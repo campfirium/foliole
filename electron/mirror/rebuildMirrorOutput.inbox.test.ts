@@ -25,6 +25,7 @@ import { softDeleteNodes } from '../database/nodeMutations.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
+import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 import { rebuildMirrorOutput } from './rebuildMirrorOutput.js';
 
 let tempRoot = '';
@@ -34,6 +35,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   mockedDocumentsDir = path.join(tempRoot, 'Documents');
   initializeDatabase();
+  resetMirrorTestWorkspace();
   await updateLibraryPathSetting({ location: 'library_home', path: path.join(tempRoot, 'Library') });
 });
 

@@ -17,8 +17,8 @@ import type {
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
-import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
+import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
 
 export type {

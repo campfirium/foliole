@@ -252,14 +252,12 @@ function createKeyboardRow(row: ExternalTreeRowRecord): NodeTreeRowModel {
       hasReveal: false,
       id: row.id,
       kind: 'folder',
-      parentNodeId: row.depth > 0 ? null : null,
+      parentNodeId: null,
       reading: null,
-      reveal: null,
       review: null,
       specialKind: undefined,
       title: row.label,
-      updatedAt: '',
-      virtualFilter: null
+      updatedAt: ''
     }
   };
 }

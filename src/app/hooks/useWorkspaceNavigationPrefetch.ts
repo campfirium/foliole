@@ -4,18 +4,13 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import {
-  markNodeDocumentLoadResolved,
-  markNodeDocumentLoadStarted,
-  markNodeDocumentMerged,
-  markNodeSelectionRequested
-} from '../../shared/platform/performanceDiagnosticsProbe';
+import { markNodeSelectionRequested } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
-import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useBreadcrumbSelectionAction, usePreparedOpenNodeAction } from './usePreparedNodeSelectionActions';
+import { useNavigationTargetResolvers, useNodeDocumentPrefetch } from './useWorkspaceNavigationPrefetchHelpers';
 
 export interface PreparedNavigationDependencies {
   activeNodeContent: string | null;
@@ -89,7 +84,6 @@ function useSelectNodeAction(
         finalize({ focusAnchor, nodeId });
         return;
       }
-
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
         await openPreparedNode(nodeId, focusAnchor);
@@ -125,52 +119,6 @@ function useSelectionRequestedMarker(nodesById: Record<string, Node>) {
     },
     [nodesById]
   );
-}
-
-function useNavigationTargetResolvers(activeNodeId: string | null, nodesById: Record<string, Node>) {
-  const resolveBackTargetNodeId = useCallback(() => {
-    const backStack = useWorkspaceStore.getState().navigation.backStack;
-    return backStack[backStack.length - 1] ?? null;
-  }, []);
-
-  const resolveForwardTargetNodeId = useCallback(() => {
-    return useWorkspaceStore.getState().navigation.forwardStack[0] ?? null;
-  }, []);
-
-  const resolveParentTargetNodeId = useCallback(() => {
-    if (!activeNodeId) {
-      return null;
-    }
-    return nodesById[activeNodeId]?.parentNodeId ?? null;
-  }, [activeNodeId, nodesById]);
-
-  return {
-    resolveBackTargetNodeId,
-    resolveForwardTargetNodeId,
-    resolveParentTargetNodeId
-  };
-}
-
-function useNodeDocumentPrefetch() {
-  return useCallback(async (nodeId: string) => {
-    const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-    if (!targetNode || isNodeDocumentLoaded(targetNode)) {
-      return;
-    }
-
-    await ensureWorkspaceNodeDocumentReady(nodeId, {
-      keepWarm: true,
-      onDocumentMerged: (document) => {
-        markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
-      },
-      onLoadResolved: () => {
-        markNodeDocumentLoadResolved(nodeId);
-      },
-      onLoadStarted: () => {
-        markNodeDocumentLoadStarted(nodeId);
-      }
-    });
-  }, []);
 }
 
 function useFinalizeNavigation(
@@ -234,7 +182,6 @@ export function usePreparedNavigationHandlers(args: PreparedNavigationDependenci
     markSelectionRequested,
     ensureNodeReady
   );
-
   return {
     handleSelectNode: useSelectNodeAction(
       args.activeNodeId,

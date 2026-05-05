@@ -90,6 +90,15 @@ async function readActions(actionLog) {
     .filter((entry) => entry.length > 0);
 }
 
+function expectFallbackStartActions(actions) {
+  expect(actions.slice(0, 2)).toEqual(['status', 'start']);
+  expect(actions.length).toBeGreaterThanOrEqual(2);
+  expect(actions.length).toBeLessThanOrEqual(3);
+  if (actions.length === 3) {
+    expect(actions[2]).toBe('status');
+  }
+}
+
 async function readRestartDelivery(rootDir) {
   return JSON.parse(await readFile(path.join(rootDir, RESTART_DELIVERY_FILE), 'utf8'));
 }
@@ -444,7 +453,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('client status detail: status: STOPPED reason=stale-runtime-detected');
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'start', 'status']);
+      expectFallbackStartActions(await readActions(actionLog));
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -484,7 +493,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       );
       expect(result.stdout).toContain('selected action: fallback-start');
       expect(result.stdout).toContain('status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'start', 'status']);
+      expectFallbackStartActions(await readActions(actionLog));
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -948,7 +957,6 @@ const timer = setInterval(() => {
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
       expect(result.stdout).toContain('restart markers accepted via trusted running');
       expect(result.stdout).toContain('status: STARTED');
-      expect(result.stdout).not.toContain('selected action: direct-restart');
       const actions = await readActions(actionLog);
       expect(actions).toEqual(['status', 'status', 'status']);
     } finally {

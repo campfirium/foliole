@@ -69,6 +69,18 @@ function writeWebSyncState(state: NativeCompanionWorkspaceSyncState) {
   return state;
 }
 
+function normalizePersistedSyncState(args: {
+  endpointUrl: string | null;
+  lastSyncedAt: string | null;
+  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
+}) {
+  return {
+    endpoint_url: args.endpointUrl,
+    last_synced_at: args.lastSyncedAt,
+    workspace_snapshot: args.workspaceSnapshot
+  } satisfies NativeCompanionWorkspaceSyncState;
+}
+
 function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }
@@ -153,6 +165,27 @@ export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
       endpoint_url: normalizedEndpointUrl,
       last_synced_at: lastSyncedAt,
       workspace_snapshot_json: JSON.stringify(payload.workspace_snapshot ?? null)
+    })
+  );
+}
+
+export async function persistCompanionWorkspaceSnapshot(args: {
+  endpointUrl: string | null;
+  lastSyncedAt: string | null;
+  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
+}) {
+  const nextState = normalizePersistedSyncState(args);
+  if (!isNativeAndroidCompanionRuntime()) {
+    return writeWebSyncState(nextState);
+  }
+
+  const endpointUrl = args.endpointUrl?.trim() ? normalizeEndpointUrl(args.endpointUrl) : 'local://companion';
+  const lastSyncedAt = args.lastSyncedAt?.trim() ? args.lastSyncedAt : new Date().toISOString();
+  return normalizeWorkspaceSyncState(
+    await FolioleCompanionSync.replaceWorkspaceSnapshot({
+      endpoint_url: endpointUrl,
+      last_synced_at: lastSyncedAt,
+      workspace_snapshot_json: JSON.stringify(args.workspaceSnapshot ?? null)
     })
   );
 }

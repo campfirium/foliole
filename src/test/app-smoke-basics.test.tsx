@@ -36,7 +36,7 @@ function createDueReview() {
   return {
     due: FIXED_TIMESTAMP,
     lastReviewAt: null,
-    state: 0,
+    state: 0 as const,
     stability: 0,
     difficulty: 0,
     elapsedDays: 0,

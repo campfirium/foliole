@@ -40,14 +40,15 @@ export function createWorkspaceSyncDebugApi(getRuntimeInvoke: RuntimeInvokeGette
       }
       return invokeLoadSyncIndex(runtimeInvoke);
     },
-    loadNodeSyncConflicts: async (objectId) => {
+    loadNodeSyncConflicts: async (objectId): Promise<NativeSyncNodeConflictRecord[] | null> => {
       const runtimeInvoke = getRuntimeInvoke();
       if (!runtimeInvoke) {
         return null;
       }
-      return objectId
-        ? invokeLoadSyncNodeConflicts(runtimeInvoke, { objectId })
-        : invokeLoadSyncNodeConflicts(runtimeInvoke);
+      const conflicts = objectId
+        ? await invokeLoadSyncNodeConflicts(runtimeInvoke, { objectIds: [objectId] })
+        : await invokeLoadSyncNodeConflicts(runtimeInvoke);
+      return conflicts as NativeSyncNodeConflictRecord[];
     },
     runNodeSyncPullSession: async ({ remoteIndex, remoteNodes }) => {
       const runtimeInvoke = getRuntimeInvoke();

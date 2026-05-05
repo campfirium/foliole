@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isCommandPaletteToggleShortcut, isDevToolsToggleShortcut, isSearchPaletteToggleShortcut } from './useAppRuntime';
+import {
+  isCommandPaletteToggleShortcut,
+  isDevToolsToggleShortcut,
+  isSearchPaletteToggleShortcut
+} from './useAppRuntimeHotkeys';
 
 describe('isCommandPaletteToggleShortcut', () => {
   it('matches Ctrl/Cmd+P and rejects Ctrl/Cmd+K', () => {

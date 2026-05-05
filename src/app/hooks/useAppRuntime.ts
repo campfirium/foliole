@@ -1,23 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import { onWindowKeydown } from '../../shared/platform/keyboard';
-import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
-interface CommandPaletteToggleShortcutEvent {
-  altKey: boolean;
-  ctrlKey: boolean;
-  key: string;
-  metaKey: boolean;
-  shiftKey: boolean;
-}
+import { useWindowHotkeys } from './useAppRuntimeHotkeys';
 
 export interface ReadingPositionSyncState {
   reason: string;
@@ -27,67 +19,6 @@ export interface ReadingPositionSyncState {
   targetViewportRatio?: number;
 }
 
-export function isDevToolsToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
-  return (
-    event.ctrlKey &&
-    !event.altKey &&
-    !event.metaKey &&
-    event.shiftKey &&
-    event.key.toLowerCase() === 'i'
-  );
-}
-
-export function isCommandPaletteToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
-  return (
-    (event.metaKey || event.ctrlKey) &&
-    !event.altKey &&
-    !event.shiftKey &&
-    event.key.toLowerCase() === 'p'
-  );
-}
-
-export function isSearchPaletteToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
-  return (
-    (event.metaKey || event.ctrlKey) &&
-    !event.altKey &&
-    !event.shiftKey &&
-    event.key.toLowerCase() === 'k'
-  );
-}
-
-function useWindowHotkeys(args: {
-  setIsCommandPaletteOpen: (update: (open: boolean) => boolean) => void;
-  setIsGoToNodePaletteOpen: (open: boolean) => void;
-  setIsMoveToNodePaletteOpen: (open: boolean) => void;
-  setIsSearchPaletteOpen: (update: (open: boolean) => boolean) => void;
-}) {
-  useEffect(
-    () =>
-      onWindowKeydown((event) => {
-        if (isDevToolsToggleShortcut(event)) {
-          event.preventDefault();
-          void toggleMainWindowDevTools();
-          return;
-        }
-        if (isCommandPaletteToggleShortcut(event)) {
-          event.preventDefault();
-          args.setIsSearchPaletteOpen(() => false);
-          args.setIsGoToNodePaletteOpen(false);
-          args.setIsMoveToNodePaletteOpen(false);
-          args.setIsCommandPaletteOpen((open) => !open);
-          return;
-        }
-        if (isSearchPaletteToggleShortcut(event)) {
-          event.preventDefault();
-          args.setIsCommandPaletteOpen(() => false);
-          args.setIsGoToNodePaletteOpen(false);
-          args.setIsMoveToNodePaletteOpen(false);
-          args.setIsSearchPaletteOpen((open) => !open);
-        }
-      }),
-    [args]
-  );
-}
 
 function useSettingsRequestState() {
   const [requestedSettingsCategory, setRequestedSettingsCategory] = useState<SettingsCategoryId | null>(null);
@@ -103,7 +34,6 @@ function useSettingsRequestState() {
 function useRecentHistory() {
   const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
   const [recentNodeIds, setRecentNodeIdsState] = useState<string[]>(() => getRecentNodeIds());
-
   return {
     recentCommandIds,
     recentNodeIds,
@@ -236,7 +166,6 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const settingsRequest = useSettingsRequestState();
   const recentHistory = useRecentHistory();
-
   useWindowHotkeys({
     setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen,
@@ -248,7 +177,6 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const bumpReadingPositionRequest = useCallback(() => {
     setReadingPositionRequestVersion((current) => current + 1);
   }, []);
-
   return {
     ...buildRuntimeState({
       bumpReadingPositionRequest,

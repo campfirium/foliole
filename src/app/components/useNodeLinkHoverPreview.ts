@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
+import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
 import { resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
@@ -25,6 +25,30 @@ function buildLoadedPreview(
     status: 'ready',
     targetNodeId,
     title: node?.title?.trim() || request.title
+  };
+}
+
+function buildMissingPreview(request: EditorNodeLinkPreviewRequest): ResolvedNodeLinkPreview {
+  return {
+    content: '',
+    request,
+    status: 'missing',
+    targetNodeId: null,
+    title: request.title
+  };
+}
+
+function buildLoadingPreview(
+  request: EditorNodeLinkPreviewRequest,
+  targetNodeId: string,
+  targetNode: Node | undefined
+): ResolvedNodeLinkPreview {
+  return {
+    content: '',
+    request,
+    status: 'loading',
+    targetNodeId,
+    title: targetNode?.title?.trim() || request.title
   };
 }
 
@@ -55,13 +79,7 @@ export function useNodeLinkHoverPreview(args: {
       trashedNodeIds: args.trashedNodeIds
     });
     if (!targetNodeId) {
-      setPreview({
-        content: '',
-        request,
-        status: 'missing',
-        targetNodeId: null,
-        title: request.title
-      });
+      setPreview(buildMissingPreview(request));
       return;
     }
 
@@ -72,24 +90,12 @@ export function useNodeLinkHoverPreview(args: {
     }
 
     let alive = true;
-    setPreview({
-      content: '',
-      request,
-      status: 'loading',
-      targetNodeId,
-      title: targetNode?.title?.trim() || request.title
-    });
+    setPreview(buildLoadingPreview(request, targetNodeId, targetNode));
     void ensureWorkspaceNodeDocumentReady(targetNodeId, { keepWarm: true }).then((document) => {
       if (!alive) {
         return;
       }
-      setPreview({
-        content: document?.content ?? '',
-        request,
-        status: 'ready',
-        targetNodeId,
-        title: targetNode?.title?.trim() || request.title
-      });
+      setPreview(buildLoadedPreview(request, targetNodeId, { ...targetNode, content: document?.content ?? '' }));
     });
 
     return () => {

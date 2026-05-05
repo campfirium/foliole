@@ -19,10 +19,10 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabase } from './migrate.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { flushNodeSyncVersion } from './nodeSyncVersions.js';
+import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
 

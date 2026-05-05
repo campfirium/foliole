@@ -41,7 +41,9 @@ describe('restart-electron-dev script', () => {
   it('skips global runtime scans when no tracked windows client state exists', async () => {
     const script = await readFile(SCRIPT_PATH, 'utf8');
 
+    expect(script).toContain('function Test-ShouldScanRuntimeCandidates');
     expect(script).toContain('function Get-ManagedRuntimeProcess');
+    expect(script).toContain('if (-not (Test-ShouldScanRuntimeCandidates -WorkDir $WorkDir -ExpectedSession $ExpectedSession)) {');
     expect(script).toContain('$runtime = Get-ManagedRuntimeProcess -WorkDir $WindowsWorkDir -ExpectedSession $runtimeSession');
     expect(script).toContain('if (Test-HasTrackedClientState) {');
     expect(script).toContain('Stop-StaleFolioleDevProcesses -WorkDir $WorkDir');
@@ -64,5 +66,6 @@ describe('restart-electron-dev script', () => {
     expect(script).toContain('Start-Process -FilePath "taskkill.exe"');
     expect(script).toContain('Wait-Process -Id $taskkill.Id -Timeout (Get-TaskkillTimeoutSeconds)');
     expect(script).toContain('taskkill timeout pid=');
+    expect(script).toContain('process still running after forced stop pid=');
   });
 });

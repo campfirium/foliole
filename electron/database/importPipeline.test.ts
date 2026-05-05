@@ -21,6 +21,7 @@ import { softDeleteNodes } from '../../lib/core/database/nodeMutations.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { runPreparedImport } from './importPipeline.js';
 import { parseAnchorLink, readInboxChildTitlesByOrder, readPersistedImportState } from './importPipeline.test-support.js';
 import { initializeDatabase } from './migrate.js';
@@ -31,6 +32,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-pipeline-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  resetSeededWorkspace();
 });
 
 afterEach(async () => {

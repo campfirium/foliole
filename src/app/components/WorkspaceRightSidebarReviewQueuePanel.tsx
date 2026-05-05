@@ -8,6 +8,13 @@ interface WorkspaceRightSidebarReviewQueuePanelProps {
   queueNodeIds: string[];
 }
 
+function buildDisplayQueueNodeIds(queueNodeIds: string[], currentNodeId: string | null) {
+  if (!currentNodeId || !queueNodeIds.includes(currentNodeId)) {
+    return queueNodeIds;
+  }
+  return [currentNodeId, ...queueNodeIds.filter((nodeId) => nodeId !== currentNodeId)];
+}
+
 function getQueueItemKindLabel(node: Node | undefined) {
   return isFsrsReviewItemNode(node) ? 'FSRS' : 'Reading';
 }
@@ -87,6 +94,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
     return <EmptyQueueState />;
   }
 
+  const displayQueueNodeIds = buildDisplayQueueNodeIds(props.queueNodeIds, props.currentNodeId);
   const fsrsCount = props.queueNodeIds.filter((nodeId) => isFsrsReviewItemNode(props.nodesById[nodeId])).length;
   const readingCount = props.queueNodeIds.length - fsrsCount;
 
@@ -95,7 +103,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
       <QueueSummary fsrsCount={fsrsCount} readingCount={readingCount} totalCount={props.queueNodeIds.length} />
       <InspectorSection className="p-2" title="Review queue">
         <ol aria-label="Review queue items" className="flex flex-col gap-1">
-          {props.queueNodeIds.map((nodeId, index) => {
+          {displayQueueNodeIds.map((nodeId, index) => {
             const node = props.nodesById[nodeId];
             const isCurrent = nodeId === props.currentNodeId;
 

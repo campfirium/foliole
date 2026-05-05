@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection } from './connection.js';
+import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { runPreparedImport } from './importPipeline.js';
 import { readInboxChildTitlesByOrder } from './importPipeline.test-support.js';
 import { initializeDatabase } from './migrate.js';
@@ -30,6 +31,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-pipeline-naming-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  resetSeededWorkspace();
 });
 
 afterEach(async () => {
@@ -58,4 +60,3 @@ it('auto-renames manual duplicate imports so inbox titles stay unique', () => {
   expect(second.nodeId).not.toBe(third.nodeId);
   expect(readInboxChildTitlesByOrder()).toEqual([{ title: 'note 3' }, { title: 'note 2' }, { title: 'note' }]);
 });
-

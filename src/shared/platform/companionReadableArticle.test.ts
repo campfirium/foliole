@@ -1,17 +1,27 @@
 import { describe, expect, it } from 'vitest';
 
+import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
+
+type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
+
 import {
   resolveCompanionRecentArticles,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
 
-function createNodeRecord(overrides: Record<string, unknown>) {
+function createNodeRecord(overrides: Partial<SnapshotNode> = {}): SnapshotNode {
   return {
+    anchorLink: null,
     content: '',
     createdAt: '2026-04-17T09:00:00.000Z',
+    hideTitleHeading: false,
     id: 'node-id',
+    isTitleManual: false,
     kind: 'topic',
     parentNodeId: null,
+    reading: null,
+    reveal: null,
+    review: null,
     title: 'Untitled',
     updatedAt: '2026-04-17T10:00:00.000Z',
     ...overrides
@@ -115,7 +125,7 @@ function createSnapshot() {
     nodesById: createSnapshotNodes(),
     trashedNodeIds: ['node-4'],
     untitledSequenceByParent: {}
-  } as never;
+  } satisfies WorkspaceSnapshot;
 }
 
 describe('companionReadableArticle helpers', () => {
@@ -124,6 +134,7 @@ describe('companionReadableArticle helpers', () => {
     snapshot.activeNodeId = 'node-1';
     snapshot.nodeOrder = ['node-1', 'node-2'];
     snapshot.nodesById['node-1'] = {
+      ...createNodeRecord(),
       content: '# First\n\nBody',
       createdAt: '2026-04-20T09:00:00.000Z',
       id: 'node-1',
@@ -133,6 +144,7 @@ describe('companionReadableArticle helpers', () => {
       updatedAt: '2026-04-21T10:00:00.000Z'
     };
     snapshot.nodesById['node-2'] = {
+      ...createNodeRecord(),
       content: '',
       createdAt: '2026-04-19T09:00:00.000Z',
       id: 'node-2',

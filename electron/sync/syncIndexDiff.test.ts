@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { NativeSyncIndexEntry } from '../../lib/platform/nativeStorageContract.js';
-
 import { diffSyncIndex } from '../../lib/core/sync/syncIndexDiff.js';
+import type { NativeSyncIndexEntry } from '../../lib/platform/nativeStorageContract.js';
 
 function createEntry(overrides: Partial<NativeSyncIndexEntry> & Pick<NativeSyncIndexEntry, 'object_id'>): NativeSyncIndexEntry {
   const { object_id, ...rest } = overrides;

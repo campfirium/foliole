@@ -149,6 +149,8 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     'Answer',
     JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
     null,
+    2,
+    null,
     '2026-03-14T00:00:00.000Z',
     '2026-03-14T00:00:00.000Z'
   ]);

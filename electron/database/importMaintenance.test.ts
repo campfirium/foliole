@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { resetImportData } from './importMaintenance.js';
 import { runPreparedImport } from './importPipeline.js';
 import { initializeDatabase } from './migrate.js';
@@ -31,6 +32,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-maintenance-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  resetSeededWorkspace();
 });
 
 afterEach(async () => {

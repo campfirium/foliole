@@ -28,6 +28,12 @@ export { ObjectConfigHeader, ObjectConfigPathButton, ObjectConfigRow, ObjectConf
 export { AppPanel } from './Panel';
 export { InspectorSection } from './InspectorSection';
 export { ReviewActionBar } from './ReviewActionBar';
+export {
+  FsrsRevealAction,
+  ReadingReviewActions,
+  ReviewCompleteAction,
+  ReviewGradeActions
+} from './ReviewActionControls';
 export { AppStatusBadge } from './StatusBadge';
 export { AppToolbar } from './Toolbar';
 export { ToolbarActionGroup } from './ToolbarActionGroup';

@@ -49,6 +49,7 @@ function renderTextLocatorNavigationHook(args: {
           } as unknown as EditorAdapter
         },
         flushPendingEditorDraft,
+        flushPendingEditorDraftImmediately: vi.fn().mockResolvedValue(true),
         forwardStackSize: 0,
         goBack: vi.fn(() => null),
         goForward: vi.fn(() => null),

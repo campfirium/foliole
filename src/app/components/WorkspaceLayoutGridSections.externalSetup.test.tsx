@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { toWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 
 vi.mock('./WorkspaceDocumentSurface', () => ({
   WorkspaceDocumentSurface: () => null
@@ -14,7 +16,7 @@ function createNode(args: {
   kind: 'folder' | 'topic' | 'item';
   parentNodeId?: string | null;
   title: string;
-}) {
+}): Node {
   return {
     anchorLink: null,
     createdAt: '2026-04-21T00:00:00.000Z',
@@ -27,7 +29,7 @@ function createNode(args: {
     reading: null,
     reveal: null,
     review: null,
-    specialKind: args.id === INBOX_NODE_ID ? 'inbox' : undefined,
+    specialKind: args.id === INBOX_NODE_ID ? ('inbox' as const) : undefined,
     title: args.title,
     updatedAt: '2026-04-21T00:00:00.000Z',
     virtualFilter: null
@@ -36,10 +38,13 @@ function createNode(args: {
 
 it('opens external library settings from the empty External row in the real list area', () => {
   const onOpenExternalLibrarySettings = vi.fn();
-  const nodesById = {
+  const nodesById: Record<string, Node> = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
     'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Projects' })
   };
+  const listNodesById = Object.fromEntries(
+    Object.entries(nodesById).map(([nodeId, node]) => [nodeId, toWorkspaceListNode(node)])
+  );
 
   render(
     <WorkspaceListArea
@@ -52,7 +57,7 @@ it('opens external library settings from the empty External row in the real list
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       isWorkspaceHydrated
-      listNodesById={nodesById}
+      listNodesById={listNodesById}
       nodesById={nodesById}
       nodeOrder={[INBOX_NODE_ID, 'folder-a']}
       onOpenMoveToNode={vi.fn()}

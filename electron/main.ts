@@ -60,6 +60,7 @@ import {
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { runStartupTask } from './startupTasks.js';
+import { ensureLanWorkspaceSyncServer, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
@@ -188,6 +189,9 @@ app.on('before-quit', (event) => {
   stopExternalSearchBackgroundRefresh();
   stopManagedInboxMonitor();
   stopKeepImportMonitor();
+  void stopLanWorkspaceSyncServer().catch((error) => {
+    console.error('[companion-sync] stop lan workspace sync server failed', error);
+  });
   if (!mirrorFlushed) {
     mirrorFlushed = true;
     event.preventDefault();
@@ -237,6 +241,10 @@ app.whenReady().then(async () => {
   registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();
+  await ensureLanWorkspaceSyncServer({
+    appVersion: app.getVersion(),
+    peerId: 'desktop-local'
+  });
   await createMainWindow();
   await appendBootEvent('main_window_ready');
   void runStartupTask('[backup] automatic backup reconcile failed', reconcileAutomaticDatabaseBackups);

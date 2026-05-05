@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { saveReadingProgress } from './readingProgress.js';
@@ -31,6 +32,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-backup-restore-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  resetSeededWorkspace();
 });
 
 afterEach(async () => {

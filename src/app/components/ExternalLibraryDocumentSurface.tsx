@@ -21,8 +21,8 @@ import {
   resolveExternalSurfaceDescription,
   resolveExternalSurfaceTitle
 } from './externalLibraryDocumentSurfaceSupport';
-import { FolderListView } from './FolderListView';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
+import { FolderListView } from './FolderListView';
 
 interface ExternalLibraryDocumentSurfaceProps {
   documentMaxWidth: number;

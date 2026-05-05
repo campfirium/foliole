@@ -35,6 +35,7 @@ import {
   seedArticleWithOverlappingLocatorHighlights,
   seedArticleWithUnresolvedLocatorHighlight
 } from './exportArticleMirror.testSupport.js';
+import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
 let tempRoot = '';
 
@@ -43,6 +44,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   mockedDocumentsDir = path.join(tempRoot, 'Documents');
   initializeDatabase();
+  resetMirrorTestWorkspace();
   await updateLibraryPathSetting({ location: 'library_home', path: path.join(tempRoot, 'Library') });
 });
 

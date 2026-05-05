@@ -7,6 +7,7 @@ import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
   loadCompanionWorkspaceVersion,
+  persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
@@ -226,11 +227,23 @@ export function useCompanionWorkspaceSync() {
     setError(null);
   }
 
+  async function replaceSnapshot(workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
+    const nextState = await persistCompanionWorkspaceSnapshot({
+      endpointUrl: state.endpoint_url,
+      lastSyncedAt: state.last_synced_at,
+      workspaceSnapshot
+    });
+    setState(nextState);
+    setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+    return nextState;
+  }
+
   return {
     clearError,
     error,
     pullFromDesktop,
     readableArticle,
+    replaceSnapshot,
     saveEndpoint,
     state,
     status

@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeConflictRecord,
@@ -70,7 +71,7 @@ it('runs a node sync pull session and reads sync conflict state through the debu
       updated_at: '2026-04-21T10:00:00.000Z'
     }
   ];
-  const runtimeInvoke = vi.fn(async (command: string) => {
+  const runtimeInvoke: NativeInvoke = vi.fn(async (command: string, args?: unknown) => {
     if (command === 'load_sync_index') {
       return localIndex;
     }
@@ -81,10 +82,11 @@ it('runs a node sync pull session and reads sync conflict state through the debu
       return ['remote-device#3'];
     }
     if (command === 'load_sync_node_conflicts') {
+      expect(args).toEqual({ objectIds: ['remote-node-1'] });
       return conflictRecords;
     }
     return null;
-  });
+  }) as NativeInvoke;
   const debugApi = createWorkspaceSyncDebugApi(() => runtimeInvoke);
 
   const syncIndex = await debugApi.loadLocalSyncIndex();
@@ -95,6 +97,6 @@ it('runs a node sync pull session and reads sync conflict state through the debu
   expect(result?.requestedRemoteObjectIds).toEqual(['remote-node-1']);
   expect(result?.execution.appliedObjectIds).toEqual(['remote-node-1']);
   expect(runtimeInvoke).toHaveBeenCalledWith('apply_sync_nodes', { nodes: remoteNodes });
-  expect(runtimeInvoke).toHaveBeenCalledWith('load_sync_node_conflicts', { objectId: 'remote-node-1' });
+  expect(runtimeInvoke).toHaveBeenCalledWith('load_sync_node_conflicts', { objectIds: ['remote-node-1'] });
   expect(conflicts).toEqual(conflictRecords);
 });

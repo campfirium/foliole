@@ -21,9 +21,12 @@
 ## Implementation Rules
 
 - companion renderer 不得直接依赖 Electron-only bridge、Windows-only 路径、桌面专属运行假设或 sqlite 直连。
+- companion 不得自行发明与 desktop 既有实现平行的业务逻辑、review 逻辑、队列逻辑、状态推进或持久化语义；开始实现前必须先检查 desktop / shared 是否已有现成真相。
+- 若 desktop 已有对应业务能力且该能力不是宿主私有差异，必须先抽到 `src/shared/**` 或现有共享层，再由 companion 接入；禁止为了赶进度把相同语义临时写在 `src/companion/**`。
 - 需要宿主能力时，优先走 `src/shared/platform/**` 的稳定调用面；若当前调用面不足，先补 contract，再接宿主。
 - companion 表面涉及持久化结果时，必须明确对应的 bridge / runtime / storage 闭环；不得只做 Web 壳即时态。
 - 若一个交互只适用于移动端，优先留在 companion 壳，不要把平台分支散落到共享 feature 里。
+- companion 可调整布局、密度、触屏交互和样式表达，但不得改写共享业务语义；若发现现有 desktop 实现过于宿主耦合，应先做最小共享化重构，再继续 companion 接线。
 
 ## Validation
 

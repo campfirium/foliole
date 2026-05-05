@@ -15,18 +15,18 @@ import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 import { getDocumentPanelView } from './documentPanelSectionModel';
 import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
-import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
 import {
   buildResolvedDocumentPanelProps,
   buildTopicBacklinks,
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
+import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
-import { useNodeLinkHoverPreview } from './useNodeLinkHoverPreview';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 import { useNodeBacklinks } from './useNodeBacklinks';
+import { useNodeLinkHoverPreview } from './useNodeLinkHoverPreview';
 
 export type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 

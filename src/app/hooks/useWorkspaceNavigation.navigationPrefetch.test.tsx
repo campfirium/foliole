@@ -65,6 +65,10 @@ function createNavigationPrefetchHookHarness(args: {
   const flushPendingEditorDraft = vi.fn(() => {
     callOrder.push('flush-draft');
   });
+  const flushPendingEditorDraftImmediately = vi.fn(async () => {
+    callOrder.push('flush-draft-immediately');
+    return true;
+  });
 
   const view = renderHook(() =>
     useWorkspaceNavigation({
@@ -78,6 +82,7 @@ function createNavigationPrefetchHookHarness(args: {
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
       flushPendingEditorDraft,
+      flushPendingEditorDraftImmediately,
       forwardStackSize: (args.forwardStack ?? []).length,
       goBack: args.actionName === 'go-back' ? action : vi.fn(() => null),
       goForward: args.actionName === 'go-forward' ? action : vi.fn(() => null),
@@ -117,6 +122,7 @@ async function expectPreparedNavigationResult(args: {
   expect(callOrder).toEqual([
     'selection-requested',
     'flush-draft',
+    'flush-draft-immediately',
     'save-view',
     args.actionName,
     'load-started',

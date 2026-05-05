@@ -60,6 +60,7 @@ function createPrefetchHookHarness(callOrder: string[]) {
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
       flushPendingEditorDraft,
+      flushPendingEditorDraftImmediately: vi.fn().mockResolvedValue(true),
       forwardStackSize: 0,
       goBack: vi.fn(() => null),
       goForward: vi.fn(() => null),

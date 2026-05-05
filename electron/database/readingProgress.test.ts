@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection } from './connection.js';
+import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
 
@@ -27,6 +28,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-progress-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  resetSeededWorkspace();
 });
 
 afterEach(async () => {

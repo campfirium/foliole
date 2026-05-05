@@ -73,6 +73,8 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
     return null;
   }
 
+  const request = props.request;
+
   return (
     <PreviewWindow
       error={error}
@@ -81,12 +83,12 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
       onClose={props.onClose}
       onImport={() => void handleImport()}
       onOpenInExternalLibrary={() => {
-        props.onOpenInExternalLibrary(props.request);
+        props.onOpenInExternalLibrary(request);
         props.onClose();
       }}
       overlayRef={overlayRef}
       preview={preview}
-      request={props.request}
+      request={request}
     />
   );
 }

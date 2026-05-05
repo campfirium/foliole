@@ -272,6 +272,21 @@ function Test-HasTrackedClientState {
   return $false
 }
 
+function Test-ShouldScanRuntimeCandidates {
+  param(
+    [string]$WorkDir = "",
+    [string]$ExpectedSession = ""
+  )
+
+  if (Test-HasTrackedClientState) {
+    return $true
+  }
+  if (-not [string]::IsNullOrWhiteSpace($ExpectedSession)) {
+    return $true
+  }
+  return $false
+}
+
 function Get-AppReadyEvent {
   param([string]$WorkDir)
 
@@ -587,6 +602,10 @@ function Get-ElectronRuntimeProcess {
     return $readyMarkerRuntime
   }
 
+  if (-not (Test-ShouldScanRuntimeCandidates -WorkDir $WorkDir -ExpectedSession (Get-TrackedRuntimeSession))) {
+    return $null
+  }
+
   $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
   if ($candidates.Count -eq 1) {
     return $candidates[0]
@@ -609,6 +628,10 @@ function Get-ManagedRuntimeProcess {
   $readyMarkerRuntime = Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession
   if ($null -ne $readyMarkerRuntime) {
     return $readyMarkerRuntime
+  }
+
+  if (-not (Test-ShouldScanRuntimeCandidates -WorkDir $WorkDir -ExpectedSession $ExpectedSession)) {
+    return $null
   }
 
   $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
@@ -649,7 +672,15 @@ function Stop-ProcessTree {
     Write-Info "taskkill launch failed pid=$ProcessId reason=$($_.Exception.Message)"
   }
 
+  if ($null -eq (Get-ProcessById -ProcessId $ProcessId)) {
+    return
+  }
   Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Milliseconds 200
+  if ($null -eq (Get-ProcessById -ProcessId $ProcessId)) {
+    return
+  }
+  Write-Info "process still running after forced stop pid=$ProcessId"
 }
 
 function Stop-MatchingProcesses {

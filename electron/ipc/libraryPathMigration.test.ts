@@ -21,6 +21,7 @@ vi.mock('./paths.js', () => ({
 vi.mock('./storage.js', () => ({ loadAppSettingsState: vi.fn().mockResolvedValue({}) }));
 
 import { openDatabaseConnection, resolveDatabasePath } from '../database/connection.js';
+import { resetSeededWorkspace } from '../database/databaseTestWorkspace.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
@@ -90,6 +91,7 @@ it('merges content into an existing target folder instead of renaming over it', 
 it('moves data and default library folders when library home changes', async () => {
   const initialPaths = await loadLibraryPathSettings();
   initializeDatabase();
+  resetSeededWorkspace();
   openDatabaseConnection().sqlite
     .prepare(
       `INSERT INTO nodes (
@@ -130,6 +132,7 @@ it('moves data and default library folders when library home changes', async () 
 it('keeps independently configured child folders in place when library home changes', async () => {
   const initialPaths = await loadLibraryPathSettings();
   initializeDatabase();
+  resetSeededWorkspace();
   await fs.writeFile(path.join(initialPaths.assets_dir, 'default-asset.png'), 'default asset');
 
   const customAssetsDir = path.join(tempRoot, 'AttachmentVault');

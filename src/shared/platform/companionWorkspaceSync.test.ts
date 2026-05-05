@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
+
 import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
+  persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
   loadCompanionWorkspaceVersion,
   saveCompanionWorkspaceSyncEndpoint
 } from './companionWorkspaceSync';
 
-function createStoredSyncState() {
+function createStoredSyncState(): NativeCompanionWorkspaceSyncState {
   return {
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: '2026-04-22T12:00:00.000Z',
@@ -18,15 +21,33 @@ function createStoredSyncState() {
       nodesById: {
         'node-1': {
           content: 'Readable from local snapshot',
+          createdAt: '2026-04-22T11:00:00.000Z',
           id: 'node-1',
+          isTitleManual: false,
+          hideTitleHeading: false,
           kind: 'item',
-          title: 'Synced article'
+          parentNodeId: null,
+          reading: null,
+          reveal: null,
+          review: null,
+          title: 'Synced article',
+          updatedAt: '2026-04-22T11:30:00.000Z',
+          anchorLink: null
         },
         'node-2': {
           content: 'Fallback',
+          createdAt: '2026-04-22T10:00:00.000Z',
           id: 'node-2',
+          isTitleManual: false,
+          hideTitleHeading: false,
           kind: 'item',
-          title: 'Fallback article'
+          parentNodeId: null,
+          reading: null,
+          reveal: null,
+          review: null,
+          title: 'Fallback article',
+          updatedAt: '2026-04-22T10:30:00.000Z',
+          anchorLink: null
         }
       },
       trashedNodeIds: [],
@@ -42,19 +63,54 @@ function mockFetchJson(payload: unknown) {
   );
 }
 
-describe('companionWorkspaceSync', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-    vi.restoreAllMocks();
-  });
+function createUpdatedStoredSnapshot() {
+  const storedState = createStoredSyncState();
+  const baseSnapshot = storedState.workspace_snapshot;
+  if (!baseSnapshot) {
+    throw new Error('Expected stored snapshot to exist.');
+  }
+  return {
+    endpointUrl: storedState.endpoint_url,
+    lastSyncedAt: storedState.last_synced_at,
+    workspaceSnapshot: {
+      ...baseSnapshot,
+      nodesById: {
+        ...baseSnapshot.nodesById,
+        'node-1': {
+          ...baseSnapshot.nodesById['node-1'],
+          review: {
+            difficulty: 4.1,
+            due: '2026-04-25T12:00:00.000Z',
+            elapsedDays: 0,
+            lapses: 0,
+            lastReviewAt: '2026-04-22T12:30:00.000Z',
+            reps: 2,
+            scheduledDays: 3,
+            stability: 3.2,
+            state: 2 as const
+          },
+          updatedAt: '2026-04-22T12:30:00.000Z'
+        }
+      }
+    }
+  };
+}
 
+function resetCompanionWorkspaceSyncTestState() {
+  window.localStorage.clear();
+  vi.restoreAllMocks();
+}
+
+function registerEndpointPersistenceTest() {
   it('stores the sync endpoint in web preview mode', async () => {
     const state = await saveCompanionWorkspaceSyncEndpoint('http://10.0.2.2:38641/');
 
     expect(state.endpoint_url).toBe('http://10.0.2.2:38641');
     expect((await loadCompanionWorkspaceSyncState()).endpoint_url).toBe('http://10.0.2.2:38641');
   });
+}
 
+function registerSnapshotPullTest() {
   it('pulls the desktop workspace snapshot and persists it in web preview mode', async () => {
     mockFetchJson({
       app_version: '0.1.0',
@@ -81,7 +137,9 @@ describe('companionWorkspaceSync', () => {
     expect(state.last_synced_at).toBe('2026-04-22T12:00:00.000Z');
     expect(state.workspace_snapshot?.activeNodeId).toBe('node-1');
   });
+}
 
+function registerWorkspaceVersionTest() {
   it('loads the lightweight workspace version payload', async () => {
     mockFetchJson({
       app_version: '0.1.0',
@@ -98,7 +156,9 @@ describe('companionWorkspaceSync', () => {
       peer_id: 'desktop-local'
     });
   });
+}
 
+function registerReadableArticleTest() {
   it('resolves the readable article from the stored snapshot in web preview mode', async () => {
     window.localStorage.setItem('foliole-companion-workspace-sync-state', JSON.stringify(createStoredSyncState()));
 
@@ -110,4 +170,35 @@ describe('companionWorkspaceSync', () => {
       title: 'Synced article'
     });
   });
+}
+
+function registerSnapshotPersistenceTest() {
+  it('persists local companion snapshot updates in web preview mode', async () => {
+    window.localStorage.setItem('foliole-companion-workspace-sync-state', JSON.stringify(createStoredSyncState()));
+
+    const state = await persistCompanionWorkspaceSnapshot(createUpdatedStoredSnapshot());
+
+    expect(state.workspace_snapshot?.nodesById['node-1']).toMatchObject({
+      review: {
+        due: '2026-04-25T12:00:00.000Z',
+        lastReviewAt: '2026-04-22T12:30:00.000Z',
+        reps: 2
+      }
+    });
+    const persistedState = await loadCompanionWorkspaceSyncState();
+    expect(persistedState.workspace_snapshot?.nodesById['node-1']).toMatchObject({
+      review: {
+        due: '2026-04-25T12:00:00.000Z'
+      }
+    });
+  });
+}
+
+describe('companionWorkspaceSync', () => {
+  beforeEach(resetCompanionWorkspaceSyncTestState);
+  registerEndpointPersistenceTest();
+  registerSnapshotPullTest();
+  registerWorkspaceVersionTest();
+  registerReadableArticleTest();
+  registerSnapshotPersistenceTest();
 });
