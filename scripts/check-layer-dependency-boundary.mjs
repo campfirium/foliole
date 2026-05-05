@@ -4,6 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const SCAN_DIRS = ['src/app', 'src/features', 'src/store'];
+const CORE_SCAN_DIRS = ['lib/core'];
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 const TEST_FILE_PATTERN = /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/;
 const BANNED_IMPORT_PATTERN =
@@ -27,6 +28,7 @@ const RUNTIME_COMMAND_BOUNDARY_FILES = new Set([
 const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
 const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)shared\/platform\/(?:bridge|runtimeInvoke)$/;
+const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -62,22 +64,30 @@ function isRuntimeCommandBoundaryImport(imports, source) {
   return RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN.test(normalizedSource) && /\bgetRuntimeInvoke\b/.test(imports);
 }
 
+function isCorePlatformImport(source) {
+  const normalizedSource = source.replace(/\\/g, '/').replace(/^(?:\.\.\/)+/, '');
+  return CORE_PLATFORM_IMPORT_SOURCE_PATTERN.test(normalizedSource);
+}
+
 function inspectFile(filePath, repoRoot) {
   const relativeFile = path.relative(repoRoot, filePath);
   const contents = fs.readFileSync(filePath, 'utf8');
   const lines = contents.split(/\r?\n/);
   const violations = [];
+  const checksBottomLayerBoundary = SCAN_DIRS.some((dir) => relativeFile.startsWith(`${dir}/`));
   const checksRuntimeCommandBoundary =
     RUNTIME_COMMAND_BOUNDARY_FILES.has(relativeFile) ||
     RUNTIME_COMMAND_BOUNDARY_DIRS.some((dir) => relativeFile.startsWith(dir));
-  lines.forEach((line, index) => {
-    if (BANNED_IMPORT_PATTERN.test(line)) {
-      violations.push({ file: relativeFile, line: index + 1, kind: 'bottom-layer-import' });
-    }
-    if (BANNED_HOST_ACCESS_PATTERN.test(line)) {
-      violations.push({ file: relativeFile, line: index + 1, kind: 'host-object-access' });
-    }
-  });
+  if (checksBottomLayerBoundary) {
+    lines.forEach((line, index) => {
+      if (BANNED_IMPORT_PATTERN.test(line)) {
+        violations.push({ file: relativeFile, line: index + 1, kind: 'bottom-layer-import' });
+      }
+      if (BANNED_HOST_ACCESS_PATTERN.test(line)) {
+        violations.push({ file: relativeFile, line: index + 1, kind: 'host-object-access' });
+      }
+    });
+  }
   if (checksRuntimeCommandBoundary) {
     for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
       if (isRuntimeCommandBoundaryImport(match[1] ?? '', match[2] ?? '')) {
@@ -85,11 +95,18 @@ function inspectFile(filePath, repoRoot) {
       }
     }
   }
+  if (relativeFile.startsWith('lib/core/')) {
+    for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
+      if (isCorePlatformImport(match[2] ?? '')) {
+        violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'core-platform-import' });
+      }
+    }
+  }
   return violations;
 }
 
 export function inspectLayerDependencyBoundary({ repoRoot = resolveRepoRoot() } = {}) {
-  const scannedFiles = SCAN_DIRS.flatMap((dir) => collectSourceFiles(path.join(repoRoot, dir)));
+  const scannedFiles = [...SCAN_DIRS, ...CORE_SCAN_DIRS].flatMap((dir) => collectSourceFiles(path.join(repoRoot, dir)));
   const violations = scannedFiles.flatMap((filePath) => inspectFile(filePath, repoRoot));
   return {
     ok: violations.length === 0,

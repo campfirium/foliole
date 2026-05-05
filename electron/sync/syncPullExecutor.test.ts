@@ -6,6 +6,7 @@ import {
   planAndExecuteSyncNodesFromRemote
 } from '../../lib/core/sync/syncPullExecutor.js';
 import type { NativeInvoke } from '../../lib/platform/nativeContract.js';
+import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeRecord
@@ -113,7 +114,7 @@ describe('executeSyncNodePullPlan', () => {
   it('applies accepted remote nodes and returns execution summary', async () => {
     const invoke = createApplyAndConflictInvoke();
 
-    const result = await executeSyncNodePullPlan(invoke, {
+    const result = await executeSyncNodePullPlan(createNativeSyncRuntimePort(invoke), {
       acceptRemote: [
         {
           decision: 'accept_remote_fast_forward',
@@ -137,7 +138,7 @@ describe('executeSyncNodePullPlan', () => {
   it('aligns equivalent-content nodes through native apply', async () => {
     const invoke = createEquivalentOnlyInvoke();
 
-    const result = await executeSyncNodePullPlan(invoke, {
+    const result = await executeSyncNodePullPlan(createNativeSyncRuntimePort(invoke), {
       acceptRemote: [],
       alreadyInSync: [],
       conflicts: [],
@@ -170,7 +171,7 @@ describe('planAndExecuteSyncNodesFromRemote', () => {
     const invoke = createPlanExecutionInvoke();
 
     const result = await planAndExecuteSyncNodesFromRemote(
-      invoke,
+      createNativeSyncRuntimePort(invoke),
       [
         createLocalIndexEntry({
           object_id: 'node-1',

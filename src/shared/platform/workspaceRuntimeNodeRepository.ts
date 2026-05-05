@@ -1,4 +1,4 @@
-import { findFolderTopicItemCommandByKind } from '../../../lib/core/nodes/folderTopicItemCommands';
+import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getRuntimeInvoke } from './bridge';
@@ -13,6 +13,19 @@ import type {
   WorkspaceRuntimeNodeDocument,
   WorkspaceRuntimeNodeSnapshot
 } from './workspaceRuntimeTypes';
+
+function resolveCreateWorkspaceNodeCommand(kind: NodeKind) {
+  if (kind === 'folder') {
+    return NATIVE_COMMANDS.createFolder;
+  }
+  if (kind === 'topic') {
+    return NATIVE_COMMANDS.createTopic;
+  }
+  if (kind === 'item') {
+    return NATIVE_COMMANDS.createItem;
+  }
+  return null;
+}
 
 export function createWorkspaceRuntimeNodeSnapshot(
   node: WorkspaceRuntimeNode,
@@ -179,7 +192,7 @@ export function saveCreatedWorkspaceNodeSnapshot(args: {
   node: WorkspaceRuntimeNode;
   position?: number;
 }) {
-  const command = findFolderTopicItemCommandByKind(args.node.kind)?.nativeCommand ?? NATIVE_COMMANDS.updateNodeContent;
+  const command = resolveCreateWorkspaceNodeCommand(args.node.kind) ?? NATIVE_COMMANDS.updateNodeContent;
   runNodeSnapshotSync({
     ...args,
     action: command === NATIVE_COMMANDS.updateNodeContent ? 'sync_create_node_fallback' : 'sync_create_node',

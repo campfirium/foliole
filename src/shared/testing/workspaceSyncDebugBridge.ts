@@ -1,5 +1,6 @@
 import { runSyncPullSession } from '../../../lib/core/sync/syncSessionService';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+import { createNativeSyncRuntimePort } from '../../../lib/platform/nativeSyncRuntimePort';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeConflictRecord,
@@ -68,7 +69,10 @@ export function createWorkspaceSyncDebugApi(getRuntimeInvoke: RuntimeInvokeGette
       if (!runtimeInvoke) {
         return null;
       }
-      return runSyncPullSession(runtimeInvoke, buildRemoteNodeSource(remoteIndex, remoteNodes, remoteObjects));
+      return runSyncPullSession(
+        createNativeSyncRuntimePort(runtimeInvoke),
+        buildRemoteNodeSource(remoteIndex, remoteNodes, remoteObjects)
+      );
     }
   };
 }

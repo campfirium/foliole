@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { runSyncPushSession } from '../../lib/core/sync/syncSessionService.js';
 import type { NativeInvoke } from '../../lib/platform/nativeContract.js';
+import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeRecord,
@@ -118,8 +119,8 @@ describe('runSyncPushSession', () => {
     const localNode = createNodeRecord();
     const localObject = createSettingObject();
     const result = await runSyncPushSession(
-      createLocalInvoke(localNode, localObject),
-      createRemoteInvoke(localNode, localObject)
+      createNativeSyncRuntimePort(createLocalInvoke(localNode, localObject)),
+      createNativeSyncRuntimePort(createRemoteInvoke(localNode, localObject))
     );
 
     expect(result.requestedLocalObjectIds).toEqual(['local-node-1']);

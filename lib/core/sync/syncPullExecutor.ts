@@ -1,19 +1,19 @@
-import type { NativeInvoke } from '../../platform/nativeContract.js';
 import type {
   NativeSyncNodeConflictRecord,
   NativeSyncIndexEntry,
   NativeSyncNodeRecord
 } from '../../platform/nativeSyncContract.js';
-import {
-  invokeApplySyncNodes,
-  invokeRecordSyncNodeConflicts
-} from '../../platform/nativeSyncInvoke.js';
 
 import {
   planSyncNodesFromRemote,
   type PlannedSyncNodeAction,
   type SyncNodePullPlan
 } from './syncNodePlan.js';
+
+export interface SyncNodePullTarget {
+  applySyncNodes(nodes: NativeSyncNodeRecord[]): Promise<string[]>;
+  recordSyncNodeConflicts(conflicts: NativeSyncNodeConflictRecord[]): Promise<string[]>;
+}
 
 export interface ExecutedSyncNodePullPlan extends SyncNodePullPlan {
   appliedObjectIds: string[];
@@ -30,20 +30,20 @@ function collectEquivalentRemoteNodes(plan: SyncNodePullPlan) {
 }
 
 export async function executeSyncNodePullPlan(
-  invoke: NativeInvoke,
+  target: SyncNodePullTarget,
   plan: SyncNodePullPlan
 ): Promise<ExecutedSyncNodePullPlan> {
   const acceptedRemoteNodes = collectAcceptedRemoteNodes(plan);
   const equivalentRemoteNodes = collectEquivalentRemoteNodes(plan);
   const conflictRecords = toConflictRecords(plan.conflicts);
   const appliedObjectIds = acceptedRemoteNodes.length > 0
-    ? await invokeApplySyncNodes(invoke, { nodes: acceptedRemoteNodes })
+    ? await target.applySyncNodes(acceptedRemoteNodes)
     : [];
   const alignedEquivalentObjectIds = equivalentRemoteNodes.length > 0
-    ? await invokeApplySyncNodes(invoke, { nodes: equivalentRemoteNodes })
+    ? await target.applySyncNodes(equivalentRemoteNodes)
     : [];
   const recordedConflictVersionIds = conflictRecords.length > 0
-    ? await invokeRecordSyncNodeConflicts(invoke, { conflicts: conflictRecords })
+    ? await target.recordSyncNodeConflicts(conflictRecords)
     : [];
 
   return {
@@ -55,12 +55,12 @@ export async function executeSyncNodePullPlan(
 }
 
 export async function planAndExecuteSyncNodesFromRemote(
-  invoke: NativeInvoke,
+  target: SyncNodePullTarget,
   localEntries: NativeSyncIndexEntry[],
   remoteNodes: NativeSyncNodeRecord[]
 ): Promise<ExecutedSyncNodePullPlan> {
   const plan = planSyncNodesFromRemote(localEntries, remoteNodes);
-  return executeSyncNodePullPlan(invoke, plan);
+  return executeSyncNodePullPlan(target, plan);
 }
 
 export function collectConflictObjectIds(actions: PlannedSyncNodeAction[]) {

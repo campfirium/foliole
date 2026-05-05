@@ -21,6 +21,7 @@ async function createFixtureRoot() {
   await mkdir(path.join(fixtureRoot, 'src', 'features', 'settings'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'app', 'hooks'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'shared', 'platform'), { recursive: true });
+  await mkdir(path.join(fixtureRoot, 'lib', 'core', 'nodes'), { recursive: true });
   return fixtureRoot;
 }
 
@@ -96,6 +97,19 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
 
     expect(result.violations).toEqual([
       { file: 'src/app/hooks/useAppRuntime.ts', line: 1, kind: 'runtime-command-import' }
+    ]);
+  });
+
+  it('blocks core modules from importing native platform contracts', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'lib/core/nodes/badCore.ts', `
+      import { NATIVE_COMMANDS } from '../../platform/nativeCommands.js';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'lib/core/nodes/badCore.ts', line: 1, kind: 'core-platform-import' }
     ]);
   });
 });

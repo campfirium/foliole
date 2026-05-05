@@ -1,5 +1,3 @@
-import { NATIVE_COMMANDS } from '../../platform/nativeCommands.js';
-
 import type { NodeKind } from './nodeKind.js';
 import { NODE_KINDS } from './nodeKind.js';
 
@@ -14,10 +12,6 @@ export interface FolderTopicItemCommandDefinition {
   kind: NodeKind;
   listLabel: string;
   menuLabel: string;
-  nativeCommand:
-    | typeof NATIVE_COMMANDS.createFolder
-    | typeof NATIVE_COMMANDS.createTopic
-    | typeof NATIVE_COMMANDS.createItem;
   paletteTitle: string;
 }
 
@@ -27,7 +21,6 @@ export const FOLDER_TOPIC_ITEM_COMMANDS: readonly FolderTopicItemCommandDefiniti
     kind: 'folder',
     listLabel: 'Create Folder',
     menuLabel: 'Create Folder',
-    nativeCommand: NATIVE_COMMANDS.createFolder,
     paletteTitle: 'Create Folder'
   },
   {
@@ -35,7 +28,6 @@ export const FOLDER_TOPIC_ITEM_COMMANDS: readonly FolderTopicItemCommandDefiniti
     kind: 'topic',
     listLabel: 'Create Topic',
     menuLabel: 'Create Topic',
-    nativeCommand: NATIVE_COMMANDS.createTopic,
     paletteTitle: 'Create Topic'
   },
   {
@@ -43,7 +35,6 @@ export const FOLDER_TOPIC_ITEM_COMMANDS: readonly FolderTopicItemCommandDefiniti
     kind: 'item',
     listLabel: 'Create Item',
     menuLabel: 'Create Item',
-    nativeCommand: NATIVE_COMMANDS.createItem,
     paletteTitle: 'Create Item'
   }
 ] as const;

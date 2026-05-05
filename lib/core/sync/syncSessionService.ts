@@ -1,27 +1,25 @@
-import type { NativeInvoke } from '../../platform/nativeContract.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
   NativeSyncObjectType
 } from '../../platform/nativeSyncContract.js';
-import {
-  invokeApplySyncObjects,
-  invokeLoadSyncIndex,
-  invokeLoadSyncNodes,
-  invokeLoadSyncObjects
-} from '../../platform/nativeSyncInvoke.js';
 
 import { diffSyncIndex, type SyncIndexDiffResult } from './syncIndexDiff.js';
 import {
   planAndExecuteSyncNodesFromRemote,
-  type ExecutedSyncNodePullPlan
+  type ExecutedSyncNodePullPlan,
+  type SyncNodePullTarget
 } from './syncPullExecutor.js';
 
 export interface SyncPullRemoteSource {
   loadSyncIndex(): Promise<NativeSyncIndexEntry[]>;
   loadSyncNodes(objectIds: string[]): Promise<NativeSyncNodeRecord[]>;
   loadSyncObjects(objectIds: string[], objectTypes?: string[]): Promise<NativeSyncObjectRecord[]>;
+}
+
+export interface SyncRuntimePort extends SyncPullRemoteSource, SyncNodePullTarget {
+  applySyncObjects(objects: NativeSyncObjectRecord[]): Promise<string[]>;
 }
 
 export interface SyncPullSessionResult {
@@ -86,8 +84,8 @@ function collectObjectIds(entries: NativeSyncIndexEntry[]) {
   return [...new Set(entries.map((entry) => entry.object_id))].sort();
 }
 
-async function applyObjectBatch(targetInvoke: NativeInvoke, objects: NativeSyncObjectRecord[]) {
-  return objects.length > 0 ? invokeApplySyncObjects(targetInvoke, { objects }) : [];
+async function applyObjectBatch(target: SyncRuntimePort, objects: NativeSyncObjectRecord[]) {
+  return objects.length > 0 ? target.applySyncObjects(objects) : [];
 }
 
 async function loadGenericObjects(source: SyncPullRemoteSource, entries: NativeSyncIndexEntry[]) {
@@ -96,20 +94,12 @@ async function loadGenericObjects(source: SyncPullRemoteSource, entries: NativeS
     : [];
 }
 
-export function createInvokeSyncSource(invoke: NativeInvoke): SyncPullRemoteSource {
-  return {
-    loadSyncIndex: () => invokeLoadSyncIndex(invoke),
-    loadSyncNodes: (objectIds) => invokeLoadSyncNodes(invoke, { objectIds }),
-    loadSyncObjects: (objectIds, objectTypes) => invokeLoadSyncObjects(invoke, { objectIds, objectTypes })
-  };
-}
-
 export async function runSyncPullSession(
-  localInvoke: NativeInvoke,
+  localRuntime: SyncRuntimePort,
   remoteSource: SyncPullRemoteSource
 ): Promise<SyncPullSessionResult> {
   const [localIndex, remoteIndex] = await Promise.all([
-    invokeLoadSyncIndex(localInvoke),
+    localRuntime.loadSyncIndex(),
     remoteSource.loadSyncIndex()
   ]);
   const indexDiff = diffSyncIndex(localIndex, remoteIndex);
@@ -119,9 +109,9 @@ export async function runSyncPullSession(
     ? await remoteSource.loadSyncNodes(requestedRemoteObjectIds)
     : [];
   const requestedRemoteSyncObjects = await loadGenericObjects(remoteSource, requestedObjectEntries);
-  const appliedRemoteObjectIds = await applyObjectBatch(localInvoke, requestedRemoteSyncObjects);
+  const appliedRemoteObjectIds = await applyObjectBatch(localRuntime, requestedRemoteSyncObjects);
   const execution = requestedRemoteNodes.length > 0
-    ? await planAndExecuteSyncNodesFromRemote(localInvoke, localIndex, requestedRemoteNodes)
+    ? await planAndExecuteSyncNodesFromRemote(localRuntime, localIndex, requestedRemoteNodes)
     : createEmptyExecutionResult();
 
   return {
@@ -138,13 +128,12 @@ export async function runSyncPullSession(
 }
 
 export async function runSyncPushSession(
-  localInvoke: NativeInvoke,
-  remoteInvoke: NativeInvoke
+  localSource: SyncPullRemoteSource,
+  remoteRuntime: SyncRuntimePort
 ): Promise<SyncPushSessionResult> {
-  const localSource = createInvokeSyncSource(localInvoke);
   const [localIndex, remoteIndex] = await Promise.all([
     localSource.loadSyncIndex(),
-    invokeLoadSyncIndex(remoteInvoke)
+    remoteRuntime.loadSyncIndex()
   ]);
   const indexDiff = diffSyncIndex(remoteIndex, localIndex);
   const requestedLocalObjectIds = collectRequestedNodeIds(indexDiff);
@@ -153,9 +142,9 @@ export async function runSyncPushSession(
     ? await localSource.loadSyncNodes(requestedLocalObjectIds)
     : [];
   const requestedLocalSyncObjects = await loadGenericObjects(localSource, requestedObjectEntries);
-  const appliedLocalObjectIds = await applyObjectBatch(remoteInvoke, requestedLocalSyncObjects);
+  const appliedLocalObjectIds = await applyObjectBatch(remoteRuntime, requestedLocalSyncObjects);
   const execution = requestedLocalNodes.length > 0
-    ? await planAndExecuteSyncNodesFromRemote(remoteInvoke, remoteIndex, requestedLocalNodes)
+    ? await planAndExecuteSyncNodesFromRemote(remoteRuntime, remoteIndex, requestedLocalNodes)
     : createEmptyExecutionResult();
 
   return {

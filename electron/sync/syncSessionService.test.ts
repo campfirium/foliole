@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { runSyncPullSession } from '../../lib/core/sync/syncSessionService.js';
 import type { NativeInvoke } from '../../lib/platform/nativeContract.js';
+import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeRecord,
@@ -218,7 +219,7 @@ describe('runSyncPullSession', () => {
     const localInvoke = createSessionLocalInvoke();
     const remoteSource = createSessionRemoteSource();
 
-    const result = await runSyncPullSession(localInvoke, remoteSource);
+    const result = await runSyncPullSession(createNativeSyncRuntimePort(localInvoke), remoteSource);
 
     expect(result.pendingPushObjectIds).toEqual(['node-5']);
     expect(result.requestedRemoteObjectIds).toEqual(['node-1', 'node-2', 'node-3', 'node-4']);
@@ -233,7 +234,7 @@ describe('runSyncPullSession', () => {
     const localInvoke = createInSyncLocalInvoke();
     const remoteSource = createInSyncRemoteSource();
 
-    const result = await runSyncPullSession(localInvoke, remoteSource);
+    const result = await runSyncPullSession(createNativeSyncRuntimePort(localInvoke), remoteSource);
 
     expect(result.requestedRemoteObjectIds).toEqual([]);
     expect(result.requestedRemoteNodes).toEqual([]);

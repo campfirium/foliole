@@ -1,20 +1,18 @@
-import type { NativeInvoke } from '../../platform/nativeContract.js';
-import { invokeReviewGrade, invokeReviewPreview } from '../../platform/nativeInvoke.js';
-
 import {
   assertSchedulerGradeInput,
   assertSchedulerGradeResult,
   assertSchedulerPreviewInput,
-  assertSchedulerPreviewResult
-} from './contract.js';
-import {
+  assertSchedulerPreviewResult,
   mapGradeToRustRating,
   type ReviewSchedulerAdapter,
   type SchedulerGradeInput,
   type SchedulerGradeResult,
   type SchedulerPreviewInput,
   type SchedulerPreviewResult
-} from './types.js';
+} from '../core/review/index.js';
+
+import type { NativeInvoke } from './nativeContract.js';
+import { invokeReviewGrade, invokeReviewPreview } from './nativeInvoke.js';
 
 export function createNativeReviewSchedulerAdapter(invoke: NativeInvoke): ReviewSchedulerAdapter {
   return {

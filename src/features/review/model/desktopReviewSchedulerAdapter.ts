@@ -1,1 +1,1 @@
-export { createNativeReviewSchedulerAdapter as createDesktopReviewSchedulerAdapter } from '../../../../lib/core/review/index.js';
+export { createDesktopReviewSchedulerAdapter } from '../../../shared/platform/reviewSchedulerNativeAdapter';
