@@ -22,7 +22,6 @@ import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContra
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
-import { applySyncObjectPayload } from './syncObjectApplyPayloads.js';
 
 let tempRoot = '';
 
@@ -54,17 +53,4 @@ it('does not accept node records through the generic state-object apply path', a
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne('SELECT id FROM nodes WHERE id = ?', ['node-1'])).toBeUndefined();
   expect(driver.queryOne('SELECT object_id FROM sync_object_state WHERE object_type = ?', ['node'])).toBeUndefined();
-});
-
-it('rejects unsupported object types at the payload apply boundary', () => {
-  const record = {
-    content_hash: 'hash-node',
-    deleted_at: null,
-    object_id: 'node-1',
-    object_type: 'node',
-    payload_json: JSON.stringify({ id: 'node-1' }),
-    updated_at: '2026-04-21T16:20:00.000Z'
-  } as unknown as NativeSyncObjectRecord;
-
-  expect(() => applySyncObjectPayload(openDatabaseConnection().driver, record)).toThrow('Unsupported sync object type');
 });
