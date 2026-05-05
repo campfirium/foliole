@@ -64,6 +64,8 @@ it('opens workspace search with Ctrl+K and searches node titles and content', as
 
   seedSearchNodes();
 
+  const searchExcerpt = '...Atlas launch checklist and follow-up notes....';
+
   expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('');
   expect(useWorkspaceStore.getState().nodesById['node-2']?.hasContent).toBe(true);
   expect(useWorkspaceStore.getState().nodesById['node-3']?.content).toBe('');
@@ -81,6 +83,8 @@ it('opens workspace search with Ctrl+K and searches node titles and content', as
     expect(within(dialog).getByRole('button', { name: /Project Atlas/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Weekly Log/i })).toBeInTheDocument();
   });
+  expect(within(dialog).getByText(searchExcerpt)).toBeInTheDocument();
+  expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
 
   fireEvent.keyDown(input, { key: 'ArrowDown' });
   fireEvent.keyDown(input, { key: 'Enter' });
@@ -100,6 +104,7 @@ it('opens workspace search with Ctrl+K and searches node titles and content', as
     reveal: null,
     hasReveal: false
   });
+  expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
   expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'Atlas' });
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-3' });
   expect(screen.queryByRole('dialog', { name: 'Workspace search' })).not.toBeInTheDocument();
