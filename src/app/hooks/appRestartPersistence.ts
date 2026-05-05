@@ -1,10 +1,12 @@
 import type { MutableRefObject } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
+import {
+  hasWorkspaceRuntimeRepository,
+  saveWorkspaceReadingProgressNow
+} from '../../shared/platform/workspaceRuntimeRepository';
 import { restartMainWindowApp } from '../../shared/platform/windowControls';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
@@ -81,7 +83,6 @@ function mergeRestartNodeViewState(
 
 export async function restartAppWithReadingProgress(args: RestartWithReadingProgressArgs) {
   const captured = captureReadingProgressForRestart(args);
-  const runtimeInvoke = getRuntimeInvoke();
   const mergedNodeViewById = mergeRestartNodeViewState(captured, args.nodeViewById);
   pushDebugTrace('reading-progress.restart-begin', {
     activeNodeId: args.activeNodeId,
@@ -89,9 +90,9 @@ export async function restartAppWithReadingProgress(args: RestartWithReadingProg
     scrollTop: captured?.viewState.scrollTop ?? null,
     selection: captured?.viewState.selection ?? null
   });
-  if (captured && runtimeInvoke) {
+  if (captured && hasWorkspaceRuntimeRepository()) {
     try {
-      await runtimeInvoke(NATIVE_COMMANDS.saveReadingProgress, {
+      await saveWorkspaceReadingProgressNow({
         activeNodeId: captured.nodeId,
         nodeViewStates: toRuntimeNodeViewStates(mergedNodeViewById),
         source: 'close-flush',
@@ -110,7 +111,6 @@ export async function restartAppWithReadingProgress(args: RestartWithReadingProg
       logRuntimeWarning('reading progress save failed before restart', {
         area: 'persistence',
         action: 'restart_app_flush_reading_progress',
-        command: NATIVE_COMMANDS.saveReadingProgress,
         fallback: 'restart_without_flush',
         activeNodeId: captured.nodeId,
         error

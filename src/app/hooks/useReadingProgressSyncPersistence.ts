@@ -1,8 +1,10 @@
 import type { MutableRefObject } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import {
+  hasWorkspaceRuntimeRepository,
+  saveWorkspaceReadingProgressNow
+} from '../../shared/platform/workspaceRuntimeRepository';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -91,8 +93,7 @@ export async function flushReadingProgressToCloseBridge(args: {
     isRestoreApplying ? null : undefined,
     !isRestoreApplying
   );
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!resolved || !runtimeInvoke) {
+  if (!resolved || !hasWorkspaceRuntimeRepository()) {
     return false;
   }
   updateCapturedNodeViewState({
@@ -106,8 +107,7 @@ export async function flushReadingProgressToCloseBridge(args: {
     capturedNodeId: resolved.captured?.nodeId ?? null,
     nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length
   });
-  await runtimeInvoke(
-    NATIVE_COMMANDS.saveReadingProgress,
+  await saveWorkspaceReadingProgressNow(
     createReadingProgressPayload(resolved.resolvedActiveNodeId, resolved.mergedNodeViewById, 'close-flush')
   );
   args.lastSyncedSignatureRef.current = createReadingProgressSignature(

@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import {
   beginNodeSelectionFlow,
   markNodeDocumentMerged,
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -20,8 +20,7 @@ export function useWorkspaceActiveNodeDocument(
   options: UseWorkspaceActiveNodeDocumentOptions = {}
 ) {
   useEffect(() => {
-    const runtimeInvoke = getRuntimeInvoke();
-    if (!runtimeInvoke || !activeNodeId) {
+    if (!hasWorkspaceRuntimeRepository() || !activeNodeId) {
       return;
     }
 

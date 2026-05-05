@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/workspaceRuntimeRepository';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
 import { useWindowHotkeys } from './useAppRuntimeHotkeys';
@@ -131,12 +130,8 @@ function useEditorDraftFlushRegistry(refs: ReturnType<typeof createRuntimeRefs>)
   const flushPendingEditorDraftImmediately = useCallback(
     async () => {
       const draftFlushed = (await refs.editorDraftCloseFlushRef.current?.()) ?? true;
-      const runtimeInvoke = getRuntimeInvoke();
-      if (!runtimeInvoke) {
-        return draftFlushed;
-      }
       try {
-        await runtimeInvoke(NATIVE_COMMANDS.flushDirtyNodeSyncVersions);
+        await flushDirtyWorkspaceNodeSyncVersions();
         return draftFlushed;
       } catch {
         return false;

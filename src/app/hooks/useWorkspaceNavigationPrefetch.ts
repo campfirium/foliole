@@ -3,8 +3,8 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import { markNodeSelectionRequested } from '../../shared/platform/performanceDiagnosticsProbe';
+import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -85,7 +85,7 @@ function useSelectNodeAction(
         return;
       }
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-      if (targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
+      if (targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository()) {
         await openPreparedNode(nodeId, focusAnchor);
         return;
       }

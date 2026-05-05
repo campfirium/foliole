@@ -19,6 +19,7 @@ async function createFixtureRoot() {
   await mkdir(path.join(fixtureRoot, 'src', 'store'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'features', 'review'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'features', 'settings'), { recursive: true });
+  await mkdir(path.join(fixtureRoot, 'src', 'app', 'hooks'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'shared', 'platform'), { recursive: true });
   return fixtureRoot;
 }
@@ -80,5 +81,21 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
     expect(result.ok).toBe(true);
+  });
+
+  it('blocks selected app runtime hooks without blocking unrelated app files', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/app/hooks/useAppRuntime.ts', `
+      import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+    `);
+    await writeFixtureFile(repoRoot, 'src/app/SearchPalette.tsx', `
+      import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'src/app/hooks/useAppRuntime.ts', line: 1, kind: 'runtime-command-import' }
+    ]);
   });
 });

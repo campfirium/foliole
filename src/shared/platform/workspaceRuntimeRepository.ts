@@ -111,3 +111,19 @@ export function deleteWorkspaceNodesPermanently(payload: { nodeIds: string[]; no
 export function saveWorkspaceReadingProgress(payload: WorkspaceReadingProgressSavePayload) {
   runFireAndForgetRuntimeSync(NATIVE_COMMANDS.saveReadingProgress, payload, 'sync_reading_progress');
 }
+
+export async function saveWorkspaceReadingProgressNow(payload: WorkspaceReadingProgressSavePayload): Promise<void> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  await runtimeInvoke(NATIVE_COMMANDS.saveReadingProgress, payload);
+}
+
+export async function flushDirtyWorkspaceNodeSyncVersions(): Promise<string[]> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return [];
+  }
+  return runtimeInvoke(NATIVE_COMMANDS.flushDirtyNodeSyncVersions);
+}

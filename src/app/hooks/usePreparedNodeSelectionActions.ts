@@ -1,12 +1,12 @@
 import { useCallback, useRef } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import {
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted,
   markNodeDocumentMerged
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import { resolveAncestorAnchorLink, type NodeNavigationResult } from '../../store/workspaceNavigation';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
@@ -32,7 +32,7 @@ export function usePreparedOpenNodeAction(
       finalize(result ? { ...result, focusAnchor } : result);
 
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-      if (!targetNode || isNodeDocumentLoaded(targetNode) || !getRuntimeInvoke()) {
+      if (!targetNode || isNodeDocumentLoaded(targetNode) || !hasWorkspaceRuntimeRepository()) {
         return;
       }
 
@@ -79,14 +79,14 @@ export function useBreadcrumbSelectionAction(
       if (activeNodeId && activeNodeId !== nodeId) {
         const ancestorTarget = resolveAncestorAnchorLink(activeNodeId, nodeId, nodesById);
         const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-        if (ancestorTarget.isAncestor && targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
+        if (ancestorTarget.isAncestor && targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository()) {
           await openPreparedNode(nodeId, ancestorTarget.focusAnchor);
           return;
         }
       }
 
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-      if (targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
+      if (targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository()) {
         await openPreparedNode(nodeId);
         return;
       }
