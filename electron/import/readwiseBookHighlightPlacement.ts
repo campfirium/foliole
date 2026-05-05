@@ -1,9 +1,15 @@
 import fs from 'node:fs/promises';
 
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
 import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
-import { findContextExcerpt } from '../../lib/core/import/controlledContextMatch.js';
+import { createContextExcerptLocator } from '../../lib/core/import/controlledContextMatch.js';
+import {
+  findPreparedHighlightExcerptInLocator,
+  prepareHighlightExcerptCandidate,
+  type PreparedHighlightExcerptCandidate
+} from '../../lib/core/import/highlightExcerptMatch.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -19,13 +25,18 @@ interface LocatedReadwiseBookHighlight extends PreparedImportHighlightRecord {
   sectionIndex: number;
 }
 
+interface SectionHighlightLocator {
+  locator: ReturnType<typeof createContextExcerptLocator>;
+  section: ImportedBookSection;
+  sectionIndex: number;
+}
+
 function stripImportedHighlightAnchors(content: string) {
   return content.replace(/<\/?highlight id="[1-9]\d*">/g, '');
 }
 
-function readNextNodePosition() {
-  const connection = openDatabaseConnection();
-  const row = connection.driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
+function readNextNodePosition(driver: DatabaseDriver) {
+  const row = driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
   return (row?.position ?? -1) + 1;
 }
 
@@ -55,43 +66,74 @@ function readImportedBookSections(rootNodeId: string) {
   );
 }
 
-function collectSectionMatches(sections: ImportedBookSection[], quote: string) {
-  return sections
-    .map((section, index) => ({
-      content: findContextExcerpt(stripImportedHighlightAnchors(section.content), quote),
-      sectionId: section.id,
-      sectionIndex: index
-    }))
-    .filter((match): match is LocatedReadwiseBookHighlight => Boolean(match.content));
+function buildSectionHighlightLocators(sections: ImportedBookSection[]) {
+  return sections.map((section, sectionIndex) => ({
+    locator: createContextExcerptLocator(stripImportedHighlightAnchors(section.content)),
+    section,
+    sectionIndex
+  }));
+}
+
+function buildSearchOrder(total: number, preferredStartIndex: number) {
+  if (total === 0) {
+    return [];
+  }
+  const safeStartIndex = Math.max(0, Math.min(preferredStartIndex, total - 1));
+  const ordered = new Set<number>();
+  ordered.add(safeStartIndex);
+
+  // Favor nearby chapters first, then keep moving forward, and finally backfill.
+  for (let radius = 1; radius <= 3; radius += 1) {
+    const forward = safeStartIndex + radius;
+    const backward = safeStartIndex - radius;
+    if (forward < total) {
+      ordered.add(forward);
+    }
+    if (backward >= 0) {
+      ordered.add(backward);
+    }
+  }
+  for (let index = safeStartIndex + 1; index < total; index += 1) {
+    ordered.add(index);
+  }
+  for (let index = 0; index < safeStartIndex; index += 1) {
+    ordered.add(index);
+  }
+
+  return Array.from(ordered.values());
 }
 
 function locateReadwiseBookHighlight(
-  sections: ImportedBookSection[],
-  quote: string,
-  preferredStartIndex: number,
-  label?: string
+  sections: SectionHighlightLocator[],
+  highlight: PreparedHighlightExcerptCandidate,
+  preferredStartIndex: number
 ) {
-  const matches = collectSectionMatches(sections, quote);
-  if (matches.length === 0) {
-    return null;
+  for (const index of buildSearchOrder(sections.length, preferredStartIndex)) {
+    const section = sections[index];
+    const content = findPreparedHighlightExcerptInLocator(section.locator, highlight);
+    if (!content) {
+      continue;
+    }
+    return {
+      content,
+      label: highlight.label,
+      sectionId: section.section.id,
+      sectionIndex: section.sectionIndex
+    } satisfies LocatedReadwiseBookHighlight;
   }
-
-  const forwardMatch = matches.find((match) => match.sectionIndex >= preferredStartIndex);
-  if (forwardMatch) {
-    return { ...forwardMatch, label: label ?? null } satisfies LocatedReadwiseBookHighlight;
-  }
-
-  return matches.length === 1 ? { ...matches[0], label: label ?? null } : null;
+  return null;
 }
 
 function groupLocatedHighlights(sections: ImportedBookSection[], markdown: string, readwiseConfig: ReadwiseReaderConfig) {
   const groupedBySection = new Map<string, PreparedImportHighlightRecord[]>();
+  const sectionLocators = buildSectionHighlightLocators(sections);
   let preferredStartIndex = 0;
   let matchedCount = 0;
   let unmatchedCount = 0;
 
   extractReadwiseSidecarHighlights(markdown, readwiseConfig).forEach((highlight) => {
-    const located = locateReadwiseBookHighlight(sections, highlight.text, preferredStartIndex, highlight.label);
+    const prepared = prepareHighlightExcerptCandidate(highlight);
+    const located = locateReadwiseBookHighlight(sectionLocators, prepared, preferredStartIndex);
     if (!located) {
       unmatchedCount += 1;
       return;
@@ -113,6 +155,7 @@ function persistSectionHighlights(input: {
 }) {
   const connection = openDatabaseConnection();
   connection.driver.transaction((driver) => {
+    let nextPosition = readNextNodePosition(driver);
     input.sections.forEach((section) => {
       const sectionHighlights = input.groupedBySection.get(section.id) ?? [];
       const baseContent = stripImportedHighlightAnchors(section.content);
@@ -120,13 +163,14 @@ function persistSectionHighlights(input: {
       if (anchored.content !== section.content) {
         driver.execute('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?', [anchored.content, input.importedAt, section.id]);
       }
-      replaceImportedHighlightNodes({
+      const insertedCount = replaceImportedHighlightNodes({
         driver,
         highlights: anchored.highlights,
         importedAt: input.importedAt,
         parentNodeId: section.id,
-        startPosition: readNextNodePosition()
+        startPosition: nextPosition
       });
+      nextPosition += insertedCount;
     });
   });
 }

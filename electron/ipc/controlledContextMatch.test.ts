@@ -2,6 +2,7 @@
 
 import { expect, it } from 'vitest';
 
+import { createContextExcerptQuoteLocator } from '../../lib/core/import/contextExcerptQuoteLocator.js';
 import { findContextExcerpt } from '../../lib/core/import/controlledContextMatch.js';
 
 it('matches list-heavy highlights by splitting on punctuation and bullets', () => {
@@ -138,4 +139,19 @@ it('trims a matched sentence down to the exact quote instead of keeping the full
   ].join('\n');
 
   expect(findContextExcerpt(content, 'This is the highlighted sentence.')).toBe('This is the highlighted sentence.');
+});
+
+it('matches very long highlights without expanding fallback fragments quadratically', () => {
+  const repeated = '甲乙丙丁戊己庚辛壬癸'.repeat(120);
+  const target = `${repeated}最终定位片段`;
+  const content = ['# Long Quote', '', `前缀${target}后缀`, '', '其他段落'].join('\n');
+
+  expect(findContextExcerpt(content, target)).toBe(target);
+});
+
+it('caps fallback matcher count for very long quotes', () => {
+  const longQuote = `开头${'甲乙丙丁戊己庚辛壬癸'.repeat(400)}结尾`;
+  const quoteLocator = createContextExcerptQuoteLocator(longQuote);
+  expect(quoteLocator).not.toBeNull();
+  expect(quoteLocator?.fragmentMatchers.length ?? 0).toBeLessThanOrEqual(160);
 });

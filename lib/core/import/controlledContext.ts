@@ -1,5 +1,6 @@
 import type { ImportSourceKind } from './contract.js';
-import { findContextExcerpt } from './controlledContextMatch.js';
+import { createContextExcerptLocator } from './controlledContextMatch.js';
+import { findPreparedHighlightExcerptInLocator, prepareHighlightExcerptCandidate } from './highlightExcerptMatch.js';
 
 export type ImportContextPolicy = 'full_text' | 'full_text_with_context' | 'context_only';
 export type ImportSourceProfile = 'default' | 'epub' | 'body_with_highlight_sidecar';
@@ -69,8 +70,10 @@ export function resolveImportContextPolicy(input: Pick<ControlledImportContextIn
 function splitMatchedHighlights(input: ControlledImportContextInput) {
   const matchedHighlights: Array<{ excerpt: string; highlight: ImportSidecarHighlight }> = [];
   const unmatchedHighlights: ImportSidecarHighlight[] = [];
+  const locator = createContextExcerptLocator(input.content);
   input.highlightSidecar?.forEach((highlight) => {
-    const excerpt = findContextExcerpt(input.content, highlight.text);
+    const prepared = prepareHighlightExcerptCandidate(highlight);
+    const excerpt = findPreparedHighlightExcerptInLocator(locator, prepared);
     if (excerpt) {
       matchedHighlights.push({ excerpt, highlight });
       return;
