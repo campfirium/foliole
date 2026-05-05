@@ -1,8 +1,12 @@
 package com.foliole.android;
 
-import android.database.Cursor;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,9 +15,10 @@ final class FolioleCompanionContentBlobBatchManifestStore {
     private FolioleCompanionContentBlobBatchManifestStore() {}
 
     static Map<String, Manifest> load(
+        Context context,
         SQLiteDatabase database,
         List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs
-    ) {
+    ) throws Exception {
         Map<String, Manifest> manifests = new HashMap<>();
         if (blobs.isEmpty()) {
             return manifests;
@@ -25,20 +30,24 @@ final class FolioleCompanionContentBlobBatchManifestStore {
             if (index > 0) placeholders.append(", ");
             placeholders.append("?");
         }
-        try (Cursor cursor = database.rawQuery(
-            "SELECT hash, compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 " +
-                "FROM content_blobs WHERE hash IN (" + placeholders + ")",
-            hashes
-        )) {
-            while (cursor.moveToNext()) {
-                manifests.put(cursor.getString(0), new Manifest(
-                    cursor.getString(1),
-                    cursor.getLong(2),
-                    cursor.getLong(3),
-                    cursor.getString(4),
-                    cursor.getString(5)
-                ));
-            }
+        JSONArray rows = FolioleCompanionNamedQueryStore
+            .loadArray(
+                context,
+                database,
+                "contentBlobManifestsByHashes",
+                Collections.singletonMap("__HASH_FILTER__", placeholders.toString()),
+                hashes
+            )
+            .getJSONArray("blobs");
+        for (int index = 0; index < rows.length(); index += 1) {
+            JSONObject row = rows.getJSONObject(index);
+            manifests.put(row.getString("hash"), new Manifest(
+                row.getString("compression"),
+                row.getLong("original_size_bytes"),
+                row.getLong("stored_size_bytes"),
+                row.getString("original_sha256"),
+                row.getString("stored_sha256")
+            ));
         }
         return manifests;
     }

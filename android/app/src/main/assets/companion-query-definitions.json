@@ -436,6 +436,42 @@
         }
       ]
     },
+    "contentBlobManifestsByHashes": {
+      "resultKey": "blobs",
+      "sql": "SELECT hash, compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 FROM content_blobs WHERE hash IN (__HASH_FILTER__)",
+      "columns": [
+        {
+          "key": "hash",
+          "source": "hash",
+          "type": "string"
+        },
+        {
+          "key": "compression",
+          "source": "compression",
+          "type": "string"
+        },
+        {
+          "key": "original_size_bytes",
+          "source": "original_size_bytes",
+          "type": "long"
+        },
+        {
+          "key": "stored_size_bytes",
+          "source": "stored_size_bytes",
+          "type": "long"
+        },
+        {
+          "key": "original_sha256",
+          "source": "original_sha256",
+          "type": "string"
+        },
+        {
+          "key": "stored_sha256",
+          "source": "stored_sha256",
+          "type": "string"
+        }
+      ]
+    },
     "attachmentResourceMissingRows": {
       "resultKey": "resources",
       "sql": "WITH attachment_refs AS (SELECT na.attachment_id AS attachment_id, CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 ELSE 2 END AS priority, n.updated_at AS updated_at FROM node_attachments na JOIN nodes n ON n.id = na.node_id LEFT JOIN node_review nr ON nr.node_id = n.id WHERE n.deleted_at IS NULL), ranked_refs AS (SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM attachment_refs GROUP BY attachment_id) SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key FROM attachment_blobs b LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = 'failed' THEN 2 ELSE 1 END ASC, COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",

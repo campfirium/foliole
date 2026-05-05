@@ -35,7 +35,7 @@ final class FolioleCompanionContentBlobBatchStore {
         List<CachedBlob> cachedBlobs = new ArrayList<>();
         long databaseStartedAt = System.nanoTime();
         Map<String, FolioleCompanionContentBlobBatchManifestStore.Manifest> manifests =
-            FolioleCompanionContentBlobBatchManifestStore.load(database, blobs);
+            FolioleCompanionContentBlobBatchManifestStore.load(context, database, blobs);
         for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
             addBatchBlob(blob, manifests, cachedBlobs, syncedHashes);
         }
