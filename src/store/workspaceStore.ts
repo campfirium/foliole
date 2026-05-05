@@ -9,7 +9,7 @@ import { loadListCollapsedPreference, loadRightSidebarCollapsedPreference } from
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
 import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { workspacePersistStorage } from './workspacePersistStorage';
-import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
+import { enforceWorkspaceRendererBoundary, trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
@@ -154,29 +154,8 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 
 const initialState = createInitialWorkspaceState();
 
-function shouldEnforceRendererBoundary(state: WorkspaceState | Partial<WorkspaceState>) {
-  return 'activeNodeId' in state;
-}
-
-function withRendererBoundary(
-  state: WorkspaceState | Partial<WorkspaceState>,
-  currentState: WorkspaceState
-): WorkspaceState | Partial<WorkspaceState> {
-  if (!shouldEnforceRendererBoundary(state)) {
-    return state;
-  }
-
-  const nextActiveNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
-  const nextNodesById = 'nodesById' in state ? state.nodesById ?? currentState.nodesById : currentState.nodesById;
-
-  return {
-    ...state,
-    nodesById: trimWorkspaceNodesForRendererBoundary(
-      nextActiveNodeId,
-      nextNodesById,
-      new Set(listPendingNodeSyncNodeIds())
-    )
-  };
+function withRendererBoundary(state: WorkspaceState | Partial<WorkspaceState>, currentState: WorkspaceState) {
+  return enforceWorkspaceRendererBoundary(state, currentState, new Set(listPendingNodeSyncNodeIds()));
 }
 
 const workspaceStore = create<WorkspaceState>()(

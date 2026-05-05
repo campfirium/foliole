@@ -1,6 +1,11 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent, hasNodeReveal } from '../features/nodes/model/nodeTypes';
 
+interface WorkspaceRendererBoundaryStateLike {
+  activeNodeId: string | null;
+  nodesById: Record<string, Node>;
+}
+
 export interface WorkspaceNodeDocument {
   content: string;
   hideTitleHeading: boolean;
@@ -57,4 +62,48 @@ export function trimWorkspaceNodesForRendererBoundary(
       toRendererBoundaryNode(node, nodeId === activeNodeId || keepNodeIds.has(nodeId))
     ])
   );
+}
+
+function listDocumentWorksetNodeIds(
+  currentNodesById: Record<string, Node>,
+  nextNodesById: Record<string, Node>
+) {
+  return Object.entries(nextNodesById)
+    .filter(([nodeId, nextNode]) => {
+      const currentNode = currentNodesById[nodeId];
+      if (!currentNode) {
+        return nextNode.content.length > 0 || nextNode.reveal !== null;
+      }
+      return (
+        currentNode.content !== nextNode.content ||
+        currentNode.reveal !== nextNode.reveal ||
+        currentNode.hideTitleHeading !== nextNode.hideTitleHeading
+      );
+    })
+    .map(([nodeId]) => nodeId);
+}
+
+export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoundaryStateLike>(
+  state: T | Partial<T>,
+  currentState: T,
+  keepNodeIds: ReadonlySet<string> = new Set()
+): T | Partial<T> {
+  if (!('activeNodeId' in state) && !('nodesById' in state)) {
+    return state;
+  }
+
+  const nextActiveNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
+  const nextNodesById = 'nodesById' in state ? state.nodesById ?? currentState.nodesById : currentState.nodesById;
+  const nextKeepNodeIds = new Set(keepNodeIds);
+
+  if (!('activeNodeId' in state)) {
+    for (const nodeId of listDocumentWorksetNodeIds(currentState.nodesById, nextNodesById)) {
+      nextKeepNodeIds.add(nodeId);
+    }
+  }
+
+  return {
+    ...state,
+    nodesById: trimWorkspaceNodesForRendererBoundary(nextActiveNodeId, nextNodesById, nextKeepNodeIds)
+  };
 }

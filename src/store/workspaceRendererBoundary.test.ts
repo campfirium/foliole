@@ -1,5 +1,6 @@
 import { beforeEach, expect, it } from 'vitest';
 
+import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 function resetWorkspaceStore() {
@@ -127,6 +128,70 @@ it('trims direct nodesById patches to the active node document', () => {
     hasReveal: true
   });
   expect(state.nodesById['node-2']).toMatchObject({
+    content: 'Second node body',
+    hasContent: true,
+    reveal: 'Second answer',
+    hasReveal: true
+  });
+});
+
+it('trims nodesById-only boundary patches against the current active node', () => {
+  const currentState = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z'));
+  const boundaryState = {
+    ...currentState,
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...currentState.nodesById,
+      ...createLoadedNodes()
+    }
+  };
+  const nextState = enforceWorkspaceRendererBoundary(
+    {
+      nodesById: createLoadedNodes()
+    },
+    boundaryState
+  ) as { nodesById: ReturnType<typeof createLoadedNodes> };
+
+  expect(nextState.nodesById['node-1']).toMatchObject({
+    content: '',
+    hasContent: true,
+    reveal: null,
+    hasReveal: true
+  });
+  expect(nextState.nodesById['node-2']).toMatchObject({
+    content: 'Second node body',
+    hasContent: true,
+    reveal: 'Second answer',
+    hasReveal: true
+  });
+});
+
+it('keeps pending nodes loaded for nodesById-only boundary patches', () => {
+  const currentState = {
+    ...createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')),
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...useWorkspaceStore.getState().nodesById,
+      ...createLoadedNodes()
+    }
+  };
+  const nextState = enforceWorkspaceRendererBoundary(
+    {
+      nodesById: createLoadedNodes()
+    },
+    currentState,
+    new Set(['node-1'])
+  ) as { nodesById: ReturnType<typeof createLoadedNodes> };
+
+  expect(nextState.nodesById['node-1']).toMatchObject({
+    content: 'First node body',
+    hasContent: true,
+    reveal: 'First answer',
+    hasReveal: true
+  });
+  expect(nextState.nodesById['node-2']).toMatchObject({
     content: 'Second node body',
     hasContent: true,
     reveal: 'Second answer',
