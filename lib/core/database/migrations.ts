@@ -14,7 +14,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 11;
+export const DATABASE_SCHEMA_VERSION = 12;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -171,6 +171,9 @@ const CREATE_TABLE_STATEMENTS_V10 = [
   'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)'
 ];
 
+const CREATE_TABLE_STATEMENTS_V12 = [
+  'CREATE TABLE IF NOT EXISTS mirror_articles (article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE, relative_path TEXT NOT NULL, mirrored_at TEXT NOT NULL)'
+];
 function migrateAttachmentIdsToHashes(sqlite: DatabaseMigrationTarget) {
   const attachmentColumns = sqlite
     .prepare('PRAGMA table_info(attachments)')
@@ -223,15 +226,11 @@ function migrateAttachmentIdsToHashes(sqlite: DatabaseMigrationTarget) {
   sqlite.exec('DROP TABLE node_attachments_legacy');
   sqlite.exec('DROP TABLE attachments_legacy');
 }
-
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
 }
-
-function setUserVersion(sqlite: DatabaseMigrationTarget, version: number) {
-  sqlite.pragma(`user_version = ${version}`);
-}
+function setUserVersion(sqlite: DatabaseMigrationTarget, version: number) { sqlite.pragma(`user_version = ${version}`); }
 
 const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V1, version: 1 },
@@ -244,9 +243,8 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V8, version: 8 },
   { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 },
   { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 },
-  { migrate: migrateAttachmentIdsToHashes, version: 11 }
+  { migrate: migrateAttachmentIdsToHashes, version: 11 }, { statements: CREATE_TABLE_STATEMENTS_V12, version: 12 }
 ];
-
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
   if (currentVersion >= step.version) {
     return;
@@ -264,7 +262,6 @@ function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: num
   }
   setUserVersion(sqlite, step.version);
 }
-
 export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
   const applyInTransaction = sqlite.transaction(() => {
     const currentVersion = readUserVersion(sqlite);
@@ -275,7 +272,6 @@ export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
       throw new Error(`database schema version ${currentVersion} is newer than supported`);
     }
   });
-
   applyInTransaction();
 }
 

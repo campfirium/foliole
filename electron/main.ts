@@ -29,6 +29,7 @@ import {
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
+import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import {
   collectRuntimeDiagnosticsSnapshot,
@@ -195,6 +196,11 @@ app.on('before-quit', () => {
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
   initializeDatabase();
+  try {
+    await backfillMissingMirrorOutput();
+  } catch (error) {
+    console.error('[mirror] startup backfill failed', error);
+  }
   registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();

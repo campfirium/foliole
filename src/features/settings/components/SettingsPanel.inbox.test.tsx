@@ -70,11 +70,13 @@ beforeEach(() => {
     updatedAt: '2026-03-30T00:20:00.000Z'
   });
   mockedRebuildRuntimeMirrorOutput.mockReset();
-  mockedRebuildRuntimeMirrorOutput.mockRejectedValue(
-    new Error(
-      'Mirror article rebuild is still being wired. Daily incremental mirror output remains the main path, and startup checks only backfill missing articles.'
-    )
-  );
+  mockedRebuildRuntimeMirrorOutput.mockResolvedValue({
+    queuedArticleCount: 2,
+    rebuiltArticleCount: 2,
+    failedArticleCount: 0,
+    pendingArticleCount: 0,
+    updatedAt: '2026-03-30T00:25:00.000Z'
+  });
   mockedUpdateRuntimeLibraryPathSetting.mockReset();
   mockedUpdateRuntimeLibraryPathSetting.mockImplementation(async (location, nextPath) => {
     if (location === 'library_home') {
@@ -174,8 +176,7 @@ it('shows separate mirror output rebuild feedback from mirror link rebuild', asy
   fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror output *' }));
 
   await waitFor(() => {
-    expect(screen.getByText(/could not rebuild mirror article output/i)).toBeInTheDocument();
-    expect(screen.getByText(/startup checks only backfill missing articles/i)).toBeInTheDocument();
+    expect(screen.getByText(/rebuilt 2 mirror article files from 2 queued articles/i)).toBeInTheDocument();
   });
   expect(mockedRebuildRuntimeMirrorOutput).toHaveBeenCalledTimes(1);
   expect(mockedRebuildRuntimeMirrorAttachmentLinks).not.toHaveBeenCalled();

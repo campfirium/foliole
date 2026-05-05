@@ -61,13 +61,20 @@ vi.mock('../mirror/rebuildAttachmentLinks.js', () => ({
   })
 }));
 vi.mock('../mirror/rebuildMirrorOutput.js', () => ({
-  rebuildMirrorOutput: vi
-    .fn()
-    .mockRejectedValue(
-      new Error(
-        'Mirror article rebuild is still being wired. Daily incremental mirror output remains the main path, and startup checks only backfill missing articles.'
-      )
-    )
+  rebuildMirrorOutput: vi.fn().mockResolvedValue({
+    queued_article_count: 2,
+    rebuilt_article_count: 2,
+    failed_article_count: 0,
+    pending_article_count: 0,
+    updated_at: '2026-03-30T00:25:00.000Z'
+  }),
+  syncIncrementalMirrorOutput: vi.fn().mockResolvedValue({
+    queued_article_count: 0,
+    rebuilt_article_count: 0,
+    failed_article_count: 0,
+    pending_article_count: 0,
+    updated_at: '2026-03-30T00:25:00.000Z'
+  })
 }));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({
@@ -133,39 +140,34 @@ vi.mock('./review.js', () => ({ reviewGrade: vi.fn(), reviewPreview: vi.fn() }))
 beforeEach(() => {
   vi.clearAllMocks();
 });
-
 async function expectLibraryPathCommands() {
   await expect(handleInvokeRequest({ command: 'load_library_path_settings' })).resolves.toMatchObject({
     library_home: '/library',
     inbox: '/library/Inbox',
     mirror: '/library/Mirror'
   });
-  await expect(handleInvokeRequest({ command: 'rebuild_mirror_output' })).rejects.toThrow(
-    'Mirror article rebuild is still being wired. Daily incremental mirror output remains the main path, and startup checks only backfill missing articles.'
-  );
+  await expect(handleInvokeRequest({ command: 'rebuild_mirror_output' })).resolves.toMatchObject({
+    queued_article_count: 2,
+    rebuilt_article_count: 2,
+    failed_article_count: 0,
+    pending_article_count: 0
+  });
   await expect(handleInvokeRequest({ command: 'rebuild_mirror_attachment_links' })).resolves.toMatchObject({
     scanned_document_count: 2,
     rewritten_document_count: 1,
     rewritten_link_count: 3
   });
-  await expect(
-    handleInvokeRequest({
-      command: 'update_library_path_setting',
-      args: {
-        location: 'mirror',
-        path: '/mirror-vault'
-      }
-    })
-  ).resolves.toMatchObject({
+  await expect(handleInvokeRequest({
+    command: 'update_library_path_setting',
+    args: { location: 'mirror', path: '/mirror-vault' }
+  })).resolves.toMatchObject({
     mirror: '/mirror-vault'
   });
 }
-
 async function expectAppAndImportSettingsCommands() {
   await expect(handleInvokeRequest({ command: 'load_app_settings_state' })).resolves.toEqual({
     'foliole-ui-font-preset': 'inter'
   });
-
   await expect(
     handleInvokeRequest({
       command: 'save_app_settings_state',
@@ -176,7 +178,6 @@ async function expectAppAndImportSettingsCommands() {
       }
     })
   ).resolves.toBeNull();
-
   await expect(handleInvokeRequest({ command: 'load_review_scheduler_settings' })).resolves.toMatchObject({
     desiredRetention: 0.9
   });
@@ -223,7 +224,6 @@ async function expectAppAndImportSettingsCommands() {
     updatedAt: '2026-03-25T00:05:00.000Z'
   });
 }
-
 async function expectReviewSchedulerCommands() {
   await expect(
     handleInvokeRequest({

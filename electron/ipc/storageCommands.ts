@@ -25,7 +25,7 @@ import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonito
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
-import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
+import { rebuildMirrorOutput, syncIncrementalMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
 import {
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
@@ -75,9 +75,10 @@ function handleSqliteMaintenanceCommand(command: string, args: Record<string, un
   return undefined;
 }
 
-function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
+async function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     upsertNodeSnapshot(parseNodeSnapshotArgs(args));
+    await syncIncrementalMirrorOutput();
     return null;
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {
@@ -86,14 +87,17 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   }
   if (command === NATIVE_COMMANDS.softDeleteNodes) {
     softDeleteNodes(parseSoftDeleteNodesArgs(args));
+    await syncIncrementalMirrorOutput();
     return null;
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
     restoreNodes(parseRestoreNodesArgs(args));
+    await syncIncrementalMirrorOutput();
     return null;
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
     deleteNodesPermanently(parseDeleteNodesPermanentlyArgs(args));
+    await syncIncrementalMirrorOutput();
     return null;
   }
   return undefined;
@@ -170,7 +174,7 @@ export async function handleStorageCommand(
   args: Record<string, unknown>,
   window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
 ): Promise<unknown> {
-  const nodeMutationResult = handleNodeMutationCommand(command, args);
+  const nodeMutationResult = await handleNodeMutationCommand(command, args);
   if (nodeMutationResult !== undefined) {
     return nodeMutationResult;
   }

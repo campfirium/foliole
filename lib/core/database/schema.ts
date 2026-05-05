@@ -76,6 +76,12 @@ export const nodeViewState = sqliteTable('node_view_state', {
   updatedAt: text('updated_at').notNull()
 });
 
+export const mirrorArticles = sqliteTable('mirror_articles', {
+  articleId: text('article_id').primaryKey(),
+  relativePath: text('relative_path').notNull(),
+  mirroredAt: text('mirrored_at').notNull()
+});
+
 export const attachments = sqliteTable('attachments', {
   id: text('id').primaryKey(),
   originalName: text('original_name'),
