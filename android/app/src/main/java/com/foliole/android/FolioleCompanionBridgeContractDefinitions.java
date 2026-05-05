@@ -13,8 +13,42 @@ final class FolioleCompanionBridgeContractDefinitions {
         return section(context, "resourcePlugin").getJSONObject("defaults").getInt(key);
     }
 
+    static String pairingCredentialRequestKey(Context context, String key) throws Exception {
+        return string(context, "pairingPlugin", "credentialRequestKeys", key);
+    }
+
+    static String pairingPreferenceKey(Context context, String key) throws Exception {
+        return string(context, "pairingPlugin", "preferenceKeys", key);
+    }
+
+    static String pairingSignatureHeaderKey(Context context, String key) throws Exception {
+        return pairingSignatureString(context, "headerKeys", key);
+    }
+
+    static String pairingSignatureRequestKey(Context context, String key) throws Exception {
+        return pairingSignatureString(context, "requestKeys", key);
+    }
+
+    static String pairingSignatureResponseKey(Context context, String key) throws Exception {
+        return pairingSignatureString(context, "responseKeys", key);
+    }
+
+    static String pairingStateKey(Context context, String key) throws Exception {
+        return string(context, "pairingPlugin", "stateKeys", key);
+    }
+
     static String resourceRequestKey(Context context, String key) throws Exception {
         return string(context, "resourcePlugin", "requestKeys", key);
+    }
+
+    private static String pairingSignatureString(Context context, String objectName, String key) throws Exception {
+        JSONObject object = section(context, "pairingPlugin").getJSONObject("signature").optJSONObject(objectName);
+        if (object == null || !object.has(key)) {
+            throw new IllegalStateException(
+                "Companion bridge contract asset is missing key: pairingPlugin.signature." + objectName + "." + key
+            );
+        }
+        return object.getString(key);
     }
 
     private static JSONObject section(Context context, String sectionName) throws Exception {

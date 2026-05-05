@@ -20,24 +20,18 @@ final class FolioleCompanionPairingStore {
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
     private static final String KEY_ALIAS = "foliole_companion_pairing_secret";
     private static final String PREFS_NAME = "foliole_companion_pairing";
-    private static final String DEVICE_ID_KEY = "device_id";
-    private static final String DEVICE_KIND_KEY = "device_kind";
-    private static final String DEVICE_NAME_KEY = "device_name";
-    private static final String DEVICE_SECRET_KEY = "device_secret";
-    private static final String IV_KEY = "device_secret_iv";
-    private static final String PAIRED_AT_KEY = "paired_at";
 
     private FolioleCompanionPairingStore() {}
 
-    static JSObject loadPairingState(Context context) {
+    static JSObject loadPairingState(Context context) throws Exception {
         SharedPreferences prefs = prefs(context);
         JSObject result = new JSObject();
-        String deviceId = prefs.getString(DEVICE_ID_KEY, null);
-        result.put("device_id", trimToNull(deviceId));
-        result.put("device_kind", trimToNull(prefs.getString(DEVICE_KIND_KEY, null)));
-        result.put("device_name", trimToNull(prefs.getString(DEVICE_NAME_KEY, null)));
-        result.put("is_paired", canReadPairingSecret(context, deviceId));
-        result.put("paired_at", trimToNull(prefs.getString(PAIRED_AT_KEY, null)));
+        String deviceId = prefs.getString(preferenceKey(context, "deviceId"), null);
+        result.put(stateKey(context, "deviceId"), trimToNull(deviceId));
+        result.put(stateKey(context, "deviceKind"), trimToNull(prefs.getString(preferenceKey(context, "deviceKind"), null)));
+        result.put(stateKey(context, "deviceName"), trimToNull(prefs.getString(preferenceKey(context, "deviceName"), null)));
+        result.put(stateKey(context, "isPaired"), canReadPairingSecret(context, deviceId));
+        result.put(stateKey(context, "pairedAt"), trimToNull(prefs.getString(preferenceKey(context, "pairedAt"), null)));
         return result;
     }
 
@@ -57,12 +51,12 @@ final class FolioleCompanionPairingStore {
         }
         byte[] encrypted = cipher.doFinal(deviceSecret.getBytes(StandardCharsets.UTF_8));
         boolean saved = prefs(context).edit()
-            .putString(DEVICE_ID_KEY, deviceId.trim())
-            .putString(DEVICE_KIND_KEY, deviceKind.trim())
-            .putString(DEVICE_NAME_KEY, deviceName.trim())
-            .putString(DEVICE_SECRET_KEY, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            .putString(IV_KEY, Base64.encodeToString(iv, Base64.NO_WRAP))
-            .putString(PAIRED_AT_KEY, pairedAt.trim())
+            .putString(preferenceKey(context, "deviceId"), deviceId.trim())
+            .putString(preferenceKey(context, "deviceKind"), deviceKind.trim())
+            .putString(preferenceKey(context, "deviceName"), deviceName.trim())
+            .putString(preferenceKey(context, "deviceSecret"), Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putString(preferenceKey(context, "deviceSecretIv"), Base64.encodeToString(iv, Base64.NO_WRAP))
+            .putString(preferenceKey(context, "pairedAt"), pairedAt.trim())
             .commit();
         if (!saved) {
             throw new IllegalStateException("Failed to persist companion pairing credentials.");
@@ -78,16 +72,16 @@ final class FolioleCompanionPairingStore {
         String nonce,
         String bodyHash
     ) throws Exception {
-        String deviceId = requireMeta(context, DEVICE_ID_KEY);
+        String deviceId = requireMeta(context, preferenceKey(context, "deviceId"));
         String secret = decryptSecret(context);
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
         JSObject headers = new JSObject();
-        headers.put("X-Device-Id", deviceId);
-        headers.put("X-Timestamp", timestamp);
-        headers.put("X-Nonce", nonce);
-        headers.put("X-Signature", signCanonicalRequest(secret, canonical));
+        headers.put(signatureHeaderKey(context, "deviceId"), deviceId);
+        headers.put(signatureHeaderKey(context, "timestamp"), timestamp);
+        headers.put(signatureHeaderKey(context, "nonce"), nonce);
+        headers.put(signatureHeaderKey(context, "signature"), signCanonicalRequest(secret, canonical));
         JSObject result = new JSObject();
-        result.put("headers", headers);
+        result.put(signatureResponseKey(context, "headers"), headers);
         return result;
     }
 
@@ -96,7 +90,7 @@ final class FolioleCompanionPairingStore {
     }
 
     private static boolean canReadPairingSecret(Context context, String deviceId) {
-        if (trimToNull(deviceId) == null || trimToNull(prefs(context).getString(DEVICE_SECRET_KEY, null)) == null) {
+        if (trimToNull(deviceId) == null || trimToNull(readPreference(context, "deviceSecret")) == null) {
             return false;
         }
         try {
@@ -111,12 +105,12 @@ final class FolioleCompanionPairingStore {
 
     static void clearPairingCredentials(Context context) {
         prefs(context).edit()
-            .remove(DEVICE_ID_KEY)
-            .remove(DEVICE_KIND_KEY)
-            .remove(DEVICE_NAME_KEY)
-            .remove(DEVICE_SECRET_KEY)
-            .remove(IV_KEY)
-            .remove(PAIRED_AT_KEY)
+            .remove(preferenceKey(context, "deviceId"))
+            .remove(preferenceKey(context, "deviceKind"))
+            .remove(preferenceKey(context, "deviceName"))
+            .remove(preferenceKey(context, "deviceSecret"))
+            .remove(preferenceKey(context, "deviceSecretIv"))
+            .remove(preferenceKey(context, "pairedAt"))
             .apply();
     }
 
@@ -139,8 +133,8 @@ final class FolioleCompanionPairingStore {
     }
 
     private static String decryptSecret(Context context) throws Exception {
-        String encryptedSecret = requireMeta(context, DEVICE_SECRET_KEY);
-        String iv = requireMeta(context, IV_KEY);
+        String encryptedSecret = requireMeta(context, preferenceKey(context, "deviceSecret"));
+        String iv = requireMeta(context, preferenceKey(context, "deviceSecretIv"));
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(
             Cipher.DECRYPT_MODE,
@@ -159,6 +153,30 @@ final class FolioleCompanionPairingStore {
             throw new IllegalStateException("Companion is not paired.");
         }
         return value;
+    }
+
+    private static String readPreference(Context context, String key) {
+        return prefs(context).getString(preferenceKey(context, key), null);
+    }
+
+    private static String preferenceKey(Context context, String key) {
+        try {
+            return FolioleCompanionBridgeContractDefinitions.pairingPreferenceKey(context, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion bridge contract asset is missing pairing preference key.", exception);
+        }
+    }
+
+    private static String signatureHeaderKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.pairingSignatureHeaderKey(context, key);
+    }
+
+    private static String signatureResponseKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.pairingSignatureResponseKey(context, key);
+    }
+
+    private static String stateKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.pairingStateKey(context, key);
     }
 
     private static String trimToNull(String value) {

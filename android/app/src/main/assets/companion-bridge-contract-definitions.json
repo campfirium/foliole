@@ -1,4 +1,46 @@
 {
+  "pairingPlugin": {
+    "credentialRequestKeys": {
+      "deviceId": "device_id",
+      "deviceKind": "device_kind",
+      "deviceName": "device_name",
+      "deviceSecret": "device_secret",
+      "pairedAt": "paired_at"
+    },
+    "preferenceKeys": {
+      "deviceId": "device_id",
+      "deviceKind": "device_kind",
+      "deviceName": "device_name",
+      "deviceSecret": "device_secret",
+      "deviceSecretIv": "device_secret_iv",
+      "pairedAt": "paired_at"
+    },
+    "signature": {
+      "headerKeys": {
+        "deviceId": "X-Device-Id",
+        "nonce": "X-Nonce",
+        "signature": "X-Signature",
+        "timestamp": "X-Timestamp"
+      },
+      "requestKeys": {
+        "bodyHash": "body_hash",
+        "method": "method",
+        "nonce": "nonce",
+        "pathWithQuery": "path_with_query",
+        "timestamp": "timestamp"
+      },
+      "responseKeys": {
+        "headers": "headers"
+      }
+    },
+    "stateKeys": {
+      "deviceId": "device_id",
+      "deviceKind": "device_kind",
+      "deviceName": "device_name",
+      "isPaired": "is_paired",
+      "pairedAt": "paired_at"
+    }
+  },
   "resourcePlugin": {
     "defaults": {
       "externalDocumentSearchLimit": 20,

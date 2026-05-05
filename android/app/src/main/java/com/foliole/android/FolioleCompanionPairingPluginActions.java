@@ -17,17 +17,22 @@ final class FolioleCompanionPairingPluginActions {
 
     static void savePairingCredentials(Context context, PluginCall call) {
         try {
-            String deviceId = call.getString("device_id");
-            String deviceKind = call.getString("device_kind");
-            String deviceName = call.getString("device_name");
-            String deviceSecret = call.getString("device_secret");
-            String pairedAt = call.getString("paired_at");
+            String deviceIdKey = credentialRequestKey(context, "deviceId");
+            String deviceKindKey = credentialRequestKey(context, "deviceKind");
+            String deviceNameKey = credentialRequestKey(context, "deviceName");
+            String deviceSecretKey = credentialRequestKey(context, "deviceSecret");
+            String pairedAtKey = credentialRequestKey(context, "pairedAt");
+            String deviceId = call.getString(deviceIdKey);
+            String deviceKind = call.getString(deviceKindKey);
+            String deviceName = call.getString(deviceNameKey);
+            String deviceSecret = call.getString(deviceSecretKey);
+            String pairedAt = call.getString(pairedAtKey);
             if (
-                rejectIfBlank(call, "device_id", deviceId) ||
-                rejectIfBlank(call, "device_kind", deviceKind) ||
-                rejectIfBlank(call, "device_name", deviceName) ||
-                rejectIfBlank(call, "device_secret", deviceSecret) ||
-                rejectIfBlank(call, "paired_at", pairedAt)
+                rejectIfBlank(call, deviceIdKey, deviceId) ||
+                rejectIfBlank(call, deviceKindKey, deviceKind) ||
+                rejectIfBlank(call, deviceNameKey, deviceName) ||
+                rejectIfBlank(call, deviceSecretKey, deviceSecret) ||
+                rejectIfBlank(call, pairedAtKey, pairedAt)
             ) {
                 return;
             }
@@ -46,17 +51,22 @@ final class FolioleCompanionPairingPluginActions {
 
     static void signCompanionSyncRequest(Context context, PluginCall call) {
         try {
-            String method = call.getString("method");
-            String pathWithQuery = call.getString("path_with_query");
-            String timestamp = call.getString("timestamp");
-            String nonce = call.getString("nonce");
-            String bodyHash = call.getString("body_hash");
+            String methodKey = signatureRequestKey(context, "method");
+            String pathWithQueryKey = signatureRequestKey(context, "pathWithQuery");
+            String timestampKey = signatureRequestKey(context, "timestamp");
+            String nonceKey = signatureRequestKey(context, "nonce");
+            String bodyHashKey = signatureRequestKey(context, "bodyHash");
+            String method = call.getString(methodKey);
+            String pathWithQuery = call.getString(pathWithQueryKey);
+            String timestamp = call.getString(timestampKey);
+            String nonce = call.getString(nonceKey);
+            String bodyHash = call.getString(bodyHashKey);
             if (
-                rejectIfBlank(call, "method", method) ||
-                rejectIfBlank(call, "path_with_query", pathWithQuery) ||
-                rejectIfBlank(call, "timestamp", timestamp) ||
-                rejectIfBlank(call, "nonce", nonce) ||
-                rejectIfBlank(call, "body_hash", bodyHash)
+                rejectIfBlank(call, methodKey, method) ||
+                rejectIfBlank(call, pathWithQueryKey, pathWithQuery) ||
+                rejectIfBlank(call, timestampKey, timestamp) ||
+                rejectIfBlank(call, nonceKey, nonce) ||
+                rejectIfBlank(call, bodyHashKey, bodyHash)
             ) {
                 return;
             }
@@ -79,5 +89,13 @@ final class FolioleCompanionPairingPluginActions {
             return true;
         }
         return false;
+    }
+
+    private static String credentialRequestKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.pairingCredentialRequestKey(context, key);
+    }
+
+    private static String signatureRequestKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.pairingSignatureRequestKey(context, key);
     }
 }
