@@ -28,7 +28,7 @@ final class FolioleCompanionSyncObjectStore {
             empty.put("objects", new JSArray());
             return empty;
         }
-        return FolioleCompanionNamedQueryStore.loadSyncRowsWithPayloads(
+        return FolioleCompanionSyncPayloadQueryStore.loadRowsWithPayloads(
             context,
             database,
             "syncObjects",
@@ -39,7 +39,7 @@ final class FolioleCompanionSyncObjectStore {
     }
 
     static JSObject loadSyncStateChanges(Context context, SQLiteDatabase database, int cursor, int limit) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadSyncRowsWithPayloads(
+        return FolioleCompanionSyncPayloadQueryStore.loadRowsWithPayloads(
             context,
             database,
             "syncStateChanges",

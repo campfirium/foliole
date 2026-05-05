@@ -10,7 +10,6 @@ import com.getcapacitor.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.Iterator;
 import java.util.Map;
 
 final class FolioleCompanionNamedQueryStore {
@@ -57,62 +56,6 @@ final class FolioleCompanionNamedQueryStore {
             }
             return cursor.getString(0);
         }
-    }
-
-    static String syncPayloadQueryName(Context context, String objectType, String objectIdKey) throws Exception {
-        JSONObject queries = loadQueries(context);
-        Iterator<String> names = queries.keys();
-        while (names.hasNext()) {
-            String queryName = names.next();
-            if (matchesSyncPayload(queries.getJSONObject(queryName), objectType, objectIdKey)) {
-                return queryName;
-            }
-        }
-        return null;
-    }
-
-    static String[] syncPayloadQueryArgs(Context context, String queryName, String objectId, String objectIdKey, String deviceId) throws Exception {
-        JSONObject payload = loadQuery(context, queryName).getJSONObject("syncPayload");
-        String argMode = payload.optString("argMode", "object_id");
-        if (argMode.equals("none")) {
-            return null;
-        }
-        if (argMode.equals("view_state_node")) {
-            return new String[] { objectIdKey.substring(5), deviceId };
-        }
-        return new String[] { objectId };
-    }
-
-    static String loadSyncPayload(Context context, SQLiteDatabase database, String objectType, String objectId) throws Exception {
-        String objectIdKey = objectIdKey(objectId);
-        String queryName = syncPayloadQueryName(context, objectType, objectIdKey);
-        if (queryName == null) {
-            return "{}";
-        }
-        String payload = loadString(context, database, queryName, syncPayloadQueryArgs(context, queryName, objectId, objectIdKey, objectIdDeviceId(objectId)));
-        return payload == null ? "{}" : payload;
-    }
-
-    static JSObject loadSyncRowsWithPayloads(
-        Context context,
-        SQLiteDatabase database,
-        String queryName,
-        String resultKey,
-        Map<String, String> replacements,
-        String[] args
-    ) throws Exception {
-        JSObject result = loadArray(context, database, queryName, replacements, args);
-        JSONArray rows = result.getJSONArray(resultKey);
-        for (int index = 0; index < rows.length(); index += 1) {
-            JSONObject row = rows.getJSONObject(index);
-            row.put(
-                "payload_json",
-                row.isNull("deleted_at")
-                    ? loadSyncPayload(context, database, row.getString("object_type"), row.getString("object_id"))
-                    : JSONObject.NULL
-            );
-        }
-        return result;
     }
 
     static JSObject loadLongMetrics(Context context, SQLiteDatabase database, String queryName) throws Exception {
@@ -185,29 +128,6 @@ final class FolioleCompanionNamedQueryStore {
             throw new IllegalStateException("Companion query definitions asset is missing queries.");
         }
         return queries;
-    }
-
-    private static boolean matchesSyncPayload(JSONObject query, String objectType, String objectIdKey) {
-        JSONObject payload = query.optJSONObject("syncPayload");
-        if (payload == null || !objectType.equals(payload.optString("objectType"))) {
-            return false;
-        }
-        String exactKey = payload.optString("objectIdKey", "");
-        if (!exactKey.isEmpty()) {
-            return exactKey.equals(objectIdKey);
-        }
-        String prefix = payload.optString("objectIdPrefix", "");
-        return prefix.isEmpty() || objectIdKey.startsWith(prefix);
-    }
-
-    private static String objectIdDeviceId(String objectId) {
-        String[] parts = objectId.split(":", 5);
-        return parts.length >= 4 ? parts[3] : "";
-    }
-
-    private static String objectIdKey(String objectId) {
-        String[] parts = objectId.split(":", 5);
-        return parts.length >= 5 ? parts[4] : objectId;
     }
 
     private static JSObject toRecord(Cursor cursor, JSONArray columns) throws Exception {

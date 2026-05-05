@@ -5,6 +5,9 @@ import { expect, it } from 'vitest';
 
 const ROOT = process.cwd();
 const ANDROID_MAIN_JAVA = 'android/app/src/main/java/com/foliole/android';
+const SYNC_PAYLOAD_QUERY_STORE = `${ANDROID_MAIN_JAVA}/FolioleCompanionSyncPayloadQueryStore.java`;
+const SYNC_PAYLOAD_QUERY_NAME_PATTERN =
+  /\bsyncPayload(?:Attachment|ExternalDocument|ExternalFolder|ImportSource|NodeReading|NodeReview|PdfPageText|Setting|ViewActiveNode|ViewNodeState)\b/;
 const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncPackApply\b/,
   /\bclass\s+FolioleCompanionSyncObjectApply\b/,
@@ -21,7 +24,6 @@ const FORBIDDEN_MAIN_PATTERNS = [
   /\bapplyReviewLog\s*\(/,
   /\bpublic\s+void\s+applySyncObjects\s*\(/,
   /\bpublic\s+void\s+applySyncReviewLog\s*\(/,
-  /\bsyncPayload(?:Attachment|ExternalDocument|ExternalFolder|ImportSource|NodeReading|NodeReview|PdfPageText|Setting|ViewActiveNode|ViewNodeState)\b/,
   /\bobjectType\.equals\("view_state"\)/,
   /objectTypeFilter/
 ];
@@ -39,7 +41,8 @@ function listJavaFiles(dir: string): string[] {
 it('keeps desktop sync-pack apply out of Android production Java', () => {
   const violations = listJavaFiles(ANDROID_MAIN_JAVA).filter((path) => {
     const source = readFileSync(join(ROOT, path), 'utf8');
-    return FORBIDDEN_MAIN_PATTERNS.some((pattern) => pattern.test(source));
+    return FORBIDDEN_MAIN_PATTERNS.some((pattern) => pattern.test(source)) ||
+      (path !== SYNC_PAYLOAD_QUERY_STORE && SYNC_PAYLOAD_QUERY_NAME_PATTERN.test(source));
   });
 
   expect(violations).toEqual([]);

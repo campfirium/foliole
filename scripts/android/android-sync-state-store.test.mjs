@@ -31,6 +31,18 @@ const SYNC_STATE_WRITE_STORE = path.join(
   'android',
   'FolioleCompanionSyncStateWriteStore.java'
 );
+const SYNC_PAYLOAD_QUERY_STORE = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncPayloadQueryStore.java'
+);
 const VIEW_STATE_SYNC_STORE = path.join(
   REPO_ROOT,
   'android',
@@ -81,10 +93,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
 
   it('loads sync object indexes and payloads through generated queries', async () => {
     const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const namedQueryStore = await readFile(
-      path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionNamedQueryStore.java'),
-      'utf8'
-    );
+    const syncPayloadQueryStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
     const queryDefinitions = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
     const loadBody = source.slice(
       source.indexOf('static JSObject loadSyncObjects'),
@@ -92,14 +101,14 @@ describe('FolioleCompanionSyncObjectStore', () => {
     );
 
     expect(source).toContain('FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex")');
-    expect(source).toContain('FolioleCompanionNamedQueryStore.loadSyncRowsWithPayloads');
+    expect(source).toContain('FolioleCompanionSyncPayloadQueryStore.loadRowsWithPayloads');
     expect(loadBody).toContain('"syncObjects"');
     expect(loadBody).toContain('syncObjectQueryReplacements');
     expect(source).not.toContain('objectTypeFilter');
     expect(source).not.toContain('private static void appendPayloads');
     expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');
-    expect(namedQueryStore).toContain('static JSObject loadSyncRowsWithPayloads');
-    expect(namedQueryStore).toContain('loadSyncPayload(context, database');
+    expect(syncPayloadQueryStore).toContain('static JSObject loadRowsWithPayloads');
+    expect(syncPayloadQueryStore).toContain('loadPayload(context, database');
     expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
       argMode: 'object_id',
       objectType: 'attachment'
@@ -114,9 +123,9 @@ describe('FolioleCompanionSyncObjectStore', () => {
       objectIdPrefix: 'node:',
       objectType: 'view_state'
     });
-    expect(namedQueryStore).toContain('static String loadSyncPayload');
-    expect(namedQueryStore).toContain('syncPayloadQueryName');
-    expect(namedQueryStore).toContain('syncPayloadQueryArgs');
+    expect(syncPayloadQueryStore).toContain('private static String loadPayload');
+    expect(syncPayloadQueryStore).toContain('private static String queryName');
+    expect(syncPayloadQueryStore).toContain('private static String[] queryArgs');
     await expect(readFile(
       path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionSyncObjectPayloadReader.java'),
       'utf8'
@@ -176,6 +185,16 @@ describe('FolioleCompanionSyncObjectStore', () => {
 
     expect(writeStateBody).toContain('FolioleCompanionNamedMutationStore.upsertSyncStateRow');
     expect(writeStateBody).toContain(', 1)');
+  });
+
+  it('loads Android view-state object keys from generated payload metadata', async () => {
+    const source = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
+
+    expect(source).toContain('FolioleCompanionSyncPayloadQueryStore.viewActiveNodeKey(context)');
+    expect(source).toContain('FolioleCompanionSyncPayloadQueryStore.viewNodeKeyPrefix(context)');
+    expect(source).not.toContain('key.equals("active_node")');
+    expect(source).not.toContain('key.startsWith("node:")');
+    expect(source).not.toContain('key.substring(5)');
   });
 
   it('exports Android node version ancestors for desktop fast-forward checks', async () => {

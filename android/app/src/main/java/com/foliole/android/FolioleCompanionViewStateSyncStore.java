@@ -23,8 +23,9 @@ final class FolioleCompanionViewStateSyncStore {
         JSONObject payload = new JSONObject();
         payload.put("active_node_id", nodeId == null ? JSONObject.NULL : nodeId);
         String now = Instant.now().toString();
-        String objectId = objectId(deviceId, "active_node");
-        String contentHash = contentHash(deviceId, "active_node", payload);
+        String key = activeNodeKey(context);
+        String objectId = objectId(deviceId, key);
+        String contentHash = contentHash(deviceId, key, payload);
         database.beginTransaction();
         try {
             upsertActiveNode(context, database, nodeId, now);
@@ -45,8 +46,9 @@ final class FolioleCompanionViewStateSyncStore {
         payload.put("selection_to", JSONObject.NULL);
         payload.put("source", "user-scroll");
         String now = Instant.now().toString();
-        String objectId = objectId(deviceId, "node:" + nodeId);
-        String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
+        String key = nodeKeyPrefix(context) + nodeId;
+        String objectId = objectId(deviceId, key);
+        String contentHash = contentHash(deviceId, key, payload);
         database.beginTransaction();
         try {
             upsertNodeViewState(context, database, nodeId, deviceId, payload.optInt("scroll_top", 0), "user-scroll", now);
@@ -61,21 +63,23 @@ final class FolioleCompanionViewStateSyncStore {
     static void applyPayload(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         String key = objectIdKey(objectId);
         String deviceId = objectIdDeviceId(objectId);
+        String activeKey = activeNodeKey(context);
+        String nodePrefix = nodeKeyPrefix(context);
         if (!record.isNull("deleted_at")) {
-            if (key.equals("active_node")) {
+            if (key.equals(activeKey)) {
                 FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeDelete", new Object[] {});
             }
-            if (key.startsWith("node:")) {
-                FolioleCompanionNamedMutationStore.execute(context, database, "syncViewNodeStateDelete", new Object[] { key.substring(5), deviceId });
+            if (key.startsWith(nodePrefix)) {
+                FolioleCompanionNamedMutationStore.execute(context, database, "syncViewNodeStateDelete", new Object[] { key.substring(nodePrefix.length()), deviceId });
             }
             return;
         }
         JSONObject payload = payload(record);
-        if (key.equals("active_node")) {
+        if (key.equals(activeKey)) {
             upsertActiveNode(context, database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
-        } else if (key.startsWith("node:")) {
+        } else if (key.startsWith(nodePrefix)) {
             String source = payload.has("source") ? "sync-apply" : "user-scroll";
-            upsertNodeViewState(context, database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
+            upsertNodeViewState(context, database, key.substring(nodePrefix.length()), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
         }
     }
 
@@ -105,6 +109,14 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static String objectId(String deviceId, String key) {
         return SCOPE + ":" + PLATFORM + ":" + FORM_FACTOR + ":" + deviceId + ":" + key;
+    }
+
+    private static String activeNodeKey(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewActiveNodeKey(context);
+    }
+
+    private static String nodeKeyPrefix(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.viewNodeKeyPrefix(context);
     }
 
     private static String objectIdKey(String objectId) {
