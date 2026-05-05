@@ -180,6 +180,57 @@ it('migrates node view state to device-scoped rows', () => {
     .get()).toEqual({ device_id: 'desktop-test', node_id: 'node-1', scroll_top: 42 });
 });
 
+it('migrates reading position to device-scoped rows', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec(`
+    CREATE TABLE settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO settings (key, value, updated_at)
+    VALUES ('desktop_device_id', '"desktop-test"', '2026-04-27T00:00:00.000Z');
+
+    CREATE TABLE nodes (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO nodes (id, title, content, updated_at)
+    VALUES ('node-reading', 'Reading', 'body', '2026-04-27T00:00:00.000Z');
+
+    CREATE TABLE node_reading (
+      node_id TEXT PRIMARY KEY REFERENCES nodes(id),
+      interval_duration_ms INTEGER NOT NULL DEFAULT 0,
+      interval_growth_factor REAL NOT NULL DEFAULT 1,
+      last_handled_at TEXT NOT NULL,
+      next_at TEXT NOT NULL,
+      priority REAL NOT NULL DEFAULT 0,
+      reading_position INTEGER NOT NULL DEFAULT 0,
+      repetition_count INTEGER NOT NULL DEFAULT 0,
+      state TEXT NOT NULL DEFAULT 'active'
+    );
+    INSERT INTO node_reading (
+      node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
+      next_at, priority, reading_position, repetition_count, state
+    ) VALUES (
+      'node-reading', 100, 1.5, '2026-04-27T01:00:00.000Z',
+      '2026-04-28T01:00:00.000Z', 2, 77, 3, 'active'
+    );
+  `);
+  connection.sqlite.pragma('user_version = 31');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite
+    .prepare('SELECT node_id, device_id, reading_position FROM node_reading_device_state')
+    .get()).toEqual({ device_id: 'desktop-test', node_id: 'node-reading', reading_position: 77 });
+  const readingColumns = connection.sqlite.prepare('PRAGMA table_info(node_reading)').all() as Array<{ name: string }>;
+  expect(readingColumns.map((column) => column.name)).not.toContain('reading_position');
+});
+
 it('rejects legacy development databases and requires a fresh schema reset', () => {
   const connection = openDatabaseConnection();
 

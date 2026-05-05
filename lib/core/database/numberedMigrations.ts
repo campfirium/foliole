@@ -218,6 +218,7 @@ function migrateNodeReadingDeviceState(sqlite: DatabaseMigrationTarget) {
     `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at)
      SELECT node_id, ?, reading_position, COALESCE(last_handled_at, next_at)
      FROM node_reading
+     WHERE true
      ON CONFLICT(node_id, device_id) DO UPDATE SET
        reading_position = excluded.reading_position,
        updated_at = excluded.updated_at`
