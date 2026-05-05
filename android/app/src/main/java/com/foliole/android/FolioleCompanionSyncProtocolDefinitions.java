@@ -33,6 +33,18 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return stringSet(context, "resourceStatuses", key);
     }
 
+    static JSONObject syncDiagnosticVerdict(Context context, String key) throws Exception {
+        JSONObject verdicts = section(context, "syncDiagnostics").optJSONObject("verdicts");
+        if (verdicts == null) {
+            throw new IllegalStateException("Companion sync protocol definitions asset is missing sync diagnostic verdicts.");
+        }
+        JSONObject verdict = verdicts.optJSONObject(key);
+        if (verdict == null) {
+            throw new IllegalStateException("Companion sync protocol definitions asset is missing sync diagnostic verdict: " + key);
+        }
+        return verdict;
+    }
+
     static Set<String> stringSet(Context context, String sectionName, String key) throws Exception {
         return stringSet(section(context, sectionName), key);
     }

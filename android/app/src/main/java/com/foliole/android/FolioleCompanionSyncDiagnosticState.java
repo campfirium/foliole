@@ -13,7 +13,11 @@ final class FolioleCompanionSyncDiagnosticState {
 
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
         JSObject state = FolioleCompanionNamedQueryStore.loadLongMetrics(context, database, "diagnosticSyncStateMetrics");
-        int cursor = loadNumberMetaValue(context, database, "sync_pack_cursor");
+        int cursor = loadNumberMetaValue(
+            context,
+            database,
+            FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaCursors", "pack")
+        );
         long maxStateSeq = state.optLong("max_state_seq", 0);
         state.remove("max_state_seq");
         state.put("pack_cursor", cursor <= 0 ? JSONObject.NULL : cursor);

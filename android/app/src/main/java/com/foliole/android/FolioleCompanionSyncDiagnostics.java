@@ -21,7 +21,7 @@ final class FolioleCompanionSyncDiagnostics {
         JSObject connection = loadConnection(context, database);
         JSObject result = new JSObject();
         result.put("collected_at", collectedAt);
-        result.put("host", "android");
+        result.put("host", FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncDiagnostics", "host"));
         result.put("identity", loadIdentity(context, databasePath));
         result.put("connection", connection);
         result.put("storage", storage);
@@ -46,7 +46,11 @@ final class FolioleCompanionSyncDiagnostics {
 
     private static JSObject loadConnection(Context context, SQLiteDatabase database) throws Exception {
         JSObject pairing = FolioleCompanionPairingStore.loadPairingState(context);
-        String endpointUrl = FolioleCompanionSyncDiagnosticMeta.load(context, database, "workspace_sync_endpoint_url");
+        String endpointUrl = FolioleCompanionSyncDiagnosticMeta.load(
+            context,
+            database,
+            FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "endpointUrl")
+        );
         JSObject connection = new JSObject();
         connection.put("endpoint_url", endpointUrl == null ? JSONObject.NULL : endpointUrl);
         connection.put("last_error", JSONObject.NULL);
@@ -58,7 +62,11 @@ final class FolioleCompanionSyncDiagnostics {
     }
 
     private static JSArray loadEvents(Context context, SQLiteDatabase database) throws Exception {
-        String stored = FolioleCompanionSyncDiagnosticMeta.load(context, database, "workspace_sync_events");
+        String stored = FolioleCompanionSyncDiagnosticMeta.load(
+            context,
+            database,
+            FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaKeys", "events")
+        );
         if (stored == null) {
             return new JSArray();
         }

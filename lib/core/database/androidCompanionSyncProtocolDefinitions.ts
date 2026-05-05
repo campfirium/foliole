@@ -19,9 +19,72 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
   resourceStatuses: ANDROID_COMPANION_RESOURCE_STATUSES,
   syncEvents: {
     completedStatus: 'completed',
+    fullSyncCompletedMessage: 'Sync fully completed.',
     fallbackStatus: 'failed',
     skippedStatus: 'skipped',
     statuses: ['started', 'completed', 'failed', 'skipped']
+  },
+  syncDiagnostics: {
+    host: 'android',
+    verdicts: {
+      endpointMissing: {
+        code: 'android_endpoint_missing',
+        message: 'This device has no desktop sync address.',
+        severity: 'warning'
+      },
+      hasLocalDirtyState: {
+        code: 'android_has_local_dirty_state',
+        message: 'This device has changes waiting to send.',
+        severity: 'info'
+      },
+      hasPendingPushAck: {
+        code: 'android_has_pending_push_ack',
+        message: 'Desktop accepted changes that are waiting for pull confirmation.',
+        severity: 'info'
+      },
+      hasPushIssues: {
+        code: 'android_has_push_issues',
+        message: 'Some device changes need review before they can be sent.',
+        severity: 'warning'
+      },
+      missingAttachmentResources: {
+        code: 'android_missing_attachment_resources',
+        message: 'Some attachment files are still downloading.',
+        severity: 'info'
+      },
+      missingContentBlobs: {
+        code: 'android_missing_content_blobs',
+        message: 'Some topic bodies are still downloading.',
+        severity: 'info'
+      },
+      noNodesAfterCompletedSync: {
+        code: 'android_no_nodes_after_completed_sync',
+        message: 'Completed sync left no topics on this device.',
+        severity: 'error'
+      },
+      packCursorMissing: {
+        code: 'android_pack_cursor_missing',
+        message: 'This device has not applied a sync pack yet.',
+        severity: 'info'
+      },
+      ready: {
+        code: 'android_ready',
+        message: 'Android sync state is readable.',
+        severity: 'ok'
+      },
+      recentSyncFailed: {
+        code: 'android_recent_sync_failed',
+        message: 'Recent sync activity failed.',
+        severity: 'error'
+      }
+    }
+  },
+  syncMetaKeys: {
+    endpointUrl: 'workspace_sync_endpoint_url',
+    events: 'workspace_sync_events',
+    lastSyncedAt: 'workspace_sync_last_synced_at',
+    onboardingStatus: 'workspace_sync_onboarding_status',
+    rememberedTargets: 'workspace_sync_remembered_targets'
   },
   syncMetaCursors: {
     nodeVersion: 'sync_node_version_cursor',
