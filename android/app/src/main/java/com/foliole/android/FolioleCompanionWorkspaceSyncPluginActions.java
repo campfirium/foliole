@@ -17,26 +17,34 @@ final class FolioleCompanionWorkspaceSyncPluginActions {
     }
 
     static JSObject saveWorkspaceSyncEndpoint(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveWorkspaceSyncEndpoint(call.getString("endpoint_url"));
+        return databaseHelper.saveWorkspaceSyncEndpoint(
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey(databaseHelper.hostContext()))
+        );
     }
 
     static JSObject recordWorkspaceSyncEvent(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        Context context = databaseHelper.hostContext();
         return databaseHelper.recordWorkspaceSyncEvent(
-            call.getString("endpoint_url"),
-            call.getString("status"),
-            call.getString("message"),
-            call.getString("occurred_at")
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey(context)),
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncStatusRequestKey(context)),
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncMessageRequestKey(context)),
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncOccurredAtRequestKey(context))
         );
     }
 
     static JSObject saveSyncOnboardingStatus(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.saveSyncOnboardingStatus(call.getString("status"));
+        return databaseHelper.saveSyncOnboardingStatus(
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncStatusRequestKey(databaseHelper.hostContext()))
+        );
     }
 
     static JSObject removeWorkspaceSyncRememberedTarget(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        String endpointUrl = call.getString("endpoint_url");
+        String endpointUrlKey = FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey(
+            databaseHelper.hostContext()
+        );
+        String endpointUrl = call.getString(endpointUrlKey);
         if (endpointUrl == null || endpointUrl.trim().isEmpty()) {
-            throw new IllegalArgumentException("endpoint_url is required.");
+            throw new IllegalArgumentException(endpointUrlKey + " is required.");
         }
         return databaseHelper.removeWorkspaceSyncRememberedTarget(endpointUrl);
     }

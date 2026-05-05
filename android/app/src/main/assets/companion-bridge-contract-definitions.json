@@ -36,6 +36,14 @@
         "deleted": "deleted",
         "packPath": "pack_path"
       }
+    },
+    "workspaceSync": {
+      "requestKeys": {
+        "endpointUrl": "endpoint_url",
+        "message": "message",
+        "occurredAt": "occurred_at",
+        "status": "status"
+      }
     }
   },
   "pairingPlugin": {

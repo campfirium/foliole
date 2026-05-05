@@ -41,14 +41,14 @@ final class FolioleCompanionBootstrapState {
 
     JSObject toJsObject() throws Exception {
         JSObject result = new JSObject();
-        result.put(FolioleCompanionBridgeContractDefinitions.bootstrapBootedAtOutputKey(context), bootedAt);
-        result.put(FolioleCompanionBridgeContractDefinitions.bootstrapDatabasePathOutputKey(context), databasePath);
-        result.put(FolioleCompanionBridgeContractDefinitions.bootstrapDatabaseReadyOutputKey(context), databaseReady);
-        result.put(FolioleCompanionBridgeContractDefinitions.bootstrapDeviceIdOutputKey(context), deviceId);
-        result.put(FolioleCompanionBridgeContractDefinitions.bootstrapDeviceNameOutputKey(context), deviceName);
+        result.put(FolioleCompanionHostBridgeContractDefinitions.bootstrapBootedAtOutputKey(context), bootedAt);
+        result.put(FolioleCompanionHostBridgeContractDefinitions.bootstrapDatabasePathOutputKey(context), databasePath);
+        result.put(FolioleCompanionHostBridgeContractDefinitions.bootstrapDatabaseReadyOutputKey(context), databaseReady);
+        result.put(FolioleCompanionHostBridgeContractDefinitions.bootstrapDeviceIdOutputKey(context), deviceId);
+        result.put(FolioleCompanionHostBridgeContractDefinitions.bootstrapDeviceNameOutputKey(context), deviceName);
         result.put(
-            FolioleCompanionBridgeContractDefinitions.bootstrapRuntimeKindOutputKey(context),
-            FolioleCompanionBridgeContractDefinitions.bootstrapRuntimeKind(context)
+            FolioleCompanionHostBridgeContractDefinitions.bootstrapRuntimeKindOutputKey(context),
+            FolioleCompanionHostBridgeContractDefinitions.bootstrapRuntimeKind(context)
         );
         return result;
     }

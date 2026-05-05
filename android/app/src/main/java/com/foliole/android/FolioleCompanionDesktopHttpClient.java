@@ -50,8 +50,8 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         JSObject result = new JSObject();
-        result.put(FolioleCompanionBridgeContractDefinitions.networkStatusResponseKey(context), status);
-        result.put(FolioleCompanionBridgeContractDefinitions.networkBodyResponseKey(context), readBody(connection, status));
+        result.put(FolioleCompanionHostBridgeContractDefinitions.networkStatusResponseKey(context), status);
+        result.put(FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context), readBody(connection, status));
         return result;
     }
 

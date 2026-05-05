@@ -15,7 +15,7 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
     public void downloadDesktopSyncPack(PluginCall call) {
         new Thread(() -> {
             try {
-                String urlKey = FolioleCompanionBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext());
+                String urlKey = FolioleCompanionHostBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext());
                 String url = call.getString(urlKey);
                 if (url == null || url.trim().isEmpty()) {
                     call.reject(urlKey + " is required.");
@@ -25,12 +25,12 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
                     getContext(),
                     url.trim(),
                     call.getData().optJSONObject(
-                        FolioleCompanionBridgeContractDefinitions.syncPackTransferHeadersRequestKey(getContext())
+                        FolioleCompanionHostBridgeContractDefinitions.syncPackTransferHeadersRequestKey(getContext())
                     )
                 );
                 JSObject result = new JSObject();
                 result.put(
-                    FolioleCompanionBridgeContractDefinitions.syncPackTransferPackPathResponseKey(getContext()),
+                    FolioleCompanionHostBridgeContractDefinitions.syncPackTransferPackPathResponseKey(getContext()),
                     packFile.getAbsolutePath()
                 );
                 call.resolve(result);
@@ -43,7 +43,7 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
     @PluginMethod
     public void deleteDownloadedSyncPack(PluginCall call) {
         try {
-            String packPathKey = FolioleCompanionBridgeContractDefinitions.syncPackTransferPackPathRequestKey(getContext());
+            String packPathKey = FolioleCompanionHostBridgeContractDefinitions.syncPackTransferPackPathRequestKey(getContext());
             String packPath = call.getString(packPathKey);
             if (packPath == null || packPath.trim().isEmpty()) {
                 call.reject(packPathKey + " is required.");
@@ -51,7 +51,7 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
             }
             JSObject result = new JSObject();
             result.put(
-                FolioleCompanionBridgeContractDefinitions.syncPackTransferDeletedResponseKey(getContext()),
+                FolioleCompanionHostBridgeContractDefinitions.syncPackTransferDeletedResponseKey(getContext()),
                 FolioleCompanionSyncPackTransfer.deleteCachedPack(getContext(), packPath.trim())
             );
             call.resolve(result);

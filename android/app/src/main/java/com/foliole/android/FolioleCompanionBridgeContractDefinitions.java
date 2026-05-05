@@ -9,78 +9,6 @@ final class FolioleCompanionBridgeContractDefinitions {
 
     private FolioleCompanionBridgeContractDefinitions() {}
 
-    static String bootstrapOutputKey(Context context, String key) throws Exception {
-        return hostApiString(context, "bootstrap", "outputKeys", key);
-    }
-
-    static String bootstrapBootedAtOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "bootedAt");
-    }
-
-    static String bootstrapDatabasePathOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "databasePath");
-    }
-
-    static String bootstrapDatabaseReadyOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "databaseReady");
-    }
-
-    static String bootstrapDeviceIdOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "deviceId");
-    }
-
-    static String bootstrapDeviceNameOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "deviceName");
-    }
-
-    static String bootstrapRuntimeKindOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "runtimeKind");
-    }
-
-    static String bootstrapRuntimeKind(Context context) throws Exception {
-        return section(context, "hostApi").getJSONObject("bootstrap").getString("runtimeKind");
-    }
-
-    static String networkDiscoveryResponseKey(Context context, String key) throws Exception {
-        return hostApiString(context, "network", "discoveryResponseKeys", key);
-    }
-
-    static String networkEndpointUrlsResponseKey(Context context) throws Exception {
-        return networkDiscoveryResponseKey(context, "endpointUrls");
-    }
-
-    static String networkRequestKey(Context context, String key) throws Exception {
-        return hostApiString(context, "network", "requestKeys", key);
-    }
-
-    static String networkBodyRequestKey(Context context) throws Exception {
-        return networkRequestKey(context, "body");
-    }
-
-    static String networkHeadersRequestKey(Context context) throws Exception {
-        return networkRequestKey(context, "headers");
-    }
-
-    static String networkMethodRequestKey(Context context) throws Exception {
-        return networkRequestKey(context, "method");
-    }
-
-    static String networkUrlRequestKey(Context context) throws Exception {
-        return networkRequestKey(context, "url");
-    }
-
-    static String networkResponseKey(Context context, String key) throws Exception {
-        return hostApiString(context, "network", "responseKeys", key);
-    }
-
-    static String networkBodyResponseKey(Context context) throws Exception {
-        return networkResponseKey(context, "body");
-    }
-
-    static String networkStatusResponseKey(Context context) throws Exception {
-        return networkResponseKey(context, "status");
-    }
-
     static int resourceDefault(Context context, String key) throws Exception {
         return section(context, "resourcePlugin").getJSONObject("defaults").getInt(key);
     }
@@ -205,35 +133,7 @@ final class FolioleCompanionBridgeContractDefinitions {
         return resourceRequestKey(context, "url");
     }
 
-    static String syncPackTransferRequestKey(Context context, String key) throws Exception {
-        return hostApiString(context, "syncPackTransfer", "requestKeys", key);
-    }
-
-    static String syncPackTransferHeadersRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "headers");
-    }
-
-    static String syncPackTransferPackPathRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "packPath");
-    }
-
-    static String syncPackTransferUrlRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "url");
-    }
-
-    static String syncPackTransferResponseKey(Context context, String key) throws Exception {
-        return hostApiString(context, "syncPackTransfer", "responseKeys", key);
-    }
-
-    static String syncPackTransferDeletedResponseKey(Context context) throws Exception {
-        return syncPackTransferResponseKey(context, "deleted");
-    }
-
-    static String syncPackTransferPackPathResponseKey(Context context) throws Exception {
-        return syncPackTransferResponseKey(context, "packPath");
-    }
-
-    private static String hostApiString(Context context, String groupName, String objectName, String key) throws Exception {
+    static String hostApiString(Context context, String groupName, String objectName, String key) throws Exception {
         JSONObject object = section(context, "hostApi").getJSONObject(groupName).optJSONObject(objectName);
         if (object == null || !object.has(key)) {
             throw new IllegalStateException(
@@ -241,6 +141,10 @@ final class FolioleCompanionBridgeContractDefinitions {
             );
         }
         return object.getString(key);
+    }
+
+    static JSONObject hostApiGroup(Context context, String groupName) throws Exception {
+        return section(context, "hostApi").getJSONObject(groupName);
     }
 
     private static String pairingSignatureString(Context context, String objectName, String key) throws Exception {

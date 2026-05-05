@@ -12,8 +12,8 @@ final class FolioleCompanionNetworkPluginActions {
     static void desktopHttpRequest(Context context, PluginCall call) {
         new Thread(() -> {
             try {
-                String urlKey = FolioleCompanionBridgeContractDefinitions.networkUrlRequestKey(context);
-                String methodKey = FolioleCompanionBridgeContractDefinitions.networkMethodRequestKey(context);
+                String urlKey = FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context);
+                String methodKey = FolioleCompanionHostBridgeContractDefinitions.networkMethodRequestKey(context);
                 String url = call.getString(urlKey);
                 String method = call.getString(methodKey);
                 if (url == null || url.trim().isEmpty()) {
@@ -28,8 +28,8 @@ final class FolioleCompanionNetworkPluginActions {
                     context,
                     url,
                     method,
-                    call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.networkHeadersRequestKey(context)),
-                    call.getString(FolioleCompanionBridgeContractDefinitions.networkBodyRequestKey(context))
+                    call.getData().optJSONObject(FolioleCompanionHostBridgeContractDefinitions.networkHeadersRequestKey(context)),
+                    call.getString(FolioleCompanionHostBridgeContractDefinitions.networkBodyRequestKey(context))
                 ));
             } catch (Exception exception) {
                 call.reject("Desktop HTTP request failed.", exception);
@@ -46,7 +46,7 @@ final class FolioleCompanionNetworkPluginActions {
                     endpointUrls.put(endpointUrl);
                 }
                 JSObject result = new JSObject();
-                result.put(FolioleCompanionBridgeContractDefinitions.networkEndpointUrlsResponseKey(context), endpointUrls);
+                result.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlsResponseKey(context), endpointUrls);
                 call.resolve(result);
             } catch (Exception exception) {
                 call.reject("Failed to load companion discovery candidates.", exception);

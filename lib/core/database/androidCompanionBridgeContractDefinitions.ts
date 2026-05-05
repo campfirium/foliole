@@ -36,6 +36,14 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         deleted: 'deleted',
         packPath: 'pack_path'
       }
+    },
+    workspaceSync: {
+      requestKeys: {
+        endpointUrl: 'endpoint_url',
+        message: 'message',
+        occurredAt: 'occurred_at',
+        status: 'status'
+      }
     }
   },
   pairingPlugin: {
