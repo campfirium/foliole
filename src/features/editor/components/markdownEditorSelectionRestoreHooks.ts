@@ -3,10 +3,14 @@ import { useEffect, useLayoutEffect, type MutableRefObject } from 'react';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
 
 import { clearRestoreCompletionTimers } from './markdownEditorSelectionRestoreSupport';
-import { createPendingRestoreSelectionKey } from './markdownEditorSelectionRestoreTarget';
+import {
+  createPendingRestoreSelectionKey,
+  normalizeRestoreSelection
+} from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function usePendingRestoreKey(args: {
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
@@ -40,6 +44,16 @@ export function usePendingRestoreKey(args: {
     args.previousReadingSelectionRef.current = args.readingSelection;
     args.lastRestoredSelectionKeyRef.current = null;
     args.pendingRestoreSelectionKeyRef.current = nextPendingRestoreSelectionKey;
+    if (nextPendingRestoreSelectionKey) {
+      const selectionSource = args.readingSelection ?? args.nodeViewState?.selection;
+      const restoreSelection = selectionSource
+        ? normalizeRestoreSelection(selectionSource) ?? { from: 0, to: 0 }
+        : { from: 0, to: 0 };
+      args.beginApplyingReadingPosition?.(
+        restoreSelection,
+        'editor-restore-pending'
+      );
+    }
   }, [args]);
 }
 

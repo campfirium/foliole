@@ -55,7 +55,11 @@ function useResolvedReadingProgressState(
   latest: ReturnType<typeof useLatestReadingProgressState>
 ) {
   return useCallback(
-    (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null): ResolvedReadingProgressState | null => {
+    (
+      activeNodeIdOverride?: string | null,
+      captureNodeIdOverride?: string | null,
+      includePendingNodeViewStates = true
+    ): ResolvedReadingProgressState | null => {
       if (!latest.isWorkspaceHydratedRef.current) {
         return null;
       }
@@ -73,10 +77,12 @@ function useResolvedReadingProgressState(
             args.editorRef
           )
         : null;
-      const mergedPendingNodeViewById = mergePendingNodeViewStates(
-        latest.nodeViewByIdRef.current,
-        latest.pendingNodeViewByIdRef.current
-      );
+      const mergedPendingNodeViewById = includePendingNodeViewStates
+        ? mergePendingNodeViewStates(
+            latest.nodeViewByIdRef.current,
+            latest.pendingNodeViewByIdRef.current
+          )
+        : latest.nodeViewByIdRef.current;
       return {
         captured,
         mergedNodeViewById: captured
@@ -102,7 +108,8 @@ function useReadingProgressFlushCallbacks(args: {
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
   resolveCapturedReadingProgress: (
     activeNodeIdOverride?: string | null,
-    captureNodeIdOverride?: string | null
+    captureNodeIdOverride?: string | null,
+    includePendingNodeViewStates?: boolean
   ) => ResolvedReadingProgressState | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {

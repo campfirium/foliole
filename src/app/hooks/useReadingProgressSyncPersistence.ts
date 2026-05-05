@@ -22,7 +22,8 @@ export interface ReadingProgressPersistenceArgs {
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
   resolveCapturedReadingProgress: (
     activeNodeIdOverride?: string | null,
-    captureNodeIdOverride?: string | null
+    captureNodeIdOverride?: string | null,
+    includePendingNodeViewStates?: boolean
   ) => ResolvedReadingProgressState | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }
@@ -82,7 +83,8 @@ export async function flushReadingProgressToCloseBridge(args: {
   const isRestoreApplying = Boolean(args.persistence.getReadingPositionSyncState?.());
   const resolved = args.persistence.resolveCapturedReadingProgress(
     undefined,
-    isRestoreApplying ? null : undefined
+    isRestoreApplying ? null : undefined,
+    !isRestoreApplying
   );
   const runtimeInvoke = getRuntimeInvoke();
   if (!resolved || !runtimeInvoke) {

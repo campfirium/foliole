@@ -8,7 +8,11 @@ import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/i
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorDiffDecorations, EditorViewportMode } from '../adapters/EditorAdapter';
 
-import { useEditorSelectionRestore } from './markdownEditorSelectionRestore';
+import {
+  useEditorSelectionRestoreExecution,
+  useEditorSelectionRestorePreparation,
+  useEditorSelectionRestoreRefs
+} from './markdownEditorSelectionRestore';
 import type { EditorViewState } from './markdownEditorTypes';
 
 function useEditorContentSync(
@@ -41,25 +45,35 @@ export function useEditorLayoutEffects(
   nodeViewState: EditorViewState | undefined,
   beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined,
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined,
-  setReadingPositionSelection: ((selection: NonNullable<EditorViewState['selection']>) => void) | undefined,
+  _setReadingPositionSelection: ((selection: NonNullable<EditorViewState['selection']>) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
   value: string,
   lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
-  useEditorContentSync(adapterRef, nodeId, value, lineDiffDecorations);
-  useEditorSelectionRestore(
-    adapterRef,
+  const restoreRefs = useEditorSelectionRestoreRefs();
+  useEditorSelectionRestorePreparation({
+    beginApplyingReadingPosition,
+    completeApplyingReadingPosition,
     nodeId,
+    nodeViewState,
+    readingSelection,
+    readingTargetViewportMode,
+    restoreRefs
+  });
+  useEditorContentSync(adapterRef, nodeId, value, lineDiffDecorations);
+  useEditorSelectionRestoreExecution({
+    adapterRef,
+    beginApplyingReadingPosition,
+    completeApplyingReadingPosition,
+    nodeId,
+    nodeViewState,
     readingSelection,
     readingTargetViewportMode,
     readingTargetViewportRatio,
-    nodeViewState,
-    beginApplyingReadingPosition,
-    completeApplyingReadingPosition,
-    setReadingPositionSelection,
+    restoreRefs,
     shouldSuppressSelectionRestore,
     value
-  );
+  });
 }
 
 export function useEditorAppearanceEffects(
