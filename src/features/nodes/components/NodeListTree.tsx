@@ -14,9 +14,10 @@ interface NodeListTreeProps {
   isTrashViewOpen: boolean;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  onOpenNotesView: () => void;
+  onOpenTrashView: () => void;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
-  onToggleTrashView: () => void;
   selectedTrashNodeId: string | null;
 }
 
@@ -26,9 +27,10 @@ export function NodeListTree({
   isTrashViewOpen,
   nodeOrder,
   nodesById,
+  onOpenNotesView,
+  onOpenTrashView,
   onSelectNode,
   onSelectTrashNode,
-  onToggleTrashView,
   selectedTrashNodeId
 }: NodeListTreeProps) {
   const createRootNode = useWorkspaceStore((state) => state.createRootNode);
@@ -144,8 +146,14 @@ export function NodeListTree({
     closeContextMenu();
   };
 
-  const handleCreateRootNode = () => {
+  const handleCreateRootNode = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     createRootNode('');
+  };
+
+  const handleNotesHeaderClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onOpenNotesView();
   };
 
   const handleSelectNode = (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -192,41 +200,54 @@ export function NodeListTree({
       <Panel
         ariaLabel="Node list panel"
         actions={
-          <Button aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
-            New
-          </Button>
+          <div className="node-list-header-actions">
+            <Button aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
+              New
+            </Button>
+          </div>
         }
         as="aside"
         bodyClassName="node-list"
         className="panel-list"
-        footer={
-          <button aria-label="Trash" aria-pressed={isTrashViewOpen} className="trash-footer-button" onClick={onToggleTrashView} type="button">
-            Trash
-          </button>
-        }
+        onHeaderClick={onOpenNotesView}
         scrollBody
-        title="Notes"
+        title={
+          <h2 className="node-list-title-heading">
+            <button
+              aria-label="Notes"
+              aria-pressed={!isTrashViewOpen}
+              className="notes-title-button"
+              onClick={handleNotesHeaderClick}
+              type="button"
+            >
+              Notes
+            </button>
+          </h2>
+        }
       >
-        {noteRows.length === 0 ? (
-          <EmptyState description="Create or import a node to start editing." title="No notes" />
-        ) : (
-          noteRows.map((row) => (
-            <NodeTreeRow
-              depth={row.depth}
-              isActive={activeNodeId === row.node.id}
-              isSelected={selectedNodeIds.includes(row.node.id)}
-              key={row.node.id}
-              label={row.node.title}
-              nodeId={row.node.id}
-              onContextMenu={openContextMenu}
-              onSelect={handleSelectNode}
-              showBranch={row.depth > 0 || row.hasChildren}
-            />
-          ))
-        )}
+        <section aria-hidden={isTrashViewOpen} className="node-list-notes" data-collapsed={isTrashViewOpen}>
+          {noteRows.length === 0 ? (
+            <EmptyState description="Create or import a node to start editing." title="No notes" />
+          ) : (
+            noteRows.map((row) => (
+              <NodeTreeRow
+                depth={row.depth}
+                isActive={activeNodeId === row.node.id}
+                isSelected={selectedNodeIds.includes(row.node.id)}
+                key={row.node.id}
+                label={row.node.title}
+                nodeId={row.node.id}
+                onContextMenu={openContextMenu}
+                onSelect={handleSelectNode}
+                showBranch={row.depth > 0 || row.hasChildren}
+              />
+            ))
+          )}
+        </section>
 
         <NodeTrashSection
           isOpen={isTrashViewOpen}
+          onOpen={onOpenTrashView}
           onContextMenu={openContextMenu}
           onEmptyTrash={handleEmptyTrash}
           onSelect={handleSelectNode}

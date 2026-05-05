@@ -522,7 +522,7 @@ describe('App', () => {
     fireEvent.click(trashButton);
     expect(within(nodePanel).getByRole('region', { name: 'Trash section' })).toBeInTheDocument();
     expect(within(nodePanel).getByRole('button', { name: 'New' })).toBeInTheDocument();
-    expect(within(nodePanel).getByRole('button', { name: 'Empty Trash' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Empty' })).toBeInTheDocument();
     expect(within(nodePanel).getByRole('button', { name: 'Child' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Document area' })).toBeInTheDocument();
     expect(screen.getByLabelText('Prompt editor')).toBeInTheDocument();
@@ -617,8 +617,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
     expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Notes' }));
     fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
     fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
     expect(useWorkspaceStore.getState().nodesById['node-2']).toBeUndefined();
@@ -704,7 +706,7 @@ describe('App', () => {
     fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
     fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Empty Trash' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Empty' }));
 
     const workspace = useWorkspaceStore.getState();
     expect(workspace.nodesById['node-2']).toBeUndefined();

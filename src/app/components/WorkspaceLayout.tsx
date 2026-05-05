@@ -42,7 +42,8 @@ export interface WorkspaceLayoutProps {
   onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onToggleTrashView: () => void;
+  onOpenNotesView: () => void;
+  onOpenTrashView: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
@@ -83,7 +84,8 @@ export function WorkspaceLayout({
   onSelectTrashNode,
   onSplitterKeyDown,
   onSplitterPointerDown,
-  onToggleTrashView,
+  onOpenNotesView,
+  onOpenTrashView,
   onGoBack,
   onGoForward,
   onGoParent,
@@ -114,9 +116,10 @@ export function WorkspaceLayout({
           isTrashViewOpen={isTrashViewOpen}
           nodeOrder={nodeOrder}
           nodesById={nodesById}
+          onOpenNotesView={onOpenNotesView}
+          onOpenTrashView={onOpenTrashView}
           onSelectNode={onSelectNode}
           onSelectTrashNode={onSelectTrashNode}
-          onToggleTrashView={onToggleTrashView}
           selectedTrashNodeId={selectedTrashNodeId}
         />
         <ListSplitter

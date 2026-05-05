@@ -6,6 +6,7 @@ interface PanelProps<T extends PanelElement = 'section'> {
   as?: T;
   title: ReactNode;
   actions?: ReactNode;
+  onHeaderClick?: ComponentPropsWithoutRef<'header'>['onClick'];
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
@@ -22,6 +23,7 @@ export function Panel<T extends PanelElement = 'section'>({
   as,
   title,
   actions,
+  onHeaderClick,
   children,
   footer,
   className,
@@ -39,7 +41,7 @@ export function Panel<T extends PanelElement = 'section'>({
       className={joinClassNames('ui-panel', className)}
       {...rest}
     >
-      <header className="ui-panel-header">
+      <header className="ui-panel-header" onClick={onHeaderClick}>
         {useHeading ? <h2 className="ui-panel-title">{title}</h2> : <div className="ui-panel-title">{title}</div>}
         {actions}
       </header>

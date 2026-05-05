@@ -28,14 +28,19 @@ export function useTrashView({ nodeOrder, trashedNodeIds }: UseTrashViewParams) 
     }
   }, [isTrashViewOpen, selectedTrashNodeId, trashedNodeIds, trashedNodeOrder]);
 
-  const toggleTrashView = () => {
-    setIsTrashViewOpen((prev) => !prev);
+  const openTrashView = () => {
+    setIsTrashViewOpen(true);
+  };
+
+  const closeTrashView = () => {
+    setIsTrashViewOpen(false);
   };
 
   return {
+    closeTrashView,
     isTrashViewOpen,
+    openTrashView,
     selectedTrashNodeId,
-    setSelectedTrashNodeId,
-    toggleTrashView
+    setSelectedTrashNodeId
   };
 }

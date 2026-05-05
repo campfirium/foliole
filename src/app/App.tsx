@@ -39,10 +39,11 @@ export function App() {
   const listResize = useListResizer(listWidth, setListWidth);
   const documentResize = useDocumentWidthResizer(documentMaxWidth, setDocumentMaxWidth);
   const {
+    closeTrashView,
     isTrashViewOpen,
+    openTrashView,
     selectedTrashNodeId,
-    setSelectedTrashNodeId,
-    toggleTrashView
+    setSelectedTrashNodeId
   } = useTrashView({
     nodeOrder,
     trashedNodeIds
@@ -123,9 +124,23 @@ export function App() {
     updateNodeReveal(activeNodeId, answer);
   };
 
-  const handleToggleTrashView = () => {
+  const handleOpenTrashView = () => {
     setIsViewingTrashNode(false);
-    toggleTrashView();
+    if (isTrashViewOpen) {
+      closeTrashView();
+    } else {
+      openTrashView();
+    }
+    closeContextMenu();
+  };
+
+  const handleOpenNotesView = () => {
+    setIsViewingTrashNode(false);
+    if (isTrashViewOpen) {
+      closeTrashView();
+    } else {
+      openTrashView();
+    }
     closeContextMenu();
   };
 
@@ -136,6 +151,7 @@ export function App() {
 
   const handleSelectTrashNode = (nodeId: string) => {
     setIsViewingTrashNode(true);
+    openTrashView();
     setSelectedTrashNodeId(nodeId);
   };
 
@@ -223,7 +239,8 @@ export function App() {
       onSplitterKeyDown={listResize.handleSplitterKeyDown}
       onSplitterPointerDown={listResize.handleSplitterPointerDown}
       onStartDocumentResize={documentResize.startResize}
-      onToggleTrashView={handleToggleTrashView}
+      onOpenNotesView={handleOpenNotesView}
+      onOpenTrashView={handleOpenTrashView}
       selectedTrashNodeId={selectedTrashNodeId}
     />
   );
