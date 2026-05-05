@@ -78,7 +78,7 @@ function renderImmediateCaptureHarness(setNodeViewState: ReturnType<typeof vi.fn
   render(<ImmediateCaptureHarness />);
 }
 
-function renderDebouncedHarness(listeners: Set<() => void>) {
+function renderDebouncedHarness(listeners: Set<() => void>, setNodeViewState: ReturnType<typeof vi.fn>) {
   function DebouncedHarness() {
     const editorRef = {
       current: {
@@ -95,12 +95,12 @@ function renderDebouncedHarness(listeners: Set<() => void>) {
     useReadingProgressSync({
       activeNodeId: 'node-2',
       editorRef,
-      getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
-      isViewingTrashNode: false,
-      isWorkspaceHydrated: true,
-      nodeViewById: {},
-      setNodeViewState: vi.fn()
-    });
+        getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
+        isViewingTrashNode: false,
+        isWorkspaceHydrated: true,
+        nodeViewById: {},
+        setNodeViewState
+      });
     return null;
   }
 
@@ -132,7 +132,7 @@ function registerHydrationLifecycleTests() {
 }
 
 function registerScrollPersistenceTests() {
-  it('updates the in-memory reading position immediately when the editor scrolls', () => {
+  it('does not write reading position into store while the editor is still scrolling', () => {
     const setNodeViewState = vi.fn();
     const scrollListeners = new Set<() => void>();
     renderImmediateCaptureHarness(setNodeViewState, scrollListeners);
@@ -143,10 +143,7 @@ function registerScrollPersistenceTests() {
       }
     });
 
-    expect(setNodeViewState).toHaveBeenCalledWith('node-2', {
-      scrollTop: 5400,
-      selection: { from: 48000, to: 48024 }
-    });
+    expect(setNodeViewState).not.toHaveBeenCalled();
   });
 
   it('does not update the in-memory reading position while anchor navigation restore is applying', () => {
@@ -196,7 +193,8 @@ function registerScrollPersistenceTests() {
 
   it('persists reading progress shortly after scrolling stops', () => {
     const listeners = new Set<() => void>();
-    renderDebouncedHarness(listeners);
+    const setNodeViewState = vi.fn();
+    renderDebouncedHarness(listeners, setNodeViewState);
     vi.clearAllMocks();
 
     act(() => {
@@ -209,6 +207,10 @@ function registerScrollPersistenceTests() {
 
     act(() => {
       vi.advanceTimersByTime(1);
+    });
+    expect(setNodeViewState).toHaveBeenCalledWith('node-2', {
+      scrollTop: 5400,
+      selection: { from: 48000, to: 48000 }
     });
     expect(syncReadingProgressToRuntime).toHaveBeenCalledWith({
       activeNodeId: 'node-2',
@@ -226,6 +228,7 @@ function registerScrollPersistenceTests() {
 
   it('does not persist scroll debounce while anchor navigation restore is applying', () => {
     const listeners = new Set<() => void>();
+    const setNodeViewState = vi.fn();
 
     function DebouncedHarness() {
       const editorRef = {
@@ -252,7 +255,7 @@ function registerScrollPersistenceTests() {
         isViewingTrashNode: false,
         isWorkspaceHydrated: true,
         nodeViewById: {},
-        setNodeViewState: vi.fn()
+        setNodeViewState
       });
       return null;
     }
@@ -268,6 +271,7 @@ function registerScrollPersistenceTests() {
     });
 
     expect(syncReadingProgressToRuntime).not.toHaveBeenCalled();
+    expect(setNodeViewState).not.toHaveBeenCalled();
   });
 
   it('persists the runtime reading position instead of the raw editor selection', () => {

@@ -9,7 +9,15 @@ import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
 import { useCloseBridgeRegistration, useDebouncedReadingProgressPersistence, useImmediateReadingProgressCapture, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
-import { captureEditorNodeViewState, createReadingProgressPayload, createReadingProgressSignature, type ResolvedReadingProgressState, updateCapturedNodeViewState } from './useReadingProgressSyncSupport';
+import {
+  captureEditorNodeViewState,
+  createReadingProgressPayload,
+  createReadingProgressSignature,
+  mergePendingNodeViewStates,
+  type PendingNodeViewStateMap,
+  type ResolvedReadingProgressState,
+  updateCapturedNodeViewState
+} from './useReadingProgressSyncSupport';
 
 export interface ReadingProgressSyncOptions {
   activeNodeId: string | null;
@@ -26,6 +34,7 @@ function useLatestReadingProgressState(args: ReadingProgressSyncOptions) {
   const activeNodeIdRef = useRef(args.activeNodeId);
   const isWorkspaceHydratedRef = useRef(args.isWorkspaceHydrated);
   const nodeViewByIdRef = useRef(args.nodeViewById);
+  const pendingNodeViewByIdRef = useRef<PendingNodeViewStateMap>({});
 
   activeNodeIdRef.current = args.activeNodeId;
   isWorkspaceHydratedRef.current = args.isWorkspaceHydrated;
@@ -34,7 +43,8 @@ function useLatestReadingProgressState(args: ReadingProgressSyncOptions) {
   return {
     activeNodeIdRef,
     isWorkspaceHydratedRef,
-    nodeViewByIdRef
+    nodeViewByIdRef,
+    pendingNodeViewByIdRef
   };
 }
 function createReadingProgressOptions(args: ReadingProgressSyncOptions): ReadingProgressSyncOptions {
@@ -63,14 +73,18 @@ function useResolvedReadingProgressState(
             args.editorRef
           )
         : null;
+      const mergedPendingNodeViewById = mergePendingNodeViewStates(
+        latest.nodeViewByIdRef.current,
+        latest.pendingNodeViewByIdRef.current
+      );
       return {
         captured,
         mergedNodeViewById: captured
           ? {
-              ...latest.nodeViewByIdRef.current,
+              ...mergedPendingNodeViewById,
               [captured.nodeId]: captured.viewState
             }
-          : latest.nodeViewByIdRef.current,
+          : mergedPendingNodeViewById,
         resolvedActiveNodeId:
           typeof activeNodeIdOverride === 'undefined'
             ? latest.activeNodeIdRef.current
@@ -120,6 +134,7 @@ function flushReadingProgressToRuntime(args: {
   args: {
     getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
     nodeViewById: Record<string, NodeViewState | undefined>;
+    pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
     resolveCapturedReadingProgress: (
       activeNodeIdOverride?: string | null,
       captureNodeIdOverride?: string | null
@@ -139,6 +154,7 @@ function flushReadingProgressToRuntime(args: {
   updateCapturedNodeViewState({
     captured: resolved.captured,
     nodeViewById: args.args.nodeViewById,
+    pendingNodeViewByIdRef: args.args.pendingNodeViewByIdRef,
     setNodeViewState: args.args.setNodeViewState
   });
   pushDebugTrace('reading-progress.flush-runtime', {
@@ -170,6 +186,7 @@ async function flushReadingProgressToCloseBridge(args: {
   args: {
     isWorkspaceHydrated: boolean;
     nodeViewById: Record<string, NodeViewState | undefined>;
+    pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
     resolveCapturedReadingProgress: (
       activeNodeIdOverride?: string | null,
       captureNodeIdOverride?: string | null
@@ -189,6 +206,7 @@ async function flushReadingProgressToCloseBridge(args: {
   updateCapturedNodeViewState({
     captured: resolved.captured,
     nodeViewById: args.args.nodeViewById,
+    pendingNodeViewByIdRef: args.args.pendingNodeViewByIdRef,
     setNodeViewState: args.args.setNodeViewState
   });
   pushDebugTrace('reading-progress.flush-close-bridge', {
@@ -233,6 +251,7 @@ export function useReadingProgressSync({
     getReadingPositionSyncState,
     isWorkspaceHydrated,
     nodeViewById,
+    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
     resolveCapturedReadingProgress,
     setNodeViewState
   });
@@ -252,7 +271,7 @@ export function useReadingProgressSync({
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
-    setNodeViewState
+    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
   });
   useDebouncedReadingProgressPersistence({
     activeNodeId,

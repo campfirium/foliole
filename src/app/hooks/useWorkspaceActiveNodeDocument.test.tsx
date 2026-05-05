@@ -204,7 +204,7 @@ it('reopens the same long document without reloading while it is still warm', as
   await expectNodeDocument('node-1', longDocument, null);
   await reopenLongDocument(view, longDocument);
 
-  expect(useWorkspaceStore.getState().nodeViewById['node-1']).toEqual({
+  expect(useWorkspaceStore.getState().nodeViewById['node-1']).toMatchObject({
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
   });

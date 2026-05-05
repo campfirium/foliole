@@ -15,6 +15,10 @@ export interface ResolvedReadingProgressState {
   resolvedActiveNodeId: string | null;
 }
 
+export interface PendingNodeViewStateMap {
+  [nodeId: string]: NodeViewState | undefined;
+}
+
 export function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
   return {
     scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
@@ -76,13 +80,63 @@ export function createReadingProgressPayload(
   };
 }
 
+export function mergePendingNodeViewStates(
+  nodeViewById: Record<string, NodeViewState | undefined>,
+  pendingNodeViewById: PendingNodeViewStateMap
+) {
+  let mergedNodeViewById = nodeViewById;
+  for (const [nodeId, viewState] of Object.entries(pendingNodeViewById)) {
+    if (!viewState || isSameNodeViewState(mergedNodeViewById[nodeId], viewState)) {
+      continue;
+    }
+    if (mergedNodeViewById === nodeViewById) {
+      mergedNodeViewById = { ...nodeViewById };
+    }
+    mergedNodeViewById[nodeId] = viewState;
+  }
+  return mergedNodeViewById;
+}
+
+export function stagePendingNodeViewState(args: {
+  captured: CapturedNodeViewState | null;
+  nodeViewById: Record<string, NodeViewState | undefined>;
+  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
+}) {
+  if (!args.captured) {
+    return false;
+  }
+  const previousPendingViewState = args.pendingNodeViewByIdRef.current[args.captured.nodeId];
+  if (
+    isSameNodeViewState(previousPendingViewState, args.captured.viewState) ||
+    (isSameNodeViewState(args.nodeViewById[args.captured.nodeId], args.captured.viewState) && !previousPendingViewState)
+  ) {
+    return false;
+  }
+  args.pendingNodeViewByIdRef.current = {
+    ...args.pendingNodeViewByIdRef.current,
+    [args.captured.nodeId]: args.captured.viewState
+  };
+  return true;
+}
+
 export function updateCapturedNodeViewState(args: {
   captured: CapturedNodeViewState | null;
   nodeViewById: Record<string, NodeViewState | undefined>;
+  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {
   if (!args.captured || isSameNodeViewState(args.nodeViewById[args.captured.nodeId], args.captured.viewState)) {
+    if (args.captured && args.pendingNodeViewByIdRef.current[args.captured.nodeId]) {
+      const nextPendingNodeViewById = { ...args.pendingNodeViewByIdRef.current };
+      delete nextPendingNodeViewById[args.captured.nodeId];
+      args.pendingNodeViewByIdRef.current = nextPendingNodeViewById;
+    }
     return;
   }
   args.setNodeViewState(args.captured.nodeId, args.captured.viewState);
+  if (args.pendingNodeViewByIdRef.current[args.captured.nodeId]) {
+    const nextPendingNodeViewById = { ...args.pendingNodeViewByIdRef.current };
+    delete nextPendingNodeViewById[args.captured.nodeId];
+    args.pendingNodeViewByIdRef.current = nextPendingNodeViewById;
+  }
 }

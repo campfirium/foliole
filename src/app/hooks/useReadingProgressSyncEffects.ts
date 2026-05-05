@@ -4,7 +4,11 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { captureEditorNodeViewState, isSameNodeViewState } from './useReadingProgressSyncSupport';
+import {
+  captureEditorNodeViewState,
+  stagePendingNodeViewState,
+  type PendingNodeViewStateMap
+} from './useReadingProgressSyncSupport';
 
 const READING_PROGRESS_SYNC_INTERVAL_MS = 1500;
 const READING_PROGRESS_DEBOUNCE_MS = 400;
@@ -121,7 +125,7 @@ export function useImmediateReadingProgressCapture(args: {
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
-  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
+  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
 }) {
   useEffect(() => {
     if (!args.isWorkspaceHydrated || !args.activeNodeId || args.isViewingTrashNode || !args.editorRef.current) {
@@ -138,7 +142,13 @@ export function useImmediateReadingProgressCapture(args: {
         args.isViewingTrashNode,
         args.editorRef
       );
-      if (!captured || isSameNodeViewState(args.nodeViewById[captured.nodeId], captured.viewState)) {
+      if (
+        !stagePendingNodeViewState({
+          captured,
+          nodeViewById: args.nodeViewById,
+          pendingNodeViewByIdRef: args.pendingNodeViewByIdRef
+        })
+      ) {
         return;
       }
       pushDebugTrace('reading-progress.capture-scroll', {
@@ -146,7 +156,6 @@ export function useImmediateReadingProgressCapture(args: {
         scrollTop: captured.viewState.scrollTop,
         selection: captured.viewState.selection
       });
-      args.setNodeViewState(captured.nodeId, captured.viewState);
     });
 
     return unsubscribe;
@@ -158,7 +167,7 @@ export function useImmediateReadingProgressCapture(args: {
     args.isViewingTrashNode,
     args.isWorkspaceHydrated,
     args.nodeViewById,
-    args.setNodeViewState
+    args.pendingNodeViewByIdRef
   ]);
 }
 
