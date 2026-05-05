@@ -54,10 +54,16 @@ function openCacheDb() {
 function readMainExternalDocuments() {
   return openDatabaseConnection().sqlite
     .prepare(
-      `SELECT document_id, folder_id, relative_path, file_name, is_present, content
+      `SELECT document_id, folder_id, relative_path, file_name, is_present, content, body_blob_hash
        FROM external_documents ORDER BY relative_path ASC`
     )
     .all() as Array<Record<string, unknown>>;
+}
+
+function readContentBlob(hash: string) {
+  return openDatabaseConnection().sqlite
+    .prepare('SELECT hash, kind, availability FROM content_blobs WHERE hash = ?')
+    .get(hash) as { availability: string; hash: string; kind: string } | undefined;
 }
 
 function readExternalDocumentSyncRows() {
@@ -158,6 +164,7 @@ it('mirrors indexed external documents into the main sync tables', async () => {
 
   expect(readMainExternalDocuments()).toEqual([
     expect.objectContaining({
+      body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       document_id: 'folder-sync:alpha.md',
       file_name: 'alpha.md',
       folder_id: 'folder-sync',
@@ -165,6 +172,7 @@ it('mirrors indexed external documents into the main sync tables', async () => {
       relative_path: 'alpha.md'
     }),
     expect.objectContaining({
+      body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       document_id: 'folder-sync:beta.txt',
       file_name: 'beta.txt',
       folder_id: 'folder-sync',
@@ -176,6 +184,12 @@ it('mirrors indexed external documents into the main sync tables', async () => {
     expect.objectContaining({ object_id: 'folder-sync:alpha.md', sync_dirty: 1 }),
     expect.objectContaining({ object_id: 'folder-sync:beta.txt', sync_dirty: 1 })
   ]);
+  const alpha = readMainExternalDocuments().find((document) => document.document_id === 'folder-sync:alpha.md');
+  expect(readContentBlob(String(alpha?.body_blob_hash))).toEqual({
+    availability: 'local',
+    hash: alpha?.body_blob_hash,
+    kind: 'text_body'
+  });
 });
 
 it('keeps manual rebuild as a full rewrite path', async () => {

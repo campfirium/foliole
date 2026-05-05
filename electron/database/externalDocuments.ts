@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -87,12 +88,13 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
     const payload = toExternalDocumentPayload(folder, document, indexedAt);
     const documentId = toDocumentId(folder.id, document.relativePath);
     const syncContentHash = computeSyncContentHash('external_document', payload);
+    const bodyBlobHash = upsertTextBodyBlob(connection.driver, payload.content, indexedAt);
     connection.driver.execute(
       `INSERT INTO external_documents (
          document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
          source_modified_at, source_modified_ms, content_hash, title, opening_text,
-         content, indexed_at, is_present, missing_at, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)
+         body_blob_hash, content, indexed_at, is_present, missing_at, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)
        ON CONFLICT(document_id) DO UPDATE SET
          relative_path = excluded.relative_path,
          file_name = excluded.file_name,
@@ -103,6 +105,7 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
          content_hash = excluded.content_hash,
          title = excluded.title,
          opening_text = excluded.opening_text,
+         body_blob_hash = excluded.body_blob_hash,
          content = excluded.content,
          indexed_at = excluded.indexed_at,
          is_present = 1,
@@ -120,6 +123,7 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
         payload.content_hash,
         payload.title,
         payload.opening_text,
+        bodyBlobHash,
         payload.content,
         payload.indexed_at,
         indexedAt,

@@ -11,6 +11,7 @@ export const EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS = [
     content_hash TEXT NOT NULL,
     title TEXT NOT NULL,
     opening_text TEXT,
+    body_blob_hash TEXT,
     content TEXT NOT NULL,
     indexed_at TEXT NOT NULL,
     is_present INTEGER NOT NULL DEFAULT 1,

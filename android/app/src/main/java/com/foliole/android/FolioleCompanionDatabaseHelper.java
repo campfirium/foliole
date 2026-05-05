@@ -20,7 +20,7 @@ import java.util.UUID;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
-    private static final int DATABASE_VERSION = 9;
+    private static final int DATABASE_VERSION = 10;
     private static final String META_TABLE = "companion_meta";
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
@@ -102,6 +102,13 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 9) {
             FolioleCompanionNodeAttachmentStore.backfillNodeAttachmentsFromVersions(database);
+        }
+        if (oldVersion < 10) {
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion content blob schema.", exception);
+            }
         }
     }
 

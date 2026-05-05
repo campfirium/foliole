@@ -58,8 +58,18 @@ function seedNode(nodeId: string, parentNodeId: string | null, position: number)
 
 function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
-  return connection.sqlite.prepare('SELECT id, parent_id, content, anchor_link, deleted_at, virtual_filter FROM nodes WHERE id = ?').get(nodeId) as
-    | { content: string; id: string; parent_id: string | null; anchor_link: string | null; deleted_at: string | null; virtual_filter: string | null }
+  return connection.sqlite
+    .prepare('SELECT id, parent_id, content, body_blob_hash, anchor_link, deleted_at, virtual_filter FROM nodes WHERE id = ?')
+    .get(nodeId) as
+    | {
+        anchor_link: string | null;
+        body_blob_hash: string | null;
+        content: string;
+        deleted_at: string | null;
+        id: string;
+        parent_id: string | null;
+        virtual_filter: string | null;
+      }
     | undefined;
 }
 
@@ -89,6 +99,13 @@ function getNodeReadingRow(nodeId: string) {
   return connection.sqlite
     .prepare('SELECT node_id, state FROM node_reading WHERE node_id = ?')
     .get(nodeId) as { node_id: string; state: string } | undefined;
+}
+
+function getContentBlobRow(hash: string) {
+  const connection = openDatabaseConnection();
+  return connection.sqlite
+    .prepare('SELECT hash, kind, mime_type, availability FROM content_blobs WHERE hash = ?')
+    .get(hash) as { availability: string; hash: string; kind: string; mime_type: string } | undefined;
 }
 
 function seedDismissedReadingNode(nodeId: string, parentNodeId: string | null, position: number) {
@@ -163,6 +180,20 @@ it('marks and restores deleted_at through transactional node trash mutations', (
 
   expect(getNodeRow('node-root')?.deleted_at).toBeNull();
   expect(getNodeRow('node-child')?.deleted_at).toBeNull();
+});
+
+it('writes node body blob metadata when storing node content', () => {
+  seedNode('node-root', null, 0);
+
+  const row = getNodeRow('node-root');
+
+  expect(row?.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(getContentBlobRow(row?.body_blob_hash ?? '')).toEqual({
+    availability: 'local',
+    hash: row?.body_blob_hash,
+    kind: 'text_body',
+    mime_type: 'text/plain'
+  });
 });
 
 it('deletes subtree nodes and rewrites node_order while clearing review side tables', () => {

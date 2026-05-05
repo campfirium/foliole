@@ -5,7 +5,7 @@ import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 28;
+export const DATABASE_SCHEMA_VERSION = 29;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -18,6 +18,7 @@ const CREATE_SCHEMA_STATEMENTS = [
     is_title_manual INTEGER NOT NULL DEFAULT 0,
     hide_title_heading INTEGER NOT NULL DEFAULT 0,
     content TEXT NOT NULL DEFAULT '',
+    body_blob_hash TEXT,
     opening_text TEXT,
     virtual_filter TEXT,
     reveal TEXT,
@@ -184,6 +185,26 @@ const CREATE_SCHEMA_STATEMENTS = [
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS content_blobs (
+    hash TEXT PRIMARY KEY,
+    storage_key TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    mime_type TEXT,
+    compression TEXT NOT NULL DEFAULT 'none',
+    original_size_bytes INTEGER NOT NULL,
+    stored_size_bytes INTEGER NOT NULL,
+    original_sha256 TEXT NOT NULL,
+    stored_sha256 TEXT NOT NULL,
+    availability TEXT NOT NULL DEFAULT 'missing',
+    source_device_id TEXT,
+    created_at TEXT NOT NULL,
+    cached_at TEXT,
+    last_verified_at TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_content_blobs_availability
+    ON content_blobs (availability)`,
+  `CREATE INDEX IF NOT EXISTS idx_content_blobs_kind
+    ON content_blobs (kind)`,
   ...SYNC_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS pdf_page_text (
     attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,

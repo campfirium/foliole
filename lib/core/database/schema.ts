@@ -10,6 +10,7 @@ export const nodes = sqliteTable('nodes', {
   isTitleManual: integer('is_title_manual', { mode: 'boolean' }).notNull().default(false),
   hideTitleHeading: integer('hide_title_heading', { mode: 'boolean' }).notNull().default(false),
   content: text('content').notNull().default(''),
+  bodyBlobHash: text('body_blob_hash'),
   openingText: text('opening_text'),
   virtualFilter: text('virtual_filter'),
   reveal: text('reveal'),
@@ -240,6 +241,23 @@ export const attachmentBlobs = sqliteTable('attachment_blobs', {
   storageKey: text('storage_key'),
   sizeBytes: integer('size_bytes'),
   mimeType: text('mime_type'),
+  availability: text('availability').notNull().default('missing'),
+  sourceDeviceId: text('source_device_id'),
+  createdAt: text('created_at').notNull(),
+  cachedAt: text('cached_at'),
+  lastVerifiedAt: text('last_verified_at')
+});
+
+export const contentBlobs = sqliteTable('content_blobs', {
+  hash: text('hash').primaryKey(),
+  storageKey: text('storage_key').notNull(),
+  kind: text('kind').notNull(),
+  mimeType: text('mime_type'),
+  compression: text('compression').notNull().default('none'),
+  originalSizeBytes: integer('original_size_bytes').notNull(),
+  storedSizeBytes: integer('stored_size_bytes').notNull(),
+  originalSha256: text('original_sha256').notNull(),
+  storedSha256: text('stored_sha256').notNull(),
   availability: text('availability').notNull().default('missing'),
   sourceDeviceId: text('source_device_id'),
   createdAt: text('created_at').notNull(),

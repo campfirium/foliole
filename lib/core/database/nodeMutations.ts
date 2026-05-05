@@ -4,6 +4,7 @@ import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
@@ -133,6 +134,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
 
   driver.transaction(() => {
     ensureSpecialRootNodesForInput(driver, input);
+    const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
     upsertNodeStatement.run([
       input.nodeId,
       input.parentNodeId,
@@ -143,6 +145,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.isTitleManual ? 1 : 0,
       input.hideTitleHeading === true ? 1 : 0,
       input.content,
+      bodyBlobHash,
       resolveStoredOpeningText(input),
       stringifyVirtualNodeFilter(input.virtualFilter ?? null),
       input.reveal,
