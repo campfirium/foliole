@@ -79,7 +79,6 @@ resolve_quality_gate_log_root() {
 
 ensure_quality_gate_run_dir() {
   if [[ -n "${QUALITY_GATE_RUN_DIR:-}" ]]; then
-    printf '%s' "${QUALITY_GATE_RUN_DIR}"
     return 0
   fi
 
@@ -89,7 +88,6 @@ ensure_quality_gate_run_dir() {
   QUALITY_GATE_RUN_DIR="${log_root}/${run_id}"
   mkdir -p "${QUALITY_GATE_RUN_DIR}"
   prune_quality_gate_logs "${log_root}" "${run_id}"
-  printf '%s' "${QUALITY_GATE_RUN_DIR}"
 }
 
 prune_quality_gate_logs() {
@@ -124,7 +122,8 @@ prune_quality_gate_logs() {
 create_quality_gate_log_file() {
   local script_name="$1"
   local run_dir file_name
-  run_dir="$(ensure_quality_gate_run_dir)"
+  ensure_quality_gate_run_dir
+  run_dir="${QUALITY_GATE_RUN_DIR}"
   file_name="$(sanitize_quality_gate_log_name "${script_name}").log"
   printf '%s/%s' "${run_dir}" "${file_name}"
 }

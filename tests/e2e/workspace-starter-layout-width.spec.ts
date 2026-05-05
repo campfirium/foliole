@@ -1,150 +1,113 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const STARTER_TIMESTAMP = '2026-04-21T00:00:00.000Z';
+const STARTER_WELCOME_NODE_ID = 'starter-welcome';
+const STARTER_WELCOME_CONTENT = '# Welcome to Foliole';
+
+function createWorkspaceNode(overrides: Record<string, unknown>) {
+  return {
+    anchorLink: null,
+    createdAt: STARTER_TIMESTAMP,
+    content: '',
+    hasContent: false,
+    hasReveal: false,
+    imageRegions: null,
+    isTitleManual: true,
+    kind: 'folder',
+    parentNodeId: null,
+    reading: null,
+    reveal: null,
+    review: null,
+    updatedAt: STARTER_TIMESTAMP,
+    ...overrides
+  };
+}
+
+const STARTER_WORKSPACE_LIST_SNAPSHOT = {
+  activeNodeId: STARTER_WELCOME_NODE_ID,
+  nodeOrder: ['special-inbox', 'starter-root-folder', 'special-virtual-root', 'starter-virtual-example', STARTER_WELCOME_NODE_ID],
+  nodesById: {
+    'special-inbox': createWorkspaceNode({
+      id: 'special-inbox',
+      specialKind: 'inbox',
+      title: 'Inbox'
+    }),
+    'starter-root-folder': createWorkspaceNode({
+      id: 'starter-root-folder',
+      title: 'Untitled Folder'
+    }),
+    'special-virtual-root': createWorkspaceNode({
+      id: 'special-virtual-root',
+      specialKind: 'virtual-root',
+      title: 'Virtual'
+    }),
+    'starter-virtual-example': createWorkspaceNode({
+      id: 'starter-virtual-example',
+      parentNodeId: 'special-virtual-root',
+      specialKind: 'virtual',
+      title: 'Example'
+    }),
+    [STARTER_WELCOME_NODE_ID]: createWorkspaceNode({
+      content: STARTER_WELCOME_CONTENT,
+      hasContent: true,
+      id: STARTER_WELCOME_NODE_ID,
+      kind: 'topic',
+      parentNodeId: 'special-inbox',
+      title: 'Welcome to Foliole'
+    })
+  },
+  trashedNodeIds: []
+};
+
+const STARTER_WELCOME_DOCUMENT = {
+  content: STARTER_WELCOME_CONTENT,
+  hideTitleHeading: false,
+  kind: 'topic',
+  nodeId: STARTER_WELCOME_NODE_ID,
+  reveal: null
+};
 
 async function installStarterWorkspaceRuntime(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear();
+  await page.addInitScript(
+    ({ welcomeDocument, welcomeNodeId, workspaceListSnapshot }) => {
+      const readingProgress = {
+        activeNodeId: welcomeNodeId,
+        nodeViewStateById: {}
+      };
 
-    const workspaceListSnapshot = {
-      activeNodeId: 'starter-welcome',
-      nodeOrder: [
-        'special-inbox',
-        'starter-root-folder',
-        'special-virtual-root',
-        'starter-virtual-example',
-        'starter-welcome'
-      ],
-      nodesById: {
-        'special-inbox': {
-          anchorLink: null,
-          createdAt: '2026-04-21T00:00:00.000Z',
-          content: '',
-          hasContent: false,
-          hasReveal: false,
-          id: 'special-inbox',
-          imageRegions: null,
-          isTitleManual: true,
-          kind: 'folder',
-          parentNodeId: null,
-          reading: null,
-          reveal: null,
-          review: null,
-          specialKind: 'inbox',
-          title: 'Inbox',
-          updatedAt: '2026-04-21T00:00:00.000Z'
+      localStorage.clear();
+      window.electronAPI = {
+        invoke: async (command: string, payload?: { nodeId?: string }) => {
+          switch (command) {
+            case 'window_is_maximized':
+              return false;
+            case 'load_app_settings_state':
+              return {};
+            case 'save_app_settings_state':
+              return null;
+            case 'load_workspace_list_snapshot':
+              return workspaceListSnapshot;
+            case 'load_node_document':
+              return payload?.nodeId === welcomeNodeId ? welcomeDocument : null;
+            case 'load_reading_progress':
+              return readingProgress;
+            case 'boot_report':
+              return null;
+            default:
+              return null;
+          }
         },
-        'starter-root-folder': {
-          anchorLink: null,
-          createdAt: '2026-04-21T00:00:00.000Z',
-          content: '',
-          hasContent: false,
-          hasReveal: false,
-          id: 'starter-root-folder',
-          imageRegions: null,
-          isTitleManual: true,
-          kind: 'folder',
-          parentNodeId: null,
-          reading: null,
-          reveal: null,
-          review: null,
-          title: 'Untitled Folder',
-          updatedAt: '2026-04-21T00:00:00.000Z'
-        },
-        'special-virtual-root': {
-          anchorLink: null,
-          createdAt: '2026-04-21T00:00:00.000Z',
-          content: '',
-          hasContent: false,
-          hasReveal: false,
-          id: 'special-virtual-root',
-          imageRegions: null,
-          isTitleManual: true,
-          kind: 'folder',
-          parentNodeId: null,
-          reading: null,
-          reveal: null,
-          review: null,
-          specialKind: 'virtual-root',
-          title: 'Virtual',
-          updatedAt: '2026-04-21T00:00:00.000Z'
-        },
-        'starter-virtual-example': {
-          anchorLink: null,
-          createdAt: '2026-04-21T00:00:00.000Z',
-          content: '',
-          hasContent: false,
-          hasReveal: false,
-          id: 'starter-virtual-example',
-          imageRegions: null,
-          isTitleManual: true,
-          kind: 'folder',
-          parentNodeId: 'special-virtual-root',
-          reading: null,
-          reveal: null,
-          review: null,
-          specialKind: 'virtual',
-          title: 'Example',
-          updatedAt: '2026-04-21T00:00:00.000Z'
-        },
-        'starter-welcome': {
-          anchorLink: null,
-          createdAt: '2026-04-21T00:00:00.000Z',
-          content: '# Welcome to Foliole',
-          hasContent: true,
-          hasReveal: false,
-          id: 'starter-welcome',
-          imageRegions: null,
-          isTitleManual: true,
-          kind: 'topic',
-          parentNodeId: 'special-inbox',
-          reading: null,
-          reveal: null,
-          review: null,
-          title: 'Welcome to Foliole',
-          updatedAt: '2026-04-21T00:00:00.000Z'
-        }
-      },
-      trashedNodeIds: []
-    };
-
-    const welcomeDocument = {
-      content: '# Welcome to Foliole',
-      hideTitleHeading: false,
-      kind: 'topic',
-      nodeId: 'starter-welcome',
-      reveal: null
-    };
-
-    window.electronAPI = {
-      invoke: async (command: string, payload?: { nodeId?: string }) => {
-        switch (command) {
-          case 'window_is_maximized':
-            return false;
-          case 'load_app_settings_state':
-            return {};
-          case 'save_app_settings_state':
-            return null;
-          case 'load_workspace_list_snapshot':
-            return workspaceListSnapshot;
-          case 'load_node_document':
-            return payload?.nodeId === 'starter-welcome' ? welcomeDocument : null;
-          case 'load_reading_progress':
-            return {
-              activeNodeId: 'starter-welcome',
-              nodeViewStateById: {}
-            };
-          case 'boot_report':
-            return null;
-          default:
-            return null;
-        }
-      },
-      onManagedInboxUpdated: () => () => undefined,
-      onNativeMenuCommand: () => () => undefined,
-      onWindowResized: () => () => undefined
-    };
-  });
+        onManagedInboxUpdated: () => () => undefined,
+        onNativeMenuCommand: () => () => undefined,
+        onWindowResized: () => () => undefined
+      };
+    },
+    {
+      welcomeDocument: STARTER_WELCOME_DOCUMENT,
+      welcomeNodeId: STARTER_WELCOME_NODE_ID,
+      workspaceListSnapshot: STARTER_WORKSPACE_LIST_SNAPSHOT
+    }
+  );
 }
 
 test('starter workspace uses 450px left region with 200px folder column', async ({ page }) => {

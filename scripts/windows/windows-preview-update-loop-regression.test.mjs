@@ -15,12 +15,19 @@ const RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 const RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
 const RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 const RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
+const TEST_IDLE_TIMEOUT_MS = 5_000;
+const TEST_PREVIEW_TIMEOUTS = {
+  WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
+  WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',
+  WINDOWS_PREVIEW_TIMEOUT_START_SECONDS: '4',
+  WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '4'
+};
 
 function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, ...env }
+      env: { ...process.env, ...TEST_PREVIEW_TIMEOUTS, ...env }
     });
     let stdout = '';
     let stderr = '';
@@ -101,7 +108,7 @@ function writeJson(filePath, payload) {
 const start = Date.now();
 const timer = setInterval(() => {
   if (!fs.existsSync(intentFile)) {
-    if (Date.now() - start > 15000) {
+    if (Date.now() - start > ${TEST_IDLE_TIMEOUT_MS}) {
       clearInterval(timer);
       process.exit(0);
     }
@@ -217,7 +224,8 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
-        WINDOWS_PREVIEW_CHANGED_FILES: ['src/app/App.tsx', 'electron/preload.ts'].join('\n')
+        WINDOWS_PREVIEW_CHANGED_FILES: ['src/app/App.tsx', 'electron/preload.ts'].join('\n'),
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '4'
       });
 
       const restartDelivery = await readRestartDelivery(tempRoot);

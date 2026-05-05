@@ -44,6 +44,18 @@ function Resolve-SdkRoot {
   throw "Android SDK not found. Install Android SDK first."
 }
 
+function Invoke-GradleWrapper {
+  param(
+    [string]$TaskName
+  )
+
+  $gradleCommand = "call .\gradlew.bat $TaskName"
+  & cmd.exe /d /c $gradleCommand
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
+}
+
 $javaHome = Resolve-JavaHome
 $sdkRoot = Resolve-SdkRoot
 $env:JAVA_HOME = $javaHome
@@ -60,10 +72,7 @@ Write-Info "workdir: $androidDir"
 Write-Info "task: $TaskName"
 Push-Location $androidDir
 try {
-  & ".\gradlew.bat" $TaskName
-  if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-  }
+  Invoke-GradleWrapper -TaskName $TaskName
 } finally {
   Pop-Location
 }

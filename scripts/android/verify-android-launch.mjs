@@ -1,3 +1,5 @@
+/* global console, process, setTimeout */
+
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 

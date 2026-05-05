@@ -63,6 +63,18 @@ function Resolve-NodeExe {
   throw "node.exe not found. Install Node.js first."
 }
 
+function Invoke-GradleWrapper {
+  param(
+    [string]$TaskName
+  )
+
+  $gradleCommand = "call .\gradlew.bat $TaskName"
+  & cmd.exe /d /c $gradleCommand
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
+}
+
 function Get-RunningDeviceSerial {
   param([string]$AdbPath)
 
@@ -143,10 +155,7 @@ Write-Info "device: $serial"
 Push-Location $androidDir
 try {
   Write-Info "installing debug build"
-  & ".\gradlew.bat" installDebug
-  if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-  }
+  Invoke-GradleWrapper -TaskName "installDebug"
 } finally {
   Pop-Location
 }

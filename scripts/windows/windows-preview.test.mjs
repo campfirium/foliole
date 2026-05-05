@@ -15,12 +15,19 @@ const RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 const RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
 const RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 const RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
+const TEST_IDLE_TIMEOUT_MS = 5_000;
+const TEST_PREVIEW_TIMEOUTS = {
+  WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
+  WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',
+  WINDOWS_PREVIEW_TIMEOUT_START_SECONDS: '3',
+  WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '3'
+};
 
 function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, ...env }
+      env: { ...process.env, ...TEST_PREVIEW_TIMEOUTS, ...env }
     });
     let stdout = '';
     let stderr = '';
@@ -126,7 +133,7 @@ function writeJson(filePath, payload) {
 const start = Date.now();
 const timer = setInterval(() => {
   if (!fs.existsSync(intentFile)) {
-    if (Date.now() - start > 15000) {
+    if (Date.now() - start > ${TEST_IDLE_TIMEOUT_MS}) {
       clearInterval(timer);
       process.exit(0);
     }
@@ -173,7 +180,7 @@ const timer = setInterval(() => {
   });
 }
 
-function startRestartDeliveryConsumer(rootDir, timeoutMs = 30000) {
+function startRestartDeliveryConsumer(rootDir, timeoutMs = TEST_IDLE_TIMEOUT_MS) {
   const script = `
 const fs = require('node:fs');
 const path = require('node:path');
@@ -729,7 +736,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
         WINDOWS_PREVIEW_TIMEOUT_SECONDS: '1',
         WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '1',
-        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '3'
       });
 
       const restartDelivery = await readRestartDelivery(tempRoot);
@@ -773,7 +780,7 @@ function writeJson(filePath, payload) {
 const start = Date.now();
 const timer = setInterval(() => {
   if (!fs.existsSync(intentFile)) {
-    if (Date.now() - start > 15000) {
+    if (Date.now() - start > ${TEST_IDLE_TIMEOUT_MS}) {
       clearInterval(timer);
       process.exit(0);
     }
@@ -827,7 +834,7 @@ const timer = setInterval(() => {
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
-        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '2'
       });
 
       const restartDelivery = await readRestartDelivery(tempRoot);
@@ -891,7 +898,7 @@ writeJson(bridgeReadyFile, {
 const start = Date.now();
 const timer = setInterval(() => {
   if (!fs.existsSync(intentFile)) {
-    if (Date.now() - start > 15000) {
+    if (Date.now() - start > ${TEST_IDLE_TIMEOUT_MS}) {
       clearInterval(timer);
       process.exit(0);
     }
@@ -949,7 +956,7 @@ const timer = setInterval(() => {
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
-        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '2'
       });
 
       expect(result.code).toBe(0);
