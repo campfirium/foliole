@@ -181,6 +181,7 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
       maximumIntervalDays={props.reviewSchedulerSettings.maximumIntervalDays}
       enableFuzz={props.reviewSchedulerSettings.enableFuzz}
       enableShortTerm={props.reviewSchedulerSettings.enableShortTerm}
+      defaultPriority={props.reviewSchedulerSettings.pushQueue.defaultPriority}
       priorityRatio={props.reviewSchedulerSettings.pushQueue.priorityRatio}
       queueMixRatioReading={props.reviewSchedulerSettings.pushQueue.queueMixRatio.reading}
       queueMixRatioFsrs={props.reviewSchedulerSettings.pushQueue.queueMixRatio.fsrs}
@@ -202,6 +203,7 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
       onInterfaceFontSizeChange={props.onInterfaceFontSizeChange}
       onInterfaceFontSizeReset={props.onInterfaceFontSizeReset}
       onDesiredRetentionChange={props.onDesiredRetentionChange}
+      onDefaultPriorityChange={props.onDefaultPriorityChange}
       onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange}
       onEnableFuzzChange={props.onEnableFuzzChange}
       onEnableShortTermChange={props.onEnableShortTermChange}

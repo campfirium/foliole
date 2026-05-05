@@ -37,6 +37,7 @@ interface SettingsPanelProps {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  defaultPriority: number;
   priorityRatio: number;
   queueMixRatioReading: number;
   queueMixRatioFsrs: number;
@@ -58,6 +59,7 @@ interface SettingsPanelProps {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
+  onDefaultPriorityChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
@@ -162,6 +164,7 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  defaultPriority: number;
   priorityRatio: number;
   queueMixRatioReading: number;
   queueMixRatioFsrs: number;
@@ -184,6 +187,7 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
+  onDefaultPriorityChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;

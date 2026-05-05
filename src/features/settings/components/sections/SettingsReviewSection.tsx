@@ -7,6 +7,7 @@ interface SettingsReviewSectionProps {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  defaultPriority: number;
   priorityRatio: number;
   queueMixRatioReading: number;
   queueMixRatioFsrs: number;
@@ -17,6 +18,7 @@ interface SettingsReviewSectionProps {
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
+  onDefaultPriorityChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
   onQueueMixRatioReadingChange: (value: number) => void;
   onQueueMixRatioFsrsChange: (value: number) => void;
@@ -89,6 +91,20 @@ function ReviewNumberInputControl(props: {
   );
 }
 
+function DefaultPriorityControl(props: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="settings-select-wrap">
+      <span className="sr-only">Default node priority</span>
+      <select aria-label="Default node priority" className="settings-select" onChange={(event) => props.onChange(Number(event.target.value))} value={String(props.value)}>
+        {Array.from({ length: 10 }, (_, index) => <option key={index} value={index}>{index === 0 ? 'P0 · Absolute privilege' : `P${index}`}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function QueueMixRatioControl(props: {
   reading: number;
   fsrs: number;
@@ -97,21 +113,9 @@ function QueueMixRatioControl(props: {
 }) {
   return (
     <div className="settings-slider-wrap">
-      <ReviewNumberInputControl
-        ariaLabel="Reading queue mix ratio"
-        min={1}
-        onChange={props.onReadingChange}
-        step={1}
-        value={props.reading}
-      />
+      <ReviewNumberInputControl ariaLabel="Reading queue mix ratio" min={1} onChange={props.onReadingChange} step={1} value={props.reading} />
       <span className="settings-range-value">:</span>
-      <ReviewNumberInputControl
-        ariaLabel="FSRS queue mix ratio"
-        min={1}
-        onChange={props.onFsrsChange}
-        step={1}
-        value={props.fsrs}
-      />
+      <ReviewNumberInputControl ariaLabel="FSRS queue mix ratio" min={1} onChange={props.onFsrsChange} step={1} value={props.fsrs} />
       <span className="settings-range-value">{`${props.reading}:${props.fsrs}`}</span>
     </div>
   );
@@ -125,21 +129,9 @@ function ReadingGrowthFactorRangeControl(props: {
 }) {
   return (
     <div className="settings-slider-wrap">
-      <ReviewNumberInputControl
-        ariaLabel="Reading growth factor min"
-        min={1}
-        onChange={props.onMinChange}
-        step={0.01}
-        value={props.minValue}
-      />
+      <ReviewNumberInputControl ariaLabel="Reading growth factor min" min={1} onChange={props.onMinChange} step={0.01} value={props.minValue} />
       <span className="settings-range-value">to</span>
-      <ReviewNumberInputControl
-        ariaLabel="Reading growth factor max"
-        min={1}
-        onChange={props.onMaxChange}
-        step={0.01}
-        value={props.maxValue}
-      />
+      <ReviewNumberInputControl ariaLabel="Reading growth factor max" min={1} onChange={props.onMaxChange} step={0.01} value={props.maxValue} />
     </div>
   );
 }
@@ -183,12 +175,14 @@ function SchedulerCoreRows(props: Pick<
 
 function PushQueueRows(props: Pick<
   SettingsReviewSectionProps,
+  | 'defaultPriority'
   | 'priorityRatio'
   | 'queueMixRatioReading'
   | 'queueMixRatioFsrs'
   | 'readingInitialIntervalMs'
   | 'readingIntervalGrowthFactorMin'
   | 'readingIntervalGrowthFactorMax'
+  | 'onDefaultPriorityChange'
   | 'onPriorityRatioChange'
   | 'onQueueMixRatioReadingChange'
   | 'onQueueMixRatioFsrsChange'
@@ -200,6 +194,11 @@ function PushQueueRows(props: Pick<
 
   return (
     <>
+      <ReviewSettingRow
+        title="Default node priority"
+        description="Set the global `defaultPriority` fallback used when a node and its ancestors leave `priority` unset."
+        control={<DefaultPriorityControl onChange={props.onDefaultPriorityChange} value={props.defaultPriority} />}
+      />
       <ReviewSettingRow
         title="Dual queue mix ratio"
         description="Set `queueMixRatio` as the reading:fsrs interleave ratio for the two due queues. The default `1:5` means one reading draw is mixed after five FSRS draws."
@@ -229,6 +228,7 @@ export function SettingsReviewSection({
   maximumIntervalDays,
   enableFuzz,
   enableShortTerm,
+  defaultPriority,
   priorityRatio,
   queueMixRatioReading,
   queueMixRatioFsrs,
@@ -239,6 +239,7 @@ export function SettingsReviewSection({
   onMaximumIntervalDaysChange,
   onEnableFuzzChange,
   onEnableShortTermChange,
+  onDefaultPriorityChange,
   onPriorityRatioChange,
   onQueueMixRatioReadingChange,
   onQueueMixRatioFsrsChange,
@@ -250,7 +251,7 @@ export function SettingsReviewSection({
     <section aria-label="Review settings section" className="settings-group">
       <h3 className="settings-group-title">Scheduler</h3>
       <SchedulerCoreRows desiredRetention={desiredRetention} enableFuzz={enableFuzz} enableShortTerm={enableShortTerm} maximumIntervalDays={maximumIntervalDays} onDesiredRetentionChange={onDesiredRetentionChange} onEnableFuzzChange={onEnableFuzzChange} onEnableShortTermChange={onEnableShortTermChange} onMaximumIntervalDaysChange={onMaximumIntervalDaysChange} />
-      <PushQueueRows onPriorityRatioChange={onPriorityRatioChange} onQueueMixRatioFsrsChange={onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={onReadingIntervalGrowthFactorMinChange} priorityRatio={priorityRatio} queueMixRatioFsrs={queueMixRatioFsrs} queueMixRatioReading={queueMixRatioReading} readingInitialIntervalMs={readingInitialIntervalMs} readingIntervalGrowthFactorMax={readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={readingIntervalGrowthFactorMin} />
+      <PushQueueRows defaultPriority={defaultPriority} onDefaultPriorityChange={onDefaultPriorityChange} onPriorityRatioChange={onPriorityRatioChange} onQueueMixRatioFsrsChange={onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={onReadingIntervalGrowthFactorMinChange} priorityRatio={priorityRatio} queueMixRatioFsrs={queueMixRatioFsrs} queueMixRatioReading={queueMixRatioReading} readingInitialIntervalMs={readingInitialIntervalMs} readingIntervalGrowthFactorMax={readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={readingIntervalGrowthFactorMin} />
     </section>
   );
 }

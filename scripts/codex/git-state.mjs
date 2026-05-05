@@ -341,7 +341,9 @@ export async function buildCommitMessage(cwd, task, options = {}) {
     if (isValidCommitMessage(generated, sequence)) {
       return generated;
     }
-  } catch {}
+  } catch (error) {
+    void error;
+  }
 
   return buildFallbackCommitMessage({ sequence, task, evidence });
 }

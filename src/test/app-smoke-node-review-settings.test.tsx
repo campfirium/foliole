@@ -4,6 +4,8 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { DocumentPanelNodeReviewSettings } from '../app/components/DocumentPanelNodeReviewSettings';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../features/settings/model/reviewSchedulerSettings';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
@@ -76,4 +78,46 @@ it('shows inherited values, writes explicit overrides, and falls back to ancesto
 
   expect(screen.getByText('Inherited · 0.84 from Root node')).toBeInTheDocument();
   expect(screen.getByText('Inherited · P2 from Root node')).toBeInTheDocument();
+});
+
+it('updates the default priority copy when the global fallback changes', () => {
+  const nodesById = {
+    'root-node': createNode({
+      id: 'root-node',
+      title: 'Root node',
+      content: '# Root'
+    })
+  };
+
+  const { rerender } = render(
+    <DocumentPanelNodeReviewSettings
+      activeNodeId="root-node"
+      editableNodeId="root-node"
+      nodesById={nodesById}
+      onDesiredRetentionChange={() => undefined}
+      onPriorityChange={() => undefined}
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+    />
+  );
+
+  expect(screen.getByText('Default · P5 from push queue fallback')).toBeInTheDocument();
+
+  rerender(
+    <DocumentPanelNodeReviewSettings
+      activeNodeId="root-node"
+      editableNodeId="root-node"
+      nodesById={nodesById}
+      onDesiredRetentionChange={() => undefined}
+      onPriorityChange={() => undefined}
+      reviewSchedulerSettings={{
+        ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+        pushQueue: {
+          ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
+          defaultPriority: 3
+        }
+      }}
+    />
+  );
+
+  expect(screen.getByText('Default · P3 from push queue fallback')).toBeInTheDocument();
 });

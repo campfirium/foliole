@@ -21,6 +21,7 @@ export interface SettingsCategoryContentProps {
   accentColorInputRef: RefObject<HTMLInputElement>;
   areFontOptionsReady: boolean;
   baseColorMode: BaseColorMode;
+  defaultPriority: number;
   desiredRetention: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
@@ -36,6 +37,7 @@ export interface SettingsCategoryContentProps {
   onCustomInterfaceFontChange: (value: string) => void;
   onCustomMonospaceFontChange: (value: string) => void;
   onCustomUiFontChange: (value: string) => void;
+  onDefaultPriorityChange: (value: number) => void;
   onDesiredRetentionChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
@@ -85,7 +87,7 @@ function AppearanceSettingsContent(props: SettingsCategoryContentProps) {
 
 function ReviewSettingsContent(props: SettingsCategoryContentProps) {
   return (
-    <SettingsReviewSection desiredRetention={props.desiredRetention} enableFuzz={props.enableFuzz} enableShortTerm={props.enableShortTerm} maximumIntervalDays={props.maximumIntervalDays} onDesiredRetentionChange={props.onDesiredRetentionChange} onEnableFuzzChange={props.onEnableFuzzChange} onEnableShortTermChange={props.onEnableShortTermChange} onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange} onPriorityRatioChange={props.onPriorityRatioChange} onQueueMixRatioFsrsChange={props.onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={props.onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={props.onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={props.onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={props.onReadingIntervalGrowthFactorMinChange} priorityRatio={props.priorityRatio} queueMixRatioFsrs={props.queueMixRatioFsrs} queueMixRatioReading={props.queueMixRatioReading} readingInitialIntervalMs={props.readingInitialIntervalMs} readingIntervalGrowthFactorMax={props.readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={props.readingIntervalGrowthFactorMin} />
+    <SettingsReviewSection defaultPriority={props.defaultPriority} desiredRetention={props.desiredRetention} enableFuzz={props.enableFuzz} enableShortTerm={props.enableShortTerm} maximumIntervalDays={props.maximumIntervalDays} onDefaultPriorityChange={props.onDefaultPriorityChange} onDesiredRetentionChange={props.onDesiredRetentionChange} onEnableFuzzChange={props.onEnableFuzzChange} onEnableShortTermChange={props.onEnableShortTermChange} onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange} onPriorityRatioChange={props.onPriorityRatioChange} onQueueMixRatioFsrsChange={props.onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={props.onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={props.onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={props.onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={props.onReadingIntervalGrowthFactorMinChange} priorityRatio={props.priorityRatio} queueMixRatioFsrs={props.queueMixRatioFsrs} queueMixRatioReading={props.queueMixRatioReading} readingInitialIntervalMs={props.readingInitialIntervalMs} readingIntervalGrowthFactorMax={props.readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={props.readingIntervalGrowthFactorMin} />
   );
 }
 

@@ -20,6 +20,7 @@ export function createProps() {
     maximumIntervalDays: 36500,
     enableFuzz: false,
     enableShortTerm: false,
+    defaultPriority: 5,
     priorityRatio: 5,
     queueMixRatioReading: 1,
     queueMixRatioFsrs: 5,
@@ -39,6 +40,7 @@ export function createProps() {
     onCustomMonospaceFontChange: () => undefined,
     onCustomUiFontChange: () => undefined,
     onDesiredRetentionChange: () => undefined,
+    onDefaultPriorityChange: () => undefined,
     onMaximumIntervalDaysChange: () => undefined,
     onEnableFuzzChange: () => undefined,
     onEnableShortTermChange: () => undefined,
@@ -68,6 +70,7 @@ export function openReviewSettings() {
 export function expectPushQueueValues(values: {
   reading: number;
   fsrs: number;
+  defaultPriority: number;
   priorityRatio: number;
   readingInitialIntervalDays: number;
   readingGrowthMin: number;
@@ -75,6 +78,7 @@ export function expectPushQueueValues(values: {
 }) {
   expect(screen.getByLabelText('Reading queue mix ratio')).toHaveValue(values.reading);
   expect(screen.getByLabelText('FSRS queue mix ratio')).toHaveValue(values.fsrs);
+  expect(screen.getByLabelText('Default node priority')).toHaveValue(String(values.defaultPriority));
   expect(screen.getByLabelText('Priority strength (P1 relative to P9)')).toHaveValue(values.priorityRatio);
   expect(screen.getByLabelText('Reading initial interval days')).toHaveValue(values.readingInitialIntervalDays);
   expect(screen.getByLabelText('Reading growth factor min')).toHaveValue(values.readingGrowthMin);
@@ -84,6 +88,7 @@ export function expectPushQueueValues(values: {
 export function changePushQueueValues(values: {
   reading: string;
   fsrs: string;
+  defaultPriority: string;
   priorityRatio: string;
   readingInitialIntervalDays: string;
   readingGrowthMin: string;
@@ -91,6 +96,7 @@ export function changePushQueueValues(values: {
 }) {
   fireEvent.change(screen.getByLabelText('Reading queue mix ratio'), { target: { value: values.reading } });
   fireEvent.change(screen.getByLabelText('FSRS queue mix ratio'), { target: { value: values.fsrs } });
+  fireEvent.change(screen.getByLabelText('Default node priority'), { target: { value: values.defaultPriority } });
   fireEvent.change(screen.getByLabelText('Priority strength (P1 relative to P9)'), { target: { value: values.priorityRatio } });
   fireEvent.change(screen.getByLabelText('Reading initial interval days'), { target: { value: values.readingInitialIntervalDays } });
   fireEvent.change(screen.getByLabelText('Reading growth factor min'), { target: { value: values.readingGrowthMin } });
@@ -100,6 +106,7 @@ export function changePushQueueValues(values: {
 export function createSavedPushQueueProps() {
   return {
     ...createProps(),
+    defaultPriority: 4,
     priorityRatio: 7,
     queueMixRatioReading: 2,
     queueMixRatioFsrs: 4,
@@ -112,6 +119,7 @@ export function createSavedPushQueueProps() {
 export function expectPushQueueChangeCallbacks(callbacks: {
   onQueueMixRatioReadingChange: ReturnType<typeof vi.fn>;
   onQueueMixRatioFsrsChange: ReturnType<typeof vi.fn>;
+  onDefaultPriorityChange: ReturnType<typeof vi.fn>;
   onPriorityRatioChange: ReturnType<typeof vi.fn>;
   onReadingInitialIntervalDaysChange: ReturnType<typeof vi.fn>;
   onReadingIntervalGrowthFactorMinChange: ReturnType<typeof vi.fn>;
@@ -119,6 +127,7 @@ export function expectPushQueueChangeCallbacks(callbacks: {
 }) {
   expect(callbacks.onQueueMixRatioReadingChange).toHaveBeenCalledWith(2);
   expect(callbacks.onQueueMixRatioFsrsChange).toHaveBeenCalledWith(4);
+  expect(callbacks.onDefaultPriorityChange).toHaveBeenCalledWith(4);
   expect(callbacks.onPriorityRatioChange).toHaveBeenCalledWith(7);
   expect(callbacks.onReadingInitialIntervalDaysChange).toHaveBeenCalledWith(2);
   expect(callbacks.onReadingIntervalGrowthFactorMinChange).toHaveBeenCalledWith(1.12);

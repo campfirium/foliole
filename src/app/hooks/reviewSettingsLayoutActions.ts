@@ -106,6 +106,12 @@ function createPushQueueActions(
   saveSettings: (patch: ReviewSchedulerSettingsSavePatch) => void
 ) {
   return {
+    onDefaultPriorityChange: (value: number) => {
+      if (!Number.isFinite(value) || value < 0 || value > 9) {
+        return;
+      }
+      saveSettings({ pushQueue: { defaultPriority: Math.round(value) } });
+    },
     onPriorityRatioChange: (value: number) => {
       if (!Number.isFinite(value) || value < 1) {
         return;

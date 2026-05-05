@@ -96,6 +96,7 @@ export interface WorkspaceLayoutProps {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
+  onDefaultPriorityChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onEnableFuzzChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;

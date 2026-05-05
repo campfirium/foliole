@@ -26,6 +26,12 @@ function PushQueueSettingsHarness() {
         <SettingsPanel
           {...props}
           onClose={() => setIsOpen(false)}
+          onDefaultPriorityChange={(value) =>
+            setProps((current) => ({
+              ...current,
+              defaultPriority: value
+            }))
+          }
           onPriorityRatioChange={(value) =>
             setProps((current) => ({
               ...current,
@@ -69,8 +75,10 @@ function PushQueueSettingsHarness() {
 }
 
 function expectPushQueueSemanticCopy() {
+  expect(screen.getByRole('heading', { level: 4, name: 'Default node priority' })).toBeInTheDocument();
   expect(screen.getByText('Dual queue mix ratio')).toBeInTheDocument();
   expect(screen.getByText('Priority strength (`priorityRatio`)')).toBeInTheDocument();
+  expect(screen.getByText(/global `defaultPriority` fallback/i)).toBeInTheDocument();
   expect(screen.getByText(/weight multiple of P1 relative to P9/i)).toBeInTheDocument();
   expect(screen.getByText(/weight ratio, not a percentage scale/i)).toBeInTheDocument();
   expect(screen.getByText(/default `1:5` means one reading draw is mixed after five FSRS draws/i)).toBeInTheDocument();
@@ -175,6 +183,7 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
   expectPushQueueValues({
     reading: 1,
     fsrs: 5,
+    defaultPriority: 5,
     priorityRatio: 5,
     readingInitialIntervalDays: 1,
     readingGrowthMin: 1.1,
@@ -183,6 +192,7 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
   changePushQueueValues({
     reading: '2',
     fsrs: '4',
+    defaultPriority: '4',
     priorityRatio: '7',
     readingInitialIntervalDays: '2',
     readingGrowthMin: '1.12',
@@ -193,6 +203,7 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
     expectPushQueueValues({
       reading: 2,
       fsrs: 4,
+      defaultPriority: 4,
       priorityRatio: 7,
       readingInitialIntervalDays: 2,
       readingGrowthMin: 1.12,
@@ -209,6 +220,7 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
     expectPushQueueValues({
       reading: 2,
       fsrs: 4,
+      defaultPriority: 4,
       priorityRatio: 7,
       readingInitialIntervalDays: 2,
       readingGrowthMin: 1.12,
