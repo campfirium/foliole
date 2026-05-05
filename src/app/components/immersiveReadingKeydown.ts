@@ -4,7 +4,7 @@ import { getSelectionCommandPayload } from '../contextCommands';
 
 import { isImmersiveEditableElement } from './immersiveReadingKeyboard';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
-import { resolveParagraphSelection } from './immersiveReadingModel';
+import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
@@ -62,9 +62,10 @@ function selectParagraph(args: {
     (readingSelection.from !== 0 || readingSelection.to !== 0)
       ? readingSelection
       : editorSelection;
+  const movementBaseSelection = resolveCurrentParagraphSelection(editor.getContent(), currentSelection) ?? currentSelection;
   const nextSelection = resolveParagraphSelection({
     content: editor.getContent(),
-    currentSelection,
+    currentSelection: movementBaseSelection,
     direction: args.direction
   });
   if (nextSelection) {

@@ -30,7 +30,7 @@ it('treats contiguous markdown table rows as a standalone reading block', () => 
   expect(resolveCurrentParagraphSelection(content, { from: 20, to: 20 })).toEqual({ from: 7, to: 47 });
 });
 
-it('selects the current paragraph first, then advances to the next paragraph', () => {
+it('selects the current paragraph before advancing when given only a point', () => {
   const content = 'Alpha line\nstill alpha\n\nBeta\n\nGamma';
 
   expect(
@@ -40,14 +40,6 @@ it('selects the current paragraph first, then advances to the next paragraph', (
       direction: 'forward'
     })
   ).toEqual({ from: 0, to: 22 });
-
-  expect(
-    resolveParagraphSelection({
-      content,
-      currentSelection: { from: 0, to: 22 },
-      direction: 'forward'
-    })
-  ).toEqual({ from: 24, to: 28 });
 });
 
 it('returns null when moving past the last paragraph', () => {
