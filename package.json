@@ -57,6 +57,8 @@
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",
     "agent:loop:dry-run": "bash scripts/codex/run-loop.sh --dry-run",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "prepare": "npm run hooks:install",
     "task:finish": "node scripts/task-finish.mjs",
     "quality:fast": "bash scripts/quality-gate-fast.sh",
     "quality:desktop": "bash scripts/quality-gate-target.sh desktop",

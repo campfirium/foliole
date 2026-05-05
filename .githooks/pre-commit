@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+blocked_paths="$(git diff --cached --name-only --diff-filter=ACMRTUXB | sed -n '/^\.lab\//p')"
+
+if [[ -n "$blocked_paths" ]]; then
+  {
+    echo "error: refusing to commit .lab files."
+    echo
+    echo "$blocked_paths"
+    echo
+    echo "Remove them from the index with: git restore --staged .lab"
+  } >&2
+  exit 1
+fi
