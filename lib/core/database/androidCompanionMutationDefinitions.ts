@@ -28,6 +28,14 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'INSERT OR REPLACE INTO setting_records (' +
     'key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  syncViewActiveNodeDelete: "DELETE FROM workspace_meta WHERE key = 'active_node_id'",
+  syncViewActiveNodeUpsert:
+    'INSERT OR REPLACE INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)',
+  syncViewNodeStateDelete: 'DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?',
+  syncViewNodeStateUpsert:
+    'INSERT OR REPLACE INTO node_view_state (' +
+    'node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at' +
+    ') VALUES (?, ?, ?, ?, ?, ?, ?)',
   syncStateExisting:
     'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
   syncStateNextSeq: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',

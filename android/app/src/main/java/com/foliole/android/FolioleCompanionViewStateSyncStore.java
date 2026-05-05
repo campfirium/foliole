@@ -1,6 +1,5 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -28,7 +27,7 @@ final class FolioleCompanionViewStateSyncStore {
         String contentHash = contentHash(deviceId, "active_node", payload);
         database.beginTransaction();
         try {
-            upsertActiveNode(database, nodeId, now);
+            upsertActiveNode(context, database, nodeId, now);
             writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
@@ -50,7 +49,7 @@ final class FolioleCompanionViewStateSyncStore {
         String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
         database.beginTransaction();
         try {
-            upsertNodeViewState(database, nodeId, deviceId, payload.optInt("scroll_top", 0), "user-scroll", now);
+            upsertNodeViewState(context, database, nodeId, deviceId, payload.optInt("scroll_top", 0), "user-scroll", now);
             writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
@@ -59,22 +58,24 @@ final class FolioleCompanionViewStateSyncStore {
         return result(objectId, contentHash);
     }
 
-    static void applyPayload(SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
+    static void applyPayload(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
         String key = objectIdKey(objectId);
         String deviceId = objectIdDeviceId(objectId);
         if (!record.isNull("deleted_at")) {
-            if (key.equals("active_node")) database.delete("workspace_meta", "key = ?", new String[] { "active_node_id" });
+            if (key.equals("active_node")) {
+                FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeDelete", new Object[] {});
+            }
             if (key.startsWith("node:")) {
-                database.delete("node_view_state", "node_id = ? AND device_id = ?", new String[] { key.substring(5), deviceId });
+                FolioleCompanionNamedMutationStore.execute(context, database, "syncViewNodeStateDelete", new Object[] { key.substring(5), deviceId });
             }
             return;
         }
         JSONObject payload = payload(record);
         if (key.equals("active_node")) {
-            upsertActiveNode(database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
+            upsertActiveNode(context, database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
         } else if (key.startsWith("node:")) {
             String source = payload.has("source") ? "sync-apply" : "user-scroll";
-            upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
+            upsertNodeViewState(context, database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
         }
     }
 
@@ -82,24 +83,24 @@ final class FolioleCompanionViewStateSyncStore {
         FolioleCompanionNamedMutationStore.upsertSyncStateRow(context, database, "view_state", objectId, null, contentHash, deviceId, now, null, 1);
     }
 
-    private static void upsertActiveNode(SQLiteDatabase database, String nodeId, String now) {
-        ContentValues values = new ContentValues();
-        values.put("key", "active_node_id");
-        values.put("value", nodeId == null ? "" : nodeId);
-        values.put("updated_at", now);
-        database.insertWithOnConflict("workspace_meta", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    private static void upsertActiveNode(Context context, SQLiteDatabase database, String nodeId, String now) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeUpsert", new Object[] {
+            "active_node_id",
+            nodeId == null ? "" : nodeId,
+            now
+        });
     }
 
-    private static void upsertNodeViewState(SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String source, String now) {
-        ContentValues values = new ContentValues();
-        values.put("node_id", nodeId);
-        values.put("device_id", deviceId);
-        values.put("scroll_top", Math.max(0, scrollTop));
-        values.putNull("selection_from");
-        values.putNull("selection_to");
-        values.put("source", source);
-        values.put("updated_at", now);
-        database.insertWithOnConflict("node_view_state", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    private static void upsertNodeViewState(Context context, SQLiteDatabase database, String nodeId, String deviceId, int scrollTop, String source, String now) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "syncViewNodeStateUpsert", new Object[] {
+            nodeId,
+            deviceId,
+            Math.max(0, scrollTop),
+            null,
+            null,
+            source,
+            now
+        });
     }
 
     private static String objectId(String deviceId, String key) {

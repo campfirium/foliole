@@ -31,7 +31,7 @@ final class FolioleCompanionSyncObjectApply {
         } else if (type.equals("pdf_page_text")) {
             applyPdfPageText(database, objectId, record);
         } else if (type.equals("view_state")) {
-            FolioleCompanionViewStateSyncStore.applyPayload(database, objectId, record);
+            FolioleCompanionViewStateSyncStore.applyPayload(InstrumentationRegistry.getInstrumentation().getTargetContext(), database, objectId, record);
         } else {
             throw new IllegalArgumentException("Unsupported sync object type: " + type);
         }
