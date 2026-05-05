@@ -65,7 +65,7 @@ describe('App', () => {
   it('renders note list and single document panel', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: 'Nodes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Document' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Review' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
   });
@@ -140,6 +140,69 @@ describe('App', () => {
     expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
     fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
+
+  it('expands compact breadcrumbs when clicking ellipsis', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const n2: Node = {
+      id: 'node-2',
+      parentNodeId: 'node-1',
+      title: 'N2',
+      content: '# N2',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const n3: Node = {
+      id: 'node-3',
+      parentNodeId: 'node-2',
+      title: 'N3',
+      content: '# N3',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const n4: Node = {
+      id: 'node-4',
+      parentNodeId: 'node-3',
+      title: 'N4',
+      content: '# N4',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const n5: Node = {
+      id: 'node-5',
+      parentNodeId: 'node-4',
+      title: 'N5',
+      content: '# N5',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-5',
+      nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': n2,
+        'node-3': n3,
+        'node-4': n4,
+        'node-5': n5
+      }
+    }));
+
+    render(<App />);
+
+    const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
+    expect(within(nav).queryByRole('button', { name: 'N2' })).not.toBeInTheDocument();
+    fireEvent.click(within(nav).getByRole('button', { name: 'Expand breadcrumb path' }));
+    expect(within(nav).getByRole('button', { name: 'N2' })).toBeInTheDocument();
   });
 
   it('updates active node content from editor changes', () => {

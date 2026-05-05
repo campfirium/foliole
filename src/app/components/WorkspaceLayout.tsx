@@ -157,11 +157,10 @@ function DocumentPanelSection({
     <section aria-label="Document area" className="panel-document-shell">
       <Panel
         ariaLabel="Document panel"
-        actions={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
         bodyClassName="editor-body"
         className="panel-editor"
         style={documentLayoutStyle}
-        title="Document"
+        title={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
       >
         <div className="document-width-shell" data-resizing={isDocumentResizing}>
           <DocumentWidthHandle

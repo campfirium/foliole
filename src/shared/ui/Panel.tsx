@@ -4,7 +4,7 @@ type PanelElement = 'section' | 'aside' | 'div';
 
 interface PanelProps<T extends PanelElement = 'section'> {
   as?: T;
-  title: string;
+  title: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -29,6 +29,7 @@ export function Panel<T extends PanelElement = 'section'>({
   ...rest
 }: PanelProps<T> & Omit<ComponentPropsWithoutRef<T>, keyof PanelProps>) {
   const Component = (as ?? 'section') as ElementType;
+  const useHeading = typeof title === 'string';
 
   return (
     <Component
@@ -37,7 +38,7 @@ export function Panel<T extends PanelElement = 'section'>({
       {...rest}
     >
       <header className="ui-panel-header">
-        <h2 className="ui-panel-title">{title}</h2>
+        {useHeading ? <h2 className="ui-panel-title">{title}</h2> : <div className="ui-panel-title">{title}</div>}
         {actions}
       </header>
       <div className={joinClassNames('ui-panel-body', scrollBody && 'ui-panel-body-scroll', bodyClassName)}>

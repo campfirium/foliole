@@ -6,7 +6,7 @@ export interface NodeBreadcrumbItem {
   title: string;
 }
 
-const DEFAULT_BREADCRUMB_MAX_ITEMS = 4;
+const DEFAULT_BREADCRUMB_MAX_ITEMS = 3;
 
 function collectNodePath(nodeId: string | null, nodesById: Record<string, Node>): Node[] {
   if (!nodeId) {
@@ -57,15 +57,10 @@ export function buildNodeBreadcrumbs(
     }));
   }
 
-  const tailCount = Math.max(1, maxItems - 2);
+  const tailCount = Math.max(2, maxItems - 1);
   const tail = path.slice(-tailCount);
 
   return [
-    {
-      id: path[0].id,
-      isEllipsis: false,
-      title: path[0].title
-    },
     createEllipsisItem(),
     ...tail.map((node) => ({
       id: node.id,

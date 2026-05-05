@@ -38,9 +38,9 @@ describe('buildNodeBreadcrumbs', () => {
       n5: createNode('n5', 'N5', 'n4')
     };
 
-    const items = buildNodeBreadcrumbs('n5', nodesById, 4);
+    const items = buildNodeBreadcrumbs('n5', nodesById, 3);
 
-    expect(items.map((item) => item.title)).toEqual(['N1', '...', 'N4', 'N5']);
-    expect(items[1]?.isEllipsis).toBe(true);
+    expect(items.map((item) => item.title)).toEqual(['...', 'N4', 'N5']);
+    expect(items[0]?.isEllipsis).toBe(true);
   });
 });
