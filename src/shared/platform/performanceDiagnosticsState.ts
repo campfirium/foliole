@@ -13,6 +13,7 @@ export const POSITION_REQUEST_GRACE_MS = 2000;
 
 export const state: PerformanceDiagnosticsState = {
   activeFlow: null,
+  accumulatedComponentRenderCounts: createComponentRenderCounts(),
   imageCache: { entries: 0, hits: 0, misses: 0 },
   nodeDocumentCache: { entries: 0, hits: 0, misses: 0 },
   pdfSurfaceCache: { entries: 0 },
@@ -194,7 +195,11 @@ export function resolveFlowSnapshot(flow: NodeSelectionFlow | null): FlowDiagnos
   };
 }
 
-export function ensurePerformanceDiagnosticsDebugApi(readSnapshot: PerformanceDiagnosticsDebugApi['getSnapshot'], reset: () => void) {
+export function ensurePerformanceDiagnosticsDebugApi(
+  readSnapshot: PerformanceDiagnosticsDebugApi['getSnapshot'],
+  reset: () => void,
+  resetTotals: () => void
+) {
   if (!isPerformanceDebugEnabled() || typeof window === 'undefined') {
     return null;
   }
@@ -204,14 +209,19 @@ export function ensurePerformanceDiagnosticsDebugApi(readSnapshot: PerformanceDi
     return targetWindow.__foliolePerformanceDebug;
   }
 
-  const api: PerformanceDiagnosticsDebugApi = { getSnapshot: readSnapshot, reset };
+  const api: PerformanceDiagnosticsDebugApi = { getSnapshot: readSnapshot, reset, resetTotals };
   targetWindow.__foliolePerformanceDebug = api;
   return api;
 }
 
 export function readPerformanceDiagnosticsProbe() {
-  ensurePerformanceDiagnosticsDebugApi(readPerformanceDiagnosticsProbe, resetPerformanceDiagnosticsProbe);
+  ensurePerformanceDiagnosticsDebugApi(
+    readPerformanceDiagnosticsProbe,
+    resetPerformanceDiagnosticsProbe,
+    resetPerformanceDiagnosticsTotals
+  );
   return {
+    accumulatedComponentRenderCounts: { ...state.accumulatedComponentRenderCounts },
     flow: resolveFlowSnapshot(state.activeFlow),
     imageCache: { ...state.imageCache },
     nodeDocumentCache: { ...state.nodeDocumentCache },
@@ -243,12 +253,26 @@ export function updateSourceDetailsCacheStats(snapshot: { entries: number; hit: 
 }
 
 export function resetPerformanceDiagnosticsProbe() {
-  ensurePerformanceDiagnosticsDebugApi(readPerformanceDiagnosticsProbe, resetPerformanceDiagnosticsProbe);
+  ensurePerformanceDiagnosticsDebugApi(
+    readPerformanceDiagnosticsProbe,
+    resetPerformanceDiagnosticsProbe,
+    resetPerformanceDiagnosticsTotals
+  );
   state.activeFlow = null;
+  state.accumulatedComponentRenderCounts = createComponentRenderCounts();
   state.imageCache = { entries: 0, hits: 0, misses: 0 };
   state.nodeDocumentCache = { entries: 0, hits: 0, misses: 0 };
   state.pdfSurfaceCache = { entries: 0 };
   state.sourceDetailsCache = { entries: 0, hits: 0, misses: 0 };
+}
+
+export function resetPerformanceDiagnosticsTotals() {
+  ensurePerformanceDiagnosticsDebugApi(
+    readPerformanceDiagnosticsProbe,
+    resetPerformanceDiagnosticsProbe,
+    resetPerformanceDiagnosticsTotals
+  );
+  state.accumulatedComponentRenderCounts = createComponentRenderCounts();
 }
 
 export function resolveNodeTitle(nodesById: Record<string, Node>, nodeId: string) {

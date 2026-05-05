@@ -24,6 +24,7 @@ export {
 
 export {
   readPerformanceDiagnosticsProbe,
+  resetPerformanceDiagnosticsTotals,
   resetPerformanceDiagnosticsProbe,
   updateImageCacheStats,
   updatePdfSurfaceCacheStats,

@@ -130,9 +130,7 @@ function ReadingProfileSection({ reading }: { reading: NodeReadingProfile | null
 }
 
 function EmptyDevPanelState() {
-  return (
-    <InspectorSection description="Select a node to inspect its development data." title="Dev panel" />
-  );
+  return <InspectorSection description="Select a node to inspect its development data." title="Dev panel" />;
 }
 
 function resolveDevPanelData(

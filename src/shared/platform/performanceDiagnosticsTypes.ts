@@ -1,3 +1,10 @@
+export interface ComponentRenderCounts {
+  documentPanel: number;
+  nodeListTree: number;
+  rightSidebar: number;
+  workspaceGrid: number;
+}
+
 export interface FlowTimelineEvent {
   atMs: number;
   detail?: string;
@@ -7,12 +14,7 @@ export interface FlowTimelineEvent {
 export interface FlowDiagnosticsSnapshot {
   bodyPaintDurationMs: number | null;
   bodyReadyDurationMs: number | null;
-  componentRenderCounts: {
-    documentPanel: number;
-    nodeListTree: number;
-    rightSidebar: number;
-    workspaceGrid: number;
-  };
+  componentRenderCounts: ComponentRenderCounts;
   documentLoadDurationMs: number | null;
   documentLoadStartDurationMs: number | null;
   firstImageReadyDurationMs: number | null;
@@ -40,12 +42,7 @@ export interface NodeSelectionFlow {
   appliedAt: number | null;
   bodyPaintAt: number | null;
   bodyReadyAt: number | null;
-  componentRenderCounts: {
-    documentPanel: number;
-    nodeListTree: number;
-    rightSidebar: number;
-    workspaceGrid: number;
-  };
+  componentRenderCounts: ComponentRenderCounts;
   documentLoadResolvedAt: number | null;
   documentLoadStartedAt: number | null;
   imageState: {
@@ -72,6 +69,7 @@ export interface NodeSelectionFlow {
 
 export interface PerformanceDiagnosticsState {
   activeFlow: NodeSelectionFlow | null;
+  accumulatedComponentRenderCounts: ComponentRenderCounts;
   imageCache: {
     entries: number;
     hits: number;
@@ -95,6 +93,7 @@ export interface PerformanceDiagnosticsState {
 export type PerformanceDiagnosticsDebugApi = {
   getSnapshot: () => { flow: FlowDiagnosticsSnapshot } & Omit<PerformanceDiagnosticsState, 'activeFlow'>;
   reset: () => void;
+  resetTotals: () => void;
 };
 
 export type PerformanceDiagnosticsWindow = Window & {

@@ -219,6 +219,7 @@ export function recordNodeListRowRender(renderedNodeId: string) {
 }
 
 export function recordComponentRender(name: 'documentPanel' | 'nodeListTree' | 'rightSidebar' | 'workspaceGrid') {
+  state.accumulatedComponentRenderCounts[name] += 1;
   const flow = state.activeFlow;
   if (!flow) {
     return;
