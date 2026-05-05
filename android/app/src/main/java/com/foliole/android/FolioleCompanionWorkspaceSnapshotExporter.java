@@ -81,7 +81,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private static JSONArray loadOrderedNodeIds(Context context, SQLiteDatabase database) throws Exception {
         JSONArray result = new JSONArray();
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "workspaceOrderedNodeIds").getJSONArray("nodes");
+        JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "workspaceOrderedNodeIds", "nodes");
         for (int index = 0; index < rows.length(); index += 1) {
             result.put(rows.getJSONObject(index).getString("id"));
         }

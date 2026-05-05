@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
+import org.json.JSONObject;
 
 final class FolioleCompanionSyncDiagnosticContent {
     private FolioleCompanionSyncDiagnosticContent() {}
@@ -53,9 +53,8 @@ final class FolioleCompanionSyncDiagnosticContent {
     }
 
     private static JSObject loadActiveTopic(Context context, SQLiteDatabase database) throws Exception {
-        JSONArray topics = FolioleCompanionNamedQueryStore.loadArray(context, database, "diagnosticActiveTopic").getJSONArray("topics");
-        if (topics.length() == 0) return null;
-        return JSObject.fromJSONObject(topics.getJSONObject(0));
+        JSONObject topic = FolioleCompanionNamedQueryStore.loadFirstRow(context, database, "diagnosticActiveTopic", "topics", null);
+        return topic == null ? null : JSObject.fromJSONObject(topic);
     }
 
     private static JSArray loadRecentTopics(Context context, SQLiteDatabase database) throws Exception {

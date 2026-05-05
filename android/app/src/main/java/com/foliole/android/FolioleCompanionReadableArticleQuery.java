@@ -3,9 +3,9 @@ package com.foliole.android;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionReadableArticleQuery {
@@ -24,11 +24,11 @@ final class FolioleCompanionReadableArticleQuery {
             }
         }
 
-        JSONArray articles = FolioleCompanionNamedQueryStore.loadArray(context, database, "readableArticleFirstNode").getJSONArray("articles");
-        if (articles.length() <= 0) {
+        JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(context, database, "readableArticleFirstNode", "articles", null);
+        if (article == null) {
             return wrap(null);
         }
-        return wrap(buildArticle(context, database, articles.getJSONObject(0)));
+        return wrap(buildArticle(context, database, article));
     }
 
     private static String loadActiveNodeId(Context context, SQLiteDatabase database) throws Exception {
@@ -37,13 +37,17 @@ final class FolioleCompanionReadableArticleQuery {
     }
 
     private static JSObject loadArticleByNodeId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
-        JSONArray articles = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "readableArticleByNodeId", new String[] { nodeId })
-            .getJSONArray("articles");
-        if (articles.length() <= 0) {
+        JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(
+            context,
+            database,
+            "readableArticleByNodeId",
+            "articles",
+            new String[] { nodeId }
+        );
+        if (article == null) {
             return null;
         }
-        return buildArticle(context, database, articles.getJSONObject(0));
+        return buildArticle(context, database, article);
     }
 
     private static String loadReferencePdfAttachmentId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
@@ -60,9 +64,13 @@ final class FolioleCompanionReadableArticleQuery {
             return null;
         }
         StringBuilder builder = new StringBuilder();
-        JSONArray pages = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "pdfPageTextPages", new String[] { attachmentId.trim() })
-            .getJSONArray("pages");
+        JSArray pages = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            "pdfPageTextPages",
+            "pages",
+            new String[] { attachmentId.trim() }
+        );
         for (int index = 0; index < pages.length(); index += 1) {
             String text = pages.getJSONObject(index).optString("text", null);
             if (text == null || text.trim().isEmpty()) {
