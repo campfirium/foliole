@@ -74,3 +74,15 @@ it('keeps pack apply inert outside native Android', async () => {
     to_state_seq: 0
   });
 });
+
+it('deletes downloaded desktop packs when shared core apply fails', async () => {
+  syncPackNodesMock.applyCompanionSyncPackPathWithSharedCore.mockRejectedValueOnce(new Error('apply failed'));
+  const api = await import('./companionSyncPackApply');
+
+  await expect(api.applyCompanionDesktopSyncPack({
+    headers: { 'X-Device-Id': 'android' },
+    url: 'http://desktop/companion/sync-pack'
+  })).rejects.toThrow('apply failed');
+
+  expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
+});
