@@ -137,6 +137,10 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
       .filter((resource) => syncedIdSet.has(resource.attachment_id))
       .reduce((sum, resource) => sum + Math.max(0, resource.size_bytes ?? 0), 0);
     onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt, phase: 'attachment', total, totalBytes });
+    if (syncedBatchIds.length === 0) {
+      if (syncedAttachmentIds.length > 0) break;
+      throw new Error('Attachment file batch could not download any requested file.');
+    }
     if (resources.length < ATTACHMENT_RESOURCE_BATCH_LIMIT || syncedBatchIds.length === 0) break;
   }
   return { syncedAttachmentResourceBytes: syncedBytes, syncedAttachmentIds };
