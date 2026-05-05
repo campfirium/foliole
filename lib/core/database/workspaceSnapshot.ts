@@ -27,6 +27,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   is_title_manual: number;
   hide_title_heading: number;
   opening_text: string | null;
+  body_status: string | null;
   virtual_filter: string | null;
   content: string;
   reveal: string | null;
@@ -81,6 +82,12 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.is_title_manual,
        n.hide_title_heading,
        n.opening_text,
+       CASE
+         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
+         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing'
+         WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty'
+         ELSE 'ready'
+       END AS body_status,
        n.virtual_filter,
        COALESCE(CAST(cbd.data AS TEXT), n.content) AS content,
        n.reveal,
@@ -107,6 +114,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        nr.reps AS review_reps,
        nr.lapses AS review_lapses
      FROM nodes n
+     LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?

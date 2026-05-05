@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeTheme } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
@@ -22,14 +22,16 @@ import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, focusWindow, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
+import { setRuntimeStartupTokensCss } from './runtimeStartupTokens.js';
 import { runStartupTask } from './startupTasks.js';
+import { loadStartupSkeletonAppearance } from './startupSkeletonLayout.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 
 interface MainLifecycleArgs {
-  createMainWindow: (startupView?: StartupRendererView | null) => Promise<BrowserWindow>;
+  createMainWindow: (startupAppearance?: { backgroundColor: string } | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
   loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
   runtimeMode: RuntimeMode;
@@ -112,17 +114,21 @@ function createStartupErrorView(error: unknown, moduleLabel: string): StartupRen
   };
 }
 
+async function reportStartupRuntimeServicesFailure(error: unknown, moduleLabel: string) {
+  appendMainProcessDiagnosticLog('startup_runtime_services_failed', { error });
+  await appendBootEvent('startup_runtime_services_failed', {
+    message: toStartupErrorSummary(error),
+    moduleLabel
+  });
+}
+
 async function loadStartupErrorSurface(args: {
   error: unknown;
   moduleLabel: string;
   window: BrowserWindow;
   loadMainWindow: MainLifecycleArgs['loadMainWindow'];
 }) {
-  appendMainProcessDiagnosticLog('startup_runtime_services_failed', { error: args.error });
-  await appendBootEvent('startup_runtime_services_failed', {
-    message: toStartupErrorSummary(args.error),
-    moduleLabel: args.moduleLabel
-  });
+  await reportStartupRuntimeServicesFailure(args.error, args.moduleLabel);
   if (!args.window.isDestroyed()) {
     await args.loadMainWindow(args.window, createStartupErrorView(args.error, args.moduleLabel));
   }
@@ -175,7 +181,10 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     installAppProcessDiagnostics();
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
-    const mainWindow = await args.createMainWindow({ kind: 'booting' });
+    const startupAppearance = loadStartupSkeletonAppearance();
+    setRuntimeStartupTokensCss(startupAppearance.css);
+    nativeTheme.themeSource = startupAppearance.themeSource;
+    const mainWindow = await args.createMainWindow({ backgroundColor: startupAppearance.backgroundColor });
     startDevScreenshotServer({ getWindow: () => mainWindow });
     try {
       await initializeRuntimeServices();
@@ -204,7 +213,13 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     }
     app.on('activate', async () => {
       notifyExternalSearchUserActivity();
-      if (BrowserWindow.getAllWindows().length === 0) await args.createMainWindow();
+      if (BrowserWindow.getAllWindows().length === 0) {
+        const nextStartupAppearance = loadStartupSkeletonAppearance();
+        setRuntimeStartupTokensCss(nextStartupAppearance.css);
+        nativeTheme.themeSource = nextStartupAppearance.themeSource;
+        const window = await args.createMainWindow({ backgroundColor: nextStartupAppearance.backgroundColor });
+        await args.loadMainWindow(window);
+      }
     });
   });
   app.on('window-all-closed', () => {

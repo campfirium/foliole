@@ -6,9 +6,9 @@ import {
   syncCompanionContentBlob
 } from './companionSyncObjects';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
-export { bootstrapCompanionFromDesktopState } from './companionDesktopSyncBootstrap';
 
 const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
+const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
 const SYNC_PACK_PATH = '/companion/sync-pack';
 const CHANGE_PAGE_LIMIT = 500;
 const MAX_CHANGE_PAGES = 20;
@@ -41,6 +41,26 @@ function buildContentBlobPath(hash: string) {
   const params = new URLSearchParams();
   params.set('hash', hash);
   return `${CONTENT_BLOB_RESOURCE_PATH}?${params.toString()}`;
+}
+
+async function ackContentBlob(endpointUrl: string, hash: string) {
+  const bodyText = JSON.stringify({ hashes: [hash] });
+  const headers = await createSignedRequestHeaders({
+    bodyText,
+    method: 'POST',
+    pathWithQuery: CONTENT_BLOB_ACK_PATH
+  });
+  const response = await fetch(`${endpointUrl}${CONTENT_BLOB_ACK_PATH}`, {
+    body: bodyText,
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json'
+    },
+    method: 'POST'
+  });
+  if (!response.ok) {
+    throw new Error(`Content blob ack failed with ${response.status}.`);
+  }
 }
 
 function normalizeEndpointUrl(endpointUrl: string) {
@@ -77,6 +97,7 @@ async function pullMissingContentBlobs(endpointUrl: string) {
         url: `${endpoint}${pathWithQuery}`
       });
       if (result.availability === 'cached') {
+        await ackContentBlob(endpoint, result.hash);
         syncedContentBlobHashes.push(result.hash);
       }
     }

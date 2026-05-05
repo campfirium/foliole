@@ -94,11 +94,43 @@ function scheduleRendererSnapshot(window: BrowserWindow, label: string, delayMs:
   }, delayMs);
 }
 
+function showWhenRendererAppReady(window: BrowserWindow) {
+  let attempts = 0;
+  const maxAttempts = 120;
+  const interval = globalThis.setInterval(() => {
+    if (window.isDestroyed() || window.isVisible()) {
+      globalThis.clearInterval(interval);
+      return;
+    }
+    attempts += 1;
+    void window.webContents
+      .executeJavaScript(
+        `Boolean(window.__FOLIOLE_APP_READY_REPORTED__ && document.getElementById('root')?.childElementCount)`,
+        true
+      )
+      .then((isReady) => {
+        if (isReady && !window.isDestroyed() && !window.isVisible()) {
+          appendRuntimeEventLog('app-ready-show');
+          window.show();
+          globalThis.clearInterval(interval);
+        } else if (attempts >= maxAttempts) {
+          appendRuntimeEventLog('app-ready-show-timeout');
+          globalThis.clearInterval(interval);
+        }
+      })
+      .catch((error) => {
+        appendMainProcessDiagnosticLog('app_ready_show_probe_failed', { error });
+        if (attempts >= maxAttempts) {
+          globalThis.clearInterval(interval);
+        }
+      });
+  }, 50);
+}
+
 export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
   window.once('ready-to-show', () => {
     if (!window.isDestroyed()) {
       appendRuntimeEventLog('ready-to-show');
-      window.show();
     }
   });
 
@@ -114,6 +146,7 @@ export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
     appendRuntimeEventLog('dom-ready', {
       url: window.webContents.getURL()
     });
+    showWhenRendererAppReady(window);
     logRendererStateSnapshot(window, 'dom-ready');
   });
 

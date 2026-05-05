@@ -50,6 +50,36 @@ function createMissingBodySurface() {
   };
 }
 
+function createEmptyBodySurface() {
+  return {
+    ...createPdfReadableSurface(),
+    readableArticle: {
+      bodyStatus: 'empty',
+      content: '',
+      hideTitleHeading: false,
+      nodeId: 'topic-1',
+      pdfAttachmentId: null,
+      textAnchorDecorations: [],
+      title: 'Empty topic'
+    }
+  };
+}
+
+function createFailedBodySurface() {
+  return {
+    ...createPdfReadableSurface(),
+    readableArticle: {
+      bodyStatus: 'failed',
+      content: '',
+      hideTitleHeading: false,
+      nodeId: 'topic-1',
+      pdfAttachmentId: null,
+      textAnchorDecorations: [],
+      title: 'Failed topic'
+    }
+  };
+}
+
 describe('CompanionShellContent PDF articles', () => {
   it('keeps extracted PDF text as the primary mobile reading surface', () => {
     render(renderCompanionShellContent({
@@ -90,5 +120,39 @@ describe('CompanionShellContent PDF articles', () => {
 
     expect(screen.getByText('Topic content is still syncing.')).toBeInTheDocument();
     expect(screen.getByText('Keep this device connected to desktop and try again shortly.')).toBeInTheDocument();
+  });
+
+  it('shows an empty state when the selected topic has no body', () => {
+    render(renderCompanionShellContent({
+      hasSnapshot: true,
+      onBackToSettingsList: vi.fn(),
+      onOpenSyncSettings: vi.fn(),
+      onSelectReviewBreadcrumbItem: vi.fn(),
+      reviewBreadcrumbItems: [],
+      settingsPage: 'list',
+      surface: createEmptyBodySurface() as never,
+      workspaceError: null,
+      workspaceSync: {} as never
+    }));
+
+    expect(screen.getByText('This topic is empty.')).toBeInTheDocument();
+    expect(screen.queryByText('Topic content is still syncing.')).not.toBeInTheDocument();
+  });
+
+  it('shows a retryable failed state when body blob sync fails validation', () => {
+    render(renderCompanionShellContent({
+      hasSnapshot: true,
+      onBackToSettingsList: vi.fn(),
+      onOpenSyncSettings: vi.fn(),
+      onSelectReviewBreadcrumbItem: vi.fn(),
+      reviewBreadcrumbItems: [],
+      settingsPage: 'list',
+      surface: createFailedBodySurface() as never,
+      workspaceError: null,
+      workspaceSync: {} as never
+    }));
+
+    expect(screen.getByText('Topic content could not be synced.')).toBeInTheDocument();
+    expect(screen.getByText('Reconnect this device to desktop to retry.')).toBeInTheDocument();
   });
 });

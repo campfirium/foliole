@@ -94,11 +94,38 @@ public class FolioleCompanionContentBlobStoreTest {
         try {
             FolioleCompanionContentBlobStore.syncBlob(database, hash, server.url(), new JSONObject());
         } catch (IllegalStateException expected) {
-            assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
+            assertEquals("failed", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
             assertEquals(0, countRows("SELECT COUNT(*) FROM content_blob_data WHERE hash = '" + hash + "'"));
             return;
         }
         throw new AssertionError("Expected content blob hash mismatch.");
+    }
+
+    @Test
+    public void rejectsBlobBytesThatDoNotMatchManifestSizeAndCompression() throws Exception {
+        String body = "expected body";
+        String hash = sha256(body);
+        insertMissingBlob(hash);
+        database.execSQL("UPDATE content_blobs SET stored_size_bytes = 999 WHERE hash = '" + hash + "'");
+        OneShotHttpServer server = new OneShotHttpServer(body);
+        server.start();
+
+        assertSyncBlobFails(hash, server.url(), "failed");
+
+        database.execSQL("UPDATE content_blobs SET stored_size_bytes = 13, compression = 'deflate' WHERE hash = '" + hash + "'");
+        assertSyncBlobFails(hash, server.url(), "failed");
+    }
+
+    @Test
+    public void retriesFailedReferencedContentBlobs() throws Exception {
+        String hash = sha256("retry body");
+        insertMissingBlob(hash);
+        database.execSQL("UPDATE content_blobs SET availability = 'failed' WHERE hash = '" + hash + "'");
+        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + hash + "')");
+
+        assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(0));
     }
 
     @Test
@@ -120,13 +147,27 @@ public class FolioleCompanionContentBlobStoreTest {
         assertEquals("cached", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
     }
 
-
     private void insertMissingBlob(String hash) {
+        insertMissingBlob(hash, 17);
+    }
+
+    private void insertMissingBlob(String hash, int sizeBytes) {
         database.execSQL("INSERT INTO content_blobs (" +
             "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
             "original_sha256, stored_sha256, availability, source_device_id, created_at) VALUES (" +
-            "'" + hash + "', 'text/" + hash + "', 'text_body', 'text/plain', 'none', 17, 17, " +
+            "'" + hash + "', 'text/" + hash + "', 'text_body', 'text/plain', 'none', " + sizeBytes + ", " + sizeBytes + ", " +
             "'" + hash + "', '" + hash + "', 'missing', 'desktop', '2026-04-27T00:00:00.000Z')");
+    }
+
+    private void assertSyncBlobFails(String hash, String url, String expectedAvailability) throws Exception {
+        try {
+            FolioleCompanionContentBlobStore.syncBlob(database, hash, url, new JSONObject());
+        } catch (IllegalStateException expected) {
+            assertEquals(expectedAvailability, selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
+            assertEquals(0, countRows("SELECT COUNT(*) FROM content_blob_data WHERE hash = '" + hash + "'"));
+            return;
+        }
+        throw new AssertionError("Expected content blob sync failure.");
     }
 
     private String selectString(String sql) {

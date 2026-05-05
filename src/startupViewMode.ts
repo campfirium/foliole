@@ -4,10 +4,7 @@ import type { RuntimeInvoke } from './shared/platform/bridge';
 import type { StartupErrorActions } from './shared/ui/StartupSurface';
 
 export type StartupViewMode =
-  | {
-      kind: 'booting';
-    }
-  | {
+  {
       errorSummary: string;
       kind: 'startup-error';
       logPath: string | null;
@@ -17,9 +14,6 @@ export type StartupViewMode =
 export function resolveStartupView(search: string): StartupViewMode | null {
   const params = new URLSearchParams(search);
   const view = params.get('startupView');
-  if (view === 'booting') {
-    return { kind: 'booting' };
-  }
   if (view === 'startup-error') {
     return {
       errorSummary: params.get('startupError') ?? 'Unknown startup exception',

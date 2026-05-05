@@ -23,8 +23,9 @@ final class FolioleCompanionReadableArticleQuery {
         }
 
         try (Cursor cursor = database.rawQuery(
-            "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data " +
+            "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability " +
                 "FROM nodes n " +
+                "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
                 "LEFT JOIN node_order no ON no.node_id = n.id " +
                 "WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' " +
@@ -58,9 +59,11 @@ final class FolioleCompanionReadableArticleQuery {
 
     private static JSObject loadArticleByNodeId(SQLiteDatabase database, String nodeId) {
         try (Cursor cursor = database.rawQuery(
-            "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data " +
-                "FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
-                "WHERE n.id = ? AND (n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '') LIMIT 1",
+            "SELECT n.id, n.title, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability " +
+                "FROM nodes n " +
+                "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+                "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+                "WHERE n.id = ? LIMIT 1",
             new String[] { nodeId }
         )) {
             if (!cursor.moveToFirst()) {
@@ -126,9 +129,15 @@ final class FolioleCompanionReadableArticleQuery {
         return "# " + normalizeTitle(title) + "\n\n" + pdfText;
     }
 
-    private static String resolveContentStatus(String inlineContent, String bodyBlobHash, String bodyBlobData) {
+    private static String resolveContentStatus(String inlineContent, String bodyBlobHash, String bodyBlobData, String availability) {
         if (bodyBlobHash != null && !bodyBlobHash.trim().isEmpty() && bodyBlobData == null) {
+            if ("fetching".equals(availability) || "failed".equals(availability)) {
+                return availability;
+            }
             return "missing";
+        }
+        if (resolveContent(inlineContent, bodyBlobData).trim().isEmpty()) {
+            return "empty";
         }
         return "ready";
     }
@@ -143,13 +152,14 @@ final class FolioleCompanionReadableArticleQuery {
         String inlineContent = cursor.getString(2);
         String bodyBlobHash = cursor.isNull(3) ? null : cursor.getString(3);
         String bodyBlobData = cursor.isNull(4) ? null : cursor.getString(4);
+        String availability = cursor.isNull(5) ? null : cursor.getString(5);
         String content = resolveContent(inlineContent, bodyBlobData);
         String pdfAttachmentId = loadReferencePdfAttachmentId(database, nodeId);
         JSObject article = new JSObject();
         article.put("node_id", nodeId);
         article.put("title", title);
         article.put("content", resolveArticleContent(database, title, content, pdfAttachmentId));
-        article.put("content_status", resolveContentStatus(inlineContent, bodyBlobHash, bodyBlobData));
+        article.put("content_status", resolveContentStatus(inlineContent, bodyBlobHash, bodyBlobData, availability));
         article.put("pdf_attachment_id", pdfAttachmentId);
         return article;
     }

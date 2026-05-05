@@ -13,7 +13,7 @@ import {
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 import { installRendererErrorDiagnostics } from './shared/platform/rendererErrorDiagnostics';
 import { logRuntimeError } from './shared/platform/runtimeLogging';
-import { renderStartupBootView, renderStartupErrorView } from './shared/ui/StartupSurface';
+import { renderStartupErrorView } from './shared/ui/StartupSurface';
 import { bootstrapApp } from './startupBootstrap';
 import { createStartupErrorActions, resolveStartupView } from './startupViewMode';
 
@@ -45,10 +45,6 @@ function renderStartupViewIfRequested() {
   }
   registerBootDiagnostics();
   reportRuntimeBootStage('startup_surface_render', { kind: startupView.kind });
-  if (startupView.kind === 'booting') {
-    renderStartupBootView(rootElement);
-    return true;
-  }
   renderStartupErrorView(
     rootElement,
     {

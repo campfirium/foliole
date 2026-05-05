@@ -152,7 +152,7 @@ it('verifies native pairing credentials are readable after saving', async () => 
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
   expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
     method: 'GET',
-    path_with_query: '/companion/sync-state?limit=1&after_state_seq=0'
+    path_with_query: '/companion/sync-pack?after_state_seq=0'
   }));
 });
 

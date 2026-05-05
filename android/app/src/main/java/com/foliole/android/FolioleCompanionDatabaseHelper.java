@@ -214,7 +214,16 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         String now = Instant.now().toString();
         String deviceId = loadOrCreateDeviceId(database, now);
         File backupFile = FolioleCompanionDatabaseBackup.createPreSyncBackup(context, database, "pack");
-        JSObject result = FolioleCompanionSyncPackApply.applyPack(database, new File(packPath), deviceId);
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(
+            database,
+            new File(packPath),
+            deviceId,
+            loadNumberCursorValue(database, SYNC_PACK_CURSOR_KEY)
+        );
+        int toStateSeq = result.optInt("to_state_seq", 0);
+        if (toStateSeq > 0) {
+            saveNumberCursorValue(database, SYNC_PACK_CURSOR_KEY, toStateSeq);
+        }
         result.put("pre_sync_backup_path", backupFile.getAbsolutePath());
         return result;
     }
@@ -368,19 +377,28 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private JSObject loadNumberCursor(String key) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         JSObject result = new JSObject();
-        String stored = loadMetaValue(database, key);
-        result.put("cursor", stored == null ? JSONObject.NULL : Integer.parseInt(stored));
+        int cursor = loadNumberCursorValue(database, key);
+        result.put("cursor", cursor <= 0 ? JSONObject.NULL : cursor);
         return result;
     }
 
     private JSObject saveNumberCursor(String key, Integer cursor) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        if (cursor == null || cursor <= 0) {
+        saveNumberCursorValue(database, key, cursor == null ? 0 : cursor);
+        return loadNumberCursor(key);
+    }
+
+    private int loadNumberCursorValue(SQLiteDatabase database, String key) {
+        String stored = loadMetaValue(database, key);
+        return stored == null ? 0 : Math.max(0, Integer.parseInt(stored));
+    }
+
+    private void saveNumberCursorValue(SQLiteDatabase database, String key, int cursor) {
+        if (cursor <= 0) {
             deleteMetaValue(database, key);
         } else {
             saveMetaValue(database, key, String.valueOf(cursor), Instant.now().toString());
         }
-        return loadNumberCursor(key);
     }
 
     private JSObject loadSyncEventCursor(String key) throws Exception {

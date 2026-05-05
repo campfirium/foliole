@@ -30,6 +30,7 @@ interface WorkspaceReadingProfile {
 
 export interface WorkspaceNodeSnapshot {
   attachments?: WorkspaceNodeAttachmentSnapshot[];
+  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;
   parentNodeId: string | null;
   kind: NodeKind;
@@ -59,6 +60,7 @@ export interface WorkspaceNodeAttachmentSnapshot {
 
 export interface WorkspaceNodeRowShape {
   anchor_link: string | null;
+  body_status?: string | null;
   content: string;
   created_at: string;
   deleted_at: string | null;
@@ -161,6 +163,14 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
   }
   if (typeof row.desired_retention === 'number') {
     node.desiredRetention = row.desired_retention;
+  }
+  if (
+    row.body_status === 'empty' ||
+    row.body_status === 'failed' ||
+    row.body_status === 'fetching' ||
+    row.body_status === 'missing'
+  ) {
+    node.bodyStatus = row.body_status;
   }
   return node;
 }

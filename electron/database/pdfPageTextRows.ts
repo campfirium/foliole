@@ -8,6 +8,7 @@ import { syncPdfSearchIndexForAttachmentIds } from '../../lib/core/database/work
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { syncPdfBodyBlobsForReferenceNodes } from './pdfBodyBlobs.js';
 
 export interface PdfPageTextInput {
   page: number;
@@ -102,6 +103,7 @@ export function savePdfPageTextRows(
       }
       recordPdfPageTextDeleted(attachmentId, row.page, deviceId, now);
     }
+    syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, deviceId, now);
   });
 
   runInTransaction();

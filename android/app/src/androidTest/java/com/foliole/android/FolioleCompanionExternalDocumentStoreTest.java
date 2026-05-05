@@ -31,6 +31,12 @@ public class FolioleCompanionExternalDocumentStoreTest {
             "title TEXT NOT NULL, opening_text TEXT, body_blob_hash TEXT, content TEXT NOT NULL, indexed_at TEXT NOT NULL, " +
             "is_present INTEGER NOT NULL DEFAULT 1, missing_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
+        database.execSQL("CREATE TABLE content_blobs (" +
+            "hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT, " +
+            "compression TEXT NOT NULL DEFAULT 'none', original_size_bytes INTEGER NOT NULL, " +
+            "stored_size_bytes INTEGER NOT NULL, original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL, " +
+            "availability TEXT NOT NULL DEFAULT 'missing', source_device_id TEXT, created_at TEXT NOT NULL, " +
+            "cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE sync_object_state (" +
             "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
             "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +
@@ -132,6 +138,23 @@ public class FolioleCompanionExternalDocumentStoreTest {
     }
 
     @Test
+    public void reportsExternalDocumentBodyFetchingAndFailedStates() throws Exception {
+        insertExternalDocument("folder-1:fetching.md", "fetching-hash");
+        insertExternalDocument("folder-1:failed.md", "failed-hash");
+        insertContentBlob("fetching-hash", "fetching");
+        insertContentBlob("failed-hash", "failed");
+
+        JSONObject fetching = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:fetching.md")
+            .getJSONObject("document");
+        JSONArray failedResults = FolioleCompanionExternalDocumentStore.searchDocuments(database, "failed", 10)
+            .getJSONArray("results");
+
+        assertEquals("fetching", fetching.getString("content_status"));
+        assertEquals(1, failedResults.length());
+        assertEquals("failed", failedResults.getJSONObject(0).getString("content_status"));
+    }
+
+    @Test
     public void ignoresMissingExternalDocuments() throws Exception {
         JSONArray records = new JSONArray()
             .put(record("folder-1:doc.md", "doc.md", "cached external content"));
@@ -168,6 +191,30 @@ public class FolioleCompanionExternalDocumentStoreTest {
         try (android.database.Cursor cursor = database.rawQuery(sql, null)) {
             return cursor.moveToFirst() && !cursor.isNull(0) ? cursor.getString(0) : null;
         }
+    }
+
+    private void insertExternalDocument(String documentId, String bodyBlobHash) {
+        String relativePath = documentId.substring(documentId.indexOf(':') + 1);
+        database.execSQL(
+            "INSERT INTO external_documents (" +
+                "document_id, folder_id, relative_path, file_name, extension, source_size_bytes, " +
+                "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
+                "content, indexed_at, created_at, updated_at" +
+                ") VALUES (?, 'folder-1', ?, ?, 'md', 12, '2026-04-26T00:00:00.000Z', 1777, " +
+                "'hash', 'Blob Doc', ?, ?, '', '2026-04-26T01:00:00.000Z', " +
+                "'2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z')",
+            new Object[] { documentId, relativePath, relativePath, relativePath, bodyBlobHash }
+        );
+    }
+
+    private void insertContentBlob(String hash, String availability) {
+        database.execSQL(
+            "INSERT INTO content_blobs (" +
+                "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
+                "original_sha256, stored_sha256, availability, source_device_id, created_at) " +
+                "VALUES (?, ?, 'text_body', 'text/plain', 'none', 0, 0, ?, ?, ?, 'desktop', '2026-04-26T00:00:00.000Z')",
+            new Object[] { hash, "text/" + hash, hash, hash, availability }
+        );
     }
 
     private static JSONObject payload(String relativePath, String content) throws Exception {

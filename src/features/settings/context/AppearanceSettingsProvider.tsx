@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
 import { getEditorDisplayMode } from '../../editor/model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
@@ -28,6 +28,8 @@ import { resolveBaseColorMode } from '../model/baseColorMode';
 
 import { AppearanceSettingsContext, useAppearanceSettings } from './appearanceSettingsContext';
 import { useAppearanceSettingsValue } from './appearanceSettingsValue';
+
+const usePrePaintEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 function getInitialAppearanceModeState() {
   const baseColorMode = getBaseColorMode();
@@ -163,7 +165,7 @@ function useModeScopedAppearanceEffect(state: ReturnType<typeof useAppearanceSta
 }
 
 function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateValues>) {
-  useEffect(() => {
+  usePrePaintEffect(() => {
     applyAppearanceSettings({
       accentColor: state.accentColorPresetState,
       baseColor: state.baseColorModeState,
@@ -185,6 +187,9 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
       workspaceSurfacePalette: state.workspaceSurfacePaletteState
     });
+    if (typeof document !== 'undefined') {
+      document.body.dataset.bootSkeleton = 'hidden';
+    }
   }, [
     state.accentColorPresetState,
     state.baseColorModeState,

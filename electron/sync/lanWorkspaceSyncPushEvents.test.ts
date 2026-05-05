@@ -76,15 +76,15 @@ async function resetTestState() {
   electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-sync-push-events-'));
 }
 
-async function postNodeAndReviewPushes(endpoint: string, paired: { device_id: string; device_secret: string }) {
+async function expectRetiredNodeAndReviewPushes(endpoint: string, paired: { device_id: string; device_secret: string }) {
   const nodeResponse = await postSigned(
     endpoint,
     '/companion/sync-node-versions',
     JSON.stringify({ nodes: [{ object_id: 'node-mobile', object_type: 'node' }] }),
     paired
   );
-  expect(nodeResponse.status).toBe(200);
-  await expect(nodeResponse.json()).resolves.toMatchObject({ applied_node_ids: ['node-mobile'] });
+  expect(nodeResponse.status).toBe(410);
+  await expect(nodeResponse.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
 
   const reviewResponse = await postSigned(
     endpoint,
@@ -92,30 +92,23 @@ async function postNodeAndReviewPushes(endpoint: string, paired: { device_id: st
     JSON.stringify({ reviews: [{ op_id: 'op-mobile' }] }),
     paired
   );
-  expect(reviewResponse.status).toBe(200);
-  await expect(reviewResponse.json()).resolves.toMatchObject({ applied_op_ids: ['op-mobile'] });
+  expect(reviewResponse.status).toBe(410);
+  await expect(reviewResponse.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
 }
 
 describe('lan workspace sync push events', () => {
   afterEach(resetTestState);
 
-  it('notifies renderer windows when pushed node and review streams are applied', async () => {
+  it('does not notify renderer windows for retired pushed node and review streams', async () => {
     process.env.FOLIOLE_COMPANION_SYNC_PORT = '38685';
     const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
     await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
     const paired = await pairDevice('http://127.0.0.1:38685');
 
-    await postNodeAndReviewPushes('http://127.0.0.1:38685', paired);
+    await expectRetiredNodeAndReviewPushes('http://127.0.0.1:38685', paired);
 
-    expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
-      appliedNodeIds: ['node-mobile'],
-      appliedObjectIds: [],
-      appliedReviewOpIds: []
-    });
-    expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
-      appliedNodeIds: [],
-      appliedObjectIds: [],
-      appliedReviewOpIds: ['op-mobile']
-    });
+    expect(syncDatabaseMock.applySyncNodes).not.toHaveBeenCalled();
+    expect(syncDatabaseMock.applySyncReviewLog).not.toHaveBeenCalled();
+    expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).not.toHaveBeenCalled();
   });
 });

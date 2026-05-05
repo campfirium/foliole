@@ -43,6 +43,26 @@ function seedPdfAttachment() {
     .run('pdf-1', 'paper.pdf', 'application/pdf', 1024, '2026-04-24T00:00:00.000Z');
 }
 
+function seedPdfReferenceNode() {
+  const database = openDatabaseConnection().sqlite;
+  database
+    .prepare(
+      `INSERT INTO nodes (
+         id, kind, title, is_title_manual, hide_title_heading, content, created_at, updated_at
+       ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?)`
+    )
+    .run(
+      'node-pdf',
+      'Paper',
+      '# Paper\n\nLinked PDF source ready for the reader surface.',
+      '2026-04-24T00:00:00.000Z',
+      '2026-04-24T00:00:00.000Z'
+    );
+  database
+    .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
+    .run('node-pdf', 'pdf-1', 'reference');
+}
+
 function listPdfPageTextState() {
   return openDatabaseConnection().sqlite
     .prepare(
@@ -62,6 +82,19 @@ function countPdfPageTextChanges() {
        WHERE object_type = 'pdf_page_text'`
     )
     .get() as { count: number };
+}
+
+function readPdfReferenceNodeBody() {
+  const database = openDatabaseConnection().sqlite;
+  const row = database
+    .prepare(
+      `SELECT n.body_blob_hash, n.opening_text, n.sync_dirty, CAST(cbd.data AS TEXT) AS body_blob_data
+       FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.id = ?`
+    )
+    .get('node-pdf') as { body_blob_data: string; body_blob_hash: string; opening_text: string; sync_dirty: number };
+  return row;
 }
 
 it('writes sync object state for saved PDF page text rows', () => {
@@ -105,4 +138,28 @@ it('marks removed PDF pages as deleted sync objects', () => {
     { object_id: 'pdf-1:2', deleted_at: '2026-04-24T00:02:00.000Z', sync_dirty: 1 }
   ]);
   expect(countPdfPageTextChanges().count).toBe(0);
+});
+
+it('writes extracted PDF text as the reference node body blob for sync packs', () => {
+  seedPdfAttachment();
+  seedPdfReferenceNode();
+
+  savePdfPageTextRows(
+    'pdf-1',
+    [
+      { page: 1, pageHeight: 1200, pageWidth: 800, text: 'First extracted page.' },
+      { page: 2, pageHeight: 1200, pageWidth: 800, text: 'Second extracted page.' }
+    ],
+    '2026-04-24T00:03:00.000Z'
+  );
+
+  expect(readPdfReferenceNodeBody()).toMatchObject({
+    body_blob_data: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.',
+    body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    opening_text: 'First extracted page. Second extracted page.',
+    sync_dirty: 1
+  });
+  expect(openDatabaseConnection().sqlite
+    .prepare(`SELECT object_id, object_type FROM sync_object_state WHERE object_type = 'node'`)
+    .all()).toEqual([{ object_id: 'node-pdf', object_type: 'node' }]);
 });

@@ -4,7 +4,7 @@ import {
 } from './companionWorkspaceSyncBridge';
 
 export interface CompanionExternalDocument {
-  bodyStatus?: 'missing' | 'ready';
+  bodyStatus?: 'failed' | 'fetching' | 'missing' | 'ready';
   content: string;
   document_id: string;
   extension: string;
@@ -22,11 +22,11 @@ export interface CompanionExternalDocumentSearchResult extends CompanionExternal
 }
 
 type NativeExternalDocument = Omit<CompanionExternalDocument, 'bodyStatus'> & {
-  content_status?: 'missing' | 'ready';
+  content_status?: 'failed' | 'fetching' | 'missing' | 'ready';
 };
 
 type NativeExternalDocumentSearchResult = Omit<CompanionExternalDocumentSearchResult, 'bodyStatus'> & {
-  content_status?: 'missing' | 'ready';
+  content_status?: 'failed' | 'fetching' | 'missing' | 'ready';
 };
 
 export async function loadCompanionExternalDocument(documentId: string) {
@@ -49,8 +49,12 @@ function normalizeExternalDocument<T extends NativeExternalDocument>(document: T
   const { content_status, ...rest } = document;
   return {
     ...rest,
-    bodyStatus: content_status === 'missing' ? 'missing' : 'ready'
+    bodyStatus: normalizeBodyStatus(content_status)
   };
+}
+
+function normalizeBodyStatus(status: NativeExternalDocument['content_status']) {
+  return status === 'failed' || status === 'fetching' || status === 'missing' ? status : 'ready';
 }
 
 function normalizeExternalDocumentSearchResult(document: NativeExternalDocumentSearchResult): CompanionExternalDocumentSearchResult {

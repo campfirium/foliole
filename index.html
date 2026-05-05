@@ -6,6 +6,18 @@
     <title>Foliole</title>
     <style>
       :root {
+        --startup-rail-width: 40px;
+        --startup-list-width: 506px;
+        --startup-list-current-width: var(--startup-list-width);
+        --startup-right-sidebar-width: 342px;
+        --startup-right-sidebar-current-width: var(--startup-right-sidebar-width);
+        --startup-titlebar-height: 40px;
+        --startup-divider: rgba(32, 33, 36, 0.18);
+        --startup-titlebar-bg: #fcfcfc;
+        --startup-list-bg: #eef0ec;
+        --startup-document-bg: #ffffff;
+        --startup-sidebar-bg: #f6f6f6;
+        /*STARTUP_INJECTED_CSS*/
         color: #202124;
         font-family:
           -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
@@ -13,198 +25,142 @@
           sans-serif;
       }
 
-      html, body, #root {
+      html,
+      body,
+      #root {
         height: 100%;
       }
 
       body {
         margin: 0;
-        background: #ffffff;
+        background: var(--startup-document-bg);
+      }
+
+      body[data-boot-skeleton='hidden'] #boot-skeleton {
+        display: none;
       }
 
       .startup-shell {
-        display: flex;
+        display: grid;
+        position: fixed;
+        inset: 0;
         min-height: 100%;
-        flex-direction: column;
+        grid-template-rows: var(--startup-titlebar-height) minmax(0, 1fr);
         overflow: hidden;
       }
 
       .startup-shell__titlebar {
-        display: flex;
-        align-items: center;
-        min-height: 38px;
-        background: #fcfcfc;
+        display: grid;
+        grid-template-columns:
+          var(--startup-rail-width)
+          var(--startup-list-current-width)
+          minmax(0, 1fr)
+          var(--startup-right-sidebar-current-width);
+        min-height: var(--startup-titlebar-height);
+        background:
+          linear-gradient(
+            to right,
+            var(--startup-list-bg) 0,
+            var(--startup-list-bg) calc(var(--startup-rail-width) + var(--startup-list-current-width)),
+            var(--startup-document-bg) calc(var(--startup-rail-width) + var(--startup-list-current-width)),
+            var(--startup-document-bg) calc(100% - var(--startup-right-sidebar-current-width)),
+            var(--startup-titlebar-bg) calc(100% - var(--startup-right-sidebar-current-width)),
+            var(--startup-titlebar-bg) 100%
+          );
         border-bottom: 1px solid #d9d9d6;
-        position: relative;
-      }
-
-      .startup-shell__left {
-        width: 340px;
-        min-width: 0;
-      }
-
-      .startup-shell__drag {
-        flex: 1 1 auto;
-        min-height: 38px;
-      }
-
-      .startup-shell__controls {
-        width: 138px;
-        min-height: 38px;
-        margin-left: auto;
-        position: relative;
-        z-index: 1;
-      }
-
-      .startup-shell__right-anchor {
-        position: absolute;
-        inset: 0 0 0 auto;
-        width: 320px;
-        pointer-events: none;
-      }
-
-      .startup-shell__right-zone {
-        position: absolute;
-        inset: 0 0 0 auto;
-        width: 320px;
-        border-left: 1px solid #d9d9d6;
       }
 
       .startup-shell__body {
         display: grid;
-        grid-template-columns: 40px minmax(0, 1fr);
+        grid-template-columns:
+          var(--startup-rail-width)
+          var(--startup-list-current-width)
+          1px
+          minmax(0, 1fr)
+          1px
+          var(--startup-right-sidebar-current-width);
         min-height: 0;
-        flex: 1 1 auto;
         overflow: hidden;
       }
 
       .startup-shell__rail {
-        border-right: 1px solid rgba(32, 33, 36, 0.18);
-        background: #f6f6f6;
+        background: var(--startup-list-bg);
+        border-right: 1px solid var(--startup-divider);
       }
 
-      .startup-shell__content {
-        min-width: 0;
-        min-height: 0;
-        overflow: hidden;
+      .startup-shell__list {
+        background: var(--startup-list-bg);
       }
 
-      .startup-shell__grid {
-        display: grid;
-        grid-template-columns: minmax(0, 300px) 1px minmax(0, 1fr) 1px minmax(0, 320px);
-        height: 100%;
-        overflow: hidden;
+      .startup-shell__document {
+        background: var(--startup-document-bg);
       }
 
-      .startup-shell__panel {
-        min-height: 0;
-        overflow: hidden;
-        background: #f6f6f6;
-      }
-
-      .startup-shell__panel--main {
-        background: #ffffff;
+      .startup-shell__sidebar {
+        background: var(--startup-sidebar-bg);
       }
 
       .startup-shell__divider {
-        background: rgba(32, 33, 36, 0.18);
-      }
-
-      .startup-shell__main-head {
-        border-bottom: 1px solid rgba(32, 33, 36, 0.18);
-        padding: 16px 24px;
-      }
-
-      .startup-shell__main-copy {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: calc(100% - 53px);
-        padding: 40px;
-        overflow: hidden;
-      }
-
-      .startup-shell__loading-pill {
-        width: 28px;
-        height: 28px;
-        border: 2px solid rgba(32, 33, 36, 0.18);
-        border-top-color: rgba(32, 33, 36, 0.55);
-        border-radius: 999px;
-        animation: startup-spin 0.8s linear infinite;
-      }
-
-      @keyframes startup-spin {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
+        background: var(--startup-divider);
       }
 
       @media (max-width: 1279px) {
-        .startup-shell__grid {
-          grid-template-columns: minmax(0, 300px) 1px minmax(0, 1fr);
+        :root {
+          --startup-right-sidebar-current-width: 0px;
         }
 
-        .startup-shell__panel--right,
-        .startup-shell__divider--right {
+        .startup-shell__body {
+          grid-template-columns: var(--startup-rail-width) var(--startup-list-current-width) 1px minmax(0, 1fr);
+        }
+
+        .startup-shell__body > .startup-shell__divider:last-of-type,
+        .startup-shell__sidebar {
           display: none;
         }
       }
 
       @media (max-width: 1079px) {
+        :root {
+          --startup-list-current-width: 0px;
+        }
+
+        .startup-shell__titlebar,
         .startup-shell__body {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 1fr);
         }
 
         .startup-shell__rail,
-        .startup-shell__left {
-          display: none;
-        }
-
-        .startup-shell__grid {
-          grid-template-columns: 1fr;
-          grid-template-rows: minmax(0, 34vh) minmax(0, 1fr);
-        }
-
-        .startup-shell__panel--list,
-        .startup-shell__divider--list {
+        .startup-shell__list,
+        .startup-shell__divider,
+        .startup-shell__sidebar {
           display: none;
         }
       }
     </style>
+    <script>
+      (() => {
+        const startupCss = new URLSearchParams(window.location.search).get('startupCss');
+        if (!startupCss) return;
+        const style = document.createElement('style');
+        style.id = 'runtime-startup-tokens';
+        style.textContent = `:root { ${startupCss} }`;
+        document.head.appendChild(style);
+      })();
+    </script>
   </head>
   <body>
-    <div id="root">
-      <section aria-busy="true" aria-label="Loading workspace" class="startup-shell">
-        <div class="startup-shell__titlebar">
-          <div class="startup-shell__left"></div>
-          <div class="startup-shell__drag"></div>
-          <div class="startup-shell__right-anchor">
-            <div class="startup-shell__right-zone"></div>
-          </div>
-          <div class="startup-shell__controls"></div>
-        </div>
-        <div class="startup-shell__body">
-          <div class="startup-shell__rail"></div>
-          <div class="startup-shell__content">
-            <div class="startup-shell__grid">
-              <aside class="startup-shell__panel startup-shell__panel--list"></aside>
-              <div class="startup-shell__divider startup-shell__divider--list"></div>
-              <main class="startup-shell__panel startup-shell__panel--main">
-                <div class="startup-shell__main-head"></div>
-                <div class="startup-shell__main-copy">
-                  <div aria-label="Loading indicator" class="startup-shell__loading-pill"></div>
-                </div>
-              </main>
-              <div class="startup-shell__divider startup-shell__divider--right"></div>
-              <aside class="startup-shell__panel startup-shell__panel--right"></aside>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+    <section id="boot-skeleton" aria-hidden="true" class="startup-shell">
+      <div class="startup-shell__titlebar"></div>
+      <div class="startup-shell__body">
+        <div class="startup-shell__rail"></div>
+        <div class="startup-shell__list"></div>
+        <div class="startup-shell__divider"></div>
+        <main class="startup-shell__document"></main>
+        <div class="startup-shell__divider"></div>
+        <aside class="startup-shell__sidebar"></aside>
+      </div>
+    </section>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

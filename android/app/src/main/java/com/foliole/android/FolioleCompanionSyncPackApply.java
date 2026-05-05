@@ -15,27 +15,44 @@ final class FolioleCompanionSyncPackApply {
     private FolioleCompanionSyncPackApply() {}
 
     static JSObject applyPack(SQLiteDatabase database, File packFile, String deviceId) throws Exception {
+        return applyPack(database, packFile, deviceId, 0);
+    }
+
+    static JSObject applyPack(SQLiteDatabase database, File packFile, String deviceId, int currentCursor) throws Exception {
         if (packFile == null || !packFile.isFile()) {
             throw new IllegalArgumentException("Invalid sync pack file.");
         }
-        attachIncoming(database, packFile);
         int appliedObjects = 0;
         int appliedBlobs = 0;
         int toStateSeq = 0;
+        boolean attached = false;
+        FolioleCompanionSyncPackContainer.PreparedPack preparedPack =
+            FolioleCompanionSyncPackContainer.prepare(packFile);
         try {
+            attachIncoming(database, preparedPack.incomingFile);
+            attached = true;
             database.beginTransaction();
             try {
-                toStateSeq = readPackToStateSeq(database);
-                appliedBlobs = upsertContentBlobs(database);
-                upsertNodes(database);
-                upsertExternalDocuments(database);
-                appliedObjects = upsertStateRows(database, deviceId);
+                PackCursor packCursor = readPackCursor(database);
+                toStateSeq = packCursor.toStateSeq;
+                if (packCursor.toStateSeq > currentCursor) {
+                    if (packCursor.fromStateSeq != currentCursor) {
+                        throw new IllegalArgumentException("Sync pack cursor is not contiguous.");
+                    }
+                    appliedBlobs = upsertContentBlobs(database);
+                    upsertNodes(database);
+                    upsertExternalDocuments(database);
+                    appliedObjects = upsertStateRows(database, deviceId);
+                }
                 database.setTransactionSuccessful();
             } finally {
                 database.endTransaction();
             }
         } finally {
-            detachIncoming(database);
+            if (attached) {
+                detachIncoming(database);
+            }
+            preparedPack.close();
         }
         JSObject result = new JSObject();
         result.put("applied_object_count", appliedObjects);
@@ -52,7 +69,7 @@ final class FolioleCompanionSyncPackApply {
         database.execSQL("DETACH DATABASE " + INCOMING_ALIAS);
     }
 
-    private static int readPackToStateSeq(SQLiteDatabase database) throws Exception {
+    private static PackCursor readPackCursor(SQLiteDatabase database) throws Exception {
         try (Cursor cursor = database.rawQuery(
             "SELECT value FROM inc.pack_manifest WHERE key = 'manifest_json'",
             null
@@ -61,7 +78,10 @@ final class FolioleCompanionSyncPackApply {
                 throw new IllegalArgumentException("Invalid sync pack manifest.");
             }
             JSONObject manifest = new JSONObject(cursor.getString(0));
-            return Math.max(0, manifest.optInt("to_state_seq", 0));
+            return new PackCursor(
+                Math.max(0, manifest.optInt("from_state_seq", 0)),
+                Math.max(0, manifest.optInt("to_state_seq", 0))
+            );
         }
     }
 
@@ -154,5 +174,15 @@ final class FolioleCompanionSyncPackApply {
 
     private static String sqlString(String value) {
         return "'" + value.replace("'", "''") + "'";
+    }
+
+    private static final class PackCursor {
+        final int fromStateSeq;
+        final int toStateSeq;
+
+        PackCursor(int fromStateSeq, int toStateSeq) {
+            this.fromStateSeq = fromStateSeq;
+            this.toStateSeq = toStateSeq;
+        }
     }
 }

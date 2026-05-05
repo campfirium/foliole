@@ -78,6 +78,29 @@ function ReadableArticleDocument(props: {
       </section>
     );
   }
+  if (props.readableArticle.bodyStatus === 'fetching') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>Topic content is downloading.</p>
+        <p className="mt-3">Keep this device connected to desktop.</p>
+      </section>
+    );
+  }
+  if (props.readableArticle.bodyStatus === 'failed') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>Topic content could not be synced.</p>
+        <p className="mt-3">Reconnect this device to desktop to retry.</p>
+      </section>
+    );
+  }
+  if (props.readableArticle.bodyStatus === 'empty') {
+    return (
+      <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+        <p>This topic is empty.</p>
+      </section>
+    );
+  }
 
   return (
     <>

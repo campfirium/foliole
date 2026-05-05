@@ -22,7 +22,7 @@ import {
 
 const WEB_PAIRING_STATE_KEY = 'foliole-companion-pairing-state';
 const pairingKeyIdsByRequestId = new Map<string, string>();
-const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-state?limit=1&after_state_seq=0';
+const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
 
 type WebCompanionPairingState = NativeCompanionPairingState & { device_secret?: string };
 

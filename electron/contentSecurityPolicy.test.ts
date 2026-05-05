@@ -16,6 +16,7 @@ it('injects a packaged main window content security policy', () => {
   expect(headers['Content-Security-Policy']?.[0]).toContain('img-src');
   expect(headers['Content-Security-Policy']?.[0]).toContain('connect-src');
   expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-asset:');
+  expect(headers['Content-Security-Policy']?.[0]).not.toContain('foliole-runtime:');
   expect(headers['Content-Security-Policy']?.[0]).not.toContain('attachment:');
   expect(headers['Content-Security-Policy']?.[0]).not.toContain("'unsafe-eval'");
 });

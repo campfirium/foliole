@@ -1,5 +1,9 @@
 import type { CompanionReadableArticle } from './companionReadableArticle';
 
+function normalizeBodyStatus(status: unknown) {
+  return status === 'missing' || status === 'empty' || status === 'fetching' || status === 'failed' ? status : 'ready';
+}
+
 export function normalizeReadableArticlePayload(value: unknown): CompanionReadableArticle | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -13,7 +17,7 @@ export function normalizeReadableArticlePayload(value: unknown): CompanionReadab
     return null;
   }
   return {
-    bodyStatus: raw.content_status === 'missing' ? 'missing' : 'ready',
+    bodyStatus: normalizeBodyStatus(raw.content_status),
     content: raw.content,
     hideTitleHeading: raw.hide_title_heading === true,
     nodeId: raw.node_id,

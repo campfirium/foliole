@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   NativeSyncChangeCursor,
-  NativeSyncIndexEntry,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
   NativeSyncReviewLogRecord,
@@ -16,7 +15,6 @@ const syncBridgeMock = vi.hoisted(() => ({
     objects.map((object) => `${object.object_type}:${object.object_id}`)
   )),
   applyCompanionSyncReviewLog: vi.fn(async (reviews: NativeSyncReviewLogRecord[]) => reviews.map((review) => review.op_id)),
-  loadCompanionSyncIndex: vi.fn(async (): Promise<NativeSyncIndexEntry[]> => []),
   loadCompanionSyncNodeVersionCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncNodeVersionPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncNodeVersions: vi.fn(async () => [] as NativeSyncNodeRecord[]),
@@ -58,24 +56,9 @@ function createStateObject(index: number): NativeSyncStateObjectRecord {
   };
 }
 
-function createEntry(objectId: string, contentHash: string, updatedAt: string): NativeSyncIndexEntry {
-  return {
-    content_hash: contentHash,
-    object_id: objectId,
-    object_type: 'setting',
-    sync_version_id: null,
-    updated_at: updatedAt
-  };
-}
-
 async function runSync() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   return await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-}
-
-async function runBootstrap() {
-  const { bootstrapCompanionFromDesktopState } = await import('./companionDesktopSyncObjects');
-  return await bootstrapCompanionFromDesktopState('http://10.0.2.2:38641/');
 }
 
 function resetSyncMocks() {
@@ -83,7 +66,6 @@ function resetSyncMocks() {
   syncBridgeMock.applyCompanionSyncObjects.mockImplementation(async (objects: NativeSyncObjectRecord[]) => (
     objects.map((object) => `${object.object_type}:${object.object_id}`)
   ));
-  syncBridgeMock.loadCompanionSyncIndex.mockResolvedValue([]);
   syncBridgeMock.loadCompanionSyncNodeVersionCursor.mockResolvedValue(null);
   syncBridgeMock.loadCompanionSyncNodeVersionPushCursor.mockResolvedValue(null);
   syncBridgeMock.loadCompanionSyncNodeVersions.mockResolvedValue([]);
@@ -140,21 +122,9 @@ describe('companion desktop sync object paging', () => {
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 
-  it('keeps state diff behind the explicit bootstrap entry point', async () => {
-    syncBridgeMock.loadCompanionSyncIndex.mockResolvedValue([
-      createEntry('setting-1', 'local-newer-hash', '2026-04-25T00:10:00.000Z')
-    ]);
-    const fetchMock = vi.fn(async (url: string) => ({
-      json: async () => url.includes('/companion/sync-index')
-        ? { entries: [createEntry('setting-1', 'remote-older-hash', '2026-04-25T00:09:00.000Z')] }
-        : { changes: [] },
-      ok: true
-    }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('does not expose the retired state diff bootstrap path', async () => {
+    const syncObjects = await import('./companionDesktopSyncObjects');
 
-    const result = await runBootstrap();
-
-    expect(result.requestedObjectIds).toEqual([]);
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-objects'), expect.any(Object));
+    expect('bootstrapCompanionFromDesktopState' in syncObjects).toBe(false);
   });
 });

@@ -24,7 +24,14 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         }
         boolean canReadBodyBlobData = hasTable(database, "content_blob_data");
         String contentExpression = canReadBodyBlobData ? "COALESCE(CAST(cbd.data AS TEXT), n.content)" : "n.content";
-        String contentBlobJoin = canReadBodyBlobData ? "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " : "";
+        String contentBlobJoin = canReadBodyBlobData
+            ? "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash "
+            : "";
+        String bodyStatusExpression = canReadBodyBlobData
+            ? "CASE WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability " +
+                "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing' " +
+                "WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty' ELSE 'ready' END"
+            : "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END";
 
         JSObject nodesById = new JSObject();
         JSONArray trashedNodeIds = new JSONArray();
@@ -33,7 +40,8 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         try (Cursor cursor = database.rawQuery(
             "SELECT " +
                 "n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, " +
-                "n.hide_title_heading, " + contentExpression + ", n.opening_text, n.virtual_filter, n.reveal, n.anchor_link, " +
+                "n.hide_title_heading, " + contentExpression + ", n.opening_text, " + bodyStatusExpression + ", " +
+                "n.virtual_filter, n.reveal, n.anchor_link, " +
                 "n.image_regions, n.created_at, n.updated_at, n.deleted_at, " +
                 "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
                 "rds.reading_position, rd.repetition_count, rd.state, " +
@@ -50,7 +58,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         )) {
             while (cursor.moveToNext()) {
                 String nodeId = cursor.getString(0);
-                String deletedAt = cursor.isNull(16) ? null : cursor.getString(16);
+                String deletedAt = cursor.isNull(17) ? null : cursor.getString(17);
                 if (deletedAt != null) {
                     trashedNodeIds.put(nodeId);
                 } else if (firstActiveNodeId == null) {
@@ -113,19 +121,23 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         node.put("isTitleManual", cursor.getInt(6) == 1);
         node.put("hideTitleHeading", cursor.getInt(7) == 1);
         node.put("content", cursor.getString(8));
+        String bodyStatus = cursor.getString(10);
+        if ("missing".equals(bodyStatus) || "empty".equals(bodyStatus) || "fetching".equals(bodyStatus) || "failed".equals(bodyStatus)) {
+            node.put("bodyStatus", bodyStatus);
+        }
         JSArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(database, cursor.getString(0));
         if (attachments.length() > 0) {
             node.put("attachments", attachments);
         }
         node.put("openingText", cursor.isNull(9) ? null : cursor.getString(9));
-        node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(cursor.isNull(10) ? null : cursor.getString(10)));
-        node.put("reveal", cursor.isNull(11) ? null : cursor.getString(11));
-        node.put("anchorLink", FolioleCompanionJsonValueParser.parse(cursor.isNull(12) ? null : cursor.getString(12)));
-        node.put("imageRegions", FolioleCompanionJsonValueParser.parse(cursor.isNull(13) ? null : cursor.getString(13)));
+        node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(cursor.isNull(11) ? null : cursor.getString(11)));
+        node.put("reveal", cursor.isNull(12) ? null : cursor.getString(12));
+        node.put("anchorLink", FolioleCompanionJsonValueParser.parse(cursor.isNull(13) ? null : cursor.getString(13)));
+        node.put("imageRegions", FolioleCompanionJsonValueParser.parse(cursor.isNull(14) ? null : cursor.getString(14)));
         node.put("reading", buildReading(cursor));
         node.put("review", buildReview(cursor));
-        node.put("createdAt", cursor.getString(14));
-        node.put("updatedAt", cursor.getString(15));
+        node.put("createdAt", cursor.getString(15));
+        node.put("updatedAt", cursor.getString(16));
         if (deletedAt != null) {
             node.put("deletedAt", deletedAt);
         }
@@ -133,39 +145,39 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static Object buildReading(Cursor cursor) {
-        if (cursor.isNull(19) || cursor.isNull(20) || cursor.isNull(24)) {
+        if (cursor.isNull(20) || cursor.isNull(21) || cursor.isNull(25)) {
             return null;
         }
-        String state = cursor.getString(24);
+        String state = cursor.getString(25);
         if (!"active".equals(state) && !"done".equals(state) && !"dismissed".equals(state)) {
             return null;
         }
         JSObject reading = new JSObject();
-        reading.put("intervalDurationMs", cursor.isNull(17) ? 0 : cursor.getLong(17));
-        reading.put("intervalGrowthFactor", cursor.isNull(18) ? 1 : cursor.getDouble(18));
-        reading.put("lastHandledAt", cursor.getString(19));
-        reading.put("nextAt", cursor.getString(20));
-        reading.put("priority", cursor.isNull(21) ? 0 : cursor.getDouble(21));
-        reading.put("readingPosition", cursor.isNull(22) ? 0 : cursor.getLong(22));
-        reading.put("repetitionCount", cursor.isNull(23) ? 0 : cursor.getLong(23));
+        reading.put("intervalDurationMs", cursor.isNull(18) ? 0 : cursor.getLong(18));
+        reading.put("intervalGrowthFactor", cursor.isNull(19) ? 1 : cursor.getDouble(19));
+        reading.put("lastHandledAt", cursor.getString(20));
+        reading.put("nextAt", cursor.getString(21));
+        reading.put("priority", cursor.isNull(22) ? 0 : cursor.getDouble(22));
+        reading.put("readingPosition", cursor.isNull(23) ? 0 : cursor.getLong(23));
+        reading.put("repetitionCount", cursor.isNull(24) ? 0 : cursor.getLong(24));
         reading.put("state", state);
         return reading;
     }
 
     private static Object buildReview(Cursor cursor) {
-        if (cursor.isNull(25)) {
+        if (cursor.isNull(26)) {
             return null;
         }
         JSObject review = new JSObject();
-        review.put("due", cursor.getString(25));
-        review.put("lastReviewAt", cursor.isNull(26) ? null : cursor.getString(26));
-        review.put("state", cursor.isNull(27) ? 0 : cursor.getInt(27));
-        review.put("stability", cursor.isNull(28) ? 0 : cursor.getDouble(28));
-        review.put("difficulty", cursor.isNull(29) ? 0 : cursor.getDouble(29));
-        review.put("elapsedDays", cursor.isNull(30) ? 0 : cursor.getInt(30));
-        review.put("scheduledDays", cursor.isNull(31) ? 0 : cursor.getInt(31));
-        review.put("reps", cursor.isNull(32) ? 0 : cursor.getInt(32));
-        review.put("lapses", cursor.isNull(33) ? 0 : cursor.getInt(33));
+        review.put("due", cursor.getString(26));
+        review.put("lastReviewAt", cursor.isNull(27) ? null : cursor.getString(27));
+        review.put("state", cursor.isNull(28) ? 0 : cursor.getInt(28));
+        review.put("stability", cursor.isNull(29) ? 0 : cursor.getDouble(29));
+        review.put("difficulty", cursor.isNull(30) ? 0 : cursor.getDouble(30));
+        review.put("elapsedDays", cursor.isNull(31) ? 0 : cursor.getInt(31));
+        review.put("scheduledDays", cursor.isNull(32) ? 0 : cursor.getInt(32));
+        review.put("reps", cursor.isNull(33) ? 0 : cursor.getInt(33));
+        review.put("lapses", cursor.isNull(34) ? 0 : cursor.getInt(34));
         return review;
     }
 

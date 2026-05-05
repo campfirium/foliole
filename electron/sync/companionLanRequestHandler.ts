@@ -7,6 +7,8 @@ import {
   loadCompanionAttachmentResource
 } from './companionLanAttachmentResources.js';
 import {
+  acknowledgeCompanionContentBlobs,
+  CONTENT_BLOB_ACK_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
@@ -17,17 +19,7 @@ import {
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
 import {
-  handleSyncNodeVersionsPush,
-  handleSyncObjectsPush,
-  handleSyncReviewLogPush
-} from './companionLanSyncObjectPush.js';
-import {
-  buildSyncIndexPayload,
-  buildSyncNodeVersionsPayload,
-  buildSyncObjectsPayload,
-  buildSyncReviewLogPayload,
-  buildSyncStatePayload,
-  isSyncObjectEndpoint,
+  isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
@@ -38,6 +30,7 @@ import {
   buildCompanionSyncPackResource,
   SYNC_PACK_PATH
 } from './companionLanSyncPack.js';
+import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 const ALLOWED_CORS_PROTOCOLS = new Set(['capacitor:', 'http:', 'https:']);
@@ -50,6 +43,7 @@ export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export {
   ATTACHMENT_RESOURCE_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
+  CONTENT_BLOB_ACK_PATH,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
@@ -113,22 +107,6 @@ function writeBinary(response: http.ServerResponse, statusCode: number, body: Bu
   response.end(body);
 }
 
-function buildSyncEndpointPayload(parsedRequestUrl: URL) {
-  if (parsedRequestUrl.pathname === SYNC_INDEX_PATH) {
-    return buildSyncIndexPayload();
-  }
-  if (parsedRequestUrl.pathname === SYNC_STATE_PATH) {
-    return buildSyncStatePayload(parsedRequestUrl);
-  }
-  if (parsedRequestUrl.pathname === SYNC_NODE_VERSIONS_PATH) {
-    return buildSyncNodeVersionsPayload(parsedRequestUrl);
-  }
-  if (parsedRequestUrl.pathname === SYNC_REVIEW_LOG_PATH) {
-    return buildSyncReviewLogPayload(parsedRequestUrl);
-  }
-  return buildSyncObjectsPayload(parsedRequestUrl);
-}
-
 async function handlePostRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -148,18 +126,6 @@ async function handlePostRequest(
     await handlePairRequest(request, response, args.appVersion, args.peerId, args.updatePairingStatus, writeJson);
     return true;
   }
-  if (parsedRequestUrl.pathname === SYNC_OBJECTS_PATH) {
-    await handleSyncObjectsPush(request, response, writeJson);
-    return true;
-  }
-  if (parsedRequestUrl.pathname === SYNC_NODE_VERSIONS_PATH) {
-    await handleSyncNodeVersionsPush(request, response, writeJson);
-    return true;
-  }
-  if (parsedRequestUrl.pathname === SYNC_REVIEW_LOG_PATH) {
-    await handleSyncReviewLogPush(request, response, writeJson);
-    return true;
-  }
   return false;
 }
 
@@ -169,8 +135,8 @@ async function handleAuthenticatedGet(
   parsedRequestUrl: URL,
   args: { appVersion: string; peerId: string }
 ) {
-  if (isSyncObjectEndpoint(request, parsedRequestUrl)) {
-    writeJson(request, response, 200, buildSyncEndpointPayload(parsedRequestUrl));
+  if (request.method === 'GET' && isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
+    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'GET, OPTIONS');
     return;
   }
   if (parsedRequestUrl.pathname === ATTACHMENT_RESOURCE_PATH) {
@@ -221,6 +187,34 @@ async function handleAuthenticatedGet(
   writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.peerId, snapshot));
 }
 
+async function handleAuthenticatedPost(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  parsedRequestUrl: URL
+) {
+  const bodyText = await readCompanionRequestBody(request);
+  const auth = authenticateCompanionRequest({ bodyText, request });
+  if (!auth.ok) {
+    writeJson(request, response, auth.status_code, { error: auth.error });
+    return true;
+  }
+  if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) {
+    const ack = acknowledgeCompanionContentBlobs(bodyText);
+    if (ack.status === 'ok') {
+      writeJson(request, response, 200, ack, 'POST, OPTIONS');
+    } else {
+      writeJson(request, response, ack.statusCode, { error: ack.error }, 'POST, OPTIONS');
+    }
+    return true;
+  }
+  if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
+    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS');
+    return true;
+  }
+  writeJson(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
+  return true;
+}
+
 export function createLanWorkspaceSyncRequestHandler(args: {
   appVersion: string;
   onPairRequestCreated: (() => void) | null;
@@ -239,6 +233,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
     }
     if (request.method === 'POST') {
       if (await handlePostRequest(request, response, parsedRequestUrl, args)) return;
+      if (await handleAuthenticatedPost(request, response, parsedRequestUrl)) return;
     }
     if (request.method !== 'GET') {
       writeJson(request, response, 405, { error: 'method_not_allowed' });

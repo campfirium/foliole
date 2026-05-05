@@ -1,4 +1,5 @@
 import type http from 'node:http';
+import { Readable } from 'node:stream';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -17,6 +18,10 @@ const attachmentResourceMock = vi.hoisted(() => ({
   }))
 }));
 const contentBlobResourceMock = vi.hoisted(() => ({
+  acknowledgeCompanionContentBlobs: vi.fn((): unknown => ({
+    acked_hashes: ['a'.repeat(64)],
+    status: 'ok'
+  })),
   loadCompanionContentBlobResource: vi.fn(async (): Promise<unknown> => ({
     body: Buffer.from('body-bytes'),
     mimeType: 'text/plain',
@@ -45,7 +50,9 @@ vi.mock('./companionLanAttachmentResources.js', () => ({
   loadCompanionAttachmentResource: attachmentResourceMock.loadCompanionAttachmentResource
 }));
 vi.mock('./companionLanContentBlobs.js', () => ({
+  CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',
   CONTENT_BLOB_RESOURCE_PATH: '/companion/content-blob',
+  acknowledgeCompanionContentBlobs: contentBlobResourceMock.acknowledgeCompanionContentBlobs,
   loadCompanionContentBlobResource: contentBlobResourceMock.loadCompanionContentBlobResource
 }));
 vi.mock('./companionLanSyncPack.js', () => ({
@@ -55,9 +62,15 @@ vi.mock('./companionLanSyncPack.js', () => ({
 
 import {
   ATTACHMENT_RESOURCE_PATH,
+  CONTENT_BLOB_ACK_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
   createLanWorkspaceSyncRequestHandler,
+  SYNC_INDEX_PATH,
+  SYNC_NODE_VERSIONS_PATH,
+  SYNC_OBJECTS_PATH,
   SYNC_PACK_PATH,
+  SYNC_REVIEW_LOG_PATH,
+  SYNC_STATE_PATH,
   WORKSPACE_VERSION_PATH,
   WORKSPACE_SNAPSHOT_PATH
 } from './companionLanRequestHandler.js';
@@ -73,6 +86,10 @@ beforeEach(() => {
     body: Buffer.from('body-bytes'),
     mimeType: 'text/plain',
     status: 'ready'
+  });
+  contentBlobResourceMock.acknowledgeCompanionContentBlobs.mockReturnValue({
+    acked_hashes: ['a'.repeat(64)],
+    status: 'ok'
   });
   syncPackMock.buildCompanionSyncPackResource.mockResolvedValue({
     body: Buffer.from('sqlite-pack'),
@@ -177,6 +194,27 @@ it('serves signed content body blobs without loading the workspace snapshot', as
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
 
+it('accepts signed content body blob ack without loading the workspace snapshot', async () => {
+  const response = createResponse();
+  const requestBody = JSON.stringify({ hashes: ['a'.repeat(64)] });
+  const request = Readable.from([requestBody]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = CONTENT_BLOB_ACK_PATH;
+
+  await createHandler()(request, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+    'Content-Type': 'application/json; charset=utf-8'
+  }));
+  expect(response.end).toHaveBeenCalledWith(JSON.stringify({
+    acked_hashes: ['a'.repeat(64)],
+    status: 'ok'
+  }));
+  expect(contentBlobResourceMock.acknowledgeCompanionContentBlobs).toHaveBeenCalledWith(requestBody);
+  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
+});
+
 it('serves signed sync pack containers without loading the workspace snapshot', async () => {
   const response = createResponse();
   await createHandler()({
@@ -194,5 +232,46 @@ it('serves signed sync pack containers without loading the workspace snapshot', 
   expect(syncPackMock.buildCompanionSyncPackResource).toHaveBeenCalledWith(expect.objectContaining({
     pathname: SYNC_PACK_PATH
   }));
+  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
+});
+
+it.each([
+  SYNC_INDEX_PATH,
+  `${SYNC_NODE_VERSIONS_PATH}?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=desktop%230`,
+  `${SYNC_OBJECTS_PATH}?object_type=setting&object_id=setting%3Atheme`,
+  `${SYNC_REVIEW_LOG_PATH}?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=op-0`,
+  `${SYNC_STATE_PATH}?after_state_seq=0`
+])('retires signed legacy JSON GET endpoint %s', async (pathWithQuery) => {
+  const response = createResponse();
+  await createHandler()({
+    headers: {},
+    method: 'GET',
+    url: pathWithQuery
+  } as http.IncomingMessage, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(410, expect.objectContaining({
+    'Content-Type': 'application/json; charset=utf-8'
+  }));
+  expect(response.end).toHaveBeenCalledWith(JSON.stringify({ error: 'sync_json_endpoint_retired' }));
+  expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
+});
+
+it.each([
+  SYNC_NODE_VERSIONS_PATH,
+  SYNC_OBJECTS_PATH,
+  SYNC_REVIEW_LOG_PATH
+])('retires signed legacy JSON POST endpoint %s', async (path) => {
+  const response = createResponse();
+  const request = Readable.from([JSON.stringify({ objects: [] })]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = path;
+
+  await createHandler()(request, response);
+
+  expect(response.writeHead).toHaveBeenCalledWith(410, expect.objectContaining({
+    'Content-Type': 'application/json; charset=utf-8'
+  }));
+  expect(response.end).toHaveBeenCalledWith(JSON.stringify({ error: 'sync_json_endpoint_retired' }));
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });

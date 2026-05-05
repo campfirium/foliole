@@ -61,7 +61,7 @@ public class FolioleCompanionPairingStoreTest {
         JSObject signed = FolioleCompanionPairingStore.signRequest(
             context,
             "GET",
-            "/companion/sync-state?limit=1&after_state_seq=0",
+            "/companion/sync-pack?after_state_seq=0",
             "2026-04-27T06:00:01.000Z",
             "nonce-1",
             "empty-body-hash"

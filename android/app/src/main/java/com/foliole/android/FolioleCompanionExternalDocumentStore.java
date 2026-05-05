@@ -23,8 +23,9 @@ final class FolioleCompanionExternalDocumentStore {
         }
         try (Cursor cursor = database.rawQuery(
             "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, updated_at " +
+                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at " +
                 "FROM external_documents ed " +
+                "LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
                 "WHERE document_id = ? AND is_present = 1 LIMIT 1",
             new String[] { documentId.trim() }
@@ -47,9 +48,10 @@ final class FolioleCompanionExternalDocumentStore {
         }
         try (Cursor cursor = database.rawQuery(
             "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, updated_at, " +
+                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at, " +
                 "instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) AS match_index " +
                 "FROM external_documents ed " +
+                "LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
                 "WHERE is_present = 1 " +
                 "AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 " +
@@ -81,7 +83,7 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSObject toSearchResult(Cursor cursor) {
         JSObject result = new JSObject();
-        int matchStart = Math.max(0, cursor.getInt(11) - 1);
+        int matchStart = Math.max(0, cursor.getInt(12) - 1);
         putDocumentFields(result, cursor);
         result.put("match_start", matchStart);
         result.put("excerpt", buildExcerpt(resolveContent(cursor), matchStart));
@@ -98,7 +100,7 @@ final class FolioleCompanionExternalDocumentStore {
         target.put("opening_text", cursor.getString(6));
         target.put("content", resolveContent(cursor));
         target.put("content_status", resolveContentStatus(cursor));
-        target.put("updated_at", cursor.getString(10));
+        target.put("updated_at", cursor.getString(11));
     }
 
     private static String resolveContent(Cursor cursor) {
@@ -109,7 +111,14 @@ final class FolioleCompanionExternalDocumentStore {
     private static String resolveContentStatus(Cursor cursor) {
         String bodyBlobHash = cursor.isNull(8) ? null : cursor.getString(8);
         boolean hasBodyBlobHash = bodyBlobHash != null && !bodyBlobHash.trim().isEmpty();
-        return hasBodyBlobHash && cursor.isNull(9) ? "missing" : "ready";
+        if (hasBodyBlobHash && cursor.isNull(9)) {
+            String availability = cursor.isNull(10) ? null : cursor.getString(10);
+            if ("fetching".equals(availability) || "failed".equals(availability)) {
+                return availability;
+            }
+            return "missing";
+        }
+        return "ready";
     }
 
     private static String buildExcerpt(String text, int matchStart) {

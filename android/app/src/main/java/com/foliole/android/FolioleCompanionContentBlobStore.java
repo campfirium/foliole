@@ -40,24 +40,38 @@ final class FolioleCompanionContentBlobStore {
         if (hasCachedBlobData(database, normalizedHash)) {
             return markCached(database, normalizedHash);
         }
-        byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
-        String actualHash = sha256(bytes);
-        if (!normalizedHash.equals(actualHash)) {
-            throw new IllegalStateException("Content blob hash mismatch.");
+        ContentBlobManifest manifest = loadManifest(database, normalizedHash);
+        markAvailability(database, normalizedHash, "fetching", false);
+        try {
+            if (!"none".equals(manifest.compression)) {
+                throw new IllegalStateException("Unsupported content blob compression.");
+            }
+            byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(requireText(url, "url"), headers);
+            String actualHash = sha256(bytes);
+            if (!normalizedHash.equals(actualHash) || !manifest.matches(bytes.length, actualHash)) {
+                throw new IllegalStateException("Content blob hash mismatch.");
+            }
+            return storeCachedBlob(database, normalizedHash, bytes);
+        } catch (Exception error) {
+            markAvailability(database, normalizedHash, "failed", false);
+            throw error;
         }
+    }
+
+    private static JSObject storeCachedBlob(SQLiteDatabase database, String hash, byte[] bytes) {
         String now = Instant.now().toString();
         database.beginTransaction();
         try {
             ContentValues data = new ContentValues();
-            data.put("hash", normalizedHash);
+            data.put("hash", hash);
             data.put("data", bytes);
             database.insertWithOnConflict("content_blob_data", null, data, SQLiteDatabase.CONFLICT_REPLACE);
 
-            ContentValues manifest = new ContentValues();
-            manifest.put("availability", "cached");
-            manifest.put("cached_at", now);
-            manifest.put("last_verified_at", now);
-            int updated = database.update("content_blobs", manifest, "hash = ?", new String[] { normalizedHash });
+            ContentValues updates = new ContentValues();
+            updates.put("availability", "cached");
+            updates.put("cached_at", now);
+            updates.put("last_verified_at", now);
+            int updated = database.update("content_blobs", updates, "hash = ?", new String[] { hash });
             if (updated <= 0) {
                 throw new IllegalStateException("Content blob manifest is missing.");
             }
@@ -66,9 +80,28 @@ final class FolioleCompanionContentBlobStore {
             database.endTransaction();
         }
         JSObject result = new JSObject();
-        result.put("hash", normalizedHash);
+        result.put("hash", hash);
         result.put("availability", "cached");
         return result;
+    }
+
+    private static ContentBlobManifest loadManifest(SQLiteDatabase database, String hash) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256 " +
+                "FROM content_blobs WHERE hash = ? LIMIT 1",
+            new String[] { hash }
+        )) {
+            if (!cursor.moveToFirst()) {
+                throw new IllegalStateException("Content blob manifest is missing.");
+            }
+            return new ContentBlobManifest(
+                cursor.getString(0),
+                cursor.getLong(1),
+                cursor.getLong(2),
+                cursor.getString(3),
+                cursor.getString(4)
+            );
+        }
     }
 
     private static boolean hasCachedBlobData(SQLiteDatabase database, String hash) {
@@ -81,19 +114,25 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static JSObject markCached(SQLiteDatabase database, String hash) {
-        String now = Instant.now().toString();
-        ContentValues manifest = new ContentValues();
-        manifest.put("availability", "cached");
-        manifest.put("cached_at", now);
-        manifest.put("last_verified_at", now);
-        int updated = database.update("content_blobs", manifest, "hash = ?", new String[] { hash });
-        if (updated <= 0) {
-            throw new IllegalStateException("Content blob manifest is missing.");
-        }
+        markAvailability(database, hash, "cached", true);
         JSObject result = new JSObject();
         result.put("hash", hash);
         result.put("availability", "cached");
         return result;
+    }
+
+    private static void markAvailability(SQLiteDatabase database, String hash, String availability, boolean verified) {
+        String now = Instant.now().toString();
+        ContentValues manifest = new ContentValues();
+        manifest.put("availability", availability);
+        if (verified) {
+            manifest.put("cached_at", now);
+            manifest.put("last_verified_at", now);
+        }
+        int updated = database.update("content_blobs", manifest, "hash = ?", new String[] { hash });
+        if (updated <= 0) {
+            throw new IllegalStateException("Content blob manifest is missing.");
+        }
     }
 
     private static String requireHash(String value) {
@@ -119,5 +158,28 @@ final class FolioleCompanionContentBlobStore {
             builder.append(String.format("%02x", value));
         }
         return builder.toString();
+    }
+
+    private static final class ContentBlobManifest {
+        final String compression;
+        final long originalSizeBytes;
+        final long storedSizeBytes;
+        final String originalSha256;
+        final String storedSha256;
+
+        ContentBlobManifest(String compression, long originalSizeBytes, long storedSizeBytes, String originalSha256, String storedSha256) {
+            this.compression = compression;
+            this.originalSizeBytes = originalSizeBytes;
+            this.storedSizeBytes = storedSizeBytes;
+            this.originalSha256 = originalSha256;
+            this.storedSha256 = storedSha256;
+        }
+
+        boolean matches(long byteLength, String hash) {
+            return originalSizeBytes == byteLength &&
+                storedSizeBytes == byteLength &&
+                hash.equals(originalSha256) &&
+                hash.equals(storedSha256);
+        }
     }
 }

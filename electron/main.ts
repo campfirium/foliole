@@ -99,7 +99,10 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
   window.on('resize', publishResize);
 }
 
-async function loadRendererIntoWindow(window: ElectronBrowserWindow, startupView?: StartupRendererView | null) {
+async function loadRendererIntoWindow(
+  window: ElectronBrowserWindow,
+  startupView?: StartupRendererView | null
+) {
   await appendBootEvent('renderer_load_start', {
     startupView: startupView?.kind ?? 'workspace'
   });
@@ -110,12 +113,15 @@ async function loadRendererIntoWindow(window: ElectronBrowserWindow, startupView
   });
 }
 
-async function createMainWindow(startupView?: StartupRendererView | null) {
+async function createMainWindow(startupAppearance?: { backgroundColor: string } | null) {
   await appendBootEvent('main_window_create_start');
   const restoredWindowState = await loadWindowState();
   await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
   const options = applyWindowStateToOptions(createMainWindowOptions(runtimeDiagnostics.preloadPath), restoredWindowState);
+  if (startupAppearance?.backgroundColor) {
+    options.backgroundColor = startupAppearance.backgroundColor;
+  }
   logWindowStateRestoreDecision('window-options-applied', restoredWindowState, {
     options: {
       fullscreen: options.fullscreen ?? false,
@@ -145,7 +151,6 @@ async function createMainWindow(startupView?: StartupRendererView | null) {
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);
-  await loadRendererIntoWindow(window, startupView);
   return window;
 }
 

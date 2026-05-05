@@ -21,7 +21,10 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import { loadCompanionContentBlobResource } from './companionLanContentBlobs.js';
+import {
+  acknowledgeCompanionContentBlobs,
+  loadCompanionContentBlobResource
+} from './companionLanContentBlobs.js';
 
 let tempRoot = '';
 
@@ -60,5 +63,19 @@ it('rejects invalid and missing content blob hashes', async () => {
     error: 'blob_not_found',
     status: 'error',
     statusCode: 404
+  });
+});
+
+it('acknowledges validated content blob hashes', () => {
+  const hash = 'a'.repeat(64);
+
+  expect(acknowledgeCompanionContentBlobs(JSON.stringify({ hashes: [hash] }))).toEqual({
+    acked_hashes: [hash],
+    status: 'ok'
+  });
+  expect(acknowledgeCompanionContentBlobs(JSON.stringify({ hashes: ['not-a-hash'] }))).toEqual({
+    error: 'invalid_hashes',
+    status: 'error',
+    statusCode: 400
   });
 });

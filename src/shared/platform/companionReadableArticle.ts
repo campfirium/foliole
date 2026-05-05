@@ -5,7 +5,7 @@ import { collectDocumentTextAnchorDecorations } from '../../features/editor/mode
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
 export interface CompanionReadableArticle {
-  bodyStatus?: 'missing' | 'ready';
+  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   content: string;
   hideTitleHeading: boolean;
   nodeId: string;
@@ -15,6 +15,7 @@ export interface CompanionReadableArticle {
 }
 
 export interface CompanionRecentArticle {
+  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   nodeId: string;
   preview: string | null;
   title: string;
@@ -22,6 +23,7 @@ export interface CompanionRecentArticle {
 }
 
 export interface CompanionFolderListEntry {
+  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   kind: CompanionReadableNode['kind'];
   nodeId: string;
   preview: string | null;
@@ -37,7 +39,13 @@ export interface CompanionFolderView {
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
 
 function hasReadableContent(node: CompanionReadableNode | undefined) {
-  return Boolean(node && typeof node.content === 'string' && node.content.trim());
+  return Boolean(node && (
+    (typeof node.content === 'string' && node.content.trim()) ||
+    node.bodyStatus === 'empty' ||
+    node.bodyStatus === 'failed' ||
+    node.bodyStatus === 'fetching' ||
+    node.bodyStatus === 'missing'
+  ));
 }
 
 function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode | undefined) {
@@ -59,7 +67,7 @@ function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode 
 
 function buildReadableArticle(node: CompanionReadableNode) {
   return {
-    bodyStatus: 'ready' as const,
+    bodyStatus: normalizeBodyStatus(node.bodyStatus) ?? 'ready' as const,
     content: node.content,
     hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,
@@ -87,11 +95,16 @@ function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: Com
 
 function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFolderListEntry {
   return {
+    bodyStatus: normalizeBodyStatus(node.bodyStatus),
     kind: node.kind,
     nodeId: node.id,
-    preview: node.kind === 'folder' ? null : resolveNodeOpeningText(node.content, node.title),
+    preview: node.kind === 'folder' ? null : resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
     title: node.kind === 'topic' ? resolveCompanionArticleTitle(node) : node.title.trim() || 'Untitled'
   };
+}
+
+function normalizeBodyStatus(status: CompanionReadableNode['bodyStatus']) {
+  return status === 'missing' || status === 'empty' || status === 'fetching' || status === 'failed' ? status : undefined;
 }
 
 function isActiveFolderNode(node: CompanionReadableNode | undefined) {
@@ -190,7 +203,8 @@ export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | nul
     })
     .map((node) => ({
       nodeId: node.id,
-      preview: resolveNodeOpeningText(node.content, node.title),
+      preview: resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
+      bodyStatus: normalizeBodyStatus(node.bodyStatus),
       title: resolveCompanionArticleTitle(node),
       updatedAt: node.updatedAt
     }));

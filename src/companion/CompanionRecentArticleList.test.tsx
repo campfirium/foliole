@@ -23,6 +23,67 @@ describe('RecentArticleList', () => {
     expect(screen.getByText('Line one. Line two. Line three. Line four.').className).toContain('line-clamp-3');
   });
 
+  it('marks recent topics whose content is still syncing', () => {
+    render(
+      <RecentArticleList
+        currentArticleId={null}
+        onSelectArticle={vi.fn()}
+        recentArticles={[
+          {
+            bodyStatus: 'missing',
+            nodeId: 'article-1',
+            preview: 'Opening text',
+            title: 'Article 1',
+            updatedAt: '2026-04-21T10:00:00.000Z'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Content syncing')).toBeInTheDocument();
+    expect(screen.getByText('Opening text')).toBeInTheDocument();
+  });
+
+  it('marks recent topics whose content is empty', () => {
+    render(
+      <RecentArticleList
+        currentArticleId={null}
+        onSelectArticle={vi.fn()}
+        recentArticles={[
+          {
+            bodyStatus: 'empty',
+            nodeId: 'article-1',
+            preview: null,
+            title: 'Article 1',
+            updatedAt: '2026-04-21T10:00:00.000Z'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Empty topic')).toBeInTheDocument();
+  });
+
+  it('marks recent topics whose content sync failed', () => {
+    render(
+      <RecentArticleList
+        currentArticleId={null}
+        onSelectArticle={vi.fn()}
+        recentArticles={[
+          {
+            bodyStatus: 'failed',
+            nodeId: 'article-1',
+            preview: 'Opening text',
+            title: 'Article 1',
+            updatedAt: '2026-04-21T10:00:00.000Z'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Content sync failed')).toBeInTheDocument();
+  });
+
   it('keeps the empty recent topics state passive while automatic sync owns refresh', () => {
     render(
       <RecentArticleList

@@ -142,49 +142,13 @@ async function fetchSignedGet(endpoint: string, pathWithQuery: string, paired: {
   });
 }
 
-async function expectStateStream(endpoint: string, paired: { device_id: string; device_secret: string }) {
-  const response = await fetchSignedGet(endpoint, '/companion/sync-state?after_state_seq=0&limit=500', paired);
-  expect(response.status).toBe(200);
-  await expect(response.json()).resolves.toMatchObject({
-    objects: [{ object_id: 'setting:theme', object_type: 'setting', state_seq: 1 }]
-  });
-  expect(syncDatabaseMock.loadSyncStateObjectsSince).toHaveBeenCalledWith(0, 500);
+async function expectRetiredGet(endpoint: string, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
+  const response = await fetchSignedGet(endpoint, pathWithQuery, paired);
+  expect(response.status).toBe(410);
+  await expect(response.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
 }
 
-async function expectIndexAndObjects(endpoint: string, paired: { device_id: string; device_secret: string }) {
-  const indexResponse = await fetchSignedGet(endpoint, '/companion/sync-index', paired);
-  expect(indexResponse.status).toBe(200);
-  await expect(indexResponse.json()).resolves.toMatchObject({ entries: [{ object_id: 'setting:theme' }] });
-  const pathWithQuery = '/companion/sync-objects?object_type=setting&object_id=setting%3Atheme';
-  const objectsResponse = await fetchSignedGet(endpoint, pathWithQuery, paired);
-  expect(objectsResponse.status).toBe(200);
-  await expect(objectsResponse.json()).resolves.toMatchObject({ objects: [{ object_id: 'setting:theme' }] });
-  expect(syncDatabaseMock.loadSyncObjects).toHaveBeenCalledWith(['setting:theme'], ['setting']);
-}
-
-async function expectEventStreams(endpoint: string, paired: { device_id: string; device_secret: string }) {
-  const nodesPath = '/companion/sync-node-versions?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=desktop%230&limit=500';
-  const nodesResponse = await fetchSignedGet(endpoint, nodesPath, paired);
-  expect(nodesResponse.status).toBe(200);
-  await expect(nodesResponse.json()).resolves.toMatchObject({ nodes: [{ object_id: 'node-1', version_id: 'desktop#1' }] });
-  expect(syncDatabaseMock.flushDirtyNodeSyncVersions.mock.invocationCallOrder[0]).toBeLessThan(
-    syncDatabaseMock.loadSyncNodeVersionsSince.mock.invocationCallOrder[0]
-  );
-  expect(syncDatabaseMock.loadSyncNodeVersionsSince).toHaveBeenCalledWith({
-    createdAt: '2026-04-25T00:00:00.000Z',
-    versionId: 'desktop#0'
-  }, 500);
-  const reviewPath = '/companion/sync-review-log?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=op-0&limit=500';
-  const reviewResponse = await fetchSignedGet(endpoint, reviewPath, paired);
-  expect(reviewResponse.status).toBe(200);
-  await expect(reviewResponse.json()).resolves.toMatchObject({ reviews: [{ op_id: 'op-1' }] });
-  expect(syncDatabaseMock.loadSyncReviewLogSince).toHaveBeenCalledWith({
-    opId: 'op-0',
-    reviewedAt: '2026-04-25T00:00:00.000Z'
-  }, 500);
-}
-
-async function testServesSyncStreamsToPairedDevices() {
+async function testRetiresSyncStreamsForPairedDevices() {
   process.env.FOLIOLE_COMPANION_SYNC_PORT = '38683';
   const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
   await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
@@ -193,9 +157,25 @@ async function testServesSyncStreamsToPairedDevices() {
 
   const endpoint = 'http://127.0.0.1:38683';
   const paired = await pairDevice('http://127.0.0.1:38683');
-  await expectStateStream(endpoint, paired);
-  await expectEventStreams(endpoint, paired);
-  await expectIndexAndObjects(endpoint, paired);
+  await expectRetiredGet(endpoint, '/companion/sync-state?after_state_seq=0&limit=500', paired);
+  await expectRetiredGet(endpoint, '/companion/sync-index', paired);
+  await expectRetiredGet(endpoint, '/companion/sync-objects?object_type=setting&object_id=setting%3Atheme', paired);
+  await expectRetiredGet(
+    endpoint,
+    '/companion/sync-node-versions?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=desktop%230&limit=500',
+    paired
+  );
+  await expectRetiredGet(
+    endpoint,
+    '/companion/sync-review-log?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=op-0&limit=500',
+    paired
+  );
+  expect(syncDatabaseMock.loadSyncStateObjectsSince).not.toHaveBeenCalled();
+  expect(syncDatabaseMock.loadSyncIndex).not.toHaveBeenCalled();
+  expect(syncDatabaseMock.loadSyncObjects).not.toHaveBeenCalled();
+  expect(syncDatabaseMock.flushDirtyNodeSyncVersions).not.toHaveBeenCalled();
+  expect(syncDatabaseMock.loadSyncNodeVersionsSince).not.toHaveBeenCalled();
+  expect(syncDatabaseMock.loadSyncReviewLogSince).not.toHaveBeenCalled();
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 }
 
@@ -233,7 +213,7 @@ function buildMobileStateObjectsBody() {
   });
 }
 
-async function testAcceptsPushedMobileStateObjects() {
+async function testRetiresPushedMobileStateObjects() {
   process.env.FOLIOLE_COMPANION_SYNC_PORT = '38684';
   const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
   await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
@@ -246,27 +226,15 @@ async function testAcceptsPushedMobileStateObjects() {
     paired
   );
 
-  expect(response.status).toBe(200);
-  await expect(response.json()).resolves.toMatchObject({
-    applied_object_ids: [
-      'setting:mobile:android:phone:*:handoff',
-      'node_reading:node-1',
-      'node_review:node-1',
-      'view_state:session_resume:android:phone:android-test-device:node:node-1'
-    ]
-  });
-  expect(syncDatabaseMock.applySyncObjects).toHaveBeenCalledWith([
-    expect.objectContaining({ object_type: 'setting' }),
-    expect.objectContaining({ object_type: 'node_reading' }),
-    expect.objectContaining({ object_type: 'node_review' }),
-    expect.objectContaining({ object_type: 'view_state' })
-  ], { includeAlreadyApplied: true });
+  expect(response.status).toBe(410);
+  await expect(response.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
+  expect(syncDatabaseMock.applySyncObjects).not.toHaveBeenCalled();
 }
 
 describe('lan workspace sync objects', () => {
   afterEach(resetTestState);
 
-  it('serves generic sync index and objects only for paired devices', testServesSyncStreamsToPairedDevices);
+  it('requires pairing but retires legacy JSON sync GET streams', testRetiresSyncStreamsForPairedDevices);
 
-  it('accepts pushed mobile state objects from paired devices', testAcceptsPushedMobileStateObjects);
+  it('retires pushed mobile state objects from paired devices', testRetiresPushedMobileStateObjects);
 });

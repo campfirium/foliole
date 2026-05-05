@@ -40,6 +40,7 @@ function AppearanceHarness() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  delete document.body.dataset.bootSkeleton;
 });
 
 it('hydrates saved appearance settings and persists updates through the shared provider', () => {
@@ -60,6 +61,7 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+  expect(document.body.dataset.bootSkeleton).toBe('hidden');
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle mode' }));
   fireEvent.click(screen.getByRole('button', { name: 'Show syntax' }));

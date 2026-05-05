@@ -101,7 +101,7 @@ public class FolioleCompanionSyncPackApplyTest {
         assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = 'blob-ext'"));
         assertEquals("android-test", selectString(
             "SELECT last_modified_by_device_id FROM sync_object_state " +
-                "WHERE object_type = 'external_document' AND object_id = 'folder-1:doc.md'"
+            "WHERE object_type = 'external_document' AND object_id = 'folder-1:doc.md'"
         ));
     }
 

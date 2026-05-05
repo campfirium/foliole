@@ -23,7 +23,7 @@ async function testPullsStructurePackAndContentBlobs() {
   syncBridgeMock.loadCompanionMissingContentBlobHashes
     .mockResolvedValueOnce([bodyHash])
     .mockResolvedValueOnce([]);
-  const fetchMock = vi.fn();
+  const fetchMock = vi.fn(async () => ({ ok: true }));
   vi.stubGlobal('fetch', fetchMock);
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -50,7 +50,15 @@ async function testPullsStructurePackAndContentBlobs() {
     },
     url: `http://10.0.2.2:38641/companion/content-blob?hash=${bodyHash}`
   });
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(fetchMock).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/content-blob/ack', {
+    body: JSON.stringify({ hashes: [bodyHash] }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Device-Id': 'android-test-device',
+      'X-Signature': 'signed:/companion/content-blob/ack'
+    },
+    method: 'POST'
+  });
 }
 
 async function testNoLegacyJsonStreams() {

@@ -71,6 +71,48 @@ describe('companion external documents bridge', () => {
     expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'external' });
   });
 
+  it('preserves external document fetching and failed body status', async () => {
+    capacitorMock.plugin.loadExternalDocument.mockResolvedValueOnce({
+      document: {
+        content: '',
+        content_status: 'fetching',
+        document_id: 'folder-1:doc.md',
+        extension: 'md',
+        file_name: 'doc.md',
+        folder_id: 'folder-1',
+        opening_text: 'cached external',
+        relative_path: 'doc.md',
+        title: 'Doc',
+        updated_at: '2026-04-26T01:00:00.000Z'
+      }
+    });
+    capacitorMock.plugin.searchExternalDocuments.mockResolvedValueOnce({
+      query: 'external',
+      results: [{
+        content: '',
+        content_status: 'failed',
+        document_id: 'folder-1:doc.md',
+        excerpt: '',
+        extension: 'md',
+        file_name: 'doc.md',
+        folder_id: 'folder-1',
+        match_start: 0,
+        opening_text: 'cached external',
+        relative_path: 'doc.md',
+        title: 'Doc',
+        updated_at: '2026-04-26T01:00:00.000Z'
+      }]
+    });
+    const api = await import('./companionExternalDocuments');
+
+    await expect(api.loadCompanionExternalDocument('folder-1:doc.md')).resolves.toMatchObject({
+      bodyStatus: 'fetching'
+    });
+    await expect(api.searchCompanionExternalDocuments('external')).resolves.toEqual([expect.objectContaining({
+      bodyStatus: 'failed'
+    })]);
+  });
+
   it('returns empty values outside native Android runtime', async () => {
     capacitorMock.isNative.mockReturnValue(false);
     const api = await import('./companionExternalDocuments');

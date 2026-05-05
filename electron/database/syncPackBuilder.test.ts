@@ -32,6 +32,10 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 let tempRoot = '';
+const CONTRACT_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'android/app/src/androidTest/assets/sync-pack-contract.syncpack'
+);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-builder-'));
@@ -64,6 +68,45 @@ function insertNodeSyncState() {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('setting', 'setting-1', 2, 'setting-hash', 'desktop', '2026-04-27T00:01:00.000Z', 1)`
   );
+}
+
+function insertExternalDocumentSyncState() {
+  const folder: NativeExternalSearchFolder = {
+    attachment_mode: 'document_relative',
+    attachment_root_path: null,
+    created_at: '2026-04-27T00:02:00.000Z',
+    document_count: 0,
+    excluded_dirs: [],
+    folder_path: '/library',
+    id: 'folder-1',
+    indexed_at: null,
+    last_error: null,
+    status: 'ready',
+    updated_at: '2026-04-27T00:02:00.000Z'
+  };
+  upsertExternalDocuments(folder, [{
+    absolutePath: '/library/doc.md',
+    content: '# External Doc\n\nExternal body must stay out of pack',
+    extension: 'md',
+    fileName: 'doc.md',
+    modifiedAt: '2026-04-27T00:02:00.000Z',
+    modifiedMs: 1777,
+    relativePath: 'doc.md',
+    sizeBytes: 48
+  }], '2026-04-27T00:02:00.000Z');
+}
+
+async function buildContractFixturePack(outputPath: string) {
+  insertNodeSyncState();
+  insertExternalDocumentSyncState();
+  return buildDesktopSyncPack({
+    createdAt: '2026-04-27T02:00:00.000Z',
+    fromDeviceId: 'desktop-fixture',
+    fromStateSeq: 0,
+    outputPath,
+    packId: 'sync-pack-contract-v1',
+    toPeerId: 'android-fixture'
+  });
 }
 
 function readPackRows(packPath: string) {
@@ -211,5 +254,40 @@ it('packs external document structure with body blob manifests but no body bytes
       ]
     }),
     stateRows: [{ object_id: 'folder-1:doc.md', object_type: 'external_document', state_seq: 1 }]
+  });
+});
+
+it('keeps the Android sync pack contract fixture deterministic', async () => {
+  const generatedPath = path.join(tempRoot, 'sync-pack-contract.syncpack');
+  await buildContractFixturePack(generatedPath);
+  const generatedBytes = await fs.readFile(generatedPath);
+
+  if (process.env.UPDATE_SYNC_PACK_CONTRACT_FIXTURE === '1') {
+    await fs.mkdir(path.dirname(CONTRACT_FIXTURE_PATH), { recursive: true });
+    await fs.writeFile(CONTRACT_FIXTURE_PATH, generatedBytes);
+  }
+
+  const fixtureBytes = await fs.readFile(CONTRACT_FIXTURE_PATH);
+  expect(generatedBytes.equals(fixtureBytes)).toBe(true);
+  expect(readPackRows(CONTRACT_FIXTURE_PATH)).toMatchObject({
+    externalDocuments: [expect.objectContaining({
+      body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      content: '',
+      document_id: 'folder-1:doc.md'
+    })],
+    manifest: expect.objectContaining({
+      pack_id: 'sync-pack-contract-v1',
+      tables: [
+        { name: 'sync_object_state', row_count: 2 },
+        { name: 'nodes', row_count: 1 },
+        { name: 'external_documents', row_count: 1 },
+        { name: 'content_blobs', row_count: 2 }
+      ]
+    }),
+    nodes: [expect.objectContaining({
+      body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      content: '',
+      id: 'node-1'
+    })]
   });
 });
