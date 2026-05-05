@@ -22,6 +22,7 @@ echo "[windows-sync] target: ${WINDOWS_MIRROR_DIR}"
 
 RSYNC_ARGS=(
   -rlt
+  --inplace
   --delete
   --itemize-changes
   --no-perms

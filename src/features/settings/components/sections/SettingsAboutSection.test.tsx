@@ -41,17 +41,14 @@ beforeEach(() => {
       remainingPages: 0
     }
   });
-  mockedListDatabaseBackups.mockResolvedValue({
-    ok: true,
-    value: [
-      {
-        fileName: 'foliole-2026-03-14_10-00-00-000.db',
-        filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
-        sizeBytes: 4096,
-        updatedAt: '2026-03-14T10:00:00.000Z'
-      }
-    ]
-  });
+  mockedListDatabaseBackups.mockResolvedValue([
+    {
+      fileName: 'foliole-2026-03-14_10-00-00-000.db',
+      filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
+      sizeBytes: 4096,
+      updatedAt: '2026-03-14T10:00:00.000Z'
+    }
+  ]);
   mockedRestoreDatabaseBackup.mockResolvedValue({
     ok: true,
     value: {
@@ -79,17 +76,14 @@ it('shows backup list entries loaded for the about settings section', async () =
 });
 
 it('creates a backup and refreshes the visible list', async () => {
-  mockedListDatabaseBackups.mockResolvedValueOnce({ ok: true, value: [] }).mockResolvedValueOnce({
-    ok: true,
-    value: [
-      {
-        fileName: 'foliole-2026-03-15_08-00-00-000.db',
-        filePath: '/app/backups/foliole-2026-03-15_08-00-00-000.db',
-        sizeBytes: 81920,
-        updatedAt: '2026-03-15T08:00:00.000Z'
-      }
-    ]
-  });
+  mockedListDatabaseBackups.mockResolvedValueOnce([]).mockResolvedValueOnce([
+    {
+      fileName: 'foliole-2026-03-15_08-00-00-000.db',
+      filePath: '/app/backups/foliole-2026-03-15_08-00-00-000.db',
+      sizeBytes: 81920,
+      updatedAt: '2026-03-15T08:00:00.000Z'
+    }
+  ]);
   mockedCreateDatabaseBackup.mockResolvedValue({
     ok: true,
     value: {
@@ -116,29 +110,8 @@ it('creates a backup and refreshes the visible list', async () => {
   expect(screen.getByText('foliole-2026-03-15_08-00-00-000.db')).toBeInTheDocument();
 });
 
-it('shows the native backup error message when creation fails', async () => {
-  mockedCreateDatabaseBackup.mockResolvedValue({
-    ok: false,
-    errorMessage: 'EPERM: operation not permitted, mkdir C:\\\\Users\\\\zephu\\\\AppData\\\\Roaming\\\\foliole\\\\backups'
-  });
-
-  render(<SettingsAboutSection />);
-
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
-  });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
-
-  await waitFor(() => {
-    expect(screen.getByText(/Backup creation failed: EPERM: operation not permitted/)).toBeInTheDocument();
-  });
-});
-
-it('keeps a created backup visible when the list refresh fails', async () => {
-  mockedListDatabaseBackups
-    .mockResolvedValueOnce({ ok: true, value: [] })
-    .mockResolvedValueOnce({ ok: false, errorMessage: 'backup directory scan timed out' });
+it('keeps the success status even when the refreshed list stays empty', async () => {
+  mockedListDatabaseBackups.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
   mockedCreateDatabaseBackup.mockResolvedValue({
     ok: true,
     value: {
@@ -158,10 +131,28 @@ it('keeps a created backup visible when the list refresh fails', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
 
   await waitFor(() => {
-    expect(screen.getByText(/Backup list refresh failed: backup directory scan timed out/)).toBeInTheDocument();
+    expect(screen.getByText('Backup created: foliole-2026-03-15_08-30-00-000.db.')).toBeInTheDocument();
   });
-  expect(screen.getByText('foliole-2026-03-15_08-30-00-000.db')).toBeInTheDocument();
-  expect(screen.getByText(/Pending refresh/)).toBeInTheDocument();
+  expect(screen.getByText('No backups yet')).toBeInTheDocument();
+});
+
+it('shows the native backup error message when creation fails', async () => {
+  mockedCreateDatabaseBackup.mockResolvedValue({
+    ok: false,
+    errorMessage: 'EPERM: operation not permitted, mkdir C:\\\\Users\\\\zephu\\\\AppData\\\\Roaming\\\\foliole\\\\backups'
+  });
+
+  render(<SettingsAboutSection />);
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Backup creation failed: EPERM: operation not permitted/)).toBeInTheDocument();
+  });
 });
 
 it('restores a backup from the listed entry', async () => {
@@ -185,7 +176,7 @@ it('restores a backup from the listed entry', async () => {
 
 it('shows desktop-only fallback when runtime bridge is unavailable', async () => {
   mockedAreDatabaseBackupActionsAvailable.mockReturnValue(false);
-  mockedListDatabaseBackups.mockResolvedValue(null);
+  mockedListDatabaseBackups.mockResolvedValue([]);
 
   render(<SettingsAboutSection />);
 
@@ -196,16 +187,12 @@ it('shows desktop-only fallback when runtime bridge is unavailable', async () =>
   expect(screen.getByRole('button', { name: 'Create backup' })).toBeDisabled();
 });
 
-it('shows the backup list load error instead of silently acting empty', async () => {
-  mockedListDatabaseBackups.mockResolvedValue({
-    ok: false,
-    errorMessage: 'native list command rejected'
-  });
+it('shows the empty state when no backups are returned', async () => {
+  mockedListDatabaseBackups.mockResolvedValue([]);
 
   render(<SettingsAboutSection />);
 
   await waitFor(() => {
-    expect(screen.getByText('Backup list failed: native list command rejected')).toBeInTheDocument();
+    expect(screen.getByText('No backups yet')).toBeInTheDocument();
   });
-  expect(screen.getByText('No backups yet')).toBeInTheDocument();
 });

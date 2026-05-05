@@ -74,6 +74,7 @@ describe('windows-sync script', () => {
       expect(args).toContain('.tmp-vitest-*/');
       expect(args).toContain('.tmp-npm/');
       expect(args).toContain('.windows-native-boot-ready.json');
+      expect(args).toContain('--inplace');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
