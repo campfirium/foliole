@@ -19,6 +19,7 @@ export const CONTENT_BLOB_BATCH_LIMIT = 64;
 export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
 export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
 export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 64;
+export const ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC = 20;
 export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
 
 export interface CompanionDesktopSyncOptions {
@@ -121,16 +122,26 @@ async function pullMissingContentBlobs(endpointUrl: string, onProgress?: Compani
 
 async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const total = await loadMissingAttachmentResourceCount();
+  const syncedAttachmentIds: string[] = [];
   onProgress?.({ completed: 0, phase: 'attachment', total });
-  const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
-  const syncedAttachmentIds = await syncCompanionAttachmentResourceRequestsFromDesktop(
-    endpointUrl,
-    resources.map((resource) => ({
-      attachmentId: resource.attachment_id,
-      contentHash: resource.content_hash
-    }))
-  );
-  onProgress?.({ completed: syncedAttachmentIds.length, phase: 'attachment', total });
+  for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
+    const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
+    if (resources.length === 0) {
+      break;
+    }
+    const syncedBatchIds = await syncCompanionAttachmentResourceRequestsFromDesktop(
+      endpointUrl,
+      resources.map((resource) => ({
+        attachmentId: resource.attachment_id,
+        contentHash: resource.content_hash
+      }))
+    );
+    syncedAttachmentIds.push(...syncedBatchIds);
+    onProgress?.({ completed: syncedAttachmentIds.length, phase: 'attachment', total });
+    if (resources.length < ATTACHMENT_RESOURCE_BATCH_LIMIT || syncedBatchIds.length === 0) {
+      break;
+    }
+  }
   return { syncedAttachmentIds };
 }
 

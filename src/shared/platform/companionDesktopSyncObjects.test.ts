@@ -106,6 +106,28 @@ async function testPullsMissingAttachmentResourcesAfterStructurePack() {
   expect(onProgress).toHaveBeenCalledWith({ completed: 1, phase: 'attachment', total: null });
 }
 
+async function testContinuesAttachmentCachingAcrossBoundedBatches() {
+  const firstBatch = Array.from({ length: 64 }, (_, index) => ({
+    attachment_id: `att-${index}`,
+    content_hash: `hash-att-${index}`
+  }));
+  const secondBatch = [
+    { attachment_id: 'att-64', content_hash: 'hash-att-64' },
+    { attachment_id: 'att-65', content_hash: 'hash-att-65' }
+  ];
+  syncBridgeMock.loadCompanionMissingAttachmentResources
+    .mockResolvedValueOnce(firstBatch)
+    .mockResolvedValueOnce(secondBatch);
+
+  const { ATTACHMENT_RESOURCE_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledTimes(2);
+  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(ATTACHMENT_RESOURCE_BATCH_LIMIT);
+  expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledTimes(2);
+  expect(result.syncedAttachmentIds).toHaveLength(66);
+}
+
 async function testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails() {
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
     { attachment_id: 'att-1', content_hash: 'hash-att-1' }
@@ -273,6 +295,8 @@ describe('companion desktop sync objects', () => {
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
 
   it('pulls missing attachment resources from desktop after structure sync', testPullsMissingAttachmentResourcesAfterStructurePack);
+
+  it('continues attachment resource caching across bounded batches', testContinuesAttachmentCachingAcrossBoundedBatches);
 
   it('keeps structure sync successful when attachment resource caching fails', testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails);
 
