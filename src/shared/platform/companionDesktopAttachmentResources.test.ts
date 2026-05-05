@@ -22,6 +22,9 @@ const syncObjectsMock = vi.hoisted(() => ({
     { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
   ])
 }));
+const attachmentResourceCacheMock = vi.hoisted(() => ({
+  invalidateAttachmentResourceResolution: vi.fn()
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -32,6 +35,7 @@ vi.mock('@capacitor/core', () => ({
 }));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('./companionSyncObjects', () => syncObjectsMock);
+vi.mock('./attachmentResources', () => attachmentResourceCacheMock);
 
 import {
   syncCompanionAttachmentResourceFromDesktop,
@@ -65,6 +69,7 @@ function resetAttachmentResourceMocks() {
     content_hash: 'blob-hash-3',
     size_bytes: 4096
   });
+  attachmentResourceCacheMock.invalidateAttachmentResourceResolution.mockReset();
 }
 
 describe('companion desktop attachment resource manifests', () => {
@@ -152,6 +157,10 @@ describe('companion desktop attachment resource queue', () => {
       { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
     ])).rejects.toThrow('Attachment batch could not download any requested file.');
   });
+});
+
+describe('companion desktop active attachment resource priority', () => {
+  beforeEach(resetAttachmentResourceMocks);
 
   it('downloads a missing attachment resource by attachment id for active item priority', async () => {
     await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
@@ -167,6 +176,7 @@ describe('companion desktop attachment resource queue', () => {
       headers: { 'X-Signature': 'signed' },
       url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3'
     });
+    expect(attachmentResourceCacheMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('att-3');
   });
 
   it('reports an attachment resource as not queued when it is not missing locally', async () => {

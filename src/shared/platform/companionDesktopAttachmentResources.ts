@@ -1,5 +1,6 @@
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
+import { invalidateAttachmentResourceResolution } from './attachmentResources';
 import { loadCompanionMissingAttachmentResource } from './companionSyncObjects';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
@@ -122,6 +123,9 @@ export async function syncCompanionAttachmentResourceFromDesktop(
     attachmentId: request.attachment_id,
     contentHash: request.content_hash
   }]);
+  if (syncedIds.includes(attachmentId)) {
+    invalidateAttachmentResourceResolution(attachmentId);
+  }
   return {
     attachmentId,
     status: syncedIds.includes(attachmentId) ? 'cached' as const : 'missing' as const
