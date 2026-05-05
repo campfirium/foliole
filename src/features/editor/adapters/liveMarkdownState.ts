@@ -7,6 +7,7 @@ import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
+  type EditorMissingAttachmentResourceHandler,
   type EditorTextAnchorDecoration
 } from './EditorAdapter';
 
@@ -20,6 +21,13 @@ export const activeNodeIdFacet = Facet.define<string | null, string | null>({
 
 export const imageClozePresentationVersionFacet = Facet.define<number, number>({
   combine: (values) => values[0] ?? 0
+});
+
+export const missingAttachmentResourceFacet = Facet.define<
+  EditorMissingAttachmentResourceHandler | null,
+  EditorMissingAttachmentResourceHandler | null
+>({
+  combine: (values) => values[0] ?? null
 });
 
 export const textAnchorDecorationsFacet = Facet.define<
@@ -59,6 +67,7 @@ export function createLiveMarkdownStateExtensions(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
@@ -68,6 +77,7 @@ export function createLiveMarkdownStateExtensions(args: {
     hideTitleHeadingFacet.of(args.hideTitleHeading),
     activeNodeIdFacet.of(args.nodeId),
     imageClozePresentationVersionFacet.of(args.imageClozePresentationVersion),
+    missingAttachmentResourceFacet.of(args.onMissingAttachmentResource ?? null),
     textAnchorDecorationsFacet.of(args.textAnchorDecorations),
     openExternalLinkFacet.of(args.onOpenExternalLink ?? null),
     openNodeLinkFacet.of(args.onOpenNodeLink),

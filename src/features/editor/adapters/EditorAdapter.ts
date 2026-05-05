@@ -20,6 +20,8 @@ export interface EditorTextAnchorDecoration {
   to: number;
 }
 
+export type EditorMissingAttachmentResourceHandler = (attachmentId: string) => Promise<void> | void;
+
 export const EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS: readonly EditorTextAnchorDecoration[] = [];
 
 export interface EditorScrollMetrics {

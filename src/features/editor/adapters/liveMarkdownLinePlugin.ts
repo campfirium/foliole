@@ -8,6 +8,7 @@ import {
   activeNodeIdFacet,
   hideTitleHeadingFacet,
   imageClozePresentationVersionFacet,
+  missingAttachmentResourceFacet,
   textAnchorDecorationsFacet
 } from './liveMarkdownState';
 import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
@@ -27,6 +28,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     hideTitleHeading: view.state.facet(hideTitleHeadingFacet),
     imageClozePresentationVersion: view.state.facet(imageClozePresentationVersionFacet),
     markdownSyntaxVisible: getMarkdownSyntaxVisibility() === 'visible',
+    onMissingAttachmentResource: view.state.facet(missingAttachmentResourceFacet),
     nodeId: view.state.facet(activeNodeIdFacet)
   });
 }

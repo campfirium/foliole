@@ -7,7 +7,7 @@ import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
-import type { EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 
@@ -16,6 +16,7 @@ export interface CodeMirrorEditorAdapterOptions {
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
   onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
@@ -33,6 +34,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
@@ -44,6 +46,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,
+      onMissingAttachmentResource: args.onMissingAttachmentResource ?? null,
       onOpenExternalLink: args.onOpenExternalLink ?? null,
       onOpenNodeLink: args.onOpenNodeLink,
       onPreviewNodeLink: args.onPreviewNodeLink ?? null,
@@ -77,6 +80,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
@@ -90,6 +94,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,
+      onMissingAttachmentResource: args.onMissingAttachmentResource ?? null,
       onOpenExternalLink: args.onOpenExternalLink ?? null,
       onOpenNodeLink: args.onOpenNodeLink,
       onPreviewNodeLink: args.onPreviewNodeLink ?? null,

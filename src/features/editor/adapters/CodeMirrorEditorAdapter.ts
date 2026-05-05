@@ -58,6 +58,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownStateCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
+  private onMissingAttachmentResource: NonNullable<CodeMirrorEditorAdapterOptions['onMissingAttachmentResource']> | null = null;
   private onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | null = null;
   private onOpenNodeLink: ((title: string) => void) | null = null;
   private onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | null = null;
@@ -76,6 +77,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.hideTitleHeading = options.hideTitleHeading === true;
     this.textAnchorDecorations = options.textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
     this.onChange = options.onChange;
+    this.onMissingAttachmentResource = options.onMissingAttachmentResource ?? null;
     this.onOpenExternalLink = options.onOpenExternalLink ?? null;
     this.onOpenNodeLink = options.onOpenNodeLink ?? null;
     this.onPreviewNodeLink = options.onPreviewNodeLink ?? null;
@@ -251,6 +253,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       hideTitleHeading: this.hideTitleHeading,
       imageClozePresentationVersion: this.imageClozePresentationVersion,
       nodeId: this.nodeId,
+      onMissingAttachmentResource: this.onMissingAttachmentResource,
       onOpenExternalLink: this.onOpenExternalLink,
       onOpenNodeLink: this.onOpenNodeLink,
       onPreviewNodeLink: this.onPreviewNodeLink,

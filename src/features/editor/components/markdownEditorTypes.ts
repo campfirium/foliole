@@ -4,6 +4,7 @@ import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalL
 import type {
   EditorAdapter,
   EditorDiffDecorations,
+  EditorMissingAttachmentResourceHandler,
   EditorTextAnchorDecoration,
   EditorViewportMode
 } from '../adapters/EditorAdapter';
@@ -44,6 +45,7 @@ export interface MarkdownEditorProps {
   onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
   onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;

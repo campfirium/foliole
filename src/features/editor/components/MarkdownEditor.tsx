@@ -114,6 +114,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.value,
     props.textAnchorDecorations,
     props.hideTitleHeading ?? false,
+    props.onMissingAttachmentResource,
     props.onOpenExternalLink,
     props.onOpenNodeLink,
     props.onPreviewNodeLink,

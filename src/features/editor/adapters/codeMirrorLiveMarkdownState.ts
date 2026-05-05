@@ -5,7 +5,7 @@ import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalL
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { dispatchLiveMarkdownReconfigure } from './codeMirrorEditorAdapterSupport';
-import type { EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 
 export function applyLiveMarkdownState(args: {
   liveMarkdownStateCompartment: Compartment;
@@ -13,6 +13,7 @@ export function applyLiveMarkdownState(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
@@ -25,6 +26,7 @@ export function applyLiveMarkdownState(args: {
     hideTitleHeading: args.hideTitleHeading,
     imageClozePresentationVersion: args.imageClozePresentationVersion,
     nodeId: args.nodeId,
+    onMissingAttachmentResource: args.onMissingAttachmentResource ?? null,
     onOpenExternalLink: args.onOpenExternalLink ?? null,
     onOpenNodeLink: args.onOpenNodeLink,
     onPreviewNodeLink: args.onPreviewNodeLink ?? null,

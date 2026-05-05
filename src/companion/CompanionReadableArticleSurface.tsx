@@ -60,7 +60,7 @@ export function ReadableArticleDocument(props: {
 }) {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
-  const syncMissingPdfResource = useCallback(async (attachmentId: string) => {
+  const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) {
       return;
     }
@@ -72,7 +72,7 @@ export function ReadableArticleDocument(props: {
       <SimplePdfDocument
         attachmentId={pdfAttachmentId}
         onBackToText={() => setIsViewingPdfOriginal(false)}
-        onMissingResource={syncMissingPdfResource}
+        onMissingResource={syncMissingAttachmentResource}
         title={props.readableArticle.title}
       />
     );
@@ -101,6 +101,7 @@ export function ReadableArticleDocument(props: {
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
         nodeViewState={toEditorViewState(props.readableArticle)}
+        onMissingAttachmentResource={syncMissingAttachmentResource}
         readingSelection={props.readingSelection}
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}

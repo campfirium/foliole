@@ -1,4 +1,9 @@
-import type { EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../features/editor/adapters/EditorAdapter';
+import type {
+  EditorMissingAttachmentResourceHandler,
+  EditorSelection,
+  EditorTextAnchorDecoration,
+  EditorViewportMode
+} from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { EditorViewState } from '../features/editor/components/markdownEditorTypes';
 
@@ -10,6 +15,7 @@ export function CompanionArticleDocument(props: {
   layout?: 'article' | 'review';
   nodeId: string;
   nodeViewState?: EditorViewState;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
@@ -24,6 +30,7 @@ export function CompanionArticleDocument(props: {
         nodeId={props.nodeId}
         nodeViewState={props.nodeViewState}
         onChange={() => undefined}
+        onMissingAttachmentResource={props.onMissingAttachmentResource}
         readOnly
         readingSelection={props.readingSelection}
         readingTargetViewportMode={props.readingTargetViewportMode}

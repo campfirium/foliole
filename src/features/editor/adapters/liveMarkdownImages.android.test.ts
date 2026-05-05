@@ -35,6 +35,16 @@ function createAdapterHost(initialContent: string) {
   return { adapter, host };
 }
 
+function createAdapterHostWithMissingResourceSync(
+  initialContent: string,
+  onMissingAttachmentResource: (attachmentId: string) => Promise<void>
+) {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const adapter = new CodeMirrorEditorAdapter(host, { initialContent, onMissingAttachmentResource });
+  return { adapter, host };
+}
+
 describe('live markdown image rendering on Android companion', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,6 +67,35 @@ describe('live markdown image rendering on Android companion', () => {
     expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
       attachment_id: 'android-hash-1'
     });
+
+    adapter.destroy();
+  });
+
+  it('retries Android image rendering after the caller syncs a missing attachment resource', async () => {
+    const syncMissing = vi.fn(async () => undefined);
+    capacitorMock.plugin.resolveAttachmentResource
+      .mockResolvedValueOnce({
+        resource_url: null,
+        status: 'missing_file'
+      })
+      .mockResolvedValueOnce({
+        mime_type: 'image/png',
+        resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/android-hash-2',
+        status: 'ready'
+      });
+
+    const { adapter, host } = createAdapterHostWithMissingResourceSync(
+      '![Cover](asset://android-hash-2.png)',
+      syncMissing
+    );
+
+    await waitFor(() => {
+      expect(host.querySelector('.cm-md-image-element')?.getAttribute('src')).toBe(
+        'capacitor://file:///data/user/0/com.foliole.android/files/attachments/android-hash-2'
+      );
+    });
+    expect(syncMissing).toHaveBeenCalledWith('android-hash-2');
+    expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledTimes(2);
 
     adapter.destroy();
   });

@@ -6,7 +6,7 @@ import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { applyLiveMarkdownState } from './codeMirrorLiveMarkdownState';
 import { applyEditorTextAnchorDecorations } from './codeMirrorTextAnchorPresentation';
-import type { EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorMissingAttachmentResourceHandler, EditorTextAnchorDecoration } from './EditorAdapter';
 
 export function syncEditorTextAnchorDecorations(args: {
   compartment: Compartment;
@@ -22,6 +22,7 @@ export function syncEditorLiveMarkdownState(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;

@@ -93,6 +93,7 @@ function createEditorAdapter(args: {
   host: HTMLDivElement;
   initialContent: string;
   onChange: (value: string) => void;
+  onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
@@ -104,6 +105,7 @@ function createEditorAdapter(args: {
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
     onChange: args.onChange,
+    onMissingAttachmentResource: args.onMissingAttachmentResource,
     onOpenExternalLink: args.onOpenExternalLink,
     onOpenNodeLink: args.onOpenNodeLink,
     onPreviewNodeLink: args.onPreviewNodeLink,
@@ -121,6 +123,7 @@ function useEditorAdapterInputs(args: {
   hideTitleHeading: boolean;
   initialValue: string;
   onChange: (value: string) => void;
+  onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'];
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
@@ -129,45 +132,36 @@ function useEditorAdapterInputs(args: {
   readOnly: boolean | undefined;
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'];
 }) {
-  const {
-    hideTitleHeading,
-    initialValue,
-    onChange,
-    onOpenExternalLink,
-    onOpenNodeLink,
-    onPreviewNodeLink,
-    onPastedAnchors,
-    onReady,
-    readOnly,
-    textAnchorDecorations
-  } = args;
-  const initialValueRef = useRef(initialValue);
-  const onChangeRef = useRef(onChange);
-  const onOpenExternalLinkRef = useRef(onOpenExternalLink);
-  const onOpenNodeLinkRef = useRef(onOpenNodeLink);
-  const onPreviewNodeLinkRef = useRef(onPreviewNodeLink);
-  const onPastedAnchorsRef = useRef(onPastedAnchors);
-  const onReadyRef = useRef(onReady);
-  const hideTitleHeadingRef = useRef(hideTitleHeading);
-  const readOnlyRef = useRef(readOnly);
-  const resolvedTextAnchorDecorations = resolveTextAnchorDecorations(textAnchorDecorations);
+  const initialValueRef = useRef(args.initialValue);
+  const onChangeRef = useRef(args.onChange);
+  const onMissingAttachmentResourceRef = useRef(args.onMissingAttachmentResource);
+  const onOpenExternalLinkRef = useRef(args.onOpenExternalLink);
+  const onOpenNodeLinkRef = useRef(args.onOpenNodeLink);
+  const onPreviewNodeLinkRef = useRef(args.onPreviewNodeLink);
+  const onPastedAnchorsRef = useRef(args.onPastedAnchors);
+  const onReadyRef = useRef(args.onReady);
+  const hideTitleHeadingRef = useRef(args.hideTitleHeading);
+  const readOnlyRef = useRef(args.readOnly);
+  const resolvedTextAnchorDecorations = resolveTextAnchorDecorations(args.textAnchorDecorations);
   const textAnchorDecorationsRef = useRef(resolvedTextAnchorDecorations);
 
-  onChangeRef.current = onChange;
-  initialValueRef.current = initialValue;
-  onOpenExternalLinkRef.current = onOpenExternalLink;
-  onOpenNodeLinkRef.current = onOpenNodeLink;
-  onPreviewNodeLinkRef.current = onPreviewNodeLink;
-  onPastedAnchorsRef.current = onPastedAnchors;
-  onReadyRef.current = onReady;
-  hideTitleHeadingRef.current = hideTitleHeading;
-  readOnlyRef.current = readOnly;
+  onChangeRef.current = args.onChange;
+  onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
+  initialValueRef.current = args.initialValue;
+  onOpenExternalLinkRef.current = args.onOpenExternalLink;
+  onOpenNodeLinkRef.current = args.onOpenNodeLink;
+  onPreviewNodeLinkRef.current = args.onPreviewNodeLink;
+  onPastedAnchorsRef.current = args.onPastedAnchors;
+  onReadyRef.current = args.onReady;
+  hideTitleHeadingRef.current = args.hideTitleHeading;
+  readOnlyRef.current = args.readOnly;
   textAnchorDecorationsRef.current = resolvedTextAnchorDecorations;
 
   return {
     hideTitleHeadingRef,
     initialValueRef,
     onChangeRef,
+    onMissingAttachmentResourceRef,
     onOpenExternalLinkRef,
     onOpenNodeLinkRef,
     onPreviewNodeLinkRef,
@@ -198,6 +192,7 @@ function useEditorAdapterLifecycle(args: {
       host,
       initialContent: inputs.initialValueRef.current,
       onChange: (nextValue) => inputs.onChangeRef.current(nextValue),
+      onMissingAttachmentResource: (attachmentId) => inputs.onMissingAttachmentResourceRef.current?.(attachmentId),
       onOpenExternalLink: (href) => inputs.onOpenExternalLinkRef.current?.(href),
       onOpenNodeLink: (title) => inputs.onOpenNodeLinkRef.current?.(title),
       onPreviewNodeLink: (request) => inputs.onPreviewNodeLinkRef.current?.(request),
@@ -227,6 +222,7 @@ export function useEditorAdapter(
   initialValue: string,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],
   hideTitleHeading: boolean,
+  onMissingAttachmentResource: MarkdownEditorProps['onMissingAttachmentResource'],
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined,
   onOpenNodeLink: ((title: string) => void) | undefined,
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined,
@@ -238,6 +234,7 @@ export function useEditorAdapter(
     hideTitleHeading,
     initialValue,
     onChange,
+    onMissingAttachmentResource,
     onOpenExternalLink,
     onOpenNodeLink,
     onPreviewNodeLink,

@@ -54,6 +54,7 @@ export function createCodeMirrorEditorExtensions(args: {
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
         nodeId: args.nodeId,
+        onMissingAttachmentResource: args.options.onMissingAttachmentResource ?? null,
         onOpenExternalLink: args.options.onOpenExternalLink ?? null,
         onOpenNodeLink: args.options.onOpenNodeLink ?? null,
         onPreviewNodeLink: args.options.onPreviewNodeLink ?? null,
@@ -81,6 +82,7 @@ export function createLiveMarkdownEffect(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onMissingAttachmentResource?: import('./EditorAdapter').EditorMissingAttachmentResourceHandler | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink?: ((request: import('../model/nodeLinkPreview').EditorNodeLinkPreviewRequest | null) => void) | null;

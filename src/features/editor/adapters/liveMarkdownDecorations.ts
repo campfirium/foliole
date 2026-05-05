@@ -6,6 +6,7 @@ import type { InlineTextDecorationPlan } from '../model/inlineTextDecorationPlan
 import {
   collectPreviewViewportPlans,
   collectSourceViewportPlans,
+  type ViewportPreviewLinePlan,
   type ViewportLineInput
 } from '../model/liveMarkdownViewportPlans';
 import {
@@ -23,6 +24,7 @@ import {
 import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
 import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
 
+import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addImageDecorations } from './liveMarkdownInlineDecorations';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
@@ -44,6 +46,7 @@ interface DecorationBuildContext {
   imageClozePresentationVersion: number;
   markdownSyntaxVisible: boolean;
   nodeId: string | null;
+  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null;
 }
 
 function applyInlineTextDecorationPlan(ranges: Range<Decoration>[], plan: InlineTextDecorationPlan) {
@@ -54,6 +57,24 @@ function applyInlineTextDecorationPlan(ranges: Range<Decoration>[], plan: Inline
 function applyInlinePresentationPlan(ranges: Range<Decoration>[], plan: InlinePresentationPlan) {
   for (const range of plan.markRanges) addMark(ranges, range.from, range.to, range.className, range.attributes);
   for (const range of plan.replaceRanges) addReplace(ranges, range.from, range.to);
+}
+
+function addPreviewImageDecorations(
+  ranges: Range<Decoration>[],
+  plan: ViewportPreviewLinePlan['plan'],
+  context: DecorationBuildContext
+) {
+  if (!plan.imageVisible) {
+    return;
+  }
+  addImageDecorations(
+    ranges,
+    plan.imageMatches,
+    false,
+    context.nodeId,
+    context.imageClozePresentationVersion,
+    context.onMissingAttachmentResource
+  );
 }
 
 function hideLinkReferenceDefinition(
@@ -158,9 +179,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     }
     if (plan.lineClass) addLine(ranges, lineFrom, plan.lineClass);
     if (hideLinkReferenceDefinition(ranges, lineFrom, linkReferenceRangeByLineFrom)) continue;
-    if (plan.imageVisible) {
-      addImageDecorations(ranges, plan.imageMatches, false, context.nodeId, context.imageClozePresentationVersion);
-    }
+    addPreviewImageDecorations(ranges, plan, context);
 
     if (plan.prefixVisible) {
       addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, {

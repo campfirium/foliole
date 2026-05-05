@@ -1,9 +1,13 @@
-import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
+import {
+  invalidateAttachmentResourceResolution,
+  resolveRuntimeAttachmentResource
+} from '../../../shared/platform/attachmentResources';
 import { isNativeAndroidCompanionRuntime } from '../../../shared/platform/companionWorkspaceSyncBridge';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
 
+import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 
 function parseImageRange(value: number) {
@@ -75,11 +79,26 @@ function appendResolvedAndroidAttachmentImage(
   wrapper: HTMLElement,
   imageMatch: MarkdownImageMatch,
   renderPlan: ReturnType<typeof buildMarkdownImageRenderPlan>,
-  editorNodeId: string | null
+  editorNodeId: string | null,
+  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null
 ) {
   wrapper.append(createImageStatusElement('loading', renderPlan.display));
-  void resolveRuntimeAttachmentResource(imageMatch.source).then((resolution) => {
+  let didRetry = false;
+  async function resolveImage() {
+    const resolution = await resolveRuntimeAttachmentResource(imageMatch.source);
     if (resolution?.status !== 'ready' || !resolution.resource_url) {
+      if (!didRetry && imageMatch.attachmentId && onMissingAttachmentResource) {
+        didRetry = true;
+        try {
+          await onMissingAttachmentResource(imageMatch.attachmentId);
+        } catch {
+          wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+          return;
+        }
+        invalidateAttachmentResourceResolution(imageMatch.attachmentId);
+        await resolveImage();
+        return;
+      }
       wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
       return;
     }
@@ -90,10 +109,15 @@ function appendResolvedAndroidAttachmentImage(
         }
       })
     );
-  });
+  }
+  void resolveImage();
 }
 
-export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, editorNodeId: string | null = null) {
+export function createMarkdownImageWidgetDom(
+  imageMatch: MarkdownImageMatch,
+  editorNodeId: string | null = null,
+  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null
+) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const wrapper = document.createElement('span');
   wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
@@ -121,7 +145,7 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, edi
   }
 
   if (isNativeAndroidCompanionRuntime()) {
-    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId);
+    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource);
     return wrapper;
   }
 
