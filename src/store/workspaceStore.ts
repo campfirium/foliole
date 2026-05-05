@@ -10,6 +10,7 @@ import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type Wor
 import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
+import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
@@ -276,5 +277,7 @@ workspaceStore.setState = ((partial, replace) =>
 
     return rawWorkspaceSetState(nextPartial, false);
   }) as typeof workspaceStore.setState;
+
+registerPendingNodeSyncRendererBoundary(workspaceStore);
 
 export const useWorkspaceStore = workspaceStore;

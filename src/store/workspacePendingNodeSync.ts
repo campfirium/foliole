@@ -12,6 +12,10 @@ interface PendingNodeSyncSnapshot {
   nodesById: Record<string, NativeNodeSnapshotArgs>;
 }
 
+type PendingNodeSyncResolvedListener = (nodeId: string) => void;
+
+let pendingNodeSyncResolvedListener: PendingNodeSyncResolvedListener | null = null;
+
 function getLocalStorage(): Storage | null {
   if (typeof window === 'undefined') {
     return null;
@@ -86,6 +90,11 @@ export function resolvePendingNodeSync(nodeId: string, updatedAt: string) {
   }
   delete snapshot.nodesById[nodeId];
   writePendingSnapshot(snapshot);
+  pendingNodeSyncResolvedListener?.(nodeId);
+}
+
+export function setPendingNodeSyncResolvedListener(listener: PendingNodeSyncResolvedListener | null) {
+  pendingNodeSyncResolvedListener = listener;
 }
 
 export function hasPendingNodeSync(nodeId: string) {
