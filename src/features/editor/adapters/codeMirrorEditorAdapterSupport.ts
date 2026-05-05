@@ -4,10 +4,7 @@ import { Decoration, EditorView } from '@codemirror/view';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
-import {
-  requestRemoteImageLocalizationConsent,
-  shouldAutoLocalizeRemoteImages
-} from '../model/remoteImageLocalizationSetting';
+import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
@@ -134,7 +131,7 @@ export class RemoteImageLocalizationController {
     if (!/!\[[^\]]*\]\((?:<)?https?:\/\//i.test(currentContent)) {
       return;
     }
-    if (!shouldAutoLocalizeRemoteImages() && !requestRemoteImageLocalizationConsent()) {
+    if (!shouldAutoLocalizeRemoteImages()) {
       return;
     }
 

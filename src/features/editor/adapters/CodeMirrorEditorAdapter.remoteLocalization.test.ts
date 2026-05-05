@@ -43,8 +43,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-it('rewrites remote markdown images after editor content changes', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
+it('rewrites remote markdown images by default after editor content changes', async () => {
   importRemoteImageAttachment.mockResolvedValue({
     status: 'imported',
     attachment_id: 'hash-1',
@@ -64,8 +63,8 @@ it('rewrites remote markdown images after editor content changes', async () => {
   adapter.destroy();
 });
 
-it('asks once before saving remote images and continues when approved', async () => {
-  vi.mocked(window.confirm).mockReturnValue(true);
+it('rewrites remote markdown images when the setting is explicitly enabled', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
   importRemoteImageAttachment.mockResolvedValue({
     status: 'imported',
     attachment_id: 'hash-1',
@@ -77,23 +76,8 @@ it('asks once before saving remote images and continues when approved', async ()
   adapter.replaceSelection('![Remote](https://example.com/cover.png)');
   await waitForLocalization();
 
-  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Save pictures for offline reading?'));
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('true');
+  expect(window.confirm).not.toHaveBeenCalled();
   expect(adapter.getContent()).toBe('![Remote](asset://hash-1.png)');
-
-  adapter.destroy();
-});
-
-it('keeps remote image URLs untouched when local saving is declined', async () => {
-  const { adapter } = createAdapter();
-
-  adapter.setNodeId('node-1');
-  adapter.replaceSelection('![Remote](https://example.com/cover.png)');
-  await waitForLocalization();
-
-  expect(adapter.getContent()).toBe('![Remote](https://example.com/cover.png)');
-  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('false');
 
   adapter.destroy();
 });

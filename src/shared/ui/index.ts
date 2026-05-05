@@ -4,6 +4,7 @@ export {
   AppDialog,
   AppDialogClose,
   AppDialogContent,
+  AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,

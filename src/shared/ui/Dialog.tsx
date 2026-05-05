@@ -50,10 +50,23 @@ const AppDialogTitle = React.forwardRef<
 ));
 AppDialogTitle.displayName = DialogPrimitive.Title.displayName;
 
+const AppDialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn('text-sm leading-6 text-foreground/68', className)}
+    {...props}
+  />
+));
+AppDialogDescription.displayName = DialogPrimitive.Description.displayName;
+
 export {
   AppDialog,
   AppDialogClose,
   AppDialogContent,
+  AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
