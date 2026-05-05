@@ -46,7 +46,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
                 "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
                 "rds.reading_position, rd.repetition_count, rd.state, " +
                 "nr.due, nr.last_review_at, nr.state, nr.stability, nr.difficulty, nr.elapsed_days, " +
-                "nr.scheduled_days, nr.reps, nr.lapses " +
+                "nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash " +
             "FROM nodes n " +
             contentBlobJoin +
             "LEFT JOIN node_reading rd ON rd.node_id = n.id " +
@@ -122,6 +122,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         node.put("isTitleManual", cursor.getInt(6) == 1);
         node.put("hideTitleHeading", cursor.getInt(7) == 1);
         node.put("content", cursor.getString(8));
+        node.put("bodyBlobHash", cursor.isNull(35) ? null : cursor.getString(35));
         String bodyStatus = cursor.getString(10);
         if ("missing".equals(bodyStatus) || "empty".equals(bodyStatus) || "fetching".equals(bodyStatus) || "failed".equals(bodyStatus)) {
             node.put("bodyStatus", bodyStatus);

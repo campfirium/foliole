@@ -11,8 +11,12 @@ const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'item-1' })),
   saveCompanionSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
 }));
+const desktopSyncMock = vi.hoisted(() => ({
+  syncCompanionContentBlobFromDesktop: vi.fn(async () => ({ availability: 'cached', hash: 'hash' }))
+}));
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
+vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock);
 
 function createSnapshot(): WorkspaceSnapshot {
   return {
@@ -121,6 +125,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
       title: 'First article'
     },
     replaceSnapshot: vi.fn(async () => state),
+    refreshFromDevice: vi.fn(async () => state),
     removeRememberedTarget: vi.fn(),
     requestPairing: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(async () => state),
@@ -201,6 +206,8 @@ describe('useCompanionArticleSurface', () => {
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
     syncObjectMock.saveCompanionSyncNodeViewState.mockClear();
+    desktopSyncMock.syncCompanionContentBlobFromDesktop.mockClear();
+    desktopSyncMock.syncCompanionContentBlobFromDesktop.mockResolvedValue({ availability: 'cached', hash: 'hash' });
   });
 
   it('opens the connection page first when the phone has no desktop content yet', () => {
@@ -267,4 +274,5 @@ describe('useCompanionArticleSurface browsing', () => {
   });
 
   it('persists reading review actions as single-node companion updates', expectReadingReviewActionPersists);
+
 });

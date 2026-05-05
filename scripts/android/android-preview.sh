@@ -9,6 +9,9 @@ ANDROID_SYNC_SCRIPT="${ANDROID_SYNC_SCRIPT:-scripts/android/windows-cap-sync.sh}
 ANDROID_OPEN_SCRIPT="${ANDROID_OPEN_SCRIPT:-scripts/android/windows-open.sh}"
 ANDROID_EMULATOR_SCRIPT="${ANDROID_EMULATOR_SCRIPT:-scripts/android/windows-run-emulator.sh}"
 ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-app.sh}"
+ANDROID_DATA_PROTECTION_SCRIPT="${ANDROID_DATA_PROTECTION_SCRIPT:-scripts/android/android-device-data-protection.mjs}"
+ANDROID_DATA_PROTECTION_BACKUP_DIR="${ANDROID_DATA_PROTECTION_BACKUP_DIR:-.lab/internal/android-device-backups}"
+ANDROID_DATA_PROTECTION="${ANDROID_DATA_PROTECTION:-1}"
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
 ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD-${FOLIOLE_ANDROID_AVD-${DEFAULT_ANDROID_AVD}}}"
@@ -16,12 +19,16 @@ ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS:-60
 ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS:-600}"
 ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS="${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS:-240}"
 ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS:-600}"
+ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS:-120}"
 ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS="${ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS:-60}"
 ANDROID_PREVIEW_KILL_AFTER_SECONDS="${ANDROID_PREVIEW_KILL_AFTER_SECONDS:-10}"
 PREVIEW_TOTAL_STEPS=3
 
 if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
   PREVIEW_TOTAL_STEPS=4
+  if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
+    PREVIEW_TOTAL_STEPS=6
+  fi
 fi
 
 cd "${REPO_ROOT}"
@@ -86,11 +93,34 @@ if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
     echo "[android-preview] status: FAILED"
     exit 1
   fi
-  echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: deploy app"
+  DATA_PROTECTION_MANIFEST=""
+  if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
+    mkdir -p "${ANDROID_DATA_PROTECTION_BACKUP_DIR}"
+    DATA_PROTECTION_MANIFEST="${ANDROID_DATA_PROTECTION_BACKUP_DIR}/preview-before-$(date +%Y%m%d-%H%M%S).json"
+    echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: backup android app data"
+    if ! run_timed_preview_step "android-data-backup" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode backup --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}"; then
+      echo "[android-preview] failed at: data protection preflight"
+      echo "[android-preview] status: FAILED"
+      exit 1
+    fi
+  fi
+  DEPLOY_STEP=4
+  if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
+    DEPLOY_STEP=5
+  fi
+  echo "[android-preview] step ${DEPLOY_STEP}/${PREVIEW_TOTAL_STEPS}: deploy app"
   if ! run_timed_preview_step "android-deploy" "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
     echo "[android-preview] failed at: app deploy"
     echo "[android-preview] status: FAILED"
     exit 1
+  fi
+  if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
+    echo "[android-preview] step 6/${PREVIEW_TOTAL_STEPS}: check android app data"
+    if ! run_timed_preview_step "android-data-check" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode check --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}"; then
+      echo "[android-preview] failed at: data protection check"
+      echo "[android-preview] status: FAILED"
+      exit 1
+    fi
   fi
   echo "[android-preview] status: OPENED"
   exit 0

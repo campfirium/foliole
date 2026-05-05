@@ -41,11 +41,11 @@ describe('CompanionSyncInlineStatus visibility', () => {
 
     expect(screen.getByLabelText('Sync status')).toBeInTheDocument();
     expect(screen.getByText('Syncing topics')).toBeInTheDocument();
-    expect(screen.getByText('Bringing the latest desktop content onto this device.')).toBeInTheDocument();
+    expect(screen.queryByText('Bringing the latest desktop content onto this device.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 
-  it('shows sync failures without offering a manual sync action', async () => {
+  it('keeps sync failures out of the main content flow', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
     render(
@@ -54,8 +54,9 @@ describe('CompanionSyncInlineStatus visibility', () => {
       />
     );
 
-    expect(screen.getByText('Sync needs attention')).toBeInTheDocument();
-    expect(screen.getByText('Desktop sync failed.')).toBeInTheDocument();
+    expect(screen.queryByText('Sync needs attention')).not.toBeInTheDocument();
+    expect(screen.queryByText('Desktop sync failed.')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Sync status')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 });

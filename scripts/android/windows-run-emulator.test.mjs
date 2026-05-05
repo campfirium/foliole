@@ -22,7 +22,17 @@ describe('windows-run-emulator.ps1', () => {
   it('cold starts the AVD instead of loading a stale snapshot', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
+    expect(script).toContain('function Start-EmulatorProcess');
     expect(script).toContain('"-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone');
+    expect(script).toContain('Start-EmulatorProcess -EmulatorPath $emulatorPath -AvdName $AvdName -Timezone $Timezone');
+  });
+
+  it('detaches emulator logs from the preview process pipe', async () => {
+    const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
+
+    expect(script).toContain('$logDir = Join-Path $env:TEMP "foliole-android-emulator"');
+    expect(script).toContain('-RedirectStandardOutput $stdoutLog');
+    expect(script).toContain('-RedirectStandardError $stderrLog');
   });
 
   it('passes an explicit zoneinfo timezone to the emulator', async () => {

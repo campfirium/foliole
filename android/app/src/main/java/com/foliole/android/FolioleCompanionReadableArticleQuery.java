@@ -158,6 +158,7 @@ final class FolioleCompanionReadableArticleQuery {
         JSObject article = new JSObject();
         article.put("node_id", nodeId);
         article.put("title", title);
+        article.put("body_blob_hash", bodyBlobHash);
         article.put("content", resolveArticleContent(database, title, content, pdfAttachmentId));
         article.put("content_status", resolveContentStatus(inlineContent, bodyBlobHash, bodyBlobData, availability));
         article.put("pdf_attachment_id", pdfAttachmentId);

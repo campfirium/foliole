@@ -20,6 +20,19 @@ function formatLag(result: CombinedSyncDiagnosticResult) {
   return `${Math.max(0, desktopSeq - cursor)} state rows`;
 }
 
+function formatStructureStatus(result: CombinedSyncDiagnosticResult) {
+  const cursor = result.android?.sync_state.pack_cursor;
+  const desktopSeq = result.desktop?.sync_state.max_state_seq;
+  if (typeof cursor !== 'number' || typeof desktopSeq !== 'number') return 'Missing data';
+  return Math.max(0, desktopSeq - cursor) === 0 ? 'Caught up' : 'Behind';
+}
+
+function formatActiveTopicBodyStatus(result: CombinedSyncDiagnosticResult) {
+  const activeTopic = result.android?.content.active_topic;
+  if (!activeTopic) return 'None';
+  return `${activeTopic.body_status}: ${activeTopic.title}`;
+}
+
 function latestEvent(events: SyncDiagnosticEvent[], status?: SyncDiagnosticEvent['status']) {
   const candidates = status ? events.filter((event) => event.status === status) : events;
   return [...candidates].sort((left, right) => right.occurred_at.localeCompare(left.occurred_at))[0] ?? null;
@@ -63,6 +76,7 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
       <div className="border-t border-companion-divider">
         <MetricRow label="Desktop ledger seq" value={formatNumber(desktopSeq)} />
         <MetricRow label="Android applied cursor" value={formatNumber(cursor)} />
+        <MetricRow label="Structure cursor" value={formatStructureStatus(props.result)} />
         <MetricRow label="Cursor lag" value={formatLag(props.result)} />
         <MetricRow label="Desktop topic ledger" value={formatNumber(desktopObjectMaxSeq(props.result, 'node'))} />
         <MetricRow label="Lagging object types" value={formatLaggingObjects(props.result)} wrap />
@@ -71,7 +85,8 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
           value={`${formatNumber(props.result.android?.storage.active_node_count)} Android / ${formatNumber(props.result.desktop?.storage.active_node_count)} Desktop`}
         />
         <MetricRow label="Dirty rows" value={`${formatNumber(props.result.android?.sync_state.local_dirty_count)} Android / ${formatNumber(props.result.desktop?.sync_state.local_dirty_count)} Desktop`} />
-        <MetricRow label="Android missing content" value={formatNumber(props.result.android?.content.missing_content_blob_count)} />
+        <MetricRow label="Content cache backlog" value={formatNumber(props.result.android?.content.missing_content_blob_count)} />
+        <MetricRow label="Current topic body" value={formatActiveTopicBodyStatus(props.result)} wrap />
         <MetricRow label="Latest Android event" value={formatEvent(latestAndroidEvent)} wrap />
         <MetricRow label="Last failed event" value={formatEvent(latestFailedEvent)} wrap />
       </div>

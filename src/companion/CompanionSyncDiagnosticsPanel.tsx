@@ -32,7 +32,7 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       <MetricRow label="Topics" value={formatNumber(snapshot.storage.active_node_count)} />
       <MetricRow label={isAndroid ? 'Local ledger seq' : 'Ledger seq'} value={formatNumber(snapshot.sync_state.max_state_seq)} />
       {isAndroid ? <MetricRow label="Applied desktop cursor" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
-      <MetricRow label="Missing content" value={formatNumber(snapshot.content.missing_content_blob_count)} />
+      <MetricRow label="Content cache backlog" value={formatNumber(snapshot.content.missing_content_blob_count)} />
     </div>
   );
 }

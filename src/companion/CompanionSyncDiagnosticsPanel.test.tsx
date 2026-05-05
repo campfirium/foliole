@@ -16,7 +16,10 @@ const diagnosticResult = {
   android: {
     collected_at: '2026-04-29T00:00:00.000Z',
     connection: { endpoint_url: 'http://10.0.2.2:38641', last_error: null, state: 'ready' },
-    content: { missing_content_blob_count: 0 },
+    content: {
+      active_topic: { body_status: 'missing', id: 'topic-1', title: 'Current topic' },
+      missing_content_blob_count: 5
+    },
     events: [{
       endpoint_url: 'http://10.0.2.2:38641',
       message: 'Completed auto sync.',
@@ -76,6 +79,10 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('Sync checkpoint')).toBeInTheDocument();
     expect(screen.getByText('Desktop ledger seq')).toBeInTheDocument();
     expect(screen.getByText('Android applied cursor')).toBeInTheDocument();
+    expect(screen.getByText('Structure cursor')).toBeInTheDocument();
+    expect(screen.getAllByText('Content cache backlog').length).toBeGreaterThan(0);
+    expect(screen.getByText('Current topic body')).toBeInTheDocument();
+    expect(screen.getByText('missing: Current topic')).toBeInTheDocument();
     expect(screen.getByText('3 state rows')).toBeInTheDocument();
     expect(screen.getByText('Lagging object types')).toBeInTheDocument();
     expect(screen.getByText('view_state +3')).toBeInTheDocument();

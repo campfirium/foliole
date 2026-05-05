@@ -30,6 +30,7 @@ interface WorkspaceReadingProfile {
 
 export interface WorkspaceNodeSnapshot {
   attachments?: WorkspaceNodeAttachmentSnapshot[];
+  bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;
   parentNodeId: string | null;
@@ -59,6 +60,7 @@ export interface WorkspaceNodeAttachmentSnapshot {
 }
 
 export interface WorkspaceNodeRowShape {
+  body_blob_hash?: string | null;
   anchor_link: string | null;
   body_status?: string | null;
   content: string;
@@ -147,6 +149,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     hideTitleHeading: row.hide_title_heading === 1,
     openingText: row.opening_text,
     content: row.content,
+    bodyBlobHash: row.body_blob_hash ?? null,
     virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
     reveal: row.reveal,
     anchorLink: parseStoredAnchorLink(row.anchor_link),

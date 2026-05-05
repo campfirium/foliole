@@ -17,6 +17,7 @@ export function normalizeReadableArticlePayload(value: unknown): CompanionReadab
     return null;
   }
   return {
+    bodyBlobHash: typeof raw.body_blob_hash === 'string' && raw.body_blob_hash.trim() ? raw.body_blob_hash : null,
     bodyStatus: normalizeBodyStatus(raw.content_status),
     content: raw.content,
     hideTitleHeading: raw.hide_title_heading === true,

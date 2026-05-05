@@ -77,6 +77,35 @@ async function testPullsStructurePackAndContentBlobs() {
   });
 }
 
+async function testRefreshesStructureBeforeContentBatchCompletes() {
+  const hashes = Array.from({ length: 40 }, (_, index) => `${String(index % 10)}`.repeat(64));
+  syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValueOnce(hashes);
+  const onStructureSynced = vi.fn();
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [], status: 'ok' }), { status: 200 })));
+
+  const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onStructureSynced });
+
+  expect(onStructureSynced.mock.invocationCallOrder[0])
+    .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobHashes.mock.invocationCallOrder[0]);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
+  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(hashes.length);
+}
+
+async function testKeepsStructureSyncSuccessfulWhenContentBatchFails() {
+  const bodyHash = 'c'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValueOnce([bodyHash]);
+  syncBridgeMock.syncCompanionContentBlob.mockRejectedValueOnce(new Error('blob unavailable'));
+  vi.stubGlobal('fetch', vi.fn());
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.appliedPackObjectCount).toBe(3);
+  expect(result.contentBlobError).toBe('blob unavailable');
+  expect(result.syncedContentBlobHashes).toEqual([]);
+}
+
 async function testRoutesAckThroughNativeDesktopHttp() {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
@@ -174,6 +203,10 @@ describe('companion desktop sync objects', () => {
   });
 
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
+
+  it('refreshes structure before running one bounded content blob batch', testRefreshesStructureBeforeContentBatchCompletes);
+
+  it('keeps structure sync successful when content blob caching fails', testKeepsStructureSyncSuccessfulWhenContentBatchFails);
 
   it('routes content blob acknowledgements through native desktop HTTP on Android', testRoutesAckThroughNativeDesktopHttp);
 

@@ -6,6 +6,7 @@ import { collectDocumentTextAnchorDecorations } from '../../features/editor/mode
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
 export interface CompanionReadableArticle {
+  bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   content: string;
   hideTitleHeading: boolean;
@@ -17,6 +18,7 @@ export interface CompanionReadableArticle {
 }
 
 export interface CompanionRecentArticle {
+  bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   nodeId: string;
   preview: string | null;
@@ -25,6 +27,7 @@ export interface CompanionRecentArticle {
 }
 
 export interface CompanionFolderListEntry {
+  bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   kind: CompanionReadableNode['kind'];
   nodeId: string;
@@ -74,6 +77,7 @@ function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode 
 function buildReadableArticle(node: CompanionReadableNode, persistedNodeViewState: PersistedNodeViewState | null) {
   return {
     bodyStatus: normalizeBodyStatus(node.bodyStatus) ?? 'ready' as const,
+    bodyBlobHash: node.bodyBlobHash ?? null,
     content: node.content,
     hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,
@@ -103,6 +107,7 @@ function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: Com
 function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFolderListEntry {
   return {
     bodyStatus: normalizeBodyStatus(node.bodyStatus),
+    bodyBlobHash: node.bodyBlobHash ?? null,
     kind: node.kind,
     nodeId: node.id,
     preview: node.kind === 'folder' ? null : resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
@@ -240,6 +245,7 @@ export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | nul
     })
     .map((node) => ({
       nodeId: node.id,
+      bodyBlobHash: node.bodyBlobHash ?? null,
       preview: resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
       bodyStatus: normalizeBodyStatus(node.bodyStatus),
       title: resolveCompanionArticleTitle(node),

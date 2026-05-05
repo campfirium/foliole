@@ -63,7 +63,12 @@ export function ReadableArticleDocument(props: {
     return <SimplePdfDocument attachmentId={pdfAttachmentId} onBackToText={() => setIsViewingPdfOriginal(false)} title={props.readableArticle.title} />;
   }
   if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
-    return <CompanionArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} />;
+    return (
+      <CompanionArticleBodyStatusFallback
+        bodyStatus={props.readableArticle.bodyStatus}
+        title={props.readableArticle.title}
+      />
+    );
   }
 
   return (

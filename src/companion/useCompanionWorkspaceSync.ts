@@ -32,6 +32,15 @@ const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   workspace_snapshot: null
 };
 
+interface WorkspaceSnapshotActionArgs {
+  setError: (message: string | null) => void;
+  setReadableArticle: (article: CompanionReadableArticle | null) => void;
+  setSyncConflictCount: (count: number) => void;
+  setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setStatus: (status: CompanionWorkspaceSyncStatus) => void;
+  state: NativeCompanionWorkspaceSyncState;
+}
+
 async function initializeWorkspaceSyncState(args: {
   cancelled: () => boolean;
   setReadableArticle(article: CompanionReadableArticle | null): void;
@@ -55,13 +64,20 @@ async function syncDesktopStreams(args: {
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
 }) {
+  async function refreshAfterStructureSync() {
+    const structureState = await loadCompanionWorkspaceSyncState();
+    args.setState(structureState);
+    args.setReadableArticle(await loadCompanionReadableArticle(structureState.workspace_snapshot));
+    args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  }
+
   const startedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     message: 'Sync started.',
     status: 'started'
   });
   args.setState(startedState);
-  await syncCompanionObjectsFromDesktop(args.endpointUrl);
+  await syncCompanionObjectsFromDesktop(args.endpointUrl, { onStructureSynced: refreshAfterStructureSync });
   const nextState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     message: 'Sync completed.',
@@ -88,27 +104,20 @@ async function recordManualSyncFailure(args: {
   }
 }
 
-function useWorkspaceSnapshotActions(args: {
-  setError: (message: string | null) => void;
+async function refreshCompanionWorkspaceFromDevice(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
-  setStatus: (status: CompanionWorkspaceSyncStatus) => void;
-  state: NativeCompanionWorkspaceSyncState;
 }) {
-  async function saveEndpoint(endpointUrl: string) {
-    const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-    args.setState(nextState);
-    return nextState;
-  }
+  const nextState = await loadCompanionWorkspaceSyncState();
+  args.setState(nextState);
+  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  return nextState;
+}
 
-  async function removeRememberedTarget(endpointUrl: string) {
-    const nextState = await removeCompanionWorkspaceSyncRememberedTarget(endpointUrl);
-    args.setState(nextState);
-    return nextState;
-  }
-
-  async function pullFromDesktop(endpointUrl: string) {
+function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
+  return async function pullFromDesktop(endpointUrl: string) {
     args.setStatus('syncing');
     args.setError(null);
     try {
@@ -127,22 +136,54 @@ function useWorkspaceSnapshotActions(args: {
       await recordManualSyncFailure({ endpointUrl, message, setState: args.setState });
       throw syncError;
     }
+  };
+}
+
+async function replaceCompanionWorkspaceSnapshot(
+  args: WorkspaceSnapshotActionArgs,
+  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
+  changedNodeId?: string
+) {
+  const nextState = await persistCompanionWorkspaceSnapshot({
+    changedNodeId,
+    endpointUrl: args.state.endpoint_url,
+    lastSyncedAt: args.state.last_synced_at,
+    rememberedTargets: args.state.remembered_targets,
+    workspaceSnapshot
+  });
+  args.setState(nextState);
+  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
+  return nextState;
+}
+
+function useWorkspaceSnapshotActions(args: WorkspaceSnapshotActionArgs) {
+  async function saveEndpoint(endpointUrl: string) {
+    const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
+    args.setState(nextState);
+    return nextState;
   }
+
+  async function removeRememberedTarget(endpointUrl: string) {
+    const nextState = await removeCompanionWorkspaceSyncRememberedTarget(endpointUrl);
+    args.setState(nextState);
+    return nextState;
+  }
+
+  const pullFromDesktop = createPullFromDesktop(args);
 
   async function replaceSnapshot(
     workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
     changedNodeId?: string
   ) {
-    const nextState = await persistCompanionWorkspaceSnapshot({
-      changedNodeId,
-      endpointUrl: args.state.endpoint_url,
-      lastSyncedAt: args.state.last_synced_at,
-      rememberedTargets: args.state.remembered_targets,
-      workspaceSnapshot
+    return await replaceCompanionWorkspaceSnapshot(args, workspaceSnapshot, changedNodeId);
+  }
+
+  async function refreshFromDevice() {
+    return await refreshCompanionWorkspaceFromDevice({
+      setReadableArticle: args.setReadableArticle,
+      setSyncConflictCount: args.setSyncConflictCount,
+      setState: args.setState
     });
-    args.setState(nextState);
-    args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-    return nextState;
   }
 
   async function saveSyncOnboardingStatus(status: NativeCompanionWorkspaceSyncState['sync_onboarding_status']) {
@@ -151,7 +192,14 @@ function useWorkspaceSnapshotActions(args: {
     return nextState;
   }
 
-  return { pullFromDesktop, removeRememberedTarget, replaceSnapshot, saveEndpoint, saveSyncOnboardingStatus };
+  return {
+    pullFromDesktop,
+    refreshFromDevice,
+    removeRememberedTarget,
+    replaceSnapshot,
+    saveEndpoint,
+    saveSyncOnboardingStatus
+  };
 }
 
 function useWorkspaceSyncBootstrap(
@@ -220,6 +268,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     syncConflictCount,
     status,
     pullFromDesktop: snapshotActions.pullFromDesktop,
+    refreshFromDevice: snapshotActions.refreshFromDevice,
     removeRememberedTarget: snapshotActions.removeRememberedTarget,
     replaceSnapshot: snapshotActions.replaceSnapshot,
     saveEndpoint: snapshotActions.saveEndpoint,

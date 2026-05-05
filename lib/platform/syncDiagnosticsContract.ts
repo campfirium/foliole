@@ -42,6 +42,11 @@ export interface SyncDiagnosticState {
 }
 
 export interface SyncDiagnosticContent {
+  active_topic?: {
+    body_status: 'cached' | 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+    id: string;
+    title: string;
+  } | null;
   missing_content_blob_count: number;
   recent_topics?: Array<{
     body_blob_hash: string | null;

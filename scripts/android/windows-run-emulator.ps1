@@ -176,6 +176,27 @@ function Wait-ForEmulatorReady {
   return $null
 }
 
+function Start-EmulatorProcess {
+  param(
+    [string]$EmulatorPath,
+    [string]$AvdName,
+    [string]$Timezone
+  )
+
+  $logDir = Join-Path $env:TEMP "foliole-android-emulator"
+  New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+  $stdoutLog = Join-Path $logDir "emulator.stdout.log"
+  $stderrLog = Join-Path $logDir "emulator.stderr.log"
+  Set-Content -Path $stdoutLog -Value "" -Encoding utf8
+  Set-Content -Path $stderrLog -Value "" -Encoding utf8
+
+  Start-Process `
+    -FilePath $EmulatorPath `
+    -ArgumentList "-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone `
+    -RedirectStandardOutput $stdoutLog `
+    -RedirectStandardError $stderrLog
+}
+
 if ([string]::IsNullOrWhiteSpace($AvdName)) {
   $AvdName = "Foliole_API_36"
 }
@@ -221,7 +242,7 @@ if ($null -ne $existingSerial) {
 }
 
 if ($null -eq $existingSerial) {
-  Start-Process -FilePath $emulatorPath -ArgumentList "-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone
+  Start-EmulatorProcess -EmulatorPath $emulatorPath -AvdName $AvdName -Timezone $Timezone
   Write-Info "launch: requested"
 } else {
   Write-Info "launch: already running ($existingSerial)"

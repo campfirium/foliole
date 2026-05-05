@@ -10,6 +10,7 @@ import {
 } from './companionReviewSession';
 import { persistCompanionReviewSyncObject } from './companionReviewSyncPersistence';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
+import { useCompanionMissingBodySync } from './useCompanionMissingBodySync';
 import { useCompanionViewStateSync } from './useCompanionViewStateSync';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
@@ -256,6 +257,8 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
       setActiveAction('more');
     }
   }, [workspaceSync.state.workspace_snapshot]);
+
+  useCompanionMissingBodySync({ readableArticle: browseState.readableArticle, workspaceSync });
 
   return {
     activeAction,

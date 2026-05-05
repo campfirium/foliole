@@ -106,17 +106,17 @@ export function mergeSyncDiagnosticVerdicts(args: {
     }));
   }
   if (args.android.storage.active_node_count > 0 && args.android.content.missing_content_blob_count > 0) {
-    verdicts.push(warningVerdict('sync_android_missing_content_blobs', 'Android has topics with uncached content blobs.', {
+    verdicts.push(warningVerdict('sync_android_content_cache_backlog', 'Android still has content blobs to cache.', {
       missing_content_blob_count: args.android.content.missing_content_blob_count
     }));
   }
   if (
     desktopMaxSeq > 0 &&
     desktopMaxSeq === androidCursor &&
-    args.android.storage.active_node_count > 0 &&
-    args.android.content.missing_content_blob_count === 0
+    args.android.storage.active_node_count > 0
   ) {
     verdicts.push(okVerdict('sync_structure_aligned', 'Structure sync is aligned.', {
+      missing_content_blob_count: args.android.content.missing_content_blob_count,
       state_seq: desktopMaxSeq
     }));
   }

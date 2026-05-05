@@ -84,6 +84,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.title,
        n.is_title_manual,
        n.hide_title_heading,
+       n.body_blob_hash,
        n.opening_text,
        CASE
          WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability

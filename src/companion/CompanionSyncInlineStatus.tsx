@@ -9,26 +9,17 @@ export function CompanionSyncInlineStatus(props: {
 }) {
   const { workspaceSync } = props;
   const isSyncing = workspaceSync.status === 'syncing';
-  if (!isSyncing && !workspaceSync.error) {
+  if (!isSyncing) {
     return null;
   }
-  const title = isSyncing ? 'Syncing topics' : 'Sync needs attention';
-  const detail = workspaceSync.error ?? 'Bringing the latest desktop content onto this device.';
 
   return (
     <section
       aria-label="Sync status"
-      className="mb-4 rounded-2xl border border-companion-divider bg-canvas px-4 py-3 text-sm shadow-panel"
+      className="mb-2 flex items-center gap-2 px-1 text-xs font-medium leading-5 text-companion-text-secondary"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
-          {isSyncing ? <Loader2 aria-hidden="true" className="mt-0.5 size-4 shrink-0 animate-spin text-accent" strokeWidth={1.8} /> : null}
-          <div className="min-w-0">
-            <p className="font-medium text-foreground">{title}</p>
-            <p className="mt-1 leading-5 text-companion-text-secondary">{detail}</p>
-          </div>
-        </div>
-      </div>
+      <Loader2 aria-hidden="true" className="size-3.5 shrink-0 animate-spin text-accent" strokeWidth={1.8} />
+      <span>Syncing topics</span>
     </section>
   );
 }

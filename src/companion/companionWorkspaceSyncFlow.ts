@@ -3,6 +3,7 @@ import { syncCompanionObjectsFromDesktop } from '../shared/platform/companionDes
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   loadCompanionReadableArticle,
+  loadCompanionWorkspaceSyncState,
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
 
@@ -21,7 +22,16 @@ export async function runCompanionStreamSync(args: {
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
 }) {
-  await syncCompanionObjectsFromDesktop(args.endpointUrl);
+  await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+    onStructureSynced: async () => {
+      if (args.cancelled()) {
+        return;
+      }
+      const structureState = await loadCompanionWorkspaceSyncState();
+      args.setState(structureState);
+      args.setReadableArticle(await syncReadableArticle(structureState.workspace_snapshot));
+    }
+  });
   if (args.cancelled()) {
     return;
   }

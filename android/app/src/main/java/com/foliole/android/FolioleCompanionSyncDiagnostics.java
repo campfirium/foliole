@@ -92,8 +92,36 @@ final class FolioleCompanionSyncDiagnostics {
         content.put("missing_content_blob_count", count(database,
             "SELECT COUNT(*) FROM content_blobs WHERE availability <> 'cached'"
         ));
+        content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
         return content;
+    }
+
+    private static JSObject loadActiveTopic(SQLiteDatabase database) throws Exception {
+        String activeNodeId = loadWorkspaceMetaValue(database, "active_node_id");
+        if (activeNodeId == null) {
+            return null;
+        }
+        try (Cursor cursor = database.rawQuery(
+            "SELECT n.id, n.title, CASE " +
+                "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability " +
+                "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing' " +
+                "WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty' ELSE 'ready' END " +
+            "FROM nodes n " +
+            "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +
+            "LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash " +
+            "WHERE n.id = ? AND n.deleted_at IS NULL LIMIT 1",
+            new String[] { activeNodeId }
+        )) {
+            if (!cursor.moveToFirst()) {
+                return null;
+            }
+            JSObject row = new JSObject();
+            row.put("id", cursor.getString(0));
+            row.put("title", cursor.getString(1));
+            row.put("body_status", cursor.getString(2));
+            return row;
+        }
     }
 
     private static JSArray loadStateCounts(SQLiteDatabase database) throws Exception {
@@ -227,6 +255,19 @@ final class FolioleCompanionSyncDiagnostics {
     private static String loadMetaValue(SQLiteDatabase database, String key) {
         try (Cursor cursor = database.rawQuery(
             "SELECT value FROM companion_meta WHERE key = ? LIMIT 1",
+            new String[] { key }
+        )) {
+            if (!cursor.moveToFirst()) {
+                return null;
+            }
+            String value = cursor.getString(0);
+            return value == null || value.trim().isEmpty() ? null : value;
+        }
+    }
+
+    private static String loadWorkspaceMetaValue(SQLiteDatabase database, String key) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT value FROM workspace_meta WHERE key = ? LIMIT 1",
             new String[] { key }
         )) {
             if (!cursor.moveToFirst()) {

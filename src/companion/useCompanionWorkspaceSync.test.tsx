@@ -148,7 +148,10 @@ async function testManualSyncRefreshesReadableArticle() {
     await result.current.pullFromDesktop('http://10.0.2.2:38641');
   });
 
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+    'http://10.0.2.2:38641',
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+  );
   expect(result.current.state.workspace_snapshot?.activeNodeId).toBe('topic-1');
   expect(result.current.readableArticle?.nodeId).toBe('topic-1');
   expect(result.current.status).toBe('idle');

@@ -19,6 +19,7 @@ function runAndroidPreview(cwd, env = {}, script = ANDROID_PREVIEW_SCRIPT) {
       cwd,
       env: {
         ...process.env,
+        ANDROID_DATA_PROTECTION: '0',
         ...env
       }
     });
@@ -126,6 +127,82 @@ describe('android-preview.sh', () => {
       expect(result.stdout).toContain('[android-preview] begin: android-deploy');
       expect(result.stdout).toContain('[android-preview] done: android-deploy');
       expect(result.stdout).toContain('[android-preview] status: OPENED');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('backs up app data before deploy and checks it after deploy', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-'));
+    try {
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-ok\n');
+      const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
+      const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
+      const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
+      const dataProtection = await writeExecutable(
+        tempRoot,
+        'data-protection.mjs',
+        'console.log(`data-protection:${process.argv.slice(2).join("|")}`);\n'
+      );
+
+      const result = await runAndroidPreview(tempRoot, {
+        ANDROID_DATA_PROTECTION: '1',
+        ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
+        ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
+        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SYNC_SCRIPT: androidSync,
+        ANDROID_EMULATOR_SCRIPT: emulator,
+        ANDROID_DEPLOY_SCRIPT: deploy,
+        ANDROID_PREVIEW_AVD: 'Test_AVD',
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[android-preview] begin: android-data-backup');
+      expect(result.stdout).toContain('[android-preview] begin: android-data-check');
+      expect(result.stdout).toContain('data-protection:--mode|backup');
+      expect(result.stdout).toContain('data-protection:--mode|check');
+      expect(result.stdout.indexOf('data-protection:--mode|backup')).toBeLessThan(result.stdout.indexOf('deploy-ok'));
+      expect(result.stdout.indexOf('deploy-ok')).toBeLessThan(result.stdout.indexOf('data-protection:--mode|check'));
+      expect(result.stdout).toContain('[android-preview] status: OPENED');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('fails preview as a data protection failure when the post-deploy check fails', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-fail-'));
+    try {
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-ok\n');
+      const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
+      const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
+      const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
+      const dataProtection = await writeExecutable(
+        tempRoot,
+        'data-protection.mjs',
+        [
+          'const args = process.argv.slice(2);',
+          'console.log(`data-protection:${args.join("|")}`);',
+          'if (args.includes("check")) process.exit(2);'
+        ].join('\n')
+      );
+
+      const result = await runAndroidPreview(tempRoot, {
+        ANDROID_DATA_PROTECTION: '1',
+        ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
+        ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
+        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SYNC_SCRIPT: androidSync,
+        ANDROID_EMULATOR_SCRIPT: emulator,
+        ANDROID_DEPLOY_SCRIPT: deploy,
+        ANDROID_PREVIEW_AVD: 'Test_AVD',
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('deploy-ok');
+      expect(result.stdout).toContain('[android-preview] failed at: data protection check');
+      expect(result.stdout).toContain('[android-preview] status: FAILED');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

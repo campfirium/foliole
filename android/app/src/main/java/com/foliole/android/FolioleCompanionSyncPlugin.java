@@ -10,6 +10,23 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
 
+    private interface DatabaseWork {
+        JSObject run(FolioleCompanionDatabaseHelper databaseHelper) throws Exception;
+    }
+
+    private void resolveWithDatabase(PluginCall call, String errorMessage, DatabaseWork work) {
+        new Thread(() -> {
+            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+            try {
+                call.resolve(work.run(databaseHelper));
+            } catch (Exception exception) {
+                call.reject(errorMessage, exception);
+            } finally {
+                databaseHelper.close();
+            }
+        }).start();
+    }
+
 
     @PluginMethod
     public void desktopHttpRequest(PluginCall call) {
@@ -40,118 +57,90 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod
     public void syncAttachmentResource(PluginCall call) {
-        new Thread(() -> {
-            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-            try {
-                call.resolve(databaseHelper.syncAttachmentResource(
-                    call.getString("attachment_id"),
-                    call.getString("content_hash"),
-                    call.getString("url"),
-                    call.getData().optJSONObject("headers")
-                ));
-            } catch (Exception exception) {
-                call.reject("Failed to sync companion attachment resource.", exception);
-            } finally {
-                databaseHelper.close();
-            }
-        }).start();
+        resolveWithDatabase(
+            call,
+            "Failed to sync companion attachment resource.",
+            databaseHelper -> databaseHelper.syncAttachmentResource(
+                call.getString("attachment_id"),
+                call.getString("content_hash"),
+                call.getString("url"),
+                call.getData().optJSONObject("headers")
+            )
+        );
     }
 
 
     @PluginMethod
     public void loadMissingContentBlobHashes(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadMissingContentBlobHashes(call.getInt("limit", 50)));
-        } catch (Exception exception) {
-            call.reject("Failed to load missing companion content blobs.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load missing companion content blobs.",
+            databaseHelper -> databaseHelper.loadMissingContentBlobHashes(call.getInt("limit", 50))
+        );
     }
 
 
     @PluginMethod
     public void syncContentBlob(PluginCall call) {
-        new Thread(() -> {
-            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-            try {
-                call.resolve(databaseHelper.syncContentBlob(
-                    call.getString("hash"),
-                    call.getString("url"),
-                    call.getData().optJSONObject("headers")
-                ));
-            } catch (Exception exception) {
-                call.reject("Failed to sync companion content blob.", exception);
-            } finally {
-                databaseHelper.close();
-            }
-        }).start();
+        resolveWithDatabase(
+            call,
+            "Failed to sync companion content blob.",
+            databaseHelper -> databaseHelper.syncContentBlob(
+                call.getString("hash"),
+                call.getString("url"),
+                call.getData().optJSONObject("headers")
+            )
+        );
     }
 
 
     @PluginMethod
     public void resolveAttachmentResource(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.resolveAttachmentResource(call.getString("attachment_id")));
-        } catch (Exception exception) {
-            call.reject("Failed to resolve companion attachment resource.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to resolve companion attachment resource.",
+            databaseHelper -> databaseHelper.resolveAttachmentResource(call.getString("attachment_id"))
+        );
     }
 
 
     @PluginMethod
     public void loadPdfPageText(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadPdfPageText(call.getString("attachment_id")));
-        } catch (Exception exception) {
-            call.reject("Failed to load companion PDF page text.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion PDF page text.",
+            databaseHelper -> databaseHelper.loadPdfPageText(call.getString("attachment_id"))
+        );
     }
 
 
     @PluginMethod
     public void searchPdfPageText(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.searchPdfPageText(call.getString("query"), call.getInt("limit", 20)));
-        } catch (Exception exception) {
-            call.reject("Failed to search companion PDF page text.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to search companion PDF page text.",
+            databaseHelper -> databaseHelper.searchPdfPageText(call.getString("query"), call.getInt("limit", 20))
+        );
     }
 
 
     @PluginMethod
     public void loadExternalDocument(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadExternalDocument(call.getString("document_id")));
-        } catch (Exception exception) {
-            call.reject("Failed to load companion external document.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion external document.",
+            databaseHelper -> databaseHelper.loadExternalDocument(call.getString("document_id"))
+        );
     }
 
 
     @PluginMethod
     public void searchExternalDocuments(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.searchExternalDocuments(call.getString("query"), call.getInt("limit", 20)));
-        } catch (Exception exception) {
-            call.reject("Failed to search companion external documents.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to search companion external documents.",
+            databaseHelper -> databaseHelper.searchExternalDocuments(call.getString("query"), call.getInt("limit", 20))
+        );
     }
 
 
@@ -271,495 +260,381 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod
     public void loadWorkspaceSyncState(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadWorkspaceSyncState());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion workspace sync state.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion workspace sync state.",
+            FolioleCompanionDatabaseHelper::loadWorkspaceSyncState
+        );
     }
 
     @PluginMethod
     public void diagnoseSync(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(FolioleCompanionSyncDiagnostics.diagnose(
+        resolveWithDatabase(
+            call,
+            "Failed to diagnose companion sync.",
+            databaseHelper -> FolioleCompanionSyncDiagnostics.diagnose(
                 getContext(),
                 databaseHelper.getReadableDatabase(),
                 getContext().getDatabasePath(FolioleCompanionDatabaseHelper.DATABASE_NAME).getAbsolutePath()
-            ));
-        } catch (Exception exception) {
-            call.reject("Failed to diagnose companion sync.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+            )
+        );
     }
 
     @PluginMethod
     public void saveWorkspaceSyncEndpoint(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveWorkspaceSyncEndpoint(call.getString("endpoint_url")));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion workspace sync endpoint.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion workspace sync endpoint.",
+            databaseHelper -> databaseHelper.saveWorkspaceSyncEndpoint(call.getString("endpoint_url"))
+        );
     }
 
     @PluginMethod
     public void recordWorkspaceSyncEvent(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.recordWorkspaceSyncEvent(
+        resolveWithDatabase(
+            call,
+            "Failed to record companion workspace sync event.",
+            databaseHelper -> databaseHelper.recordWorkspaceSyncEvent(
                 call.getString("endpoint_url"),
                 call.getString("status"),
                 call.getString("message"),
                 call.getString("occurred_at")
-            ));
-        } catch (Exception exception) {
-            call.reject("Failed to record companion workspace sync event.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+            )
+        );
     }
 
     @PluginMethod
     public void saveSyncOnboardingStatus(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncOnboardingStatus(call.getString("status")));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync onboarding status.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync onboarding status.",
+            databaseHelper -> databaseHelper.saveSyncOnboardingStatus(call.getString("status"))
+        );
     }
 
     @PluginMethod
     public void removeWorkspaceSyncRememberedTarget(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            String endpointUrl = call.getString("endpoint_url");
-            if (endpointUrl == null || endpointUrl.trim().isEmpty()) {
-                call.reject("endpoint_url is required.");
-                return;
+        resolveWithDatabase(
+            call,
+            "Failed to remove companion workspace sync target.",
+            databaseHelper -> {
+                String endpointUrl = call.getString("endpoint_url");
+                if (endpointUrl == null || endpointUrl.trim().isEmpty()) {
+                    throw new IllegalArgumentException("endpoint_url is required.");
+                }
+                return databaseHelper.removeWorkspaceSyncRememberedTarget(endpointUrl);
             }
-            call.resolve(databaseHelper.removeWorkspaceSyncRememberedTarget(endpointUrl));
-        } catch (Exception exception) {
-            call.reject("Failed to remove companion workspace sync target.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        );
     }
 
     @PluginMethod
     public void loadReadableArticle(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadReadableArticle());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion readable article.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion readable article.",
+            FolioleCompanionDatabaseHelper::loadReadableArticle
+        );
     }
 
     @PluginMethod
     public void loadSyncIndex(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncIndex());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync index.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(call, "Failed to load companion sync index.", FolioleCompanionDatabaseHelper::loadSyncIndex);
     }
 
     @PluginMethod
     public void loadSyncNodeConflicts(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncNodeConflicts());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync node conflicts.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync node conflicts.",
+            FolioleCompanionDatabaseHelper::loadSyncNodeConflicts
+        );
     }
 
     @PluginMethod
     public void loadSyncStateChanges(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                ? call.getData().getInt("cursor")
-                : null;
-            call.resolve(databaseHelper.loadSyncStateChanges(cursor, call.getData().optInt("limit", 500)));
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync state changes.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync state changes.",
+            databaseHelper -> {
+                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
+                    ? call.getData().getInt("cursor")
+                    : null;
+                return databaseHelper.loadSyncStateChanges(cursor, call.getData().optInt("limit", 500));
+            }
+        );
     }
 
     @PluginMethod
     public void loadSyncStateCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncStateCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync state cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(call, "Failed to load companion sync state cursor.", FolioleCompanionDatabaseHelper::loadSyncStateCursor);
     }
 
     @PluginMethod
     public void saveSyncStateCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                ? call.getData().getInt("cursor")
-                : null;
-            call.resolve(databaseHelper.saveSyncStateCursor(cursor));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync state cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync state cursor.",
+            databaseHelper -> {
+                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
+                    ? call.getData().getInt("cursor")
+                    : null;
+                return databaseHelper.saveSyncStateCursor(cursor);
+            }
+        );
     }
 
     @PluginMethod
     public void loadSyncPackCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncPackCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync pack cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(call, "Failed to load companion sync pack cursor.", FolioleCompanionDatabaseHelper::loadSyncPackCursor);
     }
 
     @PluginMethod
     public void saveSyncPackCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                ? call.getData().getInt("cursor")
-                : null;
-            call.resolve(databaseHelper.saveSyncPackCursor(cursor));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync pack cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync pack cursor.",
+            databaseHelper -> {
+                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
+                    ? call.getData().getInt("cursor")
+                    : null;
+                return databaseHelper.saveSyncPackCursor(cursor);
+            }
+        );
     }
 
     @PluginMethod
     public void loadSyncStatePushCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncStatePushCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync state push cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync state push cursor.",
+            FolioleCompanionDatabaseHelper::loadSyncStatePushCursor
+        );
     }
 
     @PluginMethod
     public void saveSyncStatePushCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                ? call.getData().getInt("cursor")
-                : null;
-            call.resolve(databaseHelper.saveSyncStatePushCursor(cursor));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync state push cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync state push cursor.",
+            databaseHelper -> {
+                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
+                    ? call.getData().getInt("cursor")
+                    : null;
+                return databaseHelper.saveSyncStatePushCursor(cursor);
+            }
+        );
     }
 
     @PluginMethod
     public void loadSyncNodeVersionCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncNodeVersionCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync node version cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync node version cursor.",
+            FolioleCompanionDatabaseHelper::loadSyncNodeVersionCursor
+        );
     }
 
     @PluginMethod
     public void saveSyncNodeVersionCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncNodeVersionCursor(call.getData().optJSONObject("cursor")));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync node version cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync node version cursor.",
+            databaseHelper -> databaseHelper.saveSyncNodeVersionCursor(call.getData().optJSONObject("cursor"))
+        );
     }
 
     @PluginMethod
     public void loadSyncNodeVersionPushCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncNodeVersionPushCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync node version push cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync node version push cursor.",
+            FolioleCompanionDatabaseHelper::loadSyncNodeVersionPushCursor
+        );
     }
 
     @PluginMethod
     public void saveSyncNodeVersionPushCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncNodeVersionPushCursor(call.getData().optJSONObject("cursor")));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync node version push cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync node version push cursor.",
+            databaseHelper -> databaseHelper.saveSyncNodeVersionPushCursor(call.getData().optJSONObject("cursor"))
+        );
     }
 
     @PluginMethod
     public void loadSyncReviewLogCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncReviewLogCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync review log cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync review log cursor.",
+            FolioleCompanionDatabaseHelper::loadSyncReviewLogCursor
+        );
     }
 
     @PluginMethod
     public void saveSyncReviewLogCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncReviewLogCursor(call.getData().optJSONObject("cursor")));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync review log cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync review log cursor.",
+            databaseHelper -> databaseHelper.saveSyncReviewLogCursor(call.getData().optJSONObject("cursor"))
+        );
     }
 
     @PluginMethod
     public void loadSyncReviewLogPushCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncReviewLogPushCursor());
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync review log push cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync review log push cursor.",
+            FolioleCompanionDatabaseHelper::loadSyncReviewLogPushCursor
+        );
     }
 
     @PluginMethod
     public void saveSyncReviewLogPushCursor(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncReviewLogPushCursor(call.getData().optJSONObject("cursor")));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync review log push cursor.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync review log push cursor.",
+            databaseHelper -> databaseHelper.saveSyncReviewLogPushCursor(call.getData().optJSONObject("cursor"))
+        );
     }
 
     @PluginMethod
     public void saveSyncSettingRecord(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncSettingRecord(call.getData()));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync setting record.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync setting record.",
+            databaseHelper -> databaseHelper.saveSyncSettingRecord(call.getData())
+        );
     }
 
     @PluginMethod
     public void saveSyncNodeReadingRecord(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncNodeReadingRecord(call.getData()));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync node reading record.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync node reading record.",
+            databaseHelper -> databaseHelper.saveSyncNodeReadingRecord(call.getData())
+        );
     }
 
     @PluginMethod
     public void saveSyncNodeReviewRecord(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncNodeReviewRecord(call.getData()));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync node review record.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync node review record.",
+            databaseHelper -> databaseHelper.saveSyncNodeReviewRecord(call.getData())
+        );
     }
 
     @PluginMethod
     public void saveSyncActiveViewState(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncActiveViewState(call.getData()));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync active view state.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync active view state.",
+            databaseHelper -> databaseHelper.saveSyncActiveViewState(call.getData())
+        );
     }
 
     @PluginMethod
     public void saveSyncNodeViewState(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.saveSyncNodeViewState(call.getData()));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion sync node view state.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync node view state.",
+            databaseHelper -> databaseHelper.saveSyncNodeViewState(call.getData())
+        );
     }
 
     @PluginMethod
     public void loadSyncObjects(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncObjects(
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync objects.",
+            databaseHelper -> databaseHelper.loadSyncObjects(
                 call.getData().optJSONArray("object_ids"),
                 call.getData().optJSONArray("object_types")
-            ));
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync objects.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+            )
+        );
     }
 
     @PluginMethod
     public void applySyncObjects(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.applySyncObjects(call.getData().optJSONArray("objects")));
-        } catch (Exception exception) {
-            call.reject("Failed to apply companion sync objects.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to apply companion sync objects.",
+            databaseHelper -> databaseHelper.applySyncObjects(call.getData().optJSONArray("objects"))
+        );
     }
 
     @PluginMethod
     public void applySyncPack(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            String packPath = call.getString("pack_path");
-            if (packPath == null || packPath.trim().isEmpty()) {
-                call.reject("pack_path is required.");
-                return;
+        resolveWithDatabase(
+            call,
+            "Failed to apply companion sync pack.",
+            databaseHelper -> {
+                String packPath = call.getString("pack_path");
+                if (packPath == null || packPath.trim().isEmpty()) {
+                    throw new IllegalArgumentException("pack_path is required.");
+                }
+                return databaseHelper.applySyncPack(packPath.trim());
             }
-            call.resolve(databaseHelper.applySyncPack(packPath.trim()));
-        } catch (Exception exception) {
-            call.reject("Failed to apply companion sync pack.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        );
     }
 
     @PluginMethod
     public void applyDesktopSyncPack(PluginCall call) {
-        new Thread(() -> {
-            FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-            try {
+        resolveWithDatabase(
+            call,
+            "Failed to apply companion desktop sync pack.",
+            databaseHelper -> {
                 String url = call.getString("url");
                 if (url == null || url.trim().isEmpty()) {
-                    call.reject("url is required.");
-                    return;
+                    throw new IllegalArgumentException("url is required.");
                 }
-                call.resolve(databaseHelper.applyDesktopSyncPack(
+                return databaseHelper.applyDesktopSyncPack(
                     url.trim(),
                     call.getData().optJSONObject("headers")
-                ));
-            } catch (Exception exception) {
-                call.reject("Failed to apply companion desktop sync pack.", exception);
-            } finally {
-                databaseHelper.close();
+                );
             }
-        }).start();
+        );
     }
 
     @PluginMethod
     public void loadSyncNodeVersions(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncNodeVersions(
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync node versions.",
+            databaseHelper -> databaseHelper.loadSyncNodeVersions(
                 call.getData().optJSONObject("cursor"),
                 call.getData().optInt("limit", 500)
-            ));
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync node versions.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+            )
+        );
     }
 
     @PluginMethod
     public void loadSyncReviewLog(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.loadSyncReviewLog(
+        resolveWithDatabase(
+            call,
+            "Failed to load companion sync review log.",
+            databaseHelper -> databaseHelper.loadSyncReviewLog(
                 call.getData().optJSONObject("cursor"),
                 call.getData().optInt("limit", 500)
-            ));
-        } catch (Exception exception) {
-            call.reject("Failed to load companion sync review log.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+            )
+        );
     }
 
     @PluginMethod
     public void applySyncNodeVersions(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.applySyncNodeVersions(call.getData().optJSONArray("nodes")));
-        } catch (Exception exception) {
-            call.reject("Failed to apply companion sync node versions.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to apply companion sync node versions.",
+            databaseHelper -> databaseHelper.applySyncNodeVersions(call.getData().optJSONArray("nodes"))
+        );
     }
 
     @PluginMethod
     public void applySyncReviewLog(PluginCall call) {
-        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
-        try {
-            call.resolve(databaseHelper.applySyncReviewLog(call.getData().optJSONArray("reviews")));
-        } catch (Exception exception) {
-            call.reject("Failed to apply companion sync review log.", exception);
-        } finally {
-            databaseHelper.close();
-        }
+        resolveWithDatabase(
+            call,
+            "Failed to apply companion sync review log.",
+            databaseHelper -> databaseHelper.applySyncReviewLog(call.getData().optJSONArray("reviews"))
+        );
     }
 }
