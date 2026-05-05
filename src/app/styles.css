@@ -389,20 +389,6 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
-.pdf-document-surface .textLayer span[data-pdf-search-hit='match'] {
-  background: color-mix(in srgb, #facc15 45%, transparent) !important;
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, #ca8a04 75%, transparent) !important;
-}
-
-.pdf-document-surface .textLayer span[data-pdf-search-hit='active'] {
-  background: #f59e0b !important;
-  border-radius: 2px;
-  box-shadow: 0 0 0 2px #b45309 !important;
-  color: #111827 !important;
-  -webkit-text-fill-color: currentColor;
-}
-
 .cloze-answer-zone .answer-editor-host .cm-content {
   padding-top: 1.2rem;
 }

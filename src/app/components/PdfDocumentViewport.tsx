@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { MutableRefObject } from 'react';
 
@@ -6,14 +5,9 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { PdfViewportSearchDebugOverlay, useSearchDebugOverlayState } from './PdfDocumentViewportDebug';
-import {
-  PdfDocumentErrorState,
-  PdfDocumentViewportContent,
-  usePageJumpEffect,
-  useViewportTransformAnchor,
-  useVisiblePageSync
-} from './PdfDocumentViewportParts';
+import { PdfDocumentErrorState, PdfDocumentViewportContent } from './PdfDocumentViewportParts';
 import type { PdfPageTextEntry } from './pdfPageText';
+import { usePdfViewportRuntime } from './pdfViewportRuntime';
 
 interface PdfDocumentViewportProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
@@ -106,7 +100,19 @@ function renderPdfViewportContent(args: {
 
 export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
   const { handleScroll, handleTextContentLoad, handleTextLayerRender, pageElementsRef, pageTextByNumberRef, searchDebug, scrollContainerRef, searchHighlights, searchRevision, setSearchDebug, setSearchHighlights } =
-    usePdfViewportRuntime(props.clearPageJumpRequest, props.page, props.pageJumpRequest, props.pdfSource, props.rotation, props.setVisiblePage, props.totalPages, props.zoom);
+    usePdfViewportRuntime({
+      clearPageJumpRequest: props.clearPageJumpRequest,
+      page: props.page,
+      pageJumpRequest: props.pageJumpRequest,
+      pdfSource: props.pdfSource,
+      rotation: props.rotation,
+      searchQuery: props.searchQuery,
+      searchRequest: props.searchRequest,
+      searchTarget: props.searchTarget,
+      setVisiblePage: props.setVisiblePage,
+      totalPages: props.totalPages,
+      zoom: props.zoom
+    });
   const [isSearchDebugOpen, setIsSearchDebugOpen] = usePdfSearchDebugState(props.searchQuery, props.searchRequest, props.searchStatus, props.searchTarget, searchHighlights.length);
 
   if (props.loadError) {
@@ -167,74 +173,4 @@ function PdfDocumentViewportReady(
   } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
 ) {
   return renderPdfViewportContent(props);
-}
-
-function scheduleSearchReflowRefresh(refresh: () => void) {
-  if (typeof window.requestAnimationFrame === 'function') {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(refresh);
-    });
-    return;
-  }
-  window.setTimeout(refresh, 0);
-}
-
-function usePdfViewportRuntime(
-  clearPageJumpRequest: (requestId: number) => void,
-  page: number,
-  pageJumpRequest: PdfJumpRequest | null,
-  pdfSource: string,
-  rotation: number,
-  setVisiblePage: (page: number) => void,
-  totalPages: number | null,
-  zoom: number
-) {
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
-  const pageTextByNumberRef = useRef<Record<number, PdfPageTextEntry | string>>({});
-  const [searchDebug, setSearchDebug] = useState<PdfSearchDebugInfo>({ pages: [] });
-  const [searchHighlights, setSearchHighlights] = useState<PdfSearchVisualHighlight[]>([]);
-  const [searchRevision, setSearchRevision] = useState(0);
-
-  useEffect(() => {
-    pageTextByNumberRef.current = {};
-    setSearchDebug({ pages: [] });
-    setSearchHighlights([]);
-    setSearchRevision((current) => current + 1);
-  }, [pdfSource]);
-
-  usePageJumpEffect(pageJumpRequest, pageElementsRef, scrollContainerRef, totalPages, clearPageJumpRequest);
-  useViewportTransformAnchor(rotation, scrollContainerRef, zoom);
-  const handleScroll = useVisiblePageSync(page, pageElementsRef, scrollContainerRef, setVisiblePage, totalPages);
-  const handleTextLayerRender = () => {
-    // Text layer can be torn down and rebuilt across repeated searches.
-    // Every successful render needs a fresh geometry pass.
-    setSearchRevision((current) => current + 1);
-    // Trigger one extra pass after paint so highlight geometry is resolved with stable page bounds.
-    scheduleSearchReflowRefresh(() => {
-      setSearchRevision((current) => current + 1);
-    });
-  };
-  const handleTextContentLoad = (pageNumber: number, text: PdfPageTextEntry) => {
-    const current = pageTextByNumberRef.current[pageNumber];
-    if (typeof current !== 'string' && current?.text === text.text) {
-      return;
-    }
-    pageTextByNumberRef.current[pageNumber] = text;
-    setSearchRevision((current) => current + 1);
-  };
-
-  return {
-    handleScroll,
-    handleTextContentLoad,
-    handleTextLayerRender,
-    pageElementsRef,
-    pageTextByNumberRef,
-    searchDebug,
-    scrollContainerRef,
-    searchHighlights,
-    searchRevision,
-    setSearchDebug,
-    setSearchHighlights
-  };
 }

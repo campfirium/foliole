@@ -48,7 +48,6 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
             args.onTextContentLoad(args.pageNumber, resolvePageText(textContent));
           }}
           onRenderTextLayerSuccess={() => {
-            stripTextLayerInlineFonts(args.pageElementsRef.current[args.pageNumber]);
             args.onTextLayerRender(args.pageNumber);
           }}
           pageNumber={args.pageNumber}
@@ -101,16 +100,6 @@ function renderSearchHighlightsOnPage(pageSearchHighlights: PdfSearchVisualHighl
         : null}
     </>
   );
-}
-
-function stripTextLayerInlineFonts(page: HTMLDivElement | null) {
-  if (!page) {
-    return;
-  }
-  const spans = page.querySelectorAll<HTMLSpanElement>('.textLayer span');
-  for (const span of spans) {
-    span.style.fontFamily = '';
-  }
 }
 
 function renderSelectionOverlay(
