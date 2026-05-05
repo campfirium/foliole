@@ -125,3 +125,27 @@ it('waits for on-demand content to load before restoring a saved mid-document po
   expect(mockSetSelection).not.toHaveBeenCalled();
   expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
 });
+
+it('does not reapply a saved selection while typing in the same node', () => {
+  const longDocument = createLongDocument();
+  const nodeViewState = {
+    scrollTop: 5_400,
+    selection: { from: 48_000, to: 48_024 }
+  };
+  const view = renderEditor(
+    <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />
+  );
+
+  expect(mockRevealSelection).toHaveBeenCalledTimes(1);
+
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={nodeViewState}
+      onChange={vi.fn()}
+      value={`${longDocument}a`}
+    />
+  );
+
+  expect(mockRevealSelection).toHaveBeenCalledTimes(1);
+});

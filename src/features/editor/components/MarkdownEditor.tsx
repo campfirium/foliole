@@ -124,8 +124,11 @@ function useEditorLayoutEffects(
     adapterRef.current?.setHideTitleHeading(hideTitleHeading);
   }, [adapterRef, hideTitleHeading]);
 
+  const lastRestoredSelectionKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!nodeId || !nodeViewState) {
+      lastRestoredSelectionKeyRef.current = null;
       return;
     }
     const adapter = adapterRef.current;
@@ -136,7 +139,12 @@ function useEditorLayoutEffects(
     if (value.length === 0 && selectionEnd > 0) {
       return;
     }
+    const selectionKey = `${nodeId}:${nodeViewState.selection.from}:${nodeViewState.selection.to}`;
+    if (lastRestoredSelectionKeyRef.current === selectionKey) {
+      return;
+    }
     adapter.revealSelection(nodeViewState.selection);
+    lastRestoredSelectionKeyRef.current = selectionKey;
     requestAnimationFrame(syncScrollMetrics);
   }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics, value]);
 }
