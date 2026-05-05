@@ -39,7 +39,7 @@ function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | n
 
 export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
   const connection = openDatabaseConnection();
-  const upsertNodeStatement = connection.sqlite.prepare(
+  const upsertNodeStatement = connection.driver.prepare(
     `INSERT INTO nodes (
         id,
         parent_id,
@@ -62,13 +62,13 @@ export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
         updated_at = excluded.updated_at,
         deleted_at = NULL`
   );
-  const upsertNodeOrderStatement = connection.sqlite.prepare(
+  const upsertNodeOrderStatement = connection.driver.prepare(
     `INSERT INTO node_order (node_id, position)
      VALUES (?, ?)
      ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`
   );
   withTransaction(connection.driver, () => {
-    upsertNodeStatement.run(
+    upsertNodeStatement.run([
       input.nodeId,
       input.parentNodeId,
       input.title,
@@ -78,40 +78,40 @@ export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput): void {
       toAnchorLinkValue(input.anchorLink),
       input.createdAt,
       input.updatedAt
-    );
+    ]);
     if (typeof input.position === 'number') {
-      upsertNodeOrderStatement.run(input.nodeId, input.position);
+      upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }
   });
 }
 
 export function replaceNodeOrder(nodeIds: string[]): void {
   const connection = openDatabaseConnection();
-  const deleteOrderStatement = connection.sqlite.prepare('DELETE FROM node_order');
-  const insertOrderStatement = connection.sqlite.prepare(
+  const deleteOrderStatement = connection.driver.prepare('DELETE FROM node_order');
+  const insertOrderStatement = connection.driver.prepare(
     'INSERT INTO node_order (node_id, position) VALUES (?, ?)'
   );
   withTransaction(connection.driver, () => {
     deleteOrderStatement.run();
     for (let index = 0; index < nodeIds.length; index += 1) {
-      insertOrderStatement.run(nodeIds[index], index);
+      insertOrderStatement.run([nodeIds[index], index]);
     }
   });
 }
 
 export function clearNodeOrder(): void {
   const connection = openDatabaseConnection();
-  connection.sqlite.prepare('DELETE FROM node_order').run();
+  connection.driver.execute('DELETE FROM node_order');
 }
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   const connection = openDatabaseConnection();
-  const setDeletedAtStatement = connection.sqlite.prepare(
+  const setDeletedAtStatement = connection.driver.prepare(
     'UPDATE nodes SET deleted_at = ?, updated_at = ? WHERE id = ?'
   );
   withTransaction(connection.driver, () => {
     for (const nodeId of input.nodeIds) {
-      setDeletedAtStatement.run(input.deletedAt, input.deletedAt, nodeId);
+      setDeletedAtStatement.run([input.deletedAt, input.deletedAt, nodeId]);
     }
   });
 }
@@ -119,39 +119,39 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
 export function restoreNodes(input: RestoreNodesInput): void {
   const connection = openDatabaseConnection();
   const restoredAt = new Date().toISOString();
-  const clearDeletedAtStatement = connection.sqlite.prepare(
+  const clearDeletedAtStatement = connection.driver.prepare(
     'UPDATE nodes SET deleted_at = NULL, updated_at = ? WHERE id = ?'
   );
   withTransaction(connection.driver, () => {
     for (const nodeId of input.nodeIds) {
-      clearDeletedAtStatement.run(restoredAt, nodeId);
+      clearDeletedAtStatement.run([restoredAt, nodeId]);
     }
   });
 }
 
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): void {
   const connection = openDatabaseConnection();
-  const deleteReviewLogStatement = connection.sqlite.prepare('DELETE FROM review_log WHERE node_id = ?');
-  const deleteNodeReviewStatement = connection.sqlite.prepare('DELETE FROM node_review WHERE node_id = ?');
-  const deleteNodeOrderStatement = connection.sqlite.prepare('DELETE FROM node_order WHERE node_id = ?');
-  const deleteNodeStatement = connection.sqlite.prepare('DELETE FROM nodes WHERE id = ?');
-  const clearOrderStatement = connection.sqlite.prepare('DELETE FROM node_order');
-  const insertOrderStatement = connection.sqlite.prepare(
+  const deleteReviewLogStatement = connection.driver.prepare('DELETE FROM review_log WHERE node_id = ?');
+  const deleteNodeReviewStatement = connection.driver.prepare('DELETE FROM node_review WHERE node_id = ?');
+  const deleteNodeOrderStatement = connection.driver.prepare('DELETE FROM node_order WHERE node_id = ?');
+  const deleteNodeStatement = connection.driver.prepare('DELETE FROM nodes WHERE id = ?');
+  const clearOrderStatement = connection.driver.prepare('DELETE FROM node_order');
+  const insertOrderStatement = connection.driver.prepare(
     'INSERT INTO node_order (node_id, position) VALUES (?, ?)'
   );
 
   withTransaction(connection.driver, () => {
     for (const nodeId of input.nodeIds) {
-      deleteReviewLogStatement.run(nodeId);
-      deleteNodeReviewStatement.run(nodeId);
-      deleteNodeOrderStatement.run(nodeId);
+      deleteReviewLogStatement.run([nodeId]);
+      deleteNodeReviewStatement.run([nodeId]);
+      deleteNodeOrderStatement.run([nodeId]);
     }
     for (const nodeId of [...input.nodeIds].reverse()) {
-      deleteNodeStatement.run(nodeId);
+      deleteNodeStatement.run([nodeId]);
     }
     clearOrderStatement.run();
     for (let index = 0; index < input.nodeOrder.length; index += 1) {
-      insertOrderStatement.run(input.nodeOrder[index], index);
+      insertOrderStatement.run([input.nodeOrder[index], index]);
     }
   });
 }

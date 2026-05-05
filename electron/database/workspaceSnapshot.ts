@@ -1,3 +1,5 @@
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
+
 import { openDatabaseConnection } from './connection.js';
 
 interface WorkspaceAnchorLink {
@@ -37,7 +39,7 @@ export interface WorkspaceSnapshot {
   trashedNodeIds: string[];
 }
 
-interface WorkspaceNodeRow {
+interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
   parent_id: string | null;
   title: string;
@@ -99,39 +101,37 @@ function toReviewProfile(row: WorkspaceNodeRow): WorkspaceReviewProfile | null {
 
 function queryWorkspaceRows(): WorkspaceNodeRow[] {
   const connection = openDatabaseConnection();
-  return connection.sqlite
-    .prepare(
-      `SELECT
-         n.id,
-         n.parent_id,
-         n.title,
-         n.is_title_manual,
-         n.content,
-         n.reveal,
-         n.anchor_link,
-         n.created_at,
-         n.updated_at,
-         n.deleted_at,
-         nr.due AS review_due,
-         nr.last_review_at AS review_last_review_at,
-         nr.state AS review_state,
-         nr.stability AS review_stability,
-         nr.difficulty AS review_difficulty,
-         nr.elapsed_days AS review_elapsed_days,
-         nr.scheduled_days AS review_scheduled_days,
-         nr.reps AS review_reps,
-         nr.lapses AS review_lapses
-       FROM nodes n
-       LEFT JOIN node_review nr ON nr.node_id = n.id`
-    )
-    .all() as WorkspaceNodeRow[];
+  return connection.driver.queryAll<WorkspaceNodeRow>(
+    `SELECT
+       n.id,
+       n.parent_id,
+       n.title,
+       n.is_title_manual,
+       n.content,
+       n.reveal,
+       n.anchor_link,
+       n.created_at,
+       n.updated_at,
+       n.deleted_at,
+       nr.due AS review_due,
+       nr.last_review_at AS review_last_review_at,
+       nr.state AS review_state,
+       nr.stability AS review_stability,
+       nr.difficulty AS review_difficulty,
+       nr.elapsed_days AS review_elapsed_days,
+       nr.scheduled_days AS review_scheduled_days,
+       nr.reps AS review_reps,
+       nr.lapses AS review_lapses
+     FROM nodes n
+     LEFT JOIN node_review nr ON nr.node_id = n.id`
+  );
 }
 
 function queryNodeOrderRows(): Array<{ node_id: string }> {
   const connection = openDatabaseConnection();
-  return connection.sqlite
-    .prepare('SELECT node_id FROM node_order ORDER BY position ASC')
-    .all() as Array<{ node_id: string }>;
+  return connection.driver.queryAll<{ node_id: string }>(
+    'SELECT node_id FROM node_order ORDER BY position ASC'
+  );
 }
 
 function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: Array<{ node_id: string }>): WorkspaceSnapshot {

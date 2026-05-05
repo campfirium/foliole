@@ -100,12 +100,12 @@ function toReviewLogParams(input: ApplyReviewGradeInput, opId: string, logId: st
 
 export function applyReviewGrade(input: ApplyReviewGradeInput): void {
   const connection = openDatabaseConnection();
-  const upsertNodeReviewStatement = connection.sqlite.prepare(UPSERT_NODE_REVIEW_SQL);
-  const insertReviewLogStatement = connection.sqlite.prepare(INSERT_REVIEW_LOG_SQL);
+  const upsertNodeReviewStatement = connection.driver.prepare(UPSERT_NODE_REVIEW_SQL);
+  const insertReviewLogStatement = connection.driver.prepare(INSERT_REVIEW_LOG_SQL);
   const opId = randomUUID();
   const logId = randomUUID();
   withTransaction(connection.driver, () => {
-    upsertNodeReviewStatement.run(...toNodeReviewParams(input));
-    insertReviewLogStatement.run(...toReviewLogParams(input, opId, logId));
+    upsertNodeReviewStatement.run(toNodeReviewParams(input));
+    insertReviewLogStatement.run(toReviewLogParams(input, opId, logId));
   });
 }

@@ -1,3 +1,5 @@
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
+
 import { openDatabaseConnection } from './connection.js';
 import { withTransaction } from './transaction.js';
 
@@ -26,11 +28,11 @@ export interface ReadingProgressSnapshot {
   nodeViewStateById: Record<string, NodeViewStateSnapshot>;
 }
 
-interface MetaRow {
+interface MetaRow extends DatabaseRow {
   value: string;
 }
 
-interface NodeViewStateRow {
+interface NodeViewStateRow extends DatabaseRow {
   node_id: string;
   scroll_top: number;
   selection_from: number | null;
@@ -42,14 +44,14 @@ const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
   const connection = openDatabaseConnection();
-  const upsertMetaStatement = connection.sqlite.prepare(
+  const upsertMetaStatement = connection.driver.prepare(
     `INSERT INTO workspace_meta (key, value, updated_at)
      VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET
        value = excluded.value,
        updated_at = excluded.updated_at`
   );
-  const upsertNodeViewStateStatement = connection.sqlite.prepare(
+  const upsertNodeViewStateStatement = connection.driver.prepare(
     `INSERT INTO node_view_state (
        node_id,
        scroll_top,
@@ -65,35 +67,34 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
   );
 
   withTransaction(connection.driver, () => {
-    upsertMetaStatement.run(ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt);
+    upsertMetaStatement.run([ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt]);
     for (const state of input.nodeViewStates) {
-      upsertNodeViewStateStatement.run(
+      upsertNodeViewStateStatement.run([
         state.nodeId,
         state.scrollTop,
         state.selectionFrom,
         state.selectionTo,
         input.updatedAt
-      );
+      ]);
     }
   });
 }
 
 export function loadReadingProgress(): ReadingProgressSnapshot {
   const connection = openDatabaseConnection();
-  const activeNodeRow = connection.sqlite
-    .prepare('SELECT value FROM workspace_meta WHERE key = ?')
-    .get(ACTIVE_NODE_META_KEY) as MetaRow | undefined;
-  const nodeRows = connection.sqlite
-    .prepare(
-      `SELECT
-         node_id,
-         scroll_top,
-         selection_from,
-         selection_to,
-         updated_at
-       FROM node_view_state`
-    )
-    .all() as NodeViewStateRow[];
+  const activeNodeRow = connection.driver.queryOne<MetaRow>(
+    'SELECT value FROM workspace_meta WHERE key = ?',
+    [ACTIVE_NODE_META_KEY]
+  );
+  const nodeRows = connection.driver.queryAll<NodeViewStateRow>(
+    `SELECT
+       node_id,
+       scroll_top,
+       selection_from,
+       selection_to,
+       updated_at
+     FROM node_view_state`
+  );
 
   const nodeViewStateById: Record<string, NodeViewStateSnapshot> = {};
   for (const row of nodeRows) {
