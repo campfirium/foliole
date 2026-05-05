@@ -78,8 +78,10 @@ async function testPullsStructurePackAndContentBlobs() {
 }
 
 async function testRefreshesStructureBeforeContentBatchCompletes() {
-  const hashes = Array.from({ length: 40 }, (_, index) => `${String(index % 10)}`.repeat(64));
-  syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValueOnce(hashes);
+  const hashes = Array.from({ length: 32 }, (_, index) => `${String(index % 10)}`.repeat(64));
+  syncBridgeMock.loadCompanionMissingContentBlobHashes
+    .mockResolvedValueOnce(hashes)
+    .mockResolvedValueOnce([]);
   const onStructureSynced = vi.fn();
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [], status: 'ok' }), { status: 200 })));
 
@@ -90,6 +92,23 @@ async function testRefreshesStructureBeforeContentBatchCompletes() {
     .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobHashes.mock.invocationCallOrder[0]);
   expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
   expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(hashes.length);
+}
+
+async function testContinuesContentCachingAcrossBoundedBatches() {
+  const firstBatch = Array.from({ length: 32 }, (_, index) => `a${String(index).padStart(2, '0')}`.padEnd(64, 'a'));
+  const secondBatch = ['b'.repeat(64), 'c'.repeat(64)];
+  syncBridgeMock.loadCompanionMissingContentBlobHashes
+    .mockResolvedValueOnce(firstBatch)
+    .mockResolvedValueOnce(secondBatch);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [], status: 'ok' }), { status: 200 })));
+
+  const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledTimes(2);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
+  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(34);
+  expect(result.syncedContentBlobHashes).toHaveLength(34);
 }
 
 async function testKeepsStructureSyncSuccessfulWhenContentBatchFails() {
@@ -204,7 +223,9 @@ describe('companion desktop sync objects', () => {
 
   it('pulls the structure pack and missing content blobs from desktop', testPullsStructurePackAndContentBlobs);
 
-  it('refreshes structure before running one bounded content blob batch', testRefreshesStructureBeforeContentBatchCompletes);
+  it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatchCompletes);
+
+  it('continues content caching across bounded batches', testContinuesContentCachingAcrossBoundedBatches);
 
   it('keeps structure sync successful when content blob caching fails', testKeepsStructureSyncSuccessfulWhenContentBatchFails);
 

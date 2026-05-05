@@ -12,6 +12,7 @@ const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
 const SYNC_PACK_PATH = '/companion/sync-pack';
 export const CONTENT_BLOB_BATCH_LIMIT = 32;
+export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 5;
 export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
 
 export interface CompanionDesktopSyncOptions {
@@ -75,17 +76,26 @@ async function pullRemoteStructurePack(endpointUrl: string) {
 async function pullMissingContentBlobs(endpointUrl: string) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
-  const hashes = await loadCompanionMissingContentBlobHashes(CONTENT_BLOB_BATCH_LIMIT);
-  for (const hash of hashes) {
-    const pathWithQuery = buildContentBlobPath(hash);
-    const result = await syncCompanionContentBlob({
-      hash,
-      headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
-      url: `${endpoint}${pathWithQuery}`
-    });
-    if (result.availability === 'cached') {
-      await ackContentBlob(endpoint, result.hash);
-      syncedContentBlobHashes.push(result.hash);
+  for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
+    const hashes = await loadCompanionMissingContentBlobHashes(CONTENT_BLOB_BATCH_LIMIT);
+    if (hashes.length === 0) {
+      break;
+    }
+    const syncedBeforeBatch = syncedContentBlobHashes.length;
+    for (const hash of hashes) {
+      const pathWithQuery = buildContentBlobPath(hash);
+      const result = await syncCompanionContentBlob({
+        hash,
+        headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+        url: `${endpoint}${pathWithQuery}`
+      });
+      if (result.availability === 'cached') {
+        await ackContentBlob(endpoint, result.hash);
+        syncedContentBlobHashes.push(result.hash);
+      }
+    }
+    if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedContentBlobHashes.length === syncedBeforeBatch) {
+      break;
     }
   }
   return { syncedContentBlobHashes };

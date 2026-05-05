@@ -10,15 +10,12 @@ function buildOpenLabel(title: string, kind?: NodeBrowseListItem['kind']) {
   if (kind === 'folder') {
     return `Open folder ${title}`;
   }
-  return `Open article ${title}`;
+  return `Open topic ${title}`;
 }
 
 function renderBodyStatus(status: NodeBrowseListItem['bodyStatus']) {
   if (status === 'failed') {
-    return 'Content sync failed';
-  }
-  if (status === 'fetching' || status === 'missing') {
-    return 'Content syncing';
+    return 'Topic body unavailable';
   }
   if (status === 'empty') {
     return 'Empty topic';

@@ -116,7 +116,7 @@ function formatEventStatus(status: NativeCompanionSyncEvent['status']) {
   return 'Started';
 }
 
-function formatActivityMessage(event: NativeCompanionSyncEvent) {
+function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
   if (event.status === 'completed' && event.message === 'Auto sync completed.') {
     return 'Completed auto sync';
   }
@@ -127,19 +127,28 @@ function formatActivityMessage(event: NativeCompanionSyncEvent) {
     return 'Started auto sync';
   }
   if (event.status === 'failed') {
-    return event.message.replace(/^Desktop sync /, 'Failed ');
+    return isSupersededFailure(event, laterEvents)
+      ? 'Earlier sync attempt did not complete'
+      : 'Sync did not complete';
   }
   return `${formatEventStatus(event.status)} ${event.message}`;
 }
 
-function statusClass(status: NativeCompanionSyncEvent['status']) {
-  if (status === 'failed') {
+function isSupersededFailure(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
+  return event.status === 'failed' && laterEvents.some((laterEvent) => (
+    laterEvent.status === 'completed' &&
+    laterEvent.endpoint_url === event.endpoint_url
+  ));
+}
+
+function statusClass(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
+  if (event.status === 'failed' && !isSupersededFailure(event, laterEvents)) {
     return 'text-error';
   }
-  if (status === 'completed') {
+  if (event.status === 'completed') {
     return 'text-companion-accent';
   }
-  return 'text-foreground';
+  return 'text-companion-text-secondary';
 }
 
 function SyncActivitySummary(props: {
@@ -162,10 +171,12 @@ function ActivityPage(props: { events: NativeCompanionSyncEvent[] }) {
         <p className="border-b border-companion-divider py-4 text-sm leading-6 text-companion-text-secondary">
           No sync activity yet.
         </p>
-      ) : props.events.slice(0, 20).map((event) => (
+      ) : props.events.slice(0, 20).map((event, index, visibleEvents) => (
         <div className="grid grid-cols-[4.5rem_1fr] gap-3 border-b border-companion-divider py-3 text-sm leading-5" key={event.id}>
           <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at)}</span>
-          <span className={statusClass(event.status)}>{formatActivityMessage(event)}</span>
+          <span className={statusClass(event, visibleEvents.slice(0, index))}>
+            {formatActivityMessage(event, visibleEvents.slice(0, index))}
+          </span>
         </div>
       ))}
     </section>
@@ -241,8 +252,8 @@ export function CompanionSyncStatusDetails(props: {
       />
       <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
       <SettingsLinkRow
-        detail="Read-only sync health snapshot"
-        label="Diagnostic"
+        detail="Current connection and topic status"
+        label="Sync check"
         onClick={() => props.onOpenPage('syncDiagnostics')}
         value="Run"
       />

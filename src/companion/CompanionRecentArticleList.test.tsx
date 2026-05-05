@@ -23,7 +23,7 @@ describe('RecentArticleList', () => {
     expect(screen.getByText('Line one. Line two. Line three. Line four.').className).toContain('line-clamp-3');
   });
 
-  it('marks recent topics whose content is still syncing', () => {
+  it('keeps recent topics quiet while their bodies are still caching', () => {
     render(
       <RecentArticleList
         currentArticleId={null}
@@ -40,7 +40,7 @@ describe('RecentArticleList', () => {
       />
     );
 
-    expect(screen.getByText('Content syncing')).toBeInTheDocument();
+    expect(screen.queryByText('Content syncing')).not.toBeInTheDocument();
     expect(screen.getByText('Opening text')).toBeInTheDocument();
   });
 
@@ -64,7 +64,7 @@ describe('RecentArticleList', () => {
     expect(screen.getByText('Empty topic')).toBeInTheDocument();
   });
 
-  it('marks recent topics whose content sync failed', () => {
+  it('marks recent topics whose body is unavailable', () => {
     render(
       <RecentArticleList
         currentArticleId={null}
@@ -81,7 +81,7 @@ describe('RecentArticleList', () => {
       />
     );
 
-    expect(screen.getByText('Content sync failed')).toBeInTheDocument();
+    expect(screen.getByText('Topic body unavailable')).toBeInTheDocument();
   });
 
   it('keeps the empty recent topics state passive while automatic sync owns refresh', () => {

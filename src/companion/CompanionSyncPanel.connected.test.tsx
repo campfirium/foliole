@@ -99,4 +99,35 @@ describe('CompanionSyncPanel connected state', () => {
     screen.getByRole('button', { name: /Activity/ }).click();
     expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncActivity');
   });
+
+  it('shows older failures as neutral history after a later completed sync', () => {
+    const props = createConnectedProps();
+    render(
+      <CompanionSyncPanel
+        {...props}
+        page="syncActivity"
+        syncEvents={[
+          {
+            endpoint_url: 'http://10.0.2.2:38641',
+            id: 'completed-event',
+            message: 'Auto sync completed.',
+            occurred_at: '2026-04-29T02:24:44.000Z',
+            status: 'completed'
+          },
+          {
+            endpoint_url: 'http://10.0.2.2:38641',
+            id: 'failed-event',
+            message: 'Desktop sync timed out while fetching content blobs.',
+            occurred_at: '2026-04-29T02:18:33.000Z',
+            status: 'failed'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Completed auto sync')).toBeInTheDocument();
+    const oldFailure = screen.getByText('Earlier sync attempt did not complete');
+    expect(oldFailure).toBeInTheDocument();
+    expect(oldFailure.className).not.toContain('text-error');
+  });
 });
