@@ -6,6 +6,7 @@ import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
 import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
+import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -68,6 +69,7 @@ function updateDeletedAnchorParent(args: {
   deletedAt: string;
   deletedNode: Node;
   deletedNodeIds: ReadonlySet<string>;
+  mode: 'permanent' | 'soft';
   nextNodesById: Record<string, Node>;
 }) {
   const anchorLink = args.deletedNode.anchorLink;
@@ -79,7 +81,9 @@ function updateDeletedAnchorParent(args: {
   if (!parentNode) {
     return null;
   }
-  const cleanedContent = removeAnchorTagsForLink(parentNode.content, anchorLink);
+  const shouldRemoveTextAnchor =
+    args.mode === 'permanent' && !anchorLink.locator && isNodeDocumentLoaded(parentNode);
+  const cleanedContent = shouldRemoveTextAnchor ? removeAnchorTagsForLink(parentNode.content, anchorLink) : parentNode.content;
   const parentWithRemovedRegion = removeImageRegionFromParent(parentNode, args.deletedNode, args.deletedAt);
   if (cleanedContent === parentNode.content && parentWithRemovedRegion === parentNode) {
     return null;
@@ -98,6 +102,7 @@ function updateDeletedAnchorParent(args: {
 function syncDeletedAnchorParents(args: {
   deletedAt: string;
   deletedNodeIds: ReadonlySet<string>;
+  mode: 'permanent' | 'soft';
   nextNodesById: Record<string, Node>;
   parentNodesToSync: Map<string, Node>;
   state: WorkspaceState;
@@ -111,6 +116,7 @@ function syncDeletedAnchorParents(args: {
       deletedAt: args.deletedAt,
       deletedNode,
       deletedNodeIds: args.deletedNodeIds,
+      mode: args.mode,
       nextNodesById: args.nextNodesById
     });
     if (!update) {
@@ -195,6 +201,7 @@ export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: strin
   syncDeletedAnchorParents({
     deletedAt,
     deletedNodeIds,
+    mode: 'soft',
     nextNodesById,
     parentNodesToSync,
     state
@@ -241,10 +248,20 @@ export function computeDeleteNodesPermanentlyMutation(
     }
   }
 
+  const deletedAt = new Date().toISOString();
   const nextNodeOrder = state.nodeOrder.filter((nodeId) => !deletedNodeIds.has(nodeId));
   const nextNodesById = Object.fromEntries(
     Object.entries(state.nodesById).filter(([nodeId]) => !deletedNodeIds.has(nodeId))
   );
+  const parentNodesToSync = new Map<string, Node>();
+  syncDeletedAnchorParents({
+    deletedAt,
+    deletedNodeIds,
+    mode: 'permanent',
+    nextNodesById,
+    parentNodesToSync,
+    state
+  });
   const nextTrashedNodeIds = state.trashedNodeIds.filter((nodeId) => !deletedNodeIds.has(nodeId));
   const hiddenNodeIds = new Set(nextTrashedNodeIds);
   const nextActiveNodeId =
@@ -257,10 +274,10 @@ export function computeDeleteNodesPermanentlyMutation(
       : sanitizeNavigationState(state.navigation, nextNodesById, new Set([...deletedNodeIds, ...nextTrashedNodeIds]));
 
   return {
-    deletedAt: new Date().toISOString(),
+    deletedAt,
     nodeIds: [...deletedNodeIds],
     nodeOrder: nextNodeOrder,
-    parentNodesToSync: [],
+    parentNodesToSync: [...parentNodesToSync.values()],
     patch: buildDeleteNodePatch({
       state,
       nextActiveNodeId,

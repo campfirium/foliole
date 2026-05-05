@@ -1,8 +1,9 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { createInlineAnchorKey } from '../../features/editor/adapters/liveMarkdownAnchors';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import {
@@ -70,6 +71,30 @@ export interface DocumentPanelSectionProps {
   nodesById: Record<string, Node>;
 }
 
+function collectHiddenTextAnchorKeys(args: {
+  activeNodeId: string | null;
+  nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
+}) {
+  if (!args.activeNodeId) {
+    return [];
+  }
+  const hiddenKeys = new Set<string>();
+  for (const trashedNodeId of args.trashedNodeIds) {
+    const node = args.nodesById[trashedNodeId];
+    if (
+      !node ||
+      node.parentNodeId !== args.activeNodeId ||
+      !node.anchorLink ||
+      node.anchorLink.locator
+    ) {
+      continue;
+    }
+    hiddenKeys.add(createInlineAnchorKey(node.anchorLink));
+  }
+  return [...hiddenKeys];
+}
+
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   const { editorDisplayMode } = useAppearanceSettings();
@@ -77,6 +102,15 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { bodyProps, documentLayoutStyle, isFolderListView, loadingLabel } = getDocumentPanelView(props, editorDisplayMode);
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
+  const hiddenTextAnchorKeys = useMemo(
+    () =>
+      collectHiddenTextAnchorKeys({
+        activeNodeId: props.activeNodeId,
+        nodesById: props.nodesById,
+        trashedNodeIds: props.trashedNodeIds
+      }),
+    [props.activeNodeId, props.nodesById, props.trashedNodeIds]
+  );
   const {
     currentSourceUpdateContent,
     handleSourceUpdateDraftChange,
@@ -118,6 +152,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       <DocumentPanelSectionShell
         bodyProps={{
           ...bodyProps,
+          hiddenTextAnchorKeys,
           emptyContent: loadingLabel ? (
             <div className="flex min-h-0 flex-1 items-center justify-center">
               <div

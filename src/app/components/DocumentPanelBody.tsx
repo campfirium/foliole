@@ -21,6 +21,7 @@ interface DocumentPanelBodyProps {
   editorContent: string;
   editorContentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
+  hiddenTextAnchorKeys?: readonly string[];
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;

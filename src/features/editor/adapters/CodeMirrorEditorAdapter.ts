@@ -22,6 +22,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
   private imageClozePresentationVersion = 0;
+  private hiddenTextAnchorKeys: readonly string[] = [];
   private liveMarkdownCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
@@ -38,6 +39,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
 
   constructor(host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
     this.hideTitleHeading = options.hideTitleHeading === true;
+    this.hiddenTextAnchorKeys = options.hiddenTextAnchorKeys ?? [];
     this.onChange = options.onChange;
     this.view = new EditorView({
       parent: host,
@@ -58,7 +60,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           markdownInputAssist,
           this.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
           this.liveMarkdownCompartment.of(
-            createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
+            createLiveMarkdown(
+              this.hideTitleHeading,
+              this.nodeId,
+              this.imageClozePresentationVersion,
+              this.hiddenTextAnchorKeys
+            )
           ),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
@@ -120,11 +127,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;
     this.view.dispatch({
-      effects: createLiveMarkdownReconfigureEffect({
-        compartment: this.liveMarkdownCompartment,
-        hideTitleHeading: this.hideTitleHeading,
-        imageClozePresentationVersion: this.imageClozePresentationVersion,
-        nodeId: this.nodeId
+        effects: createLiveMarkdownReconfigureEffect({
+          compartment: this.liveMarkdownCompartment,
+          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
+          hideTitleHeading: this.hideTitleHeading,
+          imageClozePresentationVersion: this.imageClozePresentationVersion,
+          nodeId: this.nodeId
       })
     });
   }
@@ -132,11 +140,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setNodeId(nodeId: string | null) {
     this.nodeId = nodeId;
     this.view.dispatch({
-      effects: createLiveMarkdownReconfigureEffect({
-        compartment: this.liveMarkdownCompartment,
-        hideTitleHeading: this.hideTitleHeading,
-        imageClozePresentationVersion: this.imageClozePresentationVersion,
-        nodeId: this.nodeId
+        effects: createLiveMarkdownReconfigureEffect({
+          compartment: this.liveMarkdownCompartment,
+          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
+          hideTitleHeading: this.hideTitleHeading,
+          imageClozePresentationVersion: this.imageClozePresentationVersion,
+          nodeId: this.nodeId
       })
     });
     this.remoteImageLocalization.schedule();
@@ -145,8 +154,28 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   refreshImageClozePresentation() {
     this.imageClozePresentationVersion += 1;
     this.view.dispatch({
+        effects: createLiveMarkdownReconfigureEffect({
+          compartment: this.liveMarkdownCompartment,
+          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
+          hideTitleHeading: this.hideTitleHeading,
+          imageClozePresentationVersion: this.imageClozePresentationVersion,
+          nodeId: this.nodeId
+      })
+    });
+  }
+
+  setHiddenTextAnchorKeys(hiddenTextAnchorKeys: readonly string[]) {
+    if (
+      this.hiddenTextAnchorKeys.length === hiddenTextAnchorKeys.length &&
+      this.hiddenTextAnchorKeys.every((key, index) => key === hiddenTextAnchorKeys[index])
+    ) {
+      return;
+    }
+    this.hiddenTextAnchorKeys = [...hiddenTextAnchorKeys];
+    this.view.dispatch({
       effects: createLiveMarkdownReconfigureEffect({
         compartment: this.liveMarkdownCompartment,
+        hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
         hideTitleHeading: this.hideTitleHeading,
         imageClozePresentationVersion: this.imageClozePresentationVersion,
         nodeId: this.nodeId

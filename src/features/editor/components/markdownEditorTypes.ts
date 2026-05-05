@@ -16,6 +16,7 @@ export interface MarkdownEditorProps {
   className?: string;
   contentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
+  hiddenTextAnchorKeys?: readonly string[];
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;

@@ -115,8 +115,8 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
     const parsed = parseDeleteNodesPermanentlyArgs(args);
-    deleteNodesPermanently(parsed);
-    scheduleMirrorSync(parsed.nodeIds);
+    const affectedParentNodeIds = deleteNodesPermanently(parsed);
+    scheduleMirrorSync([...new Set([...parsed.nodeIds, ...affectedParentNodeIds])]);
     return null;
   }
   return undefined;

@@ -2,6 +2,7 @@ import type { Range } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
 import {
+  createAnchorKey,
   collectAnchorTagTokenRanges,
   collectAnchorTextSegments,
   type AnchorTextSegment
@@ -12,8 +13,12 @@ import { addMark, addReplace } from './liveMarkdownPrimitives';
 
 export const INLINE_ANCHOR_TAG_PATTERN = /<(\/?)(highlight|cloze)\s+id="([1-9]\d*)"\s*>/g;
 
-export function addAnchorTagDecorations(ranges: Range<Decoration>[], content: string) {
-  const segments = collectAnchorTextSegments(content);
+export function addAnchorTagDecorations(
+  ranges: Range<Decoration>[],
+  content: string,
+  hiddenAnchorKeys: ReadonlySet<string> = new Set()
+) {
+  const segments = collectAnchorTextSegments(content, hiddenAnchorKeys);
   const tokenRanges = mergeAdjacentRanges(collectAnchorTagTokenRanges(content));
 
   for (const tokenRange of tokenRanges) addReplace(ranges, tokenRange.from, tokenRange.to);
@@ -31,6 +36,10 @@ export function addAnchorTagDecorations(ranges: Range<Decoration>[], content: st
   for (const range of clozeRanges) addMark(ranges, range.from, range.to, 'cm-md-cloze');
   for (const range of highlightOverlapRanges) addMark(ranges, range.from, range.to, 'cm-md-highlight-overlap');
   for (const range of mixedOverlapRanges) addMark(ranges, range.from, range.to, 'cm-md-anchor-overlap');
+}
+
+export function createInlineAnchorKey(anchor: { id: string; kind: 'highlight' | 'cloze' }) {
+  return createAnchorKey(anchor);
 }
 
 function mergeAdjacentRanges(ranges: Array<{ from: number; to: number }>) {

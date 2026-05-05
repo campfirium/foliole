@@ -6,6 +6,7 @@ import { getEditorDisplayMode } from '../model/editorDisplayMode';
 
 import { addAnchorTagDecorations } from './liveMarkdownAnchors';
 import { buildFrontmatterDecorationState, type FrontmatterDecorationState } from './liveMarkdownFrontmatter';
+import { getHiddenTextAnchorKeys } from './liveMarkdown';
 import { addSourceModeAnchorDecorations } from './liveMarkdownSourceAnchors';
 
 interface AnchorDecorationState {
@@ -16,7 +17,7 @@ interface AnchorDecorationState {
 function buildPreviewAnchorDecorationState(view: EditorView): AnchorDecorationState {
   const ranges: Range<Decoration>[] = [];
   const content = view.state.doc.toString();
-  addAnchorTagDecorations(ranges, content);
+  addAnchorTagDecorations(ranges, content, new Set(getHiddenTextAnchorKeys(view)));
   return {
     decorations: Decoration.set(ranges, true),
     sensitiveRanges: collectAnchorSensitiveRanges(content)
@@ -109,9 +110,12 @@ export const markdownStaticPlugin = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (!update.docChanged) return;
+      const hiddenTextAnchorKeysChanged =
+        getHiddenTextAnchorKeys(update.startState as never) !== getHiddenTextAnchorKeys(update.state as never);
+      if (!update.docChanged && !hiddenTextAnchorKeysChanged) return;
 
       this.anchorState = shouldRebuildAnchorDecorations(update, this.anchorState)
+        || hiddenTextAnchorKeysChanged
         ? (getEditorDisplayMode() === 'source'
             ? buildSourceModeAnchorDecorationState(update.view)
             : buildPreviewAnchorDecorationState(update.view))

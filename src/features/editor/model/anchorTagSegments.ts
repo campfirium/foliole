@@ -17,6 +17,10 @@ export interface AnchorTextSegment {
   to: number;
 }
 
+function toKey(token: { id: string; kind: AnchorKind }) {
+  return `${token.kind}:${token.id}`;
+}
+
 export function collectAnchorTagTokens(content: string): AnchorTagToken[] {
   const tokens: AnchorTagToken[] = [];
   for (const match of content.matchAll(ANCHOR_TAG_PATTERN)) {
@@ -40,11 +44,7 @@ export function collectAnchorTagTokens(content: string): AnchorTagToken[] {
   return tokens;
 }
 
-function toKey(token: { id: string; kind: AnchorKind }) {
-  return `${token.kind}:${token.id}`;
-}
-
-export function collectAnchorTextSegments(content: string): AnchorTextSegment[] {
+export function collectAnchorTextSegments(content: string, hiddenAnchorKeys: ReadonlySet<string> = new Set()): AnchorTextSegment[] {
   const tokens = collectAnchorTagTokens(content);
   const activeKeys = new Set<string>();
   const segments: AnchorTextSegment[] = [];
@@ -54,8 +54,9 @@ export function collectAnchorTextSegments(content: string): AnchorTextSegment[] 
     if (to <= cursor) {
       return;
     }
-    const activeHighlightCount = [...activeKeys].filter((key) => key.startsWith('highlight:')).length;
-    const activeClozeCount = [...activeKeys].filter((key) => key.startsWith('cloze:')).length;
+    const visibleKeys = [...activeKeys].filter((key) => !hiddenAnchorKeys.has(key));
+    const activeHighlightCount = visibleKeys.filter((key) => key.startsWith('highlight:')).length;
+    const activeClozeCount = visibleKeys.filter((key) => key.startsWith('cloze:')).length;
     segments.push({ activeClozeCount, activeHighlightCount, from: cursor, to });
   };
 
@@ -72,6 +73,10 @@ export function collectAnchorTextSegments(content: string): AnchorTextSegment[] 
   pushSegment(content.length);
 
   return segments;
+}
+
+export function createAnchorKey(anchor: { id: string; kind: AnchorKind }) {
+  return toKey(anchor);
 }
 
 export function collectAnchorTagTokenRanges(content: string): Array<{ from: number; to: number }> {

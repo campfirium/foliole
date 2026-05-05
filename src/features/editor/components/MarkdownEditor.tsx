@@ -27,6 +27,7 @@ function useEditorAdapter(
   onChange: (value: string) => void,
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
+  hiddenTextAnchorKeys: readonly string[] | undefined,
   hideTitleHeading: boolean,
   readOnly: boolean | undefined
 ) {
@@ -45,6 +46,7 @@ function useEditorAdapter(
     }
 
     const adapter = new CodeMirrorEditorAdapter(host, {
+      hiddenTextAnchorKeys,
       hideTitleHeading,
       initialContent: initialValueRef.current,
       onChange: (nextValue) => onChangeRef.current(nextValue),
@@ -66,6 +68,10 @@ function useEditorAdapter(
       adapterRef.current = null;
     };
   }, [debugId, hostRef, readOnly]);
+
+  useLayoutEffect(() => {
+    adapterRef.current?.setHiddenTextAnchorKeys?.(hiddenTextAnchorKeys ?? []);
+  }, [hiddenTextAnchorKeys]);
 
   return adapterRef;
 }
@@ -150,6 +156,7 @@ export function MarkdownEditor({
   className,
   contentPaddingBottom,
   fitBlockImagesToViewport = false,
+  hiddenTextAnchorKeys,
   debugId,
   hideTitleHeading = false,
   hideScrollbar = false,
@@ -166,7 +173,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { bindings, settings } = useMouseGestureSettings();
   const hostRef = useRef<HTMLDivElement | null>(null), rootRef = useRef<HTMLDivElement | null>(null);
-  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hideTitleHeading, readOnly);
+  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hiddenTextAnchorKeys, hideTitleHeading, readOnly);
   const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
   useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, lineDiffDecorations);

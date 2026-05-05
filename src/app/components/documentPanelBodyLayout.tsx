@@ -36,6 +36,7 @@ export interface DocumentPanelBodyLayoutProps {
     title: string;
   };
   fitBlockImagesToViewport?: boolean;
+  hiddenTextAnchorKeys?: readonly string[];
   hasAnswerSection: boolean;
   isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
@@ -147,6 +148,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         contentPaddingBottom={props.editorContentPaddingBottom}
         debugId={props.promptEditorDebugId}
         fitBlockImagesToViewport={props.fitBlockImagesToViewport}
+        hiddenTextAnchorKeys={props.hiddenTextAnchorKeys}
         hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
         key={`prompt-${props.editorAppearanceKey}`}

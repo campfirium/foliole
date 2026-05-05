@@ -44,15 +44,21 @@ const imageClozePresentationVersionFacet = Facet.define<number, number>({
   combine: (values) => values[0] ?? 0
 });
 
+const hiddenTextAnchorKeysFacet = Facet.define<readonly string[], readonly string[]>({
+  combine: (values) => values[0] ?? []
+});
+
 export function createLiveMarkdown(
   hideTitleHeading = false,
   nodeId: string | null = null,
-  imageClozePresentationVersion = 0
+  imageClozePresentationVersion = 0,
+  hiddenTextAnchorKeys: readonly string[] = []
 ) {
   return [
     hideTitleHeadingFacet.of(hideTitleHeading),
     activeNodeIdFacet.of(nodeId),
     imageClozePresentationVersionFacet.of(imageClozePresentationVersion),
+    hiddenTextAnchorKeysFacet.of(hiddenTextAnchorKeys),
     liveMarkdownTheme,
     codeFenceLineNumbersField,
     markdownStaticPlugin,
@@ -147,11 +153,14 @@ const markdownLinePlugin = ViewPlugin.fromClass(
       const imageClozePresentationChanged =
         update.startState.facet(imageClozePresentationVersionFacet) !==
         update.state.facet(imageClozePresentationVersionFacet);
+      const hiddenTextAnchorKeysChanged =
+        update.startState.facet(hiddenTextAnchorKeysFacet) !== update.state.facet(hiddenTextAnchorKeysFacet);
       const nextCursorLineNumber = getCursorLineNumber(update.view);
       if (
         shouldRefreshLineDecorations(update, this.cursorLineNumber, nextCursorLineNumber) ||
         nodeIdChanged ||
-        imageClozePresentationChanged
+        imageClozePresentationChanged ||
+        hiddenTextAnchorKeysChanged
       ) {
         this.decorations = buildLineDecorations(update.view);
       }
@@ -160,6 +169,13 @@ const markdownLinePlugin = ViewPlugin.fromClass(
   },
   { decorations: (value) => value.decorations }
 );
+
+export function getHiddenTextAnchorKeys(value: EditorView | { facet: EditorView['state']['facet'] }) {
+  if ('state' in value) {
+    return value.state.facet(hiddenTextAnchorKeysFacet);
+  }
+  return value.facet(hiddenTextAnchorKeysFacet);
+}
 
 const markdownInteractionHandlers = EditorView.domEventHandlers({
   click(event) {

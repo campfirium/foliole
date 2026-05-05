@@ -102,6 +102,9 @@ function syncPermanentDeleteMutation(runtimeHandlers: DeleteNodeSyncHandlers, mu
   if (!mutation || mutation.nodeIds.length === 0 || !mutation.nodeOrder) {
     return;
   }
+  for (const parentNode of mutation.parentNodesToSync) {
+    runtimeHandlers.syncNodeContent(parentNode);
+  }
   runtimeHandlers.syncDeleteNodesPermanently({
     nodeIds: mutation.nodeIds,
     nodeOrder: mutation.nodeOrder

@@ -2,7 +2,7 @@ import type { NodeKind } from '../nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
-import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
+import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpsertNodeOrderStatement,
@@ -22,6 +22,15 @@ interface NodeAnchorLinkPayload {
     x: number;
     y: number;
   };
+}
+
+interface DeletedNodeAnchorCleanupRow extends DatabaseRow {
+  anchor_link: string | null;
+  parent_id: string | null;
+}
+
+interface ParentContentRow extends DatabaseRow {
+  content: string;
 }
 
 interface NodeReadingPayload {
@@ -80,6 +89,60 @@ export interface RestoreNodesInput {
 export interface DeleteNodesPermanentlyInput {
   nodeIds: string[];
   nodeOrder: string[];
+}
+
+function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
+  const openTag = `<${anchor.kind} id="${anchor.id}">`;
+  const closeTag = `</${anchor.kind} id="${anchor.id}">`;
+  return content.replaceAll(openTag, '').replaceAll(closeTag, '');
+}
+
+function parseAnchorLinkPayload(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as NodeAnchorLinkPayload;
+    if (!parsed || (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') || typeof parsed.id !== 'string') {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function cleanupDeletedTextAnchors(driver: DatabaseDriver, nodeIds: string[], deletedAt: string) {
+  const deletedNodeIds = new Set(nodeIds);
+  const selectDeletedNodeStatement = driver.prepare(
+    'SELECT parent_id, anchor_link FROM nodes WHERE id = ?'
+  );
+  const selectParentContentStatement = driver.prepare('SELECT content FROM nodes WHERE id = ?');
+  const updateParentContentStatement = driver.prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?');
+  const affectedParentNodeIds = new Set<string>();
+
+  for (const nodeId of nodeIds) {
+    const deletedNode = selectDeletedNodeStatement.get([nodeId]) as DeletedNodeAnchorCleanupRow | undefined;
+    if (!deletedNode?.parent_id || deletedNodeIds.has(deletedNode.parent_id)) {
+      continue;
+    }
+    const anchorLink = parseAnchorLinkPayload(deletedNode.anchor_link);
+    if (!anchorLink || anchorLink.locator) {
+      continue;
+    }
+    const parentRow = selectParentContentStatement.get([deletedNode.parent_id]) as ParentContentRow | undefined;
+    if (!parentRow) {
+      continue;
+    }
+    const cleanedContent = removeAnchorTagsForLink(parentRow.content, anchorLink);
+    if (cleanedContent === parentRow.content) {
+      continue;
+    }
+    updateParentContentStatement.run([cleanedContent, deletedAt, deletedNode.parent_id]);
+    affectedParentNodeIds.add(deletedNode.parent_id);
+  }
+
+  return [...affectedParentNodeIds];
 }
 
 function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | null {
@@ -187,7 +250,7 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
   });
 }
 
-export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNodesPermanentlyInput): void {
+export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNodesPermanentlyInput): string[] {
   const deleteReviewLogStatement = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
   const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
@@ -195,8 +258,11 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   const clearOrderStatement = driver.prepare('DELETE FROM node_order');
   const insertOrderStatement = driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
+  const deletedAt = new Date().toISOString();
+  let affectedParentNodeIds: string[] = [];
 
   driver.transaction(() => {
+    affectedParentNodeIds = cleanupDeletedTextAnchors(driver, input.nodeIds, deletedAt);
     for (const nodeId of input.nodeIds) {
       deleteReviewLogStatement.run([nodeId]);
       deleteNodeReviewStatement.run([nodeId]);
@@ -211,4 +277,6 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       insertOrderStatement.run([input.nodeOrder[index], index]);
     }
   });
+
+  return affectedParentNodeIds;
 }

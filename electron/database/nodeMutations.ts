@@ -42,6 +42,6 @@ export function restoreNodes(input: RestoreNodesInput): void {
   restoreNodesViaDriver(openDatabaseConnection().driver, input);
 }
 
-export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): void {
-  deleteNodesPermanentlyViaDriver(openDatabaseConnection().driver, input);
+export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
+  return deleteNodesPermanentlyViaDriver(openDatabaseConnection().driver, input);
 }

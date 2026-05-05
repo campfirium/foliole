@@ -58,8 +58,8 @@ function seedNode(nodeId: string, parentNodeId: string | null, position: number)
 
 function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
-  return connection.sqlite.prepare('SELECT id, parent_id, deleted_at, virtual_filter FROM nodes WHERE id = ?').get(nodeId) as
-    | { id: string; parent_id: string | null; deleted_at: string | null; virtual_filter: string | null }
+  return connection.sqlite.prepare('SELECT id, parent_id, content, deleted_at, virtual_filter FROM nodes WHERE id = ?').get(nodeId) as
+    | { content: string; id: string; parent_id: string | null; deleted_at: string | null; virtual_filter: string | null }
     | undefined;
 }
 
@@ -185,6 +185,48 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeOrderRows()).toEqual([{ node_id: 'node-keep', position: 0 }]);
   expect(getReviewCounts('node-child')).toEqual({ reviewCount: 0, reviewLogCount: 0 });
   expect(getNodeReadingRow('node-child')).toBeUndefined();
+});
+
+it('cleans inline text anchors from surviving parents when permanently deleting linked child nodes', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-parent',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'node-parent',
+    isTitleManual: true,
+    content: 'before <cloze id="1">answer</cloze id="1"> after',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-child',
+    parentNodeId: 'node-parent',
+    kind: 'item',
+    title: 'node-child',
+    isTitleManual: true,
+    content: 'before [...] after',
+    reveal: 'answer',
+    anchorLink: { id: '1', kind: 'cloze' },
+    position: 1,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+  softDeleteNodes({
+    nodeIds: ['node-child'],
+    deletedAt: '2026-03-06T00:10:00.000Z'
+  });
+
+  const affectedParentNodeIds = deleteNodesPermanently({
+    nodeIds: ['node-child'],
+    nodeOrder: ['node-parent']
+  });
+
+  expect(affectedParentNodeIds).toEqual(['node-parent']);
+  expect(getNodeRow('node-parent')?.content).toBe('before answer after');
+  expect(getNodeRow('node-child')).toBeUndefined();
 });
 
 it('stores virtual filter payload in sqlite node rows', () => {

@@ -30,6 +30,7 @@ export interface EditorAdapter {
   getScrollMetrics(): EditorScrollMetrics;
   replaceRange(from: number, to: number, content: string): void;
   replaceSelection(content: string): void;
+  setHiddenTextAnchorKeys?(hiddenTextAnchorKeys: readonly string[]): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   onContentChange(listener: (content: string) => void): () => void;
   onScroll(listener: () => void): () => void;

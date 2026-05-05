@@ -7,6 +7,7 @@ import { createLiveMarkdown } from './liveMarkdown';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 
 export interface CodeMirrorEditorAdapterOptions {
+  hiddenTextAnchorKeys?: readonly string[];
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
@@ -15,12 +16,13 @@ export interface CodeMirrorEditorAdapterOptions {
 
 export function createLiveMarkdownReconfigureEffect(args: {
   compartment: Compartment;
+  hiddenTextAnchorKeys: readonly string[];
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
 }) {
   return args.compartment.reconfigure(
-    createLiveMarkdown(args.hideTitleHeading, args.nodeId, args.imageClozePresentationVersion)
+    createLiveMarkdown(args.hideTitleHeading, args.nodeId, args.imageClozePresentationVersion, args.hiddenTextAnchorKeys)
   );
 }
 
