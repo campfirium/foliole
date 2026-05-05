@@ -69,14 +69,37 @@ function mountApp() {
     </React.StrictMode>
   );
   reportNativeBootStage('react_render_committed');
+
+  let appReadySignaled = false;
+  const signalAppReady = (source: string) => {
+    if (appReadySignaled) {
+      return;
+    }
+    appReadySignaled = true;
+    reportNativeAppReady({
+      href: window.location.href,
+      readyState: document.readyState,
+      source
+    });
+  };
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      reportNativeAppReady({
-        href: window.location.href,
-        readyState: document.readyState
-      });
+      signalAppReady('double_raf');
     });
   });
+
+  window.addEventListener(
+    'load',
+    () => {
+      signalAppReady('window_load');
+    },
+    { once: true }
+  );
+
+  setTimeout(() => {
+    signalAppReady('timeout_1500ms');
+  }, 1500);
 }
 
 try {

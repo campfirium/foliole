@@ -26,7 +26,11 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "windows:dev:check": "bash scripts/windows/windows-check-native-ui.sh"
+    "windows:dev:check": "bash scripts/windows/windows-check-native-ui.sh",
+    "windows:tauri:simple:start": "bash scripts/windows/windows-tauri-simple.sh start",
+    "windows:tauri:simple:stop": "bash scripts/windows/windows-tauri-simple.sh stop",
+    "windows:tauri:simple:restart": "bash scripts/windows/windows-tauri-simple.sh restart",
+    "windows:tauri:simple:status": "bash scripts/windows/windows-tauri-simple.sh status"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.2",
