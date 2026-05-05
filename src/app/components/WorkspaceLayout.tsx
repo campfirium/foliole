@@ -92,6 +92,9 @@ export interface WorkspaceLayoutProps {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onDesiredRetentionChange: (value: number) => void;
+  onMaximumIntervalDaysChange: (value: number) => void;
+  onEnableFuzzChange: (value: boolean) => void;
+  onEnableShortTermChange: (value: boolean) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;

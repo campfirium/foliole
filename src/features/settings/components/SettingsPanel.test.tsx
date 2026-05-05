@@ -34,6 +34,9 @@ function createProps() {
     customMonospaceFont: '',
     customUiFont: '',
     desiredRetention: 0.9,
+    maximumIntervalDays: 36500,
+    enableFuzz: false,
+    enableShortTerm: false,
     hotkeyItems: [],
     interfaceFontPreset: 'default' as const,
     interfaceFontSize: 17,
@@ -47,6 +50,9 @@ function createProps() {
     onCustomMonospaceFontChange: () => undefined,
     onCustomUiFontChange: () => undefined,
     onDesiredRetentionChange: () => undefined,
+    onMaximumIntervalDaysChange: () => undefined,
+    onEnableFuzzChange: () => undefined,
+    onEnableShortTermChange: () => undefined,
     onHotkeyReset: () => undefined,
     onHotkeyResetAll: () => undefined,
     onHotkeyUpdate: () => ({ status: 'blocked' as const }),
@@ -102,5 +108,37 @@ it('updates desired retention from review settings slider', async () => {
   await waitFor(() => {
     expect(onDesiredRetentionChange).toHaveBeenCalledWith(0.8);
     expect(screen.getByText('0.90')).toBeInTheDocument();
+  });
+});
+
+it('updates remaining review scheduler controls from review settings section', async () => {
+  const onMaximumIntervalDaysChange = vi.fn();
+  const onEnableFuzzChange = vi.fn();
+  const onEnableShortTermChange = vi.fn();
+
+  render(
+    <SettingsPanel
+      {...createProps()}
+      onMaximumIntervalDaysChange={onMaximumIntervalDaysChange}
+      onEnableFuzzChange={onEnableFuzzChange}
+      onEnableShortTermChange={onEnableShortTermChange}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+  fireEvent.change(screen.getByLabelText('Maximum interval days'), {
+    target: { value: '365' }
+  });
+  fireEvent.change(screen.getByLabelText('Interval fuzz'), {
+    target: { value: 'on' }
+  });
+  fireEvent.change(screen.getByLabelText('Short-term scheduling'), {
+    target: { value: 'on' }
+  });
+
+  await waitFor(() => {
+    expect(onMaximumIntervalDaysChange).toHaveBeenCalledWith(365);
+    expect(onEnableFuzzChange).toHaveBeenCalledWith(true);
+    expect(onEnableShortTermChange).toHaveBeenCalledWith(true);
   });
 });

@@ -156,16 +156,34 @@ function createAppearanceActions(args: BuildLayoutPropsArgs) {
 }
 
 function createReviewActions(args: BuildLayoutPropsArgs) {
+  const saveSettings = (
+    patch: Partial<
+      Pick<ReviewSchedulerSettings, 'desiredRetention' | 'maximumIntervalDays' | 'enableFuzz' | 'enableShortTerm'>
+    >
+  ) => {
+    const nextSettings = {
+      ...args.reviewSettings.reviewSchedulerSettings,
+      ...patch
+    };
+    args.reviewSettings.setReviewSchedulerSettingsState(nextSettings);
+    void saveReviewSchedulerSettings(patch).then(args.reviewSettings.setReviewSchedulerSettingsState);
+  };
+
   return {
     onDesiredRetentionChange: (value: number) => {
-      const nextValue = Number(value.toFixed(2));
-      args.reviewSettings.setReviewSchedulerSettingsState({
-        ...args.reviewSettings.reviewSchedulerSettings,
-        desiredRetention: nextValue
-      });
-      void saveReviewSchedulerSettings({ desiredRetention: nextValue }).then(
-        args.reviewSettings.setReviewSchedulerSettingsState
-      );
+      saveSettings({ desiredRetention: Number(value.toFixed(2)) });
+    },
+    onMaximumIntervalDaysChange: (value: number) => {
+      if (!Number.isFinite(value) || value <= 0) {
+        return;
+      }
+      saveSettings({ maximumIntervalDays: Math.round(value) });
+    },
+    onEnableFuzzChange: (value: boolean) => {
+      saveSettings({ enableFuzz: value });
+    },
+    onEnableShortTermChange: (value: boolean) => {
+      saveSettings({ enableShortTerm: value });
     }
   };
 }

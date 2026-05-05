@@ -138,3 +138,28 @@ it('clears stale preview and keeps fallback state when reveal-time preview reque
     expect(screen.getByTestId('preview-good-days')).toHaveTextContent('none');
   });
 });
+
+it('requests a fresh preview when scheduler setting signature changes', async () => {
+  const preview = vi
+    .fn<ReviewSchedulerAdapter['preview']>()
+    .mockResolvedValueOnce(createPreviewResult(30))
+    .mockResolvedValueOnce(createPreviewResult(12));
+  vi.mocked(createReviewSchedulerAdapter).mockReturnValue(createAdapter(preview));
+
+  const { rerender } = render(
+    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="ts-fsrs@4.3.0|0.90|36500|0|0" reviewProfile={BASE_PROFILE} />
+  );
+
+  await waitFor(() => {
+    expect(screen.getByTestId('preview-good-days')).toHaveTextContent('30');
+  });
+
+  rerender(
+    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="ts-fsrs@4.3.0|0.90|365|1|0" reviewProfile={BASE_PROFILE} />
+  );
+
+  await waitFor(() => {
+    expect(preview).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('preview-good-days')).toHaveTextContent('12');
+  });
+});

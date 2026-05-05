@@ -22,6 +22,7 @@ import {
   type MonospaceFontPreset
 } from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
+import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { formatShortcutLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -213,7 +214,7 @@ export function useAppController(): AppControllerResult {
   const reviewPreview = useCurrentReviewPreview(
     isStudyMode,
     ws,
-    reviewSettings.reviewSchedulerSettings.desiredRetention.toFixed(2)
+    getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings)
   );
   const isReviewEditing = useReviewKeyboardShortcuts({ isStudyMode, isCommandPaletteOpen: runtime.isCommandPaletteOpen, isSettingsOpen: runtime.isSettingsOpen, reviewCurrentNodeId: ws.reviewSession.currentNodeId, isAnswerRevealed: ws.reviewSession.isAnswerRevealed, revealReviewAnswer: ws.revealReviewAnswer, gradeReviewCard: ws.gradeReviewCard });
   const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso), [nowIso, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);

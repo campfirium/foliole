@@ -60,6 +60,16 @@ export function normalizeReviewSchedulerSettings(value: unknown): ReviewSchedule
   };
 }
 
+export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSettings) {
+  return [
+    settings.algorithm,
+    settings.desiredRetention.toFixed(2),
+    settings.maximumIntervalDays,
+    settings.enableFuzz ? '1' : '0',
+    settings.enableShortTerm ? '1' : '0'
+  ].join('|');
+}
+
 export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSettings> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
