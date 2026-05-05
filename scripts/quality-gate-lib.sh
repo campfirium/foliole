@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+DEFAULT_QUALITY_GATE_HEARTBEAT_SECONDS=15
+
 resolve_package_manager() {
   local resolved_pm="npm"
   if [[ -f "pnpm-lock.yaml" ]]; then
@@ -20,6 +22,14 @@ has_package_script() {
 
 quality_gate_should_print_step() {
   [[ "${QUALITY_GATE_LOG_MODE:-verbose}" != "fail-only" ]]
+}
+
+resolve_quality_gate_heartbeat_seconds() {
+  local heartbeat_seconds="${QUALITY_GATE_HEARTBEAT_SECONDS:-${DEFAULT_QUALITY_GATE_HEARTBEAT_SECONDS}}"
+  if [[ ! "${heartbeat_seconds}" =~ ^[0-9]+$ || "${heartbeat_seconds}" -le 0 ]]; then
+    heartbeat_seconds="${DEFAULT_QUALITY_GATE_HEARTBEAT_SECONDS}"
+  fi
+  printf '%s' "${heartbeat_seconds}"
 }
 
 terminate_process_group() {
@@ -62,8 +72,9 @@ run_command_with_limits() {
   local child_pid=$!
   local child_pgid="${child_pid}"
   QUALITY_GATE_ACTIVE_PGID="${child_pgid}"
-  local started_at
+  local started_at heartbeat_seconds
   started_at="$(date +%s)"
+  heartbeat_seconds="$(resolve_quality_gate_heartbeat_seconds)"
   local peak_rss_kb=0
 
   while kill -0 "${child_pid}" 2>/dev/null; do
@@ -76,8 +87,13 @@ run_command_with_limits() {
       peak_rss_kb="${current_rss_kb}"
     fi
 
+    if (( elapsed > 0 && elapsed % heartbeat_seconds == 0 )); then
+      echo "[${prefix}] waiting: ${command_label} still running (${elapsed}s elapsed, peak ${command_label} memory ${peak_rss_kb} KiB)"
+    fi
+
     if (( max_rss_kb > 0 && current_rss_kb > max_rss_kb )); then
       echo "[${prefix}] failed: ${command_label} exceeded memory limit (${current_rss_kb} KiB > ${max_rss_kb} KiB)"
+      echo "[${prefix}] stalled after: ${elapsed}s"
       echo "[${prefix}] peak ${command_label} memory: ${peak_rss_kb} KiB"
       terminate_process_group "${child_pgid}"
       QUALITY_GATE_ACTIVE_PGID=""
@@ -87,6 +103,7 @@ run_command_with_limits() {
 
     if (( timeout_seconds > 0 && elapsed >= timeout_seconds )); then
       echo "[${prefix}] failed: ${command_label} exceeded timeout (${timeout_seconds}s)"
+      echo "[${prefix}] stalled after: ${elapsed}s"
       echo "[${prefix}] peak ${command_label} memory: ${peak_rss_kb} KiB"
       terminate_process_group "${child_pgid}"
       QUALITY_GATE_ACTIVE_PGID=""

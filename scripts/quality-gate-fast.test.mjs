@@ -155,6 +155,7 @@ describe('quality-gate-fast.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('failed: test exceeded timeout (4s)');
+      expect(result.stdout).toContain('stalled after: 4s');
       await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
@@ -176,7 +177,20 @@ describe('quality-gate-fast.sh', () => {
 
     expect(result.code).toBe(1);
     expect(result.stdout).toContain('failed: test exceeded memory limit');
+    expect(result.stdout).toContain('stalled after:');
     expect(result.stdout).toContain('peak test memory:');
+  }, 15000);
+
+  it('prints waiting progress while a guarded command is still running', async () => {
+    const result = await runGuardedCommand(
+      'sleep 2',
+      {
+        QUALITY_GATE_HEARTBEAT_SECONDS: '1',
+        QUALITY_GATE_TEST_TIMEOUT_SECONDS: '10'
+      }
+    );
+
+    expect(result.stdout).toContain('waiting: test still running (1s elapsed');
   }, 15000);
 
   it('applies timeout limits to the lint step too', async () => {
