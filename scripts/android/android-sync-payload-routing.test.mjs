@@ -32,6 +32,18 @@ const VIEW_STATE_SYNC_STORE = path.join(
   'android',
   'FolioleCompanionViewStateSyncStore.java'
 );
+const SYNC_PAYLOAD_JSON = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncPayloadJson.java'
+);
 
 describe('Android sync payload routing metadata', () => {
   it('generates payload routes and compound view-state object identity rules', async () => {
@@ -73,6 +85,7 @@ describe('Android sync payload routing metadata', () => {
 
   it('keeps Java payload routing and view-state object ids driven by generated metadata', async () => {
     const payloadStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
+    const payloadJson = await readFile(SYNC_PAYLOAD_JSON, 'utf8');
     const viewStateStore = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
 
     expect(payloadStore).toContain('syncPayloadRouting(context).getJSONArray("routes")');
@@ -80,6 +93,7 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).toContain('routingInt(context, "objectIdPartLimit")');
     expect(payloadStore).toContain('row.getString(routingString(context, "objectTypeKey"))');
     expect(payloadStore).toContain('route.getString(routingString(context, "queryNameKey"))');
+    expect(payloadJson).toContain('routing.getString("payloadJsonKey")');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectId(context, deviceId, key)');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectIdKey(context, objectId)');
     expect(viewStateStore).toContain('FolioleCompanionSyncPayloadQueryStore.viewObjectIdDeviceId(context, objectId)');
@@ -93,6 +107,7 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).not.toContain('objectId.split(":", 5)');
     expect(payloadStore).not.toContain('row.getString("object_type")');
     expect(payloadStore).not.toContain('row.put("payload_json"');
+    expect(payloadJson).not.toContain('record.opt("payload_json"');
     expect(payloadStore).not.toContain('route.getString("queryName")');
     expect(payloadStore).not.toContain('Iterator<String> names = queries.keys()');
   });

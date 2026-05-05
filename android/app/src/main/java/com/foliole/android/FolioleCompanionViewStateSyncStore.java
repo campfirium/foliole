@@ -78,7 +78,7 @@ final class FolioleCompanionViewStateSyncStore {
             }
             return;
         }
-        JSONObject payload = payload(record);
+        JSONObject payload = payload(context, record);
         if (key.equals(activeKey)) {
             upsertActiveNode(
                 context,
@@ -181,8 +181,8 @@ final class FolioleCompanionViewStateSyncStore {
         return FolioleCompanionSyncPayloadQueryStore.viewSyncAppliedSource(context);
     }
 
-    private static JSONObject payload(JSONObject record) throws Exception {
-        return FolioleCompanionSyncPayloadJson.payload(record);
+    private static JSONObject payload(Context context, JSONObject record) throws Exception {
+        return FolioleCompanionSyncPayloadJson.payload(context, record);
     }
 
     private static String contentHash(Context context, String deviceId, String key, JSONObject payload) throws Exception {

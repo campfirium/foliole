@@ -15,7 +15,7 @@ final class FolioleCompanionLearningSyncPayload {
             FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingDeviceStateDeleteMutationName"), new Object[] { objectId });
             return;
         }
-        JSONObject payload = payload(record);
+        JSONObject payload = payload(context, record);
         String updatedAt = FolioleCompanionLearningPayloadRules.updatedAt(context, record, queryName);
         FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingUpsertMutationName"), new Object[] {
             objectId,
@@ -43,7 +43,7 @@ final class FolioleCompanionLearningSyncPayload {
             FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "reviewDeleteMutationName"), new Object[] { objectId });
             return;
         }
-        JSONObject payload = payload(record);
+        JSONObject payload = payload(context, record);
         String updatedAt = FolioleCompanionLearningPayloadRules.updatedAt(context, record, queryName);
         FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "reviewUpsertMutationName"), new Object[] {
             objectId,
@@ -75,8 +75,8 @@ final class FolioleCompanionLearningSyncPayload {
         );
     }
 
-    private static JSONObject payload(JSONObject record) throws Exception {
-        return FolioleCompanionSyncPayloadJson.payload(record);
+    private static JSONObject payload(Context context, JSONObject record) throws Exception {
+        return FolioleCompanionSyncPayloadJson.payload(context, record);
     }
 
     private static String mutationRule(Context context, String key) throws Exception {

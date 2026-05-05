@@ -18,7 +18,7 @@ final class FolioleCompanionDocumentSyncPayload {
             });
             return;
         }
-        JSONObject payload = payload(record);
+        JSONObject payload = payload(context, record);
         FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] {
             objectId,
             filePart(context, payload, "folderIdPayloadKey"),
@@ -41,8 +41,8 @@ final class FolioleCompanionDocumentSyncPayload {
         });
     }
 
-    private static JSONObject payload(JSONObject record) throws Exception {
-        return FolioleCompanionSyncPayloadJson.payload(record);
+    private static JSONObject payload(Context context, JSONObject record) throws Exception {
+        return FolioleCompanionSyncPayloadJson.payload(context, record);
     }
 
     private static String mutationRule(Context context, String key) throws Exception {
