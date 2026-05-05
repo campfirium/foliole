@@ -6,16 +6,15 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  ANDROID_COMPANION_CONTENT_READ_RULES,
-  ANDROID_COMPANION_RESOURCE_READ_RULES
-} from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
+import { ANDROID_COMPANION_RESOURCE_READ_RULES } from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const CONTENT_BLOB_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobStore.java');
 const CONTENT_BLOB_BATCH_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchStore.java');
 const CONTENT_BLOB_BATCH_MANIFEST_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchManifestStore.java');
+const CONTENT_BLOB_CAS_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobCasRules.java');
+const CONTENT_BLOB_MULTIPART_BATCH = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobMultipartBatch.java');
 const TEXT_BODY_BLOBS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionTextBodyBlobs.java');
 const WORKSPACE_SNAPSHOT_EXPORTER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceSnapshotExporter.java');
 const ATTACHMENT_RESOURCE_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceStore.java');
@@ -24,8 +23,6 @@ const ATTACHMENT_RESOURCE_MISSING_STORE = path.join(REPO_ROOT, 'android/app/src/
 const APP_DATA_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAppDataStore.java');
 const PDF_PAGE_TEXT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionPdfPageTextStore.java');
 const RESOURCE_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionResourceReadQueryRules.java');
-const READABLE_ARTICLE_QUERY = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionReadableArticleQuery.java');
-const EXTERNAL_DOCUMENT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionExternalDocumentStore.java');
 
 describe('Android resource read query rules', () => {
   it('generates content blob, attachment resource, and PDF text read metadata', async () => {
@@ -34,6 +31,7 @@ describe('Android resource read query rules', () => {
     expect(definitions.resourceRead).toEqual(ANDROID_COMPANION_RESOURCE_READ_RULES);
     expect(definitions.resourceRead.groupKeys).toEqual({
       attachmentResources: 'attachmentResources',
+      contentBlobCas: 'contentBlobCas',
       contentBlobs: 'contentBlobs',
       pdfPageText: 'pdfPageText'
     });
@@ -54,6 +52,18 @@ describe('Android resource read query rules', () => {
         availability: 'availability',
         hash: 'hash'
       }
+    });
+    expect(definitions.resourceRead.contentBlobCas).toMatchObject({
+      hashAlgorithm: 'SHA-256',
+      hashPattern: '^[a-f0-9]{64}$',
+      manifestRules: {
+        byteLengthEqualsOriginalSize: true,
+        byteLengthEqualsStoredSize: true,
+        hashEqualsOriginalSha256: true,
+        hashEqualsStoredSha256: true
+      },
+      normalizeHashToLowercase: true,
+      supportedCompression: 'none'
     });
     expect(definitions.resourceRead.attachmentResources).toMatchObject({
       batchResponseKeys: {
@@ -89,29 +99,6 @@ describe('Android resource read query rules', () => {
       searchQueryName: 'pdfPageTextSearch',
       searchResultKey: 'results'
     });
-    expect(definitions.contentRead.readableArticle).toMatchObject({
-      rowKeys: {
-        bodyBlobHash: 'body_blob_hash',
-        id: 'id'
-      },
-      outputKeys: {
-        contentStatus: 'content_status',
-        nodeId: 'node_id'
-      }
-    });
-    expect(definitions.contentRead.externalDocuments).toMatchObject({
-      outputKeys: {
-        document: 'document',
-        matchStart: 'match_start',
-        results: 'results'
-      },
-      rowKeys: {
-        bodyBlobData: 'body_blob_data',
-        documentId: 'document_id',
-        matchIndex: 'match_index'
-      }
-    });
-    expect(definitions.contentRead).toEqual(ANDROID_COMPANION_CONTENT_READ_RULES);
   });
 
   it('keeps resource Java stores wired to generated read rules', async () => {
@@ -119,6 +106,8 @@ describe('Android resource read query rules', () => {
       await readFile(CONTENT_BLOB_STORE, 'utf8'),
       await readFile(CONTENT_BLOB_BATCH_STORE, 'utf8'),
       await readFile(CONTENT_BLOB_BATCH_MANIFEST_STORE, 'utf8'),
+      await readFile(CONTENT_BLOB_CAS_RULES, 'utf8'),
+      await readFile(CONTENT_BLOB_MULTIPART_BATCH, 'utf8'),
       await readFile(TEXT_BODY_BLOBS, 'utf8'),
       await readFile(WORKSPACE_SNAPSHOT_EXPORTER, 'utf8'),
       await readFile(ATTACHMENT_RESOURCE_STORE, 'utf8'),
@@ -127,6 +116,13 @@ describe('Android resource read query rules', () => {
       await readFile(APP_DATA_STORE, 'utf8'),
       await readFile(PDF_PAGE_TEXT_STORE, 'utf8')
     ].join('\n');
+    const casControlledSource = [
+      await readFile(CONTENT_BLOB_STORE, 'utf8'),
+      await readFile(CONTENT_BLOB_BATCH_STORE, 'utf8'),
+      await readFile(CONTENT_BLOB_BATCH_MANIFEST_STORE, 'utf8'),
+      await readFile(CONTENT_BLOB_CAS_RULES, 'utf8'),
+      await readFile(CONTENT_BLOB_MULTIPART_BATCH, 'utf8')
+    ].join('\n');
     const rulesSource = await readFile(RESOURCE_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobString(context, key)');
@@ -134,6 +130,8 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobBatchResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobSyncResponseKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobCasString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobCasBoolean(context, "manifestRules", key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentBatchResponseKey(context, key)');
@@ -172,42 +170,10 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('blob.getLong(resourceRule(context, "originalSizeBytesKey"))');
     expect(combinedStoreSource).not.toContain('row.getString(resourceRule(context, "attachmentIdKey"))');
     expect(combinedStoreSource).not.toContain('row.getString(resourceRule(context, "contentHashKey"))');
+    expect(casControlledSource).not.toContain('MessageDigest.getInstance("SHA-256")');
+    expect(casControlledSource).not.toContain('matches("[a-f0-9]{64}")');
+    expect(casControlledSource).not.toContain('"none".equals(compression)');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');
     expect(combinedStoreSource).not.toContain('EXCERPT_RADIUS');
-  });
-
-  it('keeps readable article Java shape wired to generated content rules', async () => {
-    const source = await readFile(READABLE_ARTICLE_QUERY, 'utf8');
-
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key)');
-    expect(source).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
-    expect(source).not.toContain('article.put("node_id"');
-    expect(source).not.toContain('article.put("content_status"');
-    expect(source).not.toContain('row.getString("id"');
-    expect(source).not.toContain('optString("text"');
-  });
-
-  it('keeps external document Java shape wired to generated content rules', async () => {
-    const source = await readFile(EXTERNAL_DOCUMENT_STORE, 'utf8');
-
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentOutputKey(context, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowInt(context, row, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowNullableString(context, row, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowString(context, row, key)');
-    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
-    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field)');
-    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
-    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
-    expect(source).not.toContain('result.put("document"');
-    expect(source).not.toContain('entry.put("document_id"');
-    expect(source).not.toContain('target.put("content_status"');
-    expect(source).not.toContain('row.getString("document_id"');
-    expect(source).not.toContain('field.getString("outputKey")');
-    expect(source).not.toContain('field.getString("rowKey")');
-    expect(source).not.toContain('field.getString("type")');
-    expect(source).not.toContain('row.getInt("match_index"');
   });
 });

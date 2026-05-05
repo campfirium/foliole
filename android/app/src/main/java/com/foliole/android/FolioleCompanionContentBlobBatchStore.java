@@ -8,7 +8,6 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,8 @@ final class FolioleCompanionContentBlobBatchStore {
                 response.body,
                 response.contentType,
                 FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context),
-                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)
+                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context),
+                context
             );
         long parseElapsedMs = elapsedMs(parseStartedAt);
         JSArray syncedHashes = new JSArray();
@@ -70,10 +70,10 @@ final class FolioleCompanionContentBlobBatchStore {
         if (manifest == null) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
-        manifest.requireSupported();
+        manifest.requireSupported(context);
         byte[] bytes = blob.bytes;
-        String actualHash = sha256(bytes);
-        if (!hash.equals(actualHash) || !manifest.matches(bytes.length, actualHash)) {
+        String actualHash = FolioleCompanionContentBlobCasRules.digestHex(context, bytes);
+        if (!hash.equals(actualHash) || !manifest.matches(context, bytes.length, actualHash)) {
             throw new IllegalStateException("Content blob hash mismatch.");
         }
         cachedBlobs.add(new CachedBlob(hash, bytes));
@@ -115,20 +115,6 @@ final class FolioleCompanionContentBlobBatchStore {
         if (updated <= 0) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
-    }
-
-    private static String sha256(byte[] bytes) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hash = digest.digest(bytes);
-        return hex(hash);
-    }
-
-    private static String hex(byte[] bytes) {
-        StringBuilder builder = new StringBuilder();
-        for (byte value : bytes) {
-            builder.append(String.format("%02x", value));
-        }
-        return builder.toString();
     }
 
     private static long elapsedMs(long startedAt) {

@@ -1,5 +1,7 @@
 package com.foliole.android;
 
+import android.content.Context;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +14,7 @@ final class FolioleCompanionContentBlobMultipartBatch {
 
     private FolioleCompanionContentBlobMultipartBatch() {}
 
-    static List<Blob> parse(byte[] response, String contentType, String blobHashHeader, String hashField) {
+    static List<Blob> parse(byte[] response, String contentType, String blobHashHeader, String hashField, Context context) throws Exception {
         String boundary = requireBoundary(contentType);
         byte[] boundaryBytes = ("--" + boundary).getBytes(StandardCharsets.UTF_8);
         byte[] closingBoundaryBytes = ("--" + boundary + "--").getBytes(StandardCharsets.UTF_8);
@@ -39,7 +41,7 @@ final class FolioleCompanionContentBlobMultipartBatch {
             System.arraycopy(response, cursor, data, 0, contentLength);
             cursor += contentLength;
             cursor = requireCrLf(response, cursor);
-            blobs.add(new Blob(requireHash(headers.get(blobHashHeader), hashField), data));
+            blobs.add(new Blob(FolioleCompanionContentBlobCasRules.requireHash(context, headers.get(blobHashHeader), hashField), data));
         }
         throw new IllegalStateException("Desktop content body batch response is truncated.");
     }
@@ -124,14 +126,6 @@ final class FolioleCompanionContentBlobMultipartBatch {
             }
         }
         return -1;
-    }
-
-    private static String requireHash(String value, String field) {
-        String hash = requireText(value, field).toLowerCase();
-        if (!hash.matches("[a-f0-9]{64}")) {
-            throw new IllegalArgumentException(field + " is invalid.");
-        }
-        return hash;
     }
 
     private static String requireText(String value, String field) {

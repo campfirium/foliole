@@ -7,7 +7,6 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.security.MessageDigest;
 import java.time.Instant;
 
 final class FolioleCompanionContentBlobStore {
@@ -29,15 +28,13 @@ final class FolioleCompanionContentBlobStore {
         ContentBlobManifest manifest = loadManifest(context, database, normalizedHash);
         markFetching(context, database, normalizedHash);
         try {
-            if (!"none".equals(manifest.compression)) {
-                throw new IllegalStateException("Unsupported content blob compression.");
-            }
+            manifest.requireSupported(context);
             byte[] bytes = FolioleCompanionDesktopHttpClient.requestBytes(
                 requireText(url, FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
                 headers
             );
-            String actualHash = sha256(bytes);
-            if (!normalizedHash.equals(actualHash) || !manifest.matches(bytes.length, actualHash)) {
+            String actualHash = FolioleCompanionContentBlobCasRules.digestHex(context, bytes);
+            if (!normalizedHash.equals(actualHash) || !manifest.matches(context, bytes.length, actualHash)) {
                 throw new IllegalStateException("Content blob hash mismatch.");
             }
             return storeCachedBlob(context, database, normalizedHash, bytes);
@@ -158,11 +155,8 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static String requireHash(Context context, String value) throws Exception {
-        String hash = requireText(value, FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)).toLowerCase();
-        if (!hash.matches("[a-f0-9]{64}")) {
-            throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context) + " is invalid.");
-        }
-        return hash;
+        String field = FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context);
+        return FolioleCompanionContentBlobCasRules.requireHash(context, value, field);
     }
 
     private static String requireText(String value, String field) {
@@ -170,16 +164,6 @@ final class FolioleCompanionContentBlobStore {
             throw new IllegalArgumentException(field + " is required.");
         }
         return value.trim();
-    }
-
-    private static String sha256(byte[] bytes) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hash = digest.digest(bytes);
-        StringBuilder builder = new StringBuilder();
-        for (byte value : hash) {
-            builder.append(String.format("%02x", value));
-        }
-        return builder.toString();
     }
 
     private static final class ContentBlobManifest {
@@ -197,11 +181,20 @@ final class FolioleCompanionContentBlobStore {
             this.storedSha256 = storedSha256;
         }
 
-        boolean matches(long byteLength, String hash) {
-            return originalSizeBytes == byteLength &&
-                storedSizeBytes == byteLength &&
-                hash.equals(originalSha256) &&
-                hash.equals(storedSha256);
+        void requireSupported(Context context) throws Exception {
+            FolioleCompanionContentBlobCasRules.requireSupportedCompression(context, compression);
+        }
+
+        boolean matches(Context context, long byteLength, String hash) throws Exception {
+            return FolioleCompanionContentBlobCasRules.manifestMatches(
+                context,
+                byteLength,
+                hash,
+                originalSizeBytes,
+                storedSizeBytes,
+                originalSha256,
+                storedSha256
+            );
         }
     }
 }

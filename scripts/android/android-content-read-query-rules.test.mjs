@@ -28,13 +28,31 @@ describe('Android content read query rules', () => {
       defaultSearchLimit: 20,
       directoryEntriesQueryName: 'externalDocumentDirectoryEntries',
       excerptRadius: 80,
+      outputKeys: {
+        document: 'document',
+        matchStart: 'match_start',
+        results: 'results'
+      },
+      rowKeys: {
+        bodyBlobData: 'body_blob_data',
+        documentId: 'document_id',
+        matchIndex: 'match_index'
+      },
       searchQueryName: 'externalDocumentSearch'
     });
     expect(definitions.contentRead.readableArticle).toMatchObject({
       activeNodeIdQueryName: 'readableArticleActiveNodeId',
       firstNodeQueryName: 'readableArticleFirstNode',
+      outputKeys: {
+        contentStatus: 'content_status',
+        nodeId: 'node_id'
+      },
       pdfPagesQueryName: 'pdfPageTextPages',
-      referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment'
+      referencePdfAttachmentQueryName: 'readableArticleReferencePdfAttachment',
+      rowKeys: {
+        bodyBlobHash: 'body_blob_hash',
+        id: 'id'
+      }
     });
   });
 
@@ -43,12 +61,20 @@ describe('Android content read query rules', () => {
     const rulesSource = await readFile(CONTENT_READ_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentOutputKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowInt(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowNullableString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowString(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, "textKey")');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName)');
     expect(combinedStoreSource).not.toContain('"externalDocumentById"');
     expect(combinedStoreSource).not.toContain('"readableArticleFirstNode"');
@@ -57,5 +83,17 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).not.toContain('row.getInt(rowKey(context, "matchIndex"))');
     expect(combinedStoreSource).not.toContain('"Linked PDF source ready for the reader surface."');
     expect(combinedStoreSource).not.toContain('"readable_article"');
+    expect(combinedStoreSource).not.toContain('result.put("document"');
+    expect(combinedStoreSource).not.toContain('entry.put("document_id"');
+    expect(combinedStoreSource).not.toContain('target.put("content_status"');
+    expect(combinedStoreSource).not.toContain('article.put("node_id"');
+    expect(combinedStoreSource).not.toContain('article.put("content_status"');
+    expect(combinedStoreSource).not.toContain('row.getString("document_id"');
+    expect(combinedStoreSource).not.toContain('row.getString("id"');
+    expect(combinedStoreSource).not.toContain('field.getString("outputKey")');
+    expect(combinedStoreSource).not.toContain('field.getString("rowKey")');
+    expect(combinedStoreSource).not.toContain('field.getString("type")');
+    expect(combinedStoreSource).not.toContain('row.getInt("match_index"');
+    expect(combinedStoreSource).not.toContain('optString("text"');
   });
 });

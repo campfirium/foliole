@@ -53,13 +53,11 @@ final class FolioleCompanionContentBlobBatchManifestStore {
     }
 
     static String requireHash(Context context, String value) throws Exception {
-        String hash = FolioleCompanionContentBlobBatchText
-            .requireText(value, FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context))
-            .toLowerCase();
-        if (!hash.matches("[a-f0-9]{64}")) {
-            throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context) + " is invalid.");
-        }
-        return hash;
+        return FolioleCompanionContentBlobCasRules.requireHash(
+            context,
+            value,
+            FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)
+        );
     }
 
     private static String resourceRule(Context context, String key) throws Exception {
@@ -95,17 +93,20 @@ final class FolioleCompanionContentBlobBatchManifestStore {
             this.storedSha256 = storedSha256;
         }
 
-        void requireSupported() {
-            if (!"none".equals(compression)) {
-                throw new IllegalStateException("Unsupported content blob compression.");
-            }
+        void requireSupported(Context context) throws Exception {
+            FolioleCompanionContentBlobCasRules.requireSupportedCompression(context, compression);
         }
 
-        boolean matches(long byteLength, String hash) {
-            return originalSizeBytes == byteLength &&
-                storedSizeBytes == byteLength &&
-                hash.equals(originalSha256) &&
-                hash.equals(storedSha256);
+        boolean matches(Context context, long byteLength, String hash) throws Exception {
+            return FolioleCompanionContentBlobCasRules.manifestMatches(
+                context,
+                byteLength,
+                hash,
+                originalSizeBytes,
+                storedSizeBytes,
+                originalSha256,
+                storedSha256
+            );
         }
     }
 }

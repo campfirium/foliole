@@ -47,6 +47,22 @@ final class FolioleCompanionResourceReadQueryRules {
         return group(context, "contentBlobs").getJSONObject(key);
     }
 
+    static String contentBlobCasString(Context context, String key) throws Exception {
+        return group(context, "contentBlobCas").getString(key);
+    }
+
+    static JSONObject contentBlobCasObject(Context context, String key) throws Exception {
+        return group(context, "contentBlobCas").getJSONObject(key);
+    }
+
+    static boolean contentBlobCasBoolean(Context context, String key) throws Exception {
+        return group(context, "contentBlobCas").getBoolean(key);
+    }
+
+    static boolean contentBlobCasBoolean(Context context, String groupKey, String key) throws Exception {
+        return contentBlobCasObject(context, groupKey).getBoolean(key);
+    }
+
     static String contentBlobBatchResponseKey(Context context, String key) throws Exception {
         return contentBlobObject(context, "batchResponseKeys").getString(key);
     }

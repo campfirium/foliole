@@ -41,6 +41,7 @@ export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
 export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
   groupKeys: {
     attachmentResources: 'attachmentResources',
+    contentBlobCas: 'contentBlobCas',
     contentBlobs: 'contentBlobs',
     pdfPageText: 'pdfPageText'
   },
@@ -103,6 +104,18 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     resultKey: 'blobs',
     storedSha256Key: 'stored_sha256',
     storedSizeBytesKey: 'stored_size_bytes'
+  },
+  contentBlobCas: {
+    hashAlgorithm: 'SHA-256',
+    hashPattern: '^[a-f0-9]{64}$',
+    manifestRules: {
+      byteLengthEqualsOriginalSize: true,
+      byteLengthEqualsStoredSize: true,
+      hashEqualsOriginalSha256: true,
+      hashEqualsStoredSha256: true
+    },
+    normalizeHashToLowercase: true,
+    supportedCompression: 'none'
   },
   pdfPageText: {
     attachmentIdKey: 'attachment_id',
