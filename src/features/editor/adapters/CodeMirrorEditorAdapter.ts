@@ -8,6 +8,7 @@ import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 import { liveMarkdown } from './liveMarkdown';
+import { markdownInputAssist } from './markdownInputAssist';
 
 interface CodeMirrorEditorAdapterOptions {
   initialContent: string;
@@ -32,6 +33,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           highlightActiveLine(),
+          markdownInputAssist,
           liveMarkdown,
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {

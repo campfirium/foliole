@@ -1,5 +1,6 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
+import { invoke } from '@tauri-apps/api/core';
 
 import {
   collectAnchorTagTokenRanges,
@@ -13,16 +14,29 @@ const HEADING_PREFIX_PATTERN = /^\s*#{1,6}(?:\s+|$)/;
 const QUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const UNORDERED_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+)/;
 const ORDERED_LIST_PREFIX_PATTERN = /^(\s*)(\d+)([.)])(\s+)/;
-const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
+const INLINE_TOKEN_PATTERN = /(\*\*|__|~~)/g;
 const INLINE_STRONG_PATTERN = /(\*\*|__)(.+?)\1/g;
 const INLINE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
 const INLINE_CLOZE_PATTERN = /\{\{(.+?)\}\}/g;
 const INLINE_CLOZE_PLACEHOLDER_PATTERN = /\[\.\.\.\]/g;
 const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+const INLINE_LINK_PATTERN = /(?<!!)\[([^\]\n]*)\]\(([^)\n]*)\)/g;
 
 interface MarkdownImageMatch extends RangeBounds {
   alt: string;
   source: string;
+}
+
+interface InlineCodeMatch extends RangeBounds {
+  contentFrom: number;
+  contentTo: number;
+}
+
+interface InlineLinkMatch extends RangeBounds {
+  labelFrom: number;
+  labelTo: number;
+  hiddenRanges: RangeBounds[];
+  href: string;
 }
 
 type PrefixWidgetKind = 'quote' | 'unordered-list' | 'ordered-list';
@@ -67,11 +81,22 @@ function addReplace(ranges: Range<Decoration>[], from: number, to: number) {
   ranges.push(Decoration.replace({}).range(from, to));
 }
 
-function addMark(ranges: Range<Decoration>[], from: number, to: number, className: string) {
+function addMark(
+  ranges: Range<Decoration>[],
+  from: number,
+  to: number,
+  className: string,
+  attributes?: Record<string, string>
+) {
   if (to <= from) {
     return;
   }
-  ranges.push(Decoration.mark({ class: className }).range(from, to));
+  ranges.push(
+    Decoration.mark({
+      class: className,
+      attributes
+    }).range(from, to)
+  );
 }
 
 function addLine(ranges: Range<Decoration>[], from: number, className: string) {
@@ -123,6 +148,25 @@ function addPrefixDecoration(
     return;
   }
   addPrefixWidget(ranges, widgetPrefixMatch);
+}
+
+function addCodeFenceDecoration(
+  ranges: Range<Decoration>[],
+  from: number,
+  text: string,
+  showSyntax: boolean
+) {
+  const match = text.match(CODE_FENCE_PATTERN);
+  if (!match) {
+    return;
+  }
+
+  const lineTo = from + text.length;
+  if (showSyntax) {
+    addMark(ranges, from, lineTo, 'cm-md-syntax-visible');
+    return;
+  }
+  addReplace(ranges, from, lineTo);
 }
 
 function collectPrefixWidgetMatch(from: number, text: string): PrefixWidgetMatch | null {
@@ -254,6 +298,137 @@ function addImageDecorations(ranges: Range<Decoration>[], imageMatches: Readonly
         inclusive: false
       }).range(imageMatch.from, imageMatch.to)
     );
+  }
+}
+
+function collectInlineCodeMatches(from: number, text: string): InlineCodeMatch[] {
+  const matches: InlineCodeMatch[] = [];
+  let index = 0;
+
+  while (index < text.length) {
+    if (text[index] !== '`') {
+      index += 1;
+      continue;
+    }
+
+    const openerStart = index;
+    while (index < text.length && text[index] === '`') {
+      index += 1;
+    }
+    const delimiterLength = index - openerStart;
+    const openerEnd = index;
+
+    let cursor = openerEnd;
+    let foundClosing = false;
+    while (cursor < text.length) {
+      if (text[cursor] !== '`') {
+        cursor += 1;
+        continue;
+      }
+
+      const closerStart = cursor;
+      while (cursor < text.length && text[cursor] === '`') {
+        cursor += 1;
+      }
+      const closerLength = cursor - closerStart;
+      if (closerLength !== delimiterLength) {
+        continue;
+      }
+
+      matches.push({
+        from: from + openerStart,
+        to: from + cursor,
+        contentFrom: from + openerEnd,
+        contentTo: from + closerStart
+      });
+      foundClosing = true;
+      break;
+    }
+
+    if (!foundClosing) {
+      index = openerEnd;
+    }
+  }
+
+  return matches;
+}
+
+function addInlineCodeDecorations(
+  ranges: Range<Decoration>[],
+  codeMatches: ReadonlyArray<InlineCodeMatch>,
+  showSyntax: boolean
+) {
+  for (const codeMatch of codeMatches) {
+    addMark(ranges, codeMatch.contentFrom, codeMatch.contentTo, 'cm-md-inline-code');
+    if (showSyntax) {
+      addMark(ranges, codeMatch.from, codeMatch.contentFrom, 'cm-md-syntax-visible');
+      addMark(ranges, codeMatch.contentTo, codeMatch.to, 'cm-md-syntax-visible');
+      continue;
+    }
+    addReplace(ranges, codeMatch.from, codeMatch.contentFrom);
+    addReplace(ranges, codeMatch.contentTo, codeMatch.to);
+  }
+}
+
+function collectInlineLinkMatches(
+  from: number,
+  text: string,
+  preservedRanges: ReadonlyArray<RangeBounds>
+): InlineLinkMatch[] {
+  const matches: InlineLinkMatch[] = [];
+
+  let match = INLINE_LINK_PATTERN.exec(text);
+  while (match) {
+    const start = from + match.index;
+    const fullText = match[0] ?? '';
+    const label = match[1] ?? '';
+    const labelFrom = start + 1;
+    const labelTo = labelFrom + label.length;
+    const pairFrom = labelTo;
+    const pairTo = pairFrom + 2;
+    const linkTo = start + fullText.length;
+
+    if (!isWithinRanges(start, linkTo, preservedRanges)) {
+      const urlFrom = pairTo;
+      const urlTo = linkTo - 1;
+      matches.push({
+        from: start,
+        to: linkTo,
+        labelFrom,
+        labelTo,
+        hiddenRanges: [
+          { from: start, to: start + 1 },
+          { from: pairFrom, to: pairTo },
+          { from: urlFrom, to: urlTo },
+          { from: linkTo - 1, to: linkTo }
+        ],
+        href: match[2] ?? ''
+      });
+    }
+    match = INLINE_LINK_PATTERN.exec(text);
+  }
+  INLINE_LINK_PATTERN.lastIndex = 0;
+
+  return matches;
+}
+
+function addInlineLinkDecorations(
+  ranges: Range<Decoration>[],
+  linkMatches: ReadonlyArray<InlineLinkMatch>,
+  showSyntax: boolean
+) {
+  for (const linkMatch of linkMatches) {
+    addMark(ranges, linkMatch.labelFrom, linkMatch.labelTo, 'cm-md-link-text', {
+      'data-md-link-url': linkMatch.href
+    });
+
+    for (const hiddenRange of linkMatch.hiddenRanges) {
+      if (showSyntax) {
+        addMark(ranges, hiddenRange.from, hiddenRange.to, 'cm-md-syntax-visible');
+      } else {
+        addReplace(ranges, hiddenRange.from, hiddenRange.to);
+      }
+    }
   }
 }
 
@@ -488,6 +663,79 @@ function getCursorLineNumber(view: EditorView) {
   return view.state.doc.lineAt(cursor).number;
 }
 
+function rangeOverlaps(leftFrom: number, leftTo: number, rightFrom: number, rightTo: number) {
+  return leftFrom < rightTo && leftTo > rightFrom;
+}
+
+function collectSelectionTextWithExpandedLinks(view: EditorView) {
+  const { state } = view;
+  const selectionRanges = state.selection.ranges;
+  const pieces: string[] = [];
+  let expanded = false;
+
+  for (const range of selectionRanges) {
+    if (range.empty) {
+      continue;
+    }
+
+    let from = range.from;
+    let to = range.to;
+    const startLine = state.doc.lineAt(from).number;
+    const endLine = state.doc.lineAt(Math.max(from, to - 1)).number;
+
+    for (let lineNumber = startLine; lineNumber <= endLine; lineNumber += 1) {
+      const line = state.doc.line(lineNumber);
+      const linkMatches = collectInlineLinkMatches(line.from, line.text, []);
+      for (const linkMatch of linkMatches) {
+        if (!rangeOverlaps(from, to, linkMatch.labelFrom, linkMatch.labelTo)) {
+          continue;
+        }
+        from = Math.min(from, linkMatch.from);
+        to = Math.max(to, linkMatch.to);
+        expanded = true;
+      }
+    }
+
+    pieces.push(state.doc.sliceString(from, to));
+  }
+
+  if (pieces.length === 0 || !expanded) {
+    return null;
+  }
+  return pieces.join('\n');
+}
+
+async function openMarkdownLink(href: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const trimmed = href.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  const resolvedHref = (() => {
+    try {
+      return new URL(trimmed, window.location.href).toString();
+    } catch {
+      return null;
+    }
+  })();
+
+  if (!resolvedHref) {
+    return;
+  }
+
+  try {
+    await invoke('open_external_url', { url: resolvedHref });
+    return;
+  } catch {
+    // Fall back to browser behavior in non-Tauri environments.
+  }
+
+  window.open(resolvedHref, '_blank', 'noopener,noreferrer');
+}
+
 function buildLineDecorations(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const content = view.state.doc.toString();
@@ -499,16 +747,24 @@ function buildLineDecorations(view: EditorView): DecorationSet {
 
   for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
+    const isCodeFenceLine = CODE_FENCE_PATTERN.test(line.text);
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
     const showSyntaxOnLine = showMarkdownSyntax && isCursorLine;
     const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
     const imageMatches = collectImageMatches(line.from, line.text);
+    const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(line.from, line.text);
     const imageRanges = imageMatches.map((imageMatch) => ({ from: imageMatch.from, to: imageMatch.to }));
-    const preservedRanges = clozePlaceholderRanges.concat(imageRanges);
+    const inlineCodeRanges = inlineCodeMatches.map((match) => ({ from: match.from, to: match.to }));
+    const preservedRanges = clozePlaceholderRanges.concat(imageRanges, inlineCodeRanges);
+    const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(line.from, line.text, preservedRanges);
 
     if (lineClass) {
-      addLine(ranges, line.from, lineClass);
+      if (isCodeFenceLine && !showSyntaxOnLine) {
+        addLine(ranges, line.from, 'cm-line-code-fence-hidden');
+      } else {
+        addLine(ranges, line.from, lineClass);
+      }
     }
 
     if (!showSyntaxOnLine && !isCursorLine && !inCodeBlock) {
@@ -516,6 +772,9 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     }
 
     addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
+    addCodeFenceDecoration(ranges, line.from, line.text, showSyntaxOnLine);
+    addInlineCodeDecorations(ranges, inlineCodeMatches, showSyntaxOnLine);
+    addInlineLinkDecorations(ranges, inlineLinkMatches, showSyntaxOnLine);
     addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, preservedRanges);
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
     addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock);
@@ -547,6 +806,49 @@ const markdownLinePlugin = ViewPlugin.fromClass(
     decorations: (value) => value.decorations
   }
 );
+
+const markdownInteractionHandlers = EditorView.domEventHandlers({
+  click(event) {
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return false;
+    }
+
+    const element = target instanceof HTMLElement ? target : target.parentElement;
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    const linkElement = element.closest('[data-md-link-url]');
+    if (!(linkElement instanceof HTMLElement)) {
+      return false;
+    }
+
+    const href = linkElement.dataset.mdLinkUrl;
+    if (!href) {
+      return false;
+    }
+
+    event.preventDefault();
+    void openMarkdownLink(href);
+    return true;
+  },
+  copy(event, view) {
+    const clipboard = event.clipboardData;
+    if (!clipboard) {
+      return false;
+    }
+
+    const expandedText = collectSelectionTextWithExpandedLinks(view);
+    if (!expandedText) {
+      return false;
+    }
+
+    event.preventDefault();
+    clipboard.setData('text/plain', expandedText);
+    return true;
+  }
+});
 
 const liveMarkdownTheme = EditorView.theme({
   '&': {
@@ -602,10 +904,21 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': {
     backgroundColor: 'rgba(15, 23, 42, 0.06)',
-    borderRadius: '0.35rem',
+    borderRadius: 0,
     fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
     fontSize: 'var(--content-panel-code-font-size, 0.86rem)',
-    padding: '0.04rem 0.5rem'
+    padding: '0 0.5rem'
+  },
+  '.cm-line.cm-line-code-fence-hidden': {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    border: 0,
+    fontSize: '0',
+    lineHeight: '0',
+    margin: 0,
+    minHeight: 0,
+    overflow: 'hidden',
+    padding: '0 !important'
   },
   '.cm-md-syntax-visible': {
     color: 'var(--color-text-secondary)',
@@ -613,6 +926,18 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-strong': {
     fontWeight: '700'
+  },
+  '.cm-md-inline-code': {
+    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    borderRadius: '0.25rem',
+    fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
+    fontSize: 'var(--content-panel-code-font-size, 0.86rem)',
+    padding: '0 0.15rem'
+  },
+  '.cm-md-link-text': {
+    color: 'var(--app-accent-color)',
+    cursor: 'pointer',
+    textDecoration: 'underline'
   },
   '.cm-md-highlight': {
     backgroundColor: 'rgba(56, 189, 248, 0.28)',
@@ -667,4 +992,4 @@ const liveMarkdownTheme = EditorView.theme({
   }
 });
 
-export const liveMarkdown = [liveMarkdownTheme, markdownLinePlugin];
+export const liveMarkdown = [liveMarkdownTheme, markdownLinePlugin, markdownInteractionHandlers];

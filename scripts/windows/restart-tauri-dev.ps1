@@ -105,7 +105,17 @@ function Start-Client {
     return
   }
 
-  $command = "cd /d `"$WindowsWorkDir`" && npm run tauri:dev"
+  $rustupHome = $env:RUSTUP_HOME
+  if ([string]::IsNullOrWhiteSpace($rustupHome)) {
+    $rustupHome = Join-Path $env:USERPROFILE ".rustup"
+  }
+  $toolchainBin = Join-Path $rustupHome "toolchains\stable-x86_64-pc-windows-msvc\bin"
+
+  if (Test-Path -Path $toolchainBin) {
+    $command = "cd /d `"$WindowsWorkDir`" && set `"PATH=$toolchainBin;%PATH%`" && set `"RUSTUP_TOOLCHAIN=stable`" && npm run tauri:dev"
+  } else {
+    $command = "cd /d `"$WindowsWorkDir`" && set `"RUSTUP_TOOLCHAIN=stable`" && npm run tauri:dev"
+  }
   $process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', $command -WorkingDirectory $WindowsWorkDir -PassThru
   Save-TrackedPid -ProcessId $process.Id
   Write-Info "status: STARTED pid=$($process.Id) (detached)"
