@@ -10,6 +10,109 @@ function getNodeListPanel() {
   return screen.getByRole('complementary', { name: 'Node list panel' });
 }
 
+function createImportedWorkspaceSnapshot() {
+  return {
+    activeNodeId: 'special-inbox',
+    nodeOrder: ['special-inbox', 'node-imported'],
+    nodesById: {
+      'special-inbox': {
+        id: 'special-inbox',
+        parentNodeId: null,
+        kind: 'folder',
+        specialKind: 'inbox',
+        title: 'Inbox',
+        isTitleManual: true,
+        hideTitleHeading: false,
+        content: '',
+        hasContent: false,
+        reveal: null,
+        hasReveal: false,
+        anchorLink: null,
+        reading: null,
+        review: null,
+        createdAt: '2026-03-22T09:55:00.000Z',
+        updatedAt: '2026-03-22T09:55:00.000Z'
+      },
+      'node-imported': {
+        id: 'node-imported',
+        parentNodeId: 'special-inbox',
+        kind: 'topic',
+        title: 'Imported note',
+        isTitleManual: true,
+        hideTitleHeading: false,
+        content: '',
+        hasContent: false,
+        reveal: null,
+        hasReveal: false,
+        anchorLink: null,
+        reading: null,
+        review: null,
+        createdAt: '2026-03-22T10:00:00.000Z',
+        updatedAt: '2026-03-22T10:00:00.000Z'
+      }
+    },
+    trashedNodeIds: []
+  };
+}
+
+function createSuccessfulImportResult() {
+  return {
+    content_fingerprint: 'content-success',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-2',
+    imported_at: '2026-03-22T10:00:00.000Z',
+    node_id: 'node-imported',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint-2',
+    source_kind: 'markdown',
+    source_locator: '/tmp/imported-note.md',
+    source_name: 'imported-note.md'
+  };
+}
+
+function createSuccessfulImportOverview() {
+  return {
+    latest_failure: null,
+    latest_result: createSuccessfulImportResult(),
+    recent_runs: []
+  };
+}
+
+function createImportedNodeRuntimeInvoke(): ElectronAPI['invoke'] {
+  const workspaceSnapshot = createImportedWorkspaceSnapshot();
+  return vi.fn(async (...args: [string, Record<string, unknown>?]) => {
+    const [command, payload] = args;
+    if (command === 'load_workspace_list_snapshot') {
+      return workspaceSnapshot;
+    }
+    if (command === 'load_reading_progress') {
+      return {
+        activeNodeId: 'special-inbox',
+        nodeViewStateById: {}
+      };
+    }
+    if (command === 'load_node_document' && payload?.nodeId === 'special-inbox') {
+      return {
+        nodeId: 'special-inbox',
+        kind: 'folder',
+        content: '',
+        hideTitleHeading: false,
+        reveal: null
+      };
+    }
+    if (command === 'run_text_file_import') {
+      return createSuccessfulImportResult();
+    }
+    if (command === 'load_import_overview') {
+      return createSuccessfulImportOverview();
+    }
+    return null;
+  });
+}
+
 it('shows Inbox in the node tree and opens its empty state landing', () => {
   render(<App />);
 
@@ -95,6 +198,25 @@ it('routes import from the left toolbar through the runtime bridge', async () =>
 
   await waitFor(() => {
     expect(invoke).toHaveBeenCalledWith('run_text_file_import', {});
+  });
+});
+
+it('shows a newly imported inbox child immediately after import without restarting', async () => {
+  const invoke = createImportedNodeRuntimeInvoke();
+
+  window.electronAPI = {
+    invoke,
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+
+  await waitFor(() => {
+    expect(within(getNodeListPanel()).getByRole('treeitem', { name: 'Imported note' })).toBeInTheDocument();
   });
 });
 

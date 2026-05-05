@@ -49,6 +49,7 @@ const useFormalImportState = create<FormalImportUiState>(() => ({
 }));
 
 let managedInboxRefreshInFlight: Promise<void> | null = null;
+let managedInboxQueuedRefreshImportId: string | null = null;
 
 function applyImportResultStatus(result: RuntimeTextImportResult) {
   useFormalImportState.setState({
@@ -79,7 +80,7 @@ function applyImportFailureStatus(message: string) {
   });
 }
 
-async function refreshFormalImportOverview() {
+async function refreshFormalImportOverview(triggerImportId?: string) {
   const overview = await loadRuntimeImportOverview();
   if (!overview) {
     return;
@@ -87,14 +88,17 @@ async function refreshFormalImportOverview() {
 
   const latestResult = overview.latestResult;
   const previousImportId = useFormalImportState.getState().lastSeenResultImportId;
-  const hasFreshImport = Boolean(latestResult && latestResult.importId !== previousImportId);
-  if (latestResult && hasFreshImport && shouldRehydrateWorkspace(latestResult)) {
+  const nextImportId = triggerImportId ?? latestResult?.importId ?? null;
+  const hasFreshImport = Boolean(nextImportId && nextImportId !== previousImportId);
+  if (triggerImportId) {
+    await useWorkspaceStore.persist.rehydrate();
+  } else if (latestResult && hasFreshImport && shouldRehydrateWorkspace(latestResult)) {
     await useWorkspaceStore.persist.rehydrate();
   }
 
   useFormalImportState.setState({
     hasLoadedOverview: true,
-    lastSeenResultImportId: latestResult?.importId ?? null,
+    lastSeenResultImportId: nextImportId,
     overview,
     status: buildStatusFromOverview(overview)
   });
@@ -110,6 +114,7 @@ function shouldRehydrateDirectoryImport(result: RuntimeDirectoryImportResult) {
 
 export function resetFormalImportState() {
   managedInboxRefreshInFlight = null;
+  managedInboxQueuedRefreshImportId = null;
   useFormalImportState.setState({
     hasLoadedOverview: false,
     isImporting: false,
@@ -119,12 +124,20 @@ export function resetFormalImportState() {
   });
 }
 
-async function refreshManagedInboxOverview() {
+async function refreshManagedInboxOverview(importId?: string) {
   if (managedInboxRefreshInFlight) {
+    managedInboxQueuedRefreshImportId = importId ?? managedInboxQueuedRefreshImportId;
     await managedInboxRefreshInFlight;
+    if (managedInboxQueuedRefreshImportId) {
+      const queuedImportId = managedInboxQueuedRefreshImportId;
+      managedInboxQueuedRefreshImportId = null;
+      await refreshManagedInboxOverview(queuedImportId);
+    }
     return;
   }
-  managedInboxRefreshInFlight = refreshFormalImportOverview().finally(() => {
+  const nextImportId = importId ?? managedInboxQueuedRefreshImportId ?? undefined;
+  managedInboxQueuedRefreshImportId = null;
+  managedInboxRefreshInFlight = refreshFormalImportOverview(nextImportId).finally(() => {
     managedInboxRefreshInFlight = null;
   });
   await managedInboxRefreshInFlight;
@@ -137,11 +150,11 @@ function useManagedInboxUpdateSubscription(isAvailable: boolean) {
     }
     let isDisposed = false;
     let unlisten: (() => void) | null = null;
-    void onManagedInboxUpdated(() => {
+    void onManagedInboxUpdated((importId) => {
       if (isDisposed) {
         return;
       }
-      void refreshManagedInboxOverview();
+      void refreshManagedInboxOverview(importId);
     }).then((nextUnlisten) => {
       if (isDisposed) {
         nextUnlisten?.();
@@ -156,6 +169,23 @@ function useManagedInboxUpdateSubscription(isAvailable: boolean) {
   }, [isAvailable]);
 }
 
+function useManagedInboxFocusRefresh(isAvailable: boolean) {
+  useEffect(() => {
+    if (!isAvailable || typeof window === 'undefined') {
+      return;
+    }
+
+    const handleFocus = () => {
+      void refreshManagedInboxOverview();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isAvailable]);
+}
+
 function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boolean) {
   useEffect(() => {
     if (!isAvailable || hasLoadedOverview) {
@@ -164,6 +194,7 @@ function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boole
     void refreshFormalImportOverview();
   }, [hasLoadedOverview, isAvailable]);
   useManagedInboxUpdateSubscription(isAvailable);
+  useManagedInboxFocusRefresh(isAvailable);
 }
 
 function useFormalImportActions() {

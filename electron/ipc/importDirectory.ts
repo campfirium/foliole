@@ -4,6 +4,7 @@ import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import/importRunLogger.js';
+import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import {
   discoverDirectoryImportSources,
@@ -18,6 +19,11 @@ import {
   resolveManagedInboxPaths
 } from './managedInboxFolder.js';
 import { resolveAppPaths } from './paths.js';
+
+function resolveLatestImportId(result: NativeDirectoryImportResult) {
+  const latestEntry = result.entries[result.entries.length - 1];
+  return typeof latestEntry?.import_id === 'string' ? latestEntry.import_id : null;
+}
 
 async function resolveManagedInboxRootPath() {
   const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox);
@@ -74,6 +80,10 @@ export async function runDirectoryImport(
       sources,
       titleStrategy
     });
+    const latestImportId = resolveLatestImportId(result);
+    if (latestImportId) {
+      notifyManagedInboxUpdated(latestImportId);
+    }
     await logDirectoryImportCompleted(result);
     return result;
   } catch (error) {

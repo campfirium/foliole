@@ -9,6 +9,7 @@ import type {
   NativeTextImportResult
 } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
+import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import { loadEpubPreview, runEpubImport } from './epubImport.js';
 import {
@@ -120,6 +121,9 @@ export async function runTextFileImport(
   let lastResult: NativeTextImportResult | null = null;
   for (const filePath of filePaths) {
     lastResult = await runImportForFilePath(filePath, args);
+    if (lastResult?.import_id) {
+      notifyManagedInboxUpdated(lastResult.import_id);
+    }
   }
   return lastResult;
 }

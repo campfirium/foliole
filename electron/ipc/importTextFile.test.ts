@@ -13,6 +13,10 @@ const { loadEpubPreview, runEpubImport } = vi.hoisted(() => ({
   runEpubImport: vi.fn()
 }));
 
+const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
+  notifyManagedInboxUpdated: vi.fn()
+}));
+
 vi.mock('electron', () => ({
   dialog: { showOpenDialog }
 }));
@@ -30,6 +34,10 @@ vi.mock('../database/importPipeline.js', () => ({
 vi.mock('./epubImport.js', () => ({
   loadEpubPreview,
   runEpubImport
+}));
+
+vi.mock('../import/managedInboxEvents.js', () => ({
+  notifyManagedInboxUpdated
 }));
 
 import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
@@ -250,4 +258,6 @@ it('imports every selected file and returns the last import result', async () =>
   });
 
   expect(runPreparedImport).toHaveBeenCalledTimes(2);
+  expect(notifyManagedInboxUpdated).toHaveBeenNthCalledWith(1, 'import-1');
+  expect(notifyManagedInboxUpdated).toHaveBeenNthCalledWith(2, 'import-2');
 });

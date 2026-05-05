@@ -25,6 +25,9 @@ const { trashItem } = vi.hoisted(() => ({
     await fs.rm(filePath, { force: true });
   })
 }));
+const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
+  notifyManagedInboxUpdated: vi.fn()
+}));
 
 vi.mock('../database/importPipeline.js', () => ({
   recordPreparedImportFailure,
@@ -37,6 +40,7 @@ vi.mock('../import/importRunLogger.js', () => ({
 }));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
 vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings }));
+vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
 vi.mock('electron', () => ({
   BrowserWindow: {},
   dialog: { showOpenDialog: vi.fn() },
@@ -146,6 +150,7 @@ it('imports markdown and HTML directories through the shared normalization and p
       source_adapter: 'external_directory'
     })
   );
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
 });
 
 it('classifies vault markdown as obsidian imports and skips the .obsidian control directory', async () => {
@@ -177,7 +182,7 @@ it('classifies vault markdown as obsidian imports and skips the .obsidian contro
   expect(runPreparedImport).toHaveBeenCalledTimes(1);
   expect(runPreparedImport).toHaveBeenCalledWith(
     expect.objectContaining({
-      content: '# Imported vault note',
+      content: '## Imported vault note',
       sourceKind: 'markdown',
       sourceName: path.join('Daily', 'note.md')
     })
@@ -188,6 +193,7 @@ it('classifies vault markdown as obsidian imports and skips the .obsidian contro
       source_adapter: 'external_directory'
     })
   );
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
 });
 
 it('resolves the managed inbox folder from runtime settings and trashes only imported sources', async () => {
@@ -249,4 +255,5 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
       source_adapter: 'foliole_managed_inbox_folder'
     })
   );
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.any(String));
 });
