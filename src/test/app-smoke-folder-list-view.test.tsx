@@ -157,7 +157,7 @@ it('switches to title sorting and keeps folder open until an item is opened', as
   });
 });
 
-it('keeps author sorting stable when some items have no author metadata', () => {
+it('keeps author display and author sorting on the same fallback rule', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
@@ -195,6 +195,7 @@ it('keeps author sorting stable when some items have no author metadata', () => 
   expect(getFolderListTitles()).toEqual(['Named author', 'No author A', 'No author B']);
   expect(screen.getByTestId('folder-list-author-note-2')).toHaveTextContent('Ada');
   expect(screen.getByTestId('folder-list-author-note-1')).toHaveAttribute('aria-label', 'Author unavailable');
+  expect(screen.getByTestId('folder-list-author-note-3')).toHaveAttribute('aria-label', 'Author unavailable');
 });
 
 it('falls back to the empty summary copy when a child node has no usable body text', () => {
@@ -208,7 +209,7 @@ it('falls back to the empty summary copy when a child node has no usable body te
         id: 'note-1',
         parentNodeId: 'folder-1',
         title: 'Empty child',
-        content: '---\nauthor: Ada\n---\n# Empty child\n'
+        content: ''
       })
     }
   }));

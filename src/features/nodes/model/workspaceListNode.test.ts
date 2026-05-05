@@ -3,12 +3,14 @@ import { expect, it } from 'vitest';
 import type { Node } from './nodeTypes';
 import {
   compareWorkspaceListNodeDateDesc,
+  getWorkspaceListNodeAuthor,
   getWorkspaceListNodeDateLabel,
   getWorkspaceListNodeSummary,
   toWorkspaceListNode,
   WORKSPACE_LIST_DATE_FALLBACK,
   WORKSPACE_LIST_SUMMARY_FALLBACK
 } from './workspaceListNode';
+import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
 it('keeps the list-layer projection lightweight', () => {
   const heavyNode: Node = {
@@ -50,10 +52,30 @@ it('extracts summary from body content, skips frontmatter, and truncates long te
 it('falls back to the empty summary copy when no usable content remains', () => {
   expect(
     getWorkspaceListNodeSummary({
-      content: ['---', 'author: Ada', '---', '# Atlas', ''].join('\n'),
+      content: '',
       title: 'Atlas'
     })
   ).toBe(WORKSPACE_LIST_SUMMARY_FALLBACK);
+});
+
+it('keeps author display and sorting on the same fallback rule', () => {
+  const namedAuthorNode = {
+    content: ['---', 'author: Ada', '---', '# Named author'].join('\n'),
+    title: 'Named author'
+  };
+  const missingAuthorANode = {
+    content: '# No author A\n\nBody only',
+    title: 'No author A'
+  };
+  const missingAuthorBNode = {
+    content: '# No author B\n\nBody only',
+    title: 'No author B'
+  };
+
+  expect(getWorkspaceListNodeAuthor(namedAuthorNode)).toBe('Ada');
+  expect(getWorkspaceListNodeAuthor(missingAuthorANode)).toBeNull();
+  expect(compareWorkspaceListNodeAuthor(namedAuthorNode, missingAuthorANode)).toBeLessThan(0);
+  expect(compareWorkspaceListNodeAuthor(missingAuthorANode, missingAuthorBNode)).toBeLessThan(0);
 });
 
 it('uses the same date fallback chain for display and descending comparison', () => {

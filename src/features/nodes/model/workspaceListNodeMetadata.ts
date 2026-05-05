@@ -147,13 +147,36 @@ function resolveWorkspaceListDateTimestamp(node: Pick<Node, 'createdAt' | 'updat
 
   return null;
 }
-
 export function getWorkspaceListNodeAuthor(node: Pick<Node, 'content'>) {
   const authorValues = getFrontmatterEntryValues(node.content, 'author').map(normalizeText).filter(Boolean);
   if (authorValues.length === 0) {
     return null;
   }
   return authorValues.join(', ');
+}
+
+export function compareWorkspaceListNodeAuthor(
+  left: Pick<Node, 'content' | 'title'>,
+  right: Pick<Node, 'content' | 'title'>
+) {
+  const compareText = (leftValue: string, rightValue: string) =>
+    leftValue.localeCompare(rightValue, undefined, { numeric: true, sensitivity: 'base' });
+  const leftAuthor = getWorkspaceListNodeAuthor(left);
+  const rightAuthor = getWorkspaceListNodeAuthor(right);
+  if (!leftAuthor && !rightAuthor) {
+    return compareText(normalizeText(left.title), normalizeText(right.title));
+  }
+  if (!leftAuthor) {
+    return 1;
+  }
+  if (!rightAuthor) {
+    return -1;
+  }
+  const authorResult = compareText(leftAuthor, rightAuthor);
+  if (authorResult !== 0) {
+    return authorResult;
+  }
+  return compareText(normalizeText(left.title), normalizeText(right.title));
 }
 
 export function getWorkspaceListNodeSummary(node: Pick<Node, 'content' | 'title'>) {

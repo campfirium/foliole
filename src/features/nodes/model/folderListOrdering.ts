@@ -1,5 +1,6 @@
 import type { Node } from './nodeTypes';
-import { compareWorkspaceListNodeDateDesc, getWorkspaceListNodeAuthor } from './workspaceListNode';
+import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
+import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
 export type FolderListSortKey = 'date' | 'title' | 'author';
 
@@ -13,25 +14,9 @@ function compareText(left: string, right: string) {
   return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-function compareOptionalText(left: string | null, right: string | null) {
-  const hasLeft = Boolean(left);
-  const hasRight = Boolean(right);
-  if (!hasLeft && !hasRight) {
-    return 0;
-  }
-  if (!hasLeft) {
-    return 1;
-  }
-  if (!hasRight) {
-    return -1;
-  }
-  return compareText(left!, right!);
-}
-
 export function sortFolderListNodes(nodes: Node[], sortKey: FolderListSortKey) {
   return nodes
     .map((node, index) => ({
-      author: getWorkspaceListNodeAuthor(node),
       index,
       node,
       title: normalizeSortText(node.title)
@@ -42,14 +27,14 @@ export function sortFolderListNodes(nodes: Node[], sortKey: FolderListSortKey) {
         if (titleResult !== 0) {
           return titleResult;
         }
-        const authorResult = compareOptionalText(left.author, right.author);
+        const authorResult = compareWorkspaceListNodeAuthor(left.node, right.node);
         if (authorResult !== 0) {
           return authorResult;
         }
       }
 
       if (sortKey === 'author') {
-        const authorResult = compareOptionalText(left.author, right.author);
+        const authorResult = compareWorkspaceListNodeAuthor(left.node, right.node);
         if (authorResult !== 0) {
           return authorResult;
         }
@@ -68,7 +53,7 @@ export function sortFolderListNodes(nodes: Node[], sortKey: FolderListSortKey) {
         if (titleResult !== 0) {
           return titleResult;
         }
-        const authorResult = compareOptionalText(left.author, right.author);
+        const authorResult = compareWorkspaceListNodeAuthor(left.node, right.node);
         if (authorResult !== 0) {
           return authorResult;
         }
