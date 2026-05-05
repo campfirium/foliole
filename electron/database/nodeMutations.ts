@@ -16,6 +16,7 @@ import type {
 } from '../../lib/core/database/nodeMutations.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
 
 export type {
@@ -60,5 +61,11 @@ export function restoreNodes(input: RestoreNodesInput): void {
 }
 
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
-  return deleteNodesPermanentlyViaDriver(openDatabaseConnection().driver, input);
+  const connection = openDatabaseConnection();
+  const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
+  const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, input);
+  withTransaction(connection.driver, () => {
+    cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
+  });
+  return affectedParentNodeIds;
 }

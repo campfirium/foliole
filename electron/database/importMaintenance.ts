@@ -1,6 +1,7 @@
 import type { NativeResetImportDataResult } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { deleteNodesPermanently } from './nodeMutations.js';
 
 interface CountRow {
   count: number;
@@ -104,14 +105,7 @@ export function resetImportData(): NativeResetImportDataResult {
   const deleteImportRuns = connection.sqlite.prepare('DELETE FROM import_runs');
   const deleteImportSources = connection.sqlite.prepare('DELETE FROM import_sources');
   const deleteKeepImportItems = connection.sqlite.prepare('DELETE FROM keep_import_items');
-  const deleteReviewLog = connection.sqlite.prepare('DELETE FROM review_log WHERE node_id = ?');
-  const deleteNodeReview = connection.sqlite.prepare('DELETE FROM node_review WHERE node_id = ?');
-  const deleteNodeReading = connection.sqlite.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeViewState = connection.sqlite.prepare('DELETE FROM node_view_state WHERE node_id = ?');
-  const deleteNodeOrder = connection.sqlite.prepare('DELETE FROM node_order WHERE node_id = ?');
-  const deleteNode = connection.sqlite.prepare('DELETE FROM nodes WHERE id = ?');
-  const clearNodeOrder = connection.sqlite.prepare('DELETE FROM node_order');
-  const insertNodeOrder = connection.sqlite.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
   const clearActiveNodeStatement = connection.sqlite.prepare('DELETE FROM workspace_meta WHERE key = ?');
 
   connection.sqlite.transaction(() => {
@@ -120,25 +114,20 @@ export function resetImportData(): NativeResetImportDataResult {
     deleteImportSources.run();
 
     for (const nodeId of deletedNodeIds) {
-      deleteReviewLog.run(nodeId);
-      deleteNodeReview.run(nodeId);
-      deleteNodeReading.run(nodeId);
       deleteNodeViewState.run(nodeId);
-      deleteNodeOrder.run(nodeId);
-    }
-    for (const nodeId of deletedNodeIds) {
-      deleteNode.run(nodeId);
     }
 
     if (clearActiveNode) {
       clearActiveNodeStatement.run(ACTIVE_NODE_META_KEY);
     }
-
-    clearNodeOrder.run();
-    for (let index = 0; index < remainingRootNodeIds.length; index += 1) {
-      insertNodeOrder.run(remainingRootNodeIds[index], index);
-    }
   })();
+
+  if (deletedNodeIds.length > 0) {
+    deleteNodesPermanently({
+      nodeIds: deletedNodeIds,
+      nodeOrder: remainingRootNodeIds
+    });
+  }
 
   return result;
 }
