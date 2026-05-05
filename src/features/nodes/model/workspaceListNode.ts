@@ -60,11 +60,28 @@ export function toWorkspaceListNodesById(
 
 export type WorkspaceListReviewItemKind = 'none' | 'reading' | 'fsrs';
 
+function resolveFormalReviewItemKind(kind: NodeKind | null | undefined): WorkspaceListReviewItemKind | null {
+  if (kind === 'folder') {
+    return 'none';
+  }
+  if (kind === 'topic') {
+    return 'reading';
+  }
+  if (kind === 'item') {
+    return 'fsrs';
+  }
+  return null;
+}
+
 export function getWorkspaceListReviewItemKind(
   node: WorkspaceListNode | null | undefined
 ): WorkspaceListReviewItemKind {
   if (!node) {
     return 'none';
+  }
+  const formalReviewItemKind = resolveFormalReviewItemKind(node.kind);
+  if (formalReviewItemKind) {
+    return formalReviewItemKind;
   }
   if (node.review) {
     return 'fsrs';

@@ -2,7 +2,7 @@ import { forgetting_curve } from 'ts-fsrs';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent } from '../features/nodes/model/nodeTypes';
-import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
+import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { toSchedulerCard } from '../features/review/model/reviewTypes';
 import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
 import {
@@ -44,7 +44,7 @@ function createSeededRandom(seedInput: string) {
 }
 
 function isQueueableReadingNode(node: Node | undefined, now: string) {
-  if (!node || isFsrsReviewItemNode(node) || !hasNodeContent(node)) {
+  if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {
@@ -54,7 +54,7 @@ function isQueueableReadingNode(node: Node | undefined, now: string) {
 }
 
 function isSchedulableReadingNode(node: Node | undefined) {
-  if (!node || isFsrsReviewItemNode(node) || !hasNodeContent(node)) {
+  if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {

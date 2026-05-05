@@ -13,11 +13,17 @@ export function canReturnNode(node: WorkspaceListNode | undefined) {
   if (!hasReviewableContent(node)) {
     return false;
   }
-  return Boolean(node && (isFsrsWorkspaceListNode(node) || node.reading !== null));
+  if (!node) {
+    return false;
+  }
+  return isFsrsWorkspaceListNode(node) || (getWorkspaceListReviewItemKind(node) === 'reading' && node.reading !== null);
 }
 
 export function canDismissNode(node: WorkspaceListNode | undefined) {
-  if (!hasReviewableContent(node) || !node || isFsrsWorkspaceListNode(node)) {
+  if (!hasReviewableContent(node) || !node) {
+    return false;
+  }
+  if (getWorkspaceListReviewItemKind(node) !== 'reading') {
     return false;
   }
   return node.reading?.state !== 'dismissed';

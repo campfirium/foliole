@@ -103,6 +103,26 @@ it('queues cloze review nodes in the FSRS lane even when reveal is empty', () =>
   expect(plan.queueNodeIds).toEqual(['cloze-1', 'reading-1']);
 });
 
+it('keeps topic nodes in the reading lane and item nodes in the fsrs lane based on kind', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const topicNode = createReadingNode('topic-reveal', '2026-03-02T08:00:00.000Z');
+  topicNode.reveal = 'answer';
+  const itemNode = createReadingNode('item-no-reveal', '2026-03-02T08:00:00.000Z');
+  itemNode.kind = 'item';
+  itemNode.reading = null;
+  const folderNode = createReadingNode('folder-content', '2026-03-02T08:00:00.000Z');
+  folderNode.kind = 'folder';
+  const nodes = [topicNode, itemNode, folderNode];
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.readingQueueNodeIds).toEqual(['topic-reveal']);
+  expect(plan.fsrsQueueNodeIds).toEqual(['item-no-reveal']);
+  expect(plan.queueNodeIds).toEqual(['item-no-reveal', 'topic-reveal']);
+});
+
 it('can build the whole queue including scheduled review items for queue inspection', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const nodes = [

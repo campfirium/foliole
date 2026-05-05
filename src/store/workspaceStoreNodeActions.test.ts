@@ -258,6 +258,21 @@ describe('createWorkspaceNodeActions dismiss', () => {
   it('marks pending reading nodes as dismissed from the node menu', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
+    const state = harness.getState();
+    const node = state.nodesById['node-1'];
+    if (!node) {
+      throw new Error('missing seed node');
+    }
+    harness.setState({
+      nodesById: {
+        ...state.nodesById,
+        'node-1': {
+          ...node,
+          kind: 'topic',
+          reveal: 'Answer'
+        }
+      }
+    });
 
     const dismissed = actions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
 

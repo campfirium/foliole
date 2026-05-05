@@ -151,7 +151,7 @@ function buildDerivedChildMap(snapshot: WorkspaceSnapshot, articleId: string) {
 function collectArticleNodes(snapshot: WorkspaceSnapshot) {
   const orderedIds = new Map(snapshot.nodeOrder.map((nodeId, index) => [nodeId, index]));
   return Object.values(snapshot.nodesById)
-    .filter((node) => node.id !== INBOX_NODE_ID && node.anchorLink === null)
+    .filter((node) => node.id !== INBOX_NODE_ID && node.anchorLink === null && node.kind === 'topic')
     .sort((left, right) => (orderedIds.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (orderedIds.get(right.id) ?? Number.MAX_SAFE_INTEGER));
 }
 

@@ -25,10 +25,23 @@ it('treats reading nodes as reading items', () => {
   expect(getReviewItemKind(createNode())).toBe('reading');
 });
 
+it('keeps topic nodes in the reading lane even when reveal exists', () => {
+  expect(getReviewItemKind(createNode({ kind: 'topic', reveal: 'answer' }))).toBe('reading');
+});
+
+it('keeps folder nodes out of review lanes even when content exists', () => {
+  expect(getReviewItemKind(createNode({ kind: 'folder', content: 'Folder body' }))).toBe('none');
+});
+
+it('treats item nodes as fsrs items even without reveal', () => {
+  expect(getReviewItemKind(createNode({ kind: 'item', reveal: null, review: null }))).toBe('fsrs');
+});
+
 it('treats nodes with review profile as fsrs items even when reveal is empty', () => {
   expect(
     getReviewItemKind(
       createNode({
+        kind: 'item',
         reveal: '',
         review: {
           due: '2026-03-17T00:00:00.000Z',
@@ -50,6 +63,7 @@ it('treats cloze-derived nodes as fsrs items', () => {
   expect(
     getReviewItemKind(
       createNode({
+        kind: 'item',
         reveal: '',
         anchorLink: { id: 'cloze-1', kind: 'cloze' }
       })

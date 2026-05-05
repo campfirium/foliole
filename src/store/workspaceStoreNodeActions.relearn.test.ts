@@ -6,6 +6,7 @@ import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -82,7 +83,7 @@ describe('createWorkspaceNodeActions relearn sync', () => {
     vi.clearAllMocks();
   });
 
-  it('resets review cards to an uninitialized state and syncs runtime reset', () => {
+  it('resets item review cards to an uninitialized state and syncs runtime reset', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const state = harness.getState();
@@ -95,7 +96,8 @@ describe('createWorkspaceNodeActions relearn sync', () => {
         ...state.nodesById,
         'node-1': {
           ...node,
-          reveal: 'Answer',
+          kind: 'item',
+          reveal: null,
           review: {
             due: '2026-03-10T00:00:00.000Z',
             lastReviewAt: '2026-03-06T00:00:00.000Z',

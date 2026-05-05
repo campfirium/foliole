@@ -3,7 +3,7 @@ import { isNodeContentLocked } from '../features/nodes/model/nodeContainers';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent } from '../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../features/nodes/model/specialNodes';
-import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
+import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
@@ -159,7 +159,7 @@ function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismi
         !node ||
         isInboxNode(node) ||
         !hasNodeContent(node) ||
-        isFsrsReviewItemNode(node) ||
+        !isReadingReviewItemNode(node) ||
         node.reading?.state === 'dismissed'
       ) {
         return state;

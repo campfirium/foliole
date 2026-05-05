@@ -1,6 +1,6 @@
 import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../features/nodes/model/specialNodes';
-import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
+import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import { syncNodeContentToRuntime, syncRelearnNodeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -17,7 +17,7 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
       if (!node || isInboxNode(node) || !hasNodeContent(node)) {
         return state;
       }
-      if (!isFsrsReviewItemNode(node) && node.reading === null) {
+      if (!isFsrsReviewItemNode(node) && !(isReadingReviewItemNode(node) && node.reading !== null)) {
         return state;
       }
       relearned = true;

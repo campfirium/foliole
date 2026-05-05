@@ -1,5 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
+import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
@@ -48,7 +48,7 @@ function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Work
     if (!currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     const remainingQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
-    if (!currentNode || isFsrsReviewItemNode(currentNode)) return false;
+    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     const currentReading = currentNode.reading;
     const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
     const nextReading = advanceReadingScheduleCoreFields({
@@ -104,7 +104,7 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
-    if (!currentNode || isFsrsReviewItemNode(currentNode)) return false;
+    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     const nextNodeId = nextQueue[0] ?? null;
     const currentReading = currentNode.reading;
@@ -161,7 +161,7 @@ function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Wo
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
-    if (!currentNode || isFsrsReviewItemNode(currentNode)) return false;
+    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     const nextNodeId = nextQueue[0] ?? null;
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;

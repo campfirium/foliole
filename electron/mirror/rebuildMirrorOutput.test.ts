@@ -123,3 +123,44 @@ it('writes one readable article .md with inline highlights, inline clozes, and s
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Highlights.md'))).rejects.toThrow();
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Clozes.md'))).rejects.toThrow();
 });
+
+it('exports blank topics as files and skips folders even when both are empty', async () => {
+  upsertNodeSnapshot({
+    nodeId: 'topic-blank',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Blank Topic',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: '   ',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'folder-empty',
+    parentNodeId: null,
+    kind: 'folder',
+    title: 'Empty Folder',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: '   ',
+    reveal: null,
+    anchorLink: null,
+    position: 1,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({
+    queued_article_count: 1,
+    rebuilt_article_count: 1,
+    failed_article_count: 0,
+    pending_article_count: 0
+  });
+
+  await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Blank Topic.md'), 'utf8')).resolves.toBe('# Blank Topic\n');
+  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Empty Folder.md'))).rejects.toThrow();
+});

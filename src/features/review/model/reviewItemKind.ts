@@ -3,9 +3,26 @@ import { hasNodeReveal } from '../../nodes/model/nodeTypes';
 
 export type ReviewItemKind = 'none' | 'reading' | 'fsrs';
 
+function resolveFormalReviewItemKind(kind: Node['kind'] | null | undefined): ReviewItemKind | null {
+  if (kind === 'folder') {
+    return 'none';
+  }
+  if (kind === 'topic') {
+    return 'reading';
+  }
+  if (kind === 'item') {
+    return 'fsrs';
+  }
+  return null;
+}
+
 export function getReviewItemKind(node: Node | null | undefined): ReviewItemKind {
   if (!node) {
     return 'none';
+  }
+  const formalReviewItemKind = resolveFormalReviewItemKind(node.kind);
+  if (formalReviewItemKind) {
+    return formalReviewItemKind;
   }
   if (node.review) {
     return 'fsrs';

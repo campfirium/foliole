@@ -8,12 +8,26 @@ import {
   canReturnNode
 } from './nodeListContextMenuReview';
 
+function createReadingState(state: 'active' | 'done' | 'dismissed' = 'active') {
+  return {
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: '2026-03-29T00:00:00.000Z',
+    nextAt: '2026-03-29T00:00:00.000Z',
+    priority: 0,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state
+  };
+}
+
 function createNode(
   input: Partial<WorkspaceListNode> & Pick<WorkspaceListNode, 'id' | 'title'>
 ): WorkspaceListNode {
   return {
     id: input.id,
     parentNodeId: input.parentNodeId ?? null,
+    kind: input.kind,
     title: input.title,
     hasContent: input.hasContent ?? true,
     hasReveal: input.hasReveal ?? false,
@@ -34,22 +48,38 @@ describe('node list review actions', () => {
   it('allows dismiss only for reading items that still need handling', () => {
     expect(canDismissNode(createNode({
       id: 'node-1',
+      kind: 'topic',
       title: 'Reading',
-      reading: {
-        intervalDurationMs: 0,
-        intervalGrowthFactor: 1,
-        lastHandledAt: '2026-03-29T00:00:00.000Z',
-        nextAt: '2026-03-29T00:00:00.000Z',
-        priority: 0,
-        readingPosition: 0,
-        repetitionCount: 0,
-        state: 'active'
-      }
+      reading: createReadingState()
     }))).toBe(true);
-    expect(canDismissNode(createNode({ id: 'node-2', title: 'Card', hasReveal: true }))).toBe(false);
+    expect(canDismissNode(createNode({ id: 'node-2', kind: 'item', title: 'Card', hasReveal: true }))).toBe(false);
+    expect(
+      canDismissNode(
+        createNode({
+          id: 'node-3',
+          kind: 'folder',
+          title: 'Folder',
+          reading: createReadingState()
+        })
+      )
+    ).toBe(false);
   });
 
   it('allows relearn without loading reveal text', () => {
-    expect(canRelearnNode(createNode({ id: 'node-1', title: 'Card', hasReveal: true }))).toBe(true);
+    expect(canRelearnNode(createNode({ id: 'node-1', kind: 'item', title: 'Card', hasReveal: true }))).toBe(true);
+  });
+
+  it('allows returning topics with reveal because kind still wins', () => {
+    expect(
+      canReturnNode(
+        createNode({
+          id: 'node-1',
+          kind: 'topic',
+          title: 'Topic',
+          hasReveal: true,
+          reading: createReadingState('dismissed')
+        })
+      )
+    ).toBe(true);
   });
 });
