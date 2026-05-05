@@ -4,10 +4,6 @@ import { AppIconButton } from '../../../../shared/ui';
 
 import { cn } from '@/shared/lib/utils';
 
-function isSamePalette(left: string[], right: string[]) {
-  return left.length === right.length && left.every((color, index) => color === right[index]);
-}
-
 function RandomPaletteCard(props: {
   ariaLabel: string;
   onClick: () => void;
@@ -37,15 +33,12 @@ function RandomPaletteCard(props: {
 }
 
 export function WorkspaceSurfaceRandomPalettePanel(props: {
-  activeMode: string | null;
   currentPalette: string[];
   onApplyPalette: (palette: string[]) => void;
   onRefresh: () => void;
   randomPalettes: string[][];
 }) {
-  const palettes = [props.currentPalette, ...props.randomPalettes];
-  const rows = [palettes.slice(0, 4), palettes.slice(4, 8)];
-  const isRandomMode = props.activeMode === 'random';
+  const rows = [props.randomPalettes.slice(0, 4), props.randomPalettes.slice(4, 8)];
 
   return (
     <div aria-label="Random mode panel" className="space-y-2 px-1 py-1">
@@ -63,15 +56,11 @@ export function WorkspaceSurfaceRandomPalettePanel(props: {
           <div className="flex flex-wrap gap-1.5" key={rowIndex}>
             {row.map((palette, paletteIndex) => (
               <RandomPaletteCard
-                ariaLabel={
-                  rowIndex === 0 && paletteIndex === 0
-                    ? 'Current random palette'
-                    : `Random palette ${rowIndex * 4 + paletteIndex + 1}`
-                }
+                ariaLabel={`Random palette ${rowIndex * 4 + paletteIndex + 1}`}
                 key={`${rowIndex}-${paletteIndex}-${palette.join('-')}`}
                 onClick={() => props.onApplyPalette(palette)}
                 palette={palette}
-                selected={isRandomMode && isSamePalette(palette, props.currentPalette)}
+                selected={palette.join('|') === props.currentPalette.join('|')}
               />
             ))}
           </div>

@@ -20,6 +20,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   workspaceSurfaceRecommendationId: 'foliole-workspace-surface-recommendation-id',
   workspaceSurfaceAutoSeed: 'foliole-workspace-surface-auto-seed',
   workspaceSurfaceAutoOptions: 'foliole-workspace-surface-auto-options',
+  workspaceSurfaceRandomHistory: 'foliole-workspace-surface-random-history',
+  workspaceSurfaceFavorites: 'foliole-workspace-surface-favorites',
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
   customMonospaceFont: 'foliole-custom-monospace-font-family',

@@ -89,21 +89,21 @@ it('applies the current automatic palette when clicking the automatic preview ca
   });
 });
 
-it('refreshes random palettes while keeping the current theme card in the first slot', async () => {
+it('refreshes all eight random palettes without reserving the first slot for the current palette', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  const firstRandomCard = screen.getByRole('button', { name: 'Current random palette' });
+  const firstRandomCard = screen.getByRole('button', { name: 'Random palette 1' });
   const before = firstRandomCard.innerHTML;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh random palettes' }));
 
   await waitFor(() => {
-    const refreshedFirstCard = screen.getByRole('button', { name: 'Current random palette' });
-    expect(refreshedFirstCard.innerHTML).toBe(before);
+    const refreshedFirstCard = screen.getByRole('button', { name: 'Random palette 1' });
+    expect(refreshedFirstCard.innerHTML).not.toBe(before);
   });
 });
 
-it('applies a random palette into the leading workspace palette slots', async () => {
+it('applies a random palette into the leading workspace palette slots and stores it in recent history', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -111,9 +111,95 @@ it('applies a random palette into the leading workspace palette slots', async ()
 
   await waitFor(() => {
     const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const history = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory) ?? '[]');
     expect(palette.slice(0, 5)).toHaveLength(5);
+    expect(history).toHaveLength(1);
+    expect(history[0]).toEqual(palette.slice(0, 5));
     expect(screen.getByText('Free palette')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Current random palette' }).className).toContain('border-border-strong');
+    expect(screen.getByRole('button', { name: 'Restore theme history 1' })).toBeInTheDocument();
+  });
+});
+
+it('restores a saved random palette from the persistent history slots', async () => {
+  const randomHistory = [
+    ['#8c7b68', '#ddd1c1', '#ebe1d3', '#faf6f0', '#e7dbc9'],
+    ['#657f79', '#b8d0ca', '#d9ebe7', '#f8fbfa', '#d0e3de']
+  ];
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory, JSON.stringify(randomHistory));
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Restore theme history 2' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const history = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceRandomHistory) ?? '[]');
+    expect(palette.slice(0, 5)).toEqual(randomHistory[1]);
+    expect(history[0]).toEqual(randomHistory[1]);
+  });
+});
+
+it('adds the current theme to favorites', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Random palette 3' }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Add current theme to favorites' })).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add current theme to favorites' }));
+
+  await waitFor(() => {
+    const favorites = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites) ?? '[]');
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    expect(favorites[0]).toEqual(palette.slice(0, 5));
+    expect(screen.getByRole('button', { name: 'Current theme is already in favorites' })).toBeInTheDocument();
+  });
+});
+
+it('opens the collection panel, applies a saved theme, closes on outside click, and removes favorites', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Random palette 3' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add current theme to favorites' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Random palette 4' }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Open theme collection' })).toHaveTextContent('Favorites');
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open theme collection' }));
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Theme collection panel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply favorite theme 1' })).toBeInTheDocument();
+  });
+
+  fireEvent.mouseDown(document.body);
+
+  await waitFor(() => {
+    expect(screen.queryByLabelText('Theme collection panel')).not.toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open theme collection' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Apply favorite theme 1' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const favorites = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites) ?? '[]');
+    expect(palette.slice(0, 5)).toEqual(favorites[0]);
+    expect(screen.queryByLabelText('Theme collection panel')).not.toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open theme collection' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove favorite theme 1' }));
+
+  await waitFor(() => {
+    const favorites = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites) ?? '[]');
+    expect(favorites).toHaveLength(0);
   });
 });
 
@@ -124,7 +210,7 @@ it('applies auto palette options before writing into the free palette slots', as
   fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
   fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Olive' }));
   fireEvent.click(screen.getByLabelText('Document stays white'));
-  fireEvent.click(screen.getByLabelText('Folder and topic match'));
+  fireEvent.click(screen.getByLabelText('Folder and topic share tone'));
 
   await waitFor(() => {
     const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
@@ -163,7 +249,7 @@ it('restores workspace surface generator preferences and active mode from storag
 
   await waitFor(() => {
     expect(screen.getByLabelText('Document stays white')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Folder and topic match')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Folder and topic share tone')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#8a962f');
   });
 });

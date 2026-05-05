@@ -7,10 +7,12 @@ import { type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSetti
 import { WorkspaceSurfaceColorModePanel } from './WorkspaceSurfaceColorModePanel';
 import { WorkspaceSurfaceColorPaletteStrip } from './WorkspaceSurfaceColorPaletteStrip';
 import {
+  addCurrentWorkspaceSurfaceFavorite,
   applyAutoModeToWorkspace,
   applyGeneratedPaletteToWorkspace,
   createRandomWorkspaceSurfacePalettes,
   openWorkspaceSurfaceColorEditor,
+  removeWorkspaceSurfaceFavoriteEntry,
   resetWorkspaceSurfaceToDefault,
   useWorkspaceSurfaceEditor,
   useWorkspaceSurfacePainting
@@ -111,6 +113,7 @@ function WorkspaceSurfaceModes(props: {
   editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
 }) {
   const currentPalette = props.editor.appearance.workspaceSurfacePalette.slice(0, 5);
+  const isFavorited = props.editor.favorites.some((palette) => palette.join('|') === currentPalette.join('|'));
 
   return (
     <WorkspaceSurfaceColorModePanel
@@ -118,21 +121,33 @@ function WorkspaceSurfaceModes(props: {
       autoOptions={props.editor.autoOptions}
       autoSeedColor={props.editor.autoSeedColor}
       currentPalette={currentPalette}
+      favorites={props.editor.favorites}
+      history={props.editor.randomHistory}
+      isFavorited={isFavorited}
+      onAddFavorite={() => addCurrentWorkspaceSurfaceFavorite(props.editor)}
       onApplyAutomaticPalette={() => {
         props.editor.setGeneratedMode('automatic');
-        applyAutoModeToWorkspace(props.editor);
+        applyAutoModeToWorkspace(props.editor, { trackHistory: true });
       }}
+      onApplyFavorite={(palette) => applyGeneratedPaletteToWorkspace(props.editor, palette, { markManual: true })}
+      onApplyHistory={(palette) => applyGeneratedPaletteToWorkspace(props.editor, palette, { markManual: true })}
       onApplyRandomPalette={(palette) => {
         props.editor.setGeneratedMode('random');
         applyGeneratedPaletteToWorkspace(props.editor, palette);
       }}
-      onAutoOptionsChange={(options) => props.editor.setAutoOptions(options)}
+      onAutoOptionsChange={(options) => {
+        props.editor.setGeneratedMode('automatic');
+        props.editor.setAutoOptions(options);
+        applyAutoModeToWorkspace(props.editor, { nextAutoOptions: options, trackHistory: true });
+      }}
       onAutoSeedColorChange={(color) => {
         props.editor.setGeneratedMode('automatic');
         props.editor.setAutoSeedColor(color);
+        applyAutoModeToWorkspace(props.editor, { nextAutoSeedColor: color, trackHistory: true });
       }}
+      onRemoveFavorite={(palette) => removeWorkspaceSurfaceFavoriteEntry(props.editor, palette)}
       onRefreshRandomPalettes={() => props.editor.setRandomPalettes(
-        createRandomWorkspaceSurfacePalettes(props.editor.autoOptions, 7, [currentPalette])
+        createRandomWorkspaceSurfacePalettes(props.editor.autoOptions, 8)
       )}
       randomPalettes={props.editor.randomPalettes}
     />

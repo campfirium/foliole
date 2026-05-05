@@ -9,6 +9,7 @@ import { type WorkspaceSurfaceColorValue } from '../../model/workspaceSurfaceCol
 import { WorkspaceSurfaceAutomaticPaletteCard } from './WorkspaceSurfaceAutomaticPaletteCard';
 import { WorkspaceSurfaceAutomaticSeedPopover } from './WorkspaceSurfaceAutomaticSeedPopover';
 import { WorkspaceSurfaceRandomPalettePanel } from './WorkspaceSurfaceRandomPalettePanel';
+import { WorkspaceSurfaceThemeToolbar } from './WorkspaceSurfaceThemeToolbar';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -56,7 +57,7 @@ function WorkspaceSurfacePreferences(props: {
       <h4 className="text-sm font-medium text-foreground">Preferences</h4>
       <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
         <InlineSwitch checked={props.options.documentPureWhite} label="Document stays white" onChange={(checked) => setOption('documentPureWhite', checked)} />
-        <InlineSwitch checked={props.options.folderTopicSharedTone} label="Folder and topic match" onChange={(checked) => setOption('folderTopicSharedTone', checked)} />
+        <InlineSwitch checked={props.options.folderTopicSharedTone} label="Folder and topic share tone" onChange={(checked) => setOption('folderTopicSharedTone', checked)} />
       </div>
     </div>
   );
@@ -101,19 +102,35 @@ export function WorkspaceSurfaceColorModePanel(props: {
   activeMode: string | null;
   autoOptions: WorkspaceSurfaceAutoPaletteOptions;
   autoSeedColor: WorkspaceSurfaceColorValue;
-  onApplyAutomaticPalette: () => void;
   currentPalette: string[];
+  favorites: string[][];
+  history: string[][];
+  isFavorited: boolean;
+  onAddFavorite: () => void;
+  onApplyAutomaticPalette: () => void;
+  onApplyFavorite: (palette: string[]) => void;
+  onApplyHistory: (palette: string[]) => void;
   onApplyRandomPalette: (palette: string[]) => void;
   onAutoOptionsChange: (options: WorkspaceSurfaceAutoPaletteOptions) => void;
   onAutoSeedColorChange: (color: WorkspaceSurfaceColorValue) => void;
+  onRemoveFavorite: (palette: string[]) => void;
   onRefreshRandomPalettes: () => void;
   randomPalettes: string[][];
 }) {
   return (
     <div className="mt-3 space-y-4">
       <WorkspaceSurfacePreferences onOptionsChange={props.onAutoOptionsChange} options={props.autoOptions} />
+      <WorkspaceSurfaceThemeToolbar
+        currentPalette={props.currentPalette}
+        favorites={props.favorites}
+        history={props.history}
+        isFavorited={props.isFavorited}
+        onAddFavorite={props.onAddFavorite}
+        onApplyFavorite={props.onApplyFavorite}
+        onApplyHistory={props.onApplyHistory}
+        onRemoveFavorite={props.onRemoveFavorite}
+      />
       <WorkspaceSurfaceRandomPalettePanel
-        activeMode={props.activeMode}
         currentPalette={props.currentPalette}
         onApplyPalette={props.onApplyRandomPalette}
         onRefresh={props.onRefreshRandomPalettes}

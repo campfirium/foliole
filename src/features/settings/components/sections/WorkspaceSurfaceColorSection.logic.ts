@@ -14,9 +14,14 @@ import {
 import { parseWorkspaceSurfaceColor } from '../../model/workspaceSurfaceColor';
 import {
   DEFAULT_WORKSPACE_SURFACE_AUTO_SEED,
+  addWorkspaceSurfaceFavorite,
   getWorkspaceSurfaceAutoOptions,
   getWorkspaceSurfaceAutoSeed,
+  getWorkspaceSurfaceFavorites,
   getWorkspaceSurfaceGeneratorMode,
+  getWorkspaceSurfaceRandomHistory,
+  pushWorkspaceSurfaceRandomHistoryEntry,
+  removeWorkspaceSurfaceFavorite,
   setWorkspaceSurfaceAutoOptions,
   setWorkspaceSurfaceAutoSeed,
   setWorkspaceSurfaceGeneratorMode,
@@ -35,7 +40,9 @@ export function useWorkspaceSurfaceEditor(
   const [autoSeedColor, setAutoSeedColor] = useState<WorkspaceSurfaceColorValue>(() => getWorkspaceSurfaceAutoSeed(appearance.workspaceSurfacePalette[0]));
   const [autoOptions, setAutoOptions] = useState<WorkspaceSurfaceAutoPaletteOptions>(() => getWorkspaceSurfaceAutoOptions());
   const [generatedMode, setGeneratedMode] = useState<WorkspaceSurfaceGeneratorMode>(() => getWorkspaceSurfaceGeneratorMode());
-  const [randomPalettes, setRandomPalettes] = useState<string[][]>(() => buildRandomWorkspaceSurfacePalettes(getWorkspaceSurfaceAutoOptions(), 7));
+  const [favorites, setFavorites] = useState<string[][]>(() => getWorkspaceSurfaceFavorites());
+  const [randomHistory, setRandomHistory] = useState<string[][]>(() => getWorkspaceSurfaceRandomHistory());
+  const [randomPalettes, setRandomPalettes] = useState<string[][]>(() => buildRandomWorkspaceSurfacePalettes(getWorkspaceSurfaceAutoOptions(), 8));
   const [editorState, setEditorState] = useState<{ bounds: { height: number; width: number }; index: number; x: number; y: number } | null>(null);
   const editorHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -57,7 +64,7 @@ export function useWorkspaceSurfaceEditor(
 
   useEffect(() => {
     setRandomPalettes(
-      buildRandomWorkspaceSurfacePalettes(autoOptions, 7, [appearance.workspaceSurfacePalette.slice(0, 5)])
+      buildRandomWorkspaceSurfacePalettes(autoOptions, 8)
     );
   }, [autoOptions]);
 
@@ -68,12 +75,16 @@ export function useWorkspaceSurfaceEditor(
     autoSeedColor,
     editorHostRef,
     editorState,
+    favorites,
     generatedMode,
+    randomHistory,
     randomPalettes,
     setActiveBrushIndex,
     setAutoOptions,
     setAutoSeedColor,
     setGeneratedMode,
+    setFavorites,
+    setRandomHistory,
     setRandomPalettes,
     setEditorState
   };
@@ -121,28 +132,51 @@ export function openWorkspaceSurfaceColorEditor(
   });
 }
 
-export function applyAutoModeToWorkspace(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {
+export function applyAutoModeToWorkspace(
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>,
+  options?: { nextAutoOptions?: WorkspaceSurfaceAutoPaletteOptions; nextAutoSeedColor?: WorkspaceSurfaceColorValue; trackHistory?: boolean }
+) {
+  const autoOptions = options?.nextAutoOptions ?? editor.autoOptions;
+  const autoSeedColor = options?.nextAutoSeedColor ?? editor.autoSeedColor;
   const nextState = {
     assignments: buildWorkspaceSurfaceAutoAssignments(),
     palette: applyWorkspaceSurfaceAutoPalette(
       editor.appearance.workspaceSurfacePalette,
-      buildWorkspaceSurfaceAutoColumnPalette(editor.autoSeedColor, editor.autoOptions)
+      buildWorkspaceSurfaceAutoColumnPalette(autoSeedColor, autoOptions)
     )
   };
   editor.appearance.setWorkspaceSurfacePalette(nextState.palette);
   editor.appearance.setWorkspaceSurfaceAssignments(nextState.assignments);
   editor.setActiveBrushIndex(3);
+  if (options?.trackHistory) {
+    editor.setRandomHistory(pushWorkspaceSurfaceRandomHistoryEntry(nextState.palette.slice(0, 5)));
+  }
 }
 
 export function applyGeneratedPaletteToWorkspace(
   editor: ReturnType<typeof useWorkspaceSurfaceEditor>,
-  palette: string[]
+  palette: string[],
+  options?: { markManual?: boolean; trackHistory?: boolean }
 ) {
+  if (options?.markManual) {
+    editor.setGeneratedMode('manual');
+  }
   editor.appearance.setWorkspaceSurfacePalette(
     applyWorkspaceSurfaceAutoPalette(editor.appearance.workspaceSurfacePalette, palette)
   );
   editor.appearance.setWorkspaceSurfaceAssignments(buildWorkspaceSurfaceAutoAssignments());
   editor.setActiveBrushIndex(3);
+  if (options?.trackHistory !== false) {
+    editor.setRandomHistory(pushWorkspaceSurfaceRandomHistoryEntry(palette));
+  }
+}
+
+export function addCurrentWorkspaceSurfaceFavorite(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {
+  editor.setFavorites(addWorkspaceSurfaceFavorite(editor.appearance.workspaceSurfacePalette.slice(0, 5)));
+}
+
+export function removeWorkspaceSurfaceFavoriteEntry(editor: ReturnType<typeof useWorkspaceSurfaceEditor>, palette: string[]) {
+  editor.setFavorites(removeWorkspaceSurfaceFavorite(palette));
 }
 
 export function resetWorkspaceSurfaceToDefault(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {
