@@ -29,7 +29,7 @@ final class FolioleCompanionNodeAttachmentStore {
     }
 
     static void replaceNodeAttachments(Context context, SQLiteDatabase database, String nodeId, JSONArray attachments) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "nodeAttachmentDeleteByNode", new Object[] { nodeId });
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "deleteByNodeMutationName"), new Object[] { nodeId });
         if (attachments == null) {
             return;
         }
@@ -43,7 +43,7 @@ final class FolioleCompanionNodeAttachmentStore {
             if (attachmentId.isEmpty() || role.isEmpty()) {
                 continue;
             }
-            FolioleCompanionNamedMutationStore.execute(context, database, "nodeAttachmentUpsert", new Object[] { nodeId, attachmentId, role });
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] { nodeId, attachmentId, role });
         }
     }
 
@@ -62,5 +62,9 @@ final class FolioleCompanionNodeAttachmentStore {
 
     private static String nodeAttachmentRule(Context context, String key) throws Exception {
         return FolioleCompanionNodeAttachmentQueryRules.nodeAttachmentString(context, key);
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionHostSupportMutationRules.nodeAttachmentString(context, key);
     }
 }

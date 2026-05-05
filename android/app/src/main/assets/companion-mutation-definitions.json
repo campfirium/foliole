@@ -97,6 +97,23 @@
       "statementName": "appDataClearWorkspaceMeta"
     }
   ],
+  "hostSupportMutations": {
+    "appData": {
+      "deleteMetaExceptDeviceMutationName": "companionMetaDeleteExceptDeviceId"
+    },
+    "companionMeta": {
+      "deleteByKeyMutationName": "companionMetaDeleteByKey",
+      "upsertMutationName": "companionMetaUpsert"
+    },
+    "nodeAttachments": {
+      "deleteByNodeMutationName": "nodeAttachmentDeleteByNode",
+      "upsertMutationName": "nodeAttachmentUpsert"
+    },
+    "textBodyBlobs": {
+      "dataInsertMutationName": "textBodyBlobDataInsert",
+      "manifestInsertMutationName": "textBodyBlobManifestInsert"
+    }
+  },
   "resourceMutations": {
     "attachmentResources": {
       "markCachedMutationName": "attachmentResourceMarkCached",

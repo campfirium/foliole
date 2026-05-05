@@ -148,6 +148,24 @@ export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
   }
 } as const;
 
+export const ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES = {
+  appData: {
+    deleteMetaExceptDeviceMutationName: 'companionMetaDeleteExceptDeviceId'
+  },
+  companionMeta: {
+    deleteByKeyMutationName: 'companionMetaDeleteByKey',
+    upsertMutationName: 'companionMetaUpsert'
+  },
+  nodeAttachments: {
+    deleteByNodeMutationName: 'nodeAttachmentDeleteByNode',
+    upsertMutationName: 'nodeAttachmentUpsert'
+  },
+  textBodyBlobs: {
+    dataInsertMutationName: 'textBodyBlobDataInsert',
+    manifestInsertMutationName: 'textBodyBlobManifestInsert'
+  }
+} as const;
+
 export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
   documents: {
     markMissingMutationName: 'syncExternalDocumentMarkMissing',

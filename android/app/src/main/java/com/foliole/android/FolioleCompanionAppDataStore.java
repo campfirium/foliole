@@ -23,7 +23,7 @@ final class FolioleCompanionAppDataStore {
             database.beginTransaction();
             try {
                 clearTables(context, database);
-                FolioleCompanionNamedMutationStore.execute(context, database, "companionMetaDeleteExceptDeviceId", null);
+                FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "deleteMetaExceptDeviceMutationName"), null);
                 database.setTransactionSuccessful();
             } finally {
                 database.endTransaction();
@@ -59,6 +59,10 @@ final class FolioleCompanionAppDataStore {
         if (!file.delete()) {
             file.deleteOnExit();
         }
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionHostSupportMutationRules.appDataString(context, key);
     }
 
 }

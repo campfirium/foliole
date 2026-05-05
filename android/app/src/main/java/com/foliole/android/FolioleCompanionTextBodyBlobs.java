@@ -19,7 +19,7 @@ final class FolioleCompanionTextBodyBlobs {
         }
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
         String hash = sha256(bytes);
-        FolioleCompanionNamedMutationStore.execute(context, database, "textBodyBlobManifestInsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "manifestInsertMutationName"), new Object[] {
             hash,
             "text/" + hash,
             "text_body",
@@ -34,8 +34,12 @@ final class FolioleCompanionTextBodyBlobs {
             now,
             now
         });
-        FolioleCompanionNamedMutationStore.execute(context, database, "textBodyBlobDataInsert", new Object[] { hash, bytes });
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "dataInsertMutationName"), new Object[] { hash, bytes });
         return hash;
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionHostSupportMutationRules.textBodyBlobString(context, key);
     }
 
     private static String sha256(byte[] bytes) throws Exception {

@@ -82,11 +82,11 @@ final class FolioleCompanionMetaRecords {
     }
 
     static void deleteValue(Context context, SQLiteDatabase database, String key) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "companionMetaDeleteByKey", new Object[] { key });
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "deleteByKeyMutationName"), new Object[] { key });
     }
 
     static void saveValue(Context context, SQLiteDatabase database, String key, String value, String updatedAt) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "companionMetaUpsert", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "upsertMutationName"), new Object[] {
             key,
             value,
             updatedAt
@@ -95,5 +95,9 @@ final class FolioleCompanionMetaRecords {
 
     private static String runtimeRule(Context context, String groupName, String key) throws Exception {
         return FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key);
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionHostSupportMutationRules.companionMetaString(context, key);
     }
 }
