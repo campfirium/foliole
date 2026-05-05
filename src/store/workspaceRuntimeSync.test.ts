@@ -11,7 +11,8 @@ import {
   syncReadingProgressToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime,
-  syncReviewGradeToRuntime
+  syncReviewGradeToRuntime,
+  syncReviewGradeToRuntimeWithRetry
 } from './workspaceRuntimeSync';
 
 vi.mock('../shared/platform/bridge', () => ({
@@ -127,14 +128,46 @@ describe('workspaceRuntimeSync node mutations', () => {
 });
 
 describe('workspaceRuntimeSync review mutations', () => {
-  it('syncs review grade mutations through apply_review_grade command', () => {
+  it('syncs review grade mutations through apply_review_grade command', async () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
+    const synced = await syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
 
+    expect(synced).toBe(true);
     expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
     expectNoWorkspacePersist(invoke);
+  });
+
+  it('returns false when runtime review mutation fails', async () => {
+    const invoke = vi.fn().mockRejectedValue(new Error('failed'));
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    const synced = await syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
+
+    expect(synced).toBe(false);
+    expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
+  });
+
+  it('retries review grade mutation in background queue until success', async () => {
+    vi.useFakeTimers();
+    try {
+      const invoke = vi.fn().mockRejectedValueOnce(new Error('failed')).mockResolvedValueOnce(null);
+      vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+      syncReviewGradeToRuntimeWithRetry(REVIEW_GRADE_PAYLOAD);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(invoke).toHaveBeenCalledTimes(1);
+      expect(invoke).toHaveBeenNthCalledWith(1, 'apply_review_grade', REVIEW_GRADE_PAYLOAD);
+
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(invoke).toHaveBeenCalledTimes(2);
+      expect(invoke).toHaveBeenNthCalledWith(2, 'apply_review_grade', REVIEW_GRADE_PAYLOAD);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

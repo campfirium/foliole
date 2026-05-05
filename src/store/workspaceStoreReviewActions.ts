@@ -1,7 +1,7 @@
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { syncReviewGradeToRuntimeWithRetry } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -80,6 +80,63 @@ function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActio
   };
 }
 
+function enqueueReviewGradeMutation(args: {
+  currentNodeId: string;
+  grade: ReviewGrade;
+  reviewedAt: string;
+  cardBefore: ReturnType<typeof toSchedulerCard>;
+  cardAfter: ReturnType<typeof toSchedulerCard>;
+}) {
+  try {
+    syncReviewGradeToRuntimeWithRetry({
+      nodeId: args.currentNodeId,
+      grade: args.grade,
+      reviewedAt: args.reviewedAt,
+      cardBefore: args.cardBefore,
+      cardAfter: args.cardAfter
+    });
+  } catch {
+    // Keep grading UX non-blocking even if runtime bridge fails unexpectedly.
+  }
+}
+
+function applyGradedReviewState(args: {
+  set: WorkspaceSet;
+  snapshot: WorkspaceState;
+  currentNodeId: string;
+  nextNodeId: string | null;
+  nextQueue: string[];
+  nextReviewProfile: ReturnType<typeof toNodeReviewProfile>;
+  reviewedAt: string;
+  now: string;
+}) {
+  args.set((state) => {
+    const node = state.nodesById[args.currentNodeId];
+    if (!node) {
+      return state;
+    }
+    return {
+      activeNodeId: args.nextNodeId ?? state.activeNodeId,
+      nodesById: {
+        ...state.nodesById,
+        [args.currentNodeId]: {
+          ...node,
+          review: { ...args.nextReviewProfile, lastReviewAt: args.reviewedAt },
+          updatedAt: args.now
+        }
+      },
+      reviewSession: args.nextNodeId
+        ? {
+            currentNodeId: args.nextNodeId,
+            isAnswerRevealed: false,
+            queueNodeIds: args.nextQueue,
+            totalNodeCount: args.snapshot.reviewSession.totalNodeCount
+          }
+        : createEmptyReviewSession()
+    };
+  });
+}
+
 function createGradeReviewCardAction(
   set: WorkspaceSet,
   get: WorkspaceGet,
@@ -99,44 +156,25 @@ function createGradeReviewCardAction(
 
     const cardBefore = toSchedulerCard(currentNode.review, now);
     const result = await scheduler.grade({ card: cardBefore, grade, now });
-    const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
-    const nextNodeId = nextQueue[0] ?? null;
-    const nextReviewProfile = toNodeReviewProfile(result.card);
-
-    set((state) => {
-      const node = state.nodesById[currentNodeId];
-      if (!node) {
-        return state;
-      }
-      return {
-        activeNodeId: nextNodeId ?? state.activeNodeId,
-        nodesById: {
-          ...state.nodesById,
-          [currentNodeId]: {
-            ...node,
-            review: {
-              ...nextReviewProfile,
-              lastReviewAt: result.reviewed_at
-            },
-            updatedAt: now
-          }
-        },
-        reviewSession: nextNodeId
-          ? {
-              currentNodeId: nextNodeId,
-              isAnswerRevealed: false,
-              queueNodeIds: nextQueue,
-              totalNodeCount: snapshot.reviewSession.totalNodeCount
-            }
-          : createEmptyReviewSession()
-      };
-    });
-    syncReviewGradeToRuntime({
-      nodeId: currentNodeId,
+    enqueueReviewGradeMutation({
+      currentNodeId,
       grade,
       reviewedAt: result.reviewed_at,
       cardBefore,
       cardAfter: result.card
+    });
+    const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
+    const nextNodeId = nextQueue[0] ?? null;
+    const nextReviewProfile = toNodeReviewProfile(result.card);
+    applyGradedReviewState({
+      set,
+      snapshot,
+      currentNodeId,
+      nextNodeId,
+      nextQueue,
+      nextReviewProfile,
+      reviewedAt: result.reviewed_at,
+      now
     });
 
     return true;

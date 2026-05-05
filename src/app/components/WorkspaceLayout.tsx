@@ -93,7 +93,7 @@ export interface WorkspaceLayoutProps {
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
-  onGradeReview: (grade: ReviewGrade) => void;
+  onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
   onExitReviewMode: () => void;
   customUiFont: string;
   customInterfaceFont: string;

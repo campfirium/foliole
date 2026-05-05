@@ -94,7 +94,7 @@ interface BuildLayoutPropsArgs {
   startReviewSession: WorkspaceState['startReviewSession'];
   exitReviewSession: WorkspaceState['exitReviewSession'];
   exitStudyMode: () => void;
-  updateGrade: (grade: ReviewGrade) => void;
+  updateGrade: (grade: ReviewGrade) => Promise<boolean>;
   revealReviewAnswer: () => void;
 }
 

@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useState } from 'react';
+
 import type { ReviewGrade, SchedulerGradeResult, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { AppButton } from '../../shared/ui';
 
@@ -7,7 +9,7 @@ interface ReviewModeToolbarProps {
   isReviewEditing: boolean;
   reviewPreview: SchedulerPreviewResult | null;
   reviewCurrentNodeId: string | null;
-  onGrade: (grade: ReviewGrade) => void;
+  onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
 }
@@ -46,19 +48,105 @@ function formatPreviewInterval(previewItem?: SchedulerGradeResult) {
 function GradeButton({
   ariaLabel,
   intervalLabel,
-  onClick
+  onClick,
+  disabled
 }: {
   ariaLabel: 'Again' | 'Hard' | 'Good' | 'Easy';
   intervalLabel: string | null;
   onClick: () => void;
+  disabled: boolean;
 }) {
   return (
-    <AppButton aria-label={ariaLabel} className="min-w-20" onClick={onClick} size="sm" variant="ghost">
+    <AppButton aria-label={ariaLabel} className="min-w-20" disabled={disabled} onClick={onClick} size="sm" variant="ghost">
       <span className="flex flex-col items-center leading-tight">
         <span>{ariaLabel}</span>
         {intervalLabel ? <span className="text-[10px] text-foreground/60">{intervalLabel}</span> : null}
       </span>
     </AppButton>
+  );
+}
+
+function ReviewCompleteBar({ onExitReviewMode }: { onExitReviewMode: () => void }) {
+  return (
+    <div
+      aria-label="Review mode toolbar"
+      className="flex h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4"
+      data-mode="study"
+    >
+      <AppButton aria-label="Review complete" onClick={onExitReviewMode} size="sm" variant="subtle">
+        Review complete
+      </AppButton>
+    </div>
+  );
+}
+
+function useGradeFeedback(
+  onGrade: ReviewModeToolbarProps['onGrade'],
+  reviewCurrentNodeId: string | null,
+  isAnswerRevealed: boolean
+) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  useEffect(() => {
+    if (!reviewCurrentNodeId || !isAnswerRevealed) {
+      setIsSubmitting(false);
+    }
+  }, [isAnswerRevealed, reviewCurrentNodeId]);
+
+  const submitGrade = useCallback(
+    async (grade: ReviewGrade) => {
+      if (isSubmitting) {
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        await onGrade(grade);
+        setIsSubmitting(false);
+      } catch {
+        setIsSubmitting(false);
+      }
+    },
+    [isSubmitting, onGrade]
+  );
+
+  return { isSubmitting, submitGrade };
+}
+
+function ReviewGradeActions({
+  isSubmitting,
+  reviewPreview,
+  submitGrade
+}: {
+  isSubmitting: boolean;
+  reviewPreview: SchedulerPreviewResult | null;
+  submitGrade: (grade: ReviewGrade) => Promise<void>;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <GradeButton
+        ariaLabel="Again"
+        disabled={isSubmitting}
+        intervalLabel={formatPreviewInterval(reviewPreview?.Again)}
+        onClick={() => void submitGrade(1)}
+      />
+      <GradeButton
+        ariaLabel="Hard"
+        disabled={isSubmitting}
+        intervalLabel={formatPreviewInterval(reviewPreview?.Hard)}
+        onClick={() => void submitGrade(2)}
+      />
+      <GradeButton
+        ariaLabel="Good"
+        disabled={isSubmitting}
+        intervalLabel={formatPreviewInterval(reviewPreview?.Good)}
+        onClick={() => void submitGrade(3)}
+      />
+      <GradeButton
+        ariaLabel="Easy"
+        disabled={isSubmitting}
+        intervalLabel={formatPreviewInterval(reviewPreview?.Easy)}
+        onClick={() => void submitGrade(4)}
+      />
+    </div>
   );
 }
 
@@ -72,22 +160,14 @@ export function ReviewModeToolbar({
   onRevealAnswer,
   onExitReviewMode
 }: ReviewModeToolbarProps) {
+  const { isSubmitting, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
+
   if (!isStudyMode) {
     return null;
   }
 
   if (!reviewCurrentNodeId) {
-    return (
-      <div
-        aria-label="Review mode toolbar"
-        className="flex h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4"
-        data-mode="study"
-      >
-        <AppButton aria-label="Review complete" onClick={onExitReviewMode} size="sm" variant="subtle">
-          Review complete
-        </AppButton>
-      </div>
-    );
+    return <ReviewCompleteBar onExitReviewMode={onExitReviewMode} />;
   }
 
   return (
@@ -104,12 +184,7 @@ export function ReviewModeToolbar({
           </AppButton>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <GradeButton ariaLabel="Again" intervalLabel={formatPreviewInterval(reviewPreview?.Again)} onClick={() => onGrade(1)} />
-          <GradeButton ariaLabel="Hard" intervalLabel={formatPreviewInterval(reviewPreview?.Hard)} onClick={() => onGrade(2)} />
-          <GradeButton ariaLabel="Good" intervalLabel={formatPreviewInterval(reviewPreview?.Good)} onClick={() => onGrade(3)} />
-          <GradeButton ariaLabel="Easy" intervalLabel={formatPreviewInterval(reviewPreview?.Easy)} onClick={() => onGrade(4)} />
-        </div>
+        <ReviewGradeActions isSubmitting={isSubmitting} reviewPreview={reviewPreview} submitGrade={submitGrade} />
       )}
     </div>
   );

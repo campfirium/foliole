@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { syncReviewGradeToRuntimeWithRetry } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -12,7 +12,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
   return {
     ...actual,
-    syncReviewGradeToRuntime: vi.fn()
+    syncReviewGradeToRuntimeWithRetry: vi.fn()
   };
 });
 
@@ -181,62 +181,82 @@ function createSchedulerCard(due: string) {
 }
 
 function expectReviewRuntimeSyncCalled() {
-  expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
+  expect(syncReviewGradeToRuntimeWithRetry).toHaveBeenCalledTimes(1);
+  expect(syncReviewGradeToRuntimeWithRetry).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
 }
 
-describe('createWorkspaceReviewActions', () => {
-  it('advances to next review node after show-answer and grade', async () => {
-    const due = '2026-03-03T00:00:00.000Z';
-    const harness = createSetStateHarness(
-      createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
-    );
-    const grade = createSchedulerGradeMock();
-    const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
-    const started = actions.startReviewSession(due);
-    expect(started).toBe(true);
-    expect(harness.getState().reviewSession.currentNodeId).toBe('qa-1');
-    expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
+it('advances to next review node after show-answer and grade', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
+  );
+  const grade = createSchedulerGradeMock();
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
 
-    actions.revealReviewAnswer();
-    expect(harness.getState().reviewSession.isAnswerRevealed).toBe(true);
+  const started = actions.startReviewSession(due);
+  expect(started).toBe(true);
+  expect(harness.getState().reviewSession.currentNodeId).toBe('qa-1');
+  expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
 
-    const graded = await actions.gradeReviewCard(3, due);
-    expect(graded).toBe(true);
-    expect(grade).toHaveBeenCalledTimes(1);
-    expectReviewRuntimeSyncCalled();
-    expectNextQueueState(harness.getState());
-  });
+  actions.revealReviewAnswer();
+  expect(harness.getState().reviewSession.isAnswerRevealed).toBe(true);
 
-  it('ends session when grading the last review node', async () => {
-    const due = '2026-03-03T00:00:00.000Z';
-    const harness = createSetStateHarness(createWorkspaceFixture([createQaNode('qa-1', due)]));
-    const actions = createWorkspaceReviewActions(
-      harness.setState,
-      harness.getState,
-      {
-        preview: previewStub,
-        grade: async (input) => ({
-          card: {
-            ...input.card,
-            state: 2,
-            due: '2026-03-06T00:00:00.000Z',
-            last_review: input.now
-          },
-          reviewed_at: input.now
-        })
-      }
-    );
+  const graded = await actions.gradeReviewCard(3, due);
+  expect(graded).toBe(true);
+  expect(grade).toHaveBeenCalledTimes(1);
+  expectReviewRuntimeSyncCalled();
+  expectNextQueueState(harness.getState());
+});
 
-    actions.startReviewSession(due);
-    actions.revealReviewAnswer();
-    const graded = await actions.gradeReviewCard(4, due);
+it('ends session when grading the last review node', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(createWorkspaceFixture([createQaNode('qa-1', due)]));
+  const actions = createWorkspaceReviewActions(
+    harness.setState,
+    harness.getState,
+    {
+      preview: previewStub,
+      grade: async (input) => ({
+        card: {
+          ...input.card,
+          state: 2,
+          due: '2026-03-06T00:00:00.000Z',
+          last_review: input.now
+        },
+        reviewed_at: input.now
+      })
+    }
+  );
 
-    expect(graded).toBe(true);
-    expect(harness.getState().reviewSession.currentNodeId).toBeNull();
-    expect(harness.getState().reviewSession.queueNodeIds).toEqual([]);
-    expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
-    expect(harness.getState().activeNodeId).toBe('qa-1');
-  });
+  actions.startReviewSession(due);
+  actions.revealReviewAnswer();
+  const graded = await actions.gradeReviewCard(4, due);
+
+  expect(graded).toBe(true);
+  expect(harness.getState().reviewSession.currentNodeId).toBeNull();
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual([]);
+  expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
+  expect(harness.getState().activeNodeId).toBe('qa-1');
+});
+
+it('enqueues runtime sync and advances review state in one grading action', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
+  );
+  const grade = createSchedulerGradeMock();
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
+
+  actions.startReviewSession(due);
+  actions.revealReviewAnswer();
+  const graded = await actions.gradeReviewCard(3, due);
+
+  expect(graded).toBe(true);
+  expect(grade).toHaveBeenCalledTimes(1);
+  expectReviewRuntimeSyncCalled();
+  expectNextQueueState(harness.getState());
 });
