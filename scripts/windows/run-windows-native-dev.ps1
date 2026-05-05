@@ -186,6 +186,51 @@ function Get-NativeViteProcesses {
   }
 }
 
+function Get-NativeCargoProcesses {
+  param([string]$WorkDir)
+
+  $normalizedWorkDir = $WorkDir.ToLowerInvariant()
+  return Get-CimInstance Win32_Process | Where-Object {
+    if ($_.Name -ne "cargo.exe" -or -not $_.CommandLine) {
+      return $false
+    }
+
+    $commandLineLower = $_.CommandLine.ToLowerInvariant()
+    return $commandLineLower.Contains($normalizedWorkDir) -and $commandLineLower.Contains("run") -and $commandLineLower.Contains("tauri")
+  }
+}
+
+function Get-NativeTauriNodeProcesses {
+  param([string]$WorkDir)
+
+  $normalizedWorkDir = $WorkDir.ToLowerInvariant()
+  return Get-CimInstance Win32_Process | Where-Object {
+    if ($_.Name -ne "node.exe" -or -not $_.CommandLine) {
+      return $false
+    }
+
+    $commandLineLower = $_.CommandLine.ToLowerInvariant()
+    return $commandLineLower.Contains($normalizedWorkDir) -and
+      ($commandLineLower.Contains("tauri.js") -or
+        $commandLineLower.Contains("npm-cli.js run tauri:dev"))
+  }
+}
+
+function Get-NativeTauriCmdProcesses {
+  param([string]$WorkDir)
+
+  $normalizedWorkDir = $WorkDir.ToLowerInvariant()
+  return Get-CimInstance Win32_Process | Where-Object {
+    if ($_.Name -ne "cmd.exe" -or -not $_.CommandLine) {
+      return $false
+    }
+
+    $commandLineLower = $_.CommandLine.ToLowerInvariant()
+    return $commandLineLower.Contains($normalizedWorkDir) -and
+      ($commandLineLower.Contains("npm run tauri:dev") -or $commandLineLower.Contains(" tauri dev"))
+  }
+}
+
 function Stop-NativeDevSession {
   param([string]$WorkDir)
 
@@ -216,6 +261,36 @@ function Stop-NativeDevSession {
       Write-Log "[windows-native-dev] stopped vite pid=$($viteProcess.ProcessId)"
     } catch {
       Write-Log "[windows-native-dev] failed to stop vite pid=$($viteProcess.ProcessId): $($_.Exception.Message)"
+    }
+  }
+
+  $cargoProcesses = Get-NativeCargoProcesses -WorkDir $WorkDir
+  foreach ($cargoProcess in $cargoProcesses) {
+    try {
+      Stop-Process -Id $cargoProcess.ProcessId -Force -ErrorAction Stop
+      Write-Log "[windows-native-dev] stopped cargo pid=$($cargoProcess.ProcessId)"
+    } catch {
+      Write-Log "[windows-native-dev] failed to stop cargo pid=$($cargoProcess.ProcessId): $($_.Exception.Message)"
+    }
+  }
+
+  $tauriNodeProcesses = Get-NativeTauriNodeProcesses -WorkDir $WorkDir
+  foreach ($tauriNodeProcess in $tauriNodeProcesses) {
+    try {
+      Stop-Process -Id $tauriNodeProcess.ProcessId -Force -ErrorAction Stop
+      Write-Log "[windows-native-dev] stopped tauri node pid=$($tauriNodeProcess.ProcessId)"
+    } catch {
+      Write-Log "[windows-native-dev] failed to stop tauri node pid=$($tauriNodeProcess.ProcessId): $($_.Exception.Message)"
+    }
+  }
+
+  $tauriCmdProcesses = Get-NativeTauriCmdProcesses -WorkDir $WorkDir
+  foreach ($tauriCmdProcess in $tauriCmdProcesses) {
+    try {
+      Stop-Process -Id $tauriCmdProcess.ProcessId -Force -ErrorAction Stop
+      Write-Log "[windows-native-dev] stopped tauri cmd pid=$($tauriCmdProcess.ProcessId)"
+    } catch {
+      Write-Log "[windows-native-dev] failed to stop tauri cmd pid=$($tauriCmdProcess.ProcessId): $($_.Exception.Message)"
     }
   }
 
@@ -285,7 +360,7 @@ function Launch-NativeDev {
   }
 
   $bootSession = [Guid]::NewGuid().ToString("N")
-  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && npm run tauri:dev"
+  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && set `"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu`" && npm run tauri:dev"
   Write-Log ""
   Write-Log "[windows-native-dev] step: launch native tauri dev"
   Write-Log "[windows-native-dev] cmd: $launchCommand"
