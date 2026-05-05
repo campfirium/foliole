@@ -252,6 +252,56 @@ function Get-WebView2ProcessesForAppId {
   }
 }
 
+function Wait-WebView2ProcessesGone {
+  param(
+    [string]$AppId,
+    [int]$TimeoutMs = 8000
+  )
+
+  $waited = 0
+  while ($waited -lt $TimeoutMs) {
+    $still = @(Get-WebView2ProcessesForAppId -AppId $AppId)
+    if ($still.Count -eq 0) {
+      Write-Log "[windows-native-dev] webview2 processes fully gone after ${waited}ms"
+      return
+    }
+    Start-Sleep -Milliseconds 300
+    $waited += 300
+  }
+  Write-Log "[windows-native-dev] webview2 processes still present after ${TimeoutMs}ms wait"
+}
+
+function Remove-WebView2LockFiles {
+  param([string]$UserDataFolder)
+
+  # WebView2 Browser Process holds LevelDB/SQLite lock files under the Default profile.
+  # If a previous session exited uncleanly these locks block the next startup, causing
+  # silent Browser Process exit within 2-4 seconds.
+  $lockPatterns = @(
+    "Default\SingletonLock",
+    "Default\SingletonSocket",
+    "Default\SingletonCookie",
+    "Default\LOCK",
+    "Default\LOG.old"
+  )
+  $removed = 0
+  foreach ($rel in $lockPatterns) {
+    $path = Join-Path $UserDataFolder $rel
+    if (Test-Path $path) {
+      try {
+        Remove-Item -Force -Path $path -ErrorAction Stop
+        Write-Log "[windows-native-dev] removed webview2 lock file: $path"
+        $removed++
+      } catch {
+        Write-Log "[windows-native-dev] could not remove webview2 lock file: $path error=$($_.Exception.Message)"
+      }
+    }
+  }
+  if ($removed -eq 0) {
+    Write-Log "[windows-native-dev] no webview2 lock files found to remove"
+  }
+}
+
 function Reset-WebView2UserData {
   param(
     [string]$AppId,
@@ -273,17 +323,8 @@ function Reset-WebView2UserData {
     }
   }
 
-  if ($webviewProcesses.Count -gt 0) {
-    $waited = 0
-    while ($waited -lt 5000) {
-      $still = @(Get-WebView2ProcessesForAppId -AppId $AppId)
-      if ($still.Count -eq 0) {
-        break
-      }
-      Start-Sleep -Milliseconds 250
-      $waited += 250
-    }
-  }
+  # Always wait for ALL WebView2 processes to fully exit before touching the UDF.
+  Wait-WebView2ProcessesGone -AppId $AppId -TimeoutMs 8000
 
   if ($DeepClean -and (Test-Path $uddRoot)) {
     try {
@@ -292,6 +333,9 @@ function Reset-WebView2UserData {
     } catch {
       Write-Log "[windows-native-dev] failed to deep clean WebView2 UDD: $uddRoot error=$($_.Exception.Message)"
     }
+  } else {
+    # Even without deep clean, remove lock files so next startup is not blocked.
+    Remove-WebView2LockFiles -UserDataFolder $uddRoot
   }
 }
 
@@ -653,11 +697,10 @@ function Stop-NativeDevSession {
     Remove-Item -Force $stateFile
   }
 
-  # Wait for foliole-tauri-core.exe to fully exit (up to 5s), then clean up
-  # the WebView2 User Data Directory lock so the next launch doesn't deadlock.
+  # Wait for foliole-tauri-core.exe to fully exit (up to 8s).
   $exePath = (Join-Path $WorkDir "src-tauri\target\debug\foliole-tauri-core.exe").ToLowerInvariant()
   $waited = 0
-  while ($waited -lt 5000) {
+  while ($waited -lt 8000) {
     $still = Get-CimInstance Win32_Process | Where-Object {
       $_.Name -eq "foliole-tauri-core.exe" -and
       $_.ExecutablePath -and
@@ -667,6 +710,11 @@ function Stop-NativeDevSession {
     Start-Sleep -Milliseconds 300
     $waited += 300
   }
+
+  # Wait for ALL WebView2 (msedgewebview2.exe) processes to exit before touching the UDF.
+  # This is the critical step: WebView2 holds LevelDB LOCK files in the UDF until all its
+  # processes exit. A new startup that finds those locks will silently exit within 2-4 seconds.
+  Wait-WebView2ProcessesGone -AppId $appId -TimeoutMs 8000
 
   Reset-WebView2UserData -AppId $appId
 }
@@ -688,6 +736,159 @@ function Save-StateFile {
   }
 
   $payload | ConvertTo-Json | Out-File -FilePath $stateFile -Encoding utf8
+}
+
+function Write-TauriLogFailureSignals {
+  param(
+    [string]$WorkDir,
+    [string]$BootSession,
+    [string]$TauriLogPath,
+    [int]$TailLines = 120
+  )
+
+  if ([string]::IsNullOrWhiteSpace($BootSession) -or [string]::IsNullOrWhiteSpace($TauriLogPath)) {
+    return
+  }
+  if (-not (Test-Path $TauriLogPath)) {
+    return
+  }
+
+  try {
+    $lines = @(Get-Content -Path $TauriLogPath -Tail $TailLines -ErrorAction Stop)
+    $pattern = "(?i)(panic|thread 'main' panicked|webview2|msedgewebview2|hresult|exception|\\berror\\b|failed to|boot timeout)"
+    $matched = @()
+    foreach ($line in $lines) {
+      if ($line -match $pattern) {
+        $normalized = ($line -replace "\s+", " ").Trim()
+        if ($normalized.Length -gt 0) {
+          $matched += $normalized
+        }
+      }
+    }
+
+    $sampleCount = [Math]::Min(8, $matched.Count)
+    $samples = @()
+    if ($sampleCount -gt 0) {
+      $samples = $matched | Select-Object -Last $sampleCount
+    }
+
+    Write-Log "[windows-native-dev] tauri log failure signals: matched=$($matched.Count) file=$TauriLogPath"
+    Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "tauri_log_failure_signals" -Payload @{
+      source = "windows_native_dev_script"
+      tauri_log = $TauriLogPath
+      tail_lines = $TailLines
+      matched_count = $matched.Count
+      samples = $samples
+    }
+  } catch {
+    Write-Log "[windows-native-dev] tauri log signal scan failed: $($_.Exception.Message)"
+    Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "tauri_log_failure_signals_scan_failed" -Payload @{
+      source = "windows_native_dev_script"
+      tauri_log = $TauriLogPath
+      error = $_.Exception.Message
+    }
+  }
+}
+
+function Write-WindowsFailureSignals {
+  param(
+    [string]$WorkDir,
+    [string]$BootSession
+  )
+
+  if ([string]::IsNullOrWhiteSpace($BootSession)) {
+    return
+  }
+
+  $startTime = (Get-Date).AddMinutes(-10)
+  try {
+    if (Test-Path $stateFile) {
+      $state = Get-Content -Path $stateFile -Raw -ErrorAction Stop | ConvertFrom-Json
+      $startedAtRaw = "$($state.started_at)".Trim()
+      if (-not [string]::IsNullOrWhiteSpace($startedAtRaw)) {
+        $parsedStart = [datetime]::Parse($startedAtRaw)
+        if ($parsedStart -lt (Get-Date)) {
+          $startTime = $parsedStart.AddSeconds(-5)
+        }
+      }
+    }
+  } catch {}
+
+  try {
+    $messagePattern = "(?i)(webview2|msedgewebview2|foliole-tauri-core|tauri|wry)"
+    $providerSet = @("Application Error", "Windows Error Reporting", "WebView2")
+    $events = @(Get-WinEvent -FilterHashtable @{ LogName = "Application"; StartTime = $startTime } -ErrorAction SilentlyContinue |
+        Where-Object {
+          $providerMatched = $providerSet -contains $_.ProviderName
+          $messageMatched = $_.Message -and $_.Message -match $messagePattern
+          $providerMatched -or $messageMatched
+        } |
+        Sort-Object TimeCreated |
+        Select-Object -Last 40)
+
+    $samples = @()
+    foreach ($event in $events | Select-Object -Last 8) {
+      $message = if ($event.Message) { ($event.Message -replace "\s+", " ").Trim() } else { "(no message)" }
+      if ($message.Length -gt 240) {
+        $message = $message.Substring(0, 240)
+      }
+      $samples += [ordered]@{
+        time = $event.TimeCreated.ToUniversalTime().ToString("o")
+        provider = $event.ProviderName
+        id = $event.Id
+        level = $event.LevelDisplayName
+        message = $message
+      }
+    }
+
+    Write-Log "[windows-native-dev] windows application failure signals: matched=$($events.Count) start=$($startTime.ToString('s'))"
+    Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "windows_application_failure_signals" -Payload @{
+      source = "windows_native_dev_script"
+      start_time_utc = $startTime.ToUniversalTime().ToString("o")
+      matched_count = $events.Count
+      samples = $samples
+    }
+  } catch {
+    Write-Log "[windows-native-dev] windows application failure signal scan failed: $($_.Exception.Message)"
+    Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "windows_application_failure_signals_scan_failed" -Payload @{
+      source = "windows_native_dev_script"
+      error = $_.Exception.Message
+    }
+  }
+
+  try {
+    $crashDir = Join-Path $webViewUserDataFolder "Crashpad\reports"
+    $crashFiles = @()
+    if (Test-Path $crashDir) {
+      $crashFiles = @(Get-ChildItem -Path $crashDir -File -ErrorAction SilentlyContinue |
+          Where-Object { $_.LastWriteTime -ge $startTime } |
+          Sort-Object LastWriteTime |
+          Select-Object -Last 8)
+    }
+
+    $crashSamples = @()
+    foreach ($file in $crashFiles) {
+      $crashSamples += [ordered]@{
+        name = $file.Name
+        bytes = $file.Length
+        last_write_utc = $file.LastWriteTime.ToUniversalTime().ToString("o")
+      }
+    }
+
+    Write-Log "[windows-native-dev] webview2 crash dump signals: matched=$($crashFiles.Count) dir=$crashDir"
+    Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_crash_dump_signals" -Payload @{
+      source = "windows_native_dev_script"
+      crash_dir = $crashDir
+      matched_count = $crashFiles.Count
+      files = $crashSamples
+    }
+  } catch {
+    Write-Log "[windows-native-dev] webview2 crash dump scan failed: $($_.Exception.Message)"
+    Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_crash_dump_signals_scan_failed" -Payload @{
+      source = "windows_native_dev_script"
+      error = $_.Exception.Message
+    }
+  }
 }
 
 function Is-NativeDevRunning {
@@ -777,6 +978,12 @@ function Launch-NativeDev {
     Remove-Item -Force $bootReadyFile -ErrorAction SilentlyContinue
   }
 
+  # Deep clean the WebView2 UDF before every launch. Stale profile data (IndexedDB,
+  # cached renderer state) from a previous session causes the Browser Process to exit
+  # silently within ~1-2 seconds on the first startup attempt. Retry succeeds because
+  # it deep cleans, so we move the clean here to avoid the first-attempt failure.
+  Reset-WebView2UserData -AppId $appId -DeepClean
+
   if (-not (Ensure-WebView2UserDataFolderWritable -UserDataFolder $webViewUserDataFolder)) {
     $script:LastBootFailureReason = "WEBVIEW2_UDF_NOT_WRITABLE"
     return ""
@@ -851,10 +1058,20 @@ function Wait-ForFrontendReady {
         $webviewSeen = $true
         $webviewFirstSeenAttempt = $attempt
         Write-Log "[windows-native-dev] webview2 process detected during boot: count=$webviewCount attempt=$attempt"
+        # Capture cmdlines of WebView2 browser processes to diagnose UDF path issues.
+        $wv2Procs = @(Get-WebView2ProcessesForAppId -AppId $appId)
+        $wv2CmdList = @()
+        foreach ($wv2p in ($wv2Procs | Select-Object -First 3)) {
+          $cmdTrunc = if ($wv2p.CommandLine -and $wv2p.CommandLine.Length -gt 500) {
+            $wv2p.CommandLine.Substring(0, 500)
+          } else { "$($wv2p.CommandLine)" }
+          $wv2CmdList += "pid=$($wv2p.ProcessId) cmd=$cmdTrunc"
+        }
         Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_process_detected" -Payload @{
           source = "windows_native_dev_script"
           count = $webviewCount
           attempt = $attempt
+          process_samples = $wv2CmdList
         }
       }
       $webviewLastSeenAttempt = $attempt
@@ -939,10 +1156,12 @@ function Wait-ForFrontendReady {
   try {
     $state = Get-Content -Path $stateFile -Raw -ErrorAction Stop | ConvertFrom-Json
     if ($state.tauri_log -and (Test-Path $state.tauri_log)) {
+      Write-TauriLogFailureSignals -WorkDir $WorkDir -BootSession $BootSession -TauriLogPath $state.tauri_log
       Write-Log "[windows-native-dev] tauri dev log (last 30 lines): $($state.tauri_log)"
       Get-Content -Path $state.tauri_log -Tail 30 | ForEach-Object { Write-Log "  $_" }
     }
   } catch {}
+  Write-WindowsFailureSignals -WorkDir $WorkDir -BootSession $BootSession
   return $false
 }
 
@@ -964,8 +1183,10 @@ function Wait-FrontendReadyWithSingleRetry {
     $script:LastBootFailureReason -eq "WEBVIEW2_LOST_BEFORE_APP_READY") {
     Reset-WebView2UserData -AppId $appId -DeepClean
   }
-  # Brief pause to let TCP port 4600 drain before re-launch avoids "port already in use"
-  Start-Sleep -Milliseconds 2000
+  # Wait for WebView2 processes and port 4600 to fully drain before re-launch.
+  # Stop-NativeDevSession already calls Wait-WebView2ProcessesGone, so this is
+  # just an extra buffer for TCP TIME_WAIT and file handle release.
+  Start-Sleep -Milliseconds 3000
   $retryBootSession = Launch-NativeDev -WorkDir $WorkDir
   Ensure-AppWindowForeground -WorkDir $WorkDir
   if ((Wait-ForDevUrlReady -TimeoutSeconds $TimeoutSeconds) -and
@@ -1047,19 +1268,22 @@ if ($Action -eq "stop") {
   exit 0
 }
 
+# For restart: stop BEFORE sync. If we sync first, tauri dev's cargo watcher detects
+# source file changes and triggers a hot-reload that kills the exe while WebView2 is
+# still initialising (2-4 s), causing its IPC pipe to break and WebView2 to exit silently.
+if ($Action -eq "restart") {
+  Write-Log "[windows-native-dev] step: stop existing native dev session before sync"
+  Stop-NativeDevSession -WorkDir $WindowsWorkDir
+  # Wait for port 4600 to drain and all WebView2/Tauri processes to fully release file handles.
+  Start-Sleep -Milliseconds 3000
+}
+
 Invoke-Robocopy -SourcePath $sourcePath -TargetPath $WindowsWorkDir
 
 $packageJsonPath = Join-Path $WindowsWorkDir "package.json"
 if (-not (Test-Path $packageJsonPath)) {
   Write-Log "[windows-native-dev] package.json not found after sync: $packageJsonPath"
   exit 1
-}
-
-if ($Action -eq "restart") {
-  Write-Log "[windows-native-dev] step: stop existing native dev session before dependency install"
-  Stop-NativeDevSession -WorkDir $WindowsWorkDir
-  # Brief pause to let TCP port 4600 drain before re-launch avoids "port already in use"
-  Start-Sleep -Milliseconds 2000
 }
 
 Ensure-NpmDependencies -WorkDir $WindowsWorkDir

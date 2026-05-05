@@ -27,7 +27,7 @@
 2. 定义验收：按 `.lab/agent/task-template.md` 写清 Given/When/Then。
 3. 实施：仅改任务相关文件，遵守当前任务边界。
 4. 验证：先跑最小可执行验证，再补可补的自动化测试。
-5. 记录：更新 `.lab/agent/iteration-log.md`（结果/风险/下一步）。
+5. 记录：每次迭代新增或更新单独记录文件 `.lab/agent/iteration-log/entries/YYYYMMDD-HHMM-<slug>.md`，并同步更新索引 `.lab/agent/iteration-log.md`（结果/风险/下一步）。
 
 ## 异常与决策升级规则（强制）
 1. 当 Agent 声称“问题已解决”，但人工验收发现问题仍存在时，禁止继续按主观猜测反复改动；必须先查阅对应官方文档与最佳实践，再进入下一轮修复。
@@ -96,13 +96,20 @@
 
 ## 文档与沟通
 1. 对内沟通与任务汇报使用中文，必要术语保留英文。
-2. 重要边界决策与异常处理结论写入 `.lab/specs/` 或 `.lab/agent/iteration-log.md`。
+2. 重要边界决策与异常处理结论写入 `.lab/specs/` 或 `.lab/agent/iteration-log/entries/*.md`（并在索引中可检索）。
 3. 任务完成汇报至少包含：功能摘要、验收步骤、风险提示。
 4. 文档默认视为参考而非绝对真相；若文档与当前代码/用户最新决策冲突，以用户最新决策和可运行代码现状为准。
 5. 提交相关请求（如“提交”“commit”“执行提交指令”）一律触发 `commit-note` skill；推荐口令为“执行提交指令”。
 6. UI 设计规范采用“双层文档”：
 - 快速入口：`.lab/specs/ui.md`（仅保留 checklist 与链接，不重复细则）
 - 详细真相：`.lab/specs/18-ui-design-system-execution-v1.md`（唯一可定义 UI 规则的文件）
+
+## 迭代日志规则（强制）
+1. 迭代日志采用“每次迭代一个文件”，禁止继续把完整记录堆积到单一大文件。
+2. 文件路径固定为 `.lab/agent/iteration-log/entries/YYYYMMDD-HHMM-<slug>.md`。
+3. `.lab/agent/iteration-log.md` 仅作为索引入口，内容保持精简（最近摘要 + 文件清单）。
+4. 每次新增迭代文件后，必须同步更新索引；未更新索引视为记录不完整。
+5. 历史大文件仅允许放在 `.lab/agent/iteration-log/archive/`，不得继续追加写入。
 
 ## 文档最小化治理（强制）
 1. 默认入口仅 `AGENTS.md`；其他文档按需读取，不做会话启动必读。
@@ -131,4 +138,4 @@
 3. 触发交接流程后，必须核对最近提交记录（至少 `git log --oneline -n 20`），确认交接中的 `Next Actions` 是否已被后续提交覆盖。
 4. 在任何代码改动前，必须先向用户发送“准备实施清单”（本轮拟做 1 个最小任务 + 验收标准 + 不做项），等待用户确认对齐。
 5. 若用户未确认或提出修正，先更新清单再实施；禁止按旧理解直接开工。
-6. 仅在用户确认后进入实施与验证；实施后按 SOP 更新 `.lab/agent/iteration-log.md`。
+6. 仅在用户确认后进入实施与验证；实施后按 SOP 更新迭代记录文件与索引（`.lab/agent/iteration-log/entries/*.md` + `.lab/agent/iteration-log.md`）。

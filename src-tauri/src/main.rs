@@ -1,10 +1,43 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde_json::json;
+use std::env;
 use tauri::webview::PageLoadEvent;
 use tauri::WindowEvent;
 
+fn install_boot_panic_hook() {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let location = panic_info
+            .location()
+            .map(|loc| format!("{}:{}", loc.file(), loc.line()))
+            .unwrap_or_else(|| "unknown".to_string());
+        let message = if let Some(value) = panic_info.payload().downcast_ref::<&str>() {
+            (*value).to_string()
+        } else if let Some(value) = panic_info.payload().downcast_ref::<String>() {
+            value.clone()
+        } else {
+            "non-string panic payload".to_string()
+        };
+
+        let payload = json!({
+          "source": "panic_hook",
+          "location": location,
+          "message": message
+        });
+        let _ = foliole_tauri_core::boot::record_boot_stage("tauri_panic", Some(payload));
+    }));
+}
+
 fn main() {
+    install_boot_panic_hook();
+    let startup_payload = json!({
+      "source": "tauri_main",
+      "boot_session": env::var("FOLIOLE_BOOT_SESSION").ok(),
+      "workdir": env::var("FOLIOLE_WORKDIR").ok(),
+      "webview2_user_data_folder": env::var("WEBVIEW2_USER_DATA_FOLDER").ok()
+    });
+    let _ = foliole_tauri_core::boot::record_boot_stage("tauri_main_start", Some(startup_payload));
+
     let builder = tauri::Builder::default()
         .setup(|app| {
             let payload = json!({
