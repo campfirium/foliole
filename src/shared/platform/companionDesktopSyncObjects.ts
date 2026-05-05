@@ -262,16 +262,6 @@ async function runCompanionObjectsSync(
   let syncedAttachmentIds: string[] = [];
   let syncedContentBlobHashes: string[] = [];
   try {
-    const attachments = await withSyncStepTimeout(
-      'fetching attachment resources',
-      pullMissingAttachmentResources(endpointUrl, options.onProgress),
-      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
-    );
-    syncedAttachmentIds = attachments.syncedAttachmentIds;
-  } catch (error) {
-    attachmentResourceError = errorMessage(error);
-  }
-  try {
     const blobs = await withSyncStepTimeout(
       'fetching topic bodies',
       pullMissingContentBlobs(endpointUrl, options.onProgress),
@@ -280,6 +270,16 @@ async function runCompanionObjectsSync(
     syncedContentBlobHashes = blobs.syncedContentBlobHashes;
   } catch (error) {
     contentBlobError = errorMessage(error);
+  }
+  try {
+    const attachments = await withSyncStepTimeout(
+      'fetching attachment resources',
+      pullMissingAttachmentResources(endpointUrl, options.onProgress),
+      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
+    );
+    syncedAttachmentIds = attachments.syncedAttachmentIds;
+  } catch (error) {
+    attachmentResourceError = errorMessage(error);
   }
   const finalSummary = await loadFinalLocalSyncSummary();
   return {

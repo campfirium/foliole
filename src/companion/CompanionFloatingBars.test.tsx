@@ -19,7 +19,7 @@ describe('CompanionBottomTabBar', () => {
     );
 
     expect(screen.getByLabelText('Sync progress')).toBeInTheDocument();
-    expect(screen.getByText('Topic body cache')).toBeInTheDocument();
+    expect(screen.getByText('Topic bodies')).toBeInTheDocument();
     expect(screen.getByText('128/616 - 1.0 MB/2.0 MB')).toBeInTheDocument();
   });
 

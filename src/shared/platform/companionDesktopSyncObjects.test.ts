@@ -144,6 +144,23 @@ async function testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails() {
   expect(result.syncedAttachmentIds).toEqual([]);
 }
 
+async function testPullsTopicBodiesBeforeAttachmentResources() {
+  const bodyHash = 'e'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
+    .mockResolvedValueOnce([]);
+  syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
+  ]);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0])
+    .toBeLessThan(syncBridgeMock.loadCompanionMissingAttachmentResources.mock.invocationCallOrder[0]);
+}
+
 async function testRefreshesStructureBeforeContentBatchCompletes() {
   const hashes = Array.from({ length: 32 }, (_, index) => `${String(index % 10)}`.repeat(64));
   syncBridgeMock.loadCompanionMissingContentBlobs
@@ -324,6 +341,8 @@ describe('companion desktop sync objects', () => {
   it('continues attachment resource caching across bounded batches', testContinuesAttachmentCachingAcrossBoundedBatches);
 
   it('keeps structure sync successful when attachment resource caching fails', testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails);
+
+  it('pulls topic bodies before attachment resources', testPullsTopicBodiesBeforeAttachmentResources);
 
   it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatchCompletes);
 

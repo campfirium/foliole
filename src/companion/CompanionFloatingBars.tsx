@@ -20,7 +20,7 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (progress.phase === 'attachment') {
     return 'Attachment files';
   }
-  return 'Topic body cache';
+  return 'Topic bodies';
 }
 
 function formatBytes(bytes: number) {
