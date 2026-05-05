@@ -107,6 +107,20 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(source).not.toContain('objectTypeFilter');
     expect(source).not.toContain('private static void appendPayloads');
     expect(queryDefinitions.queries.syncObjects.sql).toContain('? = 0 OR object_type IN (:objectTypes)');
+    expect(queryDefinitions.syncPayloadRouting.routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          objectIdKey: 'active_node',
+          objectType: 'view_state',
+          queryName: 'syncPayloadViewActiveNode'
+        }),
+        expect.objectContaining({
+          objectIdPrefix: 'node:',
+          objectType: 'view_state',
+          queryName: 'syncPayloadViewNodeState'
+        })
+      ])
+    );
     expect(syncPayloadQueryStore).toContain('static JSObject loadRowsWithPayloads');
     expect(syncPayloadQueryStore).toContain('loadPayload(context, database');
     expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
@@ -114,7 +128,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
       objectType: 'attachment'
     });
     expect(syncPayloadQueryStore).toContain('private static String loadPayload');
-    expect(syncPayloadQueryStore).toContain('private static String queryName');
+    expect(syncPayloadQueryStore).toContain('private static JSONObject syncPayloadRoute');
     expect(syncPayloadQueryStore).toContain('private static String[] queryArgs');
     await expect(readFile(
       path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', 'FolioleCompanionSyncObjectPayloadReader.java'),

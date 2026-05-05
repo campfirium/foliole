@@ -21,7 +21,7 @@ final class FolioleCompanionViewStateSyncStore {
         payload.put(activeNodePayloadKey(context), nodeId == null ? JSONObject.NULL : nodeId);
         String now = Instant.now().toString();
         String key = activeNodeKey(context);
-        String objectId = objectId(context, deviceId, key);
+        String objectId = FolioleCompanionSyncPayloadQueryStore.viewObjectId(context, deviceId, key);
         String contentHash = contentHash(context, deviceId, key, payload);
         database.beginTransaction();
         try {
@@ -47,7 +47,7 @@ final class FolioleCompanionViewStateSyncStore {
         payload.put(sourcePayloadKey(context), source);
         String now = Instant.now().toString();
         String key = nodeKeyPrefix(context) + nodeId;
-        String objectId = objectId(context, deviceId, key);
+        String objectId = FolioleCompanionSyncPayloadQueryStore.viewObjectId(context, deviceId, key);
         String contentHash = contentHash(context, deviceId, key, payload);
         database.beginTransaction();
         try {
@@ -61,26 +61,38 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     static void applyPayload(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
-        String key = objectIdKey(objectId);
-        String deviceId = objectIdDeviceId(objectId);
+        String key = FolioleCompanionSyncPayloadQueryStore.viewObjectIdKey(context, objectId);
+        String deviceId = FolioleCompanionSyncPayloadQueryStore.viewObjectIdDeviceId(context, objectId);
         String activeKey = activeNodeKey(context);
-        String nodePrefix = nodeKeyPrefix(context);
         if (!record.isNull("deleted_at")) {
             if (key.equals(activeKey)) {
                 FolioleCompanionNamedMutationStore.execute(context, database, "syncViewActiveNodeDelete", new Object[] {});
             }
-            if (key.startsWith(nodePrefix)) {
-                FolioleCompanionNamedMutationStore.execute(context, database, "syncViewNodeStateDelete", new Object[] { key.substring(nodePrefix.length()), deviceId });
+            if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key)) {
+                FolioleCompanionNamedMutationStore.execute(
+                    context,
+                    database,
+                    "syncViewNodeStateDelete",
+                    new Object[] { FolioleCompanionSyncPayloadQueryStore.viewNodeIdFromKey(context, key), deviceId }
+                );
             }
             return;
         }
         JSONObject payload = payload(record);
         if (key.equals(activeKey)) {
             upsertActiveNode(context, database, nullIfEmpty(payload.optString(activeNodePayloadKey(context), "")), record.optString("updated_at"));
-        } else if (key.startsWith(nodePrefix)) {
+        } else if (FolioleCompanionSyncPayloadQueryStore.isViewNodeKey(context, key)) {
             String sourceKey = sourcePayloadKey(context);
             String source = payload.has(sourceKey) ? syncAppliedSource(context) : localSource(context);
-            upsertNodeViewState(context, database, key.substring(nodePrefix.length()), deviceId, payload.optInt(scrollTopPayloadKey(context), 0), source, record.optString("updated_at"));
+            upsertNodeViewState(
+                context,
+                database,
+                FolioleCompanionSyncPayloadQueryStore.viewNodeIdFromKey(context, key),
+                deviceId,
+                payload.optInt(scrollTopPayloadKey(context), 0),
+                source,
+                record.optString("updated_at")
+            );
         }
     }
 
@@ -106,10 +118,6 @@ final class FolioleCompanionViewStateSyncStore {
             source,
             now
         });
-    }
-
-    private static String objectId(Context context, String deviceId, String key) throws Exception {
-        return scope(context) + ":" + platform(context) + ":" + formFactor(context) + ":" + deviceId + ":" + key;
     }
 
     private static String activeNodeKey(Context context) throws Exception {
@@ -166,16 +174,6 @@ final class FolioleCompanionViewStateSyncStore {
 
     private static String syncAppliedSource(Context context) throws Exception {
         return FolioleCompanionSyncPayloadQueryStore.viewSyncAppliedSource(context);
-    }
-
-    private static String objectIdKey(String objectId) {
-        String[] parts = objectId.split(":", 5);
-        return parts.length == 5 ? parts[4] : objectId;
-    }
-
-    private static String objectIdDeviceId(String objectId) {
-        String[] parts = objectId.split(":", 5);
-        return parts.length == 5 ? parts[3] : "*";
     }
 
     private static JSONObject payload(JSONObject record) throws Exception {

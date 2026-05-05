@@ -12,6 +12,7 @@ import {
   ANDROID_COMPANION_MUTATION_DEFINITIONS
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
+import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/androidCompanionPayloadQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
@@ -45,10 +46,32 @@ await fs.writeFile(
   }, null, 2)}\n`,
   'utf8'
 );
-await fs.writeFile(queryOutputPath, `${JSON.stringify({ queries: ANDROID_COMPANION_QUERY_DEFINITIONS }, null, 2)}\n`, 'utf8');
+await fs.writeFile(
+  queryOutputPath,
+  `${JSON.stringify({
+    queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
+    syncPayloadRouting: {
+      ...ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING,
+      routes: syncPayloadRoutes(ANDROID_COMPANION_QUERY_DEFINITIONS)
+    }
+  }, null, 2)}\n`,
+  'utf8'
+);
 await fs.writeFile(syncProtocolOutputPath, `${JSON.stringify(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS, null, 2)}\n`, 'utf8');
 console.info('[android-schema] wrote companion schema artifact', outputPath);
 console.info('[android-schema] wrote companion migration schema artifact', migrationOutputPath);
 console.info('[android-schema] wrote companion mutation definitions artifact', mutationOutputPath);
 console.info('[android-schema] wrote companion query definitions artifact', queryOutputPath);
 console.info('[android-schema] wrote companion sync protocol definitions artifact', syncProtocolOutputPath);
+
+function syncPayloadRoutes(queries) {
+  return Object.entries(queries)
+    .filter(([, query]) => query.syncPayload)
+    .map(([queryName, query]) => ({
+      argMode: query.syncPayload.argMode ?? 'object_id',
+      objectIdKey: query.syncPayload.objectIdKey,
+      objectIdPrefix: query.syncPayload.objectIdPrefix,
+      objectType: query.syncPayload.objectType,
+      queryName
+    }));
+}

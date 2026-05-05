@@ -1590,5 +1590,66 @@
         }
       ]
     }
+  },
+  "syncPayloadRouting": {
+    "defaultDeviceId": "*",
+    "objectIdDelimiter": ":",
+    "objectIdDeviceIdPartIndex": 3,
+    "objectIdKeyPartIndex": 4,
+    "objectIdPartLimit": 5,
+    "routes": [
+      {
+        "argMode": "object_id",
+        "objectType": "attachment",
+        "queryName": "syncPayloadAttachment"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "external_document",
+        "queryName": "syncPayloadExternalDocument"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "external_folder",
+        "queryName": "syncPayloadExternalFolder"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "import_source",
+        "queryName": "syncPayloadImportSource"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "node_reading",
+        "queryName": "syncPayloadNodeReading"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "node_review",
+        "queryName": "syncPayloadNodeReview"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "pdf_page_text",
+        "queryName": "syncPayloadPdfPageText"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "setting",
+        "queryName": "syncPayloadSetting"
+      },
+      {
+        "argMode": "none",
+        "objectIdKey": "active_node",
+        "objectType": "view_state",
+        "queryName": "syncPayloadViewActiveNode"
+      },
+      {
+        "argMode": "view_state_node",
+        "objectIdPrefix": "node:",
+        "objectType": "view_state",
+        "queryName": "syncPayloadViewNodeState"
+      }
+    ]
   }
 }
