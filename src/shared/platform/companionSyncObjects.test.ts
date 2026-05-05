@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 function createApplyPluginMocks() {
   return {
     applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
-    applyDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 3, applied_object_count: 4, to_state_seq: 11 })),
-    applySyncPack: vi.fn(async () => ({ applied_blob_count: 1, applied_object_count: 2, to_state_seq: 9 })),
     applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
     saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] }))
   };
@@ -15,7 +13,6 @@ function createReadPluginMocks() {
       conflicts: [{ conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }]
     })),
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
-    loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
     loadMissingContentBlobHashes: vi.fn(async () => ({
       blobs: [{ hash: 'a'.repeat(64), size_bytes: 1024 }],
       hashes: ['a'.repeat(64)]
@@ -23,14 +20,7 @@ function createReadPluginMocks() {
     loadMissingAttachmentResources: vi.fn(async () => ({
       resources: [{ attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }]
     })),
-    loadSyncStateCursor: vi.fn(async () => ({ cursor: 2 })),
-    loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
-    loadSyncStatePushCursor: vi.fn(async () => ({ cursor: null })),
-    loadSyncNodeVersionCursor: vi.fn(async () => ({ cursor: null })),
-    loadSyncNodeVersionPushCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersions: vi.fn(async () => ({ nodes: [{ object_id: 'node-1' }] })),
-    loadSyncReviewLogCursor: vi.fn(async () => ({ cursor: null })),
-    loadSyncReviewLogPushCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] }))
   };
 }
@@ -57,13 +47,6 @@ function createWritePluginMocks() {
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
     saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
-    saveSyncStateCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncPackCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncStatePushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncNodeVersionCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
     syncContentBlob: vi.fn(async ({ hash }) => ({ availability: 'cached', hash })),
     syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' }))
@@ -81,7 +64,6 @@ const capacitorMock = vi.hoisted(() => ({
   }
 }));
 
-
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: capacitorMock.platform,
@@ -89,20 +71,6 @@ vi.mock('@capacitor/core', () => ({
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
-
-function expectNativePluginCalls(cursor: { change_id: string; created_at: string }) {
-  expect(capacitorMock.plugin.loadSyncObjects).toHaveBeenCalledWith({
-    object_ids: ['one'],
-    object_types: ['setting']
-  });
-  expect(capacitorMock.plugin.saveSyncStateCursor).toHaveBeenCalledWith({ cursor: 3 });
-  expect(capacitorMock.plugin.saveSyncPackCursor).toHaveBeenCalledWith({ cursor: 5 });
-  expect(capacitorMock.plugin.saveSyncStatePushCursor).toHaveBeenCalledWith({ cursor: 3 });
-  expect(capacitorMock.plugin.saveSyncNodeVersionCursor).toHaveBeenCalledWith({ cursor });
-  expect(capacitorMock.plugin.saveSyncNodeVersionPushCursor).toHaveBeenCalledWith({ cursor });
-  expect(capacitorMock.plugin.saveSyncReviewLogCursor).toHaveBeenCalledWith({ cursor });
-  expect(capacitorMock.plugin.saveSyncReviewLogPushCursor).toHaveBeenCalledWith({ cursor });
-}
 
 function createReadingProfile() {
   return {
@@ -131,25 +99,6 @@ function createReviewProfile() {
   };
 }
 
-async function expectNativeCursorBridge(api: typeof import('./companionSyncObjects')) {
-  const cursor = { change_id: 'change-2', created_at: '2026-04-25T00:01:00.000Z' };
-  await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
-  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(4);
-  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
-  await expect(api.saveCompanionSyncStateCursor(3)).resolves.toBe(3);
-  await expect(api.saveCompanionSyncPackCursor(5)).resolves.toBe(5);
-  await expect(api.saveCompanionSyncStatePushCursor(3)).resolves.toBe(3);
-  await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.saveCompanionSyncReviewLogCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
-  expectNativePluginCalls(cursor);
-}
-
 async function testNativePluginBridge() {
   const api = await import('./companionSyncObjects');
   await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
@@ -157,7 +106,6 @@ async function testNativePluginBridge() {
     { conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }
   ]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
-  await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
   await expect(api.loadCompanionMissingContentBlobs(3)).resolves.toEqual([{ hash: 'a'.repeat(64), size_bytes: 1024 }]);
   expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
@@ -175,19 +123,6 @@ async function testNativePluginBridge() {
     headers: { 'X-Device-Id': 'android' },
     url: 'http://desktop/companion/content-blob?hash=a'
   });
-  await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({
-    applied_blob_count: 1,
-    applied_object_count: 2,
-    to_state_seq: 9
-  });
-  await expect(api.applyCompanionDesktopSyncPack({
-    headers: { 'X-Device-Id': 'android' },
-    url: 'http://desktop/companion/sync-pack'
-  })).resolves.toEqual({
-    applied_blob_count: 3,
-    applied_object_count: 4,
-    to_state_seq: 11
-  });
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
@@ -204,8 +139,6 @@ async function testNativePluginBridge() {
     text: 'indexed pdf text'
   }]);
   expect(capacitorMock.plugin.searchPdfPageText).toHaveBeenCalledWith({ limit: 5, query: 'pdf' });
-  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
-  await expectNativeCursorBridge(api);
   await expectNativeSaveBridge(api);
 }
 
@@ -252,11 +185,6 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     payload_json: '{}',
     updated_at: '2026-04-25T00:00:00.000Z'
   }])).resolves.toEqual(['setting:one']);
-  expect(capacitorMock.plugin.applySyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/pack.db' });
-  expect(capacitorMock.plugin.applyDesktopSyncPack).toHaveBeenCalledWith({
-    headers: { 'X-Device-Id': 'android' },
-    url: 'http://desktop/companion/sync-pack'
-  });
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
 }
 
