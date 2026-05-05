@@ -1,11 +1,23 @@
-import { useState } from 'react';
-
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
+import type { LearningNode } from '../features/nodes/model/nodeTypes';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
 export function App() {
-  const [content, setContent] = useState<string>(
-    '# Welcome to Foliole\n\nStart writing markdown here.'
-  );
+  const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
+  const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
+  const nodesById = useWorkspaceStore((state) => state.nodesById);
+  const updateSourceContent = useWorkspaceStore((state) => state.updateSourceContent);
+
+  const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
+  const activeSourceNode = activeNode?.kind === 'source' ? activeNode : undefined;
+  const editorContent = activeSourceNode?.content ?? '';
+
+  const handleEditorChange = (content: string) => {
+    if (!activeSourceNode) {
+      return;
+    }
+    updateSourceContent(activeSourceNode.id, content);
+  };
 
   return (
     <main className="workspace" aria-label="Foliole workspace">
@@ -14,7 +26,13 @@ export function App() {
           <h2>Nodes</h2>
         </header>
         <div className="panel-body">
-          <p>Node list placeholder</p>
+          {nodeOrder.map((nodeId) => (
+            <NodeRow
+              key={nodeId}
+              isActive={activeNodeId === nodeId}
+              node={nodesById[nodeId]}
+            />
+          ))}
         </div>
       </aside>
 
@@ -24,7 +42,7 @@ export function App() {
             <h2>Editor</h2>
           </header>
           <div className="panel-body">
-            <MarkdownEditor value={content} onChange={setContent} />
+            <MarkdownEditor value={editorContent} onChange={handleEditorChange} />
           </div>
         </section>
 
@@ -39,4 +57,17 @@ export function App() {
       </section>
     </main>
   );
+}
+
+interface NodeRowProps {
+  isActive: boolean;
+  node: LearningNode | undefined;
+}
+
+function NodeRow({ isActive, node }: NodeRowProps) {
+  if (!node) {
+    return null;
+  }
+
+  return <p className={isActive ? 'node-row node-row-active' : 'node-row'}>{node.title}</p>;
 }

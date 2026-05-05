@@ -51,6 +51,15 @@ body {
   font-size: 0.95rem;
 }
 
+.node-row + .node-row {
+  margin-top: 0.5rem;
+}
+
+.node-row-active {
+  color: #0f172a;
+  font-weight: 600;
+}
+
 .panel-editor .panel-body {
   height: 100%;
   min-height: 0;
