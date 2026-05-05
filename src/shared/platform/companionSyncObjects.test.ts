@@ -5,6 +5,7 @@ const capacitorMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'android'),
   plugin: {
     applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
+    applySyncPack: vi.fn(async () => ({ applied_blob_count: 1, applied_object_count: 2 })),
     applySyncNodeVersions: vi.fn(async () => ({ applied_node_ids: ['node-1'] })),
     applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
     loadSyncIndex: vi.fn(async () => ({ entries: [{ object_id: 'one', object_type: 'setting' }] })),
@@ -135,6 +136,7 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
+  await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({ applied_blob_count: 1, applied_object_count: 2 });
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
@@ -194,6 +196,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     payload_json: '{}',
     updated_at: '2026-04-25T00:00:00.000Z'
   }])).resolves.toEqual(['setting:one']);
+  expect(capacitorMock.plugin.applySyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/pack.db' });
   await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual(['node-1']);
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
 }
@@ -222,6 +225,7 @@ async function testWebFallbackBridge() {
   })).resolves.toBeNull();
   await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42 })).resolves.toBeNull();
   await expect(api.applyCompanionSyncObjects([])).resolves.toEqual([]);
+  await expect(api.applyCompanionSyncPack('/tmp/pack.db')).resolves.toEqual({ applied_blob_count: 0, applied_object_count: 0 });
   await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual([]);
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
 }

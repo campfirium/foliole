@@ -64,6 +64,13 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
   return (await FolioleCompanionSync.applySyncObjects({ objects })).applied_object_ids;
 }
 
+export async function applyCompanionSyncPack(packPath: string) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return { applied_blob_count: 0, applied_object_count: 0 };
+  }
+  return FolioleCompanionSync.applySyncPack({ pack_path: packPath });
+}
+
 export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [];

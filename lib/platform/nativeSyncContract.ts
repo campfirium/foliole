@@ -40,6 +40,11 @@ export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
   state_seq: number;
 }
 
+export interface NativeSyncPackApplyResult {
+  applied_blob_count: number;
+  applied_object_count: number;
+}
+
 export interface NativeSyncChangeCursor {
   change_id: string;
   created_at: string;

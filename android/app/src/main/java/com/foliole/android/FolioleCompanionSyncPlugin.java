@@ -677,6 +677,23 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void applySyncPack(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            String packPath = call.getString("pack_path");
+            if (packPath == null || packPath.trim().isEmpty()) {
+                call.reject("pack_path is required.");
+                return;
+            }
+            call.resolve(databaseHelper.applySyncPack(packPath.trim()));
+        } catch (Exception exception) {
+            call.reject("Failed to apply companion sync pack.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+    @PluginMethod
     public void loadSyncNodeVersions(PluginCall call) {
         FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
         try {
