@@ -1,105 +1,53 @@
 /* global console */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const WINDOWS_MIRROR_ROOT = '/mnt/c/dev/foliole';
+import {
+  launchDesktopSession,
+  resolveDesktopAppRoot,
+  resolveDesktopLaunchTarget
+} from './playwright-desktop-harness.mjs';
+
 let cliFailureReported = false;
 
-function resolveTimeoutMs(rawValue) {
-  const parsed = Number.parseInt(rawValue ?? '', 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
-  }
-  return DEFAULT_TIMEOUT_MS;
-}
-
-export function resolveDefaultAppRoot(env = process.env, existsSync = fs.existsSync) {
-  const configuredRoot = env.FOLIOLE_ELECTRON_APP_ROOT?.trim();
-  if (configuredRoot) {
-    return path.resolve(configuredRoot);
-  }
-  if (existsSync(WINDOWS_MIRROR_ROOT)) {
-    return WINDOWS_MIRROR_ROOT;
-  }
-  return process.cwd();
-}
-
-export function resolveElectronSpikeTarget(appRoot, existsSync = fs.existsSync) {
-  const resolvedAppRoot = path.resolve(appRoot);
-  const mainEntry = path.join(resolvedAppRoot, 'electron-dist', 'electron', 'main.js');
-  const preloadPath = path.join(resolvedAppRoot, 'electron-dist', 'preload.cjs');
-  const rendererIndexPath = path.join(resolvedAppRoot, 'dist', 'index.html');
-  const requiredPaths = [mainEntry, preloadPath, rendererIndexPath];
-
-  return {
-    appRoot: resolvedAppRoot,
-    launchMode: 'args',
-    mainEntry,
-    preloadPath,
-    rendererIndexPath,
-    missingPaths: requiredPaths.filter((filePath) => !existsSync(filePath))
-  };
-}
-
-function createLaunchOptions(target, timeoutMs, env) {
-  const executablePath = env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim();
-
-  return {
-    args: [target.mainEntry],
-    cwd: target.appRoot,
-    timeout: timeoutMs,
-    executablePath: executablePath ? path.resolve(executablePath) : undefined
-  };
-}
-
-async function readMainProcessSnapshot(electronApp) {
-  return electronApp.evaluate(({ app }) => ({
-    appName: app.getName(),
-    appPath: app.getAppPath(),
-    isReady: app.isReady()
-  }));
-}
+export const resolveDefaultAppRoot = resolveDesktopAppRoot;
+export const resolveElectronSpikeTarget = resolveDesktopLaunchTarget;
 
 export async function runElectronLaunchSpike({
   appRoot = resolveDefaultAppRoot(),
   env = process.env,
-  existsSync = fs.existsSync,
+  existsSync,
   electronLauncher,
-  timeoutMs = resolveTimeoutMs(env.FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS)
+  timeoutMs
 }) {
-  const target = resolveElectronSpikeTarget(appRoot, existsSync);
-  if (target.missingPaths.length > 0) {
-    throw new Error(`missing build output: ${target.missingPaths.join(', ')}`);
-  }
-
-  const launchOptions = createLaunchOptions(target, timeoutMs, env);
-  const electronApp = await electronLauncher.launch(launchOptions);
+  const session = await launchDesktopSession({
+    appRoot,
+    electronLauncher,
+    env,
+    existsSync,
+    timeoutMs
+  });
 
   try {
-    const firstWindow = await electronApp.firstWindow({ timeout: timeoutMs });
-    const snapshot = await readMainProcessSnapshot(electronApp);
-
     return {
-      appName: snapshot.appName,
-      appPath: snapshot.appPath,
-      appReady: snapshot.isReady,
-      appRoot: target.appRoot,
-      executablePath: launchOptions.executablePath ?? null,
-      firstWindowTitle: await firstWindow.title(),
-      firstWindowUrl: firstWindow.url(),
-      launchMode: target.launchMode,
-      mainEntry: target.mainEntry,
-      preloadPath: target.preloadPath,
-      processPid: electronApp.process()?.pid ?? null,
-      rendererIndexPath: target.rendererIndexPath,
-      timeoutMs
+      appName: session.snapshot.appName,
+      appPath: session.snapshot.appPath,
+      appReady: session.snapshot.isReady,
+      appRoot: session.target.appRoot,
+      executablePath: session.launchOptions.executablePath ?? null,
+      firstWindowTitle: await session.firstWindow.title(),
+      firstWindowUrl: session.firstWindow.url(),
+      launchMode: session.target.launchMode,
+      mainEntry: session.target.mainEntry,
+      preloadPath: session.target.preloadPath,
+      processPid: session.electronApp.process()?.pid ?? null,
+      rendererIndexPath: session.target.rendererIndexPath,
+      timeoutMs: session.timeoutMs
     };
   } finally {
-    await electronApp.close();
+    await session.close();
   }
 }
 
