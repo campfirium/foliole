@@ -118,14 +118,18 @@ export function countDueReviewNodes(
 
 export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
   const sessionActions = {
-    onStartStudyMode: () => args.startReviewSession() && args.startStudyMode(),
+    onStartStudyMode: () => {
+      args.startReviewSession();
+      args.startStudyMode();
+    },
     onToggleReviewSession: () => {
       if (args.isStudyMode) {
         args.exitReviewSession();
         args.exitStudyMode();
         return;
       }
-      if (args.startReviewSession()) args.startStudyMode();
+      args.startReviewSession();
+      args.startStudyMode();
     }
   };
   const appearanceActions = {

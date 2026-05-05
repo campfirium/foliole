@@ -72,6 +72,21 @@ it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
   expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
 });
 
+it('enters review mode and shows complete state when no due cards exist', async () => {
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Review complete' }));
+  await waitFor(() => {
+    expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
+  });
+});
+
 it('syncs node list selection when review grading advances active node', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
