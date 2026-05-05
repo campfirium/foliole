@@ -13,7 +13,10 @@ it('injects a packaged main window content security policy', () => {
   expect(headers['X-Test']).toEqual(['ok']);
   expect(headers['Content-Security-Policy']?.[0]).toContain("default-src 'self'");
   expect(headers['Content-Security-Policy']?.[0]).toContain("object-src 'none'");
-  expect(headers['Content-Security-Policy']?.[0]).toContain('attachment:');
+  expect(headers['Content-Security-Policy']?.[0]).toContain('img-src');
+  expect(headers['Content-Security-Policy']?.[0]).toContain('connect-src');
+  expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-asset:');
+  expect(headers['Content-Security-Policy']?.[0]).not.toContain('attachment:');
   expect(headers['Content-Security-Policy']?.[0]).not.toContain("'unsafe-eval'");
 });
 
@@ -25,6 +28,8 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain("'unsafe-inline'");
   expect(policy).toContain('http://127.0.0.1:*');
   expect(policy).toContain('ws://localhost:*');
+  expect(policy).toContain('connect-src');
+  expect(policy).toContain('foliole-asset:');
 });
 
 it('installs the header hook once and only handles main frame responses', () => {

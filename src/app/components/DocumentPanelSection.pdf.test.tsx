@@ -128,6 +128,7 @@ beforeEach(() => {
     value: null
   } as never);
 });
+
 it('keeps the existing document body for non-pdf nodes', () => {
   useNodeSourceDetails.mockReturnValue({
     isLoading: false,
@@ -178,6 +179,21 @@ it('renders the pdf reading container for linked pdf nodes', () => {
 
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
   expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
+});
+
+it('passes app protocol pdf attachments through to the document loader', () => {
+  useNodeSourceDetails.mockReturnValue(
+    createPdfSourceDetails({
+      importSource: {
+        ...defaultImportSource,
+        sourceLocator: 'foliole-asset://attachment/hash-1'
+      }
+    }) as never
+  );
+
+  renderSection();
+
+  expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'foliole-asset://attachment/hash-1');
 });
 
 it('renders the pdf toolbar and nearby pages after the document connects', async () => {

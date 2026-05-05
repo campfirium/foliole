@@ -8,12 +8,12 @@ const MAIN_WINDOW_CSP = [
   "frame-ancestors 'none'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: file: attachment:",
+  "img-src 'self' data: blob: file: foliole-asset:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' foliole-asset:",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
-  "media-src 'self' data: blob: file: attachment:"
+  "media-src 'self' data: blob: file: foliole-asset:"
 ].join('; ');
 const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
   .replace(
@@ -21,8 +21,8 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:* http://127.0.0.1:*"
   )
   .replace(
-    "connect-src 'self'",
-    "connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
+    "connect-src 'self' foliole-asset:",
+    "connect-src 'self' foliole-asset: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
   );
 
 const installedSessions = new WeakSet<Session>();
