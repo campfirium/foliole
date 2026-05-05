@@ -229,6 +229,8 @@ function buildPdfSurfaceLayoutProps(
     clearPageJumpRequest: pdfSystem.actions.clearPageJumpRequest,
     handleContextMenu: selectionState.handleContextMenu,
     handleSearchRequest: searchState.handleSearchRequest,
+    handleSearchRequestHandled: searchState.handleSearchRequestHandled,
+    handleSearchTargetHandled: searchState.handleSearchTargetHandled,
     highlightLocators,
     loadError: pdfSystem.state.loadError,
     maxPage: pdfSystem.state.maxPage,

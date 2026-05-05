@@ -166,6 +166,7 @@ function PdfSearchLinkedEntryHarness() {
   );
 }
 
+
 function PdfSearchDualHighlightHarness() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});

@@ -29,6 +29,8 @@ interface PdfDocumentViewportProps {
   onRotateClockwise: () => void;
   onSearchQueryChange: (value: string) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
+  onSearchRequestHandled: (requestId: number) => void;
+  onSearchTargetHandled: (targetId: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
@@ -77,6 +79,7 @@ function renderPdfViewportContent(args: {
       onRotateClockwise={args.onRotateClockwise}
       onSearchQueryChange={args.onSearchQueryChange}
       onSearchRequest={args.onSearchRequest}
+      onSearchRequestHandled={args.onSearchRequestHandled}
       onZoomIn={args.onZoomIn}
       onZoomOut={args.onZoomOut}
       page={args.page}
@@ -95,6 +98,7 @@ function renderPdfViewportContent(args: {
       searchStatus={args.searchStatus}
       totalPages={args.totalPages}
       onTextLayerRender={args.handleTextLayerRender}
+      onSearchTargetHandled={args.onSearchTargetHandled}
       zoom={args.zoom}
     />
   );

@@ -4,8 +4,8 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
-import { usePdfSearchEffect } from './PdfDocumentSearch';
 import { PdfDocumentViewportContentBody } from './PdfDocumentViewportContentBody';
+import { usePdfDocumentViewportSearchRuntime } from './PdfDocumentViewportSearchRuntime';
 import type { PdfPageTextEntry } from './pdfPageText';
 
 const PDF_PAGE_MIN = 1;
@@ -141,7 +141,9 @@ interface PdfDocumentViewportContentProps {
   onPreviousPage: () => void;
   onRotateClockwise: () => void;
   onSearchQueryChange: (value: string) => void;
+  onSearchRequestHandled: (requestId: number) => void;
   onSearchRequest: (direction: 'next' | 'previous') => void;
+  onSearchTargetHandled: (targetId: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
@@ -162,54 +164,24 @@ interface PdfDocumentViewportContentProps {
   zoom: number;
 }
 
-function usePdfSearchRuntime({
-  onSearchHighlightsChange,
-  onSearchDebugChange,
-  onSearchStatusChange,
-  pageElementsRef,
-  pageTextByNumberRef,
-  scrollContainerRef,
-  searchQuery,
-  searchRevision,
-  searchRequest,
-  searchTarget,
-  totalPages
-}: Pick<
-  PdfDocumentViewportContentProps,
-  | 'onSearchHighlightsChange'
-  | 'onSearchDebugChange'
-  | 'onSearchStatusChange'
-  | 'pageElementsRef'
-  | 'pageTextByNumberRef'
-  | 'scrollContainerRef'
-  | 'searchQuery'
-  | 'searchRequest'
-  | 'searchRevision'
-  | 'searchTarget'
-  | 'totalPages'
->) {
-  usePdfSearchEffect({
-    onSearchDebugChange,
-    onSearchHighlightsChange,
-    onSearchStatusChange,
-    pageElementsRef,
-    pageTextByNumberRef,
-    scrollContainerRef,
-    searchQuery,
-    searchRequest,
-    searchRevision,
-    searchTarget,
-    totalPages
-  });
-}
-
 export function PdfDocumentViewportContent(props: PdfDocumentViewportContentProps) {
-  usePdfSearchRuntime(resolvePdfSearchRuntimeArgs(props));
+  usePdfDocumentViewportSearchRuntime(resolvePdfSearchRuntimeArgs(props));
   return renderPdfViewportContentBody(resolveViewportContentBodyProps(props));
 }
 
 function renderPdfViewportContentBody(
-  props: Omit<PdfDocumentViewportContentProps, 'onSearchDebugChange' | 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'>
+  props: Omit<
+    PdfDocumentViewportContentProps,
+    | 'onSearchDebugChange'
+    | 'onSearchHighlightsChange'
+    | 'onSearchRequestHandled'
+    | 'onSearchStatusChange'
+    | 'onSearchTargetHandled'
+    | 'pageTextByNumberRef'
+    | 'searchRequest'
+    | 'searchRevision'
+    | 'searchTarget'
+  >
 ) {
   return <PdfDocumentViewportContentBody {...props} />;
 }
@@ -218,7 +190,9 @@ function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
   return {
     onSearchHighlightsChange: props.onSearchHighlightsChange,
     onSearchDebugChange: props.onSearchDebugChange,
+    onSearchRequestHandled: props.onSearchRequestHandled,
     onSearchStatusChange: props.onSearchStatusChange,
+    onSearchTargetHandled: props.onSearchTargetHandled,
     pageElementsRef: props.pageElementsRef,
     pageTextByNumberRef: props.pageTextByNumberRef,
     scrollContainerRef: props.scrollContainerRef,
@@ -232,7 +206,18 @@ function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
 
 function resolveViewportContentBodyProps(
   props: PdfDocumentViewportContentProps
-): Omit<PdfDocumentViewportContentProps, 'onSearchDebugChange' | 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'> {
+): Omit<
+  PdfDocumentViewportContentProps,
+  | 'onSearchDebugChange'
+  | 'onSearchHighlightsChange'
+  | 'onSearchRequestHandled'
+  | 'onSearchStatusChange'
+  | 'onSearchTargetHandled'
+  | 'pageTextByNumberRef'
+  | 'searchRequest'
+  | 'searchRevision'
+  | 'searchTarget'
+> {
   return {
     handleContextMenu: props.handleContextMenu,
     handleScroll: props.handleScroll,

@@ -9,6 +9,8 @@ interface PdfDocumentSurfaceLayoutProps {
   clearPageJumpRequest: (requestId: number) => void;
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleSearchRequest: (direction: 'next' | 'previous') => void;
+  handleSearchRequestHandled: (requestId: number) => void;
+  handleSearchTargetHandled: (targetId: number) => void;
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   loadError: string | null;
   maxPage: number;
@@ -55,7 +57,9 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       searchIndexingHint={props.searchIndexingHint}
       onSearchQueryChange={(value) => props.setSearchQuery(value)}
       onSearchRequest={props.handleSearchRequest}
+      onSearchRequestHandled={props.handleSearchRequestHandled}
       onSearchStatusChange={props.setSearchStatus}
+      onSearchTargetHandled={props.handleSearchTargetHandled}
       onZoomIn={props.zoomIn}
       onZoomOut={props.zoomOut}
       page={props.page}

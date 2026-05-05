@@ -32,10 +32,20 @@ export function usePdfSearchControls() {
     searchTargetIdRef.current += 1;
   };
 
+  const handleSearchRequestHandled = (requestId: number) => {
+    setSearchRequest((current) => (current?.id === requestId ? null : current));
+  };
+
+  const handleSearchTargetHandled = (targetId: number) => {
+    setSearchTarget((current) => (current?.id === targetId ? null : current));
+  };
+
   return {
     applyExternalSearch,
     handleSearchQueryChange,
     handleSearchRequest,
+    handleSearchRequestHandled,
+    handleSearchTargetHandled,
     searchQuery,
     searchRequest,
     searchStatus,
