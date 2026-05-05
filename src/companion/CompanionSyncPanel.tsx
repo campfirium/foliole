@@ -208,7 +208,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
         ) : (
           <EmptyDiscoveryState disabled={isBusy} onTryAgain={() => void handleTryAgain()} />
         )}
-        {props.error ? <p className="text-sm text-red-700">{props.error}</p> : null}
+        {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
         <CompanionHandoffReminderSettingsPanel
           settings={props.handoffReminderSettings}
           onChange={props.onChangeHandoffReminderSettings}

@@ -59,7 +59,7 @@ function renderReviewFallback(
           </p>
         </>
       )}
-      {error ? <span className="mt-4 block text-red-700">{error}</span> : null}
+      {error ? <span className="mt-4 block text-error">{error}</span> : null}
     </section>
   );
 }
@@ -143,8 +143,8 @@ function renderReviewContent(
       {surface.reviewSession.currentCard.itemKind === 'fsrs' && surface.isAnswerRevealed ? (
         <CompanionReviewAnswer card={surface.reviewSession.currentCard} />
       ) : null}
-      {surface.readingError ? <p className="mt-3 text-sm text-red-700">{surface.readingError}</p> : null}
-      {surface.reviewError ? <p className="mt-3 text-sm text-red-700">{surface.reviewError}</p> : null}
+      {surface.readingError ? <p className="mt-3 text-sm text-error">{surface.readingError}</p> : null}
+      {surface.reviewError ? <p className="mt-3 text-sm text-error">{surface.reviewError}</p> : null}
     </>
   );
 }

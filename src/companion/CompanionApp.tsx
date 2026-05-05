@@ -4,7 +4,7 @@ import { CompanionShell } from './CompanionShell';
 import { useCompanionBootstrap } from './useCompanionBootstrap';
 
 function BootstrapStateCard(props: { detail: string; title: string; tone: 'default' | 'critical' }) {
-  const toneClassName = props.tone === 'critical' ? 'border-red-300 bg-red-50 text-red-900' : 'border-border bg-bg-panel text-foreground';
+  const toneClassName = props.tone === 'critical' ? 'border-error bg-error-subtle text-error-foreground' : 'border-border bg-bg-panel text-foreground';
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
       <section className={`w-full max-w-[32rem] rounded-2xl border px-6 py-6 shadow-panel ${toneClassName}`}>
