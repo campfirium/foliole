@@ -162,6 +162,27 @@ async function testRecordsBacklogBytes() {
   }));
 }
 
+async function testKeepsProgressVisibleWhenBacklogRemains() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingAttachmentResourceCount: 2,
+    remainingContentBlobCount: 5
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(setSyncProgress).not.toHaveBeenCalledWith(null);
+}
+
 async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     localDirtyCount: 1,
@@ -186,6 +207,23 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
     message: 'Sync pass finished; local changes are still waiting to settle.',
     status: 'skipped'
   }));
+}
+
+async function testClearsProgressWhenBacklogIsDone() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(setSyncProgress).toHaveBeenCalledWith(null);
 }
 
 async function testRecordsPushFailureWithoutFailingPull() {
@@ -256,7 +294,11 @@ describe('tryForegroundAutoSync', () => {
 
   it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
 
+  it('keeps sync progress visible when a pass leaves resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
+
   it('does not record completed while local work is waiting', testDoesNotCompleteWhileLocalWorkIsWaiting);
+
+  it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
 
   it('records push failure without marking the pull pass failed', testRecordsPushFailureWithoutFailingPull);
 
