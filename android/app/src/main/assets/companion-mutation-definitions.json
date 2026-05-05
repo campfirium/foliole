@@ -126,6 +126,15 @@
       "markFetchingMutationName": "contentBlobMarkFetching"
     }
   },
+  "runtimeMutations": {
+    "syncPushAck": {
+      "deleteByObjectMutationName": "syncPushAckDeleteByObject",
+      "tableName": "sync_push_ack"
+    },
+    "syncState": {
+      "upsertMutationName": "syncStateUpsert"
+    }
+  },
   "statements": {
     "syncPushAckDeleteByObject": "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?",
     "syncPushAckDeleteIssuesByObject": "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",

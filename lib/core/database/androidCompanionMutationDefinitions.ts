@@ -148,6 +148,16 @@ export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
   }
 } as const;
 
+export const ANDROID_COMPANION_RUNTIME_MUTATION_RULES = {
+  syncPushAck: {
+    deleteByObjectMutationName: 'syncPushAckDeleteByObject',
+    tableName: 'sync_push_ack'
+  },
+  syncState: {
+    upsertMutationName: 'syncStateUpsert'
+  }
+} as const;
+
 export const ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES = {
   appData: {
     deleteMetaExceptDeviceMutationName: 'companionMetaDeleteExceptDeviceId'

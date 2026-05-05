@@ -45,7 +45,7 @@ final class FolioleCompanionNamedMutationStore {
         int syncDirty
     ) throws Exception {
         ExistingState current = loadExistingState(context, database, objectType, objectId);
-        database.execSQL(statement(context, "syncStateUpsert"), new Object[] {
+        database.execSQL(statement(context, syncStateMutationRule(context, "upsertMutationName")), new Object[] {
             objectType,
             objectId,
             nextStateSeq(context, database),
@@ -57,8 +57,8 @@ final class FolioleCompanionNamedMutationStore {
             deletedAt,
             syncDirty
         });
-        if (syncDirty == 1 && FolioleCompanionSqliteRuntime.tableExists(database, "sync_push_ack")) {
-            database.execSQL(statement(context, "syncPushAckDeleteByObject"), new Object[] { objectType, objectId });
+        if (syncDirty == 1 && FolioleCompanionSqliteRuntime.tableExists(database, syncPushAckMutationRule(context, "tableName"))) {
+            database.execSQL(statement(context, syncPushAckMutationRule(context, "deleteByObjectMutationName")), new Object[] { objectType, objectId });
         }
     }
 
@@ -107,6 +107,14 @@ final class FolioleCompanionNamedMutationStore {
 
     private static String runtimeRule(Context context, String groupName, String key) throws Exception {
         return FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key);
+    }
+
+    private static String syncPushAckMutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionRuntimeMutationRules.syncPushAckString(context, key);
+    }
+
+    private static String syncStateMutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionRuntimeMutationRules.syncStateString(context, key);
     }
 
     private static void bindArgs(SQLiteStatement statement, Object[] args) {
