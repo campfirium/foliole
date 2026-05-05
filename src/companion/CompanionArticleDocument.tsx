@@ -1,5 +1,6 @@
 import type {
   EditorMissingAttachmentResourceHandler,
+  EditorAdapter,
   EditorSelection,
   EditorTextAnchorDecoration,
   EditorViewportMode
@@ -15,6 +16,7 @@ export function CompanionArticleDocument(props: {
   layout?: 'article' | 'review';
   nodeId: string;
   nodeViewState?: EditorViewState;
+  onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
@@ -30,6 +32,7 @@ export function CompanionArticleDocument(props: {
         nodeId={props.nodeId}
         nodeViewState={props.nodeViewState}
         onChange={() => undefined}
+        onReady={props.onEditorReady}
         onMissingAttachmentResource={props.onMissingAttachmentResource}
         readOnly
         readingSelection={props.readingSelection}

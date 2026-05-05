@@ -1,9 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
+const revealSelectionCentered = vi.fn();
+const setSearchDecorations = vi.fn();
 
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
@@ -17,16 +20,23 @@ vi.mock('./CompanionReviewCard', () => ({
 vi.mock('./CompanionArticleDocument', () => ({
   CompanionArticleDocument: (props: {
     content: string;
+    onEditorReady?: (adapter: unknown) => void;
     readingSelection?: { from: number; to: number } | null;
-  }) => (
-    <article
-      data-reading-from={props.readingSelection?.from ?? ''}
-      data-reading-to={props.readingSelection?.to ?? ''}
-      data-testid="companion-article-document"
-    >
-      {props.content}
-    </article>
-  )
+  }) => {
+    useEffect(() => {
+      props.onEditorReady?.({ revealSelectionCentered, setSearchDecorations });
+      return () => props.onEditorReady?.(null);
+    }, [props]);
+    return (
+      <article
+        data-reading-from={props.readingSelection?.from ?? ''}
+        data-reading-to={props.readingSelection?.to ?? ''}
+        data-testid="companion-article-document"
+      >
+        {props.content}
+      </article>
+    );
+  }
 }));
 
 function mockFloatingBar() {
@@ -143,6 +153,23 @@ function expectBrowseMenuSheet() {
   expect(screen.getByText('Theme')).toBeInTheDocument();
 }
 
+async function expectReadingDocumentSearch(surface: ReturnType<typeof createReadableSurface>) {
+  fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
+  expect(screen.getByRole('dialog', { name: 'Actions' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Find in document' }));
+  expect(screen.getByRole('dialog', { name: 'Find in document' })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Find in document' }), {
+    target: { value: 'Readable' }
+  });
+  expect(await screen.findByTestId('companion-document-search-status')).toHaveTextContent('1 / 2');
+  expect(revealSelectionCentered).toHaveBeenCalledWith({ from: 2, to: 10 }, { preserveFocus: true });
+  expect(setSearchDecorations).toHaveBeenLastCalledWith({
+    activeIndex: 0,
+    matches: [{ from: 2, to: 10 }, { from: 20, to: 28 }]
+  });
+  expect(surface.handleTabAction).not.toHaveBeenCalledWith('search');
+}
+
 describe('CompanionShell navigation', () => {
   it('replaces bottom navigation with review actions during a review task', async () => {
     const surface = createSurface('review');
@@ -180,6 +207,8 @@ describe('CompanionShell navigation', () => {
 
   it('opens selected topics as immersive reading with tap-revealed chrome', async () => {
     const surface = createReadableSurface();
+    revealSelectionCentered.mockClear();
+    setSearchDecorations.mockClear();
     await renderShellWithSurface(surface);
 
     expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
@@ -208,8 +237,7 @@ describe('CompanionShell navigation', () => {
     expect(screen.getByText('PDF and text')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(surface.handleTabAction).toHaveBeenCalledWith('search');
+    await expectReadingDocumentSearch(surface);
   });
 });
 

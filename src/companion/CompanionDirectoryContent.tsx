@@ -107,7 +107,6 @@ export function CompanionDirectoryContent(props: {
   selection: CompanionDirectorySelection;
   onChangeSelection(selection: CompanionDirectorySelection): void;
   onSelectNode(nodeId: string): void;
-  onSearch(): void;
   snapshot: WorkspaceSnapshot | null;
 }) {
   const directory = useCompanionExternalDirectory();
@@ -133,7 +132,6 @@ export function CompanionDirectoryContent(props: {
     return (
       <ImmersiveReadableArticle
         onExit={() => props.onChangeSelection(parentSelection ?? { kind: 'root' })}
-        onSearch={props.onSearch}
         readableArticle={toReadableExternalArticle(externalDocument)}
       />
     );

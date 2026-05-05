@@ -6,6 +6,11 @@ import type {
   EditorSelection,
   EditorViewportMode
 } from '../../features/editor/adapters/EditorAdapter';
+import {
+  buildTopicSearchDecorations,
+  buildTopicSearchMatches,
+  resolveTopicSearchStatusLabel
+} from '../../features/editor/model/documentTopicSearch';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
@@ -13,11 +18,6 @@ import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import { AppIconButton, AppInput } from '../../shared/ui';
 import { useCommandShortcutState } from '../hooks/reviewHotkeysState';
 
-import {
-  buildTopicSearchDecorations,
-  buildTopicSearchMatches,
-  resolveTopicSearchStatusLabel
-} from './documentTopicSearch';
 import { DOCUMENT_TOPIC_SEARCH_OPEN_EVENT } from './documentTopicSearchEvents';
 
 interface DocumentTopicSearchToolbarProps {

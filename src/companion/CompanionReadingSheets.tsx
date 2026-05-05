@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
@@ -10,7 +11,7 @@ import {
   AppDialogTitle
 } from '@/shared/ui';
 
-function ReadingBottomSheet(props: {
+export function ReadingBottomSheet(props: {
   children: ReactNode;
   onOpenChange(open: boolean): void;
   open: boolean;
@@ -33,6 +34,41 @@ function ReadingBottomSheet(props: {
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
+  );
+}
+
+function ReadingActionRow(props: {
+  icon: ReactNode;
+  label: string;
+  onClick(): void;
+}) {
+  return (
+    <button
+      className="flex w-full items-center gap-3 border-b border-companion-divider py-4 text-left text-sm font-medium text-foreground"
+      onClick={props.onClick}
+      type="button"
+    >
+      <span className="text-companion-text-secondary">{props.icon}</span>
+      <span>{props.label}</span>
+    </button>
+  );
+}
+
+export function ReadingActionsSheet(props: {
+  onFindInDocument(): void;
+  onOpenChange(open: boolean): void;
+  open: boolean;
+}) {
+  return (
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title="Actions">
+      <div className="border-t border-companion-divider">
+        <ReadingActionRow
+          icon={<Search aria-hidden="true" className="h-5 w-5" />}
+          label="Find in document"
+          onClick={props.onFindInDocument}
+        />
+      </div>
+    </ReadingBottomSheet>
   );
 }
 

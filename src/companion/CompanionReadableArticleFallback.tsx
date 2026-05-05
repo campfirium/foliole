@@ -1,4 +1,4 @@
-import { ReadableArticleDocument } from './CompanionReadableArticleSurface';
+import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';

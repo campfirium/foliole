@@ -66,7 +66,6 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
       <ImmersiveReadableArticle
         onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
         onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
-        onSearch={() => props.surface.handleTabAction('search')}
         readableArticle={props.surface.readableArticle}
         syncEndpointUrl={syncEndpointUrl}
       />
@@ -120,7 +119,6 @@ function renderRecentContent(props: Parameters<typeof renderCompanionShellConten
         <ImmersiveReadableArticle
           onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
           onExit={props.onBackDirectorySelection}
-          onSearch={() => props.surface.handleTabAction('search')}
           readableArticle={props.surface.readableArticle}
           syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
         />
@@ -136,7 +134,6 @@ function renderRecentContent(props: Parameters<typeof renderCompanionShellConten
         <ImmersiveReadableArticle
           onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
           onExit={props.onBackDirectorySelection}
-          onSearch={() => props.surface.handleTabAction('search')}
           readableArticle={props.surface.readableArticle}
           syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
         />
@@ -145,7 +142,6 @@ function renderRecentContent(props: Parameters<typeof renderCompanionShellConten
     return (
       <CompanionDirectoryContent
         onChangeSelection={props.onChangeDirectorySelection}
-        onSearch={() => props.surface.handleTabAction('search')}
         onSelectNode={props.surface.handleSelectBrowseNode}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}

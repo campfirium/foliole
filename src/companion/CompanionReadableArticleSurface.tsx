@@ -1,10 +1,11 @@
-import { Highlighter, Info, ListTree, Search, SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useCallback, useState } from 'react';
+import { useRef, useState } from 'react';
 
-import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
-import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
+import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
+import { ReadingChrome } from './CompanionReadingChrome';
 import {
+  ReadingActionsSheet,
   OutlineSheet,
   ReadingFontSheet,
   ReadingHighlightSheet,
@@ -13,142 +14,25 @@ import {
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
-import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
-import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
-import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
-import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
-import { AppButton } from '@/shared/ui';
+import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
-function toEditorViewState(article: ReadableArticle): EditorViewState | undefined {
-  const persistedState = article.persistedNodeViewState;
-  if (!persistedState) {
-    return undefined;
-  }
-  const selection =
-    persistedState.selectionFrom === null || persistedState.selectionTo === null
-      ? null
-      : { from: persistedState.selectionFrom, to: persistedState.selectionTo };
-  return { scrollTop: persistedState.scrollTop, selection };
-}
-
-function ReadingChromeButton(props: {
-  disabled?: boolean;
-  icon: LucideIcon;
-  label: string;
-  onClick?: () => void;
-}) {
-  const Icon = props.icon;
-  return (
-    <button
-      aria-disabled={props.disabled ? 'true' : undefined}
-      aria-label={props.label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-companion-content/90 text-companion-text-secondary shadow-panel transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
-      disabled={props.disabled}
-      onClick={props.onClick}
-      type="button"
-    >
-      <Icon className="h-5 w-5" />
-    </button>
-  );
-}
-
-export function ReadableArticleDocument(props: {
+interface ImmersiveReadableArticleProps {
   onAttachmentResourceSynced?: () => void;
-  readingSelection?: EditorSelection | null;
+  onExit(): void;
   readableArticle: ReadableArticle;
   syncEndpointUrl?: string | null;
-}) {
-  const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
-  const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
-  const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
-    if (!props.syncEndpointUrl) {
-      return;
-    }
-    await saveCompanionSyncActiveViewState(props.readableArticle.nodeId).catch(() => undefined);
-    const result = await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
-    if (result.status === 'cached') {
-      props.onAttachmentResourceSynced?.();
-    }
-  }, [props.onAttachmentResourceSynced, props.readableArticle.nodeId, props.syncEndpointUrl]);
-
-  if (pdfAttachmentId && isViewingPdfOriginal) {
-    return (
-      <SimplePdfDocument
-        attachmentId={pdfAttachmentId}
-        onBackToText={() => setIsViewingPdfOriginal(false)}
-        onMissingResource={syncMissingAttachmentResource}
-        title={props.readableArticle.title}
-      />
-    );
-  }
-  if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
-    return (
-      <CompanionArticleBodyStatusFallback
-        bodyStatus={props.readableArticle.bodyStatus}
-        title={props.readableArticle.title}
-      />
-    );
-  }
-
-  return (
-    <>
-      {pdfAttachmentId ? (
-        <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
-          <span className="text-xs text-companion-text-secondary">Text version</span>
-          <AppButton onClick={() => setIsViewingPdfOriginal(true)} variant="ghost">
-            Open PDF
-          </AppButton>
-        </div>
-      ) : null}
-      <CompanionArticleDocument
-        content={props.readableArticle.content}
-        hideTitleHeading={props.readableArticle.hideTitleHeading}
-        nodeId={props.readableArticle.nodeId}
-        nodeViewState={toEditorViewState(props.readableArticle)}
-        onMissingAttachmentResource={syncMissingAttachmentResource}
-        readingSelection={props.readingSelection}
-        readingTargetViewportMode="center"
-        textAnchorDecorations={props.readableArticle.textAnchorDecorations}
-      />
-    </>
-  );
-}
-
-function ReadingChrome(props: {
-  onExit(): void;
-  onOpenOutline(): void;
-  onOpenSheet(sheet: 'font' | 'highlight' | 'info'): void;
-  onSearch(): void;
-  title: string;
-}) {
-  return (
-    <>
-      <div className="fixed inset-x-0 top-0 z-40 bg-companion-base/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-[760px] items-center gap-2">
-          <ReadingChromeButton icon={X} label="Exit" onClick={props.onExit} />
-          <ReadingChromeButton icon={ListTree} label="Outline" onClick={props.onOpenOutline} />
-          <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-foreground">
-            {props.title}
-          </span>
-          <ReadingChromeButton icon={SlidersHorizontal} label="Font" onClick={() => props.onOpenSheet('font')} />
-          <ReadingChromeButton icon={Highlighter} label="Highlight" onClick={() => props.onOpenSheet('highlight')} />
-          <ReadingChromeButton icon={Info} label="Info" onClick={() => props.onOpenSheet('info')} />
-        </div>
-      </div>
-      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
-        <ReadingChromeButton icon={Search} label="Search" onClick={props.onSearch} />
-      </div>
-    </>
-  );
 }
 
 function ReadingSheetsLayer(props: {
+  editor: EditorAdapter | null;
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
+  onOpenSearchSheet(open: boolean): void;
   onOpenOutline(open: boolean): void;
   onSelectOutlineItem(item: { from: number; to: number }): void;
   openReadingSheet: 'font' | 'highlight' | 'info' | null;
+  searchOpen: boolean;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
 }) {
@@ -168,21 +52,88 @@ function ReadingSheetsLayer(props: {
         open={props.openReadingSheet === 'info'}
         title={props.readableArticle.title}
       />
+      <CompanionDocumentSearchSheet
+        content={props.readableArticle.content}
+        editor={props.editor}
+        onOpenChange={props.onOpenSearchSheet}
+        open={props.searchOpen}
+      />
     </>
   );
 }
 
-export function ImmersiveReadableArticle(props: {
-  onAttachmentResourceSynced?: () => void;
+function ImmersiveChromeLayer(props: {
+  actionsOpen: boolean;
+  editor: EditorAdapter | null;
   onExit(): void;
-  onSearch(): void;
+  onFindInDocument(): void;
+  onOpenActions(open: boolean): void;
+  onOpenOutline(open: boolean): void;
+  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
+  onOpenSearchSheet(open: boolean): void;
+  onSelectOutlineItem(item: { from: number; to: number }): void;
+  openReadingSheet: 'font' | 'highlight' | 'info' | null;
+  outlineOpen: boolean;
   readableArticle: ReadableArticle;
+  searchOpen: boolean;
+}) {
+  return (
+    <>
+      <ReadingChrome
+        onExit={props.onExit}
+        onOpenActions={() => props.onOpenActions(true)}
+        onOpenOutline={() => props.onOpenOutline(true)}
+        onOpenSheet={props.onOpenReadingSheet}
+        title={props.readableArticle.title}
+      />
+      <ReadingActionsSheet
+        onFindInDocument={props.onFindInDocument}
+        onOpenChange={props.onOpenActions}
+        open={props.actionsOpen}
+      />
+      <ReadingSheetsLayer
+        editor={props.editor}
+        onOpenOutline={props.onOpenOutline}
+        onOpenReadingSheet={props.onOpenReadingSheet}
+        onOpenSearchSheet={props.onOpenSearchSheet}
+        onSelectOutlineItem={props.onSelectOutlineItem}
+        openReadingSheet={props.openReadingSheet}
+        searchOpen={props.searchOpen}
+        outlineOpen={props.outlineOpen}
+        readableArticle={props.readableArticle}
+      />
+    </>
+  );
+}
+
+function ImmersiveArticleContent(props: {
+  onAttachmentResourceSynced?: () => void;
+  onEditorReady(adapter: EditorAdapter | null): void;
+  readableArticle: ReadableArticle;
+  readingSelection: EditorSelection | null;
   syncEndpointUrl?: string | null;
 }) {
+  return (
+    <div className="mx-auto min-h-full w-full max-w-[760px]">
+      <ReadableArticleDocument
+        onAttachmentResourceSynced={props.onAttachmentResourceSynced}
+        onEditorReady={props.onEditorReady}
+        readableArticle={props.readableArticle}
+        readingSelection={props.readingSelection}
+        syncEndpointUrl={props.syncEndpointUrl}
+      />
+    </div>
+  );
+}
+
+export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const [isChromeVisible, setIsChromeVisible] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
+  const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
+  const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
   const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'highlight' | 'info' | null>(null);
   const [readingSelection, setReadingSelection] = useState<EditorSelection | null>(null);
+  const editorRef = useRef<EditorAdapter | null>(null);
   function handleSurfaceClick(event: ReactMouseEvent<HTMLElement>) {
     if ((event.target as HTMLElement).closest('button, a, input, textarea, select')) {
       return;
@@ -193,39 +144,39 @@ export function ImmersiveReadableArticle(props: {
     setReadingSelection({ from: item.from, to: item.to });
     setIsOutlineOpen(false);
   }
-
+  function openDocumentSearch() {
+    setIsActionsSheetOpen(false);
+    setIsSearchSheetOpen(true);
+  }
   return (
     <section
       className="fixed inset-0 z-30 overflow-y-auto bg-companion-base px-6 pb-20 pt-6 text-foreground sm:px-7"
       onClick={handleSurfaceClick}
     >
       {isChromeVisible ? (
-        <>
-          <ReadingChrome
-            onExit={props.onExit}
-            onOpenOutline={() => setIsOutlineOpen(true)}
-            onOpenSheet={setOpenReadingSheet}
-            onSearch={props.onSearch}
-            title={props.readableArticle.title}
-          />
-          <ReadingSheetsLayer
-            onOpenOutline={setIsOutlineOpen}
-            onOpenReadingSheet={setOpenReadingSheet}
-            onSelectOutlineItem={handleSelectOutlineItem}
-            openReadingSheet={openReadingSheet}
-            outlineOpen={isOutlineOpen}
-            readableArticle={props.readableArticle}
-          />
-        </>
-      ) : null}
-      <div className="mx-auto min-h-full w-full max-w-[760px]">
-        <ReadableArticleDocument
-          onAttachmentResourceSynced={props.onAttachmentResourceSynced}
+        <ImmersiveChromeLayer
+          actionsOpen={isActionsSheetOpen}
+          editor={editorRef.current}
+          onExit={props.onExit}
+          onFindInDocument={openDocumentSearch}
+          onOpenActions={setIsActionsSheetOpen}
+          onOpenOutline={setIsOutlineOpen}
+          onOpenReadingSheet={setOpenReadingSheet}
+          onOpenSearchSheet={setIsSearchSheetOpen}
+          onSelectOutlineItem={handleSelectOutlineItem}
+          openReadingSheet={openReadingSheet}
+          outlineOpen={isOutlineOpen}
           readableArticle={props.readableArticle}
-          readingSelection={readingSelection}
-          syncEndpointUrl={props.syncEndpointUrl}
+          searchOpen={isSearchSheetOpen}
         />
-      </div>
+      ) : null}
+      <ImmersiveArticleContent
+        onAttachmentResourceSynced={props.onAttachmentResourceSynced}
+        onEditorReady={(adapter) => { editorRef.current = adapter; }}
+        readableArticle={props.readableArticle}
+        readingSelection={readingSelection}
+        syncEndpointUrl={props.syncEndpointUrl}
+      />
     </section>
   );
 }
