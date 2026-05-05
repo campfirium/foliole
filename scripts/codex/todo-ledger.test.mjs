@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  completeTaskInLedger,
   isGateEntry,
   isPauseTask,
   normalizeTodoMarkdown,
@@ -108,5 +109,43 @@ describe('todo-ledger helpers', () => {
     const markdown = ['# Pending TODO', '', '- [ ] [auto] [infra] first task'].join('\n');
     expect(validateTodoEntries(markdown)).toEqual([]);
     expect(parseFirstTodoTask(markdown)).toBe('[infra] first task');
+  });
+
+  it('completes the first pending auto task from the main todo list', () => {
+    const result = completeTaskInLedger({
+      pendingContent: ['# TODO', '', '- [ ] [auto] first task', '- [ ] [auto] second task'].join('\n'),
+      optionalContent: ['# Optional', '', '- [ ] [auto] optional task'].join('\n'),
+      doneContent: '# DONE\n',
+      entry: { raw: '[auto] first task', task: 'first task', mode: 'auto', section: '待办' },
+      note: 'automated loop completed'
+    });
+
+    expect(result.completed).toBe(true);
+    expect(parseTodoEntries(result.updatedPendingContent)).toEqual([
+      { raw: '[auto] second task', task: 'second task', mode: 'auto', section: '待办' }
+    ]);
+    expect(result.updatedDoneContent).toContain('first task; automated loop completed.');
+  });
+
+  it('completes the first optional auto task without changing the mainline todo list', () => {
+    const result = completeTaskInLedger({
+      pendingContent: ['# TODO', '', '- [ ] [gate] windows acceptance'].join('\n'),
+      optionalContent: ['# Optional', '', '- [ ] [gate] manual follow-up', '- [ ] [auto] optional task', '- [ ] [auto] later optional'].join('\n'),
+      doneContent: '# DONE\n',
+      entry: { raw: '[auto] optional task', task: 'optional task', mode: 'auto', section: '可选' },
+      note: 'automated loop completed'
+    });
+
+    expect(result.completed).toBe(true);
+    expect(selectNextTodoTask(result.updatedPendingContent)).toEqual({
+      raw: '[gate] windows acceptance',
+      task: 'windows acceptance',
+      mode: 'gate',
+      section: '待办'
+    });
+    expect(parseTodoEntries(result.updatedOptionalContent, '可选')).toEqual([
+      { raw: '[gate] manual follow-up', task: 'manual follow-up', mode: 'gate', section: '可选' },
+      { raw: '[auto] later optional', task: 'later optional', mode: 'auto', section: '可选' }
+    ]);
   });
 });

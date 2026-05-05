@@ -52,6 +52,7 @@ describe('codex-loop helpers', () => {
 
   it('repairs a failed task before leaving a dirty workspace behind', async () => {
     const writes = [];
+    const completeAutoTaskFn = vi.fn().mockResolvedValue(true);
     const runCodexTaskFn = vi
       .fn()
       .mockRejectedValueOnce(new Error('codex exec failed with code 1'))
@@ -71,6 +72,7 @@ describe('codex-loop helpers', () => {
       {
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn,
+        completeAutoTaskFn,
         readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
         readGitStatusFn,
         readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry, null),
@@ -118,12 +120,14 @@ describe('codex-loop helpers', () => {
   it('executes the first optional auto task when the mainline is blocked by a gate', async () => {
     const writes = [];
     const optionalEntry = { raw: '[auto] import fixtures', task: 'import fixtures', mode: 'auto', section: '可选' };
+    const completeAutoTaskFn = vi.fn().mockResolvedValue(true);
 
     const exitCode = await runLoop(
       { completeGate: false, dryRun: false, maxIterations: 2, model: '' },
       {
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        completeAutoTaskFn,
         readGitStatusFn: vi.fn().mockResolvedValue(''),
         readPrimaryTodoEntryFn: vi.fn().mockResolvedValue({ raw: '[gate] windows acceptance', task: 'windows acceptance', mode: 'gate', section: '待办' }),
         readTodoEntryFn: createReadMock(optionalEntry, optionalEntry, null),
@@ -135,12 +139,40 @@ describe('codex-loop helpers', () => {
     );
 
     expect(exitCode).toBe(0);
+    expect(completeAutoTaskFn).toHaveBeenCalledWith(optionalEntry);
     expect(writes.join('')).toContain('iteration 1, round 1/3: import fixtures');
+  });
+
+  it('completes an auto task in the ledger before moving to the next item', async () => {
+    const writes = [];
+    const nextEntry = { raw: '[auto] second task', task: 'second task', mode: 'auto', section: '待办' };
+    const completeAutoTaskFn = vi.fn().mockResolvedValue(true);
+
+    const exitCode = await runLoop(
+      { completeGate: false, dryRun: false, maxIterations: 3, model: '' },
+      {
+        buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
+        commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        completeAutoTaskFn,
+        readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
+        readGitStatusFn: vi.fn().mockResolvedValue(''),
+        readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry, nextEntry, null),
+        isGateEntryFn: (entry) => entry?.mode === 'gate',
+        runCodexTaskFn: vi.fn().mockResolvedValue(undefined),
+        runQualityGateFn: vi.fn().mockResolvedValue(undefined),
+        stdout: { write: (value) => writes.push(value) }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(completeAutoTaskFn).toHaveBeenNthCalledWith(1, loopTaskEntry);
+    expect(writes.join('')).toContain('iteration 1, round 1/3: fix loop failure semantics');
   });
 
   it('reopens the same task in a fresh round after repair budget exhaustion', async () => {
     const writes = [];
     const appendLoopFailureRecordFn = vi.fn().mockResolvedValue(undefined);
+    const completeAutoTaskFn = vi.fn().mockResolvedValue(true);
     const runCodexTaskFn = vi
       .fn()
       .mockResolvedValueOnce(undefined)
@@ -165,6 +197,7 @@ describe('codex-loop helpers', () => {
         appendLoopFailureRecordFn,
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        completeAutoTaskFn,
         readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
         readGitStatusFn: createReadMock('', ' M scripts/codex/codex-loop.mjs', ' M scripts/codex/codex-loop.mjs'),
         readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry, null),
@@ -186,6 +219,7 @@ describe('codex-loop helpers', () => {
   it('stops after repeated identical failure signatures across rounds', async () => {
     const writes = [];
     const appendLoopFailureRecordFn = vi.fn().mockResolvedValue(undefined);
+    const completeAutoTaskFn = vi.fn().mockResolvedValue(true);
     const runCodexTaskFn = vi.fn().mockResolvedValue(undefined);
     const runQualityGateFn = vi.fn().mockRejectedValue(new Error('lint failed'));
 
@@ -196,6 +230,7 @@ describe('codex-loop helpers', () => {
           appendLoopFailureRecordFn,
           buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
           commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+          completeAutoTaskFn,
           readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
           readGitStatusFn: createReadMock('', ' M scripts/codex/codex-loop.mjs', ' M scripts/codex/codex-loop.mjs'),
           readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry),
@@ -216,6 +251,7 @@ describe('codex-loop helpers', () => {
         appendLoopFailureRecordFn: vi.fn().mockResolvedValue(undefined),
         buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
         commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        completeAutoTaskFn: vi.fn().mockResolvedValue(true),
         readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
         readGitStatusFn: createReadMock('', ' M scripts/codex/codex-loop.mjs', ' M scripts/codex/codex-loop.mjs'),
         readTodoEntryFn: createReadMock(loopTaskEntry, loopTaskEntry),

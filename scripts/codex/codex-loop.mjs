@@ -4,7 +4,7 @@ import process from 'node:process';
 
 import { runCodexTask } from './codex-task.mjs';
 import { buildCommitMessage, commitTrackedChanges, readGitStatus, runCommand } from './git-state.mjs';
-import { REPO_ROOT, completePauseTask, isGateEntry, readPrimaryTodoEntry, readTodoEntry } from './todo-ledger.mjs';
+import { REPO_ROOT, completeAutoTask, completePauseTask, isGateEntry, readPrimaryTodoEntry, readTodoEntry } from './todo-ledger.mjs';
 import { buildFailureSignature, buildNextRoundTask, buildRepairTask, createExhaustedRepairError, EXHAUSTED_REPAIR_CODE, normalizeFailureMessage } from './codex-loop-shared.mjs';
 
 const REPAIR_ATTEMPT_LIMIT = 2;
@@ -136,6 +136,9 @@ async function executeTaskRound(taskEntry, round, options, dependencies, priorSi
       : buildNextRoundTask(taskEntry.task, priorSignature ?? `previous round failed for task: ${taskEntry.task}`);
   await dependencies.runCodexTaskFn({ fullAuto: true, model: options.model, task });
   await stabilizeWorkspace(taskEntry.task, options, dependencies, `quality gate after task: ${taskEntry.task}`);
+  if (!dependencies.isGateEntryFn(taskEntry)) {
+    await dependencies.completeAutoTaskFn(taskEntry);
+  }
   return dependencies.commitTrackedChangesFn(
     REPO_ROOT,
     () => dependencies.buildCommitMessageFn(taskEntry.task)
@@ -180,6 +183,7 @@ async function runLoop(options, overrides = {}) {
     appendLoopFailureRecordFn: appendLoopFailureRecord,
     buildCommitMessageFn: (task) => buildCommitMessage(REPO_ROOT, task),
     commitTrackedChangesFn: commitTrackedChanges,
+    completeAutoTaskFn: completeAutoTask,
     completePauseTaskFn: completePauseTask,
     isGateEntryFn: isGateEntry,
     readPrimaryTodoEntryFn: readPrimaryTodoEntry,

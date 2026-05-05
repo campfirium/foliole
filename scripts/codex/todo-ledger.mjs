@@ -149,6 +149,10 @@ export function selectNextTodoTask(markdown, sectionName = '待办') {
   return parseTodoEntries(markdown, sectionName)[0] ?? null;
 }
 
+function selectNextTaskByMode(markdown, sectionName, mode) {
+  return parseTodoEntries(markdown, sectionName).find((entry) => entry.mode === mode) ?? null;
+}
+
 export function selectNextExecutableTodoTask(pendingMarkdown, optionalMarkdown = '') {
   const mainlineEntry = selectNextTodoTask(pendingMarkdown, '待办');
   const optionalAutoEntry = parseTodoEntries(optionalMarkdown, '可选').find((entry) => entry.mode === 'auto') ?? null;
@@ -213,6 +217,64 @@ function appendDoneEntry(markdown, entry) {
   return markdown.endsWith('\n') ? `${markdown}${entry}\n` : `${markdown}\n${entry}\n`;
 }
 
+function hasTask(markdown, sectionName, task, mode) {
+  return parseTodoEntries(markdown, sectionName).some((entry) => entry.task === task && entry.mode === mode);
+}
+
+export function completeTaskInLedger({
+  pendingContent,
+  optionalContent = '',
+  doneContent,
+  entry,
+  note = 'automated loop completed'
+}) {
+  if (!entry?.task || !entry?.mode || !entry?.section) {
+    throw new Error('task entry is required');
+  }
+  if (entry.mode === 'gate') {
+    throw new Error(`completeTaskInLedger requires an auto task, got "${entry.mode}"`);
+  }
+
+  const isOptionalEntry = entry.section === '可选';
+  const sourceContent = isOptionalEntry ? optionalContent : pendingContent;
+  const currentEntry = isOptionalEntry
+    ? selectNextTaskByMode(optionalContent, '可选', entry.mode)
+    : selectNextTodoTask(pendingContent);
+
+  if (!currentEntry) {
+    if (!hasTask(sourceContent, entry.section, entry.task, entry.mode)) {
+      return {
+        updatedPendingContent: pendingContent,
+        updatedOptionalContent: optionalContent,
+        updatedDoneContent: doneContent,
+        completed: false
+      };
+    }
+    throw new Error(`no pending ${entry.section} item found`);
+  }
+
+  if (currentEntry.task !== entry.task) {
+    if (!hasTask(sourceContent, entry.section, entry.task, entry.mode)) {
+      return {
+        updatedPendingContent: pendingContent,
+        updatedOptionalContent: optionalContent,
+        updatedDoneContent: doneContent,
+        completed: false
+      };
+    }
+    throw new Error(`first pending task mismatch: expected "${entry.task}", got "${currentEntry.task}"`);
+  }
+
+  const updatedSource = removeFirstPendingTask(sourceContent, entry.task);
+  const stamp = new Date().toISOString().slice(0, 10);
+  return {
+    updatedPendingContent: isOptionalEntry ? pendingContent : updatedSource,
+    updatedOptionalContent: isOptionalEntry ? updatedSource : optionalContent,
+    updatedDoneContent: appendDoneEntry(doneContent, `- [x] ${stamp}: ${entry.task}; ${note}.`),
+    completed: true
+  };
+}
+
 export async function completePauseTask(task, note = 'manual acceptance completed') {
   const [todoContent, doneContent] = await Promise.all([
     readFile(TODO_PATH, 'utf8'),
@@ -238,6 +300,37 @@ export async function completePauseTask(task, note = 'manual acceptance complete
     writeFile(TODO_PATH, updatedTodo, 'utf8'),
     writeFile(DONE_PATH, updatedDone, 'utf8')
   ]);
+}
+
+export async function completeAutoTask(entry, note = 'automated loop completed') {
+  const [pendingContent, optionalContent, doneContent] = await Promise.all([
+    readFile(TODO_PATH, 'utf8'),
+    readFile(OPTIONAL_PATH, 'utf8'),
+    readFile(DONE_PATH, 'utf8')
+  ]);
+
+  assertValidTodoEntries(pendingContent);
+  assertValidTodoEntries(optionalContent);
+
+  const result = completeTaskInLedger({
+    pendingContent,
+    optionalContent,
+    doneContent,
+    entry,
+    note
+  });
+
+  if (!result.completed) {
+    return false;
+  }
+
+  await Promise.all([
+    writeFile(TODO_PATH, result.updatedPendingContent, 'utf8'),
+    writeFile(OPTIONAL_PATH, result.updatedOptionalContent, 'utf8'),
+    writeFile(DONE_PATH, result.updatedDoneContent, 'utf8')
+  ]);
+
+  return true;
 }
 
 export { DEFAULT_PAUSE_PATTERNS, DONE_PATH, NOTES_PATH, OPTIONAL_PATH, REPO_ROOT, TODO_PATH, VERIFY_PATH };
