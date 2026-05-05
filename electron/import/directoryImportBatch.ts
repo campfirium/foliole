@@ -16,6 +16,12 @@ import {
 import { applyManagedInboxConsumePolicy, resolveManagedInboxPaths } from '../ipc/managedInboxFolder.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
+import {
+  createLocalImageInboxMarkdown,
+  createUnsupportedLocalImageMessage,
+  validateLocalImageInboxFile
+} from './localImageInboxSource.js';
+
 export interface DirectoryImportBatchOptions {
   consumePolicy: NativeDirectoryImportConsumePolicy;
   highlightPolicy: ImportHighlightPolicy;
@@ -57,16 +63,33 @@ async function runSingleDirectoryImport(
     if (source.kind === 'epub') {
       return toNativeDirectoryImportEntry(source.adapterId, await runEpubImport(source, importedAt));
     }
+    if (source.importMode === 'unsupported_local_image') {
+      throw new Error(createUnsupportedLocalImageMessage());
+    }
+    if (source.importMode === 'local_image') {
+      const imageValidationFailure = await validateLocalImageInboxFile(source.filePath);
+      if (imageValidationFailure) {
+        throw new Error(imageValidationFailure);
+      }
+    }
+    const preparedRecord =
+      source.importMode === 'local_image'
+        ? buildPreparedImportRecord(source, {
+            content: createLocalImageInboxMarkdown(source.filePath),
+            highlightPolicy,
+            importedAt,
+            sourceTrackingMode: 'untracked',
+            titleStrategy
+          })
+        : await loadPreparedImportRecord(source, {
+            highlightPolicy,
+            importedAt,
+            sourceTrackingMode: 'untracked',
+            titleStrategy
+          });
     return toNativeDirectoryImportEntry(
       source.adapterId,
-      runPreparedImport(
-        await loadPreparedImportRecord(source, {
-          highlightPolicy,
-          importedAt,
-          sourceTrackingMode: 'untracked',
-          titleStrategy
-        })
-      )
+      runPreparedImport(preparedRecord)
     );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';

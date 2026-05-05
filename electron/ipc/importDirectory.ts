@@ -71,7 +71,9 @@ export async function runDirectoryImport(
     const titleStrategy = args?.title_strategy ? resolveImportNodeTitleStrategy(args) : loadImportManagerSettings().titleStrategy;
     const sources = await discoverDirectoryImportSources(
       rootPath,
-      sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS } : undefined
+      sourceAdapter === 'foliole_managed_inbox_folder'
+        ? { includeLocalImages: true, supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }
+        : undefined
     );
     const result = await runDirectoryImportBatch({
       consumePolicy,
@@ -101,7 +103,10 @@ export async function runManagedInboxImport(rootPath: string) {
       highlightPolicy: 'reference_only',
       rootPath,
       sourceAdapter: 'foliole_managed_inbox_folder',
-      sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }),
+      sources: await discoverDirectoryImportSources(rootPath, {
+        includeLocalImages: true,
+        supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS
+      }),
       titleStrategy
     });
     await logDirectoryImportCompleted(result);

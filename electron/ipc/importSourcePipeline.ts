@@ -20,6 +20,7 @@ import {
 } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
+import { resolveLocalImageInboxImportMode, type LocalImageInboxImportMode } from '../import/localImageInboxSource.js';
 
 export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
 
@@ -32,6 +33,7 @@ export interface ImportSourceDescriptor {
 
 export interface DirectoryImportSourceDescriptor extends ImportSourceDescriptor {
   adapterId: DirectoryImportAdapterId;
+  importMode?: LocalImageInboxImportMode;
   mtimeMs: number;
   sizeBytes: number;
 }
@@ -191,7 +193,8 @@ async function collectDirectorySources(
   currentDir: string,
   rootIsObsidianVault: boolean,
   collected: DirectoryImportSourceDescriptor[],
-  supportedKinds: ReadonlySet<ImportSourceKind>
+  supportedKinds: ReadonlySet<ImportSourceKind>,
+  includeLocalImages: boolean
 ) {
   const entries = await fs.readdir(currentDir, { withFileTypes: true });
   const sortedEntries = [...entries].sort((left, right) => left.name.localeCompare(right.name));
@@ -201,7 +204,14 @@ async function collectDirectorySources(
       if (SKIPPED_DIRECTORY_NAMES.has(entry.name)) {
         continue;
       }
-      await collectDirectorySources(rootDir, path.join(currentDir, entry.name), rootIsObsidianVault, collected, supportedKinds);
+      await collectDirectorySources(
+        rootDir,
+        path.join(currentDir, entry.name),
+        rootIsObsidianVault,
+        collected,
+        supportedKinds,
+        includeLocalImages
+      );
       continue;
     }
     if (!entry.isFile()) {
@@ -210,10 +220,23 @@ async function collectDirectorySources(
 
     const filePath = path.join(currentDir, entry.name);
     const adapterId = resolveDirectoryAdapter(rootIsObsidianVault, path.extname(entry.name).toLowerCase(), supportedKinds);
+    const stats = await fs.stat(filePath);
     if (!adapterId) {
+      const importMode = includeLocalImages ? resolveLocalImageInboxImportMode(filePath) : null;
+      if (!importMode) {
+        continue;
+      }
+      collected.push({
+        adapterId: 'markdown_directory',
+        filePath,
+        importMode,
+        kind: 'markdown',
+        mtimeMs: stats.mtimeMs,
+        sizeBytes: stats.size,
+        sourceName: path.relative(rootDir, filePath)
+      });
       continue;
     }
-    const stats = await fs.stat(filePath);
     collected.push({
       adapterId,
       filePath,
@@ -227,10 +250,17 @@ async function collectDirectorySources(
 
 export async function discoverDirectoryImportSources(
   rootDir: string,
-  options?: { supportedKinds?: ImportSourceKind[] }
+  options?: { includeLocalImages?: boolean; supportedKinds?: ImportSourceKind[] }
 ) {
   const collected: DirectoryImportSourceDescriptor[] = [];
   const supportedKinds = new Set<ImportSourceKind>(options?.supportedKinds ?? ['html', 'markdown']);
-  await collectDirectorySources(rootDir, rootDir, await detectObsidianVaultRoot(rootDir), collected, supportedKinds);
+  await collectDirectorySources(
+    rootDir,
+    rootDir,
+    await detectObsidianVaultRoot(rootDir),
+    collected,
+    supportedKinds,
+    options?.includeLocalImages ?? false
+  );
   return collected;
 }
