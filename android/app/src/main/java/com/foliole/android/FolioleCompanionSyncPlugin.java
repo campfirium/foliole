@@ -80,12 +80,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to sync companion attachment resource.",
-            databaseHelper -> databaseHelper.syncAttachmentResource(
-                call.getString("attachment_id"),
-                call.getString("content_hash"),
-                call.getString("url"),
-                call.getData().optJSONObject("headers")
-            )
+            databaseHelper -> FolioleCompanionResourcePluginActions.syncAttachmentResource(databaseHelper, call)
         );
     }
 
@@ -94,7 +89,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to sync companion attachment resources.",
-            databaseHelper -> databaseHelper.syncAttachmentResources(call.getData().optJSONArray("resources"))
+            databaseHelper -> FolioleCompanionResourcePluginActions.syncAttachmentResources(databaseHelper, call)
         );
     }
 
@@ -104,7 +99,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load missing companion attachment resources.",
-            databaseHelper -> databaseHelper.loadMissingAttachmentResources(call.getInt("limit", 50))
+            databaseHelper -> FolioleCompanionResourcePluginActions.loadMissingAttachmentResources(databaseHelper, call)
         );
     }
 
@@ -113,7 +108,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load missing companion attachment resource.",
-            databaseHelper -> databaseHelper.loadMissingAttachmentResource(call.getString("attachment_id"))
+            databaseHelper -> FolioleCompanionResourcePluginActions.loadMissingAttachmentResource(databaseHelper, call)
         );
     }
 
@@ -122,7 +117,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load missing companion content blobs.",
-            databaseHelper -> databaseHelper.loadMissingContentBlobHashes(call.getInt("limit", 50))
+            databaseHelper -> FolioleCompanionResourcePluginActions.loadMissingContentBlobHashes(databaseHelper, call)
         );
     }
 
@@ -132,11 +127,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to sync companion content blob.",
-            databaseHelper -> databaseHelper.syncContentBlob(
-                call.getString("hash"),
-                call.getString("url"),
-                call.getData().optJSONObject("headers")
-            )
+            databaseHelper -> FolioleCompanionResourcePluginActions.syncContentBlob(databaseHelper, call)
         );
     }
 
@@ -145,11 +136,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to sync companion content blobs.",
-            databaseHelper -> databaseHelper.syncContentBlobs(
-                call.getString("url"),
-                call.getData().optJSONObject("headers"),
-                call.getString("body")
-            )
+            databaseHelper -> FolioleCompanionResourcePluginActions.syncContentBlobs(databaseHelper, call)
         );
     }
 
@@ -159,7 +146,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to resolve companion attachment resource.",
-            databaseHelper -> databaseHelper.resolveAttachmentResource(call.getString("attachment_id"))
+            databaseHelper -> FolioleCompanionResourcePluginActions.resolveAttachmentResource(databaseHelper, call)
         );
     }
 
@@ -169,7 +156,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load companion PDF page text.",
-            databaseHelper -> databaseHelper.loadPdfPageText(call.getString("attachment_id"))
+            databaseHelper -> FolioleCompanionResourcePluginActions.loadPdfPageText(databaseHelper, call)
         );
     }
 
@@ -179,7 +166,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to search companion PDF page text.",
-            databaseHelper -> databaseHelper.searchPdfPageText(call.getString("query"), call.getInt("limit", 20))
+            databaseHelper -> FolioleCompanionResourcePluginActions.searchPdfPageText(databaseHelper, call)
         );
     }
 
@@ -189,7 +176,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load companion external document.",
-            databaseHelper -> databaseHelper.loadExternalDocument(call.getString("document_id"))
+            databaseHelper -> FolioleCompanionResourcePluginActions.loadExternalDocument(databaseHelper, call)
         );
     }
 
@@ -208,7 +195,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to search companion external documents.",
-            databaseHelper -> databaseHelper.searchExternalDocuments(call.getString("query"), call.getInt("limit", 20))
+            databaseHelper -> FolioleCompanionResourcePluginActions.searchExternalDocuments(databaseHelper, call)
         );
     }
 
