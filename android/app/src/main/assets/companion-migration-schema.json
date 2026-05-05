@@ -1,0 +1,11 @@
+{
+  "statementsByName": {
+    "nodeViewStateSourceColumn": "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
+    "syncObjectStateDropLegacyTable": "DROP TABLE sync_object_state",
+    "syncObjectStateBaseContentHashColumn": "ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT",
+    "syncObjectStateRenameNextTable": "ALTER TABLE sync_object_state_next RENAME TO sync_object_state",
+    "syncObjectStateNextTable": "CREATE TABLE sync_object_state_next (\n    object_type TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    state_seq INTEGER NOT NULL,\n    current_version_id TEXT,\n    content_hash TEXT NOT NULL,\n    last_modified_by_device_id TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT,\n    sync_dirty INTEGER NOT NULL DEFAULT 0,\n    base_content_hash TEXT,\n    PRIMARY KEY (object_type, object_id),\n    UNIQUE (state_seq)\n  )",
+    "syncObjectStateSeqIndex": "CREATE INDEX IF NOT EXISTS idx_sync_object_state_seq ON sync_object_state (state_seq)",
+    "syncObjectStateTypeSeqIndex": "CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq ON sync_object_state (object_type, state_seq)"
+  }
+}

@@ -7,15 +7,11 @@ import android.database.sqlite.SQLiteDatabase;
 
 final class FolioleCompanionDatabaseMigration {
 
-    private static final String META_TABLE = "companion_meta";
-
     private FolioleCompanionDatabaseMigration() {}
 
     static void create(Context context, SQLiteDatabase database) {
-        createMetaTable(database);
         installSchema(context, database, "Failed to install companion schema.");
-        addSyncBaseContentHashIfMissing(database);
-        createSyncPushAckTable(database);
+        addSyncBaseContentHashIfMissing(context, database);
     }
 
     static void upgrade(Context context, SQLiteDatabase database, int oldVersion) {
@@ -23,7 +19,7 @@ final class FolioleCompanionDatabaseMigration {
             installSchema(context, database, "Failed to upgrade companion schema.");
         }
         if (oldVersion < 5) {
-            migrateSyncObjectStateSequence(database);
+            migrateSyncObjectStateSequence(context, database);
             installSchema(context, database, "Failed to upgrade companion sync schema.");
         }
         if (oldVersion < 6) {
@@ -46,25 +42,15 @@ final class FolioleCompanionDatabaseMigration {
         }
         if (oldVersion < 12) {
             installSchema(context, database, "Failed to upgrade companion view state source schema.");
-            addNodeViewStateSourceIfMissing(database);
+            addNodeViewStateSourceIfMissing(context, database);
         }
         if (oldVersion < 13) {
             installSchema(context, database, "Failed to upgrade companion push base reference schema.");
-            addSyncBaseContentHashIfMissing(database);
+            addSyncBaseContentHashIfMissing(context, database);
         }
         if (oldVersion < 14) {
-            createSyncPushAckTable(database);
+            installSchema(context, database, "Failed to upgrade companion push ack schema.");
         }
-    }
-
-    private static void createMetaTable(SQLiteDatabase database) {
-        database.execSQL(
-            "CREATE TABLE IF NOT EXISTS " + META_TABLE + " (" +
-                "key TEXT PRIMARY KEY NOT NULL," +
-                "value TEXT NOT NULL," +
-                "updated_at TEXT NOT NULL" +
-                ")"
-        );
     }
 
     private static void installSchema(Context context, SQLiteDatabase database, String errorMessage) {
@@ -75,40 +61,21 @@ final class FolioleCompanionDatabaseMigration {
         }
     }
 
-    private static void migrateSyncObjectStateSequence(SQLiteDatabase database) {
+    private static void migrateSyncObjectStateSequence(Context context, SQLiteDatabase database) {
         if (!tableExists(database, "sync_object_state") || columnExists(database, "sync_object_state", "state_seq")) {
             return;
         }
         database.beginTransaction();
         try {
-            createSyncObjectStateNextTable(database);
+            installMigrationStatement(context, database, "syncObjectStateNextTable", "Failed to create sync object state repair table.");
             copyLegacySyncObjectStateRows(database);
-            database.execSQL("DROP TABLE sync_object_state");
-            database.execSQL("ALTER TABLE sync_object_state_next RENAME TO sync_object_state");
-            createSyncObjectStateIndexes(database);
+            installMigrationStatement(context, database, "syncObjectStateDropLegacyTable", "Failed to drop legacy sync object state table.");
+            installMigrationStatement(context, database, "syncObjectStateRenameNextTable", "Failed to rename sync object state repair table.");
+            createSyncObjectStateIndexes(context, database);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
         }
-    }
-
-    private static void createSyncObjectStateNextTable(SQLiteDatabase database) {
-        database.execSQL(
-            "CREATE TABLE sync_object_state_next (" +
-                "object_type TEXT NOT NULL," +
-                "object_id TEXT NOT NULL," +
-                "state_seq INTEGER NOT NULL," +
-                "current_version_id TEXT," +
-                "content_hash TEXT NOT NULL," +
-                "last_modified_by_device_id TEXT NOT NULL," +
-                "updated_at TEXT NOT NULL," +
-                "deleted_at TEXT," +
-                "sync_dirty INTEGER NOT NULL DEFAULT 0," +
-                "base_content_hash TEXT," +
-                "PRIMARY KEY (object_type, object_id)," +
-                "UNIQUE (state_seq)" +
-                ")"
-        );
     }
 
     private static void copyLegacySyncObjectStateRows(SQLiteDatabase database) {
@@ -149,40 +116,36 @@ final class FolioleCompanionDatabaseMigration {
         }
     }
 
-    private static void addSyncBaseContentHashIfMissing(SQLiteDatabase database) {
+    private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
         if (columnExists(database, "sync_object_state", "base_content_hash")) {
             return;
         }
-        database.execSQL("ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT");
+        installMigrationStatement(context, database, "syncObjectStateBaseContentHashColumn", "Failed to add sync base content hash column.");
     }
 
-    private static void createSyncPushAckTable(SQLiteDatabase database) {
-        database.execSQL(
-            "CREATE TABLE IF NOT EXISTS sync_push_ack (" +
-                "client_op_id TEXT PRIMARY KEY NOT NULL," +
-                "object_type TEXT NOT NULL," +
-                "object_id TEXT NOT NULL," +
-                "state_seq INTEGER," +
-                "status TEXT NOT NULL," +
-                "acked_at TEXT NOT NULL" +
-                ")"
-        );
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS idx_sync_push_ack_identity " +
-                "ON sync_push_ack (object_type, object_id, state_seq)"
-        );
-    }
-
-    private static void addNodeViewStateSourceIfMissing(SQLiteDatabase database) {
+    private static void addNodeViewStateSourceIfMissing(Context context, SQLiteDatabase database) {
         if (columnExists(database, "node_view_state", "source")) {
             return;
         }
-        database.execSQL("ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'");
+        installMigrationStatement(context, database, "nodeViewStateSourceColumn", "Failed to add node view state source column.");
     }
 
-    private static void createSyncObjectStateIndexes(SQLiteDatabase database) {
-        database.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_object_state_seq ON sync_object_state (state_seq)");
-        database.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq ON sync_object_state (object_type, state_seq)");
+    private static void createSyncObjectStateIndexes(Context context, SQLiteDatabase database) {
+        installMigrationStatement(context, database, "syncObjectStateSeqIndex", "Failed to create sync object state sequence index.");
+        installMigrationStatement(context, database, "syncObjectStateTypeSeqIndex", "Failed to create sync object state type sequence index.");
+    }
+
+    private static void installMigrationStatement(
+        Context context,
+        SQLiteDatabase database,
+        String statementName,
+        String errorMessage
+    ) {
+        try {
+            FolioleCompanionSchemaInstaller.installMigrationStatement(context, database, statementName);
+        } catch (Exception exception) {
+            throw new IllegalStateException(errorMessage, exception);
+        }
     }
 
     private static boolean tableExists(SQLiteDatabase database, String table) {

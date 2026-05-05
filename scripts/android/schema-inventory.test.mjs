@@ -7,22 +7,48 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
+import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
+import { ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import { buildSchemaDriftReport } from './schema-inventory.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const COMPANION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-core-schema.json');
+const COMPANION_MIGRATION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-migration-schema.json');
+const COMPANION_DATABASE_MIGRATION = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionDatabaseMigration.java'
+);
 
 describe('schema inventory drift gate', () => {
   it('generates the Android schema asset from the shared schema source', async () => {
     const schema = JSON.parse(await readFile(COMPANION_SCHEMA, 'utf8'));
 
     expect(schema.statements).toEqual([
+      ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS
     ]);
+  });
+
+  it('keeps Android migration repair DDL in the generated migration asset', async () => {
+    const schema = JSON.parse(await readFile(COMPANION_MIGRATION_SCHEMA, 'utf8'));
+    const migrationSource = await readFile(COMPANION_DATABASE_MIGRATION, 'utf8');
+
+    expect(schema.statementsByName).toEqual(ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS);
+    expect(migrationSource).not.toMatch(/"CREATE (TABLE|INDEX)/);
+    expect(migrationSource).not.toContain('"ALTER TABLE');
+    expect(migrationSource).not.toContain('"DROP TABLE');
   });
 
   it('keeps the desktop and Android core schema drift explicit', () => {
@@ -35,8 +61,8 @@ describe('schema inventory drift gate', () => {
     );
 
     expect(report.sources).toEqual({
-      androidAssetStatements: 29,
-      androidJavaMigrationStatements: 2,
+      androidAssetStatements: 32,
+      androidJavaMigrationStatements: 0,
       desktopStatements: 48
     });
     expect(report.desktopOnly).toEqual([
@@ -46,11 +72,11 @@ describe('schema inventory drift gate', () => {
       { classification: 'known-platform-only', table: 'settings' },
       { classification: 'known-platform-only', table: 'sync_peers' }
     ]);
-    expect(report.androidOnly).toEqual([]);
-    expect(report.androidJavaSharedDdl).toEqual([
-      { classification: 'legacy-repair', table: 'sync_object_state_next' },
+    expect(report.androidOnly).toEqual([
+      { classification: 'known-platform-only', table: 'companion_meta' },
       { classification: 'known-platform-only', table: 'sync_push_ack' }
     ]);
+    expect(report.androidJavaSharedDdl).toEqual([]);
     expect(report.unattributed).toEqual([]);
     expect(sharedDrift).toEqual({
       attachment_blobs: [

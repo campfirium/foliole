@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 final class FolioleCompanionSchemaInstaller {
 
     private static final String SCHEMA_ASSET_PATH = "companion-core-schema.json";
+    private static final String MIGRATION_SCHEMA_ASSET_PATH = "companion-migration-schema.json";
 
     private FolioleCompanionSchemaInstaller() {}
 
@@ -28,6 +29,19 @@ final class FolioleCompanionSchemaInstaller {
                 database.execSQL(statement);
             }
         }
+    }
+
+    static void installMigrationStatement(Context context, SQLiteDatabase database, String statementName) throws Exception {
+        JSONObject payload = new JSONObject(readAsset(context, MIGRATION_SCHEMA_ASSET_PATH));
+        JSONObject statements = payload.optJSONObject("statementsByName");
+        if (statements == null) {
+            throw new IllegalStateException("Companion migration schema asset is missing statementsByName.");
+        }
+        String statement = statements.optString(statementName, "").trim();
+        if (statement.isEmpty()) {
+            throw new IllegalStateException("Companion migration schema asset is missing statement: " + statementName);
+        }
+        database.execSQL(statement);
     }
 
     private static String readAsset(Context context, String assetPath) throws Exception {
