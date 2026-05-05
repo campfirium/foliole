@@ -1,6 +1,8 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { useState } from 'react';
 
-import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
+import { isReadwiseReaderConfigReady, type ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import { AppButton, AppIconButton, AppStatusBadge, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
 
 import {
   formatHighlightModeLabel,
@@ -47,6 +49,18 @@ function ReadwiseHeader() {
       <ColumnHeader help="When it runs" title="Trigger" />
       <ColumnHeader help="Repeat" title="Every" />
       <ColumnHeader title="Actions" />
+    </div>
+  );
+}
+
+function ReadwiseSectionActions(props: {
+  configured: boolean;
+  onOpenConfig: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <AppStatusBadge label={props.configured ? 'Configured' : 'Needs setup'} tone={props.configured ? 'success' : 'warning'} />
+      <AppIconButton icon={<Settings2 aria-hidden="true" size={15} strokeWidth={1.9} />} label="Open Readwise Reader settings" onClick={props.onOpenConfig} />
     </div>
   );
 }
@@ -175,8 +189,10 @@ function ReadwiseTable(props: {
 
 export function ImportSourceWorkspaceReadwiseSection(props: {
   detailsOpen: boolean;
+  readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
   sources: DraftImportSource[];
+  onOpenReadwiseConfig: () => void;
   onToggleDetails: () => void;
   onChooseRootFolder: () => void;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
@@ -185,14 +201,31 @@ export function ImportSourceWorkspaceReadwiseSection(props: {
   onChangeAction: (sourceId: string, value: string) => void;
   onRunNow: (sourceId: string) => void;
 }) {
+  const [gateMessage, setGateMessage] = useState('');
+  const configured = props.readwiseRootPath.trim().length > 0 && isReadwiseReaderConfigReady(props.readwiseReaderConfig);
+
   return (
     <SettingsSection
+      actions={
+        <ReadwiseSectionActions
+          configured={configured}
+          onOpenConfig={() => {
+            if (!props.readwiseRootPath.trim()) {
+              setGateMessage('Choose the Readwise root folder first, then open the Readwise settings.');
+              return;
+            }
+            setGateMessage('');
+            props.onOpenReadwiseConfig();
+          }}
+        />
+      }
       ariaLabel="Readwise Reader import"
       className="mb-6"
       description="Readwise is configured separately here. Other import sources stay available below."
       title="Readwise Reader for Obsidian"
     >
       <ReadwiseRootRow onChooseRootFolder={props.onChooseRootFolder} readwiseRootPath={props.readwiseRootPath} />
+      {gateMessage ? <p className="text-sm text-amber-700">{gateMessage}</p> : null}
       <div className="overflow-auto">
         <ReadwiseTable {...props} />
       </div>

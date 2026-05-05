@@ -19,6 +19,29 @@ function createMockElectronApi() {
         persistedSettings = args?.settings ?? null;
         return persistedSettings;
       }
+      if (command === 'inspect_readwise_reader_setup') {
+        return {
+          checkedSourceCount: 1,
+          matchedHighlightCount: 2,
+          message: 'Checked 1 article sample successfully.',
+          sampleCount: 2,
+          samples: [
+            {
+              excerpt: 'This is the highlighted sentence inside the article body.',
+              highlightText: 'highlighted sentence',
+              matched: true,
+              sourceName: 'Sample Article'
+            },
+            {
+              excerpt: 'Another matching excerpt from the article body.',
+              highlightText: 'matching excerpt',
+              matched: true,
+              sourceName: 'Sample Article'
+            }
+          ],
+          success: true
+        };
+      }
       return null;
     }),
     onManagedInboxUpdated: () => () => undefined,
@@ -142,4 +165,50 @@ it('persists import manager settings after the panel remounts', async () => {
   expect(await screen.findByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
   expect(screen.getByLabelText('Trigger draft-import-source-1')).toHaveValue('manual');
   expect(screen.getByLabelText('Original folder draft-import-source-103')).toBeInTheDocument();
+});
+
+it('blocks the readwise settings entry until the root folder is chosen', () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
+
+  expect(screen.getByText('Choose the Readwise root folder first, then open the Readwise settings.')).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Readwise Reader settings' })).not.toBeInTheDocument();
+});
+
+it('requires detection and confirmation before saving the readwise reader setup', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByLabelText('Readwise root folder'));
+  await waitFor(() => {
+    expect(screen.getByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
+
+  expect(await screen.findByRole('heading', { name: 'Readwise Reader settings' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Detect' }));
+  expect(await screen.findByText('Checked 1 article sample successfully.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  await waitFor(() => {
+    expect(window.electronAPI?.invoke).toHaveBeenCalledWith(
+      'save_import_manager_settings',
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          readwiseReaderConfig: expect.objectContaining({
+            highlightSeparator: '\\n\\n',
+            validatedAt: expect.any(String)
+          }),
+          readwiseRootPath: '/tmp/chosen-folder'
+        })
+      })
+    );
+  });
+
+  expect(screen.getByText('Configured')).toBeInTheDocument();
 });

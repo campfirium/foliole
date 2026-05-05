@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { createDefaultImportManagerSettings, type ImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
+import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { selectRuntimeImportDirectory } from '../../shared/platform/importBridge';
 
 import {
@@ -184,15 +185,29 @@ function createDetailsSetter(setSettings: ReturnType<typeof usePersistedImportSo
   };
 }
 
+function createReadwiseReaderConfigActions(setSettings: ReturnType<typeof usePersistedImportSourceWorkspaceSettings>[1]) {
+  return {
+    handleSaveReadwiseReaderConfig: (config: ReadwiseReaderConfig) => {
+      setSettings((current) => ({
+        ...current,
+        readwiseReaderConfig: config
+      }));
+    }
+  };
+}
+
 export function useImportSourceWorkspaceState() {
   const [settings, setSettings] = usePersistedImportSourceWorkspaceSettings();
   const genericActions = createGenericActions(setSettings);
   const readwiseActions = createReadwiseActions(setSettings);
+  const readwiseReaderConfigActions = createReadwiseReaderConfigActions(setSettings);
 
   return {
     detailsOpen: settings.detailsOpen,
     ...genericActions,
     ...readwiseActions,
+    ...readwiseReaderConfigActions,
+    readwiseReaderConfig: settings.readwiseReaderConfig,
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSources: settings.readwiseSources,
     setDetailsOpen: createDetailsSetter(setSettings),

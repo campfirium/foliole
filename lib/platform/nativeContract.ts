@@ -6,6 +6,7 @@ import type {
   NativeTextImportArgs,
   NativeTextImportResult
 } from './nativeImportContract.js';
+import type { NativeReadwiseDetectionResult } from './nativeReadwiseContract.js';
 import type {
   NativeApplyReviewGradeArgs,
   NativeRelearnNodeArgs,
@@ -46,6 +47,10 @@ export type {
   NativeTextImportResult
 } from './nativeImportContract.js';
 export type {
+  NativeReadwiseDetectionResult,
+  NativeReadwiseDetectionSample
+} from './nativeReadwiseContract.js';
+export type {
   NativeResolvedAppPaths,
   NativeReviewGradeArgs,
   NativeReviewGradeResult,
@@ -78,6 +83,13 @@ export type NativeCommandMap = {
       url: string;
     };
     result: null;
+  };
+  [NATIVE_COMMANDS.inspectReadwiseReaderSetup]: {
+    args: {
+      highlightSeparator: string;
+      readwiseRootPath: string;
+    };
+    result: NativeReadwiseDetectionResult;
   };
   [NATIVE_COMMANDS.runTextFileImport]: {
     args: NativeTextImportArgs;

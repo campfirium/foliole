@@ -3,6 +3,7 @@ export const NATIVE_COMMANDS = {
   bootReport: 'boot_report',
   listSystemFonts: 'list_system_fonts',
   openExternalUrl: 'open_external_url',
+  inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
   loadImportOverview: 'load_import_overview',
   loadImportManagerSettings: 'load_import_manager_settings',
   runDirectoryImport: 'run_directory_import',

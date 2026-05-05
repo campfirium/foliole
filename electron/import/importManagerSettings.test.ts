@@ -38,6 +38,10 @@ afterEach(async () => {
 
 const IMPORT_MANAGER_SETTINGS_INPUT = {
   detailsOpen: false,
+  readwiseReaderConfig: {
+    highlightSeparator: '\\n\\n',
+    validatedAt: '2026-03-25T00:02:00.000Z'
+  },
   readwiseRootPath: '/tmp/readwise-root',
   readwiseSources: [
     {
@@ -80,6 +84,10 @@ function expectNormalizedSavedSettings() {
   const saved = saveImportManagerSettings(IMPORT_MANAGER_SETTINGS_INPUT);
   expect(saved).toMatchObject({
     detailsOpen: false,
+    readwiseReaderConfig: {
+      highlightSeparator: '\\n\\n',
+      validatedAt: '2026-03-25T00:02:00.000Z'
+    },
     readwiseRootPath: '/tmp/readwise-root',
     readwiseSources: [
       {
@@ -124,6 +132,10 @@ function expectReloadedSettingsAfterRestart() {
 
   expect(loadImportManagerSettings()).toMatchObject({
     detailsOpen: false,
+    readwiseReaderConfig: {
+      highlightSeparator: '\\n\\n',
+      validatedAt: '2026-03-25T00:02:00.000Z'
+    },
     readwiseRootPath: '/tmp/readwise-root',
     readwiseSources: [
       {

@@ -1,3 +1,9 @@
+import {
+  createDefaultReadwiseReaderConfig,
+  normalizeReadwiseReaderConfig,
+  type ReadwiseReaderConfig
+} from './readwiseReaderSettings.js';
+
 export type ImportHighlightMode = 'merged' | 'split';
 export type ImportSourceAction = 'delete' | 'keep' | 'move';
 export type ImportTriggerMode = 'manual' | 'scheduled';
@@ -17,6 +23,7 @@ export interface ImportManagerSourceDraft {
 
 export interface ImportManagerSettings {
   detailsOpen: boolean;
+  readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
   readwiseSources: ImportManagerSourceDraft[];
   sources: ImportManagerSourceDraft[];
@@ -24,7 +31,7 @@ export interface ImportManagerSettings {
   version: number;
 }
 
-const IMPORT_MANAGER_SETTINGS_VERSION = 1;
+const IMPORT_MANAGER_SETTINGS_VERSION = 2;
 const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['articles', 'books', 'tweets', 'podcasts'];
 const READWISE_FOLDER_NAMES: Record<ReadwiseSourceKind, string> = {
@@ -173,6 +180,7 @@ export function applyReadwiseRootPath(sources: ImportManagerSourceDraft[], rootP
 export function createDefaultImportManagerSettings(): ImportManagerSettings {
   return {
     detailsOpen: true,
+    readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
     readwiseSources: createReadwiseImportSources(),
     sources: createDefaultGenericImportSources(),
@@ -209,6 +217,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
 
   return {
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
+    readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig),
     readwiseRootPath,
     readwiseSources: defaultReadwiseSources.map((source) =>
       normalizeSource(readwiseByKind[source.kind as ReadwiseSourceKind], source, source.kind)

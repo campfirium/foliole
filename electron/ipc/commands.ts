@@ -14,6 +14,7 @@ import { runDirectoryImport } from './importDirectory.js';
 import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
+import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { reviewGrade, reviewPreview } from './review.js';
 import { handleStorageCommand } from './storageCommands.js';
 
@@ -96,6 +97,9 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     }
     await shell.openExternal(url);
     return null;
+  }
+  if (isTypedRequest(request, NATIVE_COMMANDS.inspectReadwiseReaderSetup)) {
+    return inspectReadwiseReaderSetup(request.args);
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.runTextFileImport)) {
     return runTextFileImport(resolveTargetWindow(context), request.args);

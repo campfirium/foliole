@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 
+import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 import type { DraftImportSource, DraftImportSourceField } from './importSourceWorkspaceModel';
@@ -9,11 +10,13 @@ import { ImportSourceTable } from './ImportSourceWorkspaceTable';
 type ImportSourceWorkspaceDetailsProps = {
   detailsOpen: boolean;
   open: boolean;
+  readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
   readwiseSources: DraftImportSource[];
   sources: DraftImportSource[];
   onChooseReadwiseRootFolder: () => void;
   onOpenChange: (open: boolean) => void;
+  onOpenReadwiseConfig: () => void;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChangeReadwise: (sourceId: string, field: DraftImportSourceField, value: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
@@ -54,8 +57,10 @@ function ImportSourceWorkspaceBody(props: Omit<ImportSourceWorkspaceDetailsProps
         onChooseHighlightFolder={props.onChooseReadwiseHighlightFolder}
         onChoosePrimaryFolder={props.onChooseReadwisePrimaryFolder}
         onChangeAction={props.onChangeReadwiseAction}
+        onOpenReadwiseConfig={props.onOpenReadwiseConfig}
         onToggleDetails={props.onToggleDetails}
         onRunNow={props.onRunNow}
+        readwiseReaderConfig={props.readwiseReaderConfig}
         readwiseRootPath={props.readwiseRootPath}
         sources={props.readwiseSources}
       />
@@ -79,10 +84,12 @@ export function ImportSourceWorkspaceDetails({
   detailsOpen,
   open,
   readwiseRootPath,
+  readwiseReaderConfig,
   readwiseSources,
   sources,
   onChooseReadwiseRootFolder,
   onOpenChange,
+  onOpenReadwiseConfig,
   onChange,
   onChangeReadwise,
   onChoosePrimaryFolder,
@@ -119,8 +126,10 @@ export function ImportSourceWorkspaceDetails({
               onChooseReadwiseRootFolder={onChooseReadwiseRootFolder}
               onCopySource={onCopySource}
               onDeleteSource={onDeleteSource}
+              onOpenReadwiseConfig={onOpenReadwiseConfig}
               onRunNow={onRunNow}
               onToggleDetails={onToggleDetails}
+              readwiseReaderConfig={readwiseReaderConfig}
               readwiseRootPath={readwiseRootPath}
               readwiseSources={readwiseSources}
               sources={sources}

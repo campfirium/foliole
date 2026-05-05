@@ -35,16 +35,20 @@ vi.mock('./storage.js', () => ({
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({
     detailsOpen: true,
+    readwiseReaderConfig: {
+      highlightSeparator: '\\n\\n',
+      validatedAt: ''
+    },
     readwiseRootPath: '/tmp/readwise',
     readwiseSources: [],
     sources: [],
     updatedAt: '2026-03-25T00:00:00.000Z',
-    version: 1
+    version: 2
   }),
   saveImportManagerSettings: vi.fn().mockImplementation((settings) => ({
     ...settings,
     updatedAt: '2026-03-25T00:05:00.000Z',
-    version: 1
+    version: 2
   }))
 }));
 vi.mock('../reviewSchedulerSettings.js', () => ({
@@ -116,6 +120,10 @@ async function expectAppAndImportSettingsCommands() {
       args: {
         settings: {
           detailsOpen: false,
+          readwiseReaderConfig: {
+            highlightSeparator: '\\n\\n',
+            validatedAt: '2026-03-25T00:02:00.000Z'
+          },
           readwiseRootPath: '/tmp/readwise-next',
           readwiseSources: [],
           sources: []
@@ -124,6 +132,10 @@ async function expectAppAndImportSettingsCommands() {
     })
   ).resolves.toMatchObject({
     detailsOpen: false,
+    readwiseReaderConfig: {
+      highlightSeparator: '\\n\\n',
+      validatedAt: '2026-03-25T00:02:00.000Z'
+    },
     readwiseRootPath: '/tmp/readwise-next',
     updatedAt: '2026-03-25T00:05:00.000Z'
   });
