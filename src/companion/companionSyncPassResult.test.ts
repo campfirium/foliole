@@ -60,7 +60,19 @@ describe('describeCompanionSyncPassResult', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.; 3 topic bodies still caching.',
+      message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies still caching.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('keeps resource backlog visible when push conflicts need review', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      pushConflictCount: 1,
+      remainingAttachmentResourceCount: 0,
+      remainingContentBlobCount: 3
+    }))).toEqual({
+      message: 'Sync pass finished; 1 device change(s) need review before they can be sent; 3 topic bodies still caching.',
       outcome: 'skipped',
       status: 'skipped'
     });

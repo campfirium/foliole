@@ -29,15 +29,19 @@ function formatBacklogLabel(label: string, count: number | null, bytes?: number 
   return typeof bytes === 'number' && bytes > 0 ? `${countLabel} (${formatBytes(bytes)})` : countLabel;
 }
 
+function joinBacklogSuffix(prefix: string, suffix: string) {
+  return `${prefix.replace(/[.;]\s*$/, '')}; ${suffix}`;
+}
+
 function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const remainingBodies = result.remainingContentBlobCount;
   const remainingAttachments = result.remainingAttachmentResourceCount;
   const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
   if (remainingBodies === 0 && remainingAttachments === 0) return prefix;
-  if (remainingBodies === 0) return `${prefix}; ${attachmentLabel} still caching.`;
-  if (remainingAttachments === 0) return `${prefix}; ${bodyLabel} still caching.`;
-  return `${prefix}; ${bodyLabel} and ${attachmentLabel} still caching.`;
+  if (remainingBodies === 0) return joinBacklogSuffix(prefix, `${attachmentLabel} still caching.`);
+  if (remainingAttachments === 0) return joinBacklogSuffix(prefix, `${bodyLabel} still caching.`);
+  return joinBacklogSuffix(prefix, `${bodyLabel} and ${attachmentLabel} still caching.`);
 }
 
 function createPassResult(message: string, status: CompanionSyncPassResult['status']): CompanionSyncPassResult {
@@ -59,7 +63,10 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   }
   const rejectedOrConflicted = (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0);
   if (rejectedOrConflicted > 0) {
-    return createPassResult(`Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`, 'skipped');
+    return createPassResult(
+      appendBacklogSuffix(`Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`, result),
+      'skipped'
+    );
   }
   if (
     result.remainingContentBlobCount === 0 &&
