@@ -20,6 +20,8 @@ type WorkspaceSet = (
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
+type NodeSnapshot = WorkspaceState['nodesById'][string];
+
 function collectMoveRootIds(
   nodeIds: string[],
   nodeOrder: string[],
@@ -154,63 +156,101 @@ function createMoveNodesPatch(
   return buildMovedState(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
 }
 
-export function createChildNodeAction(set: WorkspaceSet): WorkspaceState['createChildNode'] {
+export function createChildNodeAction(
+  set: WorkspaceSet,
+  onNodeCreated?: (node: NodeSnapshot) => void,
+  onNodeOrderChanged?: (nodeOrder: string[]) => void
+): WorkspaceState['createChildNode'] {
   return (parentNodeId, content = '') => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
+    let createdNode: NodeSnapshot | null = null;
+    let nextNodeOrder: string[] | null = null;
 
     set((state) => {
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) {
         return state;
       }
+      const nextNode = {
+        id: nodeId,
+        parentNodeId,
+        title: deriveNodeTitleFromContent(content),
+        content,
+        anchorLink: null,
+        reveal: null,
+        review: null,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      };
+      createdNode = nextNode;
 
       return {
         activeNodeId: nodeId,
-        nodeOrder: insertNodeBlockUnderParent(
+        nodeOrder: (nextNodeOrder = insertNodeBlockUnderParent(
           state.nodeOrder,
           [nodeId],
           parentNodeId,
           state.nodesById
-        ),
+        )),
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            id: nodeId,
-            parentNodeId,
-            title: deriveNodeTitleFromContent(content),
-            content,
-            anchorLink: null,
-            reveal: null,
-            review: null,
-            createdAt: timestamp,
-            updatedAt: timestamp
-          }
+          [nodeId]: nextNode
         }
       };
     });
+    if (createdNode) {
+      onNodeCreated?.(createdNode);
+      if (nextNodeOrder) {
+        onNodeOrderChanged?.(nextNodeOrder);
+      }
+    }
 
     return nodeId;
   };
 }
 
-export function createMoveNodesAction(set: WorkspaceSet): WorkspaceState['moveNodes'] {
+export function createMoveNodesAction(
+  set: WorkspaceSet,
+  onNodesMoved?: (nodes: NodeSnapshot[]) => void,
+  onNodeOrderChanged?: (nodeOrder: string[]) => void
+): WorkspaceState['moveNodes'] {
   return (nodeIds, targetNodeId, intent) => {
     let moved = false;
+    let movedRootNodeSnapshots: NodeSnapshot[] = [];
+    let nextNodeOrder: string[] | null = null;
 
     set((state) => {
+      const rootNodeIds = resolveMovableRootNodeIds(state, nodeIds, targetNodeId, intent);
+      if (!rootNodeIds) {
+        return state;
+      }
       const patch = createMoveNodesPatch(state, nodeIds, targetNodeId, intent);
       if (!patch) {
         return state;
       }
+      movedRootNodeSnapshots = rootNodeIds
+        .map((nodeId) => patch.nodesById[nodeId])
+        .filter((node): node is NodeSnapshot => Boolean(node));
+      nextNodeOrder = patch.nodeOrder;
       moved = true;
       return patch;
     });
+    if (moved && movedRootNodeSnapshots.length > 0) {
+      onNodesMoved?.(movedRootNodeSnapshots);
+      if (nextNodeOrder) {
+        onNodeOrderChanged?.(nextNodeOrder);
+      }
+    }
 
     return moved;
   };
 }
 
-export function createMoveNodeAction(set: WorkspaceSet): WorkspaceState['moveNode'] {
-  const moveNodes = createMoveNodesAction(set);
+export function createMoveNodeAction(
+  set: WorkspaceSet,
+  onNodesMoved?: (nodes: NodeSnapshot[]) => void,
+  onNodeOrderChanged?: (nodeOrder: string[]) => void
+): WorkspaceState['moveNode'] {
+  const moveNodes = createMoveNodesAction(set, onNodesMoved, onNodeOrderChanged);
   return (nodeId, nextParentNodeId) => moveNodes([nodeId], nextParentNodeId, 'child');
 }

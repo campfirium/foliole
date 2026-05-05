@@ -2,6 +2,8 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { replaceNodeOrder, upsertNodeSnapshot } from '../database/nodeMutations.js';
+
 import { handleInvokeRequest } from './commands.js';
 
 const mockWindow = {
@@ -30,12 +32,18 @@ vi.mock('./paths.js', () => ({
     app_log_dir: '/log'
   })
 }));
+vi.mock('../database/workspaceState.js', () => ({
+  clearWorkspaceStateFromSqlite: vi.fn(),
+  loadWorkspaceStateFromSqlite: vi.fn().mockReturnValue('{"state":1}'),
+  saveWorkspaceStateToSqlite: vi.fn()
+}));
+vi.mock('../database/nodeMutations.js', () => ({
+  replaceNodeOrder: vi.fn(),
+  upsertNodeSnapshot: vi.fn()
+}));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
-  saveAppSettingsState: vi.fn().mockResolvedValue(undefined),
-  clearWorkspaceState: vi.fn().mockResolvedValue(undefined),
-  loadWorkspaceState: vi.fn().mockResolvedValue('{"state":1}'),
-  saveWorkspaceState: vi.fn().mockResolvedValue(undefined)
+  saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({
@@ -47,7 +55,7 @@ beforeEach(() => {
   mockWindow.isMaximized.mockReturnValue(false);
 });
 
-it('handles workspace storage commands', async () => {
+it('handles workspace state storage commands', async () => {
   await expect(
     handleInvokeRequest({
       command: 'save_workspace_state',
@@ -68,6 +76,84 @@ it('handles workspace storage commands', async () => {
       args: { storageKey: 'foliole-workspace-v1' }
     })
   ).resolves.toBeNull();
+});
+
+it('handles node mutation commands', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'update_node_content',
+      args: {
+        nodeId: 'node-1',
+        parentNodeId: null,
+        title: 'Node title',
+        isTitleManual: false,
+        content: '# Content',
+        reveal: null,
+        anchorLink: null,
+        position: 1,
+        createdAt: '2026-03-06T00:00:00.000Z',
+        updatedAt: '2026-03-06T00:00:01.000Z'
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(upsertNodeSnapshot).toHaveBeenNthCalledWith(1, {
+    nodeId: 'node-1',
+    parentNodeId: null,
+    title: 'Node title',
+    isTitleManual: false,
+    content: '# Content',
+    reveal: null,
+    anchorLink: null,
+    position: 1,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:01.000Z'
+  });
+
+});
+
+it('handles node reveal mutation command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'update_node_reveal',
+      args: {
+        nodeId: 'node-2',
+        parentNodeId: 'node-1',
+        title: 'QA',
+        isTitleManual: true,
+        content: 'Question',
+        reveal: 'Answer',
+        anchorLink: { id: 'cloze-1', kind: 'cloze' },
+        position: 2,
+        createdAt: '2026-03-06T00:00:00.000Z',
+        updatedAt: '2026-03-06T00:00:02.000Z'
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith({
+    nodeId: 'node-2',
+    parentNodeId: 'node-1',
+    title: 'QA',
+    isTitleManual: true,
+    content: 'Question',
+    reveal: 'Answer',
+    anchorLink: { id: 'cloze-1', kind: 'cloze' },
+    position: 2,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:02.000Z'
+  });
+
+});
+
+it('handles node order replacement command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'replace_node_order',
+      args: { nodeIds: ['node-1', 'node-2'] }
+    })
+  ).resolves.toBeNull();
+  expect(replaceNodeOrder).toHaveBeenCalledWith(['node-1', 'node-2']);
 });
 
 it('handles app settings storage commands', async () => {

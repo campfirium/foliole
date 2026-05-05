@@ -1,7 +1,16 @@
-import { deriveNodeTitleForCloze, deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 
-import { createDefaultReviewProfile } from './workspaceSeed';
-import type { WorkspaceState } from './workspaceStore';
+import {
+  syncNodeContentToRuntime,
+  syncNodeOrderToRuntime,
+  syncNodeRevealToRuntime
+} from './workspaceRuntimeSync';
+import { type WorkspaceState } from './workspaceStore';
+import {
+  createHighlightFromSelectionAction,
+  createQAFromSelectionAction,
+  createRootNodeAction
+} from './workspaceStoreCreateActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import { createChildNodeAction, createMoveNodeAction, createMoveNodesAction } from './workspaceStoreTreeActions';
 
@@ -53,189 +62,111 @@ function createSetNodeViewStateAction(set: WorkspaceSet): WorkspaceNodeActions['
 
 function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeTitle'] {
   return (nodeId, title) => {
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node) {
         return state;
       }
       const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
+      const nextNode = {
+        ...node,
+        title: nextTitle,
+        isTitleManual: true,
+        updatedAt: new Date().toISOString()
+      };
+      nextNodeForSync = nextNode;
       return {
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            ...node,
-            title: nextTitle,
-            isTitleManual: true,
-            updatedAt: new Date().toISOString()
-          }
+          [nodeId]: nextNode
         }
       };
     });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
   };
 }
 
 function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeContent'] {
   return (nodeId, content) => {
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node) {
         return state;
       }
       const derivedTitle = deriveNodeTitleFromContent(content);
+      const nextNode = {
+        ...node,
+        content,
+        title: node.isTitleManual ? node.title : derivedTitle,
+        updatedAt: new Date().toISOString()
+      };
+      nextNodeForSync = nextNode;
       return {
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            ...node,
-            content,
-            title: node.isTitleManual ? node.title : derivedTitle,
-            updatedAt: new Date().toISOString()
-          }
+          [nodeId]: nextNode
         }
       };
     });
+    if (nextNodeForSync) {
+      syncNodeContentToRuntime(nextNodeForSync);
+    }
   };
 }
 
 function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeReveal'] {
   return (nodeId, reveal) => {
+    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node || node.reveal === null) {
         return state;
       }
+      const nextNode = {
+        ...node,
+        reveal,
+        updatedAt: new Date().toISOString()
+      };
+      nextNodeForSync = nextNode;
       return {
         nodesById: {
           ...state.nodesById,
-          [nodeId]: {
-            ...node,
-            reveal,
-            updatedAt: new Date().toISOString()
-          }
+          [nodeId]: nextNode
         }
       };
     });
-  };
-}
-
-function createRootNodeAction(set: WorkspaceSet): WorkspaceNodeActions['createRootNode'] {
-  return (content = '') => {
-    const nodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
-
-    set((state) => ({
-      activeNodeId: nodeId,
-      nodeOrder: [...state.nodeOrder, nodeId],
-      nodesById: {
-        ...state.nodesById,
-        [nodeId]: {
-          id: nodeId,
-          parentNodeId: null,
-          title: deriveNodeTitleFromContent(content),
-          content,
-          anchorLink: null,
-          reveal: null,
-          review: null,
-          createdAt: timestamp,
-          updatedAt: timestamp
-        }
-      }
-    }));
-
-    return nodeId;
-  };
-}
-
-function createHighlightFromSelectionAction(set: WorkspaceSet): WorkspaceNodeActions['createHighlightNodeFromSelection'] {
-  return (parentNodeId, content, anchorId) => {
-    const normalizedContent = content.trim();
-    if (!normalizedContent) {
-      return null;
+    if (nextNodeForSync) {
+      syncNodeRevealToRuntime(nextNodeForSync);
     }
-
-    const childNodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
-
-    set((state) => {
-      const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
-        return state;
-      }
-      return {
-        nodeOrder: [...state.nodeOrder, childNodeId],
-        nodesById: {
-          ...state.nodesById,
-          [childNodeId]: {
-            id: childNodeId,
-            parentNodeId,
-            title: deriveNodeTitleFromContent(normalizedContent),
-            content: normalizedContent,
-            anchorLink: anchorId ? { id: anchorId, kind: 'highlight' } : null,
-            reveal: null,
-            review: null,
-            createdAt: timestamp,
-            updatedAt: timestamp
-          }
-        }
-      };
-    });
-
-    return childNodeId;
-  };
-}
-
-function createQAFromSelectionAction(set: WorkspaceSet): WorkspaceNodeActions['createQANodeFromSelection'] {
-  return (parentNodeId, promptContent, answerContent, anchorId) => {
-    const normalizedPrompt = promptContent.trim();
-    const normalizedAnswer = answerContent.trim();
-    if (!normalizedPrompt || !normalizedAnswer) {
-      return null;
-    }
-
-    const childNodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
-
-    set((state) => {
-      const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
-        return state;
-      }
-      return {
-        nodeOrder: [...state.nodeOrder, childNodeId],
-        nodesById: {
-          ...state.nodesById,
-          [childNodeId]: {
-            id: childNodeId,
-            parentNodeId,
-            title: deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
-            content: normalizedPrompt,
-            anchorLink: anchorId ? { id: anchorId, kind: 'cloze' } : null,
-            reveal: normalizedAnswer,
-            review: createDefaultReviewProfile(timestamp),
-            createdAt: timestamp,
-            updatedAt: timestamp
-          }
-        }
-      };
-    });
-
-    return childNodeId;
   };
 }
 
 export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActions {
   const trashActions = createWorkspaceTrashActions(set);
+  const runtimeHandlers = {
+    syncNodeContent: syncNodeContentToRuntime,
+    syncNodeOrder: syncNodeOrderToRuntime
+  };
+  const syncMovedNodes = (nodes: WorkspaceState['nodesById'][string][]) => {
+    for (const node of nodes) {
+      syncNodeContentToRuntime(node);
+    }
+  };
   return {
     ...trashActions,
     setNodeViewState: createSetNodeViewStateAction(set),
     updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
-    createRootNode: createRootNodeAction(set),
-    createChildNode: createChildNodeAction(set),
-    createHighlightNodeFromSelection: createHighlightFromSelectionAction(set),
-    createQANodeFromSelection: createQAFromSelectionAction(set),
-    moveNode: createMoveNodeAction(set),
-    moveNodes: createMoveNodesAction(set)
+    createRootNode: createRootNodeAction(set, runtimeHandlers),
+    createChildNode: createChildNodeAction(set, syncNodeContentToRuntime, syncNodeOrderToRuntime),
+    createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
+    createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
+    moveNode: createMoveNodeAction(set, syncMovedNodes, syncNodeOrderToRuntime),
+    moveNodes: createMoveNodesAction(set, syncMovedNodes, syncNodeOrderToRuntime)
   };
 }
