@@ -1,3 +1,4 @@
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
   deleteNodesPermanently,
   replaceNodeOrder,
@@ -39,26 +40,26 @@ export async function handleStorageCommand(
   command: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
-  if (command === 'load_workspace_snapshot') {
+  if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
   }
-  if (command === 'load_app_settings_state') {
+  if (command === NATIVE_COMMANDS.loadAppSettingsState) {
     return loadAppSettingsState();
   }
-  if (command === 'save_app_settings_state') {
+  if (command === NATIVE_COMMANDS.saveAppSettingsState) {
     await saveAppSettingsState(readSettingsObject(args.settings));
     return null;
   }
-  if (command === 'load_review_scheduler_settings') {
+  if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) {
     return loadReviewSchedulerSettings();
   }
-  if (command === 'save_review_scheduler_settings') {
+  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) {
     return saveReviewSchedulerSettings(readSettingsObject(args.settings));
   }
-  if (command === 'load_reading_progress') {
+  if (command === NATIVE_COMMANDS.loadReadingProgress) {
     return loadReadingProgress();
   }
-  if (command === 'save_reading_progress') {
+  if (command === NATIVE_COMMANDS.saveReadingProgress) {
     saveReadingProgress({
       activeNodeId: asNullableString(args.activeNodeId, 'activeNodeId'),
       nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
@@ -66,27 +67,27 @@ export async function handleStorageCommand(
     });
     return null;
   }
-  if (command === 'update_node_content' || command === 'update_node_reveal') {
+  if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     upsertNodeSnapshot(parseNodeSnapshotArgs(args));
     return null;
   }
-  if (command === 'replace_node_order') {
+  if (command === NATIVE_COMMANDS.replaceNodeOrder) {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
     return null;
   }
-  if (command === 'soft_delete_nodes') {
+  if (command === NATIVE_COMMANDS.softDeleteNodes) {
     softDeleteNodes(parseSoftDeleteNodesArgs(args));
     return null;
   }
-  if (command === 'restore_nodes') {
+  if (command === NATIVE_COMMANDS.restoreNodes) {
     restoreNodes(parseRestoreNodesArgs(args));
     return null;
   }
-  if (command === 'delete_nodes_permanently') {
+  if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
     deleteNodesPermanently(parseDeleteNodesPermanentlyArgs(args));
     return null;
   }
-  if (command === 'apply_review_grade') {
+  if (command === NATIVE_COMMANDS.applyReviewGrade) {
     applyReviewGrade(parseApplyReviewGradeArgs(args));
     return null;
   }

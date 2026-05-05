@@ -1,3 +1,4 @@
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import { getRuntimeInvoke } from './bridge';
@@ -49,7 +50,7 @@ function persistSnapshotToRuntimeStorage() {
     return;
   }
   const settings = readWhitelistedLocalStorageSnapshot();
-  void runtimeInvoke('save_app_settings_state', { settings }).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.saveAppSettingsState, { settings }).catch(() => undefined);
 }
 
 export function getWhitelistedLocalStorageItem(key: string): string | null {

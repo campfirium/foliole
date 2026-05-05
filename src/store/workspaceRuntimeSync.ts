@@ -1,55 +1,14 @@
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
+import type {
+  NativeApplyReviewGradeArgs,
+  NativeNodeSnapshotArgs,
+  NativeSaveReadingProgressArgs
+} from '../../lib/platform/nativeContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { isDesktopRuntime } from '../shared/platform/runtime';
 
-interface ReviewCardSnapshot {
-  due: string;
-  last_review: string | null;
-  state: 0 | 1 | 2 | 3;
-  stability: number;
-  difficulty: number;
-  elapsed_days: number;
-  scheduled_days: number;
-  reps: number;
-  lapses: number;
-}
-
-interface ReviewGradeRuntimePayload {
-  nodeId: string;
-  grade: 1 | 2 | 3 | 4;
-  reviewedAt: string;
-  cardBefore: ReviewCardSnapshot;
-  cardAfter: ReviewCardSnapshot;
-}
-
-interface SoftDeleteNodesRuntimePayload {
-  nodeIds: string[];
-  deletedAt: string;
-}
-
-interface RestoreNodesRuntimePayload {
-  nodeIds: string[];
-}
-
-interface DeleteNodesPermanentlyRuntimePayload {
-  nodeIds: string[];
-  nodeOrder: string[];
-}
-
-interface ReadingProgressNodeViewState {
-  nodeId: string;
-  scrollTop: number;
-  selectionFrom: number;
-  selectionTo: number;
-}
-
-interface ReadingProgressRuntimePayload {
-  activeNodeId: string | null;
-  nodeViewStates: ReadingProgressNodeViewState[];
-  updatedAt: string;
-}
-
-function toNodeSnapshotPayload(node: Node, position?: number) {
+function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapshotArgs {
   return {
     nodeId: node.id,
     parentNodeId: node.parentNodeId,
@@ -69,7 +28,7 @@ export function syncNodeContentToRuntime(node: Node, position?: number) {
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('update_node_content', toNodeSnapshotPayload(node, position)).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.updateNodeContent, toNodeSnapshotPayload(node, position)).catch(() => undefined);
 }
 
 export function syncNodeRevealToRuntime(node: Node, position?: number) {
@@ -77,7 +36,7 @@ export function syncNodeRevealToRuntime(node: Node, position?: number) {
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('update_node_reveal', toNodeSnapshotPayload(node, position)).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.updateNodeReveal, toNodeSnapshotPayload(node, position)).catch(() => undefined);
 }
 
 export function syncNodeOrderToRuntime(nodeOrder: string[]) {
@@ -85,10 +44,10 @@ export function syncNodeOrderToRuntime(nodeOrder: string[]) {
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('replace_node_order', { nodeIds: nodeOrder }).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.replaceNodeOrder, { nodeIds: nodeOrder }).catch(() => undefined);
 }
 
-export async function syncReviewGradeToRuntime(payload: ReviewGradeRuntimePayload): Promise<void> {
+export async function syncReviewGradeToRuntime(payload: NativeApplyReviewGradeArgs): Promise<void> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     if (!isDesktopRuntime()) {
@@ -96,37 +55,37 @@ export async function syncReviewGradeToRuntime(payload: ReviewGradeRuntimePayloa
     }
     throw new Error('runtime bridge unavailable for review grade sync');
   }
-  await runtimeInvoke('apply_review_grade', payload as unknown as Record<string, unknown>);
+  await runtimeInvoke(NATIVE_COMMANDS.applyReviewGrade, payload);
 }
 
-export function syncSoftDeleteNodesToRuntime(payload: SoftDeleteNodesRuntimePayload) {
+export function syncSoftDeleteNodesToRuntime(payload: { nodeIds: string[]; deletedAt: string }) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('soft_delete_nodes', payload as unknown as Record<string, unknown>).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.softDeleteNodes, payload).catch(() => undefined);
 }
 
-export function syncRestoreNodesToRuntime(payload: RestoreNodesRuntimePayload) {
+export function syncRestoreNodesToRuntime(payload: { nodeIds: string[] }) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('restore_nodes', payload as unknown as Record<string, unknown>).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.restoreNodes, payload).catch(() => undefined);
 }
 
-export function syncDeleteNodesPermanentlyToRuntime(payload: DeleteNodesPermanentlyRuntimePayload) {
+export function syncDeleteNodesPermanentlyToRuntime(payload: { nodeIds: string[]; nodeOrder: string[] }) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('delete_nodes_permanently', payload as unknown as Record<string, unknown>).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.deleteNodesPermanently, payload).catch(() => undefined);
 }
 
-export function syncReadingProgressToRuntime(payload: ReadingProgressRuntimePayload) {
+export function syncReadingProgressToRuntime(payload: NativeSaveReadingProgressArgs) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return;
   }
-  void runtimeInvoke('save_reading_progress', payload as unknown as Record<string, unknown>).catch(() => undefined);
+  void runtimeInvoke(NATIVE_COMMANDS.saveReadingProgress, payload).catch(() => undefined);
 }

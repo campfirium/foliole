@@ -48,8 +48,29 @@ export function buildCommitMessage(task) {
   return `auto(task): ${ascii}`;
 }
 
+async function stageTrackedChanges(cwd) {
+  await runCommand('git', ['add', '-u', '--', '.'], { cwd });
+}
+
+async function listUntrackedFiles(cwd) {
+  const result = await runCommand('git', ['ls-files', '--others', '--exclude-standard', '--', '.'], { cwd });
+  return result.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+async function stageUntrackedFiles(cwd) {
+  const files = await listUntrackedFiles(cwd);
+  if (files.length === 0) {
+    return;
+  }
+  await runCommand('git', ['add', '--', ...files], { cwd });
+}
+
 export async function commitTrackedChanges(cwd, message) {
-  await runCommand('git', ['add', '-A', '--', '.', ':(exclude).lab', ':(exclude).lab/**'], { cwd });
+  await stageTrackedChanges(cwd);
+  await stageUntrackedFiles(cwd);
   const staged = await runCommand('git', ['diff', '--cached', '--name-only'], { cwd });
   if (!staged.stdout.trim()) {
     return false;

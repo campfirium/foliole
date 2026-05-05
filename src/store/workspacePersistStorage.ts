@@ -1,5 +1,6 @@
 import type { StateStorage } from 'zustand/middleware';
 
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
 import { mergeWorkspaceSnapshotWithReadingProgress } from './workspaceReadingProgress';
@@ -24,8 +25,8 @@ export const workspacePersistStorage: StateStorage = {
     if (runtimeInvoke) {
       try {
         const [snapshot, readingProgress] = await Promise.all([
-          runtimeInvoke('load_workspace_snapshot'),
-          runtimeInvoke('load_reading_progress').catch(() => null)
+          runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceSnapshot),
+          runtimeInvoke(NATIVE_COMMANDS.loadReadingProgress).catch(() => null)
         ]);
         return toPersistedStatePayload(mergeWorkspaceSnapshotWithReadingProgress(snapshot, readingProgress));
       } catch {

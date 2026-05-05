@@ -1,3 +1,4 @@
+import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 
 export interface ReviewSchedulerSettings {
@@ -65,7 +66,7 @@ export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSett
     return DEFAULT_REVIEW_SCHEDULER_SETTINGS;
   }
   try {
-    return normalizeReviewSchedulerSettings(await runtimeInvoke('load_review_scheduler_settings'));
+    return normalizeReviewSchedulerSettings(await runtimeInvoke(NATIVE_COMMANDS.loadReviewSchedulerSettings));
   } catch {
     return DEFAULT_REVIEW_SCHEDULER_SETTINGS;
   }
@@ -84,7 +85,7 @@ export async function saveReviewSchedulerSettings(
   }
   try {
     return normalizeReviewSchedulerSettings(
-      await runtimeInvoke('save_review_scheduler_settings', {
+      await runtimeInvoke(NATIVE_COMMANDS.saveReviewSchedulerSettings, {
         settings: payload
       })
     );

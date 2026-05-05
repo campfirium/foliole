@@ -1,3 +1,5 @@
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+
 import { getRuntimeInvoke } from './bridge';
 import { getLocalStorageWhitelist } from './storage';
 
@@ -61,7 +63,7 @@ export async function syncAppSettingsWithRuntime() {
   let runtimeSnapshot: Record<string, string> = {};
 
   try {
-    runtimeSnapshot = normalizeSettingsPayload(await runtimeInvoke('load_app_settings_state'));
+    runtimeSnapshot = normalizeSettingsPayload(await runtimeInvoke(NATIVE_COMMANDS.loadAppSettingsState));
   } catch {
     return;
   }
@@ -70,7 +72,7 @@ export async function syncAppSettingsWithRuntime() {
   writeWhitelistedLocalSettings(merged);
 
   try {
-    await runtimeInvoke('save_app_settings_state', { settings: merged });
+    await runtimeInvoke(NATIVE_COMMANDS.saveAppSettingsState, { settings: merged });
   } catch {
     // Keep local snapshot even when native write fails.
   }

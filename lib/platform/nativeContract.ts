@@ -1,3 +1,21 @@
+import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
+import type {
+  NativeApplyReviewGradeArgs,
+  NativeNodeSnapshotArgs,
+  NativeReadingProgressSnapshot,
+  NativeReviewSchedulerSettings,
+  NativeSaveReadingProgressArgs,
+  NativeWorkspaceSnapshot
+} from './nativeStorageContract.js';
+export type {
+  NativeApplyReviewGradeArgs,
+  NativeNodeSnapshotArgs,
+  NativeReadingProgressSnapshot,
+  NativeReviewSchedulerSettings,
+  NativeSaveReadingProgressArgs,
+  NativeWorkspaceSnapshot
+} from './nativeStorageContract.js';
+
 export interface NativeResolvedAppPaths {
   app_data_dir: string;
   app_config_dir: string;
@@ -49,63 +67,119 @@ export interface NativeReviewPreviewResult {
   Easy: NativeReviewGradeResult;
 }
 
-export interface NativeCommandMap {
-  app_get_version: {
+export type NativeCommandMap = {
+  [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
   };
-  boot_report: {
+  [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;
       payload?: unknown;
     };
     result: null;
   };
-  list_system_fonts: {
+  [NATIVE_COMMANDS.listSystemFonts]: {
     args: undefined;
     result: NativeSystemFontCatalog;
   };
-  open_external_url: {
+  [NATIVE_COMMANDS.openExternalUrl]: {
     args: {
       url: string;
     };
     result: null;
   };
-  resolve_app_paths: {
+  [NATIVE_COMMANDS.resolveAppPaths]: {
     args: undefined;
     result: NativeResolvedAppPaths;
   };
-  review_grade: {
+  [NATIVE_COMMANDS.reviewGrade]: {
     args: NativeReviewGradeArgs;
     result: NativeReviewGradeResult;
   };
-  review_preview: {
+  [NATIVE_COMMANDS.reviewPreview]: {
     args: NativeReviewPreviewArgs;
     result: NativeReviewPreviewResult;
   };
-  sync_app_menu_state: {
+  [NATIVE_COMMANDS.syncAppMenuState]: {
     args: {
       enabledCommandIds: string[];
     };
     result: null;
   };
-  window_close: {
+  [NATIVE_COMMANDS.windowClose]: {
     args: undefined;
     result: null;
   };
-  window_is_maximized: {
+  [NATIVE_COMMANDS.windowIsMaximized]: {
     args: undefined;
     result: boolean;
   };
-  window_minimize: {
+  [NATIVE_COMMANDS.windowMinimize]: {
     args: undefined;
     result: null;
   };
-  window_toggle_maximize: {
+  [NATIVE_COMMANDS.windowToggleMaximize]: {
     args: undefined;
     result: null;
   };
-}
+  [NATIVE_COMMANDS.loadWorkspaceSnapshot]: {
+    args: undefined;
+    result: NativeWorkspaceSnapshot;
+  };
+  [NATIVE_COMMANDS.loadAppSettingsState]: {
+    args: undefined;
+    result: Record<string, string>;
+  };
+  [NATIVE_COMMANDS.saveAppSettingsState]: {
+    args: { settings: Record<string, string> };
+    result: null;
+  };
+  [NATIVE_COMMANDS.loadReviewSchedulerSettings]: {
+    args: undefined;
+    result: NativeReviewSchedulerSettings;
+  };
+  [NATIVE_COMMANDS.saveReviewSchedulerSettings]: {
+    args: { settings: NativeReviewSchedulerSettings };
+    result: NativeReviewSchedulerSettings;
+  };
+  [NATIVE_COMMANDS.loadReadingProgress]: {
+    args: undefined;
+    result: NativeReadingProgressSnapshot;
+  };
+  [NATIVE_COMMANDS.saveReadingProgress]: {
+    args: NativeSaveReadingProgressArgs;
+    result: null;
+  };
+  [NATIVE_COMMANDS.updateNodeContent]: {
+    args: NativeNodeSnapshotArgs;
+    result: null;
+  };
+  [NATIVE_COMMANDS.updateNodeReveal]: {
+    args: NativeNodeSnapshotArgs;
+    result: null;
+  };
+  [NATIVE_COMMANDS.replaceNodeOrder]: {
+    args: { nodeIds: string[] };
+    result: null;
+  };
+  [NATIVE_COMMANDS.softDeleteNodes]: {
+    args: { nodeIds: string[]; deletedAt: string };
+    result: null;
+  };
+  [NATIVE_COMMANDS.restoreNodes]: {
+    args: { nodeIds: string[] };
+    result: null;
+  };
+  [NATIVE_COMMANDS.deleteNodesPermanently]: {
+    args: { nodeIds: string[]; nodeOrder: string[] };
+    result: null;
+  };
+  [NATIVE_COMMANDS.applyReviewGrade]: {
+    args: NativeApplyReviewGradeArgs;
+    result: null;
+  };
+};
 
 export type NativeCommandName = keyof NativeCommandMap;
 
@@ -132,43 +206,26 @@ export function invokeReviewGrade(
   invoke: NativeInvoke,
   args: NativeReviewGradeArgs
 ): Promise<NativeReviewGradeResult> {
-  return invoke('review_grade', args);
+  return invoke(NATIVE_COMMANDS.reviewGrade, args);
 }
 
 export function invokeReviewPreview(
   invoke: NativeInvoke,
   args: NativeReviewPreviewArgs
 ): Promise<NativeReviewPreviewResult> {
-  return invoke('review_preview', args);
+  return invoke(NATIVE_COMMANDS.reviewPreview, args);
 }
 
 export function invokeBootReport(
   invoke: NativeInvoke,
-  args: NativeCommandArgs<'boot_report'>
-): Promise<NativeCommandResult<'boot_report'>> {
-  return invoke('boot_report', args);
-}
-
-export function isTypedNativeCommand(command: string): command is NativeCommandName {
-  return (
-    command === 'app_get_version' ||
-    command === 'boot_report' ||
-    command === 'list_system_fonts' ||
-    command === 'open_external_url' ||
-    command === 'resolve_app_paths' ||
-    command === 'review_grade' ||
-    command === 'review_preview' ||
-    command === 'sync_app_menu_state' ||
-    command === 'window_close' ||
-    command === 'window_is_maximized' ||
-    command === 'window_minimize' ||
-    command === 'window_toggle_maximize'
-  );
+  args: NativeCommandArgs<typeof NATIVE_COMMANDS.bootReport>
+): Promise<NativeCommandResult<typeof NATIVE_COMMANDS.bootReport>> {
+  return invoke(NATIVE_COMMANDS.bootReport, args);
 }
 
 export function isTypedNativeRequest<T extends NativeCommandName>(
   request: { command: string; args?: unknown },
   command: T
 ): request is NativeInvokeRequest<T> {
-  return request.command === command;
+  return isTypedNativeCommand(request.command) && request.command === command;
 }
