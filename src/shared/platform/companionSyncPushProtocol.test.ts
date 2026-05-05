@@ -161,6 +161,26 @@ function testBlocksLegacyMissingBase() {
   });
 }
 
+function testBlocksPullApplyForDirtyStateRows() {
+  const payload = createNodeReviewRow({ state_seq: 20 });
+  const dirtyLocal = createNodeReviewRow({ local_status: 'dirty', state_seq: 12 });
+
+  expect(nodeReviewSyncAdapter.applyPullPayload(payload, dirtyLocal)).toEqual({
+    identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+    status: 'blocked_by_dirty'
+  });
+}
+
+function testAppliesPullWhenLocalStateIsClean() {
+  const payload = createNodeReviewRow({ state_seq: 20 });
+  const cleanLocal = createNodeReviewRow({ local_status: undefined, state_seq: 12 });
+
+  expect(nodeReviewSyncAdapter.applyPullPayload(payload, cleanLocal)).toEqual({
+    identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+    status: 'applied'
+  });
+}
+
 function testConfirmsNodeReviewByAckStateSeq() {
   const row = createNodeReviewRow();
   const ack = createAck(row, { stateSeq: 12 });
@@ -221,6 +241,8 @@ describe('companion sync push protocol adapters', () => {
   it('builds a setting push payload scoped by the setting identity tuple', testBuildsSettingPayload);
   it('builds a view_state push payload scoped by its state scope', testBuildsViewStatePayload);
   it('blocks legacy node_review dirty rows that have no base reference', testBlocksLegacyMissingBase);
+  it('blocks state pull payloads when local dirty state exists', testBlocksPullApplyForDirtyStateRows);
+  it('applies state pull payloads when the local state is clean', testAppliesPullWhenLocalStateIsClean);
   it('confirms node_review dirty only after pulled state reaches the ack state_seq', testConfirmsNodeReviewByAckStateSeq);
   it('confirms node_reading dirty only after pulled state reaches the ack state_seq', testConfirmsNodeReadingByAckStateSeq);
   it('does not confirm node_review conflicts', testDoesNotConfirmConflict);

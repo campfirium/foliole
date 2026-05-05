@@ -46,7 +46,7 @@ export interface SyncApplyResult {
 }
 
 export interface SyncableObjectAdapter<LocalRow, PullPayload> {
-  applyPullPayload(payload: PullPayload): SyncApplyResult;
+  applyPullPayload(payload: PullPayload, localRow?: LocalRow | null): SyncApplyResult;
   baseReference(row: LocalRow): SyncBaseReference;
   buildPushPayload(row: LocalRow): SyncPushPayload;
   identity(row: LocalRow | PullPayload): SyncObjectIdentity;
@@ -88,10 +88,10 @@ function createStateObjectSyncAdapter(
   objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state'
 ): SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> {
   return {
-    applyPullPayload(payload) {
+    applyPullPayload(payload, localRow) {
       return {
         identity: stateObjectIdentity(payload),
-        status: payload.object_type === objectType ? 'applied' : 'ignored'
+        status: resolveStateApplyStatus(payload, objectType, localRow)
       };
     },
     baseReference(row) {
@@ -122,6 +122,17 @@ function createStateObjectSyncAdapter(
         && payload.state_seq >= ack.stateSeq;
     }
   };
+}
+
+function resolveStateApplyStatus(
+  payload: NativeSyncStateObjectRecord,
+  objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state',
+  localRow?: SyncableStateObjectRow | null
+): SyncApplyResult['status'] {
+  if (payload.object_type !== objectType) return 'ignored';
+  if (!localRow || !sameIdentity(stateObjectIdentity(payload), stateObjectIdentity(localRow))) return 'applied';
+  if (localRow.local_status && localRow.local_status !== 'ready_to_push') return 'blocked_by_dirty';
+  return localRow.local_status === 'ready_to_push' ? 'blocked_by_dirty' : 'applied';
 }
 
 export const nodeReadingSyncAdapter = createStateObjectSyncAdapter('node_reading');
