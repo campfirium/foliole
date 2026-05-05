@@ -1,7 +1,7 @@
 import { Document } from 'react-pdf';
 
 import { renderPdfPage } from './PdfDocumentPageRender';
-import type { PdfSearchStatus } from './PdfDocumentSearch';
+import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 
@@ -64,6 +64,7 @@ interface PdfViewportDocumentProps {
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;
+  searchHighlights: PdfSearchVisualHighlight[];
   totalPages: number | null;
   zoom: number;
 }
@@ -90,6 +91,7 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
         pageElementsRef={props.pageElementsRef}
         pdfSelectionLocator={props.pdfSelectionLocator}
         rotation={props.rotation}
+        searchHighlights={props.searchHighlights}
         totalPages={props.totalPages}
         zoom={props.zoom}
       />
@@ -104,6 +106,7 @@ function PdfDocumentPages({
   pageElementsRef,
   pdfSelectionLocator,
   rotation,
+  searchHighlights,
   totalPages,
   zoom
 }: {
@@ -119,6 +122,7 @@ function PdfDocumentPages({
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
+  searchHighlights: PdfSearchVisualHighlight[];
   totalPages: number | null;
   zoom: number;
 }) {
@@ -135,6 +139,7 @@ function PdfDocumentPages({
       pageNumber,
       pdfSelectionLocator,
       rotation,
+      searchHighlights,
       zoom
     });
   });

@@ -2,13 +2,18 @@ import type { MutableRefObject } from 'react';
 
 export interface PdfSearchMatch {
   element: HTMLElement;
+  id: string;
   matchStart: number;
   page: number;
+  rects: Array<{ height: number; width: number; x: number; y: number }>;
+  x: number | null;
+  y: number | null;
 }
 
 interface TextSpanSegment {
   element: HTMLElement;
   end: number;
+  node: Text;
   start: number;
 }
 
@@ -18,28 +23,25 @@ function collectTextSegments(shell: HTMLDivElement): TextSpanSegment[] {
     return [];
   }
   const segments: TextSpanSegment[] = [];
-  const textBySpan = new Map<HTMLElement, string>();
   const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+  let cursor = 0;
   let node = walker.nextNode();
   while (node) {
+    if (!(node instanceof Text)) {
+      node = walker.nextNode();
+      continue;
+    }
     const textValue = node.textContent ?? '';
     if (textValue.length > 0) {
       const container = node.parentElement?.closest<HTMLElement>('span');
       if (container) {
-        textBySpan.set(container, `${textBySpan.get(container) ?? ''}${textValue}`);
+        const start = cursor;
+        const end = start + textValue.length;
+        segments.push({ element: container, end, node, start });
+        cursor = end;
       }
     }
     node = walker.nextNode();
-  }
-  let cursor = 0;
-  for (const [span, text] of textBySpan) {
-    if (!text) {
-      continue;
-    }
-    const start = cursor;
-    const end = start + text.length;
-    segments.push({ element: span, end, start });
-    cursor = end;
   }
   return segments;
 }
@@ -51,6 +53,82 @@ function resolveSegmentAtPosition(segments: TextSpanSegment[], position: number)
     }
   }
   return segments[segments.length - 1] ?? null;
+}
+
+function resolvePageBounds(shell: HTMLDivElement) {
+  return shell.querySelector<HTMLElement>('.react-pdf__Page') ?? shell;
+}
+
+function normalizeRect(
+  rect: DOMRect,
+  pageRect: DOMRect
+): { height: number; width: number; x: number; y: number } | null {
+  if (pageRect.width <= 0 || pageRect.height <= 0 || rect.width <= 0 || rect.height <= 0) {
+    return null;
+  }
+  const x = (rect.left - pageRect.left) / pageRect.width;
+  const y = (rect.top - pageRect.top) / pageRect.height;
+  const width = rect.width / pageRect.width;
+  const height = rect.height / pageRect.height;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+    return null;
+  }
+  return {
+    height: Math.max(0, Math.min(1, height)),
+    width: Math.max(0, Math.min(1, width)),
+    x: Math.max(0, Math.min(1, x)),
+    y: Math.max(0, Math.min(1, y))
+  };
+}
+
+function collectRangeRects(range: Range, pageBounds: HTMLElement) {
+  const pageRect = pageBounds.getBoundingClientRect();
+  const rectSource = typeof range.getClientRects === 'function' ? range.getClientRects() : [];
+  const normalizedRects = Array.from(rectSource)
+    .map((rect) => normalizeRect(rect, pageRect))
+    .filter((rect): rect is { height: number; width: number; x: number; y: number } => !!rect);
+  if (normalizedRects.length > 0) {
+    return normalizedRects;
+  }
+  if (typeof range.getBoundingClientRect !== 'function') {
+    return [];
+  }
+  const fallback = normalizeRect(range.getBoundingClientRect(), pageRect);
+  return fallback ? [fallback] : [];
+}
+
+function resolveMatchGeometry(
+  pageBounds: HTMLElement,
+  segments: TextSpanSegment[],
+  matchStart: number,
+  queryLength: number
+): {
+  element: HTMLElement;
+  rects: Array<{ height: number; width: number; x: number; y: number }>;
+  x: number | null;
+  y: number | null;
+} | null {
+  if (segments.length === 0 || queryLength <= 0) {
+    return null;
+  }
+  const startSegment = resolveSegmentAtPosition(segments, matchStart);
+  const endSegment = resolveSegmentAtPosition(segments, matchStart + queryLength - 1);
+  if (!startSegment || !endSegment) {
+    return null;
+  }
+  const startOffset = Math.max(0, Math.min(startSegment.node.length, matchStart - startSegment.start));
+  const endOffset = Math.max(startOffset, Math.min(endSegment.node.length, matchStart + queryLength - endSegment.start));
+  const range = document.createRange();
+  range.setStart(startSegment.node, startOffset);
+  range.setEnd(endSegment.node, endOffset);
+  const rects = collectRangeRects(range, pageBounds);
+  const firstRect = rects[0] ?? null;
+  return {
+    element: startSegment.element,
+    rects,
+    x: firstRect ? firstRect.x + firstRect.width / 2 : null,
+    y: firstRect ? firstRect.y + firstRect.height / 2 : null
+  };
 }
 
 function collectQueryPositions(text: string, query: string) {
@@ -82,24 +160,39 @@ export function collectMatches(
     if (!shell) {
       continue;
     }
+    const pageBounds = resolvePageBounds(shell);
     const segments = collectTextSegments(shell);
-    const renderedPageText = segments.map((segment) => segment.element.textContent ?? '').join('').toLocaleLowerCase();
+    const renderedPageText = segments.map((segment) => segment.node.textContent ?? '').join('').toLocaleLowerCase();
     const indexedPageText = (pageTextByNumberRef?.current[page] ?? '').toLocaleLowerCase();
     const pageText = renderedPageText.length > 0 ? renderedPageText : indexedPageText;
     if (!pageText) {
       continue;
     }
     const positions = collectQueryPositions(pageText, query);
-    for (const position of positions) {
-      if (segments.length === 0) {
-        matches.push({ element: shell, matchStart: position, page });
-        continue;
+    positions.forEach((position, index) => {
+      const geometry = resolveMatchGeometry(pageBounds, segments, position, query.length);
+      if (!geometry) {
+        matches.push({
+          element: shell,
+          id: `${page}:${position}:${index}`,
+          matchStart: position,
+          page,
+          rects: [],
+          x: null,
+          y: null
+        });
+        return;
       }
-      const segment = resolveSegmentAtPosition(segments, position);
-      if (segment) {
-        matches.push({ element: segment.element, matchStart: position, page });
-      }
-    }
+      matches.push({
+        element: geometry.element,
+        id: `${page}:${position}:${index}`,
+        matchStart: position,
+        page,
+        rects: geometry.rects,
+        x: geometry.x,
+        y: geometry.y
+      });
+    });
   }
   return matches;
 }

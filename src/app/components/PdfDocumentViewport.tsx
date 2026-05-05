@@ -4,7 +4,7 @@ import type { MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
-import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget } from './PdfDocumentSearch';
+import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import {
   PdfDocumentErrorState,
   PdfDocumentViewportContent,
@@ -49,8 +49,10 @@ function renderPdfViewportContent(args: {
   handleTextContentLoad: (pageNumber: number, text: string) => void;
   handleTextLayerRender: (pageNumber: number) => void;
   handleScroll: () => void;
+  onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
   pageTextByNumberRef: MutableRefObject<Record<number, string>>;
+  searchHighlights: PdfSearchVisualHighlight[];
   searchRevision: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
 } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>) {
@@ -63,6 +65,7 @@ function renderPdfViewportContent(args: {
       onLoadError={args.onLoadError}
       onLoadSuccess={args.onLoadSuccess}
       onTextContentLoad={args.handleTextContentLoad}
+      onSearchHighlightsChange={args.onSearchHighlightsChange}
       onSearchStatusChange={args.onSearchStatusChange}
       onNextPage={args.onNextPage}
       onPageChange={args.onPageChange}
@@ -84,6 +87,7 @@ function renderPdfViewportContent(args: {
       searchRevision={args.searchRevision}
       searchRequest={args.searchRequest}
       searchTarget={args.searchTarget}
+      searchHighlights={args.searchHighlights}
       searchStatus={args.searchStatus}
       totalPages={args.totalPages}
       onTextLayerRender={args.handleTextLayerRender}
@@ -93,7 +97,17 @@ function renderPdfViewportContent(args: {
 }
 
 export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
-  const { handleScroll, handleTextContentLoad, handleTextLayerRender, pageElementsRef, pageTextByNumberRef, scrollContainerRef, searchRevision } = usePdfViewportRuntime(
+  const {
+    handleScroll,
+    handleTextContentLoad,
+    handleTextLayerRender,
+    pageElementsRef,
+    pageTextByNumberRef,
+    scrollContainerRef,
+    searchHighlights,
+    searchRevision,
+    setSearchHighlights
+  } = usePdfViewportRuntime(
     props.clearPageJumpRequest,
     props.page,
     props.pageJumpRequest,
@@ -115,8 +129,10 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
       handleTextLayerRender={handleTextLayerRender}
       pageElementsRef={pageElementsRef}
       pageTextByNumberRef={pageTextByNumberRef}
+      searchHighlights={searchHighlights}
       searchRevision={searchRevision}
       scrollContainerRef={scrollContainerRef}
+      onSearchHighlightsChange={setSearchHighlights}
       {...props}
     />
   );
@@ -129,8 +145,10 @@ function PdfDocumentViewportReady(
     handleTextLayerRender: (pageNumber: number) => void;
     pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
     pageTextByNumberRef: MutableRefObject<Record<number, string>>;
+    searchHighlights: PdfSearchVisualHighlight[];
     searchRevision: number;
     scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
+    onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   } & Omit<PdfDocumentViewportProps, 'clearPageJumpRequest' | 'loadError' | 'pageJumpRequest' | 'setVisiblePage'>
 ) {
   return renderPdfViewportContent(props);
@@ -150,11 +168,13 @@ function usePdfViewportRuntime(
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const pageTextByNumberRef = useRef<Record<number, string>>({});
   const renderedTextLayerPagesRef = useRef<Set<number>>(new Set());
+  const [searchHighlights, setSearchHighlights] = useState<PdfSearchVisualHighlight[]>([]);
   const [searchRevision, setSearchRevision] = useState(0);
 
   useEffect(() => {
     renderedTextLayerPagesRef.current.clear();
     pageTextByNumberRef.current = {};
+    setSearchHighlights([]);
     setSearchRevision((current) => current + 1);
   }, [pdfSource]);
 
@@ -176,5 +196,15 @@ function usePdfViewportRuntime(
     setSearchRevision((current) => current + 1);
   };
 
-  return { handleScroll, handleTextContentLoad, pageElementsRef, pageTextByNumberRef, searchRevision, scrollContainerRef, handleTextLayerRender };
+  return {
+    handleScroll,
+    handleTextContentLoad,
+    handleTextLayerRender,
+    pageElementsRef,
+    pageTextByNumberRef,
+    scrollContainerRef,
+    searchHighlights,
+    searchRevision,
+    setSearchHighlights
+  };
 }

@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
-import type { PdfSearchStatus } from './PdfDocumentSearch';
+import type { PdfSearchStatus, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { PdfViewportDocument, PdfViewportToolbar } from './PdfDocumentViewportRenderParts';
 
@@ -28,6 +28,7 @@ interface PdfDocumentViewportContentBodyProps {
   rotation: number;
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   searchIndexingHint: string | null;
+  searchHighlights: PdfSearchVisualHighlight[];
   searchQuery: string;
   searchStatus: PdfSearchStatus;
   totalPages: number | null;
@@ -69,6 +70,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         pdfSelectionLocator={props.pdfSelectionLocator}
         pdfSource={props.pdfSource}
         rotation={props.rotation}
+        searchHighlights={props.searchHighlights}
         totalPages={props.totalPages}
         zoom={props.zoom}
       />

@@ -1,5 +1,6 @@
 import { Page } from 'react-pdf';
 
+import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { renderPdfOverlayMarker, renderPdfOverlayRects, resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
 import { resolvePageText } from './pdfPageText';
@@ -20,11 +21,13 @@ interface RenderPdfPageArgs {
   pageNumber: number;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   rotation: number;
+  searchHighlights: PdfSearchVisualHighlight[];
   zoom: number;
 }
 
 export function renderPdfPage(args: RenderPdfPageArgs) {
   const pageHighlights = args.highlightLocators.filter((locator) => locator.page === args.pageNumber);
+  const pageSearchHighlights = args.searchHighlights.filter((highlight) => highlight.page === args.pageNumber);
   const markerSize = resolvePdfOverlayMarkerSize(args.zoom);
   const selectionLocator = args.pdfSelectionLocator?.page === args.pageNumber ? { ...args.pdfSelectionLocator, id: 'pdf-selection-overlay' } : null;
   return (
@@ -58,9 +61,45 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
           const highlightRects = renderPdfOverlayRects(locator);
           return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
         })}
+        {renderSearchHighlightsOnPage(pageSearchHighlights, markerSize)}
         {renderSelectionOverlay(selectionLocator, markerSize)}
       </div>
     </div>
+  );
+}
+
+function renderSearchHighlightsOnPage(pageSearchHighlights: PdfSearchVisualHighlight[], markerSize: number) {
+  const pageSearchMatches = pageSearchHighlights.filter((highlight) => !highlight.isActive);
+  const activeSearchMatch = pageSearchHighlights.find((highlight) => highlight.isActive) ?? null;
+  return (
+    <>
+      {pageSearchMatches.map((match) =>
+        renderPdfOverlayRects(
+          match,
+          'pointer-events-none absolute z-20 rounded-[2px] bg-[color:rgb(var(--app-highlight-color-rgb)/0.3)] ring-1 ring-[color:rgb(var(--app-highlight-color-rgb)/0.5)]',
+          'pdf-search-match-weak'
+        ) ??
+        renderPdfOverlayMarker(
+          match,
+          markerSize,
+          'pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color:rgb(var(--app-highlight-color-rgb)/0.4)] ring-1 ring-[color:rgb(var(--app-highlight-color-rgb)/0.5)]',
+          'pdf-search-match-weak'
+        )
+      )}
+      {activeSearchMatch
+        ? renderPdfOverlayRects(
+            activeSearchMatch,
+            'pointer-events-none absolute z-30 rounded-[2px] bg-[color:rgb(var(--app-highlight-color-rgb)/0.7)] ring-2 ring-[color:rgb(var(--app-highlight-color-rgb)/0.92)]',
+            'pdf-search-match-active'
+          ) ??
+          renderPdfOverlayMarker(
+            activeSearchMatch,
+            markerSize,
+            'pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color:rgb(var(--app-highlight-color-rgb)/0.86)] ring-2 ring-[color:rgb(var(--app-highlight-color-rgb)/0.96)]',
+            'pdf-search-match-active'
+          )
+        : null}
+    </>
   );
 }
 

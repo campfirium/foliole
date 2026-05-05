@@ -24,6 +24,7 @@ function PdfSearchLateTextLayerHarness() {
   }, []);
 
   usePdfSearchEffect({
+    onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,
     pageTextByNumberRef,
@@ -63,6 +64,7 @@ function PdfSearchSingleRequestHarness() {
   const [searchRequest, setSearchRequest] = useState<{ direction: 'next'; id: number } | null>(null);
 
   usePdfSearchEffect({
+    onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,
     pageTextByNumberRef,
@@ -111,6 +113,7 @@ function PdfSearchLinkedEntryHarness() {
   const [searchTarget, setSearchTarget] = useState<{ id: number; matchStart: number; page: number } | null>(null);
 
   usePdfSearchEffect({
+    onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
     pageElementsRef,
     pageTextByNumberRef,
@@ -137,6 +140,68 @@ function PdfSearchLinkedEntryHarness() {
         toolbar-next
       </button>
       <p data-testid="pdf-search-linked-entry-status">{`${searchStatus.current}/${searchStatus.total}`}</p>
+    </div>
+  );
+}
+
+function PdfSearchDualHighlightHarness() {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
+  const pageTextByNumberRef = useRef<Record<number, string>>({ 1: 'keyword bridge keyword' });
+  const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
+  const [searchHighlights, setSearchHighlights] = useState<{ active: number; total: number }>({ active: 0, total: 0 });
+
+  usePdfSearchEffect({
+    onSearchHighlightsChange: (highlights) => {
+      setSearchHighlights({ active: highlights.filter((item) => item.isActive).length, total: highlights.length });
+    },
+    onSearchStatusChange: setSearchStatus,
+    pageElementsRef,
+    pageTextByNumberRef,
+    scrollContainerRef,
+    searchQuery: 'keyword',
+    searchRequest: null,
+    searchTarget: null,
+    searchRevision: 1,
+    totalPages: 1
+  });
+
+  return (
+    <div ref={scrollContainerRef}>
+      <div data-pdf-page-number="1" ref={(element) => { pageElementsRef.current[1] = element; }}>
+        <div className="textLayer"><span role="presentation">keyword bridge keyword</span></div>
+      </div>
+      <p data-testid="pdf-search-dual-highlight-status">{`${searchStatus.current}/${searchStatus.total}/${searchHighlights.active}/${searchHighlights.total}`}</p>
+    </div>
+  );
+}
+
+function PdfSearchReopenConsistencyHarness() {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
+  const pageTextByNumberRef = useRef<Record<number, string>>({ 1: 'keyword bridge keyword' });
+  const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
+  const [searchTarget] = useState({ id: 9, matchStart: 'keyword bridge '.length, page: 1 });
+
+  usePdfSearchEffect({
+    onSearchHighlightsChange: () => undefined,
+    onSearchStatusChange: setSearchStatus,
+    pageElementsRef,
+    pageTextByNumberRef,
+    scrollContainerRef,
+    searchQuery: 'keyword',
+    searchRequest: null,
+    searchTarget,
+    searchRevision: 1,
+    totalPages: 1
+  });
+
+  return (
+    <div ref={scrollContainerRef}>
+      <div data-pdf-page-number="1" ref={(element) => { pageElementsRef.current[1] = element; }}>
+        <div className="textLayer"><span role="presentation">keyword bridge keyword</span></div>
+      </div>
+      <p data-testid="pdf-search-reopen-status">{`${searchStatus.current}/${searchStatus.total}`}</p>
     </div>
   );
 }
@@ -187,6 +252,29 @@ describe('usePdfSearchEffect', () => {
     fireEvent.click(screen.getByRole('button', { name: 'toolbar-next' }));
     await waitFor(() => {
       expect(screen.getByTestId('pdf-search-linked-entry-status')).toHaveTextContent('1/3');
+    });
+  });
+
+  it('keeps all matches weak-highlighted while only one current match stays strong-highlighted', async () => {
+    render(<PdfSearchDualHighlightHarness />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pdf-search-dual-highlight-status')).toHaveTextContent('1/2/1/2');
+    });
+  });
+
+  it('keeps target cursor consistent after reopening the same search target', async () => {
+    const first = render(<PdfSearchReopenConsistencyHarness />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pdf-search-reopen-status')).toHaveTextContent('2/2');
+    });
+
+    first.unmount();
+    render(<PdfSearchReopenConsistencyHarness />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pdf-search-reopen-status')).toHaveTextContent('2/2');
     });
   });
 });

@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
-import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget } from './PdfDocumentSearch';
+import type { PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { usePdfSearchEffect } from './PdfDocumentSearch';
 import { PdfDocumentViewportContentBody } from './PdfDocumentViewportContentBody';
 
@@ -133,6 +133,7 @@ interface PdfDocumentViewportContentProps {
   onTextContentLoad: (pageNumber: number, text: string) => void;
   onTextLayerRender: (pageNumber: number) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
+  onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
@@ -148,6 +149,7 @@ interface PdfDocumentViewportContentProps {
   pdfSource: string;
   rotation: number;
   searchIndexingHint: string | null;
+  searchHighlights: PdfSearchVisualHighlight[];
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
   searchQuery: string;
   searchRevision: number;
@@ -159,6 +161,7 @@ interface PdfDocumentViewportContentProps {
 }
 
 function usePdfSearchRuntime({
+  onSearchHighlightsChange,
   onSearchStatusChange,
   pageElementsRef,
   pageTextByNumberRef,
@@ -170,9 +173,19 @@ function usePdfSearchRuntime({
   totalPages
 }: Pick<
   PdfDocumentViewportContentProps,
-  'onSearchStatusChange' | 'pageElementsRef' | 'pageTextByNumberRef' | 'scrollContainerRef' | 'searchQuery' | 'searchRequest' | 'searchRevision' | 'searchTarget' | 'totalPages'
+  | 'onSearchHighlightsChange'
+  | 'onSearchStatusChange'
+  | 'pageElementsRef'
+  | 'pageTextByNumberRef'
+  | 'scrollContainerRef'
+  | 'searchQuery'
+  | 'searchRequest'
+  | 'searchRevision'
+  | 'searchTarget'
+  | 'totalPages'
 >) {
   usePdfSearchEffect({
+    onSearchHighlightsChange,
     onSearchStatusChange,
     pageElementsRef,
     pageTextByNumberRef,
@@ -191,13 +204,14 @@ export function PdfDocumentViewportContent(props: PdfDocumentViewportContentProp
 }
 
 function renderPdfViewportContentBody(
-  props: Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'>
+  props: Omit<PdfDocumentViewportContentProps, 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'>
 ) {
   return <PdfDocumentViewportContentBody {...props} />;
 }
 
 function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
   return {
+    onSearchHighlightsChange: props.onSearchHighlightsChange,
     onSearchStatusChange: props.onSearchStatusChange,
     pageElementsRef: props.pageElementsRef,
     pageTextByNumberRef: props.pageTextByNumberRef,
@@ -212,7 +226,7 @@ function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
 
 function resolveViewportContentBodyProps(
   props: PdfDocumentViewportContentProps
-): Omit<PdfDocumentViewportContentProps, 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'> {
+): Omit<PdfDocumentViewportContentProps, 'onSearchHighlightsChange' | 'onSearchStatusChange' | 'pageTextByNumberRef' | 'searchRequest' | 'searchRevision' | 'searchTarget'> {
   return {
     handleContextMenu: props.handleContextMenu,
     handleScroll: props.handleScroll,
@@ -236,6 +250,7 @@ function resolveViewportContentBodyProps(
     pdfSource: props.pdfSource,
     rotation: props.rotation,
     searchIndexingHint: props.searchIndexingHint,
+    searchHighlights: props.searchHighlights,
     scrollContainerRef: props.scrollContainerRef,
     searchQuery: props.searchQuery,
     searchStatus: props.searchStatus,

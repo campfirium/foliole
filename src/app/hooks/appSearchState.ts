@@ -46,7 +46,7 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
         requestPdfAnchorJump(result.id, {
           page: result.pdfMatch.page,
           x: 0.5,
-          y: Math.min(0.95, Math.max(0.05, result.pdfMatch.matchStart / Math.max(1, result.pdfMatch.pageTextLength)))
+          y: 0.1
         });
         requestPdfSearch(result.id, {
           matchStart: result.pdfMatch.matchStart,

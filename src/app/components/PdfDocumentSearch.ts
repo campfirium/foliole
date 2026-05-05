@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import type { MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import { collectMatches, type PdfSearchMatch } from './pdfSearchMatchCollection';
 
@@ -15,6 +14,7 @@ export interface PdfSearchStatus {
 }
 
 interface PdfSearchArgs {
+  onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
   pageTextByNumberRef: MutableRefObject<Record<number, string>>;
   searchRevision: number;
@@ -32,6 +32,15 @@ export interface PdfSearchTarget {
   page: number;
 }
 
+export interface PdfSearchVisualHighlight {
+  id: string;
+  isActive: boolean;
+  page: number;
+  rects: Array<{ height: number; width: number; x: number; y: number }>;
+  x: number | null;
+  y: number | null;
+}
+
 const SEARCH_HIT_ATTR = 'data-pdf-search-hit';
 const SEARCH_HIT_MATCH = 'match';
 const SEARCH_HIT_ACTIVE = 'active';
@@ -45,6 +54,16 @@ export { collectMatches } from './pdfSearchMatchCollection';
 function scrollToMatch(container: HTMLDivElement, match: PdfSearchMatch) {
   const shell = container.querySelector<HTMLElement>(`[data-pdf-page-number="${match.page}"]`);
   if (!shell) {
+    return;
+  }
+  if (typeof match.y === 'number') {
+    const rawTop = shell.offsetTop + shell.clientHeight * match.y - container.clientHeight * 0.36;
+    const top = Math.max(0, rawTop);
+    if (typeof container.scrollTo === 'function') {
+      container.scrollTo({ behavior: 'smooth', top });
+    } else {
+      container.scrollTop = top;
+    }
     return;
   }
   const containerRect = container.getBoundingClientRect();
@@ -63,6 +82,67 @@ function clearSearchHitMarker(container: HTMLDivElement) {
   for (const hit of markedHits) {
     hit.removeAttribute(SEARCH_HIT_ATTR);
   }
+}
+
+function toSearchHighlights(matches: PdfSearchMatch[], activeMatchId: string) {
+  return matches.map((match) => ({
+    id: match.id,
+    isActive: match.id === activeMatchId,
+    page: match.page,
+    rects: match.rects,
+    x: match.x,
+    y: match.y
+  }));
+}
+
+function runPdfSearchCycle(args: {
+  container: HTMLDivElement;
+  cursorRef: { current: number };
+  lastHandledTargetIdRef: { current: number | null };
+  lastQueryRef: { current: string };
+  lastRequestIdRef: { current: number | null };
+  onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
+  onSearchStatusChange: (status: PdfSearchStatus) => void;
+  pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
+  pageTextByNumberRef: MutableRefObject<Record<number, string>>;
+  query: string;
+  searchRequest: PdfSearchRequest | null;
+  searchTarget: PdfSearchTarget | null;
+  totalPages: number;
+}) {
+  const matches = collectMatches(args.pageElementsRef, args.totalPages, args.query, args.pageTextByNumberRef);
+  if (matches.length === 0) {
+    clearSearchHitMarker(args.container);
+    args.onSearchHighlightsChange([]);
+    resetSearchCursorState(args);
+    args.onSearchStatusChange({ current: 0, hasQuery: true, total: 0 });
+    return;
+  }
+
+  resolveCursorByRequest({
+    cursorRef: args.cursorRef,
+    lastHandledTargetIdRef: args.lastHandledTargetIdRef,
+    lastQueryRef: args.lastQueryRef,
+    lastRequestIdRef: args.lastRequestIdRef,
+    matches,
+    query: args.query,
+    searchRequest: args.searchRequest,
+    searchTarget: args.searchTarget
+  });
+  const match = matches[args.cursorRef.current];
+  if (!match) {
+    clearSearchHitMarker(args.container);
+    args.onSearchHighlightsChange([]);
+    args.onSearchStatusChange({ current: 0, hasQuery: true, total: matches.length });
+    return;
+  }
+
+  clearSearchHitMarker(args.container);
+  markSearchHits(matches);
+  markActiveSearchHit(match);
+  args.onSearchHighlightsChange(toSearchHighlights(matches, match.id));
+  scrollToMatch(args.container, match);
+  args.onSearchStatusChange({ current: args.cursorRef.current + 1, hasQuery: true, total: matches.length });
 }
 
 function markSearchHits(matches: PdfSearchMatch[]) {
@@ -150,6 +230,7 @@ function resolveCursorByRequest(args: {
 }
 
 export function usePdfSearchEffect({
+  onSearchHighlightsChange,
   onSearchStatusChange,
   pageElementsRef,
   pageTextByNumberRef,
@@ -164,6 +245,16 @@ export function usePdfSearchEffect({
   const lastHandledTargetIdRef = useRef<number | null>(null);
   const lastRequestIdRef = useRef<number | null>(null);
   const lastQueryRef = useRef('');
+  const onSearchStatusChangeRef = useRef(onSearchStatusChange);
+  const onSearchHighlightsChangeRef = useRef(onSearchHighlightsChange);
+
+  useEffect(() => {
+    onSearchStatusChangeRef.current = onSearchStatusChange;
+  }, [onSearchStatusChange]);
+
+  useEffect(() => {
+    onSearchHighlightsChangeRef.current = onSearchHighlightsChange;
+  }, [onSearchHighlightsChange]);
 
   useEffect(() => {
     const query = normalizeQuery(searchQuery);
@@ -172,41 +263,25 @@ export function usePdfSearchEffect({
       if (container) {
         clearSearchHitMarker(container);
       }
+      onSearchHighlightsChangeRef.current([]);
       resetSearchCursorState({ cursorRef, lastHandledTargetIdRef, lastRequestIdRef, lastQueryRef, query });
-      onSearchStatusChange({ current: 0, hasQuery: query.length > 0, total: 0 });
+      onSearchStatusChangeRef.current({ current: 0, hasQuery: query.length > 0, total: 0 });
       return;
     }
-
-    const matches = collectMatches(pageElementsRef, totalPages, query, pageTextByNumberRef);
-    if (matches.length === 0) {
-      clearSearchHitMarker(container);
-      resetSearchCursorState({ cursorRef, lastHandledTargetIdRef, lastRequestIdRef, lastQueryRef, query });
-      onSearchStatusChange({ current: 0, hasQuery: true, total: 0 });
-      return;
-    }
-
-    resolveCursorByRequest({
+    runPdfSearchCycle({
+      container,
       cursorRef,
       lastHandledTargetIdRef,
       lastQueryRef,
       lastRequestIdRef,
-      matches,
+      onSearchHighlightsChange: onSearchHighlightsChangeRef.current,
+      onSearchStatusChange: onSearchStatusChangeRef.current,
+      pageElementsRef,
+      pageTextByNumberRef,
       query,
       searchRequest,
-      searchTarget
+      searchTarget,
+      totalPages
     });
-
-    const match = matches[cursorRef.current];
-    if (!match) {
-      clearSearchHitMarker(container);
-      onSearchStatusChange({ current: 0, hasQuery: true, total: matches.length });
-      return;
-    }
-
-    clearSearchHitMarker(container);
-    markSearchHits(matches);
-    markActiveSearchHit(match);
-    scrollToMatch(container, match);
-    onSearchStatusChange({ current: cursorRef.current + 1, hasQuery: true, total: matches.length });
-  }, [onSearchStatusChange, pageElementsRef, pageTextByNumberRef, searchQuery, searchRequest, searchRevision, searchTarget, scrollContainerRef, totalPages]);
+  }, [pageElementsRef, pageTextByNumberRef, searchQuery, searchRequest, searchRevision, searchTarget, scrollContainerRef, totalPages]);
 }
