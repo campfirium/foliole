@@ -35,22 +35,7 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         ON content_blobs (kind)`);
       addColumnIfMissing(sqlite, 'nodes', 'body_blob_hash', 'TEXT');
       addColumnIfMissing(sqlite, 'external_documents', 'body_blob_hash', 'TEXT');
-      backfillTextBodyBlobHashes(sqlite, {
-        bodyHashColumn: 'body_blob_hash',
-        contentColumn: 'content',
-        idColumn: 'id',
-        kind: 'text_body',
-        tableName: 'nodes',
-        updatedAtColumn: 'updated_at'
-      });
-      backfillTextBodyBlobHashes(sqlite, {
-        bodyHashColumn: 'body_blob_hash',
-        contentColumn: 'content',
-        idColumn: 'document_id',
-        kind: 'text_body',
-        tableName: 'external_documents',
-        updatedAtColumn: 'updated_at'
-      });
+      backfillTextBodyBlobOwners(sqlite);
     }
   },
   {
@@ -60,6 +45,9 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         hash TEXT PRIMARY KEY REFERENCES content_blobs(hash) ON DELETE CASCADE,
         data BLOB NOT NULL
       )`);
+      addColumnIfMissing(sqlite, 'nodes', 'body_blob_hash', 'TEXT');
+      addColumnIfMissing(sqlite, 'external_documents', 'body_blob_hash', 'TEXT');
+      backfillTextBodyBlobOwners(sqlite);
       backfillTextBodyBlobData(sqlite, {
         bodyHashColumn: 'body_blob_hash',
         contentColumn: 'content',
@@ -145,6 +133,25 @@ function sha256Hex(text: string) {
 
 function byteLength(text: string) {
   return Buffer.byteLength(text, 'utf8');
+}
+
+function backfillTextBodyBlobOwners(sqlite: DatabaseMigrationTarget) {
+  backfillTextBodyBlobHashes(sqlite, {
+    bodyHashColumn: 'body_blob_hash',
+    contentColumn: 'content',
+    idColumn: 'id',
+    kind: 'text_body',
+    tableName: 'nodes',
+    updatedAtColumn: 'updated_at'
+  });
+  backfillTextBodyBlobHashes(sqlite, {
+    bodyHashColumn: 'body_blob_hash',
+    contentColumn: 'content',
+    idColumn: 'document_id',
+    kind: 'text_body',
+    tableName: 'external_documents',
+    updatedAtColumn: 'updated_at'
+  });
 }
 
 function backfillTextBodyBlobHashes(sqlite: DatabaseMigrationTarget, args: {
