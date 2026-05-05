@@ -1,9 +1,12 @@
 import Database from 'better-sqlite3';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
-import { applyCompanionSyncNodeVersionsWithSharedCore } from './companionSyncNodeVersions';
+import {
+  applyCompanionSyncNodeVersionsWithSharedCore,
+  applyCompanionSyncNodeVersionsWithSharedCoreOnDevice
+} from './companionSyncNodeVersions';
 
 let db: Database.Database | null = null;
 
@@ -28,6 +31,23 @@ it('applies node versions through the Capacitor DbPort adapter and shared core',
     object_id: 'node-1',
     version_id: 'android#1'
   }]);
+});
+
+it('opens the Android companion database before running the shared core', async () => {
+  db = new Database(':memory:');
+  installNodeApplySchema(db);
+  const connection = createFakeCapacitorConnection(db);
+  const manager = {
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn()
+  };
+
+  await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
+    .resolves.toEqual(['node-1']);
+
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 14, false);
+  expect(connection.open).toHaveBeenCalled();
 });
 
 function nodeVersion(): NativeSyncNodeRecord {
@@ -77,6 +97,7 @@ function createFakeCapacitorConnection(database: Database.Database) {
       database.exec(sql);
       return { changes: { changes: database.prepare('SELECT changes() AS count').get().count } };
     },
+    open: vi.fn(async () => undefined),
     query: async (sql: string, params: unknown[] = []) => ({
       values: database.prepare(sql).all(...decodeParams(params))
     }),
