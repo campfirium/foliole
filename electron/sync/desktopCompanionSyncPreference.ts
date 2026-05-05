@@ -1,5 +1,4 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
-
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
 const APP_SETTINGS_KEY = 'app_settings';

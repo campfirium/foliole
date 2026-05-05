@@ -6,7 +6,7 @@ import {
   countPendingCompanionPairRequests,
   createCompanionPairRequest
 } from './companionPairingRequests.js';
-import { countPairedCompanionDevices, registerPairedCompanionDevice, removePairedCompanionDevice } from './companionPairingStore.js';
+import { countPairedCompanionDevices, registerPairedCompanionDevice } from './companionPairingStore.js';
 
 type PairingStatusUpdater = (pairing: {
   paired_device_count: number;
@@ -110,13 +110,19 @@ export async function handlePairRequestCreate(
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
-  removePairedCompanionDevice(deviceId);
   const created = createCompanionPairRequest({
     clientAddress: normalizeClientAddress(request.socket.remoteAddress),
     deviceId,
     deviceKind,
     deviceName
   });
+  if (created.rate_limited) {
+    writeJson(request, response, 429, {
+      error: 'pair_request_rate_limited',
+      retry_after_ms: created.retry_after_ms
+    });
+    return;
+  }
   writePairingStatus(updatePairingStatus);
   onPairRequestCreated?.();
   writeJson(request, response, created.created ? 202 : 409, {

@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 const PAIR_REQUEST_TTL_MS = 2 * 60 * 1000;
+const PAIR_REQUEST_RATE_LIMIT_MAX = 5;
+const PAIR_REQUEST_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
 export interface PendingCompanionPairRequest {
   client_address: string | null;
@@ -18,6 +20,7 @@ interface StoredCompanionPairRequest extends PendingCompanionPairRequest {
 }
 
 const requestsById = new Map<string, StoredCompanionPairRequest>();
+const requestTimestampsByClient = new Map<string, number[]>();
 
 function pruneExpiredRequests(nowMs: number) {
   for (const [requestId, request] of requestsById.entries()) {
@@ -25,6 +28,25 @@ function pruneExpiredRequests(nowMs: number) {
       requestsById.delete(requestId);
     }
   }
+}
+
+function resolveRateLimitKey(args: { clientAddress?: string | null; deviceId: string }) {
+  return args.clientAddress?.trim() || `device:${args.deviceId.trim() || 'unknown'}`;
+}
+
+function reserveRateLimitSlot(args: { clientAddress?: string | null; deviceId: string; nowMs: number }) {
+  const key = resolveRateLimitKey(args);
+  const windowStartMs = args.nowMs - PAIR_REQUEST_RATE_LIMIT_WINDOW_MS;
+  const recentTimestamps = (requestTimestampsByClient.get(key) ?? []).filter((timestamp) => timestamp > windowStartMs);
+  if (recentTimestamps.length >= PAIR_REQUEST_RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      retry_after_ms: recentTimestamps[0] + PAIR_REQUEST_RATE_LIMIT_WINDOW_MS - args.nowMs
+    } as const;
+  }
+  recentTimestamps.push(args.nowMs);
+  requestTimestampsByClient.set(key, recentTimestamps);
+  return { allowed: true } as const;
 }
 
 function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionPairRequest {
@@ -55,7 +77,16 @@ export function createCompanionPairRequest(args: {
   if (existingPendingRequest) {
     return {
       created: false,
+      rate_limited: false,
       request: toPublicRequest(existingPendingRequest)
+    } as const;
+  }
+  const rateLimit = reserveRateLimitSlot({ clientAddress: args.clientAddress, deviceId: args.deviceId, nowMs });
+  if (!rateLimit.allowed) {
+    return {
+      created: false,
+      rate_limited: true,
+      retry_after_ms: rateLimit.retry_after_ms
     } as const;
   }
   const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
@@ -73,6 +104,7 @@ export function createCompanionPairRequest(args: {
   requestsById.set(request.pair_request_id, request);
   return {
     created: true,
+    rate_limited: false,
     request: toPublicRequest(request)
   } as const;
 }
@@ -121,4 +153,5 @@ export function consumeApprovedCompanionPairRequest(pairRequestId: string, nowMs
 
 export function clearCompanionPairRequests() {
   requestsById.clear();
+  requestTimestampsByClient.clear();
 }

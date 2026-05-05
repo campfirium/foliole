@@ -6,11 +6,11 @@ import {
   loadPendingCompanionPairRequests,
   rejectCompanionPairRequest
 } from '../sync/companionPairingRequests.js';
+import { clearPairedCompanionDevices, loadPairedCompanionDevices, removePairedCompanionDevice } from '../sync/companionPairingStore.js';
 import {
   isDesktopCompanionSyncEnabled,
   setDesktopCompanionSyncEnabled
 } from '../sync/desktopCompanionSyncPreference.js';
-import { clearPairedCompanionDevices, loadPairedCompanionDevices, removePairedCompanionDevice } from '../sync/companionPairingStore.js';
 import {
   ensureLanWorkspaceSyncServer,
   getLanWorkspaceSyncServerStatus,

@@ -71,9 +71,12 @@ export function countPairedCompanionDevices() {
 }
 
 export function loadPairedCompanionDevices() {
-  return readStore().devices.map(({ device_secret: _deviceSecret, ...device }) => ({
-    ...device,
-    client_address: device.client_address ?? null
+  return readStore().devices.map((device) => ({
+    client_address: device.client_address ?? null,
+    device_id: device.device_id,
+    device_kind: device.device_kind,
+    device_name: device.device_name,
+    paired_at: device.paired_at
   }));
 }
 
@@ -84,7 +87,6 @@ export function loadPairedCompanionDevice(deviceId: string) {
   }
   return readStore().devices.find((device) => device.device_id === normalizedDeviceId) ?? null;
 }
-
 
 export function removePairedCompanionDevice(deviceId: string) {
   const normalizedDeviceId = deviceId.trim();

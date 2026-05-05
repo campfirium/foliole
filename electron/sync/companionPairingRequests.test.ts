@@ -28,4 +28,28 @@ describe('companion pairing requests', () => {
       }
     ]);
   });
+
+  it('rate limits new pairing requests by client address', () => {
+    const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
+    for (let index = 0; index < 5; index += 1) {
+      expect(createCompanionPairRequest({
+        clientAddress: '192.168.1.22',
+        deviceId: `android-${index}`,
+        deviceKind: 'android-capacitor',
+        deviceName: `Android companion ${index}`,
+        nowMs: nowMs + index
+      })).toMatchObject({ created: true, rate_limited: false });
+    }
+
+    expect(createCompanionPairRequest({
+      clientAddress: '192.168.1.22',
+      deviceId: 'android-6',
+      deviceKind: 'android-capacitor',
+      deviceName: 'Android companion 6',
+      nowMs: nowMs + 5
+    })).toMatchObject({
+      created: false,
+      rate_limited: true
+    });
+  });
 });

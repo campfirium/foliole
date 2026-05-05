@@ -43,7 +43,17 @@ const companionPairingMocks = vi.hoisted(() => ({
       status: 'pending'
     }
   ]),
+  loadPairedCompanionDevices: vi.fn().mockReturnValue([
+    {
+      client_address: '192.168.1.22',
+      device_id: 'android-1',
+      device_kind: 'android',
+      device_name: 'Pixel 9',
+      paired_at: '2026-04-24T10:03:00.000Z'
+    }
+  ]),
   clearPairedCompanionDevices: vi.fn(),
+  removePairedCompanionDevice: vi.fn(),
   rejectCompanionPairRequest: vi.fn().mockImplementation((pairRequestId: string) =>
     pairRequestId === 'pair-request-1'
       ? {
@@ -87,7 +97,9 @@ vi.mock('../database/nodeMutations.js', () => ({
 vi.mock('../database/syncPeers.js', () => ({ loadSyncPeers, saveSyncPeers }));
 vi.mock('../sync/companionPairingRequests.js', () => companionPairingMocks);
 vi.mock('../sync/companionPairingStore.js', () => ({
-  clearPairedCompanionDevices: companionPairingMocks.clearPairedCompanionDevices
+  clearPairedCompanionDevices: companionPairingMocks.clearPairedCompanionDevices,
+  loadPairedCompanionDevices: companionPairingMocks.loadPairedCompanionDevices,
+  removePairedCompanionDevice: companionPairingMocks.removePairedCompanionDevice
 }));
 vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
@@ -98,7 +110,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
     port: 38641,
     state: 'running'
   }),
-    getLanWorkspaceSyncServerStatus: vi.fn().mockReturnValue({
+  getLanWorkspaceSyncServerStatus: vi.fn().mockReturnValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
     paired_device_count: 1,
