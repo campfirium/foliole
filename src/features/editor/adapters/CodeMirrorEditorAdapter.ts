@@ -67,6 +67,28 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return { from, to };
   }
 
+  setSelection(selection: EditorSelection) {
+    const max = this.view.state.doc.length;
+    const anchor = Math.max(0, Math.min(selection.from, max));
+    const head = Math.max(0, Math.min(selection.to, max));
+
+    this.view.dispatch({
+      selection: { anchor, head },
+      scrollIntoView: false
+    });
+  }
+
+  getScrollTop() {
+    return this.view.scrollDOM.scrollTop;
+  }
+
+  setScrollTop(scrollTop: number) {
+    if (!Number.isFinite(scrollTop)) {
+      return;
+    }
+    this.view.scrollDOM.scrollTop = Math.max(0, scrollTop);
+  }
+
   replaceSelection(content: string) {
     const { from, to } = this.view.state.selection.main;
     this.view.dispatch({

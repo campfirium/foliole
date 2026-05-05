@@ -3,13 +3,23 @@ import { useEffect, useRef } from 'react';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorAdapter } from '../adapters/EditorAdapter';
 
+interface EditorViewState {
+  scrollTop: number;
+  selection: {
+    from: number;
+    to: number;
+  };
+}
+
 interface MarkdownEditorProps {
+  nodeId: string | null;
+  nodeViewState?: EditorViewState;
   value: string;
   onChange: (value: string) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
 }
 
-export function MarkdownEditor({ value, onChange, onReady }: MarkdownEditorProps) {
+export function MarkdownEditor({ nodeId, nodeViewState, value, onChange, onReady }: MarkdownEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const onChangeRef = useRef(onChange);
@@ -41,6 +51,19 @@ export function MarkdownEditor({ value, onChange, onReady }: MarkdownEditorProps
   useEffect(() => {
     adapterRef.current?.setContent(value);
   }, [value]);
+
+  useEffect(() => {
+    if (!nodeId || !nodeViewState) {
+      return;
+    }
+    const adapter = adapterRef.current;
+    if (!adapter) {
+      return;
+    }
+
+    adapter.setSelection(nodeViewState.selection);
+    adapter.setScrollTop(nodeViewState.scrollTop);
+  }, [nodeId, nodeViewState]);
 
   return <div className="markdown-editor-host" ref={hostRef} />;
 }

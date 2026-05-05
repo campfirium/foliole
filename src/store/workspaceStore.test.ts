@@ -20,6 +20,19 @@ function createTestStore(now: Date) {
         }
       }));
     },
+    setNodeViewState: (nodeId, viewState) => {
+      set((state) => {
+        if (!state.nodesById[nodeId]) {
+          return state;
+        }
+        return {
+          nodeViewById: {
+            ...state.nodeViewById,
+            [nodeId]: viewState
+          }
+        };
+      });
+    },
     setDocumentMaxWidth: (width) => {
       if (!Number.isFinite(width) || width <= 0) {
         return;

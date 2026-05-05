@@ -6,9 +6,11 @@ import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes'
 export interface WorkspaceState {
   activeNodeId: string | null;
   layout: WorkspaceLayoutState;
+  nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   resetLayout: () => void;
+  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   setDocumentMaxWidth: (width: number) => void;
   setListWidth: (width: number) => void;
   setActiveNode: (nodeId: string) => void;
@@ -19,6 +21,7 @@ export interface WorkspaceState {
 interface WorkspacePersistedState {
   activeNodeId: string | null;
   layout: WorkspaceLayoutState;
+  nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
 }
@@ -26,6 +29,14 @@ interface WorkspacePersistedState {
 export interface WorkspaceLayoutState {
   documentMaxWidth: number;
   listWidth: number;
+}
+
+export interface NodeViewState {
+  scrollTop: number;
+  selection: {
+    from: number;
+    to: number;
+  };
 }
 
 export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';
@@ -70,13 +81,14 @@ export function createSeedNode(timestamp: string): Node {
 
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
-  'activeNodeId' | 'layout' | 'nodeOrder' | 'nodesById'
+  'activeNodeId' | 'layout' | 'nodeOrder' | 'nodesById' | 'nodeViewById'
 > {
   const timestamp = now.toISOString();
   const seedNode = createSeedNode(timestamp);
   return {
     activeNodeId: seedNode.id,
     layout: { ...defaultLayoutState },
+    nodeViewById: {},
     nodeOrder: [seedNode.id],
     nodesById: { [seedNode.id]: seedNode }
   };
@@ -90,6 +102,26 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       ...initialState,
       resetLayout: () => {
         set({ layout: { ...defaultLayoutState } });
+      },
+      setNodeViewState: (nodeId, viewState) => {
+        set((state) => {
+          if (!state.nodesById[nodeId]) {
+            return state;
+          }
+
+          return {
+            nodeViewById: {
+              ...state.nodeViewById,
+              [nodeId]: {
+                scrollTop: Math.max(0, viewState.scrollTop),
+                selection: {
+                  from: Math.max(0, viewState.selection.from),
+                  to: Math.max(0, viewState.selection.to)
+                }
+              }
+            }
+          };
+        });
       },
       setDocumentMaxWidth: (width) => {
         const normalizedWidth = normalizeWidth(width);
@@ -185,6 +217,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       partialize: (state): WorkspacePersistedState => ({
         activeNodeId: state.activeNodeId,
         layout: state.layout,
+        nodeViewById: state.nodeViewById,
         nodeOrder: state.nodeOrder,
         nodesById: state.nodesById
       })

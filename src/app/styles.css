@@ -191,6 +191,12 @@ body {
 
 .markdown-editor-host .cm-scroller {
   font-size: var(--font-size-14);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.markdown-editor-host .cm-scroller::-webkit-scrollbar {
+  display: none;
 }
 
 body.workspace-resizing {

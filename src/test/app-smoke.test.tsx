@@ -21,6 +21,9 @@ const mockEditorAdapter: EditorAdapter = {
     mockEditorState.content = content;
   },
   getSelection: () => ({ from: 0, to: 0 }),
+  setSelection: () => undefined,
+  getScrollTop: () => 0,
+  setScrollTop: () => undefined,
   replaceSelection: () => undefined,
   onContentChange: () => () => undefined
 };

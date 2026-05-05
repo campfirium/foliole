@@ -5,21 +5,26 @@ import type {
   PointerEvent as ReactPointerEvent
 } from 'react';
 
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { Button, EmptyState, Panel } from '../../shared/ui';
+import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 export interface WorkspaceLayoutProps {
   activeNodeId: string | null;
   documentMaxWidth: number;
   editorContent: string;
+  editorNodeId: string | null;
+  editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
   isResizingList: boolean;
   listWidth: number;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   onEditorChange: (content: string) => void;
+  onEditorReady: (adapter: EditorAdapter | null) => void;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
@@ -34,12 +39,15 @@ export function WorkspaceLayout({
   activeNodeId,
   documentMaxWidth,
   editorContent,
+  editorNodeId,
+  editorNodeViewState,
   isDocumentResizing,
   isResizingList,
   listWidth,
   nodeOrder,
   nodesById,
   onEditorChange,
+  onEditorReady,
   onResetLayout,
   onSelectNode,
   onSplitterKeyDown,
@@ -68,8 +76,11 @@ export function WorkspaceLayout({
         <DocumentPanelSection
           documentMaxWidth={documentMaxWidth}
           editorContent={editorContent}
+          editorNodeId={editorNodeId}
+          editorNodeViewState={editorNodeViewState}
           isDocumentResizing={isDocumentResizing}
           onEditorChange={onEditorChange}
+          onEditorReady={onEditorReady}
           onResetLayout={onResetLayout}
           onStartDocumentResize={onStartDocumentResize}
         />
@@ -137,8 +148,11 @@ function ListSplitter({ listWidth, onResetLayout, onSplitterKeyDown, onSplitterP
 interface DocumentPanelSectionProps {
   documentMaxWidth: number;
   editorContent: string;
+  editorNodeId: string | null;
+  editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
   onEditorChange: (content: string) => void;
+  onEditorReady: (adapter: EditorAdapter | null) => void;
   onResetLayout: () => void;
   onStartDocumentResize: (
     side: ResizeSide,
@@ -149,8 +163,11 @@ interface DocumentPanelSectionProps {
 function DocumentPanelSection({
   documentMaxWidth,
   editorContent,
+  editorNodeId,
+  editorNodeViewState,
   isDocumentResizing,
   onEditorChange,
+  onEditorReady,
   onResetLayout,
   onStartDocumentResize
 }: DocumentPanelSectionProps) {
@@ -175,7 +192,13 @@ function DocumentPanelSection({
             side="left"
           />
           <div className="document-width-frame">
-            <MarkdownEditor onChange={onEditorChange} value={editorContent} />
+            <MarkdownEditor
+              nodeId={editorNodeId}
+              nodeViewState={editorNodeViewState}
+              onChange={onEditorChange}
+              onReady={onEditorReady}
+              value={editorContent}
+            />
           </div>
           <DocumentWidthHandle
             ariaLabel="Resize document width from right"
@@ -223,7 +246,6 @@ function NodeRow({ isActive, node, onSelect }: NodeRowProps) {
   if (!node) {
     return null;
   }
-
   return (
     <Button
       active={isActive}

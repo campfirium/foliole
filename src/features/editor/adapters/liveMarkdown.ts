@@ -1,9 +1,10 @@
-import { RangeSetBuilder } from '@codemirror/state';
+import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 const CODE_FENCE_PATTERN = /^\s*`{3,}/;
-const PREFIX_PATTERN = /^\s*(#{1,6}\s+|[-*+]\s+|\d+\.\s+|>\s?)/;
+const PREFIX_PATTERN = /^\s*(#{1,6}\s*|[-*+]\s+|\d+\.\s+|>\s?)/;
 const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
+const INLINE_STRONG_PATTERN = /(\*\*|__)(.+?)\1/g;
 
 function createLineClass(text: string, inCodeBlock: boolean) {
   if (CODE_FENCE_PATTERN.test(text)) {
@@ -12,13 +13,13 @@ function createLineClass(text: string, inCodeBlock: boolean) {
   if (inCodeBlock) {
     return 'cm-line-code';
   }
-  if (/^#{3}\s+/.test(text)) {
+  if (/^#{3}\s*/.test(text)) {
     return 'cm-line-h3';
   }
-  if (/^#{2}\s+/.test(text)) {
+  if (/^#{2}\s*/.test(text)) {
     return 'cm-line-h2';
   }
-  if (/^#{1}\s+/.test(text)) {
+  if (/^#{1}\s*/.test(text)) {
     return 'cm-line-h1';
   }
   if (/^\s*>\s?/.test(text)) {
@@ -30,28 +31,32 @@ function createLineClass(text: string, inCodeBlock: boolean) {
   return null;
 }
 
-function addMark(builder: RangeSetBuilder<Decoration>, from: number, to: number, className: string) {
+function addReplace(ranges: Range<Decoration>[], from: number, to: number) {
   if (to <= from) {
     return;
   }
-  builder.add(
-    from,
-    to,
-    Decoration.mark({
-      class: className
-    })
+  ranges.push(Decoration.replace({}).range(from, to));
+}
+
+function addMark(ranges: Range<Decoration>[], from: number, to: number, className: string) {
+  if (to <= from) {
+    return;
+  }
+  ranges.push(Decoration.mark({ class: className }).range(from, to));
+}
+
+function addLine(ranges: Range<Decoration>[], from: number, className: string) {
+  ranges.push(
+    Decoration.line({
+      attributes: {
+        class: className
+      }
+    }).range(from)
   );
 }
 
-function addReplace(builder: RangeSetBuilder<Decoration>, from: number, to: number) {
-  if (to <= from) {
-    return;
-  }
-  builder.add(from, to, Decoration.replace({}));
-}
-
 function addPrefixDecoration(
-  builder: RangeSetBuilder<Decoration>,
+  ranges: Range<Decoration>[],
   from: number,
   text: string,
   isCursorLine: boolean
@@ -63,14 +68,14 @@ function addPrefixDecoration(
 
   const prefixLength = prefixMatch[0].length;
   if (isCursorLine) {
-    addMark(builder, from, from + prefixLength, 'cm-md-syntax-visible');
+    addMark(ranges, from, from + prefixLength, 'cm-md-syntax-visible');
     return;
   }
-  addReplace(builder, from, from + prefixLength);
+  addReplace(ranges, from, from + prefixLength);
 }
 
 function addInlineTokenDecorations(
-  builder: RangeSetBuilder<Decoration>,
+  ranges: Range<Decoration>[],
   from: number,
   text: string,
   inCodeBlock: boolean,
@@ -85,9 +90,9 @@ function addInlineTokenDecorations(
   while (tokenMatch) {
     const tokenFrom = from + tokenMatch.index;
     if (isCursorLine) {
-      addMark(builder, tokenFrom, tokenFrom + tokenMatch[0].length, 'cm-md-syntax-visible');
+      addMark(ranges, tokenFrom, tokenFrom + tokenMatch[0].length, 'cm-md-syntax-visible');
     } else {
-      addReplace(builder, tokenFrom, tokenFrom + tokenMatch[0].length);
+      addReplace(ranges, tokenFrom, tokenFrom + tokenMatch[0].length);
     }
     tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
   }
@@ -95,42 +100,54 @@ function addInlineTokenDecorations(
   INLINE_TOKEN_PATTERN.lastIndex = 0;
 }
 
+function addStrongTextDecorations(ranges: Range<Decoration>[], from: number, text: string, inCodeBlock: boolean) {
+  if (inCodeBlock) {
+    return;
+  }
+
+  let match = INLINE_STRONG_PATTERN.exec(text);
+  while (match) {
+    const delimiterLength = match[1]?.length ?? 0;
+    const contentFrom = from + match.index + delimiterLength;
+    const contentTo = from + match.index + match[0].length - delimiterLength;
+    addMark(ranges, contentFrom, contentTo, 'cm-md-strong');
+    match = INLINE_STRONG_PATTERN.exec(text);
+  }
+  INLINE_STRONG_PATTERN.lastIndex = 0;
+}
+
 function getCursorLineNumber(view: EditorView) {
+  if (!view.hasFocus) {
+    return null;
+  }
   const cursor = view.state.selection.main.head;
   return view.state.doc.lineAt(cursor).number;
 }
 
 function buildLineDecorations(view: EditorView): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>();
+  const ranges: Range<Decoration>[] = [];
   const cursorLineNumber = getCursorLineNumber(view);
   let inCodeBlock = false;
 
   for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
     const lineClass = createLineClass(line.text, inCodeBlock);
-    const isCursorLine = lineNumber === cursorLineNumber;
+    const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
 
     if (lineClass) {
-      builder.add(
-        line.from,
-        line.from,
-        Decoration.line({
-          attributes: {
-            class: lineClass
-          }
-        })
-      );
+      addLine(ranges, line.from, lineClass);
     }
 
-    addPrefixDecoration(builder, line.from, line.text, isCursorLine);
-    addInlineTokenDecorations(builder, line.from, line.text, inCodeBlock, isCursorLine);
+    addPrefixDecoration(ranges, line.from, line.text, isCursorLine);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, isCursorLine);
+    addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
 
     if (CODE_FENCE_PATTERN.test(line.text)) {
       inCodeBlock = !inCodeBlock;
     }
   }
 
-  return builder.finish();
+  return Decoration.set(ranges, true);
 }
 
 const markdownLinePlugin = ViewPlugin.fromClass(
@@ -142,7 +159,7 @@ const markdownLinePlugin = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+      if (update.docChanged || update.viewportChanged || update.selectionSet || update.focusChanged) {
         this.decorations = buildLineDecorations(update.view);
       }
     }
@@ -173,27 +190,38 @@ const liveMarkdownTheme = EditorView.theme({
     fontSize: '1.5rem',
     fontWeight: '700',
     letterSpacing: '-0.01em',
-    marginBottom: '0.25rem',
-    marginTop: '0.75rem'
+    paddingBottom: '0.25rem',
+    paddingTop: '0.75rem'
   },
   '.cm-line.cm-line-h2': {
     fontSize: '1.25rem',
     fontWeight: '700',
-    marginBottom: '0.2rem',
-    marginTop: '0.65rem'
+    paddingBottom: '0.2rem',
+    paddingTop: '0.65rem'
   },
   '.cm-line.cm-line-h3': {
     fontSize: '1.08rem',
     fontWeight: '650',
-    marginTop: '0.5rem'
+    paddingTop: '0.5rem'
   },
   '.cm-line.cm-line-list': {
-    paddingLeft: '0.2rem'
+    paddingLeft: '1.1rem',
+    position: 'relative'
+  },
+  '.cm-line.cm-line-list::before': {
+    color: 'var(--color-text-secondary)',
+    content: '"•"',
+    left: '0.05rem',
+    position: 'absolute'
+  },
+  '.cm-line.cm-line-list.cm-activeLine::before': {
+    display: 'none'
   },
   '.cm-line.cm-line-quote': {
     borderLeft: '3px solid var(--color-border-strong)',
     color: 'var(--color-text-secondary)',
-    margin: '0.15rem 0',
+    paddingBottom: '0.15rem',
+    paddingTop: '0.15rem',
     paddingLeft: '0.75rem'
   },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': {
@@ -206,6 +234,9 @@ const liveMarkdownTheme = EditorView.theme({
   '.cm-md-syntax-visible': {
     color: 'var(--color-text-secondary)',
     opacity: '0.58'
+  },
+  '.cm-md-strong': {
+    fontWeight: '700'
   },
   '.cm-activeLine': {
     backgroundColor: 'transparent'
