@@ -8,7 +8,6 @@ export interface EditorContextMenuProps {
   onClose: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreateImageCloze: () => void;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -23,7 +22,6 @@ export function EditorContextMenu({
   onClose,
   onCopyImage,
   onCreateHighlight,
-  onCreateImageCloze,
   onCreateCloze,
   onCutImage,
   onDeleteImage,
@@ -32,7 +30,6 @@ export function EditorContextMenu({
   if (kind === 'image') {
     return (
       <AppSelectionDropdownMenu left={left} onClose={onClose} top={top}>
-        <AppSelectionDropdownMenuItem onClick={onCreateImageCloze}>Create image cloze</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={onCopyImage}>Copy image</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={onCutImage}>Cut image</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={onExportImage}>Export image</AppSelectionDropdownMenuItem>

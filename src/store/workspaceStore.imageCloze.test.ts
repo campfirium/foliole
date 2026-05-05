@@ -39,36 +39,48 @@ beforeEach(() => {
   });
 });
 
-it('creates image cloze item nodes from saved regions', () => {
-  const createdIds = useWorkspaceStore.getState().createImageClozeNodes('node-1', 'hash-1', [
+it('creates image cloze item nodes with prompt context and reveal image content', () => {
+  const createdIds = useWorkspaceStore.getState().createImageClozeNodes(
+    'node-1',
+    'hash-1',
     {
-      answer: 'Paris',
-      attachmentId: 'hash-1',
-      height: 0.15,
-      id: 'region-1',
-      width: 0.2,
-      x: 0.1,
-      y: 0.2
+      promptContent: 'Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image',
+      revealContent: '![Cover](asset://hash-1.png)'
     },
-    {
-      answer: 'River',
-      attachmentId: 'hash-1',
-      height: 0.12,
-      id: 'region-2',
-      width: 0.18,
-      x: 0.42,
-      y: 0.55
-    }
-  ]);
+    [
+      {
+        answer: 'Paris',
+        attachmentId: 'hash-1',
+        height: 0.15,
+        id: 'region-1',
+        width: 0.2,
+        x: 0.1,
+        y: 0.2
+      },
+      {
+        answer: 'River',
+        attachmentId: 'hash-1',
+        height: 0.12,
+        id: 'region-2',
+        width: 0.18,
+        x: 0.42,
+        y: 0.55
+      }
+    ]
+  );
 
   expect(createdIds).toHaveLength(2);
   const firstNode = useWorkspaceStore.getState().nodesById[createdIds[0] as string];
   const secondNode = useWorkspaceStore.getState().nodesById[createdIds[1] as string];
+  const parentNode = useWorkspaceStore.getState().nodesById['node-1'];
   expect(firstNode?.parentNodeId).toBe('node-1');
   expect(firstNode?.kind).toBe('item');
-  expect(firstNode?.reveal).toBe('Paris');
+  expect(firstNode?.content).toBe('Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image');
+  expect(firstNode?.reveal).toBe('![Cover](asset://hash-1.png)');
   expect(firstNode?.review).not.toBeNull();
   expect(firstNode?.anchorLink?.kind).toBe('cloze');
+  expect(firstNode?.anchorLink?.id).toBe('region-1');
+  expect(firstNode?.title).toBe('Before image Cover After image');
   expect(firstNode?.anchorLink?.locator).toMatchObject({
     attachmentId: 'hash-1',
     height: 0.15,
@@ -76,5 +88,26 @@ it('creates image cloze item nodes from saved regions', () => {
     x: 0.1,
     y: 0.2
   });
-  expect(secondNode?.reveal).toBe('River');
+  expect(secondNode?.reveal).toBe('![Cover](asset://hash-1.png)');
+  expect(parentNode?.imageRegions).toEqual([
+    {
+      attachmentId: 'hash-1',
+      regions: [
+        {
+          height: 0.15,
+          id: 'region-1',
+          width: 0.2,
+          x: 0.1,
+          y: 0.2
+        },
+        {
+          height: 0.12,
+          id: 'region-2',
+          width: 0.18,
+          x: 0.42,
+          y: 0.55
+        }
+      ]
+    }
+  ]);
 });

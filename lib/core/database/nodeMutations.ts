@@ -34,6 +34,19 @@ interface NodeReadingPayload {
   state: 'active' | 'done' | 'dismissed';
 }
 
+interface NodeImageRegionPayload {
+  id: string;
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface NodeImageRegionGroupPayload {
+  attachmentId: string;
+  regions: NodeImageRegionPayload[];
+}
+
 export interface UpsertNodeSnapshotInput {
   nodeId: string;
   parentNodeId: string | null;
@@ -47,6 +60,7 @@ export interface UpsertNodeSnapshotInput {
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NodeAnchorLinkPayload | null;
+  imageRegions?: NodeImageRegionGroupPayload[] | null;
   reading?: NodeReadingPayload | null;
   position: number | null;
   createdAt: string;
@@ -71,12 +85,16 @@ function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | n
   return anchorLink ? JSON.stringify(anchorLink) : null;
 }
 
+function toImageRegionsValue(imageRegions: NodeImageRegionGroupPayload[] | null | undefined): string | null {
+  return imageRegions && imageRegions.length > 0 ? JSON.stringify(imageRegions) : null;
+}
+
 function createUpsertNodeStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO nodes (
-       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, virtual_filter, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
+       content, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
        kind = excluded.kind,
@@ -89,6 +107,7 @@ function createUpsertNodeStatement(driver: DatabaseDriver) {
        virtual_filter = excluded.virtual_filter,
        reveal = excluded.reveal,
        anchor_link = excluded.anchor_link,
+       image_regions = excluded.image_regions,
        updated_at = excluded.updated_at,
        deleted_at = NULL`
   );
@@ -150,8 +169,8 @@ function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: keyof typeof SPEC
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, virtual_filter, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, NULL, ?, ?, NULL)`,
+       content, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
+     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, NULL, NULL, ?, ?, NULL)`,
     [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, updatedAt, updatedAt]
   );
 }
@@ -195,6 +214,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       stringifyVirtualNodeFilter(input.virtualFilter ?? null),
       input.reveal,
       toAnchorLinkValue(input.anchorLink),
+      toImageRegionsValue(input.imageRegions),
       input.createdAt,
       input.updatedAt
     ]);

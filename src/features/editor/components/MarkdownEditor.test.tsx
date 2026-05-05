@@ -1,6 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  registerImageClozeEditorPresentation,
+  unregisterImageClozeEditorPresentation
+} from '../../image-cloze/model/imageClozePresentation';
 import { SettingsMouseGesturesSection } from '../../settings/components/sections/SettingsMouseGesturesSection';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 import {
@@ -17,6 +21,8 @@ const mockGetContent = vi.fn(() => '');
 const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
+const mockSetNodeId = vi.fn();
+const mockRefreshImageClozePresentation = vi.fn();
 const mockSetSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
@@ -49,6 +55,12 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     }
     setHideTitleHeading(value: boolean) {
       mockSetHideTitleHeading(value);
+    }
+    setNodeId(nodeId: string | null) {
+      mockSetNodeId(nodeId);
+    }
+    refreshImageClozePresentation() {
+      mockRefreshImageClozePresentation();
     }
     getSelection() {
       return { from: 0, to: 0 };
@@ -115,6 +127,8 @@ function resetMocks() {
     mockSetContent.mockClear();
     mockSetDiffDecorations.mockClear();
     mockSetHideTitleHeading.mockClear();
+    mockSetNodeId.mockClear();
+    mockRefreshImageClozePresentation.mockClear();
     mockSetSelection.mockClear();
     mockSetScrollTop.mockClear();
     mockOnScroll.mockClear();
@@ -158,6 +172,41 @@ describe('MarkdownEditor rendering', () => {
 
     expect(mockCtor).toHaveBeenCalledTimes(1);
     expect(mockSetHideTitleHeading).toHaveBeenCalledWith(true);
+  });
+
+  it('refreshes image cloze presentation when external image regions are registered', async () => {
+    renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="![Cover](asset://hash-1.png)" />);
+
+    await waitFor(() => {
+      expect(mockSetNodeId).toHaveBeenCalledWith('node-1');
+    });
+
+    act(() => {
+      registerImageClozeEditorPresentation('node-1', {
+        canCreate: true,
+        focusRegionId: null,
+        hiddenRegionIds: ['region-1'],
+        outlinedRegionIds: [],
+        regions: [
+          {
+            attachmentId: 'hash-1',
+            height: 0.2,
+            id: 'region-1',
+            width: 0.3,
+            x: 0.1,
+            y: 0.2
+          }
+        ]
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRefreshImageClozePresentation).toHaveBeenCalled();
+    });
+
+    act(() => {
+      unregisterImageClozeEditorPresentation('node-1');
+    });
   });
 });
 

@@ -12,6 +12,7 @@ export const nodes = sqliteTable('nodes', {
   content: text('content').notNull().default(''),
   reveal: text('reveal'),
   anchorLink: text('anchor_link'),
+  imageRegions: text('image_regions'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   deletedAt: text('deleted_at')

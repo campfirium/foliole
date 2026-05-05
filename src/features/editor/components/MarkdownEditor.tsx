@@ -1,6 +1,7 @@
-import { type CSSProperties, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
+import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { useMouseGestureSettings } from '../../settings/context/MouseGestureSettingsProvider';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorAdapter, EditorDiffDecorations } from '../adapters/EditorAdapter';
@@ -50,7 +51,7 @@ function useEditorAdapter(
   onChangeRef.current = onChange;
   onReadyRef.current = onReady;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host || adapterRef.current) {
       return;
@@ -150,14 +151,32 @@ function useEditorAppearanceEffects(
   hideTitleHeading: boolean,
   nodeId: string | null
 ) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     adapterRef.current?.setHideTitleHeading(hideTitleHeading);
   }, [adapterRef, hideTitleHeading]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof adapterRef.current?.setNodeId === 'function') {
       adapterRef.current.setNodeId(nodeId);
+      adapterRef.current.refreshImageClozePresentation();
     }
+  }, [adapterRef, nodeId]);
+
+  useLayoutEffect(() => {
+    if (!nodeId) {
+      return;
+    }
+    const handlePresentationChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ editorNodeId?: string }>).detail;
+      if (detail?.editorNodeId !== nodeId) {
+        return;
+      }
+      adapterRef.current?.refreshImageClozePresentation();
+    };
+    window.addEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
+    return () => {
+      window.removeEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, handlePresentationChange as EventListener);
+    };
   }, [adapterRef, nodeId]);
 }
 

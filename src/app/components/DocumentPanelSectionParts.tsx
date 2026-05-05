@@ -1,7 +1,6 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 
-import { isImageClozeNode } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -34,7 +33,6 @@ interface DocumentPanelContextMenuProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreateImageCloze: () => void;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
@@ -118,8 +116,7 @@ function getDocumentPanelFlags(args: {
         args.activeNodeId &&
           args.activeNode &&
           !isVirtualNode(args.activeNode) &&
-          !args.isFolderListView &&
-          !isImageClozeNode(args.activeNode)
+          !args.isFolderListView
       ) &&
       !args.pdfDocumentSurface &&
       args.sourceDetails.isLoading &&
@@ -129,8 +126,7 @@ function getDocumentPanelFlags(args: {
       !args.activeNode ||
       (!isVirtualNode(args.activeNode) &&
         !args.isFolderListView &&
-        !args.pdfDocumentSurface &&
-        !isImageClozeNode(args.activeNode))
+        !args.pdfDocumentSurface)
   };
 }
 
@@ -149,7 +145,7 @@ export function DocumentPanelContent({
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const shouldLoadSourceDetails = Boolean(
-    activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView && !isImageClozeNode(activeNode)
+    activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView
   );
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? activeNodeId : null);
   const pdfDocumentSurface = resolvePdfDocumentSurface(activeNodeId, sourceDetails.isLoading, sourceDetails.value);
@@ -203,7 +199,6 @@ export function DocumentPanelContextMenu({
   onCloseContextMenu,
   onCopyImage,
   onCreateHighlight,
-  onCreateImageCloze,
   onCreateCloze,
   onCutImage,
   onDeleteImage,
@@ -222,7 +217,6 @@ export function DocumentPanelContextMenu({
       onCopyImage={onCopyImage}
       onCreateCloze={onCreateCloze}
       onCreateHighlight={onCreateHighlight}
-      onCreateImageCloze={onCreateImageCloze}
       onCutImage={onCutImage}
       onDeleteImage={onDeleteImage}
       onExportImage={onExportImage}

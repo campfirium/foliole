@@ -44,6 +44,19 @@ export interface ImageAnchorLocator {
   y: number;
 }
 
+export interface NodeImageRegion {
+  id: string;
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+export interface NodeImageRegionGroup {
+  attachmentId: string;
+  regions: NodeImageRegion[];
+}
+
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
@@ -67,6 +80,7 @@ export interface Node {
   content: string;
   virtualFilter?: VirtualNodeFilter | null;
   anchorLink?: NodeAnchorLink | null;
+  imageRegions?: NodeImageRegionGroup[] | null;
   reveal: string | null;
   reading?: NodeReadingProfile | null;
   review: NodeReviewProfile | null;

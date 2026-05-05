@@ -1,63 +1,73 @@
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
+import { act } from 'react';
 import { expect, it, vi } from 'vitest';
+
+import { IMAGE_CLOZE_CREATE_EVENT } from '../../features/image-cloze/model/imageClozeEvents';
 
 import { useEditorContextCommands } from './useEditorContextCommands';
 
-function createImageTarget() {
-  const createImageClozeNodes = vi.fn(() => ['node-image-cloze']);
-  const imageTarget = document.createElement('img');
-  const imageWidget = document.createElement('span');
-  imageWidget.dataset.mdImageAttachmentId = 'hash-1';
-  imageWidget.dataset.mdImageFrom = '3';
-  imageWidget.dataset.mdImageSource = 'asset://hash-1.png';
-  imageWidget.dataset.mdImageTo = '27';
-  imageWidget.append(imageTarget);
-
-  return { createImageClozeNodes, imageTarget };
-}
+const content = 'Before\n\n![Cover](asset://hash-1.png)\n\nAfter';
+const imageMarkdown = '![Cover](asset://hash-1.png)';
 
 function renderImageClozeCommands(createImageClozeNodes: ReturnType<typeof vi.fn>) {
-  return renderHook(() =>
+  const editorRef = {
+    current: {
+      getContent: vi.fn(() => content)
+    }
+  } as never;
+
+  renderHook(() =>
     useEditorContextCommands({
-      activeNode: { id: 'node-1', content: '![Cover](asset://hash-1.png)', title: 'Welcome to Foliole' } as never,
+      activeNode: { id: 'node-1', content, title: 'Welcome to Foliole' } as never,
       activeNodeId: 'node-1',
       createHighlightNodeFromSelection: vi.fn(),
       createImageClozeNodes,
       createQANodeFromSelection: vi.fn(),
-      editorRef: { current: null },
+      editorRef,
       isTrashViewOpen: false,
       updateNodeContent: vi.fn()
     })
   );
 }
 
-it('opens and saves the image cloze composer from an attachment image', () => {
-  const { createImageClozeNodes, imageTarget } = createImageTarget();
-  const { result } = renderImageClozeCommands(createImageClozeNodes);
-
+function dispatchImageClozeCreateEvent() {
+  const imageFrom = content.indexOf(imageMarkdown);
   act(() => {
-    result.current.handleEditorContextMenu({
-      clientX: 40,
-      clientY: 48,
-      preventDefault: vi.fn(),
-      target: imageTarget
-    } as never);
+    window.dispatchEvent(
+      new CustomEvent(IMAGE_CLOZE_CREATE_EVENT, {
+        detail: {
+          attachmentId: 'hash-1',
+          imageRange: { from: imageFrom, to: imageFrom + imageMarkdown.length },
+          region: {
+            answer: '',
+            attachmentId: 'hash-1',
+            height: 0.2,
+            id: 'region-1',
+            width: 0.3,
+            x: 0.1,
+            y: 0.2
+          }
+        }
+      })
+    );
   });
+}
 
-  act(() => {
-    result.current.handleCreateImageCloze();
-  });
+it('creates an image cloze item directly from the image cloze widget event', () => {
+  const createImageClozeNodes = vi.fn(() => ['node-image-cloze']);
+  renderImageClozeCommands(createImageClozeNodes);
+  dispatchImageClozeCreateEvent();
 
-  expect(result.current.imageClozeComposer).toEqual({
-    attachmentId: 'hash-1',
-    parentNodeId: 'node-1'
-  });
-
-  let createdIds: string[] = [];
-  act(() => {
-    createdIds = result.current.handleSaveImageCloze([
+  expect(createImageClozeNodes).toHaveBeenCalledWith(
+    'node-1',
+    'hash-1',
+    {
+      promptContent: 'Before\n\n![Cover](asset://hash-1.png)\n\nAfter',
+      revealContent: '![Cover](asset://hash-1.png)'
+    },
+    [
       {
-        answer: 'Paris',
+        answer: '',
         attachmentId: 'hash-1',
         height: 0.2,
         id: 'region-1',
@@ -65,20 +75,6 @@ it('opens and saves the image cloze composer from an attachment image', () => {
         x: 0.1,
         y: 0.2
       }
-    ]);
-  });
-
-  expect(createdIds).toEqual(['node-image-cloze']);
-  expect(createImageClozeNodes).toHaveBeenCalledWith('node-1', 'hash-1', [
-    {
-      answer: 'Paris',
-      attachmentId: 'hash-1',
-      height: 0.2,
-      id: 'region-1',
-      width: 0.3,
-      x: 0.1,
-      y: 0.2
-    }
-  ]);
-  expect(result.current.imageClozeComposer).toBeNull();
+    ]
+  );
 });

@@ -1,7 +1,6 @@
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { ImageClozeDraftRegion } from '../../features/image-cloze/model/imageCloze';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../../shared/platform/attachmentImageActions';
 import type { WorkspaceEditorContextMenu } from '../components/WorkspaceLayout';
@@ -13,8 +12,6 @@ import {
 } from '../contextCommands';
 import { resolveImageContextMenuState, type ImageContextMenuState } from '../editorImageContextMenu';
 
-import { createImageClozeHandlers, type ImageClozeComposerState } from './useEditorImageClozeCommands';
-
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
   kind: 'selection';
   payload: SelectionCommandPayload | null;
@@ -25,17 +22,13 @@ export type EditorContextMenuState = ImageContextMenuState | SelectionContextMen
 export interface EditorContextCommandsResult {
   closeContextMenu: () => void;
   contextMenu: EditorContextMenuState | null;
-  handleCloseImageClozeComposer: () => void;
   handleCopyImage: () => Promise<void>;
   handleCreateCloze: () => void;
   handleCreateHighlight: () => void;
-  handleCreateImageCloze: () => void;
   handleCutImage: () => Promise<void>;
   handleDeleteImage: () => void;
   handleEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleExportImage: () => Promise<void>;
-  handleSaveImageCloze: (regions: ImageClozeDraftRegion[]) => string[];
-  imageClozeComposer: ImageClozeComposerState | null;
 }
 
 export function buildEditorContextCommandsResult(
@@ -209,17 +202,9 @@ function createHandleExportImage(
 }
 
 export function createImageCommandHandlers(args: {
-  activeNodeId: string | null;
   closeContextMenu: () => void;
   contextMenu: EditorContextMenuState | null;
-  createImageClozeNodes: (
-    parentNodeId: string,
-    attachmentId: string,
-    regions: ImageClozeDraftRegion[]
-  ) => string[];
   editorRef: MutableRefObject<EditorAdapter | null>;
-  imageClozeComposer: ImageClozeComposerState | null;
-  setImageClozeComposer: (value: ImageClozeComposerState | null) => void;
   syncActiveNodeContentFromEditor: () => void;
 }) {
   const removeImageSource = createRemoveImageSource(
@@ -232,15 +217,6 @@ export function createImageCommandHandlers(args: {
     handleCopyImage: createHandleCopyImage(args.contextMenu, args.closeContextMenu),
     handleCutImage: createHandleCutImage(args.contextMenu, args.closeContextMenu, removeImageSource),
     handleDeleteImage: () => (removeImageSource(), args.closeContextMenu()),
-    handleExportImage: createHandleExportImage(args.contextMenu, args.closeContextMenu),
-    ...createImageClozeHandlers({
-      activeNodeId: args.activeNodeId,
-      closeContextMenu: args.closeContextMenu,
-      contextMenuKind: args.contextMenu?.kind ?? null,
-      createImageClozeNodes: args.createImageClozeNodes,
-      imageAttachmentId: args.contextMenu?.kind === 'image' ? args.contextMenu.imageAttachmentId : null,
-      imageClozeComposer: args.imageClozeComposer,
-      setImageClozeComposer: args.setImageClozeComposer
-    })
+    handleExportImage: createHandleExportImage(args.contextMenu, args.closeContextMenu)
   };
 }

@@ -23,6 +23,7 @@ interface CodeMirrorEditorAdapterOptions {
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
+  private imageClozePresentationVersion = 0;
   private localizationRunId = 0;
   private localizationTimer: ReturnType<typeof setTimeout> | null = null;
   private liveMarkdownCompartment = new Compartment();
@@ -51,7 +52,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           highlightActiveLine(),
           markdownInputAssist,
           this.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
-          this.liveMarkdownCompartment.of(createLiveMarkdown(this.hideTitleHeading, this.nodeId)),
+          this.liveMarkdownCompartment.of(
+            createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
+          ),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
               return;
@@ -115,16 +118,29 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;
     this.view.dispatch({
-      effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(this.hideTitleHeading, this.nodeId))
+      effects: this.liveMarkdownCompartment.reconfigure(
+        createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
+      )
     });
   }
 
   setNodeId(nodeId: string | null) {
     this.nodeId = nodeId;
     this.view.dispatch({
-      effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(this.hideTitleHeading, this.nodeId))
+      effects: this.liveMarkdownCompartment.reconfigure(
+        createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
+      )
     });
     this.scheduleRemoteImageLocalization();
+  }
+
+  refreshImageClozePresentation() {
+    this.imageClozePresentationVersion += 1;
+    this.view.dispatch({
+      effects: this.liveMarkdownCompartment.reconfigure(
+        createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
+      )
+    });
   }
 
   getSelection(): EditorSelection {

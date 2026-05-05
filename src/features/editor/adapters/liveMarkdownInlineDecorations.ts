@@ -24,15 +24,21 @@ export interface InlineLinkMatch extends RangeBounds {
 }
 
 class MarkdownImageWidget extends WidgetType {
+  readonly editorNodeId: string | null;
   readonly imageMatch: MarkdownImageMatch;
+  readonly presentationVersion: number;
 
-  constructor(imageMatch: MarkdownImageMatch) {
+  constructor(imageMatch: MarkdownImageMatch, editorNodeId: string | null, presentationVersion: number) {
     super();
+    this.editorNodeId = editorNodeId;
     this.imageMatch = imageMatch;
+    this.presentationVersion = presentationVersion;
   }
 
   eq(other: MarkdownImageWidget) {
     return (
+      this.editorNodeId === other.editorNodeId &&
+      this.presentationVersion === other.presentationVersion &&
       this.imageMatch.alt === other.imageMatch.alt &&
       this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
       this.imageMatch.from === other.imageMatch.from &&
@@ -42,7 +48,7 @@ class MarkdownImageWidget extends WidgetType {
   }
 
   toDOM() {
-    return createMarkdownImageWidgetDom(this.imageMatch);
+    return createMarkdownImageWidgetDom(this.imageMatch, this.editorNodeId);
   }
 }
 
@@ -51,20 +57,30 @@ export { collectImageMatches };
 export function addImageDecorations(
   ranges: Range<Decoration>[],
   imageMatches: ReadonlyArray<MarkdownImageMatch>,
-  preserveSource = false
+  preserveSource = false,
+  editorNodeId: string | null = null,
+  presentationVersion = 0
 ) {
   for (const imageMatch of imageMatches) {
     if (preserveSource) {
       ranges.push(
         Decoration.widget({
           side: 1,
-          widget: new MarkdownImageWidget(imageMatch)
+          widget: new MarkdownImageWidget(imageMatch, editorNodeId, presentationVersion)
         }).range(imageMatch.to)
       );
       continue;
     }
 
-    ranges.push(Decoration.replace({ widget: new MarkdownImageWidget(imageMatch), inclusive: false }).range(imageMatch.from, imageMatch.to));
+    ranges.push(
+      Decoration.replace({
+        widget: new MarkdownImageWidget(imageMatch, editorNodeId, presentationVersion),
+        inclusive: false
+      }).range(
+        imageMatch.from,
+        imageMatch.to
+      )
+    );
   }
 }
 

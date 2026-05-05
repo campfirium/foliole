@@ -90,7 +90,6 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       editableNodeId={props.editorNodeId}
       editorAppearanceKey={editorAppearanceKey}
       editorContent={props.editorContent}
-      imageClozeComposerAttachmentId={props.imageClozeComposerAttachmentId}
       isEditorReadOnly={props.isEditorReadOnly}
       editorNodeId={props.editorNodeId}
       editorNodeViewState={props.editorNodeViewState}
@@ -103,7 +102,6 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onCopyImage={props.onCopyImage}
       onCreateCloze={props.onCreateCloze}
       onCreateHighlight={props.onCreateHighlight}
-      onCreateImageCloze={props.onCreateImageCloze}
       onCreatePdfHighlight={props.onCreatePdfHighlight}
       onCutImage={props.onCutImage}
       onDeleteImage={props.onDeleteImage}
@@ -112,13 +110,11 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onEditorContextMenu={props.onEditorContextMenu}
       onEditorReady={props.onEditorReady}
       onExportImage={props.onExportImage}
-      onCloseImageClozeComposer={props.onCloseImageClozeComposer}
       onGoBack={props.onGoBack}
       onGoForward={props.onGoForward}
       onGoParent={props.onGoParent}
       onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
       onResetLayout={props.onResetLayout}
-      onSaveImageCloze={props.onSaveImageCloze}
       onPersistPdfViewState={props.onPersistPdfViewState}
       onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}
       onRevealDocumentPosition={props.onRevealDocumentPosition}

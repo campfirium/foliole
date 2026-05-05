@@ -1,10 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
+
+const imageClozePresentation = vi.hoisted(() => ({
+  registerImageClozeEditorPresentation: vi.fn(),
+  unregisterImageClozeEditorPresentation: vi.fn(),
+  getImageClozeAnswerEditorNodeId: vi.fn((editorNodeId: string | null) =>
+    editorNodeId ? `${editorNodeId}::answer` : null
+  )
+}));
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
@@ -13,12 +21,14 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   })
 }));
 
+vi.mock('../../features/image-cloze/model/imageClozePresentation', () => imageClozePresentation);
+
 vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
 }));
 
 vi.mock('../../features/image-cloze/components/ImageClozeCardView', () => ({
-  ImageClozeCardView: () => <div data-testid="image-cloze-card-view">Image cloze card</div>
+  ImageClozeCardView: () => <div data-testid="image-cloze-card-view">Legacy image cloze</div>
 }));
 
 vi.mock('./ReadwiseBookActionsPanel', () => ({
@@ -31,6 +41,11 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
     value: null
   })
 }));
+
+beforeEach(() => {
+  imageClozePresentation.registerImageClozeEditorPresentation.mockClear();
+  imageClozePresentation.unregisterImageClozeEditorPresentation.mockClear();
+});
 
 const baseNode = {
   id: 'node-1',
@@ -94,7 +109,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
   );
 }
 
-it('renders the image cloze card view for image cloze items', () => {
+it('renders image cloze items through the standard document body shell', () => {
   renderSectionWithProps({
     activeNodeId: 'node-1',
     editorNodeId: 'node-1',
@@ -102,6 +117,35 @@ it('renders the image cloze card view for image cloze items', () => {
       'node-1': {
         ...baseNode,
         kind: 'item',
+        content: '![Cover](asset://hash-1.png)',
+        anchorLink: {
+          id: 'cloze-1',
+          kind: 'cloze',
+          locator: {
+            attachmentId: 'hash-1',
+            height: 0.2,
+            width: 0.3,
+            x: 0.1,
+            y: 0.2
+          }
+        },
+        reveal: 'Paris'
+      }
+    }
+  });
+
+  expect(screen.getByTestId('document-panel-body')).toBeInTheDocument();
+});
+
+it('renders legacy empty-content image cloze items through the compatibility card view', () => {
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodesById: {
+      'node-1': {
+        ...baseNode,
+        kind: 'item',
+        hasContent: false,
         anchorLink: {
           id: 'cloze-1',
           kind: 'cloze',
@@ -119,5 +163,93 @@ it('renders the image cloze card view for image cloze items', () => {
   });
 
   expect(screen.getByTestId('image-cloze-card-view')).toBeInTheDocument();
-  expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
+});
+
+it('registers saved image regions for source nodes so the original image can show all cloze marks', () => {
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodesById: {
+      'node-1': {
+        ...baseNode,
+        content: '![Cover](asset://hash-1.png)',
+        imageRegions: [
+          {
+            attachmentId: 'hash-1',
+            regions: [
+              {
+                id: 'region-1',
+                height: 0.2,
+                width: 0.3,
+                x: 0.1,
+                y: 0.2
+              }
+            ]
+          }
+        ]
+      }
+    }
+  });
+
+  expect(imageClozePresentation.registerImageClozeEditorPresentation).toHaveBeenCalledWith(
+    'node-1',
+    expect.objectContaining({
+      canCreate: true,
+      hiddenRegionIds: [],
+      outlinedRegionIds: ['region-1'],
+      regions: [
+        expect.objectContaining({
+          attachmentId: 'hash-1',
+          id: 'region-1'
+        })
+      ]
+    })
+  );
+});
+
+it('derives image regions from existing cloze child nodes when the parent has no imageRegions yet', () => {
+  renderSectionWithProps({
+    activeNodeId: 'node-1',
+    editorNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': {
+        ...baseNode,
+        content: '![Cover](asset://hash-1.png)'
+      },
+      'node-2': {
+        ...baseNode,
+        id: 'node-2',
+        kind: 'item',
+        parentNodeId: 'node-1',
+        anchorLink: {
+          id: 'region-legacy',
+          kind: 'cloze',
+          locator: {
+            attachmentId: 'hash-1',
+            height: 0.2,
+            width: 0.3,
+            x: 0.1,
+            y: 0.2
+          }
+        },
+        reveal: 'Paris'
+      }
+    }
+  });
+
+  expect(imageClozePresentation.registerImageClozeEditorPresentation).toHaveBeenCalledWith(
+    'node-1',
+    expect.objectContaining({
+      canCreate: true,
+      hiddenRegionIds: [],
+      outlinedRegionIds: ['region-legacy'],
+      regions: [
+        expect.objectContaining({
+          attachmentId: 'hash-1',
+          id: 'region-legacy'
+        })
+      ]
+    })
+  );
 });

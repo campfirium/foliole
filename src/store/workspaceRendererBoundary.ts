@@ -11,6 +11,7 @@ interface WorkspaceRendererBoundaryStateLike {
 export interface WorkspaceNodeDocument {
   content: string;
   hideTitleHeading: boolean;
+  imageRegions?: Node['imageRegions'];
   kind: NodeKind;
   reveal: string | null;
   virtualFilter?: VirtualNodeFilter | null;
@@ -63,6 +64,7 @@ export function mergeWorkspaceNodeDocument(node: Node, document: WorkspaceNodeDo
     content: document.content,
     hasContent: document.content.trim().length > 0,
     hideTitleHeading: document.hideTitleHeading,
+    ...(document.imageRegions ? { imageRegions: document.imageRegions } : {}),
     kind: document.kind,
     reveal: document.reveal,
     virtualFilter: document.virtualFilter ?? null,

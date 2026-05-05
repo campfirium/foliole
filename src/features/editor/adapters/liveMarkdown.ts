@@ -44,10 +44,19 @@ const activeNodeIdFacet = Facet.define<string | null, string | null>({
   combine: (values) => values[0] ?? null
 });
 
-export function createLiveMarkdown(hideTitleHeading = false, nodeId: string | null = null) {
+const imageClozePresentationVersionFacet = Facet.define<number, number>({
+  combine: (values) => values[0] ?? 0
+});
+
+export function createLiveMarkdown(
+  hideTitleHeading = false,
+  nodeId: string | null = null,
+  imageClozePresentationVersion = 0
+) {
   return [
     hideTitleHeadingFacet.of(hideTitleHeading),
     activeNodeIdFacet.of(nodeId),
+    imageClozePresentationVersionFacet.of(imageClozePresentationVersion),
     liveMarkdownTheme,
     markdownStaticPlugin,
     markdownLinePlugin,
@@ -59,6 +68,8 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   if (getEditorDisplayMode() === 'source') return buildSourceModeLineDecorations(view);
 
   const ranges: Range<Decoration>[] = [];
+  const activeNodeId = view.state.facet(activeNodeIdFacet);
+  const imageClozePresentationVersion = view.state.facet(imageClozePresentationVersionFacet);
   const hideTitleHeading = view.state.facet(hideTitleHeadingFacet);
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const showMarkdownSyntax = getMarkdownSyntaxVisibility() === 'visible';
@@ -81,7 +92,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
       if (isCodeFenceLine && !showSyntaxOnLine) addLine(ranges, line.from, 'cm-line-code-fence-hidden');
       else addLine(ranges, line.from, lineClass);
     }
-    if (!inCodeBlock) addImageDecorations(ranges, imageMatches, isCursorLine);
+    if (!inCodeBlock) addImageDecorations(ranges, imageMatches, false, activeNodeId, imageClozePresentationVersion);
 
     if (!inCodeBlock || isCodeFenceLine) {
       addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
@@ -212,7 +223,12 @@ const markdownLinePlugin = ViewPlugin.fromClass(
       this.decorations = buildLineDecorations(view);
     }
     update(update: ViewUpdate) {
-      if (shouldRefreshLineDecorations(update)) {
+      const nodeIdChanged =
+        update.startState.facet(activeNodeIdFacet) !== update.state.facet(activeNodeIdFacet);
+      const imageClozePresentationChanged =
+        update.startState.facet(imageClozePresentationVersionFacet) !==
+        update.state.facet(imageClozePresentationVersionFacet);
+      if (shouldRefreshLineDecorations(update) || nodeIdChanged || imageClozePresentationChanged) {
         this.decorations = buildLineDecorations(update.view);
       }
     }

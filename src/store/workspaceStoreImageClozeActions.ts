@@ -1,3 +1,8 @@
+import {
+  appendImageClozeRegions,
+  type ImageClozeDraftRegion,
+  type ImageClozeSourcePayload
+} from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 
 import { createDefaultReviewProfile } from './workspaceSeed';
@@ -7,6 +12,7 @@ import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 interface RuntimeSyncHandlers {
+  syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (node: WorkspaceNode) => void;
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
@@ -18,15 +24,7 @@ type WorkspaceSet = (
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
-interface ImageClozeRegionInput {
-  answer: string;
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-}
-
-function normalizeImageClozeRegions(attachmentId: string, regions: ImageClozeRegionInput[]) {
+function normalizeImageClozeRegions(attachmentId: string, regions: ImageClozeDraftRegion[]) {
   return regions
     .map((region) => ({
       ...region,
@@ -35,7 +33,6 @@ function normalizeImageClozeRegions(attachmentId: string, regions: ImageClozeReg
     .filter(
       (region) =>
         attachmentId.length > 0 &&
-        region.answer.length > 0 &&
         region.width > 0 &&
         region.height > 0
     );
@@ -44,13 +41,14 @@ function normalizeImageClozeRegions(attachmentId: string, regions: ImageClozeReg
 function createImageClozeNode(
   parentNodeId: string,
   attachmentId: string,
-  region: ImageClozeRegionInput,
+  sourcePayload: ImageClozeSourcePayload,
+  region: ImageClozeDraftRegion,
   timestamp: string,
   state: WorkspaceState,
   untitledSequenceByParent: Record<string, number>
 ) {
   const nodeId = `node-${crypto.randomUUID()}`;
-  const title = deriveNodeTitleForCloze('Image cloze', region.answer);
+  const title = deriveNodeTitleForCloze(sourcePayload.promptContent, sourcePayload.revealContent);
   const untitledState = resolveCreatedNodeTitleState(title, parentNodeId, {
     ...state,
     untitledSequenceByParent
@@ -60,10 +58,10 @@ function createImageClozeNode(
     parentNodeId,
     kind: 'item',
     title: untitledState.title,
-    hasContent: false,
-    content: '',
+    hasContent: sourcePayload.promptContent.trim().length > 0,
+    content: sourcePayload.promptContent,
     anchorLink: {
-      id: `image-cloze-${crypto.randomUUID()}`,
+      id: region.id,
       kind: 'cloze',
       locator: {
         attachmentId,
@@ -74,7 +72,7 @@ function createImageClozeNode(
       }
     },
     hasReveal: true,
-    reveal: region.answer,
+    reveal: sourcePayload.revealContent,
     review: createDefaultReviewProfile(timestamp),
     createdAt: timestamp,
     updatedAt: timestamp
@@ -86,55 +84,112 @@ function createImageClozeNode(
   };
 }
 
+function normalizeImageClozeSourcePayload(sourcePayload: ImageClozeSourcePayload) {
+  return {
+    promptContent: sourcePayload.promptContent.trim(),
+    revealContent: sourcePayload.revealContent.trim()
+  };
+}
+
+function createImageClozeNodeBatch(args: {
+  normalizedAttachmentId: string;
+  normalizedRegions: ImageClozeDraftRegion[];
+  parentNodeId: string;
+  sourcePayload: ImageClozeSourcePayload;
+  state: WorkspaceState;
+  timestamp: string;
+}) {
+  const createdNodes: WorkspaceNode[] = [];
+  const nextNodesById = { ...args.state.nodesById };
+  let untitledSequenceByParent = args.state.untitledSequenceByParent;
+
+  for (const region of args.normalizedRegions) {
+    const nextNode = createImageClozeNode(
+      args.parentNodeId,
+      args.normalizedAttachmentId,
+      args.sourcePayload,
+      region,
+      args.timestamp,
+      args.state,
+      untitledSequenceByParent
+    );
+    untitledSequenceByParent = nextNode.untitledSequenceByParent;
+    createdNodes.push(nextNode.createdNode);
+    nextNodesById[nextNode.createdNode.id] = nextNode.createdNode;
+  }
+
+  return {
+    createdNodes,
+    nextNodesById,
+    untitledSequenceByParent
+  };
+}
+
+function updateParentNodeImageRegions(
+  parentNode: WorkspaceNode,
+  attachmentId: string,
+  regions: ImageClozeDraftRegion[],
+  timestamp: string
+) {
+  return {
+    ...parentNode,
+    imageRegions: appendImageClozeRegions(parentNode.imageRegions, attachmentId, regions),
+    updatedAt: timestamp
+  };
+}
+
 export function createImageClozeNodesAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers,
   reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession']
 ): WorkspaceState['createImageClozeNodes'] {
-  return (parentNodeId, attachmentId, regions) => {
+  return (parentNodeId, attachmentId, sourcePayload, regions) => {
     const normalizedAttachmentId = attachmentId.trim();
     const normalizedRegions = normalizeImageClozeRegions(normalizedAttachmentId, regions);
+    const normalizedSourcePayload = normalizeImageClozeSourcePayload(sourcePayload);
 
-    if (normalizedRegions.length === 0) {
+    if (normalizedRegions.length === 0 || normalizedSourcePayload.revealContent.length === 0) {
       return [];
     }
 
     const timestamp = new Date().toISOString();
     const createdNodes: WorkspaceNode[] = [];
+    let updatedParentNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
 
     set((state) => {
-      if (!state.nodesById[parentNodeId]) {
+      const parentNode = state.nodesById[parentNodeId];
+      if (!parentNode) {
         return state;
       }
 
-      const nextNodesById = { ...state.nodesById };
-      let untitledSequenceByParent = state.untitledSequenceByParent;
-
-      for (const region of normalizedRegions) {
-        const nextNode = createImageClozeNode(
-          parentNodeId,
-          normalizedAttachmentId,
-          region,
-          timestamp,
-          state,
-          untitledSequenceByParent
-        );
-        untitledSequenceByParent = nextNode.untitledSequenceByParent;
-        createdNodes.push(nextNode.createdNode);
-        nextNodesById[nextNode.createdNode.id] = nextNode.createdNode;
-      }
+      const batch = createImageClozeNodeBatch({
+        normalizedAttachmentId,
+        normalizedRegions,
+        parentNodeId,
+        sourcePayload: normalizedSourcePayload,
+        state,
+        timestamp
+      });
+      createdNodes.push(...batch.createdNodes);
+      updatedParentNode = updateParentNodeImageRegions(
+        parentNode,
+        normalizedAttachmentId,
+        normalizedRegions,
+        timestamp
+      );
+      batch.nextNodesById[parentNodeId] = updatedParentNode;
 
       nextNodeOrder = [...state.nodeOrder, ...createdNodes.map((node) => node.id)];
       return {
         nodeOrder: nextNodeOrder,
-        nodesById: nextNodesById,
-        untitledSequenceByParent,
+        nodesById: batch.nextNodesById,
+        untitledSequenceByParent: batch.untitledSequenceByParent,
         reviewSession: reconcileReviewSession({
           ...state,
           nodeOrder: nextNodeOrder,
-          nodesById: nextNodesById,
-          untitledSequenceByParent
+          nodesById: batch.nextNodesById,
+          untitledSequenceByParent: batch.untitledSequenceByParent
         })
       };
     });
@@ -145,6 +200,9 @@ export function createImageClozeNodesAction(
 
     for (const node of createdNodes) {
       handlers.syncNodeCreation(node);
+    }
+    if (updatedParentNode) {
+      handlers.syncNodeContent(updatedParentNode);
     }
     handlers.syncNodeOrder(nextNodeOrder);
     return createdNodes.map((node) => node.id);

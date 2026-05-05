@@ -1,5 +1,3 @@
-import { ImageClozeComposerDialog } from '../../features/image-cloze/components/ImageClozeComposerDialog';
-
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContextMenu } from './DocumentPanelSectionParts';
 import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel';
@@ -41,15 +39,9 @@ export function DocumentPanelSectionOverlays({
         onCopyImage={props.onCopyImage}
         onCreateCloze={props.onCreateCloze}
         onCreateHighlight={props.onCreateHighlight}
-        onCreateImageCloze={props.onCreateImageCloze ?? (() => undefined)}
         onCutImage={props.onCutImage}
         onDeleteImage={props.onDeleteImage}
         onExportImage={props.onExportImage}
-      />
-      <ImageClozeComposerDialog
-        attachmentId={props.imageClozeComposerAttachmentId ?? null}
-        onClose={props.onCloseImageClozeComposer ?? (() => undefined)}
-        onSave={props.onSaveImageCloze ?? (() => [])}
       />
     </>
   );

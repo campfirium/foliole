@@ -140,8 +140,10 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
     1,
     0,
     '# Node 1',
+    null,
     'Answer',
     JSON.stringify({ id: 'anchor-1', kind: 'highlight' }),
+    null,
     '2026-03-14T00:00:00.000Z',
     '2026-03-14T00:00:00.000Z'
   ]);
@@ -243,6 +245,7 @@ it('loads workspace snapshot through query helpers only', () => {
         isTitleManual: true,
         hideTitleHeading: false,
         content: 'content',
+        virtualFilter: null,
         reveal: null,
         anchorLink: null,
         reading: null,

@@ -3,6 +3,7 @@ import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtual
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface WorkspaceReviewProfile {
@@ -41,6 +42,7 @@ interface WorkspaceNodeSnapshot {
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: StoredAnchorLink | null;
+  imageRegions?: StoredImageRegionGroup[] | null;
   reading: WorkspaceReadingProfile | null;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
@@ -68,6 +70,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   content: string;
   reveal: string | null;
   anchor_link: string | null;
+  image_regions: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -149,6 +152,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.content,
        n.reveal,
        n.anchor_link,
+       n.image_regions,
        n.created_at,
        n.updated_at,
        n.deleted_at,
@@ -184,6 +188,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
   const trashedNodeIds: string[] = [];
 
   for (const row of rows) {
+    const imageRegions = parseStoredImageRegions(row.image_regions);
     const node: WorkspaceNodeSnapshot = {
       id: row.id,
       parentNodeId: row.parent_id,
@@ -200,6 +205,9 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };
+    if (imageRegions) {
+      node.imageRegions = imageRegions;
+    }
     if (typeof row.priority === 'number') {
       node.priority = row.priority;
     }

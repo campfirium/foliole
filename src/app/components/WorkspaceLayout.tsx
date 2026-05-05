@@ -64,7 +64,6 @@ export interface WorkspaceLayoutProps {
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   showAnswerSection: boolean;
-  imageClozeComposerAttachmentId: string | null;
   listWidth: number;
   rightSidebarWidth: number;
   nodeOrder: string[];
@@ -105,14 +104,11 @@ export interface WorkspaceLayoutProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreateImageCloze: () => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
-  onCloseImageClozeComposer: () => void;
-  onSaveImageCloze: (regions: import('../../features/image-cloze/model/imageCloze').ImageClozeDraftRegion[]) => string[];
   onStartDocumentResize: (
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>

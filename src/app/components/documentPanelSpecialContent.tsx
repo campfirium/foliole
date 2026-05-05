@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
-import { isImageClozeNode } from '../../features/image-cloze/model/imageCloze';
+import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
 import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
@@ -62,8 +62,18 @@ function renderFolderContent(
   );
 }
 
-function renderImageClozeContent(activeNode: Node, bodyProps: ComponentProps<typeof DocumentPanelBody>) {
-  return <ImageClozeCardView node={activeNode} onAnswerChange={bodyProps.onAnswerChange} showAnswer={bodyProps.hasAnswerSection} />;
+function renderLegacyImageClozeContent(
+  activeNode: Node,
+  onAnswerChange: (answer: string) => void,
+  pdfCache: JSX.Element,
+  showAnswer: boolean
+) {
+  return (
+    <>
+      {pdfCache}
+      <ImageClozeCardView node={activeNode} onAnswerChange={onAnswerChange} showAnswer={showAnswer} />
+    </>
+  );
 }
 
 function renderPdfOrBodyContent(args: {
@@ -135,8 +145,13 @@ export function resolveDocumentPanelContentBody(args: {
   if (args.isFolderListView && args.activeNodeId) {
     return renderFolderContent(args.activeNodeId, args.nodeOrder, args.nodesById, args.onSelectNode, args.pdfCache);
   }
-  if (args.activeNode && isImageClozeNode(args.activeNode)) {
-    return renderImageClozeContent(args.activeNode, args.bodyProps);
+  if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
+    return renderLegacyImageClozeContent(
+      args.activeNode,
+      args.bodyProps.onAnswerChange,
+      args.pdfCache,
+      args.bodyProps.hasAnswerSection
+    );
   }
 
   return renderPdfOrBodyContent({

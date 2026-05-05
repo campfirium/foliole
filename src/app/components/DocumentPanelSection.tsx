@@ -1,9 +1,19 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { ImageClozeDraftRegion } from '../../features/image-cloze/model/imageCloze';
+import {
+  deriveImageClozeRegionsFromChildren,
+  getImageClozeLocator,
+  isImageClozeNode,
+  listImageClozePresentationRegions
+} from '../../features/image-cloze/model/imageCloze';
+import {
+  getImageClozeAnswerEditorNodeId,
+  registerImageClozeEditorPresentation,
+  unregisterImageClozeEditorPresentation
+} from '../../features/image-cloze/model/imageClozePresentation';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
@@ -25,7 +35,6 @@ export interface DocumentPanelSectionProps {
   documentMaxWidth: number;
   editorContent: string;
   editorAppearanceKey: string;
-  imageClozeComposerAttachmentId?: string | null;
   isEditorReadOnly: boolean;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -39,13 +48,11 @@ export interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
-  onCreateImageCloze?: () => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
-  onCloseImageClozeComposer?: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
@@ -55,7 +62,6 @@ export interface DocumentPanelSectionProps {
   onRevealDocumentSelection: (selection: EditorSelection) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onResetLayout: () => void;
-  onSaveImageCloze?: (regions: ImageClozeDraftRegion[]) => string[];
   onSelectNode: (nodeId: string) => void;
   onStartDocumentResize: (
     side: ResizeSide,
@@ -96,11 +102,12 @@ function getDocumentPanelBodyProps(
   editorContentPaddingBottom: string | undefined,
   emptyState: ReturnType<typeof resolveInboxEmptyState>,
   hasAnswerSection: boolean,
-  reveal: string
+  reveal: string,
+  imageClozePresentationRefreshToken: number
 ) {
   return {
     documentMaxWidth: props.documentMaxWidth,
-    editorAppearanceKey: props.editorAppearanceKey,
+    editorAppearanceKey: `${props.editorAppearanceKey}:image-cloze:${imageClozePresentationRefreshToken}`,
     editorContent: props.editorContent,
     editorContentPaddingBottom,
     editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
@@ -123,7 +130,11 @@ function getDocumentPanelBodyProps(
   };
 }
 
-function getDocumentPanelView(props: DocumentPanelSectionProps, editorDisplayMode: 'preview' | 'source') {
+function getDocumentPanelView(
+  props: DocumentPanelSectionProps,
+  editorDisplayMode: 'preview' | 'source',
+  imageClozePresentationRefreshToken: number
+) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(
     activeNode,
@@ -132,7 +143,14 @@ function getDocumentPanelView(props: DocumentPanelSectionProps, editorDisplayMod
   );
 
   return {
-    bodyProps: getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal),
+    bodyProps: getDocumentPanelBodyProps(
+      props,
+      editorContentPaddingBottom,
+      emptyState,
+      hasAnswerSection,
+      reveal,
+      imageClozePresentationRefreshToken
+    ),
     documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
     isFolderListView: Boolean(
       activeNode &&
@@ -210,7 +228,13 @@ function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
-  const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+  const [imageClozePresentationRefreshToken, setImageClozePresentationRefreshToken] = useState(0);
+  const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(
+    props,
+    editorDisplayMode,
+    imageClozePresentationRefreshToken
+  );
   const {
     currentSourceUpdateContent,
     handleSourceUpdateDraftChange,
@@ -218,6 +242,68 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     isSourceUpdatePanelOpen,
     sourceUpdatePreview
   } = useSourceUpdatePanelState(props);
+
+  useLayoutEffect(() => {
+    if (!props.editorNodeId || !activeNode) {
+      return;
+    }
+    const promptNodeId = props.editorNodeId;
+    const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
+    const parentRegions = listImageClozePresentationRegions(
+      activeNode.imageRegions ??
+        deriveImageClozeRegionsFromChildren({
+          nodeId: activeNode.id,
+          nodesById: props.nodesById,
+          trashedNodeIds: props.trashedNodeIds
+        })
+    );
+
+    if (!isImageClozeNode(activeNode)) {
+      if (parentRegions.length === 0) {
+        return;
+      }
+      registerImageClozeEditorPresentation(promptNodeId, {
+        canCreate: true,
+        focusRegionId: null,
+        hiddenRegionIds: [],
+        outlinedRegionIds: parentRegions.map((region) => region.id),
+        regions: parentRegions
+      });
+      setImageClozePresentationRefreshToken((value) => value + 1);
+      return () => {
+        unregisterImageClozeEditorPresentation(promptNodeId);
+      };
+    }
+
+    const locator = getImageClozeLocator(activeNode.anchorLink);
+    if (!locator) {
+      return;
+    }
+    const currentRegionId = activeNode.anchorLink?.id ?? 'current';
+    registerImageClozeEditorPresentation(promptNodeId, {
+      canCreate: false,
+      focusRegionId: null,
+      hiddenRegionIds: [currentRegionId],
+      outlinedRegionIds: [],
+      regions: [{ ...locator, id: currentRegionId }]
+    });
+    if (answerNodeId) {
+      registerImageClozeEditorPresentation(answerNodeId, {
+        canCreate: false,
+        focusRegionId: currentRegionId,
+        hiddenRegionIds: [],
+        outlinedRegionIds: [currentRegionId],
+        regions: [{ ...locator, id: currentRegionId }]
+      });
+    }
+    setImageClozePresentationRefreshToken((value) => value + 1);
+    return () => {
+      unregisterImageClozeEditorPresentation(promptNodeId);
+      if (answerNodeId) {
+        unregisterImageClozeEditorPresentation(answerNodeId);
+      }
+    };
+  }, [activeNode, props.editorNodeId, props.nodesById, props.trashedNodeIds]);
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>

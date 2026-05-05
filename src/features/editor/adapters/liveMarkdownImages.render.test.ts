@@ -2,6 +2,7 @@ import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
 const resolveRuntimeAttachmentResource = vi.fn();
 
@@ -25,6 +26,7 @@ async function expectInternalImageRendered(host: HTMLElement) {
   expect(widget).toHaveAttribute('data-md-image-attachment-id', 'hash-1');
   expect(widget).toHaveAttribute('data-md-image-from');
   expect(widget).toHaveAttribute('data-md-image-to');
+  expect(host.querySelector('.cm-md-image-cloze-overlay')).not.toBeNull();
 }
 
 function createAdapterHost(initialContent: string) {
@@ -132,7 +134,7 @@ describe('live markdown image rendering', () => {
     adapter.destroy();
   });
 
-  it('shows source text and image preview together when the cursor is on the image line', async () => {
+  it('keeps image rendering stable when the cursor is on the image line', async () => {
     const source = 'https://example.com/focus.png';
     const { adapter, host } = createAdapterHost(`![Focus](${source})`);
 
@@ -140,8 +142,46 @@ describe('live markdown image rendering', () => {
     adapter.setSelection({ from: 1, to: 1 });
 
     await expectImageStillRenderedOnSelection(host, source);
-    expect(host.querySelector('.cm-content')?.textContent ?? '').toContain(`![Focus](${source})`);
+    expect(host.querySelector('.cm-content')?.textContent ?? '').not.toContain(`![Focus](${source})`);
 
+    adapter.destroy();
+  });
+
+  it('shows outlined image cloze regions immediately after presentation refresh without requiring focus interaction', async () => {
+    resolveRuntimeAttachmentResource.mockResolvedValue({
+      status: 'ready',
+      mime_type: 'image/png',
+      resource_url: 'file:///tmp/cover.png'
+    });
+
+    const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+
+    adapter.setNodeId('node-1');
+    registerImageClozeEditorPresentation('node-1', {
+      canCreate: true,
+      focusRegionId: null,
+      hiddenRegionIds: [],
+      outlinedRegionIds: ['region-1'],
+      regions: [
+        {
+          attachmentId: 'hash-1',
+          height: 0.2,
+          id: 'region-1',
+          width: 0.3,
+          x: 0.1,
+          y: 0.2
+        }
+      ]
+    });
+    adapter.refreshImageClozePresentation();
+
+    await waitFor(() => {
+      const region = host.querySelector('.cm-md-image-cloze-region[data-region-id="region-1"]');
+      expect(region).not.toBeNull();
+      expect(region).toHaveAttribute('data-region-state', 'outlined');
+    });
+
+    unregisterImageClozeEditorPresentation('node-1');
     adapter.destroy();
   });
 });

@@ -9,6 +9,7 @@ interface ImageClozeRegionSurfaceProps {
   imageAlt: string;
   imageSrc: string;
   onCreateRegion?: (region: Omit<ImageClozeLocator, 'attachmentId'>) => void;
+  outlinedRegionIds?: string[];
   regions: Array<Pick<ImageClozeDraftRegion, 'height' | 'id' | 'width' | 'x' | 'y'> | ImageClozeLocator>;
 }
 
@@ -53,13 +54,21 @@ function createRegionKey(region: ImageClozeRegionSurfaceProps['regions'][number]
 
 function renderSavedRegions(
   regions: ImageClozeRegionSurfaceProps['regions'],
-  hiddenRegionIdSet: Set<string>
+  hiddenRegionIdSet: Set<string>,
+  outlinedRegionIdSet: Set<string>
 ) {
   return regions.map((region) => {
-    const isHidden = hiddenRegionIdSet.has('id' in region ? region.id : '');
+    const regionId = 'id' in region ? region.id : '';
+    const isHidden = hiddenRegionIdSet.has(regionId);
+    const isOutlined = outlinedRegionIdSet.has(regionId);
+    const regionClassName = isHidden
+      ? 'border-foreground bg-foreground/85'
+      : isOutlined
+        ? 'border-dashed border-accent-primary/90 bg-transparent'
+        : 'border-accent-primary/80 bg-accent-primary/10';
     return (
       <div
-        className={`absolute rounded border-2 ${isHidden ? 'border-foreground bg-foreground/85' : 'border-accent-primary/80 bg-accent-primary/10'}`}
+        className={`absolute rounded border-2 ${regionClassName}`}
         key={createRegionKey(region)}
         style={{
           height: toPercentValue(region.height),
@@ -150,11 +159,13 @@ export function ImageClozeRegionSurface({
   imageAlt,
   imageSrc,
   onCreateRegion,
+  outlinedRegionIds = [],
   regions
 }: ImageClozeRegionSurfaceProps) {
   const { draftRect, handlePointerDown, handlePointerMove, handlePointerUp, overlayRef } =
     useImageClozeDraft(onCreateRegion);
   const hiddenRegionIdSet = useMemo(() => new Set(hiddenRegionIds), [hiddenRegionIds]);
+  const outlinedRegionIdSet = useMemo(() => new Set(outlinedRegionIds), [outlinedRegionIds]);
 
   return (
     <div className="relative flex min-h-0 min-w-0 items-center justify-center overflow-auto rounded-lg border border-border bg-bg-panel">
@@ -167,7 +178,7 @@ export function ImageClozeRegionSurface({
           onPointerUp={handlePointerUp}
           ref={overlayRef}
         >
-          {renderSavedRegions(regions, hiddenRegionIdSet)}
+          {renderSavedRegions(regions, hiddenRegionIdSet, outlinedRegionIdSet)}
           {renderDraftRegion(draftRect)}
         </div>
       </div>

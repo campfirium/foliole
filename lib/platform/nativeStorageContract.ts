@@ -46,6 +46,19 @@ export interface NativeWorkspaceReadingProfile {
   state: 'active' | 'done' | 'dismissed';
 }
 
+export interface NativeWorkspaceImageRegion {
+  id: string;
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+export interface NativeWorkspaceImageRegionGroup {
+  attachmentId: string;
+  regions: NativeWorkspaceImageRegion[];
+}
+
 export interface NativeWorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
@@ -61,6 +74,7 @@ export interface NativeWorkspaceNodeSnapshot {
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
+  imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
   reading: NativeWorkspaceReadingProfile | null;
   review: NativeWorkspaceReviewProfile | null;
   createdAt: string;
@@ -78,6 +92,7 @@ export interface NativeWorkspaceNodeDocument {
   content: string;
   hideTitleHeading: boolean;
   kind: NodeKind;
+  imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
   nodeId: string;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
@@ -165,6 +180,7 @@ export interface NativeNodeSnapshotArgs {
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
+  imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
   reading?: NativeWorkspaceReadingProfile | null;
   position: number | null;
   createdAt: string;

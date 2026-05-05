@@ -30,18 +30,14 @@ interface BuildLayoutPropsArgs {
     | 'onCopyImage'
     | 'onCreateCloze'
     | 'onCreateHighlight'
-    | 'onCreateImageCloze'
     | 'onCreatePdfHighlight'
     | 'onCutImage'
     | 'onDeleteImage'
     | 'onEditorContextMenu'
     | 'onExportImage'
-    | 'onCloseImageClozeComposer'
-    | 'onSaveImageCloze'
   >;
   editorNodeId: string | null;
   editorNodeViewState: WorkspaceLayoutProps['editorNodeViewState'];
-  imageClozeComposerAttachmentId: string | null;
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isImportManagementOpen: boolean;
@@ -170,7 +166,6 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
 
   return {
     activeNodeId: args.activeNodeId, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
-    imageClozeComposerAttachmentId: args.imageClozeComposerAttachmentId,
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', isEditorReadOnly: args.activeNodeId ? !activeNode || !isNodeDocumentLoaded(activeNode) || isNodeContentLocked(args.activeNodeId, args.nodeOrder, args.nodesById, new Set(args.trashedNodeIds)) : false, editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,
@@ -189,7 +184,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRunImportFile: args.onRunImportFile,
     onRunImportFolder: args.onRunImportFolder,
     onStartClipboardImport: args.onStartClipboardImport,
-    onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCopyImage: args.editorCtx.onCopyImage, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateImageCloze: args.editorCtx.onCreateImageCloze, onCreatePdfHighlight: args.editorCtx.onCreatePdfHighlight, onCreateCloze: args.editorCtx.onCreateCloze, onCutImage: args.editorCtx.onCutImage, onDeleteImage: args.editorCtx.onDeleteImage, onExportImage: args.editorCtx.onExportImage, onCloseImageClozeComposer: args.editorCtx.onCloseImageClozeComposer, onSaveImageCloze: args.editorCtx.onSaveImageCloze,
+    onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCopyImage: args.editorCtx.onCopyImage, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreatePdfHighlight: args.editorCtx.onCreatePdfHighlight, onCreateCloze: args.editorCtx.onCreateCloze, onCutImage: args.editorCtx.onCutImage, onDeleteImage: args.editorCtx.onDeleteImage, onExportImage: args.editorCtx.onExportImage,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, selectedTrashNodeId: args.selectedTrashNodeId

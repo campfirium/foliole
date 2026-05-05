@@ -329,6 +329,138 @@ body {
   height: 0;
 }
 
+.cm-md-image-widget {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.cm-md-image-widget-block {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.cm-md-image-surface {
+  display: inline-flex;
+  max-width: 100%;
+  position: relative;
+}
+
+.cm-md-image-surface-clozeable:hover,
+.cm-md-image-surface-clozeable:hover .cm-md-image-element,
+.cm-md-image-surface-clozeable[data-md-image-cloze-active='true'],
+.cm-md-image-surface-clozeable[data-md-image-cloze-active='true'] .cm-md-image-element {
+  cursor: crosshair;
+}
+
+.cm-md-image-surface-block {
+  margin: 0 auto;
+}
+
+.cm-md-image-element {
+  display: block;
+  max-width: min(100%, 760px);
+}
+
+.cm-md-image-cloze-regions {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.cm-md-image-cloze-region {
+  border-radius: 8px;
+  border-style: solid;
+  border-width: 2px;
+  position: absolute;
+}
+
+.cm-md-image-cloze-region[data-region-state='normal'] {
+  background: transparent;
+  border-color: rgb(100 116 139 / 0.9);
+  border-style: dashed;
+}
+
+.cm-md-image-cloze-region[data-region-state='hidden'] {
+  background: rgb(255 255 255 / 0.98);
+  border-color: rgb(209 213 219 / 0.98);
+}
+
+.cm-md-image-cloze-region[data-region-state='outlined'] {
+  background: transparent;
+  border-color: rgb(14 116 144 / 0.92);
+  border-style: dashed;
+}
+
+.cm-md-image-cloze-action {
+  align-items: center;
+  background: rgb(255 255 255 / 0.96);
+  border: 1px solid var(--color-border, #d4d4d8);
+  border-radius: 999px;
+  color: var(--color-foreground, #111827);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 0.12);
+}
+
+.cm-md-image-cloze-overlay {
+  cursor: crosshair;
+  inset: 0;
+  position: absolute;
+  z-index: 2;
+}
+
+.cm-md-image-cloze-draft {
+  background: transparent;
+  border: 2px dashed rgb(17 24 39 / 0.92);
+  border-radius: 8px;
+  position: absolute;
+}
+
+.cm-md-image-cloze-actions {
+  display: inline-flex;
+  gap: 8px;
+  position: absolute;
+  transform: translate(10px, -50%);
+  z-index: 3;
+}
+
+.cm-md-image-cloze-actions[hidden] {
+  display: none;
+}
+
+.cm-md-image-cloze-feedback {
+  background: rgb(17 24 39 / 0.92);
+  border-radius: 999px;
+  color: rgb(255 255 255 / 0.96);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 12px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(14px, -50%);
+  z-index: 4;
+}
+
+.cm-md-image-icon {
+  fill: none;
+  height: 16px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  width: 16px;
+}
+
 .app-scrollbar {
   scrollbar-color: var(--app-scrollbar-thumb-color) transparent;
   scrollbar-width: thin;

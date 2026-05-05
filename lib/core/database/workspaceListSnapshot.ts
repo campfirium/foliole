@@ -3,6 +3,7 @@ import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { parseStoredImageRegions } from './imageRegionCodec.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 interface WorkspaceNodeRow extends DatabaseRow {
@@ -18,6 +19,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   has_content: number;
   has_reveal: number;
   anchor_link: string | null;
+  image_regions: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -99,6 +101,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        CASE WHEN LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        n.anchor_link,
+       n.image_regions,
        n.created_at,
        n.updated_at,
        n.deleted_at,
@@ -138,6 +141,7 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
   const nodesById: Record<string, Record<string, unknown>> = {};
   const trashedNodeIds: string[] = [];
   for (const row of rows) {
+    const imageRegions = parseStoredImageRegions(row.image_regions);
     nodesById[row.id] = {
       id: row.id,
       parentNodeId: row.parent_id,
@@ -153,6 +157,7 @@ export function loadWorkspaceListSnapshot(driver: DatabaseDriver) {
       virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
       reveal: null,
       anchorLink: parseStoredAnchorLink(row.anchor_link),
+      ...(imageRegions ? { imageRegions } : {}),
       reading: toReadingProfile(row),
       review: toReviewProfile(row),
       createdAt: row.created_at,

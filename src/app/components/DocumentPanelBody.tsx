@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { cn } from '../../shared/lib/utils';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -94,6 +95,8 @@ function AnswerSection({
   onAnswerChange,
   reveal
 }: AnswerSectionProps & { answerEditorDebugId?: string }) {
+  const answerNodeId = getImageClozeAnswerEditorNodeId(editorNodeId);
+
   return (
     <section aria-label="Cloze answer section" className="relative flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden pt-3">
       <div
@@ -106,7 +109,7 @@ function AnswerSection({
         debugId={answerEditorDebugId}
         hideTitleHeading={false}
         key={`answer-${editorAppearanceKey}`}
-        nodeId={editorNodeId}
+        nodeId={answerNodeId}
         onChange={onAnswerChange}
         value={reveal}
       />

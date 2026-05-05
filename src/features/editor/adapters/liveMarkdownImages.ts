@@ -1,6 +1,9 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
+import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
+
+import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 
 export interface MarkdownImageMatch {
   attachmentId: string | null;
@@ -39,6 +42,24 @@ function createImageElement(alt: string, source: string, display: MarkdownImageM
   return image;
 }
 
+function createImageSurface(imageMatch: MarkdownImageMatch, source: string, editorNodeId: string | null = null) {
+  const presentation = getImageClozeEditorPresentation(editorNodeId);
+  return createImageClozeImageSurface({
+    attachmentId: imageMatch.attachmentId,
+    display: imageMatch.display,
+    from: imageMatch.from,
+    presentation:
+      presentation && imageMatch.attachmentId && presentation.regions.some((region) => region.attachmentId === imageMatch.attachmentId)
+        ? {
+            ...presentation,
+            regions: presentation.regions.filter((region) => region.attachmentId === imageMatch.attachmentId)
+          }
+        : null,
+    renderImage: () => createImageElement(imageMatch.alt, source, imageMatch.display),
+    to: imageMatch.to
+  });
+}
+
 function createImageStatusElement(status: 'loading' | 'unavailable', display: MarkdownImageMatch['display']) {
   const element = document.createElement('span');
   element.className = display === 'inline' ? 'cm-md-image-status cm-md-image-status-inline' : 'cm-md-image-status cm-md-image-status-block';
@@ -47,13 +68,13 @@ function createImageStatusElement(status: 'loading' | 'unavailable', display: Ma
   return element;
 }
 
-async function renderInternalImage(wrapper: HTMLElement, alt: string, source: string, display: MarkdownImageMatch['display']) {
-  const resolution = await resolveRuntimeAttachmentResource(source);
+async function renderInternalImage(wrapper: HTMLElement, imageMatch: MarkdownImageMatch, editorNodeId: string | null) {
+  const resolution = await resolveRuntimeAttachmentResource(imageMatch.source);
   if (resolution?.status === 'ready' && resolution.resource_url) {
-    wrapper.replaceChildren(createImageElement(alt, resolution.resource_url, display));
+    wrapper.replaceChildren(createImageSurface(imageMatch, resolution.resource_url, editorNodeId));
     return;
   }
-  wrapper.replaceChildren(createImageStatusElement('unavailable', display));
+  wrapper.replaceChildren(createImageStatusElement('unavailable', imageMatch.display));
 }
 
 function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
@@ -62,7 +83,7 @@ function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
   return before.length === 0 && after.length === 0 ? 'block' : 'inline';
 }
 
-export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch) {
+export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, editorNodeId: string | null = null) {
   const wrapper = document.createElement('span');
   wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
   wrapper.dataset.mdImageAlt = imageMatch.alt;
@@ -73,12 +94,12 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch) {
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
   if (isRemoteImageSource(imageMatch.source)) {
-    wrapper.append(createImageElement(imageMatch.alt, imageMatch.source, imageMatch.display));
+    wrapper.append(createImageSurface(imageMatch, imageMatch.source, editorNodeId));
     return wrapper;
   }
 
   wrapper.append(createImageStatusElement('loading', imageMatch.display));
-  void renderInternalImage(wrapper, imageMatch.alt, imageMatch.source, imageMatch.display);
+  void renderInternalImage(wrapper, imageMatch, editorNodeId);
   return wrapper;
 }
 
