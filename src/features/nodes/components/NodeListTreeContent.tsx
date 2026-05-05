@@ -186,6 +186,9 @@ function NodeListTreeMenu(props: NodeListTreeContentProps) {
 
   const contextTargets = props.contextMenu.getContextTargets();
   const isNotesMenu = props.contextMenu.contextMenuMode === 'notes';
+  const primaryTargetId = contextTargets[0] ?? null;
+  const primaryTarget = primaryTargetId ? props.nodesById[primaryTargetId] : undefined;
+  const showNodeImportActions = Boolean(isNotesMenu && primaryTarget && contextTargets.length === 1 && !primaryTarget.anchorLink);
 
   return (
     <NodeListContextMenu
@@ -210,12 +213,16 @@ function NodeListTreeMenu(props: NodeListTreeContentProps) {
         props.contextMenu.closeContextMenu()
       )}
       onDismissNode={createDismissNodeAction(contextTargets, props.dismissNode, props.contextMenu.closeContextMenu)}
+      onImportIntoNode={props.contextMenu.closeContextMenu}
+      onPasteIntoNode={props.contextMenu.closeContextMenu}
       onRestoreNode={() => (
         contextTargets.forEach((id) => props.restoreNode(id)),
         props.contextMenu.closeContextMenu()
       )}
       onReturnNode={createReturnNodeAction(contextTargets, props.returnNode, props.contextMenu.closeContextMenu)}
       showDismissAction={isNotesMenu && hasDismissTargets(contextTargets, props.nodesById)}
+      showImportIntoNodeAction={showNodeImportActions}
+      showPasteIntoNodeAction={showNodeImportActions}
       showReturnAction={isNotesMenu && hasReturnTargets(contextTargets, props.nodesById)}
       top={props.contextMenu.menuPosition.top}
     />

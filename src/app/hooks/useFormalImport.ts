@@ -4,7 +4,9 @@ import { create } from 'zustand';
 import { getRuntimeInvoke, onManagedInboxUpdated } from '../../shared/platform/bridge';
 import {
   loadRuntimeImportOverview,
+  runRuntimeDirectoryImport,
   runRuntimeTextFileImport,
+  type RuntimeDirectoryImportResult,
   type RuntimeImportOverview,
   type RuntimeTextImportResult
 } from '../../shared/platform/importBridge';
@@ -152,6 +154,10 @@ function shouldRehydrateWorkspace(result: RuntimeTextImportResult) {
   return result.resultStatus === 'imported' && result.duplicateSemantic !== 'duplicate';
 }
 
+function shouldRehydrateDirectoryImport(result: RuntimeDirectoryImportResult) {
+  return result.entries.some((entry) => shouldRehydrateWorkspace(entry));
+}
+
 export function resetFormalImportState() {
   managedInboxRefreshInFlight = null;
   useFormalImportState.setState({
@@ -200,13 +206,7 @@ function useManagedInboxUpdateSubscription(isAvailable: boolean) {
   }, [isAvailable]);
 }
 
-export function useFormalImport() {
-  const hasLoadedOverview = useFormalImportState((state) => state.hasLoadedOverview);
-  const isImporting = useFormalImportState((state) => state.isImporting);
-  const overview = useFormalImportState((state) => state.overview);
-  const status = useFormalImportState((state) => state.status);
-  const isAvailable = Boolean(getRuntimeInvoke());
-
+function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boolean) {
   useEffect(() => {
     if (!isAvailable || hasLoadedOverview) {
       return;
@@ -214,37 +214,61 @@ export function useFormalImport() {
     void refreshFormalImportOverview();
   }, [hasLoadedOverview, isAvailable]);
   useManagedInboxUpdateSubscription(isAvailable);
+}
 
-  const startImport = useCallback(async () => {
-    if (useFormalImportState.getState().isImporting) {
+function useFormalImportActions() {
+  const startImportFile = useCallback(() => runImportFlow(runRuntimeTextFileImport, shouldRehydrateWorkspace, true), []);
+  const startImportDirectory = useCallback(
+    () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport, false),
+    []
+  );
+  return { startImportDirectory, startImportFile };
+}
+
+async function runImportFlow<Result extends RuntimeTextImportResult | RuntimeDirectoryImportResult>(
+  runner: () => Promise<Result | null>,
+  shouldRehydrate: (result: Result) => boolean,
+  applyResultStatus: boolean
+) {
+  if (useFormalImportState.getState().isImporting) {
+    return false;
+  }
+  useFormalImportState.setState({ isImporting: true });
+  try {
+    const importResult = await runner();
+    if (!importResult) {
+      applyCancelledImportStatus();
       return false;
     }
-
-    useFormalImportState.setState({ isImporting: true });
-    try {
-      const importResult = await runRuntimeTextFileImport();
-      if (!importResult) {
-        applyCancelledImportStatus();
-        return false;
-      }
-
-      if (shouldRehydrateWorkspace(importResult)) {
-        await useWorkspaceStore.persist.rehydrate();
-      }
-      applyImportResultStatus(importResult);
-      await refreshFormalImportOverview();
-      return true;
-    } catch (error) {
-      applyImportFailureStatus(error instanceof Error ? error.message : 'Unknown import failure');
-      return false;
+    if (shouldRehydrate(importResult) || applyResultStatus) {
+      await useWorkspaceStore.persist.rehydrate();
     }
-  }, []);
+    if (applyResultStatus) {
+      applyImportResultStatus(importResult as RuntimeTextImportResult);
+    }
+    await refreshFormalImportOverview();
+    useFormalImportState.setState({ isImporting: false });
+    return true;
+  } catch (error) {
+    applyImportFailureStatus(error instanceof Error ? error.message : 'Unknown import failure');
+    return false;
+  }
+}
 
+export function useFormalImport() {
+  const hasLoadedOverview = useFormalImportState((state) => state.hasLoadedOverview);
+  const isImporting = useFormalImportState((state) => state.isImporting);
+  const overview = useFormalImportState((state) => state.overview);
+  const status = useFormalImportState((state) => state.status);
+  const isAvailable = Boolean(getRuntimeInvoke());
+  const actions = useFormalImportActions();
+
+  useFormalImportBootstrap(isAvailable, hasLoadedOverview);
   return {
     isAvailable,
     isImporting,
     overview,
-    startImport,
+    ...actions,
     status
   };
 }

@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { dialog, type BrowserWindow } from 'electron';
+import { dialog, type BrowserWindow, type OpenDialogOptions } from 'electron';
 
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 import type {
@@ -35,21 +35,45 @@ function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImpo
   };
 }
 
-async function selectImportFilePath(window?: BrowserWindow | null) {
+function getImportFileDialogOptions() {
+  return {
+    filters: [{ name: 'Markdown / HTML / Text / EPUB', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'] }],
+    properties: ['openFile', 'multiSelections']
+  } satisfies OpenDialogOptions;
+}
+
+async function selectImportFilePaths(window?: BrowserWindow | null) {
   const selection = window
-    ? await dialog.showOpenDialog(window, {
-        filters: [{ name: 'Markdown / HTML / Text / EPUB', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'] }],
-        properties: ['openFile']
-      })
-    : await dialog.showOpenDialog({
-        filters: [{ name: 'Markdown / HTML / Text / EPUB', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'] }],
-        properties: ['openFile']
-      });
+    ? await dialog.showOpenDialog(window, getImportFileDialogOptions())
+    : await dialog.showOpenDialog(getImportFileDialogOptions());
 
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
-  return selection.filePaths[0] ?? null;
+  return selection.filePaths;
+}
+
+async function selectImportFilePath(window?: BrowserWindow | null) {
+  const filePaths = await selectImportFilePaths(window);
+  return filePaths?.[0] ?? null;
+}
+
+async function runImportForFilePath(filePath: string, args?: NativeTextImportArgs) {
+  const source = resolveSingleFileImportSource(filePath);
+  const importedAt = new Date().toISOString();
+  const highlightPolicy = resolveImportHighlightPolicy(args);
+
+  try {
+    return toNativeTextImportResult(runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt })));
+  } catch (error) {
+    const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
+    return toNativeTextImportResult(
+      recordPreparedImportFailure(
+        buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt }),
+        failureReason
+      )
+    );
+  }
 }
 
 export async function selectImportTextFile(
@@ -78,24 +102,13 @@ export async function runTextFileImport(
   window?: BrowserWindow | null,
   args?: NativeTextImportArgs
 ): Promise<NativeTextImportResult | null> {
-  const filePath = await selectImportFilePath(window);
-  if (!filePath) {
+  const filePaths = await selectImportFilePaths(window);
+  if (!filePaths?.length) {
     return null;
   }
-
-  const source = resolveSingleFileImportSource(filePath);
-  const importedAt = new Date().toISOString();
-  const highlightPolicy = resolveImportHighlightPolicy(args);
-
-  try {
-    return toNativeTextImportResult(runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt })));
-  } catch (error) {
-    const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
-    return toNativeTextImportResult(
-      recordPreparedImportFailure(
-        buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt }),
-        failureReason
-      )
-    );
+  let lastResult: NativeTextImportResult | null = null;
+  for (const filePath of filePaths) {
+    lastResult = await runImportForFilePath(filePath, args);
   }
+  return lastResult;
 }

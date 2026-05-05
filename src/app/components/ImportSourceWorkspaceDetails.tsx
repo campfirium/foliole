@@ -21,8 +21,11 @@ type ImportSourceWorkspaceDetailsProps = {
 function ImportSourceWorkspaceHeader({ onClose }: { onClose: () => void }) {
   return (
     <header className="flex items-center justify-between px-6 pb-3 pt-5">
-      <div className="min-w-0">
+      <div className="min-w-0 pr-4">
         <AppDialogTitle className="text-[1.02rem] font-semibold">Import management</AppDialogTitle>
+        <p className="mt-1 text-sm text-foreground/68">
+          Use this space for long-running sources like Readwise, a managed Inbox folder, and later import rules.
+        </p>
       </div>
       <AppButton aria-label="Close import management" className="size-8 px-0" onClick={onClose} variant="ghost">
         <X aria-hidden="true" size={15} strokeWidth={1.9} />

@@ -102,6 +102,8 @@ export interface BuildControllerLayoutPropsArgs {
     updateNodeReveal: (nodeId: string, reveal: string) => void;
   };
   mapPaletteItemsToHotkeyItems: (items: CommandPaletteItem[]) => HotkeySettingItem[];
+  runImportDirectory: () => Promise<boolean>;
+  runImportFile: () => Promise<boolean>;
 }
 
 function resolveEditorBindingArgs(args: BuildControllerLayoutPropsArgs) {
@@ -168,6 +170,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     isSettingsOpen: args.runtime.isSettingsOpen,
     isStudyMode: args.isStudyMode,
     isReviewEditing: args.isReviewEditing,
+    isImportManagementOpen: args.runtime.isImportManagementOpen,
     isListCollapsed: args.ws.isListCollapsed,
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
     isTrashViewOpen: args.trash.isTrashViewOpen,
@@ -235,8 +238,13 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onOpenNotesView: openNotesView,
     onOpenSettings: () => args.runtime.setIsSettingsOpen(true),
     onCloseSettings: () => args.runtime.setIsSettingsOpen(false),
+    onOpenImportManagement: () => args.runtime.setIsImportManagementOpen(true),
+    onCloseImportManagement: () => args.runtime.setIsImportManagementOpen(false),
     onOpenTrashView: createToggleTrashView(args, openNotesView),
     onResetLayout: args.ws.resetLayout,
+    onRunImportFile: args.runImportFile,
+    onRunImportFolder: args.runImportDirectory,
+    onStartClipboardImport: () => undefined,
     onSelectNode: createSelectNode(args),
     onSelectTrashNode: (nodeId: string) => {
       args.runtime.setIsViewingTrashNode(true);

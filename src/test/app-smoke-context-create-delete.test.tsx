@@ -163,3 +163,35 @@ it('deletes all selected nodes from node-list context menu', () => {
   expect(workspace.nodeOrder).toEqual(['node-1', 'node-2', 'node-3']);
   expect(workspace.activeNodeId).toBe('node-1');
 });
+
+it('marks in-progress import actions on ordinary node context menus', () => {
+  render(<App />);
+  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Welcome to Foliole' }), {
+    clientX: 56,
+    clientY: 64
+  });
+
+  expect(screen.getByRole('menuitem', { name: 'Import into this node *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste into this node *' })).toBeInTheDocument();
+});
+
+it('hides import actions on derived node context menus', () => {
+  render(<App />);
+  const editor = screen.getByLabelText('Prompt editor');
+  mockEditorState.selectionFrom = 2;
+  mockEditorState.selectionTo = 9;
+
+  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
+
+  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Welcome' }), {
+    clientX: 56,
+    clientY: 64
+  });
+
+  expect(screen.queryByRole('menuitem', { name: 'Import into this node *' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Paste into this node *' })).not.toBeInTheDocument();
+});

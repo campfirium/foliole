@@ -39,6 +39,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
   const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
 
   useEffect(
@@ -68,6 +69,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   return {
     editorRef,
     isCommandPaletteOpen,
+    isImportManagementOpen,
     isSettingsOpen,
     isViewingTrashNode,
     lastExpandedListWidthRef,
@@ -75,6 +77,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
     recentCommandIds,
     recordRecentCommand,
     setIsCommandPaletteOpen,
+    setIsImportManagementOpen,
     setIsSettingsOpen,
     setIsViewingTrashNode
   };

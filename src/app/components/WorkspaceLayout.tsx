@@ -41,6 +41,7 @@ export interface WorkspaceLayoutProps {
   reviewDueCount: number;
   reviewPreview: SchedulerPreviewResult | null;
   isStudyMode: boolean;
+  isImportManagementOpen: boolean;
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
   isCurrentReviewItemGradable: boolean;
@@ -77,9 +78,14 @@ export interface WorkspaceLayoutProps {
   onRightSidebarSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpenNotesView: () => void;
+  onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
+  onCloseImportManagement: () => void;
   onToggleListVisibility: () => void;
   onToggleRightSidebarVisibility: () => void;
+  onRunImportFile: () => Promise<boolean>;
+  onRunImportFolder: () => Promise<boolean>;
+  onStartClipboardImport: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;

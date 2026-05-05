@@ -175,7 +175,7 @@ it('retains EPUB imports as explicit degraded results instead of dropping them',
   expect(showOpenDialog).toHaveBeenCalledWith(
     expect.objectContaining({
       filters: [{ extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub'], name: 'Markdown / HTML / Text / EPUB' }],
-      properties: ['openFile']
+      properties: ['openFile', 'multiSelections']
     })
   );
   expect(runPreparedImport).toHaveBeenCalledWith(
@@ -189,4 +189,57 @@ it('retains EPUB imports as explicit degraded results instead of dropping them',
     })
   );
   expect(readFile).not.toHaveBeenCalled();
+});
+
+it('imports every selected file and returns the last import result', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/first.md', '/tmp/second.md'] });
+  runPreparedImport
+    .mockReturnValueOnce({
+      contentFingerprint: 'content-fingerprint-1',
+      degradedReason: null,
+      duplicateSemantic: 'new',
+      failureReason: null,
+      importId: 'import-1',
+      importedAt: '2026-03-22T12:00:00.000Z',
+      nodeId: 'node-import-1',
+      provider: 'desktop_text_file',
+      resultStatus: 'imported',
+      sourceFingerprint: 'source-fingerprint-1',
+      sourceKind: 'markdown',
+      sourceLocator: '/tmp/first.md',
+      sourceName: 'first.md'
+    })
+    .mockReturnValueOnce({
+      contentFingerprint: 'content-fingerprint-2',
+      degradedReason: null,
+      duplicateSemantic: 'new',
+      failureReason: null,
+      importId: 'import-2',
+      importedAt: '2026-03-22T12:01:00.000Z',
+      nodeId: 'node-import-2',
+      provider: 'desktop_text_file',
+      resultStatus: 'imported',
+      sourceFingerprint: 'source-fingerprint-2',
+      sourceKind: 'markdown',
+      sourceLocator: '/tmp/second.md',
+      sourceName: 'second.md'
+    });
+
+  await expect(runTextFileImport()).resolves.toEqual({
+    content_fingerprint: 'content-fingerprint-2',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-2',
+    imported_at: '2026-03-22T12:01:00.000Z',
+    node_id: 'node-import-2',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint-2',
+    source_kind: 'markdown',
+    source_locator: '/tmp/second.md',
+    source_name: 'second.md'
+  });
+
+  expect(runPreparedImport).toHaveBeenCalledTimes(2);
 });

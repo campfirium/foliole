@@ -84,13 +84,7 @@ function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: str
   );
 }
 
-function WorkspaceDocumentArea({
-  documentNodeId,
-  props
-}: {
-  documentNodeId: string | null;
-  props: WorkspaceLayoutProps;
-}) {
+function WorkspaceDocumentArea({ documentNodeId, props }: { documentNodeId: string | null; props: WorkspaceLayoutProps }) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
       <WorkspaceDocumentSurface documentNodeId={documentNodeId} props={props} />
@@ -113,13 +107,7 @@ function WorkspaceDocumentArea({
   );
 }
 
-function WorkspaceDocumentSurface({
-  documentNodeId,
-  props
-}: {
-  documentNodeId: string | null;
-  props: WorkspaceLayoutProps;
-}) {
+function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: string | null; props: WorkspaceLayoutProps }) {
   return (
     <DocumentPanelSection
       activeNodeId={documentNodeId}
@@ -158,10 +146,14 @@ function WorkspaceDocumentSurface({
 function WorkspaceLeftRail({
   isImportManagementOpen,
   onOpenImportManagement,
+  onStartClipboardImport,
+  onStartImport,
   props
 }: {
   isImportManagementOpen: boolean;
   onOpenImportManagement: () => void;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
   props: WorkspaceLayoutProps;
 }) {
   return (
@@ -173,6 +165,8 @@ function WorkspaceLeftRail({
         isSettingsOpen={props.isSettingsOpen}
         reviewDueCount={props.reviewDueCount}
         onOpenImportManagement={onOpenImportManagement}
+        onStartClipboardImport={onStartClipboardImport}
+        onStartImport={onStartImport}
         onOpenSettings={props.onOpenSettings}
         onToggleReviewSession={props.onToggleReviewSession}
       />
@@ -185,6 +179,8 @@ export function WorkspaceLayoutGrid({
   documentNodeId,
   isImportManagementOpen,
   onOpenImportManagement,
+  onStartClipboardImport,
+  onStartImport,
   onSelectNode,
   props
 }: {
@@ -192,48 +188,72 @@ export function WorkspaceLayoutGrid({
   documentNodeId: string | null;
   isImportManagementOpen: boolean;
   onOpenImportManagement: () => void;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
   onSelectNode: (nodeId: string) => void;
   props: WorkspaceLayoutProps;
 }) {
   return (
     <div className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]" style={{ gridTemplateColumns: '40px minmax(0, 1fr)' }}>
-      <WorkspaceLeftRail isImportManagementOpen={isImportManagementOpen} onOpenImportManagement={onOpenImportManagement} props={props} />
-      <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
-        <div
-          className={`grid h-full min-h-0 gap-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]`}
-          data-resizing={props.isResizingList || props.isResizingRightSidebar}
-        >
+      <WorkspaceLeftRail
+        isImportManagementOpen={isImportManagementOpen}
+        onOpenImportManagement={onOpenImportManagement}
+        onStartClipboardImport={onStartClipboardImport}
+        onStartImport={onStartImport}
+        props={props}
+      />
+      <WorkspaceGridContent activeRightPanelId={activeRightPanelId} documentNodeId={documentNodeId} onSelectNode={onSelectNode} props={props} />
+    </div>
+  );
+}
+
+function WorkspaceGridContent({
+  activeRightPanelId,
+  documentNodeId,
+  onSelectNode,
+  props
+}: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  documentNodeId: string | null;
+  onSelectNode: (nodeId: string) => void;
+  props: WorkspaceLayoutProps;
+}) {
+  return (
+    <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
+      <div
+        className={`grid h-full min-h-0 gap-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]`}
+        data-resizing={props.isResizingList || props.isResizingRightSidebar}
+      >
         {!props.isListCollapsed ? <WorkspaceListArea onSelectNode={onSelectNode} props={props} /> : null}
-          {!props.isListCollapsed ? (
-            <WorkspaceListSplitter
-              isResizingList={props.isResizingList}
-              listWidth={props.listWidth}
-              onResetLayout={props.onResetLayout}
-              onSplitterKeyDown={props.onSplitterKeyDown}
-              onSplitterPointerDown={props.onSplitterPointerDown}
-            />
-          ) : null}
-          <WorkspaceDocumentArea documentNodeId={documentNodeId} props={props} />
-          {!props.isRightSidebarCollapsed ? (
-            <WorkspaceRightSidebarSplitter
-              isResizingRightSidebar={props.isResizingRightSidebar}
-              onResetLayout={props.onResetLayout}
-              onRightSidebarSplitterKeyDown={props.onRightSidebarSplitterKeyDown}
-              onRightSidebarSplitterPointerDown={props.onRightSidebarSplitterPointerDown}
-              rightSidebarWidth={props.rightSidebarWidth}
-            />
-          ) : null}
-          {!props.isRightSidebarCollapsed ? (
-            <WorkspaceRightSidebar
-              activePanelId={activeRightPanelId}
-              activeNodeId={documentNodeId}
-              nodesById={props.nodesById}
-              reviewCurrentNodeId={props.reviewCurrentNodeId}
-              reviewQueueNodeIds={props.reviewPanelQueueNodeIds}
-              reviewSchedulerSettings={props.reviewSchedulerSettings}
-            />
-          ) : null}
-        </div>
+        {!props.isListCollapsed ? (
+          <WorkspaceListSplitter
+            isResizingList={props.isResizingList}
+            listWidth={props.listWidth}
+            onResetLayout={props.onResetLayout}
+            onSplitterKeyDown={props.onSplitterKeyDown}
+            onSplitterPointerDown={props.onSplitterPointerDown}
+          />
+        ) : null}
+        <WorkspaceDocumentArea documentNodeId={documentNodeId} props={props} />
+        {!props.isRightSidebarCollapsed ? (
+          <WorkspaceRightSidebarSplitter
+            isResizingRightSidebar={props.isResizingRightSidebar}
+            onResetLayout={props.onResetLayout}
+            onRightSidebarSplitterKeyDown={props.onRightSidebarSplitterKeyDown}
+            onRightSidebarSplitterPointerDown={props.onRightSidebarSplitterPointerDown}
+            rightSidebarWidth={props.rightSidebarWidth}
+          />
+        ) : null}
+        {!props.isRightSidebarCollapsed ? (
+          <WorkspaceRightSidebar
+            activePanelId={activeRightPanelId}
+            activeNodeId={documentNodeId}
+            nodesById={props.nodesById}
+            reviewCurrentNodeId={props.reviewCurrentNodeId}
+            reviewQueueNodeIds={props.reviewPanelQueueNodeIds}
+            reviewSchedulerSettings={props.reviewSchedulerSettings}
+          />
+        ) : null}
       </div>
     </div>
   );

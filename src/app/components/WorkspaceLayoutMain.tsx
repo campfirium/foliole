@@ -1,116 +1,36 @@
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
 
-import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
-
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
+import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
-  if (!props.isSettingsOpen) {
-    return null;
-  }
-
-  return (
-    <SettingsPanel
-      customUiFont={props.customUiFont}
-      customInterfaceFont={props.customInterfaceFont}
-      customMonospaceFont={props.customMonospaceFont}
-      baseColorMode={props.baseColorMode}
-      accentColorPreset={props.accentColorPreset}
-      uiFontPreset={props.uiFontPreset}
-      interfaceFontPreset={props.interfaceFontPreset}
-      interfaceFontSize={props.interfaceFontSize}
-      desiredRetention={props.reviewSchedulerSettings.desiredRetention}
-      maximumIntervalDays={props.reviewSchedulerSettings.maximumIntervalDays}
-      enableFuzz={props.reviewSchedulerSettings.enableFuzz}
-      enableShortTerm={props.reviewSchedulerSettings.enableShortTerm}
-      defaultPriority={props.reviewSchedulerSettings.pushQueue.defaultPriority}
-      priorityRatio={props.reviewSchedulerSettings.pushQueue.priorityRatio}
-      queueMixRatioReading={props.reviewSchedulerSettings.pushQueue.queueMixRatio.reading}
-      queueMixRatioFsrs={props.reviewSchedulerSettings.pushQueue.queueMixRatio.fsrs}
-      readingInitialIntervalMs={props.reviewSchedulerSettings.pushQueue.readingInitialIntervalMs}
-      readingIntervalGrowthFactorMin={props.reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.min}
-      readingIntervalGrowthFactorMax={props.reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.max}
-      hotkeyItems={props.hotkeyItems}
-      markdownSyntaxVisibility={props.markdownSyntaxVisibility}
-      monospaceFontPreset={props.monospaceFontPreset}
-      onClose={props.onCloseSettings}
-      onBaseColorModeChange={props.onBaseColorModeChange}
-      onAccentColorPresetChange={props.onAccentColorPresetChange}
-      onAccentColorPresetReset={props.onAccentColorPresetReset}
-      onUiFontPresetChange={props.onUiFontPresetChange}
-      onCustomUiFontChange={props.onCustomUiFontChange}
-      onCustomInterfaceFontChange={props.onCustomInterfaceFontChange}
-      onInterfaceFontPresetChange={props.onInterfaceFontPresetChange}
-      onCustomMonospaceFontChange={props.onCustomMonospaceFontChange}
-      onInterfaceFontSizeChange={props.onInterfaceFontSizeChange}
-      onInterfaceFontSizeReset={props.onInterfaceFontSizeReset}
-      onDesiredRetentionChange={props.onDesiredRetentionChange}
-      onDefaultPriorityChange={props.onDefaultPriorityChange}
-      onMaximumIntervalDaysChange={props.onMaximumIntervalDaysChange}
-      onEnableFuzzChange={props.onEnableFuzzChange}
-      onEnableShortTermChange={props.onEnableShortTermChange}
-      onPriorityRatioChange={props.onPriorityRatioChange}
-      onQueueMixRatioReadingChange={props.onQueueMixRatioReadingChange}
-      onQueueMixRatioFsrsChange={props.onQueueMixRatioFsrsChange}
-      onReadingInitialIntervalDaysChange={props.onReadingInitialIntervalDaysChange}
-      onReadingIntervalGrowthFactorMinChange={props.onReadingIntervalGrowthFactorMinChange}
-      onReadingIntervalGrowthFactorMaxChange={props.onReadingIntervalGrowthFactorMaxChange}
-      onMarkdownSyntaxVisibilityChange={props.onMarkdownSyntaxVisibilityChange}
-      onMonospaceFontPresetChange={props.onMonospaceFontPresetChange}
-      onHotkeyUpdate={props.onHotkeyUpdate}
-      onHotkeyReset={props.onHotkeyReset}
-      onHotkeyResetAll={props.onHotkeyResetAll}
-    />
-  );
-}
-
-function useWorkspaceMainView(props: WorkspaceLayoutProps) {
-  const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
-  const handleOpenImportManagement = () => {
-    setIsImportManagementOpen(true);
-  };
-  const handleCloseImportManagement = () => {
-    setIsImportManagementOpen(false);
-  };
+function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
   const handleOpenNotesView = () => {
-    handleCloseImportManagement();
+    props.onCloseImportManagement();
     props.onOpenNotesView();
   };
   const handleOpenTrashView = () => {
-    handleCloseImportManagement();
+    props.onCloseImportManagement();
     props.onOpenTrashView();
   };
   const handleSelectNode = (nodeId: string) => {
-    handleCloseImportManagement();
+    props.onCloseImportManagement();
     props.onSelectNode(nodeId);
   };
-
   return {
-    handleCloseImportManagement,
-    handleOpenImportManagement,
     handleOpenNotesView,
     handleOpenTrashView,
-    handleSelectNode,
-    setImportManagementOpen: setIsImportManagementOpen,
-    isImportManagementOpen
+    handleSelectNode
   };
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>('dev');
-  const {
-    handleOpenImportManagement,
-    handleOpenNotesView,
-    handleOpenTrashView,
-    handleSelectNode,
-    isImportManagementOpen,
-    setImportManagementOpen
-  } = useWorkspaceMainView(props);
+  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
@@ -125,22 +45,78 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
 
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
-      {!props.isListCollapsed ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
-          style={{ left: 'calc(40px + var(--workspace-list-width, 300px))' }}
-        />
-      ) : null}
+      <WorkspaceMainChrome
+        activeRightPanelId={activeRightPanelId}
+        onOpenNotesView={handleOpenNotesView}
+        onOpenTrashView={handleOpenTrashView}
+        isImportManagementOpen={props.isImportManagementOpen}
+        onSelectRightPanel={handleSelectRightPanel}
+        documentNodeId={documentNodeId}
+        onOpenImportManagement={props.onOpenImportManagement}
+        onStartClipboardImport={props.onStartClipboardImport}
+        onStartImport={() => void props.onRunImportFile()}
+        onSelectNode={handleSelectNode}
+        props={props}
+      />
+      <ImportSourceWorkspace
+        onOpenChange={(open) => (open ? props.onOpenImportManagement() : props.onCloseImportManagement())}
+        open={props.isImportManagementOpen}
+      />
+      <WorkspaceSettingsOverlay props={props} />
+    </main>
+  );
+}
+
+function WorkspaceListDivider({ isListCollapsed }: { isListCollapsed: boolean }) {
+  if (isListCollapsed) {
+    return null;
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
+      style={{ left: 'calc(40px + var(--workspace-list-width, 300px))' }}
+    />
+  );
+}
+
+function WorkspaceMainChrome({
+  activeRightPanelId,
+  documentNodeId,
+  isImportManagementOpen,
+  onOpenImportManagement,
+  onOpenNotesView,
+  onOpenTrashView,
+  onSelectNode,
+  onSelectRightPanel,
+  onStartClipboardImport,
+  onStartImport,
+  props
+}: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  documentNodeId: string | null;
+  isImportManagementOpen: boolean;
+  onOpenImportManagement: () => void;
+  onOpenNotesView: () => void;
+  onOpenTrashView: () => void;
+  onSelectNode: (nodeId: string) => void;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
+  props: WorkspaceLayoutProps;
+}) {
+  return (
+    <>
+      <WorkspaceListDivider isListCollapsed={props.isListCollapsed} />
       <WindowTitleBar
         activeRightPanelId={activeRightPanelId}
         isListCollapsed={props.isListCollapsed}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         isTrashViewOpen={props.isTrashViewOpen}
         listWidth={props.listWidth}
-        onOpenNotesView={handleOpenNotesView}
-        onOpenTrashView={handleOpenTrashView}
-        onSelectRightPanel={handleSelectRightPanel}
+        onOpenNotesView={onOpenNotesView}
+        onOpenTrashView={onOpenTrashView}
+        onSelectRightPanel={onSelectRightPanel}
         onToggleListVisibility={props.onToggleListVisibility}
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
         rightSidebarWidth={props.rightSidebarWidth}
@@ -149,12 +125,12 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         activeRightPanelId={activeRightPanelId}
         documentNodeId={documentNodeId}
         isImportManagementOpen={isImportManagementOpen}
-        onOpenImportManagement={handleOpenImportManagement}
-        onSelectNode={handleSelectNode}
+        onOpenImportManagement={onOpenImportManagement}
+        onSelectNode={onSelectNode}
+        onStartClipboardImport={onStartClipboardImport}
+        onStartImport={onStartImport}
         props={props}
       />
-      <ImportSourceWorkspace onOpenChange={setImportManagementOpen} open={isImportManagementOpen} />
-      <SettingsOverlay props={props} />
-    </main>
+    </>
   );
 }

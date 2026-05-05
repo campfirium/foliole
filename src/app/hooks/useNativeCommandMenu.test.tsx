@@ -36,7 +36,7 @@ describe('useNativeCommandMenu', () => {
     render(
       <TestHarness
         items={[
-          { id: APP_COMMAND_IDS.importSingleFile, title: 'Import', section: 'Import', enabled: true },
+          { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', enabled: true },
           { id: APP_COMMAND_IDS.openTrash, title: 'Trash', section: 'Workspace', enabled: false }
         ]}
         onRunCommand={onRunCommand}

@@ -2,7 +2,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
 import { loadRuntimeImportOverview, runRuntimeTextFileImport, selectRuntimeImportDirectory, selectRuntimeImportTextFile } from './importBridge';
-
 const IMPORT_OVERVIEW_PAYLOAD = {
   latest_failure: {
     content_fingerprint: 'content-failure',
@@ -102,7 +101,6 @@ const IMPORT_OVERVIEW_RESULT = {
     }
   ]
 };
-
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,
@@ -116,7 +114,6 @@ beforeEach(() => {
   vi.restoreAllMocks();
   window.electronAPI = undefined;
 });
-
 it('normalizes the native import file payload', async () => {
   const invoke = vi.fn().mockResolvedValue({
     content: '# Imported',
@@ -134,7 +131,6 @@ it('normalizes the native import file payload', async () => {
   });
   expect(invoke).toHaveBeenCalledWith('select_import_text_file', {});
 });
-
 it('returns the selected import directory path from the runtime bridge', async () => {
   const invoke = vi.fn().mockResolvedValue('/tmp/import-folder');
   window.electronAPI = createMockElectronApi(invoke);
@@ -142,7 +138,6 @@ it('returns the selected import directory path from the runtime bridge', async (
   await expect(selectRuntimeImportDirectory()).resolves.toBe('/tmp/import-folder');
   expect(invoke).toHaveBeenCalledWith('select_import_directory');
 });
-
 it('normalizes the unified import result payload', async () => {
   const invoke = vi.fn().mockResolvedValue({
     content_fingerprint: 'content-fingerprint',
@@ -178,7 +173,6 @@ it('normalizes the unified import result payload', async () => {
   });
   expect(invoke).toHaveBeenCalledWith('run_text_file_import', {});
 });
-
 it('accepts html import payloads from the runtime bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
     content_fingerprint: 'content-fingerprint-html',
@@ -213,7 +207,6 @@ it('accepts html import payloads from the runtime bridge', async () => {
     sourceName: 'note.html'
   });
 });
-
 it('forwards highlight policy configuration to the runtime import bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
     content_fingerprint: 'content-fingerprint',

@@ -10,11 +10,13 @@ interface PaletteCommandRunnerArgs {
   goForward: () => void;
   goParent: () => void;
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
+  importDirectory: () => Promise<boolean>;
   importSingleFile: () => Promise<boolean>;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
   isReviewMode: boolean;
+  openImportManagement: () => void;
   onToggleEditorDisplayMode: () => void;
   onToggleListVisibility: () => void;
   onToggleDevTools: () => void;
@@ -24,6 +26,7 @@ interface PaletteCommandRunnerArgs {
   revealReviewAnswer: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
+  startClipboardImport: () => void;
   startReviewSession: () => boolean;
   startStudyMode: () => void;
   trashViewOpen: boolean;
@@ -49,13 +52,18 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       goBack: args.goBack,
       goForward: args.goForward,
       goParent: args.goParent,
+      importDirectory: () => {
+        void args.importDirectory();
+      },
       importSingleFile: () => {
         void args.importSingleFile();
       },
+      openImportManagement: args.openImportManagement,
       openNotes: args.closeTrashView,
       openSettings: () => args.setSettingsOpen(true),
       openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
       revealReviewAnswer: args.revealReviewAnswer,
+      startClipboardImport: args.startClipboardImport,
       toggleReviewMode,
       toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
       toggleList: args.onToggleListVisibility,

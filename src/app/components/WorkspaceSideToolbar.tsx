@@ -1,4 +1,4 @@
-import { Folders, Route, Settings } from 'lucide-react';
+import { ClipboardPaste, FileUp, Folders, Route, Settings } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
@@ -8,25 +8,43 @@ interface WorkspaceSideToolbarProps {
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   reviewDueCount: number;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
   onOpenImportManagement: () => void;
   onOpenSettings: () => void;
   onToggleReviewSession: () => void;
 }
 
-function ImportManagementAction({
+function ImportActions({
   isImportManagementOpen,
+  onStartClipboardImport,
+  onStartImport,
   onOpenImportManagement
 }: {
   isImportManagementOpen: boolean;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
   onOpenImportManagement: () => void;
 }) {
   return (
-    <ToolbarActionGroup ariaLabel="Workspace import actions" className="h-[56px]" fullWidth orientation="vertical">
+    <ToolbarActionGroup ariaLabel="Workspace import actions" className="gap-2 py-1" fullWidth orientation="vertical">
+      <AppIconButton
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+        icon={<FileUp aria-hidden="true" size={16} strokeWidth={1.75} />}
+        label="Import"
+        onClick={onStartImport}
+      />
+      <AppIconButton
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+        icon={<ClipboardPaste aria-hidden="true" size={16} strokeWidth={1.75} />}
+        label="Clipboard Import *"
+        onClick={onStartClipboardImport}
+      />
       <AppIconButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
         data-active={isImportManagementOpen}
         icon={<Folders aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label="Import management"
+        label="Import Management"
         onClick={onOpenImportManagement}
       />
     </ToolbarActionGroup>
@@ -53,6 +71,8 @@ export function WorkspaceSideToolbar({
   isStudyMode,
   isSettingsOpen,
   reviewDueCount,
+  onStartClipboardImport,
+  onStartImport,
   onOpenImportManagement,
   onOpenSettings,
   onToggleReviewSession
@@ -68,7 +88,12 @@ export function WorkspaceSideToolbar({
       aria-label="Workspace side toolbar"
       className="flex h-full w-[40px] flex-col items-center border-r border-[#d9d9d6] bg-[#f6f6f6] pb-0 pt-2"
     >
-      <ImportManagementAction isImportManagementOpen={isImportManagementOpen} onOpenImportManagement={onOpenImportManagement} />
+      <ImportActions
+        isImportManagementOpen={isImportManagementOpen}
+        onOpenImportManagement={onOpenImportManagement}
+        onStartClipboardImport={onStartClipboardImport}
+        onStartImport={onStartImport}
+      />
       <div className="flex-1" />
       <SettingsAction isSettingsOpen={isSettingsOpen} onOpenSettings={onOpenSettings} />
       <ToolbarActionGroup

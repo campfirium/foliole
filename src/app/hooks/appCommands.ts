@@ -4,6 +4,7 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 
 interface BuildAppPaletteItemsOptions {
   canImportFile: boolean;
+  canImportFolder: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -17,11 +18,14 @@ interface BuildAppPaletteItemsOptions {
 }
 
 interface RunAppCommandActions {
+  importDirectory: () => void | Promise<void>;
   closeSettings: () => void;
+  openImportManagement: () => void;
   goBack: () => void;
   goForward: () => void;
   goParent: () => void;
   importSingleFile: () => void | Promise<void>;
+  startClipboardImport: () => void;
   openNotes: () => void;
   openSettings: () => void;
   openTrash: () => void;
@@ -54,9 +58,27 @@ interface AppPaletteCommandMeta {
 const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   {
     id: APP_COMMAND_IDS.importSingleFile,
-    title: 'Import Markdown / TXT to Inbox',
+    title: 'Import Files',
     section: 'Import',
-    keywords: ['markdown', 'txt', 'inbox', 'file']
+    keywords: ['import', 'inbox', 'file', 'files']
+  },
+  {
+    id: APP_COMMAND_IDS.importFolder,
+    title: 'Import Folder',
+    section: 'Import',
+    keywords: ['import', 'folder', 'directory', 'inbox']
+  },
+  {
+    id: APP_COMMAND_IDS.clipboardImport,
+    title: 'Clipboard Import *',
+    section: 'Import',
+    keywords: ['import', 'clipboard', 'paste']
+  },
+  {
+    id: APP_COMMAND_IDS.openImportManagement,
+    title: 'Import Management',
+    section: 'Import',
+    keywords: ['import', 'management', 'sources', 'readwise', 'inbox']
   },
   { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
@@ -89,6 +111,9 @@ function resolveCommandTitle(id: string, isReviewMode: boolean, title: string) {
 function isCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   if (id === APP_COMMAND_IDS.importSingleFile) {
     return options.canImportFile;
+  }
+  if (id === APP_COMMAND_IDS.importFolder) {
+    return options.canImportFolder;
   }
   if (id === APP_COMMAND_IDS.goBack) {
     return options.canGoBack;
@@ -147,6 +172,9 @@ export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeTo
 export function runAppCommand(id: string, actions: RunAppCommandActions) {
   const handlers: Record<string, () => void> = {
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
+    [APP_COMMAND_IDS.importFolder]: actions.importDirectory,
+    [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,
+    [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,

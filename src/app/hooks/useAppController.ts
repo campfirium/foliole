@@ -65,8 +65,10 @@ function buildControllerPaletteState(args: {
     goForward: args.nav.handleGoForward,
     goParent: args.nav.handleGoParent,
     gradeReviewCard: args.ws.gradeReviewCard,
-    importSingleFile: args.formalImport.startImport,
+    importDirectory: args.formalImport.startImportDirectory,
+    importSingleFile: args.formalImport.startImportFile,
     isReviewMode: args.isStudyMode,
+    openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onToggleEditorDisplayMode: args.layoutProps.onToggleEditorDisplayMode,
     onToggleListVisibility: args.layoutProps.onToggleListVisibility,
     onToggleDevTools: toggleMainWindowDevTools,
@@ -76,6 +78,7 @@ function buildControllerPaletteState(args: {
     revealReviewAnswer: args.ws.revealReviewAnswer,
     setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
+    startClipboardImport: args.layoutProps.onStartClipboardImport,
     startReviewSession: args.ws.startReviewSession,
     startStudyMode: args.study.startStudyMode,
     trashViewOpen: args.trash.isTrashViewOpen
@@ -104,6 +107,7 @@ function useReviewPaletteItems(args: {
     () =>
       buildAppPaletteItems({
         canImportFile: args.formalImportAvailable,
+        canImportFolder: args.formalImportAvailable,
         canGoBack: args.nav.canGoBack,
         canGoForward: args.nav.canGoForward,
         canGoParent: args.nav.canGoParent,
@@ -188,6 +192,8 @@ export function useAppController(): AppControllerResult {
     reviewSettings,
     rightSidebarResize: controller.rightSidebarResize,
     runtime: controller.runtime,
+    runImportDirectory: formalImport.startImportDirectory,
+    runImportFile: formalImport.startImportFile,
     selectedTrashNode: controller.selectedTrashNode,
     startStudyMode,
     trash: controller.trash,
