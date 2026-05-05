@@ -52,11 +52,16 @@ describe('windows-deploy-app.sh', () => {
     expect(script).toContain('. $installCacheScript');
     expect(cacheScript).toContain('function Test-InstallCacheHit');
     expect(cacheScript).toContain('function Get-WebAssetsHash');
+    expect(cacheScript).toContain('function Get-NativeSourcesHash');
+    expect(cacheScript).toContain('$cache.nativeSourcesHash -eq $NativeSourcesHash');
     expect(cacheScript).toContain('$cache.webAssetsHash -eq $WebAssetsHash');
+    expect(cacheScript).toContain('$cache.version -eq 3');
     expect(cacheScript).toContain('android-install-cache.json');
     expect(script).toContain('install cache: HIT apk=$apkHash versionCode=$installedVersionCode');
     expect(script).toContain('Invoke-GradleWrapper -TaskName "installDebug"');
-    expect(script).toContain('Write-InstallCache -ApkHash $apkHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
+    expect(script).toContain('$nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir');
+    expect(script).toContain('Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
+    expect(script).toContain('Write-InstallCache -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
   });
 
   it('refuses direct deploy without explicit data-risk confirmation', async () => {

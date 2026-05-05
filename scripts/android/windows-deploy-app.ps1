@@ -178,12 +178,13 @@ if ($null -eq $serial) {
 
 Write-Info "device: $serial"
 $apkHash = Get-ApkHash -AndroidDir $androidDir
+$nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir
 $webAssetsHash = Get-WebAssetsHash -AndroidDir $androidDir
 $installedVersionCode = Get-InstalledVersionCode -AdbPath $adbPath -Serial $serial -PackageName $AppId
-if (Test-InstallCacheHit -ApkHash $apkHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir) {
+if (Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir) {
   Write-Info "install cache: HIT apk=$apkHash versionCode=$installedVersionCode"
 } else {
-  Write-Info "install cache: MISS apk=$apkHash webAssets=$webAssetsHash versionCode=$installedVersionCode"
+  Write-Info "install cache: MISS apk=$apkHash nativeSources=$nativeSourcesHash webAssets=$webAssetsHash versionCode=$installedVersionCode"
   Push-Location $androidDir
   try {
     Write-Info "installing debug build"
@@ -192,9 +193,10 @@ if (Test-InstallCacheHit -ApkHash $apkHash -Serial $serial -VersionCode $install
     Pop-Location
   }
   $apkHash = Get-ApkHash -AndroidDir $androidDir
+  $nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir
   $webAssetsHash = Get-WebAssetsHash -AndroidDir $androidDir
   $installedVersionCode = Get-InstalledVersionCode -AdbPath $adbPath -Serial $serial -PackageName $AppId
-  Write-InstallCache -ApkHash $apkHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir
+  Write-InstallCache -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir
 }
 
 if ($DevReverseSyncPort -gt 0) {

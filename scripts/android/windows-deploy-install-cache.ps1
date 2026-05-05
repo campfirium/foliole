@@ -33,30 +33,69 @@ function Get-WebAssetsHash {
   return ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
 }
 
+function Get-NativeSourcesHash {
+  param([string]$AndroidDir)
+  $basePath = [System.IO.Path]::GetFullPath($AndroidDir).TrimEnd('\') + '\'
+  $paths = @(
+    "app\src\main\java",
+    "app\src\main\kotlin",
+    "app\src\main\res",
+    "app\src\main\AndroidManifest.xml",
+    "app\src\main\assets\capacitor.config.json",
+    "app\build.gradle",
+    "build.gradle",
+    "settings.gradle",
+    "gradle.properties"
+  )
+  $files = foreach ($path in $paths) {
+    $fullPath = Join-Path $AndroidDir $path
+    if (!(Test-Path -Path $fullPath)) {
+      continue
+    }
+    if ((Get-Item -Path $fullPath).PSIsContainer) {
+      Get-ChildItem -Path $fullPath -File -Recurse
+    } else {
+      Get-Item -Path $fullPath
+    }
+  }
+  $lines = $files |
+    Sort-Object FullName |
+    ForEach-Object {
+      $relativePath = [System.IO.Path]::GetFullPath($_.FullName).Substring($basePath.Length).Replace('\', '/')
+      $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLowerInvariant()
+      "$relativePath=$hash"
+    }
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes(($lines -join "`n"))
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  return ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
+}
+
 function Test-InstallCacheHit {
   param(
     [string]$ApkHash,
+    [string]$NativeSourcesHash,
     [string]$Serial,
     [string]$VersionCode,
     [string]$WebAssetsHash,
     [string]$WindowsWorkDir
   )
   $cachePath = Get-InstallCachePath -WindowsWorkDir $WindowsWorkDir
-  if ([string]::IsNullOrWhiteSpace($ApkHash) -or [string]::IsNullOrWhiteSpace($WebAssetsHash) -or !(Test-Path -Path $cachePath)) {
+  if ([string]::IsNullOrWhiteSpace($ApkHash) -or [string]::IsNullOrWhiteSpace($NativeSourcesHash) -or [string]::IsNullOrWhiteSpace($WebAssetsHash) -or !(Test-Path -Path $cachePath)) {
     return $false
   }
   $cache = Get-Content -Path $cachePath -Raw | ConvertFrom-Json
-  return $cache.apkHash -eq $ApkHash -and $cache.serial -eq $Serial -and $cache.versionCode -eq $VersionCode -and $cache.webAssetsHash -eq $WebAssetsHash -and $cache.status -eq "ok" -and $cache.version -eq 2
+  return $cache.apkHash -eq $ApkHash -and $cache.nativeSourcesHash -eq $NativeSourcesHash -and $cache.serial -eq $Serial -and $cache.versionCode -eq $VersionCode -and $cache.webAssetsHash -eq $WebAssetsHash -and $cache.status -eq "ok" -and $cache.version -eq 3
 }
 
 function Write-InstallCache {
   param(
     [string]$ApkHash,
+    [string]$NativeSourcesHash,
     [string]$Serial,
     [string]$VersionCode,
     [string]$WebAssetsHash,
     [string]$WindowsWorkDir
   )
-  $payload = @{ apkHash = $ApkHash; serial = $Serial; status = "ok"; timestamp = (Get-Date).ToUniversalTime().ToString("o"); version = 2; versionCode = $VersionCode; webAssetsHash = $WebAssetsHash }
+  $payload = @{ apkHash = $ApkHash; nativeSourcesHash = $NativeSourcesHash; serial = $Serial; status = "ok"; timestamp = (Get-Date).ToUniversalTime().ToString("o"); version = 3; versionCode = $VersionCode; webAssetsHash = $WebAssetsHash }
   $payload | ConvertTo-Json | Set-Content -Path (Get-InstallCachePath -WindowsWorkDir $WindowsWorkDir) -Encoding UTF8
 }
