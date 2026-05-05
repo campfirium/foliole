@@ -12,6 +12,8 @@ import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { runEpubImport } from '../ipc/epubImport.js';
 import { resolveSingleFileImportSource } from '../ipc/importSourcePipeline.js';
 
+import { loadImportManagerSettings } from './importManagerSettings.js';
+import { placeReadwiseBookHighlights } from './readwiseBookHighlightPlacement.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 import {
@@ -204,7 +206,14 @@ export async function loadReadwiseBookEpub(
 
   const epubPath = selection.filePaths[0].trim();
   saveRecentReadwiseBookEpubDirectory(epubPath);
-  const imported = await runEpubImport(resolveSingleFileImportSource(epubPath), new Date().toISOString());
+  const importedAt = new Date().toISOString();
+  const imported = await runEpubImport(resolveSingleFileImportSource(epubPath), importedAt);
+  await placeReadwiseBookHighlights({
+    highlightMarkdownPath: book.highlightMarkdownPath,
+    importedAt,
+    readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,
+    rootNodeId: imported.nodeId
+  });
   const generatedNodeId = imported.nodeId ?? book.generatedNodeId;
   const updatedBook = {
     ...book,
