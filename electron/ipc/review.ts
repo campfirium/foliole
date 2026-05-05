@@ -1,51 +1,18 @@
 import { Rating, fsrs, type FSRS, type Grade } from 'ts-fsrs';
 
+import type {
+  NativeReviewGradeArgs,
+  NativeReviewPreviewArgs,
+  NativeReviewPreviewResult,
+  NativeSchedulerCard
+} from '../../lib/platform/nativeContract.js';
 import {
   createReviewSchedulerParameters,
   getReviewSchedulerVersion,
   loadReviewSchedulerSettings
 } from '../reviewSchedulerSettings.js';
 
-interface SchedulerCard {
-  due: string;
-  last_review: string | null;
-  state: 0 | 1 | 2 | 3;
-  stability: number;
-  difficulty: number;
-  elapsed_days: number;
-  scheduled_days: number;
-  reps: number;
-  lapses: number;
-}
-
-export interface ReviewGradeRequest {
-  request: {
-    card: SchedulerCard;
-    rating: 'Again' | 'Hard' | 'Good' | 'Easy';
-    now: string;
-  };
-}
-
-export interface ReviewPreviewRequest {
-  request: {
-    card: SchedulerCard;
-    now: string;
-  };
-}
-
-interface ReviewSchedulerResult {
-  card: SchedulerCard;
-  reviewed_at: string;
-}
-
-export interface ReviewPreviewResult {
-  Again: ReviewSchedulerResult;
-  Hard: ReviewSchedulerResult;
-  Good: ReviewSchedulerResult;
-  Easy: ReviewSchedulerResult;
-}
-
-function toRating(value: ReviewGradeRequest['request']['rating']): Grade {
+function toRating(value: NativeReviewGradeArgs['request']['rating']): Grade {
   if (value === 'Again') {
     return Rating.Again;
   }
@@ -58,7 +25,7 @@ function toRating(value: ReviewGradeRequest['request']['rating']): Grade {
   return Rating.Easy;
 }
 
-function toTsFsrsCard(card: SchedulerCard) {
+function toTsFsrsCard(card: NativeReviewGradeArgs['request']['card']) {
   return {
     due: new Date(card.due),
     last_review: card.last_review ? new Date(card.last_review) : undefined,
@@ -82,7 +49,7 @@ function fromTsFsrsCard(card: {
   scheduled_days: number;
   reps: number;
   lapses: number;
-}): SchedulerCard {
+}): NativeSchedulerCard {
   return {
     due: card.due.toISOString(),
     last_review: card.last_review ? card.last_review.toISOString() : null,
@@ -110,21 +77,24 @@ function getReviewScheduler() {
   return schedulerCache.scheduler;
 }
 
-function toSchedulerResult(item: { card: Parameters<typeof fromTsFsrsCard>[0]; log: { review: Date } }): ReviewSchedulerResult {
+function toSchedulerResult(item: {
+  card: Parameters<typeof fromTsFsrsCard>[0];
+  log: { review: Date };
+}) {
   return {
     card: fromTsFsrsCard(item.card),
     reviewed_at: item.log.review.toISOString()
   };
 }
 
-export function reviewGrade(payload: ReviewGradeRequest) {
+export function reviewGrade(payload: NativeReviewGradeArgs) {
   const reviewAt = new Date(payload.request.now);
   const grade = toRating(payload.request.rating);
   const next = getReviewScheduler().next(toTsFsrsCard(payload.request.card), reviewAt, grade);
   return toSchedulerResult(next);
 }
 
-export function reviewPreview(payload: ReviewPreviewRequest): ReviewPreviewResult {
+export function reviewPreview(payload: NativeReviewPreviewArgs): NativeReviewPreviewResult {
   const reviewAt = new Date(payload.request.now);
   const preview = getReviewScheduler().repeat(toTsFsrsCard(payload.request.card), reviewAt);
   return {

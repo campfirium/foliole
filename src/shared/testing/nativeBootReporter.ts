@@ -1,3 +1,4 @@
+import { invokeBootReport } from '../../../lib/platform/nativeContract';
 import { getRuntimeInvoke } from '../platform/bridge';
 
 interface BootPayload {
@@ -15,7 +16,7 @@ export function reportNativeBootStage(stage: string, payload?: BootPayload) {
   if (!invoke) {
     return;
   }
-  void invoke('boot_report', { stage, payload }).catch((error) => {
+  void invokeBootReport(invoke, { stage, payload }).catch((error) => {
     console.error('[startup] boot_report failed', { stage, error });
   });
 }

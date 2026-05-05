@@ -11,7 +11,7 @@ import type { InvokeRequest } from './contracts.js';
 import { listSystemFonts } from './fonts.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
-import { reviewGrade, reviewPreview, type ReviewGradeRequest, type ReviewPreviewRequest } from './review.js';
+import { reviewGrade, reviewPreview } from './review.js';
 import { handleStorageCommand } from './storageCommands.js';
 
 interface InvokeContext {
@@ -64,7 +64,7 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
 
 export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const command = request.command;
-  const args = request.args ?? {};
+  const args = (request.args ?? {}) as Record<string, unknown>;
 
   if (isTypedRequest(request, 'open_external_url')) {
     const url = asString(request.args.url, 'url').trim();
@@ -99,11 +99,11 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     await bootReport(asString(request.args.stage, 'stage'), request.args.payload ?? null);
     return null;
   }
-  if (command === 'review_grade') {
-    return reviewGrade(args as unknown as ReviewGradeRequest);
+  if (isTypedRequest(request, 'review_grade')) {
+    return reviewGrade(request.args);
   }
-  if (command === 'review_preview') {
-    return reviewPreview(args as unknown as ReviewPreviewRequest);
+  if (isTypedRequest(request, 'review_preview')) {
+    return reviewPreview(request.args);
   }
   if (isTypedRequest(request, 'app_get_version')) {
     return app.getVersion();

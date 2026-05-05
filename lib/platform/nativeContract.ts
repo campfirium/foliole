@@ -10,6 +10,45 @@ export interface NativeSystemFontCatalog {
   monospace_fonts: unknown[];
 }
 
+export interface NativeSchedulerCard {
+  due: string;
+  last_review: string | null;
+  state: 0 | 1 | 2 | 3;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  reps: number;
+  lapses: number;
+}
+
+export interface NativeReviewGradeArgs {
+  request: {
+    card: NativeSchedulerCard;
+    rating: 'Again' | 'Hard' | 'Good' | 'Easy';
+    now: string;
+  };
+}
+
+export interface NativeReviewPreviewArgs {
+  request: {
+    card: NativeSchedulerCard;
+    now: string;
+  };
+}
+
+export interface NativeReviewGradeResult {
+  card: NativeSchedulerCard;
+  reviewed_at: string;
+}
+
+export interface NativeReviewPreviewResult {
+  Again: NativeReviewGradeResult;
+  Hard: NativeReviewGradeResult;
+  Good: NativeReviewGradeResult;
+  Easy: NativeReviewGradeResult;
+}
+
 export interface NativeCommandMap {
   app_get_version: {
     args: undefined;
@@ -35,6 +74,14 @@ export interface NativeCommandMap {
   resolve_app_paths: {
     args: undefined;
     result: NativeResolvedAppPaths;
+  };
+  review_grade: {
+    args: NativeReviewGradeArgs;
+    result: NativeReviewGradeResult;
+  };
+  review_preview: {
+    args: NativeReviewPreviewArgs;
+    result: NativeReviewPreviewResult;
   };
   sync_app_menu_state: {
     args: {
@@ -81,6 +128,27 @@ export interface NativeInvoke {
   (command: string, args?: Record<string, unknown>): Promise<unknown>;
 }
 
+export function invokeReviewGrade(
+  invoke: NativeInvoke,
+  args: NativeReviewGradeArgs
+): Promise<NativeReviewGradeResult> {
+  return invoke('review_grade', args);
+}
+
+export function invokeReviewPreview(
+  invoke: NativeInvoke,
+  args: NativeReviewPreviewArgs
+): Promise<NativeReviewPreviewResult> {
+  return invoke('review_preview', args);
+}
+
+export function invokeBootReport(
+  invoke: NativeInvoke,
+  args: NativeCommandArgs<'boot_report'>
+): Promise<NativeCommandResult<'boot_report'>> {
+  return invoke('boot_report', args);
+}
+
 export function isTypedNativeCommand(command: string): command is NativeCommandName {
   return (
     command === 'app_get_version' ||
@@ -88,6 +156,8 @@ export function isTypedNativeCommand(command: string): command is NativeCommandN
     command === 'list_system_fonts' ||
     command === 'open_external_url' ||
     command === 'resolve_app_paths' ||
+    command === 'review_grade' ||
+    command === 'review_preview' ||
     command === 'sync_app_menu_state' ||
     command === 'window_close' ||
     command === 'window_is_maximized' ||
@@ -97,7 +167,7 @@ export function isTypedNativeCommand(command: string): command is NativeCommandN
 }
 
 export function isTypedNativeRequest<T extends NativeCommandName>(
-  request: { command: string; args?: Record<string, unknown> | undefined },
+  request: { command: string; args?: unknown },
   command: T
 ): request is NativeInvokeRequest<T> {
   return request.command === command;
