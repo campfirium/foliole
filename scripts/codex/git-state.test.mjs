@@ -34,8 +34,8 @@ describe('git-state commitTrackedChanges', () => {
 
     const message = await buildCommitMessage(repoDir, 'Adjust platform bridge');
     expect(message).toContain('000136 adjust platform bridge');
-    expect(message).toContain('context: agent loop completed adjust platform bridge.');
-    expect(message).toContain('change: apply the staged code and test updates for adjust platform bridge.');
+    expect(message).toContain('context: agent loop completed one automated repository task.');
+    expect(message).toContain('change: apply the staged code and test updates from the latest loop iteration.');
     expect(message).toContain('intent: keep automated progress traceable with repository-standard commit notes.');
   });
 
@@ -55,9 +55,9 @@ describe('git-state commitTrackedChanges', () => {
     expect(message).not.toContain('auto(task):');
     expect(message).not.toMatch(/[\u4e00-\u9fff]/);
     expect(bodyLines).toEqual([
-      expect.stringMatching(/^context: [ -~]+\.$/),
-      expect.stringMatching(/^change: [ -~]+\.$/),
-      expect.stringMatching(/^intent: [ -~]+\.$/)
+      'context: agent loop completed one automated repository task.',
+      'change: apply the staged code and test updates from the latest loop iteration.',
+      'intent: keep automated progress traceable with repository-standard commit notes.'
     ]);
   });
 

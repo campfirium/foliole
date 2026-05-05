@@ -56,10 +56,6 @@ function buildCommitTopic(task) {
   return ascii.slice(0, 60).trim();
 }
 
-function buildCommitSummary(task) {
-  return buildCommitTopic(task);
-}
-
 function escapeBodyValue(value) {
   return value.replace(/\s+/g, ' ').trim();
 }
@@ -85,14 +81,14 @@ export async function getNextCommitSequence(cwd) {
 
 export async function buildCommitMessage(cwd, task) {
   const sequence = await getNextCommitSequence(cwd);
-  const summary = buildCommitSummary(task);
   const normalizedTask = escapeBodyValue(buildCommitTopic(task || 'current repository task'));
+  const subject = normalizedTask || 'agent loop checkpoint';
 
   return [
-    `${sequence} ${summary}`,
+    `${sequence} ${subject}`,
     '',
-    `context: agent loop completed ${normalizedTask}.`,
-    `change: apply the staged code and test updates for ${normalizedTask}.`,
+    'context: agent loop completed one automated repository task.',
+    'change: apply the staged code and test updates from the latest loop iteration.',
     'intent: keep automated progress traceable with repository-standard commit notes.'
   ].join('\n');
 }
