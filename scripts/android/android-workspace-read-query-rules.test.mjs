@@ -11,6 +11,7 @@ import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../lib/core/database/
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const SNAPSHOT_EXPORTER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceSnapshotExporter.java');
+const NODE_SNAPSHOT_BUILDER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceNodeSnapshotBuilder.java');
 const VIEW_STATE_EXPORTER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceViewStateExporter.java');
 const WORKSPACE_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceReadQueryRules.java');
 
@@ -61,14 +62,22 @@ describe('Android workspace read query rules', () => {
   });
 
   it('keeps workspace Java exporters wired to generated read rules', async () => {
-    const combinedSource = `${await readFile(SNAPSHOT_EXPORTER, 'utf8')}\n${await readFile(VIEW_STATE_EXPORTER, 'utf8')}`;
+    const combinedSource = [
+      await readFile(SNAPSHOT_EXPORTER, 'utf8'),
+      await readFile(NODE_SNAPSHOT_BUILDER, 'utf8'),
+      await readFile(VIEW_STATE_EXPORTER, 'utf8')
+    ].join('\n');
     const rulesSource = await readFile(WORKSPACE_RULES, 'utf8');
 
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
     expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
-    expect(combinedSource).toContain('field.getString("outputKey")');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key)');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "workspaceRead", groupName)');
+    expect(combinedSource).not.toContain('field.getString("outputKey")');
+    expect(combinedSource).not.toContain('field.getString("rowKey")');
+    expect(combinedSource).not.toContain('field.getString("type")');
     expect(combinedSource).not.toContain('"parentNodeId"');
     expect(combinedSource).not.toContain('"scrollTop"');
     expect(combinedSource).not.toContain('"selectionFrom"');

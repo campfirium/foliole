@@ -174,10 +174,15 @@ describe('Android resource read query rules', () => {
 
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentObject(context, key)');
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
+    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key)');
+    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(source).not.toContain('result.put("document"');
     expect(source).not.toContain('entry.put("document_id"');
     expect(source).not.toContain('target.put("content_status"');
     expect(source).not.toContain('row.getString("document_id"');
+    expect(source).not.toContain('field.getString("outputKey")');
+    expect(source).not.toContain('field.getString("rowKey")');
+    expect(source).not.toContain('field.getString("type")');
     expect(source).not.toContain('row.getInt("match_index"');
   });
 });

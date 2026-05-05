@@ -61,7 +61,12 @@ describe('Android missing resource query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentRowsQueryName(context)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentHashesQueryName(context)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "missingResourceRead", groupName)');
+    expect(combinedStoreSource).not.toContain('field.getString("outputKey")');
+    expect(combinedStoreSource).not.toContain('field.getString("rowKey")');
+    expect(combinedStoreSource).not.toContain('field.getString("type")');
     expect(combinedStoreSource).not.toContain('"attachmentResourceMissingRows"');
     expect(combinedStoreSource).not.toContain('"contentBlobMissingHashes"');
     expect(combinedStoreSource).not.toContain('"missing_attachment_resource_count"');

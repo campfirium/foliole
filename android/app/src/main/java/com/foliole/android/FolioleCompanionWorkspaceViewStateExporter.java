@@ -36,22 +36,30 @@ final class FolioleCompanionWorkspaceViewStateExporter {
         JSONArray fields = FolioleCompanionWorkspaceReadQueryRules.viewStateArray(context, "fields");
         for (int index = 0; index < fields.length(); index += 1) {
             JSONObject field = fields.getJSONObject(index);
-            viewState.put(field.getString("outputKey"), fieldValue(context, row, field));
+            viewState.put(field.getString(fieldKey(context, "outputKey")), fieldValue(context, row, field));
         }
         return viewState;
     }
 
     private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
-        String rowKey = field.getString("rowKey");
-        String type = field.getString("type");
-        if ("string".equals(type)) return row.getString(rowKey);
-        if ("nonNegativeLong".equals(type)) return Math.max(0, row.getLong(rowKey));
-        if ("nullableNonNegativeLong".equals(type)) return row.isNull(rowKey) ? JSONObject.NULL : Math.max(0, row.getLong(rowKey));
-        if ("defaultedString".equals(type)) {
+        String rowKey = field.getString(fieldKey(context, "rowKey"));
+        String type = field.getString(fieldKey(context, "type"));
+        if (fieldType(context, "string").equals(type)) return row.getString(rowKey);
+        if (fieldType(context, "nonNegativeLong").equals(type)) return Math.max(0, row.getLong(rowKey));
+        if (fieldType(context, "nullableNonNegativeLong").equals(type)) return row.isNull(rowKey) ? JSONObject.NULL : Math.max(0, row.getLong(rowKey));
+        if (fieldType(context, "defaultedString").equals(type)) {
             return row.isNull(rowKey)
-                ? FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, field.getString("defaultRuleKey"))
+                ? FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, field.getString(fieldKey(context, "defaultRuleKey")))
                 : row.getString(rowKey);
         }
         throw new IllegalStateException("Unsupported workspace view-state field type: " + type);
+    }
+
+    private static String fieldKey(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key);
+    }
+
+    private static String fieldType(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key);
     }
 }

@@ -15,6 +15,18 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
         return section(context, "columnTypes").getString(key);
     }
 
+    static String fieldKey(Context context, String key) throws Exception {
+        return section(context, "field").getString(key);
+    }
+
+    static String fieldCollectionKey(Context context, String key) throws Exception {
+        return section(context, "fieldCollections").getString(key);
+    }
+
+    static String fieldType(Context context, String key) throws Exception {
+        return section(context, "fieldTypes").getString(key);
+    }
+
     static String queryKey(Context context, String key) throws Exception {
         return section(context, "query").getString(key);
     }

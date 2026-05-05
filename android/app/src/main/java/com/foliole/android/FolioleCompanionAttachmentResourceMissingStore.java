@@ -91,8 +91,12 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         JSONArray resourceFields = FolioleCompanionMissingResourceQueryRules.attachmentArray(context, "resourceFields");
         for (int index = 0; index < resourceFields.length(); index += 1) {
             JSONObject field = resourceFields.getJSONObject(index);
-            String rowKey = rowKeys.getString(field.getString("rowKey"));
-            resource.put(field.getString("outputKey"), "long".equals(field.getString("type")) ? row.getLong(rowKey) : row.getString(rowKey));
+            String rowKey = rowKeys.getString(field.getString(fieldKey(context, "rowKey")));
+            String type = field.getString(fieldKey(context, "type"));
+            resource.put(
+                field.getString(fieldKey(context, "outputKey")),
+                fieldType(context, "long").equals(type) ? row.getLong(rowKey) : row.getString(rowKey)
+            );
         }
         return resource;
     }
@@ -174,5 +178,13 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     private static JSONObject rowKeys(Context context) throws Exception {
         return FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "rowKeys");
+    }
+
+    private static String fieldKey(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key);
+    }
+
+    private static String fieldType(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key);
     }
 }

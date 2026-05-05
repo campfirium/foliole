@@ -39,6 +39,35 @@ export const ANDROID_COMPANION_QUERY_SHAPE_KEYS = {
     json: 'json',
     long: 'long'
   },
+  field: {
+    defaultRuleKey: 'defaultRuleKey',
+    defaultValue: 'defaultValue',
+    omitWhenNull: 'omitWhenNull',
+    outputKey: 'outputKey',
+    rowKey: 'rowKey',
+    type: 'type'
+  },
+  fieldCollections: {
+    deletedAtField: 'deletedAtField',
+    fields: 'fields',
+    requiredRowKeys: 'requiredRowKeys',
+    validStates: 'validStates'
+  },
+  fieldTypes: {
+    booleanLong: 'booleanLong',
+    contentStatus: 'contentStatus',
+    defaultedString: 'defaultedString',
+    double: 'double',
+    json: 'json',
+    kind: 'kind',
+    long: 'long',
+    nonNegativeLong: 'nonNegativeLong',
+    nullableNonNegativeLong: 'nullableNonNegativeLong',
+    nullableString: 'nullableString',
+    resolvedContent: 'resolvedContent',
+    string: 'string',
+    title: 'title'
+  },
   query: {
     columns: 'columns',
     resultKey: 'resultKey',

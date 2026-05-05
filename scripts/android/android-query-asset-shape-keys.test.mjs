@@ -27,6 +27,35 @@ describe('Android query asset shape keys', () => {
     expect(definitions.queryShape).toEqual({
       column: { key: 'key', source: 'source', type: 'type' },
       columnTypes: { double: 'double', json: 'json', long: 'long' },
+      field: {
+        defaultRuleKey: 'defaultRuleKey',
+        defaultValue: 'defaultValue',
+        omitWhenNull: 'omitWhenNull',
+        outputKey: 'outputKey',
+        rowKey: 'rowKey',
+        type: 'type'
+      },
+      fieldCollections: {
+        deletedAtField: 'deletedAtField',
+        fields: 'fields',
+        requiredRowKeys: 'requiredRowKeys',
+        validStates: 'validStates'
+      },
+      fieldTypes: {
+        booleanLong: 'booleanLong',
+        contentStatus: 'contentStatus',
+        defaultedString: 'defaultedString',
+        double: 'double',
+        json: 'json',
+        kind: 'kind',
+        long: 'long',
+        nonNegativeLong: 'nonNegativeLong',
+        nullableNonNegativeLong: 'nullableNonNegativeLong',
+        nullableString: 'nullableString',
+        resolvedContent: 'resolvedContent',
+        string: 'string',
+        title: 'title'
+      },
       query: { columns: 'columns', resultKey: 'resultKey', sql: 'sql', syncPayload: 'syncPayload' },
       routing: { routes: 'routes' }
     });
@@ -43,6 +72,8 @@ describe('Android query asset shape keys', () => {
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes")');
+    expect(shapeKeys).toContain('fieldKey(Context context, String key)');
+    expect(shapeKeys).toContain('fieldType(Context context, String key)');
     expect(combinedSource).not.toContain('getString("sql")');
     expect(combinedSource).not.toContain('getJSONArray("columns")');
     expect(combinedSource).not.toContain('getString("source")');

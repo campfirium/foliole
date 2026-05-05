@@ -122,16 +122,16 @@ final class FolioleCompanionExternalDocumentStore {
     private static void putFields(Context context, JSObject target, JSONObject row, JSONArray fields) throws Exception {
         for (int index = 0; index < fields.length(); index += 1) {
             JSONObject field = fields.getJSONObject(index);
-            target.put(field.getString("outputKey"), fieldValue(context, row, field));
+            target.put(field.getString(fieldKey(context, "outputKey")), fieldValue(context, row, field));
         }
     }
 
     private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
-        String type = field.getString("type");
-        String rowKey = field.getString("rowKey");
-        if ("nullableString".equals(type)) return nullableString(row, rowKey);
-        if ("resolvedContent".equals(type)) return resolveContent(context, row);
-        if ("contentStatus".equals(type)) return resolveContentStatus(context, row);
+        String type = field.getString(fieldKey(context, "type"));
+        String rowKey = field.getString(fieldKey(context, "rowKey"));
+        if (fieldType(context, "nullableString").equals(type)) return nullableString(row, rowKey);
+        if (fieldType(context, "resolvedContent").equals(type)) return resolveContent(context, row);
+        if (fieldType(context, "contentStatus").equals(type)) return resolveContentStatus(context, row);
         throw new IllegalStateException("Unsupported external document field type: " + type);
     }
 
@@ -200,4 +200,11 @@ final class FolioleCompanionExternalDocumentStore {
         return objectRule(context, "rowKeys");
     }
 
+    private static String fieldKey(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldKey(context, key);
+    }
+
+    private static String fieldType(Context context, String key) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key);
+    }
 }
