@@ -84,7 +84,13 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:node:node-1',
     object_type: 'view_state',
-    payload_json: JSON.stringify({ node_id: 'node-1', scroll_top: 128, selection_from: 5, selection_to: 13 }),
+    payload_json: JSON.stringify({
+      node_id: 'node-1',
+      scroll_top: 128,
+      selection_from: 5,
+      selection_to: 13,
+      source: 'user-scroll'
+    }),
     updated_at: '2026-04-22T08:13:00.000Z'
   }];
 }
@@ -122,6 +128,6 @@ it('makes Android-applied reading, review, and view state visible to desktop sna
       scroll_top: 128,
       selection_from: 5,
       selection_to: 13,
-      source: 'user-scroll'
+      source: 'sync-apply'
     });
 });

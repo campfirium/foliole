@@ -138,7 +138,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             .put(record(
                 "view_state",
                 "session_resume:android:phone:remote-device:node:article-1",
-                "{\"node_id\":\"article-1\",\"scroll_top\":128,\"selection_from\":5,\"selection_to\":13}"
+                "{\"node_id\":\"article-1\",\"scroll_top\":128,\"selection_from\":5,\"selection_to\":13,\"source\":\"user-scroll\"}"
             ));
 
         FolioleCompanionSyncObjectStore.applySyncObjects(database, records, "remote-device");
@@ -162,7 +162,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         assertEquals(false, payloads.contains("lastReviewAt"));
         assertEquals(false, payloads.contains("activeNodeId"));
         assertEquals(false, payloads.contains("scrollTop"));
-        assertEquals("user-scroll", loadViewStateSource("article-1", "remote-device"));
+        assertEquals("sync-apply", loadViewStateSource("article-1", "remote-device"));
     }
 
     private String loadViewStateSource(String nodeId, String deviceId) {
@@ -192,6 +192,12 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         database.execSQL("CREATE TABLE node_reading_device_state (node_id TEXT NOT NULL, device_id TEXT NOT NULL, " +
             "reading_position INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
         database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        database.execSQL("CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL DEFAULT '', " +
+            "kind TEXT NOT NULL DEFAULT 'text_body', mime_type TEXT, compression TEXT NOT NULL DEFAULT 'none', " +
+            "original_size_bytes INTEGER NOT NULL DEFAULT 0, stored_size_bytes INTEGER NOT NULL DEFAULT 0, " +
+            "original_sha256 TEXT NOT NULL DEFAULT '', stored_sha256 TEXT NOT NULL DEFAULT '', " +
+            "availability TEXT NOT NULL DEFAULT 'missing', source_device_id TEXT, created_at TEXT NOT NULL DEFAULT '', " +
+            "cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE attachments (" +
             "id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL DEFAULT 0, " +

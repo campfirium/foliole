@@ -53,4 +53,23 @@ public class FolioleCompanionSyncContentHashTest {
                 .put("state", 2))
         );
     }
+
+    @Test
+    public void hashesViewStatePayloadsLikeDesktopWithoutSource() throws Exception {
+        JSONObject canonical = new JSONObject()
+            .put("device_id", "android-test")
+            .put("form_factor", "phone")
+            .put("key", "node:node-1")
+            .put("node_id", "node-1")
+            .put("platform", "android")
+            .put("scope", "session_resume")
+            .put("scroll_top", 128)
+            .put("selection_from", JSONObject.NULL)
+            .put("selection_to", JSONObject.NULL);
+
+        assertEquals(
+            "6fb29bb8de16468ec732071d8ed30ca9d673f862b19fca933d01362c9c33ae46",
+            FolioleCompanionSyncContentHash.hash(canonical)
+        );
+    }
 }

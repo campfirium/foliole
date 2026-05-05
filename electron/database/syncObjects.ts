@@ -131,6 +131,7 @@ function readViewStatePayloadJson(objectId: string) {
          'scroll_top', scroll_top,
          'selection_from', selection_from,
          'selection_to', selection_to,
+         'source', source,
          'updated_at', updated_at
        ) AS payload_json
        FROM node_view_state WHERE node_id = ? AND device_id = ?`,

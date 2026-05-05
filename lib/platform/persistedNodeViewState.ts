@@ -41,6 +41,12 @@ export function normalizeNodeViewStateWriteSource(value: unknown): NodeViewState
   return WRITE_SOURCES.has(value as NodeViewStateWriteSource) ? (value as NodeViewStateWriteSource) : 'user-scroll';
 }
 
+export function withoutNodeViewStateHashSource<T extends Record<string, unknown>>(payload: T): Omit<T, 'source'> {
+  const hashPayload = { ...payload };
+  delete hashPayload.source;
+  return hashPayload;
+}
+
 export function createPersistedNodeViewState(input: {
   nodeId: string;
   scrollTop: number;

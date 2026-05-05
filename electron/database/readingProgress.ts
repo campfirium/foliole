@@ -129,7 +129,7 @@ function saveNodeViewStates(
       source,
       input.updatedAt
     ]);
-    writeNodeViewStateSync(connection, { ...state, updatedAt: input.updatedAt });
+    writeNodeViewStateSync(connection, { ...state, source, updatedAt: input.updatedAt });
   }
 }
 

@@ -1,4 +1,8 @@
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import {
+  type NodeViewStateWriteSource,
+  withoutNodeViewStateHashSource
+} from '../../lib/platform/persistedNodeViewState.js';
 
 import type { DatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -17,6 +21,7 @@ export interface NodeViewStateSyncInput {
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;
+  source: NodeViewStateWriteSource;
   updatedAt: string;
 }
 
@@ -35,7 +40,7 @@ function writeViewStateObject(connection: DatabaseConnection, key: string, paylo
     scope: VIEW_STATE_SCOPE,
     ...payload
   };
-  const contentHash = computeSyncContentHash('view_state', syncPayload);
+  const contentHash = computeSyncContentHash('view_state', withoutNodeViewStateHashSource(syncPayload));
   upsertSyncObjectState(connection.driver, {
     objectType: 'view_state',
     objectId,
@@ -66,7 +71,8 @@ export function writeNodeViewStateSync(connection: DatabaseConnection, input: No
       node_id: input.nodeId,
       scroll_top: input.scrollTop,
       selection_from: input.selectionFrom,
-      selection_to: input.selectionTo
+      selection_to: input.selectionTo,
+      source: input.source
     },
     input.updatedAt
   );

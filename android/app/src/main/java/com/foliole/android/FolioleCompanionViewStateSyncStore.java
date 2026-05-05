@@ -44,6 +44,7 @@ final class FolioleCompanionViewStateSyncStore {
         payload.put("scroll_top", Math.max(0, input.optInt("scroll_top", 0)));
         payload.put("selection_from", JSONObject.NULL);
         payload.put("selection_to", JSONObject.NULL);
+        payload.put("source", "user-scroll");
         String now = Instant.now().toString();
         String objectId = objectId(deviceId, "node:" + nodeId);
         String contentHash = contentHash(deviceId, "node:" + nodeId, payload);
@@ -72,7 +73,8 @@ final class FolioleCompanionViewStateSyncStore {
         if (key.equals("active_node")) {
             upsertActiveNode(database, nullIfEmpty(payload.optString("active_node_id", "")), record.optString("updated_at"));
         } else if (key.startsWith("node:")) {
-            upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), "user-scroll", record.optString("updated_at"));
+            String source = payload.has("source") ? "sync-apply" : "user-scroll";
+            upsertNodeViewState(database, key.substring(5), deviceId, payload.optInt("scroll_top", 0), source, record.optString("updated_at"));
         }
     }
 
@@ -96,6 +98,7 @@ final class FolioleCompanionViewStateSyncStore {
             payload.put("scroll_top", cursor.getInt(cursor.getColumnIndexOrThrow("scroll_top")));
             payload.put("selection_from", JSONObject.NULL);
             payload.put("selection_to", JSONObject.NULL);
+            payload.put("source", cursor.getString(cursor.getColumnIndexOrThrow("source")));
         }
     }
 
@@ -152,6 +155,7 @@ final class FolioleCompanionViewStateSyncStore {
         Iterator<String> payloadKeys = payload.keys();
         while (payloadKeys.hasNext()) {
             String payloadKey = payloadKeys.next();
+            if (payloadKey.equals("source")) continue;
             canonical.put(payloadKey, payload.get(payloadKey));
         }
         return FolioleCompanionSyncContentHash.hash(canonical);

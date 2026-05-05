@@ -1,6 +1,7 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
+import { applyViewState } from './syncObjectApplyViewState.js';
 import { asObject, integer, numberOrNull, text, type JsonObject } from './syncObjectPayloadValues.js';
 
 function applySetting(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
@@ -208,39 +209,6 @@ function applyAttachment(driver: DatabaseDriver, record: NativeSyncObjectRecord)
       text(blob.mime_type), text(blob.availability) ?? 'missing', text(blob.source_device_id),
       text(blob.created_at) ?? record.updated_at, text(blob.cached_at), text(blob.last_verified_at)]
   );
-}
-
-function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
-  const payload = asObject(record);
-  const objectIdParts = record.object_id.split(':');
-  const deviceId = text(payload.device_id) ?? objectIdParts[3] ?? '*';
-  const key = objectIdParts.slice(4).join(':');
-  if (record.deleted_at) {
-    if (key === 'active_node') driver.execute("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
-    if (key.startsWith('node:')) {
-      driver.execute('DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?', [key.slice(5), deviceId]);
-    }
-    return;
-  }
-  if (key === 'active_node') {
-    driver.execute(
-      `INSERT INTO workspace_meta (key, value, updated_at) VALUES ('active_node_id', ?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-      [text(payload.active_node_id) ?? '', record.updated_at]
-    );
-    return;
-  }
-  if (key.startsWith('node:')) {
-    driver.execute(
-      `INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(node_id, device_id) DO UPDATE SET scroll_top = excluded.scroll_top,
-         selection_from = excluded.selection_from, selection_to = excluded.selection_to, updated_at = excluded.updated_at`,
-      [key.slice(5), deviceId, integer(payload.scroll_top),
-        numberOrNull(payload.selection_from), numberOrNull(payload.selection_to),
-        record.updated_at]
-    );
-  }
 }
 
 export function applySyncObjectPayload(driver: DatabaseDriver, record: NativeSyncObjectRecord) {

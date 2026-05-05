@@ -19,7 +19,9 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { writeImportSource } from '../../lib/core/database/importPipelineRecords.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
+import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { loadSyncObjects, loadSyncStateObjectsSince } from './syncObjects.js';
@@ -132,6 +134,23 @@ function insertAttachmentRecord() {
   );
 }
 
+function insertViewStateRecord() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO node_view_state (
+       node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ['node-1', 'desktop-test', 128, null, null, 'close-flush', '2026-04-21T16:20:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
+    ['view_state', 'session_resume:windows:desktop:desktop-test:node:node-1',
+      'hash-view-state', 'desktop-test', '2026-04-21T16:20:00.000Z', 1]
+  );
+}
+
 it('loads generic sync object payloads from object state rows', () => {
   insertSettingRecord();
 
@@ -200,6 +219,33 @@ it('excludes pack-owned documents from JSON sync object streams', () => {
   expect(loadSyncObjects(['doc-1'], ['external_document'])).toEqual([]);
   expect(loadSyncObjects(['doc-1'])).toEqual([]);
   expect(loadSyncStateObjectsSince(0)).toEqual([]);
+});
+
+it('exports view state source but excludes it from canonical content hash', () => {
+  insertViewStateRecord();
+
+  const [record] = loadSyncObjects(['session_resume:windows:desktop:desktop-test:node:node-1'], ['view_state']);
+  const payload = JSON.parse(record.payload_json ?? '{}') as Record<string, unknown>;
+
+  expect(payload).toMatchObject({
+    node_id: 'node-1',
+    scroll_top: 128,
+    selection_from: null,
+    selection_to: null,
+    source: 'close-flush'
+  });
+  expect(computeSyncContentHash('view_state', withoutNodeViewStateHashSource({
+    device_id: 'android-test',
+    form_factor: 'phone',
+    key: 'node:node-1',
+    node_id: 'node-1',
+    platform: 'android',
+    scope: 'session_resume',
+    scroll_top: 128,
+    selection_from: null,
+    selection_to: null,
+    source: 'user-scroll'
+  }))).toBe('6fb29bb8de16468ec732071d8ed30ca9d673f862b19fca933d01362c9c33ae46');
 });
 
 it('records import sources as sync objects when written', () => {
