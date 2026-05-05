@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/companion/**/*.ts",
+    "src/companion/**/*.tsx",
+    "src/shared/platform/**/*.ts",
+    "src/shared/platform/**/*.tsx",
+    "src/shared/ui/**/*.ts",
+    "src/shared/ui/**/*.tsx",
+    "src/shared/lib/**/*.ts",
+    "src/shared/lib/**/*.tsx",
+    "src/shared/commands/**/*.ts",
+    "src/shared/commands/**/*.tsx",
+    "src/shared/config/**/*.ts",
+    "src/shared/config/**/*.tsx",
+    "vite.companion.config.ts",
+    "capacitor.config.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.testUtils.ts",
+    "**/*.testUtils.tsx",
+    "src/shared/testing/**",
+    "src/test/**"
+  ]
+}

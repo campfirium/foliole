@@ -1,0 +1,47 @@
+# AGENTS
+
+## Scope
+
+- 本文件适用于：`android/**`、`scripts/android/**`、`capacitor.config.ts`、Android 宿主同步、模拟器、部署、日志与 Capacitor Android 集成任务。
+- 进入上述范围工作时，除根 `AGENTS.md` 外，必须同时遵守本文件。
+
+## Android Host Rules
+
+- Android 是正式宿主，不是临时试验目录；相关规则必须按宿主标准执行。
+- Android 宿主优先通过 `Capacitor` 承载 companion Web 产物；禁止把共享业务逻辑直接写进 `android/**`。
+- `android/` 只承载原生宿主工程、Gradle、Manifest、资源、平台权限与平台插件集成。
+- Android 宿主只消费 `dist/companion` 构建产物；禁止把 Android 原生目录当作第二套业务前端目录。
+- 若某能力既影响 Android 又可能影响未来 iPhone，优先先落到共享 bridge / contract 或 `src/companion/**`，再由 Android 宿主接入。
+- Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
+
+## Read Before Editing
+
+- 任务涉及 Capacitor 宿主、目录规划或 companion 接缝时，先读 `.lab/specs/architecture/multi-target-repo-layout-expectation.md`。
+- 任务涉及 Android companion 目标范围与裁剪边界时，先读 `.lab/specs/shared/platform/android-companion-expectation.md`。
+- 任务涉及 Android 开发环境与宿主职责时，按需读取 `.lab/specs/shared/platform/android-dev-environment-expectation.md`。
+
+## Implementation Rules
+
+- 不得把 React 业务状态、review 语义、同步语义或数据模型复制到 `android/**`；共享逻辑应继续留在 TypeScript 共享层。
+- 新增 Android 能力时，先判断是否应通过 Capacitor 插件 / bridge 暴露；禁止直接让 feature 层感知 Android API。
+- `capacitor.config.ts` 的 `webDir` 必须继续指向 `dist/companion`；若需要调整，必须连同 companion 构建与宿主同步链路一起说明。
+- Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
+- 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
+
+## Validation
+
+- Android / Capacitor 相关改动默认先执行 `npm run quality:android`；该入口应覆盖 Android renderer 侧检查、Windows mirror `Capacitor sync`、Android Gradle `lint` 与 Android Gradle unit test。只有当改动触及共享层、依赖或跨宿主边界时，才升级为 `npm run quality:shared` 或 `npm run quality:full`。
+- 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须升级执行 `npm run quality:android:device`。
+- 只要改动触及 `android/**`、`scripts/android/**`、`capacitor.config.ts`、Capacitor bridge 或 Android 运行链路，对话协作模式下汇报前必须执行 `npm run android:preview`。
+- 执行 `npm run android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因。
+- Android 宿主公开入口默认使用以下 npm 命令，不直接口头推荐裸命令：
+- `npm run quality:android`
+- `npm run quality:android:device`
+- `npm run android:sync`
+- `npm run android:host:lint`
+- `npm run android:host:test`
+- `npm run android:host:device-test`
+- `npm run android:open`
+- `npm run android:emulator`
+- `npm run android:logcat`
+- `npm run android:preview`

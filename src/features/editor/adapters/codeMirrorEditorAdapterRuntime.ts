@@ -1,14 +1,16 @@
 import { type Compartment } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
+
 import type {
   CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
-import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
+
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
   diffDecorationsCompartment: Compartment;

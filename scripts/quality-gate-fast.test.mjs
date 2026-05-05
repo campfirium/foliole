@@ -336,18 +336,26 @@ describe('quality-gate-fast.sh', () => {
         lint: 'node -e "console.log(\'full lint ok\')"',
         typecheck: 'node -e "console.log(\'full typecheck ok\')"',
         test: 'node -e "console.log(\'full test ok\')"',
-        build: 'node -e "console.log(\'full build ok\')"'
+        build: 'node -e "console.log(\'full build ok\')"',
+        'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
+        'android:sync': 'node -e "console.log(\'full android sync ok\')"',
+        'android:host:lint': 'node -e "console.log(\'full android host lint ok\')"',
+        'android:host:test': 'node -e "console.log(\'full android host test ok\')"'
       });
 
       const result = await runQualityGate(tempRoot, {}, ['--full']);
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] forcing full quality gate');
-      expect(result.stdout).toContain('[quality-gate] all checks passed.');
+      expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
       expect(result.stdout).toContain('full lint ok');
       expect(result.stdout).toContain('full typecheck ok');
       expect(result.stdout).toContain('full test ok');
       expect(result.stdout).toContain('full build ok');
+      expect(result.stdout).toContain('full electron compile ok');
+      expect(result.stdout).toContain('full android sync ok');
+      expect(result.stdout).toContain('full android host lint ok');
+      expect(result.stdout).toContain('full android host test ok');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

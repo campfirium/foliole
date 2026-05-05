@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/shared/**/*.ts",
+    "src/shared/**/*.tsx",
+    "src/features/**/*.ts",
+    "src/features/**/*.tsx",
+    "src/store/**/*.ts",
+    "src/store/**/*.tsx",
+    "vite.config.ts",
+    "vite.companion.config.ts",
+    "playwright.desktop.config.ts",
+    "capacitor.config.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.testUtils.ts",
+    "**/*.testUtils.tsx",
+    "src/shared/testing/**",
+    "src/test/**"
+  ]
+}

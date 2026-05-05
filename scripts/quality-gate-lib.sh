@@ -134,7 +134,7 @@ resolve_quality_gate_limit() {
   local metric="$2"
   local normalized env_name fallback
 
-  normalized="$(printf '%s' "${script_name}" | tr '[:lower:]-' '[:upper:]_')"
+  normalized="$(printf '%s' "${script_name}" | tr '[:lower:]-:' '[:upper:]__')"
   case "${metric}" in
     timeout_seconds)
       env_name="QUALITY_GATE_${normalized}_TIMEOUT_SECONDS"

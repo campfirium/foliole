@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import react from '@vitejs/plugin-react';
-import { defineConfig, type Plugin, type UserConfigExport } from 'vite';
+import { defineConfig, type Plugin, type UserConfig } from 'vite';
 
 const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp';
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
@@ -111,7 +111,7 @@ function workspaceChangeTimestampPlugin(projectRoot: string): Plugin {
   };
 }
 
-export function createSharedViteConfig(projectRoot: string): UserConfigExport {
+export function createSharedViteConfig(projectRoot: string): UserConfig {
   return defineConfig({
     base: './',
     plugins: [react(), workspaceChangeTimestampPlugin(projectRoot)],

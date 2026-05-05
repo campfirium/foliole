@@ -2,24 +2,44 @@
 
 - 若规则与用户当次最新指令冲突，以用户最新指令为准；若与当前代码现状冲突，以可运行代码现状为准。
 
-## 项目基线
-- 技术栈：Electron + React + TypeScript + Vite。
+## Project Baseline
+
+- 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`。
+- 当前已存在的主要宿主与表面为：`electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
 - 默认按 Track-Based 迭代推进，以“当前主目标 + 最小可验收任务”为单位，不再以阶段号驱动执行。
 - 默认在 `dev` 主干连续小步迭代；不创建 feature branch / worktree，除非用户明确要求。
 - 单次只做一个 30-90 分钟内可运行、可验证、可回退的最小任务；禁止混入无关重构。
-- 拆分和排序任务时必须遵循 BDD + UI 先行顺序：先 UI 壳 → 再 IPC → 最后数据层。每层只做上层要求的事，禁止先做后端再补前端；当能力尚未接通但需先露出入口时，必须按统一“开发中”规则表达，不得只用灰态冒充不可用。详见 `.lab/specs/_product/methodology.md`。
+- 当前主工作台仍是 desktop / Electron，但移动端已进入正式规则范围；禁止再按“桌面唯一宿主”编写新规则。
+- 共享目标是“共享核心 + 薄宿主适配”，不是为每个平台复制一套业务逻辑。
+- 拆分和排序任务时必须遵循 BDD + UI 先行顺序：先 UI 壳 → 再 bridge / IPC → 最后数据层。每层只做上层要求的事，禁止先做后端再补前端。
 - 所有正式图标入口、正式菜单入口默认都必须有对应命令；设计与实现时必须从“图标 / 菜单 / 命令同源且命名一致”出发，禁止先做孤立入口、后补命令。详见 `.lab/specs/_product/methodology.md`。
 
-## 文档读取顺序
+## AGENTS Routing
+
+- 启动时先读根 `AGENTS.md`。
+- 根 `AGENTS.md` 负责全仓硬规则与路由；平台与局部细则下沉到对应目录的 `AGENTS.md`。
+- 只要任务触及下列路径，实施前必须按路由补读对应规则来源，并在该规则基础上执行：
+- `electron/**`、`scripts/windows/**`、`playwright.desktop.config.ts`、`D:\X\U\Foliole\Data\foliole.db` 相关诊断或桌面运行链路：读取 `electron/AGENTS.md`
+- `android/**`、`scripts/android/**`、`capacitor.config.ts`：读取 `android/AGENTS.md`
+- `src/companion/**`：读取 `src/companion/AGENTS.md`
+- `ios/**`：读取 `ios/AGENTS.md`
+- `src/app/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 desktop renderer 规则
+- `src/features/**`、`src/store/**`、`src/shared/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 shared / cross-host 规则
+- 若一次任务同时跨多个宿主或表面，必须把相关局部 `AGENTS.md` 全部读齐；冲突时按“更靠近改动目录的规则优先，跨目录共享规则回退到根规则”执行。
+- 不得把关键平台约束只写在 spec 里却不写进对应目录 `AGENTS.md`。
+
+## Document Read Order
+
 - 启动时只读 `AGENTS.md`。
 - 仅当用户在新会话首条有效指令明确说“继续”时，先读取 `.lab/atlas/todo.md`；必要时按需补读 `.lab/atlas/verify.md`、`.lab/atlas/optional.md`、`.lab/atlas/notes.md`、`.lab/atlas/done.md` 与 `git log --oneline -n 5`。
-- 任务涉及 renderer UI 改动（`src/app/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
+- 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
-- 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
-- 任务涉及台账、继续/停车协议等执行细则时，读取 `.lab/atlas/task-protocol.md`。
+- 任务涉及新增或重写 agent 规则、目录式 `AGENTS.md`、规则路由或治理结构时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
+- 任务涉及台账、继续 / 停车协议等执行细则时，读取 `.lab/atlas/task-protocol.md`。
 - 仅在判断验证或停车策略时读取 `.lab/internal/runtime/windows-preview.flag` 与 `.lab/internal/runtime/park.flag`。
 
-## 任务执行主规则
+## Task Execution
+
 1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/atlas/todo.md` 首项。
 2. 若用户未给清晰任务范围，先补齐任务说明，再实施；禁止凭短标题脑补。
 3. 任务说明至少应覆盖：当前问题或背景、预期目标、影响范围、明确边界、已知约束或依赖。
@@ -29,58 +49,72 @@
 7. 若根因未确认，允许写“现象 + 当前怀疑 + 待确认点”；禁止把猜测写成事实。
 8. 若本轮入口是“继续”，在选择任务前必须先做台账对账：逐条比对 `todo` 首项、`done` 最近记录与 `git log --oneline -n 5`，必要时再核对 `verify` / `optional`，确认该任务是否其实已完成但未同步。
 9. 若 `todo`、`verify`、`optional`、`done` 与最近提交不一致，先更新台账或向用户明确差异，再实施代码任务；禁止跳过对账直接认领下一条。
-10. `verify` 仅表示“已实现但仍待复核/待人工确认”的备注区，不是默认任务来源；除非用户明确要求补做其中缺口，否则不得把它当作新的实施任务直接开工。
+10. `verify` 仅表示“已实现但仍待复核 / 待人工确认”的备注区，不是默认任务来源；除非用户明确要求补做其中缺口，否则不得把它当作新的实施任务直接开工。
 11. 只改当前任务相关文件；发现结构性阻塞时，先写回 TODO，再决定是否提升优先级。
 12. `.lab/atlas/todo.md`、`.lab/atlas/verify.md`、`.lab/atlas/optional.md` 共同构成未完成工作的真实来源，其中默认接手入口只有 `todo`；`.lab/atlas/notes.md` 只承载长期备注，`.lab/atlas/done.md` 只记录已完成项；但当“继续”恢复发现台账滞后于代码与提交时，必须先修正台账真相。
 
-## 架构与排障思维
+## Architecture And Troubleshooting
+
 - 实体先于表象：禁止从表现层或派生现象反推系统真相；若缺少核心状态的独立表达，先补实体，再写逻辑。
 - 抽象先于补丁：一旦问题开始依赖局部修补才能成立，默认视为抽象缺失；必须先回到模型与边界，禁止在症状层反复加补丁。
 - 生产与消费分离：状态应在其自然生命周期内被维护；任何切换、恢复、同步、进入或退出动作都只能消费状态，不得临时生成状态。
 - 动手前先自问：我依赖的是系统中的真实对象，还是由其他现象推出来的影子；如果是后者，先停下，回到源头。
+- 共享业务规则、数据语义、review 语义与同步语义优先收敛在共享层；宿主目录只保留 runtime glue、生命周期与平台集成。
+- 禁止把平台分支判断散落到 `src/features/**`、`src/store/**` 或编辑器业务逻辑中；平台差异优先放到 `src/shared/platform/**` 或对应宿主目录。
+- 若新增平台能力，先补 stable bridge / contract，再接宿主实现；禁止先把宿主 API 直接漏进业务层。
 
-## 质量闸与测试
+## Quality Gates And Validation
+
 - 不允许通过降低检查标准过关；禁止跳过关键检查、删除校验或用注释掩盖失败。
-- 默认先执行与本次改动直接相关的最小验证，顺序仍遵循 `lint` -> `typecheck` -> `test`；只有当任务影响范围较大、改动触及跨层共享边界、用户明确要求，或相关验证不足以证明结果可靠时，才升级为整仓质量闸 `scripts/quality-gate-fast.sh`。
+- 包管理器必须按锁文件检测；当前仓库以 `npm` 为准。
+- 默认先执行与本次改动直接相关的最小验证，优先使用按宿主拆分后的质量入口，而不是默认整仓全跑。
+- 质量入口默认按影响面选择：
+- `npm run quality:desktop`
+- 适用于 `electron/**`、`scripts/windows/**`、`src/app/**`、桌面 bridge、桌面 sqlite、桌面 runtime
+- `npm run quality:android`
+- 适用于 `android/**`、`scripts/android/**`、`src/companion/**`、`capacitor.config.ts`、移动 bridge、Capacitor 宿主链路
+- Android gate 默认同时覆盖 Android host `lint` / unit test、`scripts/quality-gate-*.test.mjs` 回归，以及 companion 当前依赖到的共享 `src/shared/ui`、`src/shared/lib`、`src/shared/commands`、`src/shared/config`
+- `npm run quality:android:device`
+- 适用于 Android 权限、生命周期、插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备侧暴露的场景
+- `npm run quality:shared`
+- 适用于 `src/shared/**`、`src/features/**`、`src/store/**`、共享 contract、共享构建链、跨宿主脚本调整
+- shared gate 默认使用 `lint:shared`、`typecheck:shared`、`test:shared`，而不是回退到整仓 `lint` / `typecheck` / `test`
+- `npm run quality:full`
+- 适用于交付前闸门、用户明确要求全量验证、依赖 / 构建根链路改动，或你无法证明改动只影响单一宿主
+- `npm run quality:fast`
+- 保留为通用快速入口，但多平台任务的默认汇报口径应改为上面的显式宿主 / 共享质量入口
 - 若只做相关最小验证，必须优先选择与改动文件、改动链路、复现场景直接对应的检查命令；汇报时要明确说明“已执行的相关检查”与“未执行的整仓检查”。
-- 只要在执行 `lint`、`quality:fast` 或其他质量闸时发现仓库内已存在的 lint 红灯，当前任务即刻转为清除这些红灯；禁止再用“本来就有”作为搁置理由。除非用户明确豁免或存在外部阻塞，否则必须在当次处理并重新验证到 `lint` 通过。
-- 验证方式按任务模式区分：
-  - 对话协作模式：只要本轮是用户与 AI 的交互式改动任务，并且本轮实际修改了任何仓库文件，则在相关验证通过后、向用户汇报前，必须追加执行一次预览；不得把预览推迟到“对话结束时统一执行”，也不得只在多轮中的最后一轮才跑。默认入口为 `npm run verify:preview`（直接预览，不再追加前置检查），若只需单独刷新 Windows 客户端，也可执行 `npm run windows:preview`。
-  - 自动任务模式：若本轮由脚本、agent loop、无人值守命令或纯 CLI 批处理驱动，则默认不追加预览，只执行任务所需的最小验证；除非用户在当次明确要求，才额外执行预览。
-- 上述“对话协作模式默认跑预览”优先于“普通 renderer 局部改动可不跑 Windows 预览”的一般规则；也就是说，在交互式改动任务里，只要用户需要看效果，就算是 renderer 局部改动，验证通过后也要补跑预览。
-- 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
-- npm 依赖相关复核默认由 AI 直接执行并汇报结果；禁止把“人工检查依赖风险”“人工定期复核”这类空泛表述挂成默认待办。
-- npm 依赖收紧的背景、例外与专项结论统一收口在 `.lab/atlas/npm-supply-chain-hardening-plan.md`；主规则只保留可执行入口，不在这里重复展开长篇原则。
-- 当 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 时，只有本次任务实际影响 Windows / Electron 运行链路、桌面壳行为、bridge/runtime 同步链路，或用户明确要求桌面验收时，才在相关验证通过后继续执行 `npm run windows:preview`；普通 renderer 局部改动默认不追加 Windows 预览，除非本轮现象本身只会在桌面运行时暴露。
-- 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
-- Windows 公开验证入口只保留 `npm run windows:preview`；其余 Windows npm 命令不再作为默认或推荐入口。
-- `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。
-- `build` 仅在用户明确要求完整交付时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
-- 包管理器必须按锁文件检测，禁止硬编码。
+- 只要在执行 `lint`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:fast` 或其他质量闸时发现仓库内已存在的 lint 红灯，当前任务即刻转为清除这些红灯；禁止再用“本来就有”作为搁置理由。除非用户明确豁免或存在外部阻塞，否则必须在当次处理并重新验证到 `lint` 通过。
 - 可复现 Bug 修复前，优先先补复现测试，再修复并验证测试通过；若暂时无法自动化复现，必须先说明原因，并补充可执行的人工验证步骤。
 - 任意可复现 Bug 修复必须新增至少 1 条自动化回归测试；没有回归测试不算完成。
-- 重构、模块迁移、preload/bridge 改动视为高回归风险，提交前必须补齐或更新关键回归测试。
-- 完成后汇报必须包含实际验证结果；若仍存在边界风险或未覆盖场景，需同时列出潜在问题与建议测试用例。
+- 重构、模块迁移、preload / bridge 改动、Capacitor bridge 改动与宿主生命周期改动视为高回归风险，提交前必须补齐或更新关键回归测试。
+- 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
+- 对话协作模式下，只要本轮实际修改了任何仓库文件，则在相关验证通过后、向用户汇报前，必须追加执行至少一个与受影响宿主匹配的预览。
+- 预览选择规则如下：
+- 影响 Electron / Windows / preload / IPC / sqlite / desktop runtime：执行 `npm run windows:preview`
+- 影响 `src/companion/**`、`android/**`、`capacitor.config.ts`、移动 bridge 或移动运行链路：执行 `npm run android:preview`
+- 同时影响桌面与移动共享链路时，必须分别执行 `npm run windows:preview` 与 `npm run android:preview`，除非用户明确豁免其中一侧
+- 自动任务模式默认不追加预览，只执行任务所需的最小验证；除非用户在当次明确要求，才额外执行预览。
+- 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
+- 执行 `android:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `OPENED` / `FAILED` 与失败阶段或失败原因；不得只汇报“已验证”。
+- `build` 仅在用户明确要求完整交付时执行；对应入口为 `scripts/quality-gate.sh` 或交付脚本。
 
-## 决策升级与官方来源
+## Decision Escalation And Official Sources
+
 - 技术比选、中风险及以上改动、以及“声称修复但人工验收仍失败”的问题，实施前必须核对官方文档与最佳实践。
 - 这类回复必须包含：`已核对来源`、`根因判断`、`修复策略`。
 - 涉及 Electron preload、`contextBridge`、`ipcRenderer`、`window.electronAPI` 的改动，必须先核对 Electron 官方 `sandbox` / `contextIsolation` 边界。
+- 涉及 Capacitor bridge、插件、`@capacitor/core`、Android / iOS 宿主生命周期或原生权限的改动，必须先核对 Capacitor 官方平台边界与对应平台官方文档。
 - preload 改动必须带一条“sandbox 受限 require 环境下 bridge 仍可暴露”的自动化回归测试。
+- Capacitor bridge 改动必须带一条“Web 层经 bridge 调用仍可在宿主侧落地”的自动化回归测试；若暂时无法自动化到原生层，至少补充到 contract / payload 层并给出人工验证步骤。
 
-## Desktop / Platform 规则
-- 本项目默认按桌面应用优先，不按纯 Web 方案优先。
-- 默认客户端视角就是 Windows 客户端；未特别说明时，运行态、预览验收、数据库核对与人工补数据都以 Windows 客户端为准，不以 WSL 内临时路径或其他本机副本为准。
-- 默认主数据库固定视为 `D:\X\U\Foliole\Data\foliole.db`；在 WSL 内对应路径为 `/mnt/d/X/U/Foliole/Data/foliole.db`。未获用户明确批准前，不得自行改查其他数据库路径。
-- 系统能力优先经 Electron main process 暴露，再由前端通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
-- 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
-- 持久化主路径统一走 Electron main process；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。
-- Windows 预览是否默认执行，只看 `.lab/internal/runtime/windows-preview.flag`。
-- Electron Playwright、桌面自动化回归、性能诊断与时序采样默认一律走 Windows 侧现成脚本链路：`scripts/windows/windows-desktop-test.sh`、`scripts/windows/run-playwright-desktop.ps1` 与 `playwright.desktop.config.ts`；除非用户当次明确要求排查 WSL 本地运行时，否则不得把 WSL 内直接拉起的 Electron 当成默认诊断或验收入口。
-- 桌面窗口已可见但 bridge-backed controls 失效时，默认优先排查 preload/bridge 链路，不得先草率归因为 renderer 未启动。
+## Structure And Code Constraints
 
-## 结构与代码约束
-- 目录基线：`src/app`、`src/features`、`src/shared`、`src/store`、`electron`。
+- 目录基线：`src/app`、`src/companion`、`src/features`、`src/shared`、`src/store`、`electron`、`android`；`ios` 在接入时沿用同级宿主目录。
+- `src/app` 只承载 desktop renderer shell；`src/companion` 只承载 companion renderer shell；禁止重新混回单入口。
+- `src/features`、`src/store`、`src/shared` 默认按跨宿主共享层治理；若未来需要更细目录规则，应在对应目录新增局部 `AGENTS.md`，而不是继续把路径归属留空。
+- `electron/` 只承载 Electron main、preload、IPC、桌面 runtime glue。
+- `android/`、未来 `ios/` 只承载原生宿主工程与平台资源；禁止把共享业务逻辑塞进原生目录。
 - 单文件目标 <= 220 行，硬上限 > 260 行必须拆分。
 - 单函数目标 <= 40 行，硬上限 > 60 行必须拆分或提取子函数。
 - 遇到 `max-lines`、`max-lines-per-function` 等规模约束时，禁止通过压缩格式、合并多条语句到单行、删除必要留白等方式规避；必须通过拆函数、拆组件或拆文件解决。
@@ -90,18 +124,20 @@
 - 全局设置不得进入 `WorkspaceLayoutProps` 或 workspace 中间层 props 链；新增全局设置默认走统一 settings provider，由设置页和实际消费位置直接读取。
 - 编辑器能力通过 `EditorAdapter` 暴露；状态与存储在领域层统一管理。
 
-## 数据与兼容策略
-- 未发布阶段若需要一次性迁移旧数据，默认使用仓库外人工操作或一次性脚本处理，不把这类迁移长期写进应用启动/runtime 代码；除非用户当次明确要求保留应用内迁移。
-- 语法升级只保证新写入/新编辑路径符合当前规范，不做历史语法迁移。
+## Data And Compatibility
+
+- 未发布阶段若需要一次性迁移旧数据，默认使用仓库外人工操作或一次性脚本处理，不把这类迁移长期写进应用启动 / runtime 代码；除非用户当次明确要求保留应用内迁移。
+- 语法升级只保证新写入 / 新编辑路径符合当前规范，不做历史语法迁移。
 - 数据格式切换不进入产品代码；转换由人工离线一次性完成，禁止长期双写、双读、运行时迁移与自动探测回退。
 - 所有关键数据变更优先可恢复，避免不可逆破坏。
 - 默认将用户可感知、会影响后续行为的状态视为永久态；禁止先按“临时态”假设实现，再靠后续补持久化。
-- 仅纯 UI 过程量允许不落持久化，例如弹窗开关、hover/focus、一次性展示态、当前会话游标、编辑器瞬时滚动与选区；除此之外默认都必须持久化。
-- 凡是会影响重启后结果、后续队列构建、节点图标、过滤条件、调度结果、统计口径或“该节点以后会怎样”的字段，一律按永久态处理，必须同时完成 renderer 写路径、Electron runtime sync 与 sqlite hydrate 闭环。
+- 仅纯 UI 过程量允许不落持久化，例如弹窗开关、hover / focus、一次性展示态、当前会话游标、编辑器瞬时滚动与选区；除此之外默认都必须持久化。
+- 凡是会影响重启后结果、后续队列构建、节点图标、过滤条件、调度结果、统计口径或“该节点以后会怎样”的字段，一律按永久态处理，必须同时完成 renderer 写路径、bridge / runtime sync 与存储 hydrate 闭环。
 - 页面内即时表现正确但重启后丢失的实现，视为未完成，不得汇报为“已修复”。
 - 新增或修改状态字段时，任务说明与实现前必须先声明该字段属于“纯 UI 过程量”还是“永久态”；若未明确证明为前者，默认按永久态处理。
 
-## 语言、文档与提交
+## Language, Docs, And Commits
+
 - 代码、注释、提交信息、UI 文案、配置键名统一使用英文；对外沟通与执行汇报默认中文。
 - `.lab/specs/**` 文件名使用英文 slug，正文默认中文；其他落库文档默认中文，除非用户明确要求英文。
 - 新增 spec 默认采用“主题分组 + 组内小文件”，避免继续新增超长单文档。
@@ -112,9 +148,12 @@
 - `.lab/**` 全部视为本地工作文档，默认全忽略、不提交；仅当用户在当次会话中明确要求时，才单独调整。
 - 用户要求“提交”“commit”“执行提交指令”时，必须使用 `commit-note` skill。
 
-## 细则入口
+## Detail Pointers
+
 - 开发方法论（BDD、UI 先行、任务拆分顺序）：`.lab/specs/_product/methodology.md`
 - agent 台账与执行协议：`.lab/atlas/task-protocol.md`
 - 文档治理与准入规则：`.lab/specs/_governance/doc-update-expectation.md`、`.lab/specs/_governance/spec-organization.md`、`.lab/specs/_governance/doc-organization-expectation.md`
-- UI 规范：`DESIGN.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/desktop/workspace/shell-layout.md`
-- Windows Native 开发与启动排障：`.lab/specs/desktop/electron/windows-dev-loop.md`
+- 共享 UI 规范：`DESIGN.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/shared/ui/llm-ui-rules.md`
+- Desktop workspace 规则：`.lab/specs/desktop/workspace/shell-layout.md`
+- Windows / Electron 开发与启动排障：`.lab/specs/desktop/electron/windows-dev-loop.md`
+- 多 target 仓库与 companion 方向：`.lab/specs/_governance/multi-target-repository-expectation.md`、`.lab/specs/architecture/multi-target-repo-layout-expectation.md`
