@@ -178,7 +178,7 @@ it('extracts the original file link from the readwise full document body and ope
   expect(openExternal).toHaveBeenCalledWith('https://readwise.io/reader/document_raw_content/287639057');
 });
 
-it('imports the selected EPUB into a real book structure and keeps that node on reload', async () => {
+it('imports the selected EPUB into the current readwise book node and keeps that node on reload', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
   const selectedEpubPath = await createBookEpub('selected-book.epub');
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
@@ -216,8 +216,8 @@ it('imports the selected EPUB into a real book structure and keeps that node on 
     epubStatus: 'received',
     importStatus: 'completed'
   });
-  expect(reloadedBook?.generatedNodeId).toBeTruthy();
-  expect(reloadedBook?.generatedNodeId).not.toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
+  expect(reloadedBook?.generatedNodeId).toBe(nodeId);
+  expect(reloadedBook?.generatedNodeId).toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
 
   const snapshot = loadWorkspaceSnapshot();
   const importedNode = reloadedBook?.generatedNodeId ? snapshot?.nodesById[reloadedBook.generatedNodeId] : null;

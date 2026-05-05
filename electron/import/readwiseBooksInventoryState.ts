@@ -1,3 +1,4 @@
+import { openDatabaseConnection } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
@@ -89,6 +90,15 @@ function resolveGeneratedNodeId(book: ReadwiseBookInventoryItem, persistedBook?:
     : book.generatedNodeId;
 }
 
+function hasActiveNode(nodeId: string) {
+  const connection = openDatabaseConnection();
+  const row = connection.driver.queryOne<{ id: string }>(
+    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL',
+    [nodeId]
+  );
+  return Boolean(row?.id);
+}
+
 export function loadPersistedReadwiseBooksInventory(paths: InventoryPaths) {
   const state = normalizeState(loadJsonSetting(READWISE_BOOKS_INVENTORY_STATE_KEY));
   return state.inventories[createInventoryKey(paths)] ?? null;
@@ -128,7 +138,7 @@ export function mergePersistedReadwiseBooksInventory(input: {
           generatedNodeId,
           importStatus:
             book.importStatus === 'completed' || persistedBook?.importStatus === 'completed' ? 'completed' : 'pending',
-          nodeStatus: generatedNodeId ? 'generated' : 'missing'
+          nodeStatus: generatedNodeId && hasActiveNode(generatedNodeId) ? 'generated' : 'missing'
         } satisfies ReadwiseBookInventoryItem
       ] as const;
     })

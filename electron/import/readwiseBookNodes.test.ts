@@ -193,3 +193,36 @@ it('moves legacy root-level readwise book placeholders into inbox', async () => 
     .get(legacyNodeId) as { parent_id: string | null } | undefined;
   expect(nodeRow?.parent_id).toBe('special-inbox');
 });
+
+it('keeps the book in inventory but does not recreate the node after deletion', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  const placeholderNodeId = buildReadwiseBookPlaceholderNodeId('annotated book');
+
+  const firstInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  expect(firstInventory.books.find((book) => book.bookKey === 'annotated book')?.generatedNodeId).toBe(placeholderNodeId);
+
+  openDatabaseConnection().sqlite
+    .prepare('UPDATE nodes SET deleted_at = ?, updated_at = ? WHERE id = ?')
+    .run('2026-04-04T00:00:00.000Z', '2026-04-04T00:00:00.000Z', placeholderNodeId);
+
+  const recoveredInventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const recoveredBook = recoveredInventory.books.find((book) => book.bookKey === 'annotated book');
+  expect(recoveredBook?.generatedNodeId).toBe(placeholderNodeId);
+  expect(recoveredBook?.nodeStatus).toBe('missing');
+
+  const recoveredNode = openDatabaseConnection().sqlite
+    .prepare('SELECT deleted_at, parent_id FROM nodes WHERE id = ?')
+    .get(placeholderNodeId) as { deleted_at: string | null; parent_id: string | null } | undefined;
+  expect(recoveredNode).toEqual({
+    deleted_at: '2026-04-04T00:00:00.000Z',
+    parent_id: 'special-inbox'
+  });
+});

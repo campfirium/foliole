@@ -3,16 +3,25 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 
-const { loadRuntimeReadwiseBooksInventory } = vi.hoisted(() => ({
+const { loadRuntimeReadwiseBookEpub, loadRuntimeReadwiseBooksInventory } = vi.hoisted(() => ({
+  loadRuntimeReadwiseBookEpub: vi.fn(),
   loadRuntimeReadwiseBooksInventory: vi.fn()
 }));
 
 vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
+  loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory
 }));
 
 beforeEach(() => {
+  loadRuntimeReadwiseBookEpub.mockReset();
   loadRuntimeReadwiseBooksInventory.mockReset();
+  loadRuntimeReadwiseBookEpub.mockResolvedValue({
+    book_key: 'book-a',
+    epub_path: '/tmp/Book A.epub',
+    status: 'selected',
+    title: 'Book A'
+  });
   loadRuntimeReadwiseBooksInventory.mockResolvedValue({
     books: [
       {

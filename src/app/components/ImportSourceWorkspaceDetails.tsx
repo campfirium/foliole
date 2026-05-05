@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import {
+  loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory,
   type RuntimeReadwiseBooksInventory
 } from '../../shared/platform/readwiseBooksBridge';
@@ -109,10 +110,31 @@ function ImportSourceWorkspacePage({
 
 function ReadwiseBooksPage() {
   const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
+  const [reimportingNodeId, setReimportingNodeId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
 
   const refreshBooksInventory = useCallback(async () => {
     setBooksInventory(await loadRuntimeReadwiseBooksInventory());
   }, []);
+
+  const handleReimportBook = useCallback(
+    async (input: { nodeId: string; title: string }) => {
+      setReimportingNodeId(input.nodeId);
+      const result = await loadRuntimeReadwiseBookEpub(input.nodeId);
+      if (!result || result.status === 'book_not_found') {
+        setActionMessage(`Could not find ${input.title}.`);
+      } else if (result.status === 'cancelled') {
+        setActionMessage('Re-import was cancelled.');
+      } else if (result.status === 'failed') {
+        setActionMessage(result.error_message?.trim() || `Could not re-import ${input.title}.`);
+      } else {
+        setActionMessage(`Re-imported ${result.title ?? input.title}.`);
+      }
+      setReimportingNodeId(null);
+      await refreshBooksInventory();
+    },
+    [refreshBooksInventory]
+  );
 
   useEffect(() => {
     void refreshBooksInventory();
@@ -128,7 +150,18 @@ function ReadwiseBooksPage() {
     };
   }, [refreshBooksInventory]);
 
-  return <ReadwiseBooksInventorySection inventory={booksInventory} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <ReadwiseBooksInventorySection
+        inventory={booksInventory}
+        onReimportBook={handleReimportBook}
+        reimportingNodeId={reimportingNodeId}
+      />
+      <p aria-live="polite" className="px-1 text-xs text-foreground/65">
+        {actionMessage}
+      </p>
+    </div>
+  );
 }
 
 function ImportSourceWorkspacePageContent({ pageId }: { pageId: ImportManagementPageId }) {

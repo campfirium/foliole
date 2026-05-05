@@ -15,6 +15,10 @@ function formatReadwiseEpubStatus(epubStatus: RuntimeReadwiseBooksInventory['boo
   return epubStatus === 'received' ? 'EPUB received' : 'EPUB missing';
 }
 
+function formatReadwiseImportStatus(importStatus: RuntimeReadwiseBooksInventory['books'][number]['importStatus']) {
+  return importStatus === 'completed' ? 'Imported' : 'Not imported';
+}
+
 function formatReadwiseNodeStatus(nodeStatus: RuntimeReadwiseBooksInventory['books'][number]['nodeStatus']) {
   return nodeStatus === 'generated' ? 'Node ready' : 'Node missing';
 }
@@ -25,6 +29,10 @@ function resolveReadwiseAnnotationTone(annotationStatus: RuntimeReadwiseBooksInv
 
 function resolveReadwiseEpubTone(epubStatus: RuntimeReadwiseBooksInventory['books'][number]['epubStatus']) {
   return epubStatus === 'received' ? ('success' as const) : ('warning' as const);
+}
+
+function resolveReadwiseImportTone(importStatus: RuntimeReadwiseBooksInventory['books'][number]['importStatus']) {
+  return importStatus === 'completed' ? ('info' as const) : ('neutral' as const);
 }
 
 function resolveReadwiseNodeTone(nodeStatus: RuntimeReadwiseBooksInventory['books'][number]['nodeStatus']) {
@@ -163,7 +171,15 @@ export function InboxImportedNodesSection({
   );
 }
 
-export function ReadwiseBooksInventorySection({ inventory }: { inventory: RuntimeReadwiseBooksInventory | null }) {
+export function ReadwiseBooksInventorySection({
+  inventory,
+  onReimportBook,
+  reimportingNodeId
+}: {
+  inventory: RuntimeReadwiseBooksInventory | null;
+  onReimportBook?: (input: { nodeId: string; title: string }) => void;
+  reimportingNodeId?: string | null;
+}) {
   const books = inventory?.books ?? [];
   const description = inventory
     ? `${books.length} books · scanned ${formatImportTime(inventory.scannedAt)}`
@@ -188,6 +204,23 @@ export function ReadwiseBooksInventorySection({ inventory }: { inventory: Runtim
                 />
                 <AppStatusBadge label={formatReadwiseNodeStatus(book.nodeStatus)} tone={resolveReadwiseNodeTone(book.nodeStatus)} />
                 <AppStatusBadge label={formatReadwiseEpubStatus(book.epubStatus)} tone={resolveReadwiseEpubTone(book.epubStatus)} />
+                <AppStatusBadge
+                  label={formatReadwiseImportStatus(book.importStatus)}
+                  tone={resolveReadwiseImportTone(book.importStatus)}
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-end">
+                <AppButton
+                  disabled={book.generatedNodeId === null || reimportingNodeId === book.generatedNodeId}
+                  onClick={() => {
+                    if (book.generatedNodeId && onReimportBook) {
+                      onReimportBook({ nodeId: book.generatedNodeId, title: book.title });
+                    }
+                  }}
+                  variant="ghost"
+                >
+                  {reimportingNodeId === book.generatedNodeId ? 'Re-importing…' : 'Re-import EPUB'}
+                </AppButton>
               </div>
             </div>
           ))}

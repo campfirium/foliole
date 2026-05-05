@@ -25,6 +25,12 @@ interface ActiveNodeRow {
   title: string;
 }
 
+interface ExistingNodeRow {
+  [column: string]: unknown;
+  deleted_at: string | null;
+  id: string;
+}
+
 function formatAnnotationStatus(status: ReadwiseBookInventoryItem['annotationStatus']) {
   return status === 'has_highlights' ? 'Highlights available' : 'No highlights yet';
 }
@@ -90,6 +96,18 @@ function readActiveNode(nodeId: string) {
   );
 }
 
+function readNodeIncludingDeleted(nodeId: string) {
+  const connection = openDatabaseConnection();
+  return (
+    connection.driver.queryOne<ExistingNodeRow>(
+      `SELECT id, deleted_at
+       FROM nodes
+       WHERE id = ?`,
+      [nodeId]
+    ) ?? null
+  );
+}
+
 function ensureReadwiseBookNodeInInbox(node: ActiveNodeRow, updatedAt: string) {
   if (node.parent_id === INBOX_NODE_ID && typeof node.position === 'number') {
     return node.id;
@@ -148,11 +166,26 @@ export function ensureReadwiseBookNodes(inventory: ReadwiseBooksInventory): Read
   return {
     ...inventory,
     books: inventory.books.map((book) => {
-      if (book.generatedNodeId || !shouldAutoGenerateReadwiseBookNode(book)) {
-        return book;
+      if (book.generatedNodeId) {
+        const activeNode = readActiveNode(book.generatedNodeId);
+        if (activeNode) {
+          return book;
+        }
+        return { ...book, nodeStatus: 'missing' } satisfies ReadwiseBookInventoryItem;
+      }
+      if (!shouldAutoGenerateReadwiseBookNode(book)) {
+        return { ...book, generatedNodeId: null, nodeStatus: 'missing' } satisfies ReadwiseBookInventoryItem;
       }
 
       const placeholderNodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
+      const deletedPlaceholderNode = readNodeIncludingDeleted(placeholderNodeId);
+      if (deletedPlaceholderNode?.deleted_at) {
+        return {
+          ...book,
+          generatedNodeId: placeholderNodeId,
+          nodeStatus: 'missing'
+        } satisfies ReadwiseBookInventoryItem;
+      }
       const existingNode = readActiveNode(placeholderNodeId);
       const generatedNodeId = existingNode
         ? ensureReadwiseBookNodeInInbox(existingNode, inventory.scannedAt)

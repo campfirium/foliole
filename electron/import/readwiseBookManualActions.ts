@@ -28,6 +28,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function buildReadwiseBookEpubSourceIdentity(bookKey: string) {
+  return `readwise/books/${bookKey}`;
+}
+
 async function pathExists(targetPath: string) {
   try {
     await fs.stat(targetPath);
@@ -110,18 +114,23 @@ async function importSelectedReadwiseBookEpub(input: {
   epubPath: string;
   inventory: Awaited<ReturnType<typeof loadBookByNodeId>>['inventory'];
   onBeforeHighlightPlacement?: () => void;
+  targetNodeId: string;
 }) {
   saveRecentReadwiseBookEpubDirectory(input.epubPath);
   const importedAt = new Date().toISOString();
-  const imported = await runEpubImport(resolveSingleFileImportSource(input.epubPath), importedAt);
+  const imported = await runEpubImport(resolveSingleFileImportSource(input.epubPath), importedAt, {
+    sourceIdentity: buildReadwiseBookEpubSourceIdentity(input.book.bookKey),
+    sourceTrackingMode: 'tracked',
+    targetNodeId: input.targetNodeId
+  });
   input.onBeforeHighlightPlacement?.();
   await placeReadwiseBookHighlights({
     highlightMarkdownPath: input.book.highlightMarkdownPath,
     importedAt,
     readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,
-    rootNodeId: imported.nodeId
+    rootNodeId: input.targetNodeId
   });
-  const generatedNodeId = imported.nodeId ?? input.book.generatedNodeId;
+  const generatedNodeId = input.targetNodeId || imported.nodeId || input.book.generatedNodeId;
   const updatedBook = {
     ...input.book,
     epubPath: input.epubPath,
@@ -198,6 +207,7 @@ async function importReadwiseBookEpubWithProgress(input: {
     book: input.book,
     epubPath: input.epubPath,
     inventory: input.inventory,
+    targetNodeId: input.nodeId,
     onBeforeHighlightPlacement: () => {
       publishReadwiseBookEpubProgress(input.window, {
         detail: 'Placing highlights…',

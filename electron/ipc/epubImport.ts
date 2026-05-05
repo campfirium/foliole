@@ -29,6 +29,12 @@ interface PreparedImportNodeContent {
   embeddedImages: PreparedImportEmbeddedImage[];
 }
 
+interface EpubImportOptions {
+  sourceIdentity?: string;
+  sourceTrackingMode?: 'tracked' | 'untracked';
+  targetNodeId?: string;
+}
+
 function appendReason(current: string | null, next: string | null) {
   if (!next) return current;
   if (!current) return next;
@@ -65,6 +71,39 @@ function prepareBookNode(node: RawBookNode, index: number, importedAt: string) {
 function buildRootContent(title: string, body: string) {
   const trimmedBody = body.trim();
   return trimmedBody ? `# ${title}\n\n${trimmedBody}` : `# ${title}`;
+}
+
+function ensureTrackedImportTarget(record: ReturnType<typeof createPreparedDesktopTextImport>, targetNodeId: string) {
+  const connection = openDatabaseConnection();
+  const existingSource = connection.driver.queryOne<{ source_fingerprint: string }>(
+    'SELECT source_fingerprint FROM import_sources WHERE source_fingerprint = ?',
+    [record.sourceFingerprint]
+  );
+  if (existingSource) {
+    connection.driver.execute('UPDATE import_sources SET latest_node_id = ? WHERE source_fingerprint = ?', [
+      targetNodeId,
+      record.sourceFingerprint
+    ]);
+    return;
+  }
+
+  connection.driver.execute(
+    `INSERT INTO import_sources (
+       source_fingerprint, provider, source_kind, source_name, source_locator,
+       first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      record.sourceFingerprint,
+      record.provider,
+      record.sourceKind,
+      record.sourceName,
+      record.sourceLocator,
+      record.importedAt,
+      record.importedAt,
+      '',
+      targetNodeId
+    ]
+  );
 }
 
 async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(nodeId: string, importedAt: string, node: T) {
@@ -182,7 +221,7 @@ export async function loadEpubPreview(source: ImportSourceDescriptor) {
   return [buildRootContent(book.title, book.rootContent), ...nodes.map((node) => node.content)].join('\n\n').trim();
 }
 
-export async function runEpubImport(source: ImportSourceDescriptor, importedAt: string) {
+export async function runEpubImport(source: ImportSourceDescriptor, importedAt: string, options?: EpubImportOptions) {
   const book = await readRawEpubBook(source);
   const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt));
   const rootNode = createPreparedDesktopTextImport({
@@ -193,10 +232,14 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     importedAt,
     kind: 'epub',
     managedEpubImageDestinations: book.rootEmbeddedImages.map((image) => image.destination),
-    sourceTrackingMode: 'untracked',
+    sourceIdentity: options?.sourceIdentity,
+    sourceTrackingMode: options?.sourceTrackingMode ?? 'untracked',
     sourceProfile: 'epub',
     titleStrategy: 'heading'
   });
+  if (options?.targetNodeId) {
+    ensureTrackedImportTarget(rootNode, options.targetNodeId);
+  }
   const imported = runPreparedImport(rootNode);
   if (!imported.nodeId) {
     throw new Error('EPUB import failed: parent node was not created');

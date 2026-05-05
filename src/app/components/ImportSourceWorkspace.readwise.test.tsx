@@ -3,16 +3,25 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 
-const { loadRuntimeReadwiseBooksInventory } = vi.hoisted(() => ({
+const { loadRuntimeReadwiseBookEpub, loadRuntimeReadwiseBooksInventory } = vi.hoisted(() => ({
+  loadRuntimeReadwiseBookEpub: vi.fn(),
   loadRuntimeReadwiseBooksInventory: vi.fn()
 }));
 
 vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
+  loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory
 }));
 
 beforeEach(() => {
+  loadRuntimeReadwiseBookEpub.mockReset();
   loadRuntimeReadwiseBooksInventory.mockReset();
+  loadRuntimeReadwiseBookEpub.mockResolvedValue({
+    book_key: 'book-a',
+    epub_path: '/tmp/Book A.epub',
+    status: 'selected',
+    title: 'Book A'
+  });
   loadRuntimeReadwiseBooksInventory.mockResolvedValue({
     books: [
       {
@@ -55,4 +64,20 @@ it('moves between readwise content pages from the left navigation', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByLabelText('Readwise Articles page')).toBeInTheDocument();
+});
+
+it('reimports from readwise books list when the button is clicked', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Readwise Books' }));
+  await waitFor(() => {
+    expect(screen.getByText('Book A')).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Re-import EPUB' }));
+
+  await waitFor(() => {
+    expect(loadRuntimeReadwiseBookEpub).toHaveBeenCalledWith('node-book-a');
+  });
+  expect(await screen.findByText('Re-imported Book A.')).toBeInTheDocument();
 });

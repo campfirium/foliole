@@ -150,8 +150,7 @@ function expectImportedInventory(book: Awaited<ReturnType<typeof scanReadwiseBoo
     importStatus: 'completed',
     nodeStatus: 'generated'
   });
-  expect(book?.generatedNodeId).toBeTruthy();
-  expect(book?.generatedNodeId).not.toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
+  expect(book?.generatedNodeId).toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
 }
 
 function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConnection>['sqlite'], rootNodeId: string) {
