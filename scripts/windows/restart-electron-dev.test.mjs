@@ -34,6 +34,17 @@ describe('restart-electron-dev script', () => {
 
     expect(script).toContain('if ($candidates.Count -eq 1) {');
     expect(script).toContain('return @()');
-    expect(script).toContain('$runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir');
+    expect(script).toContain('function Get-ElectronRuntimeProcess');
+    expect(script).toContain('function Get-ManagedRuntimeProcess');
+  });
+
+  it('skips global runtime scans when no tracked windows client state exists', async () => {
+    const script = await readFile(SCRIPT_PATH, 'utf8');
+
+    expect(script).toContain('function Get-ManagedRuntimeProcess');
+    expect(script).toContain('$runtime = Get-ManagedRuntimeProcess -WorkDir $WindowsWorkDir -ExpectedSession $runtimeSession');
+    expect(script).toContain('if (Test-HasTrackedClientState) {');
+    expect(script).toContain('Stop-StaleFolioleDevProcesses -WorkDir $WorkDir');
+    expect(script).toContain('Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession');
   });
 });

@@ -240,6 +240,22 @@ function Get-TrackedRuntimeProcess {
   return $proc
 }
 
+function Test-HasTrackedClientState {
+  if ($null -ne (Get-TrackedPid)) {
+    return $true
+  }
+  if ($null -ne (Get-TrackedRuntimePid)) {
+    return $true
+  }
+  if (-not [string]::IsNullOrWhiteSpace((Get-TrackedRuntimeSession))) {
+    return $true
+  }
+  if (-not [string]::IsNullOrWhiteSpace((Get-TrackedRuntimeHead))) {
+    return $true
+  }
+  return $false
+}
+
 function Get-AppReadyEvent {
   param([string]$WorkDir)
 
@@ -465,6 +481,50 @@ function Get-ElectronRuntimeCandidates {
   }
 }
 
+function Get-ReadyMarkerRuntimeProcess {
+  param(
+    [string]$WorkDir = "",
+    [string]$ExpectedSession = ""
+  )
+
+  $expectedRuntimePath = Resolve-ExpectedRuntimePath -WorkDir $WorkDir
+  $events = @(
+    (Get-BridgeReadyEvent -WorkDir $WorkDir),
+    (Get-AppReadyEvent -WorkDir $WorkDir)
+  )
+
+  foreach ($event in $events) {
+    if ($null -eq $event) {
+      continue
+    }
+
+    $markerPid = 0
+    try {
+      $markerPid = [int]$event.pid
+    } catch {
+      $markerPid = 0
+    }
+    if ($markerPid -le 0) {
+      continue
+    }
+
+    $markerSession = ""
+    if ($null -ne $event.session) {
+      $markerSession = "$($event.session)".Trim()
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedSession) -and $markerSession -ne $ExpectedSession) {
+      continue
+    }
+
+    $runtime = Get-ProcessById -ProcessId $markerPid
+    if ($null -ne $runtime -and (Test-ProcessMatchesExpectedRuntime -Process $runtime -ExpectedRuntimePath $expectedRuntimePath)) {
+      return $runtime
+    }
+  }
+
+  return $null
+}
+
 function Get-ElectronRuntimeProcess {
   param([string]$WorkDir = "")
 
@@ -473,12 +533,31 @@ function Get-ElectronRuntimeProcess {
     return $tracked
   }
 
+  $readyMarkerRuntime = Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession (Get-TrackedRuntimeSession)
+  if ($null -ne $readyMarkerRuntime) {
+    return $readyMarkerRuntime
+  }
+
   $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
   if ($candidates.Count -eq 1) {
     return $candidates[0]
   }
 
   return $null
+}
+
+function Get-ManagedRuntimeProcess {
+  param(
+    [string]$WorkDir = "",
+    [string]$ExpectedSession = ""
+  )
+
+  $tracked = Get-TrackedRuntimeProcess -WorkDir $WorkDir
+  if ($null -ne $tracked) {
+    return $tracked
+  }
+
+  return Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession
 }
 
 function Get-StaleElectronRuntimeProcesses {
@@ -593,6 +672,7 @@ function Wait-ElectronHealthy {
   param(
     [int]$ShellPid,
     [string]$WorkDir = "",
+    [string]$ExpectedSession = "",
     [int]$MaxSeconds = 10
   )
 
@@ -602,7 +682,10 @@ function Wait-ElectronHealthy {
       return @{ ok = $false; reason = "shell-exited" }
     }
 
-    $runtime = Get-ElectronRuntimeProcess -WorkDir $WorkDir
+    $runtime = Get-TrackedRuntimeProcess -WorkDir $WorkDir
+    if ($null -eq $runtime) {
+      $runtime = Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession
+    }
     if ($null -ne $runtime) {
       return @{ ok = $true; runtimePid = $runtime.Id }
     }
@@ -617,9 +700,11 @@ function Start-ElectronWithHealthCheck {
   param([string]$WorkDir)
   $bootSession = New-BootSession
   Reset-ReadyMarker -WorkDir $WorkDir
-  Stop-StaleFolioleDevProcesses -WorkDir $WorkDir
+  if (Test-HasTrackedClientState) {
+    Stop-StaleFolioleDevProcesses -WorkDir $WorkDir
+  }
   $started = Start-ElectronShell -WorkDir $WorkDir -BootSession $bootSession
-  $health = Wait-ElectronHealthy -ShellPid $started.Id -WorkDir $WorkDir -MaxSeconds (Get-HealthCheckSeconds)
+  $health = Wait-ElectronHealthy -ShellPid $started.Id -WorkDir $WorkDir -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $health.ok) {
     throw "startup health check failed: $($health.reason)"
   }
@@ -979,18 +1064,15 @@ function Stop-Electron {
 
 if ($Action -eq "status") {
   $tracked = Get-TrackedProcess
-  $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeSession = Get-TrackedRuntimeSession
   $runtimeHead = Get-TrackedRuntimeHead
-  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+  $runtime = Get-ManagedRuntimeProcess -WorkDir $WindowsWorkDir -ExpectedSession $runtimeSession
   $runtimeTrust = $null
   if ($null -ne $runtime) {
     $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
   }
   if ($null -ne $tracked) {
-    if ($staleRuntimes.Count -gt 0) {
-      Write-Info "status: STOPPED trust=FAILED reason=stale-runtime-detected shell_pid=$($tracked.Id) runtime_pid=$($staleRuntimes[0].Id)"
-    } elseif ($null -ne $runtime -and -not $runtimeTrust.ok) {
+    if ($null -ne $runtime -and -not $runtimeTrust.ok) {
       Write-Info "status: STOPPED trust=FAILED reason=$($runtimeTrust.reason) shell_pid=$($tracked.Id) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     } elseif ($null -ne $runtime) {
       $headInfo = ""
@@ -1001,11 +1083,6 @@ if ($Action -eq "status") {
     } else {
       Write-Info "status: STOPPED trust=FAILED reason=runtime-missing shell_pid=$($tracked.Id)"
     }
-    exit 0
-  }
-
-  if ($staleRuntimes.Count -gt 0) {
-    Write-Info "status: STOPPED trust=FAILED reason=stale-runtime-detected runtime_pid=$($staleRuntimes[0].Id)"
     exit 0
   }
 
@@ -1034,19 +1111,14 @@ if ($Action -eq "stop") {
 
 if ($Action -eq "start") {
   $tracked = Get-TrackedProcess
+  $runtimeSession = Get-TrackedRuntimeSession
+  $runtime = Get-ManagedRuntimeProcess -WorkDir $WindowsWorkDir -ExpectedSession $runtimeSession
+  $runtimeTrust = $null
+  if ($null -ne $runtime) {
+    $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+  }
+
   if ($null -ne $tracked) {
-    $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
-    $runtimeSession = Get-TrackedRuntimeSession
-    $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
-    $runtimeTrust = $null
-    if ($staleRuntimes.Count -gt 0) {
-      foreach ($staleRuntime in $staleRuntimes) {
-        Stop-ProcessTree -ProcessId $staleRuntime.Id
-      }
-    }
-    if ($null -ne $runtime) {
-      $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
-    }
     if ($null -ne $runtime) {
       if ($runtimeTrust.ok) {
         Write-Info "status: RUNNING trust=OK pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
@@ -1067,16 +1139,6 @@ if ($Action -eq "start") {
     exit 0
   }
 
-  $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
-  $runtimeSession = Get-TrackedRuntimeSession
-  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
-  $runtimeTrust = $null
-  if ($staleRuntimes.Count -gt 0) {
-    Stop-StaleFolioleDevProcesses -WorkDir $WindowsWorkDir
-  }
-  if ($null -ne $runtime) {
-    $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
-  }
   if ($null -ne $runtime) {
     if ($runtimeTrust.ok) {
       Write-Info "status: RUNNING trust=OK runtime_pid=$($runtime.Id)"
@@ -1103,15 +1165,9 @@ if ($Action -eq "start") {
 
 if ($Action -eq "restart") {
   $tracked = Get-TrackedProcess
-  $runtime = Get-ElectronRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeSession = Get-TrackedRuntimeSession
+  $runtime = Get-ManagedRuntimeProcess -WorkDir $WindowsWorkDir -ExpectedSession $runtimeSession
   $runtimeTrust = $null
-  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
-  if ($staleRuntimes.Count -gt 0) {
-    foreach ($staleRuntime in $staleRuntimes) {
-      Stop-ProcessTree -ProcessId $staleRuntime.Id
-    }
-  }
   if ($null -ne $runtime) {
     $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
   }
