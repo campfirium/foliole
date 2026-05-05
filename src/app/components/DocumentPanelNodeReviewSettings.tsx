@@ -5,6 +5,7 @@ import {
 } from '../../features/nodes/model/nodeReviewSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { InspectorSection } from '../../shared/ui';
 
 interface DocumentPanelNodeReviewSettingsProps {
   activeNodeId: string | null;
@@ -137,22 +138,29 @@ export function DocumentPanelNodeReviewSettings({
   const isEditable = editableNodeId === activeNodeId;
 
   return (
-    <section
-      aria-label="Node review settings"
-      className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+    <InspectorSection
+      ariaLabel="Node review settings"
+      description="`desired retention` is the memory target. `priority` is the queue scheduler. `P0` is absolute privilege and, if due, always surfaces first."
+      title="Review scheduling"
     >
-      <div className="flex w-full flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold text-foreground">Review scheduling</h3>
-          <p className="text-xs text-foreground/70">
-            `desired retention` is the memory target. `priority` is the queue scheduler. `P0` is absolute privilege and, if due, always surfaces first.
-          </p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <DesiredRetentionField activeNodeId={activeNodeId} isEditable={isEditable} node={node} nodesById={nodesById} onDesiredRetentionChange={onDesiredRetentionChange} setting={desiredRetention} />
-          <PriorityField activeNodeId={activeNodeId} isEditable={isEditable} node={node} nodesById={nodesById} onPriorityChange={onPriorityChange} setting={priority} />
-        </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <DesiredRetentionField
+          activeNodeId={activeNodeId}
+          isEditable={isEditable}
+          node={node}
+          nodesById={nodesById}
+          onDesiredRetentionChange={onDesiredRetentionChange}
+          setting={desiredRetention}
+        />
+        <PriorityField
+          activeNodeId={activeNodeId}
+          isEditable={isEditable}
+          node={node}
+          nodesById={nodesById}
+          onPriorityChange={onPriorityChange}
+          setting={priority}
+        />
       </div>
-    </section>
+    </InspectorSection>
   );
 }

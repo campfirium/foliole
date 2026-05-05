@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
-interface ToolbarActionGroupProps {
+interface ToolbarActionGroupProps extends Omit<ComponentPropsWithoutRef<'div'>, 'children' | 'aria-label'> {
   ariaLabel?: string;
   children: ReactNode;
   className?: string;
@@ -15,7 +15,8 @@ export function ToolbarActionGroup({
   children,
   className,
   fullWidth = false,
-  orientation = 'horizontal'
+  orientation = 'horizontal',
+  ...rest
 }: ToolbarActionGroupProps) {
   return (
     <div
@@ -27,6 +28,7 @@ export function ToolbarActionGroup({
         className
       )}
       role="group"
+      {...rest}
     >
       {children}
     </div>

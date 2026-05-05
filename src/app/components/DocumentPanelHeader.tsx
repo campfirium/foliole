@@ -6,7 +6,9 @@ import {
   AppDropdownMenuContent,
   AppDropdownMenuItem,
   AppDropdownMenuTrigger,
-  AppIconButton
+  AppIconButton,
+  AppToolbar,
+  ToolbarActionGroup
 } from '../../shared/ui';
 
 interface DocumentPanelHeaderProps {
@@ -58,31 +60,31 @@ export function DocumentPanelHeader({
   onToggleEditorDisplayMode
 }: DocumentPanelHeaderProps) {
   return (
-    <header className="flex min-h-[40px] items-center gap-2 px-3">
+    <AppToolbar as="header" className="min-h-[40px] gap-2 px-3">
       <h2 className="sr-only">Content</h2>
-      <NavigationButtons
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
-        canGoParent={canGoParent}
-        onGoBack={onGoBack}
-        onGoForward={onGoForward}
-        onGoParent={onGoParent}
-      />
+      <ToolbarActionGroup ariaLabel="Document navigation actions">
+        <NavigationButtons
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          canGoParent={canGoParent}
+          onGoBack={onGoBack}
+          onGoForward={onGoForward}
+          onGoParent={onGoParent}
+        />
+      </ToolbarActionGroup>
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
           <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
         </div>
       </div>
-      <div className="shrink-0">
+      <ToolbarActionGroup ariaLabel="Document editor actions">
         <AppDropdownMenu>
           <AppDropdownMenuTrigger asChild>
-            <button
-              aria-label="More editor options"
+            <AppIconButton
               className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-              type="button"
-            >
-              <MoreOptionsIcon />
-            </button>
+              icon={<MoreOptionsIcon />}
+              label="More editor options"
+            />
           </AppDropdownMenuTrigger>
           <AppDropdownMenuContent align="end" sideOffset={6}>
             <AppDropdownMenuItem onSelect={onToggleEditorDisplayMode}>
@@ -90,8 +92,8 @@ export function DocumentPanelHeader({
             </AppDropdownMenuItem>
           </AppDropdownMenuContent>
         </AppDropdownMenu>
-      </div>
-    </header>
+      </ToolbarActionGroup>
+    </AppToolbar>
   );
 }
 

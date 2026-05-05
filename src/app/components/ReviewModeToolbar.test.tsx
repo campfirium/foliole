@@ -43,6 +43,7 @@ it('renders reading actions and queue status inside the shared review action bar
   renderToolbar();
 
   expect(document.querySelector('[data-review-item-kind="reading"]')).toBeInTheDocument();
+  expect(screen.getByLabelText('Reading review actions')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.getByText('Push queue live')).toBeInTheDocument();
@@ -57,6 +58,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
   });
+  expect(screen.getByLabelText('FSRS reveal actions')).toBeInTheDocument();
   expect(onRevealAnswer).toHaveBeenCalledTimes(1);
 
   rerender(
@@ -80,5 +82,6 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   });
+  expect(screen.getByLabelText('Review grade actions')).toBeInTheDocument();
   expect(onGrade).toHaveBeenCalledWith(3);
 });

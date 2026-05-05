@@ -1,5 +1,5 @@
 import type { ReviewGrade, SchedulerGradeResult, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
-import { AppButton } from '../../shared/ui';
+import { AppButton, ToolbarActionGroup } from '../../shared/ui';
 
 function formatPreviewInterval(previewItem?: SchedulerGradeResult) {
   if (!previewItem) {
@@ -66,12 +66,12 @@ export function ReviewGradeActions({
 }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="flex items-center gap-2">
+      <ToolbarActionGroup ariaLabel="Review grade actions" className="gap-2">
         <GradeButton ariaLabel="Again" disabled={isSubmitting} intervalLabel={formatPreviewInterval(reviewPreview?.Again)} onClick={() => void submitGrade(1)} />
         <GradeButton ariaLabel="Hard" disabled={isSubmitting} intervalLabel={formatPreviewInterval(reviewPreview?.Hard)} onClick={() => void submitGrade(2)} />
         <GradeButton ariaLabel="Good" disabled={isSubmitting} intervalLabel={formatPreviewInterval(reviewPreview?.Good)} onClick={() => void submitGrade(3)} />
         <GradeButton ariaLabel="Easy" disabled={isSubmitting} intervalLabel={formatPreviewInterval(reviewPreview?.Easy)} onClick={() => void submitGrade(4)} />
-      </div>
+      </ToolbarActionGroup>
       {errorMessage ? (
         <p aria-live="assertive" className="text-[11px] text-red-600">
           {errorMessage}
@@ -91,7 +91,7 @@ export function ReadingReviewActions({
   onDismissReviewItem: () => boolean;
 }) {
   return (
-    <div className="flex items-center gap-2" data-review-toolbar-kind="reading">
+    <ToolbarActionGroup ariaLabel="Reading review actions" className="gap-2" data-review-toolbar-kind="reading">
       <AppButton aria-label="Later" onClick={onDeferReviewItem} size="sm" variant="ghost">
         Later
       </AppButton>
@@ -101,17 +101,17 @@ export function ReadingReviewActions({
       <AppButton aria-label="Dismiss" onClick={onDismissReviewItem} size="sm" variant="ghost">
         Dismiss
       </AppButton>
-    </div>
+    </ToolbarActionGroup>
   );
 }
 
 export function FsrsRevealAction({ onRevealAnswer }: { onRevealAnswer: () => void }) {
   return (
-    <div className="flex items-center gap-2" data-review-toolbar-kind="fsrs-prompt">
+    <ToolbarActionGroup ariaLabel="FSRS reveal actions" className="gap-2" data-review-toolbar-kind="fsrs-prompt">
       <AppButton aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
         Show Answer
       </AppButton>
-    </div>
+    </ToolbarActionGroup>
   );
 }
 

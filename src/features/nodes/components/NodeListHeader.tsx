@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import { AppButton, AppIconButton } from '../../../shared/ui';
+import { AppButton, AppIconButton, AppToolbar, ToolbarActionGroup } from '../../../shared/ui';
 
 interface NodeListHeaderProps {
   isTrashViewOpen: boolean;
@@ -22,50 +22,52 @@ export function NodeListHeader({
   trashCount
 }: NodeListHeaderProps) {
   return (
-    <header className="flex min-h-[40px] items-center justify-end gap-1 px-3">
+    <AppToolbar as="header" className="min-h-[40px] justify-end gap-2 px-3">
       <h2 className="sr-only">Nodes</h2>
       <button className="sr-only" onClick={onOpenNotesView} type="button">
         Nodes
       </button>
-      {isTrashViewOpen ? (
-        <>
-          <button aria-label="New" className="sr-only" onClick={onCreateRootNode} type="button">
-            New
-          </button>
-          <AppButton
-            aria-label="Empty"
-            className="text-foreground/70 hover:text-foreground"
-            disabled={trashCount === 0}
-            onClick={onEmptyTrash}
-            size="sm"
-            variant="subtle"
-          >
-            Empty
-          </AppButton>
-        </>
-      ) : (
-        <>
-          <AppIconButton
-            className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-            icon={<ExpandAllIcon />}
-            label="Expand all"
-            onClick={onExpandAll}
-          />
-          <AppIconButton
-            className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-            icon={<CollapseAllIcon />}
-            label="Collapse all"
-            onClick={onCollapseAll}
-          />
-          <AppIconButton
-            className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-            icon={<NewNoteIcon />}
-            label="New"
-            onClick={onCreateRootNode}
-          />
-        </>
-      )}
-    </header>
+      <ToolbarActionGroup ariaLabel={isTrashViewOpen ? 'Trash actions' : 'Node list actions'}>
+        {isTrashViewOpen ? (
+          <>
+            <button aria-label="New" className="sr-only" onClick={onCreateRootNode} type="button">
+              New
+            </button>
+            <AppButton
+              aria-label="Empty"
+              className="text-foreground/70 hover:text-foreground"
+              disabled={trashCount === 0}
+              onClick={onEmptyTrash}
+              size="sm"
+              variant="subtle"
+            >
+              Empty
+            </AppButton>
+          </>
+        ) : (
+          <>
+            <AppIconButton
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              icon={<ExpandAllIcon />}
+              label="Expand all"
+              onClick={onExpandAll}
+            />
+            <AppIconButton
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              icon={<CollapseAllIcon />}
+              label="Collapse all"
+              onClick={onCollapseAll}
+            />
+            <AppIconButton
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+              icon={<NewNoteIcon />}
+              label="New"
+              onClick={onCreateRootNode}
+            />
+          </>
+        )}
+      </ToolbarActionGroup>
+    </AppToolbar>
   );
 }
 
