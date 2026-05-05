@@ -12,12 +12,12 @@ import {
   WorkspaceGridDividerOverlay,
   type WorkspaceGridDividerOverlayProps
 } from './WorkspaceGridDividerOverlay';
+import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import {
   selectWorkspaceLeftRailProps,
   WorkspaceLeftRail,
   type WorkspaceLeftRailSource
 } from './WorkspaceLeftRail';
-import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 type WorkspaceLayoutGridFlatSource = WorkspaceGridContentSource &

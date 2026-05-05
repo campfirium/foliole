@@ -35,27 +35,14 @@ export function WorkspaceGridContent({
   props: WorkspaceGridContentSource;
 }) {
   const listNodesById = useProjectedListNodesById(props.nodesById);
-  const showDocumentOutline = activeRightPanelId !== 'outline' || props.isRightSidebarCollapsed;
-  const documentSurfaceProps = useMemo(
-    () => ({
-      ...selectWorkspaceDocumentSurfaceProps({
-        documentNodeId,
-        isImmersiveEditing,
-        onEnterImmersiveEdit,
-        onShouldSuppressSelectionRestore,
-        props
-      }),
-      showDocumentOutline
-    }),
-    [
-      documentNodeId,
-      isImmersiveEditing,
-      onEnterImmersiveEdit,
-      onShouldSuppressSelectionRestore,
-      props,
-      showDocumentOutline
-    ]
-  );
+  const documentSurfaceProps = useWorkspaceGridDocumentSurfaceProps({
+    activeRightPanelId,
+    documentNodeId,
+    isImmersiveEditing,
+    onEnterImmersiveEdit,
+    onShouldSuppressSelectionRestore,
+    props
+  });
   const outlineActivePosition = resolveOutlineActivePosition({
     editorSelection: props.editorNodeViewState?.selection ?? null,
     readingSelection: props.getReadingPositionSelection()
@@ -79,6 +66,44 @@ export function WorkspaceGridContent({
         })
       )}
     </WorkspaceLayoutGridFrame>
+  );
+}
+
+function useWorkspaceGridDocumentSurfaceProps({
+  activeRightPanelId,
+  documentNodeId,
+  isImmersiveEditing,
+  onEnterImmersiveEdit,
+  onShouldSuppressSelectionRestore,
+  props
+}: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  documentNodeId: string | null;
+  isImmersiveEditing: boolean;
+  onEnterImmersiveEdit: () => void;
+  onShouldSuppressSelectionRestore: () => boolean;
+  props: WorkspaceGridContentSource;
+}) {
+  const showDocumentOutline = activeRightPanelId !== 'outline' || props.isRightSidebarCollapsed;
+  return useMemo(
+    () => ({
+      ...selectWorkspaceDocumentSurfaceProps({
+        documentNodeId,
+        isImmersiveEditing,
+        onEnterImmersiveEdit,
+        onShouldSuppressSelectionRestore,
+        props
+      }),
+      showDocumentOutline
+    }),
+    [
+      documentNodeId,
+      isImmersiveEditing,
+      onEnterImmersiveEdit,
+      onShouldSuppressSelectionRestore,
+      props,
+      showDocumentOutline
+    ]
   );
 }
 

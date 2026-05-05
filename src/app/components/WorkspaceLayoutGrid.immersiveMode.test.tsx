@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
+import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
 const lifecycle = vi.hoisted(() => ({
   documentMounts: 0,
