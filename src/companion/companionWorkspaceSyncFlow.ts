@@ -45,6 +45,17 @@ export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionOb
   );
 }
 
+function hasFastRetryWork(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+  const remainingStructure = result.remainingStructureChangeCount ?? 0;
+  const waitingLocalChanges =
+    !result.pushError &&
+    result.pushConflictCount === 0 &&
+    result.pushRejectedCount === 0 &&
+    (result.pushIssueCount ?? 0) === 0 &&
+    ((result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0);
+  return madeResourceProgress(result) || remainingStructure > 0 || waitingLocalChanges;
+}
+
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   return loadCompanionReadableArticle(snapshot);
 }
@@ -86,7 +97,7 @@ export async function runCompanionStreamSync(args: {
   } else if (shouldClearCompanionSyncProgress(result)) {
     args.setSyncProgress(null);
   }
-  if (passResult.outcome === 'skipped' && hasSyncBacklog(result)) {
+  if (passResult.outcome === 'skipped' && hasFastRetryWork(result)) {
     return 'backlog';
   }
   return passResult.outcome;

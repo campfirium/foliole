@@ -27,7 +27,7 @@ async function testRecordsBacklogBytes() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
     status: 'skipped'
@@ -79,7 +79,7 @@ async function testRecordsDownloadedResourcesForPass() {
   }));
 }
 
-async function testKeepsResourceErrorsOnBacklogPath() {
+async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     contentBlobError: 'Topic body batch could not download any requested body.',
     remainingContentBlobCount: 5
@@ -97,7 +97,7 @@ async function testKeepsResourceErrorsOnBacklogPath() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('skipped');
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
@@ -129,7 +129,7 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setSyncProgress = vi.fn();
 
-  await tryForegroundAutoSync({
+  const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
@@ -139,6 +139,7 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
     state: createSyncState()
   });
 
+  expect(outcome).toBe('skipped');
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
@@ -229,13 +230,13 @@ async function testProgressWithUnknownResourceCountsContinuesBacklogRetry() {
 describe('tryForegroundAutoSync resource progress', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
-  it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
+  it('records remaining cache bytes without scheduling a fast retry when the pass makes no progress', testRecordsBacklogBytes);
 
   it('records downloaded resources when a pass makes progress', testRecordsDownloadedResourcesForPass);
 
-  it('keeps resource errors on the quick backlog retry path', testKeepsResourceErrorsOnBacklogPath);
+  it('keeps resource errors visible without fast retry when the pass makes no progress', testKeepsResourceErrorsVisibleWithoutFastRetry);
 
-  it('keeps sync progress visible when a pass leaves resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
+  it('keeps sync progress visible without fast retry when a pass leaves idle resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
 
   it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
 
