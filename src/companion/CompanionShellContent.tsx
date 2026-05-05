@@ -8,10 +8,8 @@ import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { CompanionSearchContent } from './CompanionSearchContent';
-import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
-import { CompanionSyncContent } from './CompanionSyncContent';
+import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionTabConfig } from './CompanionTabsConfig';
-import { CompanionTabsSettingsContent } from './CompanionTabsSettingsContent';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -42,6 +40,14 @@ function handleExitReadableArticle(surface: Surface, workspaceSync: WorkspaceSyn
   surface.handleTabAction('recent');
 }
 
+function continueAttachmentResourceSync(workspaceSync: WorkspaceSync) {
+  const endpointUrl = resolveShellSyncEndpoint(workspaceSync);
+  if (!endpointUrl || workspaceSync.status === 'syncing') {
+    return;
+  }
+  void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
+}
+
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
   const syncEndpointUrl = resolveShellSyncEndpoint(props.workspaceSync);
   if (props.surface.browsedFolder) {
@@ -57,6 +63,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
     return (
       <ImmersiveReadableArticle
+        onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
         onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
         onSearch={() => props.surface.handleTabAction('search')}
         readableArticle={props.surface.readableArticle}
@@ -109,12 +116,31 @@ function ReadableArticleOrFallback(props: {
   if (props.surface.readableArticle) {
     return (
       <ReadableArticleDocument
+        onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
         readableArticle={props.surface.readableArticle}
         syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
       />
     );
   }
   return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
+}
+
+function renderRecentContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
+  if (props.isBrowseDirectoryOpen) {
+    if (props.surface.readableArticle && props.surface.selectedBrowseNodeId && !props.surface.browsedFolder) {
+      return (
+        <ImmersiveReadableArticle
+          onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
+          onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
+          onSearch={() => props.surface.handleTabAction('search')}
+          readableArticle={props.surface.readableArticle}
+          syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
+        />
+      );
+    }
+    return <CompanionDirectoryContent currentNodeId={props.surface.selectedBrowseNodeId} onSelectNode={props.surface.handleSelectBrowseNode} snapshot={props.workspaceSync.state.workspace_snapshot} />;
+  }
+  return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
 
 export function resolveCompanionTopBarProps(
@@ -191,23 +217,10 @@ export function renderCompanionShellContent(props: {
   workspaceSync: WorkspaceSync;
 }) {
   if (props.surface.activeAction === 'more') {
-    return renderSettingsContent(props);
+    return renderCompanionSettingsContent(props);
   }
   if (props.surface.activeAction === 'recent') {
-    if (props.isBrowseDirectoryOpen) {
-      if (props.surface.readableArticle && props.surface.selectedBrowseNodeId && !props.surface.browsedFolder) {
-        return (
-          <ImmersiveReadableArticle
-            onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
-            onSearch={() => props.surface.handleTabAction('search')}
-            readableArticle={props.surface.readableArticle}
-            syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
-          />
-        );
-      }
-      return <CompanionDirectoryContent currentNodeId={props.surface.selectedBrowseNodeId} onSelectNode={props.surface.handleSelectBrowseNode} snapshot={props.workspaceSync.state.workspace_snapshot} />;
-    }
-    return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
+    return renderRecentContent(props);
   }
   if (props.surface.activeAction === 'review') {
     if (props.isOnlyReviewOpen) {
@@ -233,30 +246,5 @@ export function renderCompanionShellContent(props: {
       surface={props.surface}
       workspaceSync={props.workspaceSync}
     />
-  );
-}
-
-function renderSettingsContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
-  if (props.settingsPage === 'list') {
-    return <CompanionSettingsList onOpenSync={props.onOpenSyncSettings} onOpenTabs={props.onOpenTabsSettings} />;
-  }
-  if (props.settingsPage === 'tabs') {
-    return (
-      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="tabs" title="Tabs">
-        <CompanionTabsSettingsContent
-          config={props.companionTabConfig}
-          onConfigChange={props.onCompanionTabConfigChange}
-        />
-      </CompanionSettingsDetail>
-    );
-  }
-  return (
-    <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title="Device sync">
-      <CompanionSyncContent
-        page={props.settingsPage}
-        workspaceSync={props.workspaceSync}
-        onOpenSettingsPage={props.onOpenSyncSettingsPage}
-      />
-    </CompanionSettingsDetail>
   );
 }

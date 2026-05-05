@@ -54,6 +54,7 @@ function ReadingChromeButton(props: {
 }
 
 export function ReadableArticleDocument(props: {
+  onAttachmentResourceSynced?: () => void;
   readingSelection?: EditorSelection | null;
   readableArticle: ReadableArticle;
   syncEndpointUrl?: string | null;
@@ -64,8 +65,11 @@ export function ReadableArticleDocument(props: {
     if (!props.syncEndpointUrl) {
       return;
     }
-    await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
-  }, [props.syncEndpointUrl]);
+    const result = await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
+    if (result.status === 'cached') {
+      props.onAttachmentResourceSynced?.();
+    }
+  }, [props.onAttachmentResourceSynced, props.syncEndpointUrl]);
 
   if (pdfAttachmentId && isViewingPdfOriginal) {
     return (
@@ -167,6 +171,7 @@ function ReadingSheetsLayer(props: {
 }
 
 export function ImmersiveReadableArticle(props: {
+  onAttachmentResourceSynced?: () => void;
   onExit(): void;
   onSearch(): void;
   readableArticle: ReadableArticle;
@@ -213,6 +218,7 @@ export function ImmersiveReadableArticle(props: {
       ) : null}
       <div className="mx-auto min-h-full w-full max-w-[760px]">
         <ReadableArticleDocument
+          onAttachmentResourceSynced={props.onAttachmentResourceSynced}
           readableArticle={props.readableArticle}
           readingSelection={readingSelection}
           syncEndpointUrl={props.syncEndpointUrl}

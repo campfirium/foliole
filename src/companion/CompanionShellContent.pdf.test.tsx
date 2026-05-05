@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderCompanionShellContent } from './CompanionShellContent';
@@ -91,110 +91,78 @@ function createFailedBodySurface() {
   };
 }
 
+function renderSurface(surface: unknown, workspaceSync: unknown = {}) {
+  render(renderCompanionShellContent({
+    hasSnapshot: true,
+    onBackToSettingsList: vi.fn(),
+    onOpenSyncSettingsPage: vi.fn(),
+    onOpenSyncSettings: vi.fn(),
+    onSelectReviewBreadcrumbItem: vi.fn(),
+    reviewBreadcrumbItems: [],
+    settingsPage: 'list',
+    surface: surface as never,
+    workspaceError: null,
+    workspaceSync: workspaceSync as never
+  }));
+}
+
+function testPrimaryPdfReadingSurface() {
+  renderSurface(createPdfReadableSurface());
+
+  expect(screen.getByText('Text version')).toBeInTheDocument();
+  expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
+  expect(screen.queryByText('PDF original viewer')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open PDF' }));
+  expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Text' }));
+  expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
+}
+
+async function testInlineAttachmentSync() {
+  const pullFromDesktop = vi.fn(async () => undefined);
+  renderSurface(createPdfReadableSurface(), {
+    pullFromDesktop,
+    status: 'idle',
+    state: {
+      endpoint_url: 'http://10.0.2.2:38641',
+      remembered_targets: []
+    }
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load inline attachment' }));
+
+  expect(attachmentSyncMock.syncCompanionAttachmentResourceFromDesktop).toHaveBeenCalledWith(
+    'http://10.0.2.2:38641',
+    'inline-att-1'
+  );
+  await waitFor(() => expect(pullFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641'));
+}
+
+function testMissingBodyState() {
+  renderSurface(createMissingBodySurface());
+
+  expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
+  expect(screen.getByText('This device has the topic list, but this body has not reached the device yet.')).toBeInTheDocument();
+}
+
+function testEmptyBodyState() {
+  renderSurface(createEmptyBodySurface());
+
+  expect(screen.getByText('This topic is empty.')).toBeInTheDocument();
+  expect(screen.queryByText('Waiting for topic body.')).not.toBeInTheDocument();
+}
+
+function testFailedBodyState() {
+  renderSurface(createFailedBodySurface());
+
+  expect(screen.getByText('Topic body could not be loaded.')).toBeInTheDocument();
+  expect(screen.getByText('Reconnect this device to desktop to retry.')).toBeInTheDocument();
+}
+
 describe('CompanionShellContent PDF articles', () => {
-  it('keeps extracted PDF text as the primary mobile reading surface', () => {
-    render(renderCompanionShellContent({
-      hasSnapshot: true,
-      onBackToSettingsList: vi.fn(),
-      onOpenSyncSettingsPage: vi.fn(),
-      onOpenSyncSettings: vi.fn(),
-      onSelectReviewBreadcrumbItem: vi.fn(),
-      reviewBreadcrumbItems: [],
-      settingsPage: 'list',
-      surface: createPdfReadableSurface() as never,
-      workspaceError: null,
-      workspaceSync: {} as never
-    }));
-
-    expect(screen.getByText('Text version')).toBeInTheDocument();
-    expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
-    expect(screen.queryByText('PDF original viewer')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open PDF' }));
-
-    expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Text' }));
-    expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
-  });
-
-  it('syncs a missing inline attachment from the current topic surface', () => {
-    render(renderCompanionShellContent({
-      hasSnapshot: true,
-      onBackToSettingsList: vi.fn(),
-      onOpenSyncSettingsPage: vi.fn(),
-      onOpenSyncSettings: vi.fn(),
-      onSelectReviewBreadcrumbItem: vi.fn(),
-      reviewBreadcrumbItems: [],
-      settingsPage: 'list',
-      surface: createPdfReadableSurface() as never,
-      workspaceError: null,
-      workspaceSync: {
-        state: {
-          endpoint_url: 'http://10.0.2.2:38641',
-          remembered_targets: []
-        }
-      } as never
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Load inline attachment' }));
-
-    expect(attachmentSyncMock.syncCompanionAttachmentResourceFromDesktop).toHaveBeenCalledWith(
-      'http://10.0.2.2:38641',
-      'inline-att-1'
-    );
-  });
-
-  it('shows a syncing state when the topic body blob is not local yet', () => {
-    render(renderCompanionShellContent({
-      hasSnapshot: true,
-      onBackToSettingsList: vi.fn(),
-      onOpenSyncSettingsPage: vi.fn(),
-      onOpenSyncSettings: vi.fn(),
-      onSelectReviewBreadcrumbItem: vi.fn(),
-      reviewBreadcrumbItems: [],
-      settingsPage: 'list',
-      surface: createMissingBodySurface() as never,
-      workspaceError: null,
-      workspaceSync: {} as never
-    }));
-
-    expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
-    expect(screen.getByText('This device has the topic list, but this body has not reached the device yet.')).toBeInTheDocument();
-  });
-
-  it('shows an empty state when the selected topic has no body', () => {
-    render(renderCompanionShellContent({
-      hasSnapshot: true,
-      onBackToSettingsList: vi.fn(),
-      onOpenSyncSettingsPage: vi.fn(),
-      onOpenSyncSettings: vi.fn(),
-      onSelectReviewBreadcrumbItem: vi.fn(),
-      reviewBreadcrumbItems: [],
-      settingsPage: 'list',
-      surface: createEmptyBodySurface() as never,
-      workspaceError: null,
-      workspaceSync: {} as never
-    }));
-
-    expect(screen.getByText('This topic is empty.')).toBeInTheDocument();
-    expect(screen.queryByText('Waiting for topic body.')).not.toBeInTheDocument();
-  });
-
-  it('shows a retryable failed state when body blob sync fails validation', () => {
-    render(renderCompanionShellContent({
-      hasSnapshot: true,
-      onBackToSettingsList: vi.fn(),
-      onOpenSyncSettingsPage: vi.fn(),
-      onOpenSyncSettings: vi.fn(),
-      onSelectReviewBreadcrumbItem: vi.fn(),
-      reviewBreadcrumbItems: [],
-      settingsPage: 'list',
-      surface: createFailedBodySurface() as never,
-      workspaceError: null,
-      workspaceSync: {} as never
-    }));
-
-    expect(screen.getByText('Topic body could not be loaded.')).toBeInTheDocument();
-    expect(screen.getByText('Reconnect this device to desktop to retry.')).toBeInTheDocument();
-  });
+  it('keeps extracted PDF text as the primary mobile reading surface', testPrimaryPdfReadingSurface);
+  it('syncs a missing inline attachment from the current topic surface', testInlineAttachmentSync);
+  it('shows a syncing state when the topic body blob is not local yet', testMissingBodyState);
+  it('shows an empty state when the selected topic has no body', testEmptyBodyState);
+  it('shows a retryable failed state when body blob sync fails validation', testFailedBodyState);
 });
