@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
 import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,
@@ -207,9 +208,17 @@ function useBackupSectionState(): BackupSectionState {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [restoringPath, setRestoringPath] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
-  const isBackupActionsAvailable = areDatabaseBackupActionsAvailable();
+  const isBackupActionsAvailable = useRuntimeAvailability(areDatabaseBackupActionsAvailable);
 
-  useEffect(() => loadInitialBackups(setBackups, setIsLoadingBackups), []);
+  useEffect(() => {
+    if (!isBackupActionsAvailable) {
+      setBackups([]);
+      setIsLoadingBackups(false);
+      return;
+    }
+    setIsLoadingBackups(true);
+    return loadInitialBackups(setBackups, setIsLoadingBackups);
+  }, [isBackupActionsAvailable]);
 
   const refreshBackups = () => listDatabaseBackups().then(setBackups);
   const createBackup = () => void runCreateBackup(refreshBackups, setIsCreatingBackup, setStatusMessage);

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const closeMainWindow = vi.fn().mockResolvedValue(undefined);
+const isWindowControlsAvailable = vi.fn(() => true);
 const minimizeMainWindow = vi.fn().mockResolvedValue(undefined);
 const queryMainWindowMaximized = vi.fn().mockResolvedValue(false);
 const toggleMainWindowMaximize = vi.fn().mockResolvedValue(undefined);
@@ -9,7 +10,7 @@ const onMainWindowResized = vi.fn().mockResolvedValue(() => undefined);
 
 vi.mock('../../shared/platform/windowControls', () => ({
   closeMainWindow: () => closeMainWindow(),
-  isWindowControlsAvailable: () => true,
+  isWindowControlsAvailable: () => isWindowControlsAvailable(),
   minimizeMainWindow: () => minimizeMainWindow(),
   onMainWindowResized: (handler: () => void) => onMainWindowResized(handler),
   queryMainWindowMaximized: () => queryMainWindowMaximized(),
@@ -21,6 +22,8 @@ import { WindowTitleBar } from './WindowTitleBar';
 describe('WindowTitleBar', () => {
   beforeEach(() => {
     closeMainWindow.mockClear();
+    isWindowControlsAvailable.mockReset();
+    isWindowControlsAvailable.mockReturnValue(true);
     minimizeMainWindow.mockClear();
     queryMainWindowMaximized.mockClear();
     toggleMainWindowMaximize.mockClear();
@@ -51,5 +54,30 @@ describe('WindowTitleBar', () => {
     expect(minimizeMainWindow).toHaveBeenCalledTimes(1);
     expect(toggleMainWindowMaximize).toHaveBeenCalledTimes(2);
     expect(closeMainWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('enables titlebar controls after desktop bridge becomes available post-mount', async () => {
+    isWindowControlsAvailable.mockReturnValue(false);
+
+    render(
+      <WindowTitleBar
+        isListHidden={false}
+        isTrashViewOpen={false}
+        listWidth={320}
+        onOpenNotesView={() => undefined}
+        onOpenTrashView={() => undefined}
+        onToggleListVisibility={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Minimize' })).toBeDisabled();
+
+    window.setTimeout(() => {
+      isWindowControlsAvailable.mockReturnValue(true);
+    }, 0);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Minimize' })).toBeEnabled();
+    }, { timeout: 1_000 });
   });
 });

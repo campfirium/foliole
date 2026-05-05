@@ -1,6 +1,7 @@
 import { Copy, FileText, Minus, PanelLeft, Square, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
+import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
 import {
   closeMainWindow,
   isWindowControlsAvailable,
@@ -37,7 +38,7 @@ function runWindowAction(action: () => Promise<void>) {
 }
 
 function useWindowControlState() {
-  const controlsEnabled = isWindowControlsAvailable();
+  const controlsEnabled = useRuntimeAvailability(isWindowControlsAvailable);
   const [isMaximized, setIsMaximized] = useState(false);
 
   const syncMaximizedState = useCallback(async () => {

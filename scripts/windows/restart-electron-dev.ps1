@@ -445,7 +445,7 @@ function Get-ElectronRuntimeCandidates {
     if ([string]::IsNullOrWhiteSpace($commandLine)) {
       continue
     }
-    if ($commandLine -notmatch 'electron-dist[\\/]+main\.js') {
+    if ($commandLine -notmatch 'electron-dist(?:[\\/]+electron)?[\\/]+main\.js') {
       continue
     }
     $mainProc = Get-ProcessById -ProcessId ([int]$candidate.ProcessId)

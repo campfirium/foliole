@@ -196,3 +196,30 @@ it('shows the empty state when no backups are returned', async () => {
     expect(screen.getByText('No backups yet')).toBeInTheDocument();
   });
 });
+
+it('enables backup actions after desktop bridge becomes available post-mount', async () => {
+  mockedAreDatabaseBackupActionsAvailable.mockReturnValue(false);
+  mockedListDatabaseBackups.mockResolvedValue([
+    {
+      fileName: 'foliole-2026-03-15_09-00-00-000.db',
+      filePath: '/app/backups/foliole-2026-03-15_09-00-00-000.db',
+      sizeBytes: 10240,
+      updatedAt: '2026-03-15T09:00:00.000Z'
+    }
+  ]);
+
+  render(<SettingsAboutSection />);
+
+  await waitFor(() => {
+    expect(screen.getByText('Desktop runtime required')).toBeInTheDocument();
+  });
+
+  window.setTimeout(() => {
+    mockedAreDatabaseBackupActionsAvailable.mockReturnValue(true);
+  }, 0);
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
+  }, { timeout: 1_000 });
+  expect(screen.getByText('foliole-2026-03-15_09-00-00-000.db')).toBeInTheDocument();
+});
