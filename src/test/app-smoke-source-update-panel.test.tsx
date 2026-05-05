@@ -1,10 +1,14 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
-const { useNodeSourceUpdatePreviewMock } = vi.hoisted(() => ({
-  useNodeSourceUpdatePreviewMock: vi.fn(() => ({
+import { App } from '../app/App';
+import { useWorkspaceStore } from '../store/workspaceStore';
+import { useNodeSourceUpdatePreviewMock } from './app-smoke.shared';
+
+it('writes split panel edits back to the active document content', () => {
+  useNodeSourceUpdatePreviewMock.mockReturnValue({
     isLoading: false,
     value: {
       checkedAt: '2026-03-28T04:00:00.000Z',
@@ -14,17 +18,8 @@ const { useNodeSourceUpdatePreviewMock } = vi.hoisted(() => ({
       updatedHighlightCount: 2,
       updatedContent: '# Welcome to Foliole\n\nUpdated upstream content.'
     }
-  }))
-}));
+  } as never);
 
-vi.mock('../app/components/useNodeSourceUpdatePreview', () => ({
-  useNodeSourceUpdatePreview: useNodeSourceUpdatePreviewMock
-}));
-
-import { App } from '../app/App';
-import { useWorkspaceStore } from '../store/workspaceStore';
-
-it('writes split panel edits back to the active document content', () => {
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));

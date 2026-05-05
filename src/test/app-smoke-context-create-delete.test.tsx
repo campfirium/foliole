@@ -108,10 +108,10 @@ it('creates cloze node without leaving current node', () => {
   expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
 });
 
-it('creates cloze child content without inheriting anchor tags from parent', () => {
+it('creates cloze child content from pure markdown parent content', () => {
   useWorkspaceStore
     .getState()
-    .updateNodeContent('node-1', '# A <highlight id="1">B</highlight id="1"> C');
+    .updateNodeContent('node-1', '# A B C');
 
   render(<App />);
   let createdNodeId: string | null = null;

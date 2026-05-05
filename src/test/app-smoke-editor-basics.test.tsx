@@ -29,25 +29,33 @@ function keepOnlyInboxWithoutActiveNode() {
   });
 }
 
-it('creates a note from editor typing when no active node is selected', () => {
+function clearActiveNodeSelection() {
+  useWorkspaceStore.setState({
+    activeNodeId: null
+  });
+}
+
+it('shows the empty workspace state when no note exists yet', () => {
   keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
-  fireEvent.change(screen.getByTestId('editor-value'), {
-    target: { value: 'Pasted from clipboard' }
-  });
+  expect(screen.getByText('No notes yet')).toBeInTheDocument();
+  expect(screen.getByText('Create your first note from the list toolbar to start writing.')).toBeInTheDocument();
+  expect(screen.getByText('No note selected')).toBeInTheDocument();
+  expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
+});
 
-  const workspace = useWorkspaceStore.getState();
-  expect(workspace.activeNodeId).toBeTruthy();
-  if (!workspace.activeNodeId) {
-    throw new Error('expected active node to be created');
-  }
-  expect(workspace.nodeOrder).toHaveLength(2);
-  expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('Pasted from clipboard');
+it('shows the document empty state when no note is selected', () => {
+  clearActiveNodeSelection();
+
+  render(<App />);
+  expect(screen.getByRole('treeitem', { name: 'Welcome to Foliole' })).toBeInTheDocument();
+  expect(screen.getByText('No note selected')).toBeInTheDocument();
+  expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
 });
 
 it('creates a new empty note from node panel action', () => {
-  keepOnlyInboxWithoutActiveNode();
+  const initialNodeOrder = [...useWorkspaceStore.getState().nodeOrder];
 
   render(<App />);
   createTopicFromHeaderMenu();
@@ -57,14 +65,12 @@ it('creates a new empty note from node panel action', () => {
   if (!workspace.activeNodeId) {
     throw new Error('expected active node to be created');
   }
-  expect(workspace.nodeOrder).toHaveLength(2);
+  expect(workspace.nodeOrder).toHaveLength(initialNodeOrder.length + 1);
   expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('');
   expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
 });
 
 it('increments Untitled titles when creating multiple empty notes', () => {
-  keepOnlyInboxWithoutActiveNode();
-
   render(<App />);
   createTopicFromHeaderMenu();
   createTopicFromHeaderMenu();
@@ -74,13 +80,13 @@ it('increments Untitled titles when creating multiple empty notes', () => {
     .nodeOrder
     .filter((nodeId) => nodeId !== INBOX_NODE_ID)
     .map((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title);
+  const untitledTitles = titles.filter((title): title is string => title?.startsWith('Untitled') ?? false);
 
-  expect(titles).toHaveLength(2);
-  expect(titles).toEqual(expect.arrayContaining(['Untitled', 'Untitled 1']));
+  expect(untitledTitles).toHaveLength(2);
+  expect(untitledTitles).toEqual(expect.arrayContaining(['Untitled', 'Untitled 1']));
 });
 
 it('keeps first note content unchanged when editing a newly created note', async () => {
-  keepOnlyInboxWithoutActiveNode();
   render(<App />);
   createTopicFromHeaderMenu();
   const firstNodeId = findCreatedNoteId();

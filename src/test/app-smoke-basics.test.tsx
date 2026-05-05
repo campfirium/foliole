@@ -18,6 +18,19 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 
+function createReadingProfile(nextAt: string) {
+  return {
+    intervalDurationMs: 24 * 60 * 60 * 1000,
+    intervalGrowthFactor: 1.3,
+    lastHandledAt: '2026-02-24T00:00:00.000Z',
+    nextAt,
+    priority: 5 as const,
+    readingPosition: 0,
+    repetitionCount: 1,
+    state: 'active' as const
+  };
+}
+
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
 });
@@ -58,10 +71,19 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
+    activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
+      'node-1': createNode({
+        id: 'node-1',
+        kind: 'topic',
+        title: 'Reading 1',
+        content: 'Read this first',
+        reveal: null,
+        review: null,
+        reading: createReadingProfile(FIXED_TIMESTAMP)
+      }),
       'node-2': createNode({
         id: 'node-2',
         parentNodeId: 'node-1',
@@ -99,6 +121,23 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
 });
 
 it('enters review mode with the reading queue when no FSRS cards are due', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1'],
+    nodesById: {
+      ...state.nodesById,
+      'node-1': createNode({
+        id: 'node-1',
+        kind: 'topic',
+        title: 'Reading 1',
+        content: 'Read this first',
+        reveal: null,
+        review: null,
+        reading: createReadingProfile(FIXED_TIMESTAMP)
+      })
+    }
+  }));
+
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));

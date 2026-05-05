@@ -9,6 +9,26 @@ import { resetPerformanceDiagnosticsProbe } from '../shared/platform/performance
 import { resetWorkspaceNodeDocumentPrefetchForTest } from '../store/workspaceNodeDocumentPrefetch';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
+const smokeBridgeMocks = vi.hoisted(() => ({
+  loadRuntimePdfImportsInventory: vi.fn(async () => ({ items: [] })),
+  loadRuntimeReadwiseBooksInventory: vi.fn(async () => ({ books: [] })),
+  loadRuntimeNodeBacklinks: vi.fn(async () => null),
+  useNodeSourceDetails: vi.fn(() => ({
+    isLoading: false,
+    value: null
+  })),
+  useNodeSourceUpdatePreview: vi.fn(() => ({
+    isLoading: false,
+    value: null
+  }))
+}));
+
+export const loadRuntimeNodeBacklinksMock = smokeBridgeMocks.loadRuntimeNodeBacklinks;
+export const loadRuntimePdfImportsInventoryMock = smokeBridgeMocks.loadRuntimePdfImportsInventory;
+export const loadRuntimeReadwiseBooksInventoryMock = smokeBridgeMocks.loadRuntimeReadwiseBooksInventory;
+export const useNodeSourceDetailsMock = smokeBridgeMocks.useNodeSourceDetails;
+export const useNodeSourceUpdatePreviewMock = smokeBridgeMocks.useNodeSourceUpdatePreview;
+
 export const mockEditorState: { content: string; selectionFrom: number; selectionTo: number } = {
   content: '',
   selectionFrom: 0,
@@ -105,6 +125,40 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
   }
 }));
 
+vi.mock('../app/components/ReadwiseBookActionsPanel', () => ({
+  ReadwiseBookActionsPanel: () => null
+}));
+
+vi.mock('../app/components/WorkspaceSettingsOverlay', () => ({
+  WorkspaceSettingsOverlay: () => null
+}));
+
+vi.mock('../app/components/useNodeSourceDetails', () => ({
+  useNodeSourceDetails: smokeBridgeMocks.useNodeSourceDetails
+}));
+
+vi.mock('../app/components/useNodeSourceUpdatePreview', () => ({
+  useNodeSourceUpdatePreview: smokeBridgeMocks.useNodeSourceUpdatePreview
+}));
+
+vi.mock('../shared/platform/nodeBacklinksBridge', () => ({
+  loadRuntimeNodeBacklinks: smokeBridgeMocks.loadRuntimeNodeBacklinks
+}));
+
+vi.mock('../shared/platform/pdfImportsBridge', () => ({
+  loadRuntimePdfImportsInventory: smokeBridgeMocks.loadRuntimePdfImportsInventory
+}));
+
+vi.mock('../shared/platform/readwiseBooksBridge', async () => {
+  const actual = await vi.importActual<typeof import('../shared/platform/readwiseBooksBridge')>(
+    '../shared/platform/readwiseBooksBridge'
+  );
+  return {
+    ...actual,
+    loadRuntimeReadwiseBooksInventory: smokeBridgeMocks.loadRuntimeReadwiseBooksInventory
+  };
+});
+
 export const FIXED_TIMESTAMP = '2026-02-25T00:00:00.000Z';
 
 export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 'content'>): Node {
@@ -152,5 +206,21 @@ export function resetAppSmokeState() {
 }
 
 beforeEach(() => {
+  loadRuntimeNodeBacklinksMock.mockReset();
+  loadRuntimeNodeBacklinksMock.mockResolvedValue(null);
+  loadRuntimePdfImportsInventoryMock.mockReset();
+  loadRuntimePdfImportsInventoryMock.mockResolvedValue({ items: [] });
+  loadRuntimeReadwiseBooksInventoryMock.mockReset();
+  loadRuntimeReadwiseBooksInventoryMock.mockResolvedValue({ books: [] });
+  useNodeSourceDetailsMock.mockReset();
+  useNodeSourceDetailsMock.mockReturnValue({
+    isLoading: false,
+    value: null
+  });
+  useNodeSourceUpdatePreviewMock.mockReset();
+  useNodeSourceUpdatePreviewMock.mockReturnValue({
+    isLoading: false,
+    value: null
+  });
   resetAppSmokeState();
 });

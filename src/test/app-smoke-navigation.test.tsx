@@ -8,6 +8,18 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, mockEditorState } from './app-smoke.shared';
 
+function createTextAnchorLink(id: string, originalText: string, from: number) {
+  return {
+    id,
+    kind: 'highlight' as const,
+    locator: {
+      from,
+      originalText,
+      to: from + originalText.length
+    }
+  };
+}
+
 it('supports ctrl/cmd multi-select and shift range select in node list', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
@@ -137,6 +149,7 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
 });
 
 it('renders breadcrumbs in document header and jumps to ancestor node', () => {
+  const parentContent = '# Parent Needle';
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],
@@ -146,14 +159,14 @@ it('renders breadcrumbs in document header and jumps to ancestor node', () => {
         id: 'node-2',
         parentNodeId: 'node-1',
         title: 'Parent',
-        content: '# Parent <highlight id="1">Needle</highlight id="1">'
+        content: parentContent
       }),
       'node-3': createNode({
         id: 'node-3',
         parentNodeId: 'node-2',
         title: 'Child',
         content: '# Child',
-        anchorLink: { id: '1', kind: 'highlight' }
+        anchorLink: createTextAnchorLink('1', 'Needle', parentContent.indexOf('Needle'))
       })
     }
   }));
@@ -167,6 +180,7 @@ it('renders breadcrumbs in document header and jumps to ancestor node', () => {
 });
 
 it('supports toolbar parent and navigation history actions', () => {
+  const parentContent = '# Parent Needle';
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],
@@ -176,14 +190,14 @@ it('supports toolbar parent and navigation history actions', () => {
         id: 'node-2',
         parentNodeId: 'node-1',
         title: 'Parent',
-        content: '# Parent <highlight id="1">Needle</highlight id="1">'
+        content: parentContent
       }),
       'node-3': createNode({
         id: 'node-3',
         parentNodeId: 'node-2',
         title: 'Child',
         content: '# Child',
-        anchorLink: { id: '1', kind: 'highlight' }
+        anchorLink: createTextAnchorLink('1', 'Needle', parentContent.indexOf('Needle'))
       })
     },
     navigation: { backStack: [], forwardStack: [] }
@@ -200,6 +214,7 @@ it('supports toolbar parent and navigation history actions', () => {
 });
 
 it('reveals document highlights from the right sidebar list', () => {
+  const parentContent = '# Parent Needle\n\nSecond mark';
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
@@ -208,21 +223,21 @@ it('reveals document highlights from the right sidebar list', () => {
       'node-2': createNode({
         id: 'node-2',
         title: 'Parent',
-        content: '# Parent <highlight id="1">Needle</highlight id="1">\n\n<highlight id="2">Second mark</highlight id="2">'
+        content: parentContent
       }),
       'node-3': createNode({
         id: 'node-3',
         parentNodeId: 'node-2',
         title: 'Needle highlight',
         content: 'Needle',
-        anchorLink: { id: '1', kind: 'highlight' }
+        anchorLink: createTextAnchorLink('1', 'Needle', parentContent.indexOf('Needle'))
       }),
       'node-4': createNode({
         id: 'node-4',
         parentNodeId: 'node-2',
         title: 'Second mark highlight',
         content: 'Second mark',
-        anchorLink: { id: '2', kind: 'highlight' }
+        anchorLink: createTextAnchorLink('2', 'Second mark', parentContent.indexOf('Second mark'))
       })
     }
   }));
@@ -232,7 +247,7 @@ it('reveals document highlights from the right sidebar list', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Highlights panel' }));
   fireEvent.click(screen.getByRole('button', { name: /Second mark/i }));
 
-  const expectedFrom = '# Parent <highlight id="1">Needle</highlight id="1">\n\n<highlight id="2">Second mark</highlight id="2">'.indexOf('Second mark');
+  const expectedFrom = parentContent.indexOf('Second mark');
   return waitFor(() => {
     expect(mockEditorState.selectionFrom).toBe(expectedFrom);
     expect(mockEditorState.selectionTo).toBe(expectedFrom + 'Second mark'.length);

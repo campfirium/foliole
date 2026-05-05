@@ -174,7 +174,7 @@ it('opens import management from the left toolbar instead of replacing Inbox', a
 
   fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
 
-  expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
+  expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Import management' })).not.toBeInTheDocument();
 });
 
