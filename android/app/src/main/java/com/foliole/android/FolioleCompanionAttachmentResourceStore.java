@@ -34,16 +34,25 @@ final class FolioleCompanionAttachmentResourceStore {
         String url,
         JSONObject headers
     ) throws Exception {
-        JSONObject requestKeys = resourceObject(context, "syncRequestKeys");
-        String normalizedAttachmentId = requireText(attachmentId, requestKeys.getString("attachmentId"));
-        String normalizedContentHash = requireText(contentHash, requestKeys.getString("contentHash"));
+        String normalizedAttachmentId = requireText(
+            attachmentId,
+            FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context)
+        );
+        String normalizedContentHash = requireText(
+            contentHash,
+            FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)
+        );
         try {
             File outputFile = attachmentFile(context, normalizedContentHash);
             File parent = outputFile.getParentFile();
             if (parent != null && !parent.exists() && !parent.mkdirs()) {
                 throw new IllegalStateException("Failed to create attachment directory.");
             }
-            FolioleCompanionDesktopHttpClient.downloadToFile(requireText(url, requestKeys.getString("url")), headers, outputFile);
+            FolioleCompanionDesktopHttpClient.downloadToFile(
+                requireText(url, FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
+                headers,
+                outputFile
+            );
             String now = Instant.now().toString();
             int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
                 context,
@@ -75,7 +84,10 @@ final class FolioleCompanionAttachmentResourceStore {
     }
 
     static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
-        String normalizedAttachmentId = requireText(attachmentId, resourceObject(context, "syncRequestKeys").getString("attachmentId"));
+        String normalizedAttachmentId = requireText(
+            attachmentId,
+            FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context)
+        );
         JSONObject row = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
