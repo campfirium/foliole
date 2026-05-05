@@ -97,6 +97,18 @@
       "statementName": "appDataClearWorkspaceMeta"
     }
   ],
+  "resourceMutations": {
+    "attachmentResources": {
+      "markCachedMutationName": "attachmentResourceMarkCached",
+      "markFailedMutationName": "attachmentResourceMarkFailed"
+    },
+    "contentBlobs": {
+      "dataReplaceMutationName": "contentBlobDataReplace",
+      "markCachedMutationName": "contentBlobMarkCached",
+      "markFailedMutationName": "contentBlobMarkFailed",
+      "markFetchingMutationName": "contentBlobMarkFetching"
+    }
+  },
   "statements": {
     "syncPushAckDeleteByObject": "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?",
     "syncPushAckDeleteIssuesByObject": "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",

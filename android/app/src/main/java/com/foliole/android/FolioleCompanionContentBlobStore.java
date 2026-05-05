@@ -48,7 +48,7 @@ final class FolioleCompanionContentBlobStore {
         String now = Instant.now().toString();
         database.beginTransaction();
         try {
-            FolioleCompanionNamedMutationStore.execute(context, database, "contentBlobDataReplace", new Object[] { hash, bytes });
+            FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "dataReplaceMutationName"), new Object[] { hash, bytes });
             int updated = markCachedRow(context, database, hash, now);
             if (updated <= 0) {
                 throw new IllegalStateException("Content blob manifest is missing.");
@@ -112,7 +112,7 @@ final class FolioleCompanionContentBlobStore {
         return FolioleCompanionNamedMutationStore.executeChanged(
             context,
             database,
-            "contentBlobMarkCached",
+            mutationRule(context, "markCachedMutationName"),
             new Object[] { now, now, hash }
         );
     }
@@ -121,7 +121,7 @@ final class FolioleCompanionContentBlobStore {
         int updated = FolioleCompanionNamedMutationStore.executeChanged(
             context,
             database,
-            "contentBlobMarkFetching",
+            mutationRule(context, "markFetchingMutationName"),
             new Object[] { hash }
         );
         if (updated <= 0) {
@@ -133,9 +133,13 @@ final class FolioleCompanionContentBlobStore {
         FolioleCompanionNamedMutationStore.executeChanged(
             context,
             database,
-            "contentBlobMarkFailed",
+            mutationRule(context, "markFailedMutationName"),
             new Object[] { hash }
         );
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceMutationRules.contentBlobString(context, key);
     }
 
     private static String requireHash(String value) {

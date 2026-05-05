@@ -73,6 +73,10 @@ export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
 
 export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
   attachmentResources: {
+    attachmentIdKey: 'attachment_id',
+    contentHashKey: 'content_hash',
+    contentHashesByIdsQueryName: 'attachmentResourceContentHashesByIds',
+    contentHashesReplacement: '__ATTACHMENT_ID_FILTER__',
     mimeTypeKey: 'mime_type',
     resolveQueryName: 'attachmentResourceResolve',
     resultKey: 'resources',

@@ -134,3 +134,16 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'nodes', statementName: 'appDataClearNodes' },
   { table: 'workspace_meta', statementName: 'appDataClearWorkspaceMeta' }
 ] as const;
+
+export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
+  attachmentResources: {
+    markCachedMutationName: 'attachmentResourceMarkCached',
+    markFailedMutationName: 'attachmentResourceMarkFailed'
+  },
+  contentBlobs: {
+    dataReplaceMutationName: 'contentBlobDataReplace',
+    markCachedMutationName: 'contentBlobMarkCached',
+    markFailedMutationName: 'contentBlobMarkFailed',
+    markFetchingMutationName: 'contentBlobMarkFetching'
+  }
+} as const;

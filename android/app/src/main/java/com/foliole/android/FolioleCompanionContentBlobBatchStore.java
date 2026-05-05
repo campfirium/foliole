@@ -93,14 +93,14 @@ final class FolioleCompanionContentBlobBatchStore {
         CachedBlob blob,
         String now
     ) throws Exception {
-        FolioleCompanionNamedMutationStore.execute(context, database, "contentBlobDataReplace", new Object[] {
+        FolioleCompanionNamedMutationStore.execute(context, database, mutationRule(context, "dataReplaceMutationName"), new Object[] {
             blob.hash,
             blob.bytes
         });
         int updated = FolioleCompanionNamedMutationStore.executeChanged(
             context,
             database,
-            "contentBlobMarkCached",
+            mutationRule(context, "markCachedMutationName"),
             new Object[] { now, now, blob.hash }
         );
         if (updated <= 0) {
@@ -124,6 +124,10 @@ final class FolioleCompanionContentBlobBatchStore {
 
     private static long elapsedMs(long startedAt) {
         return Math.max(0L, (System.nanoTime() - startedAt) / 1_000_000L);
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceMutationRules.contentBlobString(context, key);
     }
 
     private static final class CachedBlob {

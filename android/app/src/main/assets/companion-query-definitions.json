@@ -1741,6 +1741,10 @@
   },
   "resourceRead": {
     "attachmentResources": {
+      "attachmentIdKey": "attachment_id",
+      "contentHashKey": "content_hash",
+      "contentHashesByIdsQueryName": "attachmentResourceContentHashesByIds",
+      "contentHashesReplacement": "__ATTACHMENT_ID_FILTER__",
       "mimeTypeKey": "mime_type",
       "resolveQueryName": "attachmentResourceResolve",
       "resultKey": "resources",

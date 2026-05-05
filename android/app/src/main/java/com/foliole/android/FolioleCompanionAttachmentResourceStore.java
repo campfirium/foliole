@@ -47,7 +47,7 @@ final class FolioleCompanionAttachmentResourceStore {
             int updated = FolioleCompanionNamedMutationStore.executeChanged(
                 context,
                 database,
-                "attachmentResourceMarkCached",
+                mutationRule(context, "markCachedMutationName"),
                 new Object[] { normalizedContentHash, now, now, normalizedAttachmentId }
             );
             if (updated <= 0) {
@@ -67,7 +67,7 @@ final class FolioleCompanionAttachmentResourceStore {
         FolioleCompanionNamedMutationStore.executeChanged(
             context,
             database,
-            "attachmentResourceMarkFailed",
+            mutationRule(context, "markFailedMutationName"),
             new Object[] { attachmentId }
         );
     }
@@ -121,6 +121,10 @@ final class FolioleCompanionAttachmentResourceStore {
 
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceMutationRules.attachmentString(context, key);
     }
 
     private static String nullableString(JSONObject row, String key) {

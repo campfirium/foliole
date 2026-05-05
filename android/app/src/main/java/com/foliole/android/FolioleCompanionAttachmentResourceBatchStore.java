@@ -113,7 +113,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
                 int updated = FolioleCompanionNamedMutationStore.executeChanged(
                     context,
                     database,
-                    "attachmentResourceMarkCached",
+                    mutationRule(context, "markCachedMutationName"),
                     new Object[] { contentHash, now, now, attachmentId }
                 );
                 if (updated <= 0) {
@@ -139,14 +139,16 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             .loadArray(
                 context,
                 database,
-                "attachmentResourceContentHashesByIds",
-                Collections.singletonMap("__ATTACHMENT_ID_FILTER__", placeholders.toString()),
+                resourceRule(context, "contentHashesByIdsQueryName"),
+                Collections.singletonMap(resourceRule(context, "contentHashesReplacement"), placeholders.toString()),
                 args
             )
-            .getJSONArray("resources");
+            .getJSONArray(resourceRule(context, "resultKey"));
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            hashes.put(row.getString("attachment_id"), requireText(row.getString("content_hash"), "content_hash"));
+            String attachmentId = row.getString(resourceRule(context, "attachmentIdKey"));
+            String contentHash = row.getString(resourceRule(context, "contentHashKey"));
+            hashes.put(attachmentId, requireText(contentHash, resourceRule(context, "contentHashKey")));
         }
         return hashes;
     }
@@ -155,7 +157,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         FolioleCompanionNamedMutationStore.executeChanged(
             context,
             database,
-            "attachmentResourceMarkFailed",
+            mutationRule(context, "markFailedMutationName"),
             new Object[] { attachmentId }
         );
     }
@@ -169,6 +171,14 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             throw new IllegalArgumentException(field + " is required.");
         }
         return value.trim();
+    }
+
+    private static String mutationRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceMutationRules.attachmentString(context, key);
+    }
+
+    private static String resourceRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
     }
 
     private static final class DownloadResult {
