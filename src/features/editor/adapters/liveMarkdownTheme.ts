@@ -26,7 +26,7 @@ export const liveMarkdownTheme = EditorView.theme({
     fontSize: 'var(--content-panel-font-size, 1.0625rem)',
     margin: '0 auto',
     maxWidth: 'min(100%, var(--document-max-width, 860px))',
-    padding: '0.25rem var(--document-content-inline-padding, 1.5rem) var(--editor-content-padding-bottom, 0.6rem)',
+    padding: 'var(--editor-content-padding-top, 0.25rem) var(--document-content-inline-padding, 1.5rem) var(--editor-content-padding-bottom, 0.6rem)',
     width: '100%'
   },
   '.cm-widgetBuffer': { width: '0px' },

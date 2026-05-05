@@ -119,7 +119,7 @@ it('opens an existing highlight toolbar from a highlight click', () => {
   expect(highlightElement).toHaveClass('cm-md-highlight-active');
 
   act(() => result.current.handleCreateNote('Reader thought'));
-  expect(updateNodeContent).toHaveBeenCalledWith('highlight-1', 'Welcome\n---\nReader thought');
+  expect(updateNodeContent).toHaveBeenCalledWith('highlight-1', 'Welcome\n※ Reader thought');
 
   act(() => result.current.handleDeleteExistingHighlight());
   expect(deleteNodePermanently).toHaveBeenCalledWith('highlight-1');

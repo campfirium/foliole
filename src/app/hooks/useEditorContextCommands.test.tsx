@@ -169,7 +169,7 @@ it('creates an annotated highlight from an explicit reading selection payload', 
     }, 'Reader thought');
   });
 
-  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha\n---\nReader thought', '1', {
+  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha\n※ Reader thought', '1', {
     id: '1',
     kind: 'highlight',
     locator: { from: 0, originalText: 'Alpha', to: 5 }

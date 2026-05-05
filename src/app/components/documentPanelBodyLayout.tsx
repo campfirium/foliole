@@ -31,6 +31,7 @@ export interface DocumentPanelBodyLayoutProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
+  editorContentPaddingTop?: string;
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
@@ -138,6 +139,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         blockImageMaxHeightOverride={props.sharedBlockImageMaxHeight}
         className="prompt-editor-host"
         contentPaddingBottom={props.editorContentPaddingBottom}
+        contentPaddingTop={props.editorContentPaddingTop}
         debugId={props.promptEditorDebugId}
         fitBlockImagesToViewport={props.fitBlockImagesToViewport}
         hideScrollbar={props.editorHideScrollbar}

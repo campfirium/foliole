@@ -26,6 +26,7 @@ export interface MarkdownEditorProps {
   blockImageMaxHeightOverride?: number;
   blockImageWidthOverride?: string;
   className?: string;
+  contentPaddingTop?: string;
   contentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];

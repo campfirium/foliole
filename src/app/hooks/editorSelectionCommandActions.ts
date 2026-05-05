@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { NodeAnchorLink, NodeImageRegionGroup, TextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
 
@@ -51,7 +52,7 @@ function createAnnotatedHighlightFactory(
   return (payload: SelectionCommandPayload, note: string) =>
     createHighlightNodeFromSelection(
       payload.parentNodeId,
-      formatHighlightCardContent({ note, text: payload.selectionText }),
+      formatHighlightCardContent({ note, notePrefix: getHighlightAnnotationPrefix(), text: payload.selectionText }),
       payload.anchorId,
       createTextAnchorLink(payload, 'highlight'),
       payload.imageRegions

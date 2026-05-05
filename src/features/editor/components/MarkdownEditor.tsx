@@ -66,6 +66,7 @@ function useMarkdownEditorSurfaceModel(args: {
   bindings: ReturnType<typeof useMouseGestureSettings>['bindings'];
   blockImageMaxHeightOverride: number | undefined;
   blockImageWidthOverride: string | undefined;
+  contentPaddingTop: string | undefined;
   contentPaddingBottom: string | undefined;
   fitBlockImagesToViewport: boolean;
   hostRef: MutableRefObject<HTMLDivElement | null>;
@@ -92,6 +93,7 @@ function useMarkdownEditorSurfaceModel(args: {
     value: args.value
   });
   const editorStyle = {
+    '--editor-content-padding-top': args.contentPaddingTop,
     '--editor-content-padding-bottom': args.contentPaddingBottom,
     '--editor-image-max-height':
       typeof args.blockImageMaxHeightOverride === 'number' ? `${args.blockImageMaxHeightOverride}px` : imageMaxHeight,
@@ -143,6 +145,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     bindings,
     blockImageMaxHeightOverride: props.blockImageMaxHeightOverride,
     blockImageWidthOverride: props.blockImageWidthOverride,
+    contentPaddingTop: props.contentPaddingTop,
     contentPaddingBottom: props.contentPaddingBottom,
     fitBlockImagesToViewport: props.fitBlockImagesToViewport ?? false,
     hostRef,

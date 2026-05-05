@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 
 import { appendHighlightCardNote } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
 
@@ -131,6 +132,7 @@ export function createAddNoteToSelectionHighlightFromPayloadHandler(args: {
     args.updateNodeContent(existingHighlightMatch.nodeId, appendHighlightCardNote({
       content: node.content,
       note,
+      notePrefix: getHighlightAnnotationPrefix(),
       originalText: existingHighlightMatch.originalText
     }));
     args.onSelectNode(existingHighlightMatch.nodeId);

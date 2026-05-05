@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 
 import { appendHighlightCardNote } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
@@ -191,6 +192,7 @@ function createExistingHighlightHandlers(args: {
       args.updateNodeContent(existingHighlight.nodeId, appendHighlightCardNote({
         content: node.content,
         note,
+        notePrefix: getHighlightAnnotationPrefix(),
         originalText: existingHighlight.originalText
       }));
     },
