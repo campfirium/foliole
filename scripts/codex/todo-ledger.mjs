@@ -12,9 +12,37 @@ const DEFAULT_PAUSE_PATTERNS = [
   /^验收 Phase \d+ 退出标志/
 ];
 
-export function parseFirstTodoTask(markdown) {
+const TASK_MODE_PREFIX = /^\[(auto|gate)\]\s*/i;
+
+function inferTaskMode(task, patterns = DEFAULT_PAUSE_PATTERNS) {
+  return isPauseTask(task, patterns) ? 'gate' : 'auto';
+}
+
+function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
+  const match = line.trim().match(/^- \[ \] (.+)$/);
+  if (!match) {
+    return null;
+  }
+  const body = match[1].trim();
+  const modeMatch = body.match(TASK_MODE_PREFIX);
+  if (modeMatch) {
+    return {
+      raw: body,
+      task: body.slice(modeMatch[0].length).trim(),
+      mode: modeMatch[1].toLowerCase()
+    };
+  }
+  return {
+    raw: body,
+    task: body,
+    mode: inferTaskMode(body, patterns)
+  };
+}
+
+export function parseTodoEntries(markdown, patterns = DEFAULT_PAUSE_PATTERNS) {
   const lines = markdown.split('\n');
   let insideTodoSection = false;
+  const entries = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -28,13 +56,22 @@ export function parseFirstTodoTask(markdown) {
     if (!insideTodoSection) {
       continue;
     }
-    const match = trimmed.match(/^- \[ \] (.+)$/);
-    if (match) {
-      return match[1].trim();
+    const entry = parsePendingTask(trimmed, patterns);
+    if (entry) {
+      entries.push(entry);
     }
   }
 
-  return '';
+  return entries;
+}
+
+export function parseFirstTodoTask(markdown) {
+  return parseTodoEntries(markdown)[0]?.task ?? '';
+}
+
+export function selectNextTodoTask(markdown) {
+  const entries = parseTodoEntries(markdown);
+  return entries.find((entry) => entry.mode === 'auto') ?? entries[0] ?? null;
 }
 
 export function isPauseTask(task, patterns = DEFAULT_PAUSE_PATTERNS) {
@@ -43,7 +80,7 @@ export function isPauseTask(task, patterns = DEFAULT_PAUSE_PATTERNS) {
 
 export async function readTodoTask() {
   const content = await readFile(TODO_PATH, 'utf8');
-  return parseFirstTodoTask(content);
+  return selectNextTodoTask(content)?.task ?? '';
 }
 
 function removeFirstPendingTask(markdown, task) {
@@ -63,7 +100,8 @@ function removeFirstPendingTask(markdown, task) {
     if (!insideTodoSection || removed) {
       return true;
     }
-    if (trimmed === `- [ ] ${task}`) {
+    const entry = parsePendingTask(trimmed);
+    if (entry?.task === task) {
       removed = true;
       return false;
     }
@@ -85,12 +123,15 @@ export async function completePauseTask(task, note = 'manual acceptance complete
     readFile(TODO_PATH, 'utf8'),
     readFile(DONE_PATH, 'utf8')
   ]);
-  const firstTask = parseFirstTodoTask(todoContent);
-  if (!firstTask) {
+  const currentTask = selectNextTodoTask(todoContent);
+  if (!currentTask) {
     throw new Error('no pending TODO item found');
   }
-  if (firstTask !== task) {
-    throw new Error(`first pending task mismatch: expected "${task}", got "${firstTask}"`);
+  if (currentTask.task !== task) {
+    throw new Error(`first pending task mismatch: expected "${task}", got "${currentTask.task}"`);
+  }
+  if (currentTask.mode !== 'gate') {
+    throw new Error(`complete-gate requires a gate task, got "${currentTask.mode}"`);
   }
 
   const updatedTodo = removeFirstPendingTask(todoContent, task);

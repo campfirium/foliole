@@ -6,8 +6,7 @@ import ReactDOM from 'react-dom/client';
 import { App } from './app/App';
 import './app/styles.css';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
-import { getRuntimeInvoke } from './shared/platform/bridge';
-import { reportNativeAppReady, reportNativeBootStage } from './shared/testing/nativeBootReporter';
+import { getRuntimeInvoke, reportRuntimeAppReady, reportRuntimeBootStage } from './shared/platform/bridge';
 
 const ROOT_ID = 'root';
 
@@ -30,7 +29,7 @@ function renderStartupError(message: string) {
 function registerBootDiagnostics() {
   window.addEventListener('error', (event) => {
     console.error('[startup] uncaught error', event.error);
-    reportNativeBootStage('window_error', {
+    reportRuntimeBootStage('window_error', {
       message: event.message,
       source: event.filename,
       line: event.lineno,
@@ -39,7 +38,7 @@ function registerBootDiagnostics() {
   });
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[startup] unhandled rejection', event.reason);
-    reportNativeBootStage('unhandled_rejection', {
+    reportRuntimeBootStage('unhandled_rejection', {
       reason: String(event.reason)
     });
   });
@@ -83,7 +82,7 @@ function mountApp() {
   console.info('[startup] boot context', {
     ...bootContext
   });
-  reportNativeBootStage('boot_context', bootContext);
+  reportRuntimeBootStage('boot_context', bootContext);
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
@@ -92,7 +91,7 @@ function mountApp() {
       </Theme>
     </React.StrictMode>
   );
-  reportNativeBootStage('react_render_committed');
+  reportRuntimeBootStage('react_render_committed');
 
   let appReadySignaled = false;
   const signalAppReady = (source: string) => {
@@ -100,7 +99,7 @@ function mountApp() {
       return;
     }
     appReadySignaled = true;
-    reportNativeAppReady({
+    reportRuntimeAppReady({
       href: window.location.href,
       readyState: document.readyState,
       source
@@ -112,12 +111,12 @@ function mountApp() {
 
 async function bootstrap() {
   try {
-    reportNativeBootStage('boot_start');
+    reportRuntimeBootStage('boot_start');
     await syncAppSettingsWithRuntime();
     mountApp();
   } catch (error) {
     console.error('[startup] fatal bootstrap error', error);
-    reportNativeBootStage('fatal_bootstrap_error', {
+    reportRuntimeBootStage('fatal_bootstrap_error', {
       message: error instanceof Error ? error.message : 'Unknown startup exception'
     });
     const message = error instanceof Error ? error.message : 'Unknown startup exception';

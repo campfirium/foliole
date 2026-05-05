@@ -6,6 +6,8 @@ import {
   onMainWindowResized,
   onNativeMenuCommand,
   openExternalUrl,
+  reportRuntimeAppReady,
+  reportRuntimeBootStage,
   resolveRuntimeAppPaths
 } from './bridge';
 import type { ElectronAPI } from './electronApi';
@@ -20,6 +22,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   window.electronAPI = undefined;
+  window.__FOLIOLE_APP_READY_REPORTED__ = undefined;
 });
 
 it('returns null runtime invoke outside desktop runtime', () => {
@@ -72,6 +75,34 @@ it('opens external urls through typed native invoke when available', async () =>
   await openExternalUrl('https://example.com/docs');
 
   expect(invoke).toHaveBeenCalledWith('open_external_url', { url: 'https://example.com/docs' });
+});
+
+it('reports boot stages through the typed boot report contract', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  reportRuntimeBootStage('boot_start', { mode: 'desktop' });
+  await Promise.resolve();
+
+  expect(invoke).toHaveBeenCalledWith('boot_report', {
+    stage: 'boot_start',
+    payload: { mode: 'desktop' }
+  });
+});
+
+it('only reports runtime app ready once per window lifecycle', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  reportRuntimeAppReady({ first: true });
+  reportRuntimeAppReady({ first: false });
+  await Promise.resolve();
+
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(invoke).toHaveBeenCalledWith('boot_report', {
+    stage: 'app_ready',
+    payload: { first: true }
+  });
 });
 
 it('subscribes window resize through typed electron bridge', async () => {

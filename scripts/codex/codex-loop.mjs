@@ -71,7 +71,7 @@ async function runLoop(options) {
       return 0;
     }
     if (isPauseTask(task)) {
-      process.stdout.write(`[codex-loop] waiting-for-acceptance: ${task}\n`);
+      process.stdout.write(`[codex-loop] waiting-for-gate: ${task}\n`);
       return 20;
     }
     if (options.dryRun) {

@@ -22,6 +22,10 @@ export interface RuntimeSystemFontCatalog {
   monospaceFonts: string[];
 }
 
+interface BootPayload {
+  [key: string]: unknown;
+}
+
 interface ResolveAppPathsResult {
   app_data_dir?: unknown;
   app_config_dir?: unknown;
@@ -32,6 +36,12 @@ interface ResolveAppPathsResult {
 interface ListSystemFontsResult {
   fonts?: unknown;
   monospace_fonts?: unknown;
+}
+
+declare global {
+  interface Window {
+    __FOLIOLE_APP_READY_REPORTED__?: boolean;
+  }
 }
 
 export function getRuntimeInvoke(): RuntimeInvoke | null {
@@ -142,6 +152,24 @@ export async function listRuntimeSystemFonts(): Promise<RuntimeSystemFontCatalog
   } catch {
     return null;
   }
+}
+
+export function reportRuntimeBootStage(stage: string, payload?: BootPayload) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  void runtimeInvoke(NATIVE_COMMANDS.bootReport, { stage, payload }).catch((error) => {
+    console.error('[startup] boot_report failed', { stage, error });
+  });
+}
+
+export function reportRuntimeAppReady(payload?: BootPayload) {
+  if (typeof window === 'undefined' || window.__FOLIOLE_APP_READY_REPORTED__) {
+    return;
+  }
+  window.__FOLIOLE_APP_READY_REPORTED__ = true;
+  reportRuntimeBootStage('app_ready', payload);
 }
 
 export async function onNativeMenuCommand(handler: (commandId: string) => void): Promise<NativeMenuUnlisten> {
