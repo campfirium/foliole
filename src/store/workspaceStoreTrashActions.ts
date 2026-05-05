@@ -220,15 +220,21 @@ function createRestoreNodeAction(set: WorkspaceSet, runtimeHandlers: TrashRuntim
       idsToRestoreForSync = collectNodeSubtreeIds(nodeId, state.nodesById);
       const idsToRestoreSet = new Set(idsToRestoreForSync);
       const nextTrashedNodeIds = state.trashedNodeIds.filter((id) => !idsToRestoreSet.has(id));
+      const nextTrashedNodeDeletedAtById = { ...state.trashedNodeDeletedAtById };
+      idsToRestoreForSync.forEach((id) => {
+        delete nextTrashedNodeDeletedAtById[id];
+      });
       const nextActiveNodeId = state.activeNodeId ?? nodeId;
       const nextState = {
         ...state,
         activeNodeId: nextActiveNodeId,
+        trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
         trashedNodeIds: nextTrashedNodeIds
       };
       return {
         activeNodeId: nextActiveNodeId,
         reviewSession: reconcileReviewSession(nextState, nextActiveNodeId),
+        trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
         trashedNodeIds: nextTrashedNodeIds
       };
     });

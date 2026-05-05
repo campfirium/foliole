@@ -16,6 +16,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
+import { TrashResultListPanel } from './TrashResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
@@ -144,17 +145,12 @@ function renderStandardContentColumn(
 ) {
   if (props.isTrashViewOpen) {
     return (
-      <NodeListTree
-        activeNodeId={props.selectedTrashNodeId}
-        isTrashViewOpen
-        isVirtualViewOpen={false}
+      <TrashResultListPanel
         nodeOrder={props.nodeOrder}
         nodesById={props.listNodesById}
-        onOpenMoveToNode={props.onOpenMoveToNode}
-        onOpenNotesView={props.onOpenNotesView}
-        onSelectNode={props.onSelectNode}
         onSelectTrashNode={props.onSelectTrashNode}
         selectedTrashNodeId={props.selectedTrashNodeId}
+        trashedNodeIds={props.trashedNodeIds}
       />
     );
   }

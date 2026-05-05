@@ -1,7 +1,8 @@
 import type {
   CSSProperties,
   KeyboardEvent as ReactKeyboardEvent,
-  MouseEvent as ReactMouseEvent
+  MouseEvent as ReactMouseEvent,
+  ReactNode
 } from 'react';
 
 import { AppButton } from '../../../shared/ui';
@@ -28,7 +29,8 @@ export function renderNodeTreeRowContent(props: {
   mutedOpacity: number;
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
-  secondaryLabel?: string;
+  secondaryLabel?: ReactNode;
+  trailingLabelContent?: ReactNode;
   showIcon: boolean;
   rename: ReturnType<typeof useRenameState>;
 }) {
@@ -40,6 +42,9 @@ export function renderNodeTreeRowContent(props: {
       <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
         {renderNodeLabel(props.label, props.rename)}
+        {props.trailingLabelContent ? (
+          <span className="flex-none">{props.trailingLabelContent}</span>
+        ) : null}
         {props.descendantCount > 0 ? (
           <span aria-hidden="true" className="flex-none text-foreground/55">
             ({props.descendantCount})
@@ -93,7 +98,8 @@ export function renderNodeTreeRowButtonSurface(props: {
   nodeId: string;
   rename: ReturnType<typeof useRenameState>;
   rowSpacing: number;
-  secondaryLabel?: string;
+  secondaryLabel?: ReactNode;
+  trailingLabelContent?: ReactNode;
   showIcon: boolean;
   style: CSSProperties;
   treeItemState: { 'aria-pressed': boolean; 'aria-selected': boolean };
@@ -147,6 +153,7 @@ function renderNodeTreeRowButtonBody(
         nodeIconKind: props.nodeIconKind,
         nodeIconState: props.nodeIconState,
         secondaryLabel: props.secondaryLabel,
+        trailingLabelContent: props.trailingLabelContent,
         showIcon: props.showIcon,
         rename: props.rename
       })}

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
 
@@ -35,6 +35,10 @@ const entriesByFolderId = {
   ]
 };
 
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
 it('reuses the compact item row style for external library items without dates or opening previews', () => {
   render(
     <ExternalLibraryListPanel
@@ -46,6 +50,7 @@ it('reuses the compact item row style for external library items without dates o
   );
 
   expect(screen.getByRole('treeitem', { name: 'Alpha title' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Modified time' })).toBeInTheDocument();
   expect(screen.queryByText('2026-04-21')).toBeNull();
   expect(screen.queryByText('The first useful sentence inside this external document.')).toBeNull();
 });

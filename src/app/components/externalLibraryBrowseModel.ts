@@ -3,6 +3,8 @@ import type {
   RuntimeExternalSearchFolder
 } from '../../shared/platform/externalSearchBridge';
 
+import { compareNaturalName } from './workspaceContentSort';
+
 export interface ExternalLibraryDocumentItem {
   absolutePath: string;
   extension: 'md' | 'txt';
@@ -75,7 +77,18 @@ function collectDirectoryPaths(entries: RuntimeExternalSearchBrowseEntry[]) {
       paths.add(currentPath);
     });
   });
-  return [...paths].sort((left, right) => left.localeCompare(right));
+  return [...paths].sort(compareDirectoryPath);
+}
+
+function compareDirectoryPath(left: string, right: string) {
+  const leftSegments = normalizeExternalDirectoryPath(left).split('/').filter(Boolean);
+  const rightSegments = normalizeExternalDirectoryPath(right).split('/').filter(Boolean);
+  const length = Math.min(leftSegments.length, rightSegments.length);
+  for (let index = 0; index < length; index += 1) {
+    const result = compareNaturalName(leftSegments[index], rightSegments[index]);
+    if (result !== 0) return result;
+  }
+  return leftSegments.length - rightSegments.length;
 }
 
 function buildDirectoryNode(folder: RuntimeExternalSearchFolder, directoryPath: string, entries: RuntimeExternalSearchBrowseEntry[]) {
@@ -129,7 +142,6 @@ function listDocumentsForDirectory(entries: RuntimeExternalSearchBrowseEntry[], 
         : true;
     })
     .map((entry) => toDocumentItem(entry))
-    .sort((left, right) => left.relativePath.localeCompare(right.relativePath));
 }
 
 export function buildExternalLibraryFolderBrowseState(

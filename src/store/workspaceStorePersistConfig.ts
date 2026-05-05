@@ -25,6 +25,7 @@ export function createWorkspaceStorePersistConfig(
         state.nodesById,
         collectRendererBoundaryKeepNodeIds(state, state)
       ),
+      trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
       trashedNodeIds: state.trashedNodeIds,
       untitledSequenceByParent: state.untitledSequenceByParent
     }),
@@ -40,6 +41,7 @@ export function createWorkspaceStorePersistConfig(
           ...persisted.layout
         },
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
+        trashedNodeDeletedAtById: persisted.trashedNodeDeletedAtById ?? current.trashedNodeDeletedAtById,
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent
       };

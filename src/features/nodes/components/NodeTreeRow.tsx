@@ -2,7 +2,8 @@ import type {
   CSSProperties,
   DragEvent as ReactDragEvent,
   KeyboardEvent as ReactKeyboardEvent,
-  MouseEvent as ReactMouseEvent
+  MouseEvent as ReactMouseEvent,
+  ReactNode
 } from 'react';
 import { memo } from 'react';
 
@@ -38,7 +39,8 @@ interface NodeTreeRowProps {
   label: string;
   nodeId: string;
   rowSpacing: number;
-  secondaryLabel?: string;
+  secondaryLabel?: ReactNode;
+  trailingLabelContent?: ReactNode;
   onDragEnd?: () => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragOver?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -82,7 +84,8 @@ function renderNodeTreeRowButton(props: {
   label: string;
   nodeId: string;
   rowSpacing: number;
-  secondaryLabel?: string;
+  secondaryLabel?: ReactNode;
+  trailingLabelContent?: ReactNode;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   onRename?: (nodeId: string, title: string) => void;
@@ -126,6 +129,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         nodeId: props.nodeId,
         rowSpacing: props.rowSpacing,
         secondaryLabel: props.secondaryLabel,
+        trailingLabelContent: props.trailingLabelContent,
         onContextMenu: props.onContextMenu,
         onKeyDown: props.onKeyDown,
         onRename: props.onRename,
@@ -158,6 +162,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.showIcon === next.showIcon &&
     previous.rowSpacing === next.rowSpacing &&
     previous.secondaryLabel === next.secondaryLabel &&
+    previous.trailingLabelContent === next.trailingLabelContent &&
     previous.onContextMenu === next.onContextMenu &&
     previous.onDragEnd === next.onDragEnd &&
     previous.onDragEnter === next.onDragEnter &&
@@ -189,7 +194,8 @@ interface NodeTreeRowButtonProps {
   label: string;
   nodeId: string;
   rowSpacing: number;
-  secondaryLabel?: string;
+  secondaryLabel?: ReactNode;
+  trailingLabelContent?: ReactNode;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   onRename?: (nodeId: string, title: string) => void;
@@ -198,63 +204,45 @@ interface NodeTreeRowButtonProps {
   style: CSSProperties;
 }
 
-function NodeTreeRowButton({
-  descendantCount,
-  depth,
-  hasChildren,
-  isActive,
-  isCollapsed,
-  isDerived,
-  isMuted,
-  mutedOpacity,
-  nodeIconKind,
-  nodeIconState,
-  showIcon,
-  isSelected,
-  label,
-  nodeId,
-  onContextMenu,
-  onKeyDown,
-  onRename,
-  onSelect,
-  onToggleCollapse,
-  rowSpacing,
-  secondaryLabel,
-  style
-}: NodeTreeRowButtonProps) {
-  const rename = useRenameState(label, nodeId, onRename);
-  const buttonClassName = resolveNodeRowButtonClassName({ depth, isDerived, isSelected });
-  const treeItemState = resolveNodeTreeItemState(isSelected);
+function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
+  const rename = useRenameState(props.label, props.nodeId, props.onRename);
+  const buttonClassName = resolveNodeRowButtonClassName({
+    depth: props.depth,
+    isDerived: props.isDerived,
+    isSelected: props.isSelected
+  });
+  const treeItemState = resolveNodeTreeItemState(props.isSelected);
   const handlers = createNodeTreeRowButtonHandlers(
-    hasChildren,
-    onToggleCollapse,
-    nodeId,
-    onContextMenu,
-    onKeyDown,
-    onSelect,
+    props.hasChildren,
+    props.onToggleCollapse,
+    props.nodeId,
+    props.onContextMenu,
+    props.onKeyDown,
+    props.onSelect,
     rename
   );
   return renderNodeTreeRowButtonSurface({
     buttonClassName,
-    depth,
-    descendantCount,
+    depth: props.depth,
+    descendantCount: props.descendantCount,
     handlers,
-    hasChildren,
-    isActive,
-    isCollapsed,
-    isDerived,
-    isMuted,
-    label,
-    mutedOpacity,
-    nodeIconKind,
-    nodeIconState,
-    nodeId,
-    secondaryLabel,
-    showIcon,
-    onToggleCollapse,
+    hasChildren: props.hasChildren,
+    isActive: props.isActive,
+    isCollapsed: props.isCollapsed,
+    isDerived: props.isDerived,
+    isMuted: props.isMuted,
+    label: props.label,
+    mutedOpacity: props.mutedOpacity,
+    nodeIconKind: props.nodeIconKind,
+    nodeIconState: props.nodeIconState,
+    nodeId: props.nodeId,
+    secondaryLabel: props.secondaryLabel,
+    trailingLabelContent: props.trailingLabelContent,
+    showIcon: props.showIcon,
+    onToggleCollapse: props.onToggleCollapse,
     rename,
-    rowSpacing,
-    style,
+    rowSpacing: props.rowSpacing,
+    style: props.style,
     treeItemState
   });
 }

@@ -8,6 +8,8 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
+import { compareNaturalName } from './workspaceContentSort';
+
 function createNavigationTrashNode(): WorkspaceListNode {
   const timestamp = new Date().toISOString();
   return {
@@ -82,7 +84,7 @@ export function buildFolderNavigationNodeOrder(
   const regularFolderIds = visibleFolderIds.filter((nodeId) => {
     const node = nodesById[nodeId];
     return nodeId !== INBOX_NODE_ID && nodeId !== TRASH_NODE_ID && !isInboxNode(node) && !isTrashNode(node);
-  });
+  }).sort((leftId, rightId) => compareNaturalName(nodesById[leftId]?.title ?? '', nodesById[rightId]?.title ?? ''));
 
   return [
     ...(isVisibleFolderNode(nodesById[INBOX_NODE_ID], trashedNodeIds) ? [INBOX_NODE_ID] : []),

@@ -160,8 +160,9 @@ async function persistExternalSearchFolders(
   try {
     const saved = await saveRuntimeExternalSearchFolders(folders);
     if (saved === null) return;
+    const rebuilt = await rebuildRuntimeExternalSearchIndex();
     lastSavedSnapshotRef.current = nextSnapshot;
-    setFolders(saved);
+    setFolders(rebuilt ?? saved);
     setFeedback('External library settings saved.');
   } catch (nextError) {
     setError(nextError instanceof Error ? nextError.message : 'Could not save external library settings.');

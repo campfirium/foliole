@@ -28,6 +28,7 @@ export interface WorkspaceState {
   nodesById: Record<string, Node>;
   rendererBoundaryKeepNodeIds: string[];
   reviewSession: ReviewSessionState;
+  trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
   goBack: () => NodeNavigationResult | null;
@@ -101,6 +102,7 @@ export interface WorkspacePersistedState {
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
 }
@@ -153,6 +155,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'rendererBoundaryKeepNodeIds'
   | 'nodeViewById'
   | 'reviewSession'
+  | 'trashedNodeDeletedAtById'
   | 'trashedNodeIds'
   | 'untitledSequenceByParent'
 > {
@@ -167,6 +170,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
       queueNodeIds: [],
       totalNodeCount: 0
     },
+    trashedNodeDeletedAtById: {},
     untitledSequenceByParent: {}
   };
 }

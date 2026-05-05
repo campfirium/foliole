@@ -24,6 +24,7 @@ export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: Work
     nodeViewById: {},
     nodeOrder: [],
     nodesById: {},
+    trashedNodeDeletedAtById: {},
     trashedNodeIds: []
   });
 }

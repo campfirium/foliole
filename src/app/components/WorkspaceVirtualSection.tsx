@@ -11,6 +11,8 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
+import { compareNaturalName } from './workspaceContentSort';
+
 interface WorkspaceVirtualSectionProps {
   activeVirtualNodeId?: string | null;
   isVirtualViewOpen: boolean;
@@ -39,7 +41,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
       const node = props.nodesById[nodeId];
       return isVirtualRootNode(node) || isVirtualNode(node);
-    });
+    }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
     return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
   }, [collapsedIds, props.nodeOrder, props.nodesById]);
   const onRowKeyDown = useMemo(
@@ -90,4 +92,14 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
       </section>
     </div>
   );
+}
+
+function compareVirtualNodeTitle(
+  leftId: string,
+  rightId: string,
+  nodesById: WorkspaceListNodesById
+) {
+  if (leftId === VIRTUAL_ROOT_NODE_ID) return -1;
+  if (rightId === VIRTUAL_ROOT_NODE_ID) return 1;
+  return compareNaturalName(nodesById[leftId]?.title ?? '', nodesById[rightId]?.title ?? '');
 }

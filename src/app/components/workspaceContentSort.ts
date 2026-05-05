@@ -1,0 +1,201 @@
+import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
+import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
+
+import type { ExternalLibraryDocumentItem } from './externalLibraryBrowseModel';
+
+export type WorkspaceContentSortKey = 'deletedAt' | 'lastOpenedAt' | 'modifiedAt' | 'name' | 'savedAt';
+export type WorkspaceContentSortDirection = 'asc' | 'desc';
+
+export interface WorkspaceContentSortState {
+  direction: WorkspaceContentSortDirection;
+  key: WorkspaceContentSortKey;
+}
+
+export const DEFAULT_WORKSPACE_CONTENT_SORT: WorkspaceContentSortState = {
+  direction: 'desc',
+  key: 'savedAt'
+};
+
+function compareText(left: string, right: string) {
+  return left.trim().localeCompare(right.trim(), undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function resolveTimestamp(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && !Number.isNaN(new Date(trimmed).getTime()) ? trimmed : null;
+}
+
+function compareTimestampDesc(left: string | null | undefined, right: string | null | undefined) {
+  const leftTimestamp = resolveTimestamp(left);
+  const rightTimestamp = resolveTimestamp(right);
+  if (!leftTimestamp && !rightTimestamp) return 0;
+  if (!leftTimestamp) return 1;
+  if (!rightTimestamp) return -1;
+  return rightTimestamp.localeCompare(leftTimestamp);
+}
+
+function directionMultiplier(direction: WorkspaceContentSortDirection) {
+  return direction === 'asc' ? -1 : 1;
+}
+
+export function resolveDefaultWorkspaceContentSortDirection(key: WorkspaceContentSortKey): WorkspaceContentSortDirection {
+  return key === 'name' ? 'asc' : 'desc';
+}
+
+function isWorkspaceContentSortKey(value: string): value is WorkspaceContentSortKey {
+  return (
+    value === 'deletedAt' ||
+    value === 'lastOpenedAt' ||
+    value === 'modifiedAt' ||
+    value === 'name' ||
+    value === 'savedAt'
+  );
+}
+
+function isWorkspaceContentSortDirection(value: string): value is WorkspaceContentSortDirection {
+  return value === 'asc' || value === 'desc';
+}
+
+export function loadWorkspaceContentSortPreference(): WorkspaceContentSortState {
+  const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort);
+  if (!raw) return DEFAULT_WORKSPACE_CONTENT_SORT;
+  try {
+    const parsed = JSON.parse(raw) as Partial<WorkspaceContentSortState>;
+    const key = migrateWorkspaceContentSortKey(String(parsed.key));
+    const direction = String(parsed.direction);
+    if (key && isWorkspaceContentSortDirection(direction)) {
+      return { direction, key };
+    }
+  } catch {
+    return DEFAULT_WORKSPACE_CONTENT_SORT;
+  }
+  return DEFAULT_WORKSPACE_CONTENT_SORT;
+}
+
+function migrateWorkspaceContentSortKey(value: string) {
+  if (value === 'date') return 'savedAt';
+  if (value === 'title') return 'name';
+  return isWorkspaceContentSortKey(value) ? value : null;
+}
+
+export function normalizeWorkspaceContentSort(
+  sort: WorkspaceContentSortState,
+  supportedKeys: WorkspaceContentSortKey[]
+): WorkspaceContentSortState {
+  if (supportedKeys.includes(sort.key)) {
+    return sort;
+  }
+  const key = supportedKeys[0] ?? DEFAULT_WORKSPACE_CONTENT_SORT.key;
+  return {
+    direction: resolveDefaultWorkspaceContentSortDirection(key),
+    key
+  };
+}
+
+export function saveWorkspaceContentSortPreference(value: WorkspaceContentSortState) {
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort, JSON.stringify(value));
+}
+
+export function compareWorkspaceContentNodes(
+  left: WorkspaceListNode,
+  right: WorkspaceListNode,
+  sort: WorkspaceContentSortState,
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
+) {
+  if (sort.key === 'name') {
+    const titleResult = compareText(left.title, right.title) * (sort.direction === 'asc' ? 1 : -1);
+    if (titleResult !== 0) return titleResult;
+  } else if (sort.key === 'lastOpenedAt') {
+    const dateResult = compareTimestampDesc(nodeViewById[left.id]?.updatedAt, nodeViewById[right.id]?.updatedAt) * directionMultiplier(sort.direction);
+    if (dateResult !== 0) return dateResult;
+  } else {
+    const dateResult = compareTimestampDesc(left.updatedAt, right.updatedAt) * directionMultiplier(sort.direction);
+    if (dateResult !== 0) return dateResult;
+  }
+  const fallbackTitleResult = compareText(left.title, right.title);
+  if (fallbackTitleResult !== 0) return fallbackTitleResult;
+  return left.id.localeCompare(right.id);
+}
+
+export function sortWorkspaceContentRows(
+  rows: NodeTreeRow[],
+  sort: WorkspaceContentSortState,
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
+) {
+  return [...rows].sort((left, right) => compareWorkspaceContentNodes(left.node, right.node, sort, nodeViewById));
+}
+
+export function sortTrashContentRows(
+  rows: NodeTreeRow[],
+  sort: WorkspaceContentSortState,
+  deletedAtById: Record<string, string | undefined>
+) {
+  return [...rows].sort((left, right) => {
+    if (sort.key === 'name') {
+      return compareWorkspaceContentNodes(left.node, right.node, sort);
+    }
+    const dateResult = compareTimestampDesc(deletedAtById[left.node.id], deletedAtById[right.node.id]) * directionMultiplier(sort.direction);
+    if (dateResult !== 0) return dateResult;
+    return compareWorkspaceContentNodes(left.node, right.node, { direction: 'asc', key: 'name' });
+  });
+}
+
+export function sortWorkspaceContentNodeIds(
+  nodeIds: string[],
+  nodesById: WorkspaceListNodesById,
+  sort: WorkspaceContentSortState,
+  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
+) {
+  const knownIds = new Set(nodeIds.filter((nodeId) => Boolean(nodesById[nodeId])));
+  const childrenByParent = new Map<string | null, string[]>();
+
+  nodeIds.forEach((nodeId) => {
+    const node = nodesById[nodeId];
+    if (!node) return;
+    const parentId = node.parentNodeId && knownIds.has(node.parentNodeId) ? node.parentNodeId : null;
+    childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), nodeId]);
+  });
+
+  const sortIds = (ids: string[]) =>
+    [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, sort, nodeViewById));
+
+  const sortedIds: string[] = [];
+  const walk = (parentId: string | null) => {
+    sortIds(childrenByParent.get(parentId) ?? []).forEach((nodeId) => {
+      sortedIds.push(nodeId);
+      walk(nodeId);
+    });
+  };
+  walk(null);
+  return sortedIds;
+}
+
+export function compareExternalDocuments(
+  left: ExternalLibraryDocumentItem,
+  right: ExternalLibraryDocumentItem,
+  sort: WorkspaceContentSortState
+) {
+  if (sort.key === 'name') {
+    const titleResult = compareText(left.title, right.title) * (sort.direction === 'asc' ? 1 : -1);
+    if (titleResult !== 0) return titleResult;
+  } else {
+    const dateResult = compareTimestampDesc(left.modifiedAt, right.modifiedAt) * directionMultiplier(sort.direction);
+    if (dateResult !== 0) return dateResult;
+  }
+  const fallbackTitleResult = compareText(left.title, right.title);
+  if (fallbackTitleResult !== 0) return fallbackTitleResult;
+  return left.relativePath.localeCompare(right.relativePath, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+export function sortExternalDocuments(
+  documents: ExternalLibraryDocumentItem[],
+  sort: WorkspaceContentSortState
+) {
+  return [...documents].sort((left, right) => compareExternalDocuments(left, right, sort));
+}
+
+export function compareNaturalName(left: string, right: string) {
+  return compareText(left, right);
+}

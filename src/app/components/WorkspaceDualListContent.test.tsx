@@ -190,7 +190,7 @@ it('renders external folders in the left section and only documents in the right
   expect(screen.getByRole('treeitem', { name: /two think/i })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('aria-selected', 'false');
   expect(screen.queryByRole('treeitem', { name: /^sub$/i })).toBeNull();
-  expect(screen.getByRole('button', { name: /expand .*think \*/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /expand .*think/i })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Alpha' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Beta' })).toBeInTheDocument();
   expect(screen.queryByText('sub/b.md')).toBeNull();
@@ -207,7 +207,7 @@ it('shows an expand toggle for external folders before their entries finish load
     isExternalViewOpen: true
   });
 
-  expect(screen.getByRole('button', { name: /expand .*think \*/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /expand .*think/i })).toBeInTheDocument();
 });
 
 it('opens external library settings from the External placeholder row when no folders are configured', () => {
@@ -253,7 +253,7 @@ it('restores persisted external collapse state without affecting sibling roots',
   expect(screen.getByRole('treeitem', { name: /^sub$/i })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: /^sync$/i })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: /^collapse two think \*$/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^collapse two think$/i }));
 
   expect(screen.queryByRole('treeitem', { name: /^sub$/i })).toBeNull();
   expect(screen.getByRole('treeitem', { name: /^sync$/i })).toBeInTheDocument();

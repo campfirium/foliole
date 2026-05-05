@@ -18,7 +18,7 @@ export interface DeleteNodeMutationResult {
   parentNodesToSync: Node[];
   patch: Pick<
     WorkspaceState,
-    'activeNodeId' | 'navigation' | 'nodeOrder' | 'nodesById' | 'reviewSession' | 'trashedNodeIds'
+    'activeNodeId' | 'navigation' | 'nodeOrder' | 'nodesById' | 'reviewSession' | 'trashedNodeDeletedAtById' | 'trashedNodeIds'
   >;
 }
 
@@ -120,6 +120,7 @@ function buildDeleteNodePatch(args: {
   nextNavigation: WorkspaceState['navigation'];
   nextNodeOrder?: string[];
   nextNodesById: WorkspaceState['nodesById'];
+  nextTrashedNodeDeletedAtById: WorkspaceState['trashedNodeDeletedAtById'];
   nextTrashedNodeIds: string[];
 }): DeleteNodeMutationResult['patch'] {
   const nextState = {
@@ -128,6 +129,7 @@ function buildDeleteNodePatch(args: {
     navigation: args.nextNavigation,
     nodeOrder: args.nextNodeOrder ?? args.state.nodeOrder,
     nodesById: args.nextNodesById,
+    trashedNodeDeletedAtById: args.nextTrashedNodeDeletedAtById,
     trashedNodeIds: args.nextTrashedNodeIds
   };
   return {
@@ -136,6 +138,7 @@ function buildDeleteNodePatch(args: {
     nodeOrder: args.nextNodeOrder ?? args.state.nodeOrder,
     nodesById: args.nextNodesById,
     reviewSession: reconcileReviewSession(nextState, args.nextActiveNodeId),
+    trashedNodeDeletedAtById: args.nextTrashedNodeDeletedAtById,
     trashedNodeIds: args.nextTrashedNodeIds
   };
 }
@@ -161,6 +164,12 @@ export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: strin
   });
 
   const nextTrashedNodeIds = [...new Set([...state.trashedNodeIds, ...deletedNodeIds])];
+  const nextTrashedNodeDeletedAtById = {
+    ...state.trashedNodeDeletedAtById
+  };
+  deletedNodeIds.forEach((nodeId) => {
+    nextTrashedNodeDeletedAtById[nodeId] = deletedAt;
+  });
   const hiddenNodeIds = new Set(nextTrashedNodeIds);
   const nextActiveNodeId =
     state.activeNodeId && !hiddenNodeIds.has(state.activeNodeId)
@@ -180,6 +189,7 @@ export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: strin
       nextActiveNodeId,
       nextNavigation,
       nextNodesById,
+      nextTrashedNodeDeletedAtById,
       nextTrashedNodeIds
     })
   };
@@ -211,6 +221,10 @@ export function computeDeleteNodesPermanentlyMutation(
     state
   });
   const nextTrashedNodeIds = state.trashedNodeIds.filter((nodeId) => !deletedNodeIds.has(nodeId));
+  const nextTrashedNodeDeletedAtById = { ...state.trashedNodeDeletedAtById };
+  deletedNodeIds.forEach((nodeId) => {
+    delete nextTrashedNodeDeletedAtById[nodeId];
+  });
   const hiddenNodeIds = new Set(nextTrashedNodeIds);
   const nextActiveNodeId =
     state.activeNodeId && !deletedNodeIds.has(state.activeNodeId) && !hiddenNodeIds.has(state.activeNodeId)
@@ -232,6 +246,7 @@ export function computeDeleteNodesPermanentlyMutation(
       nextNavigation,
       nextNodeOrder,
       nextNodesById,
+      nextTrashedNodeDeletedAtById,
       nextTrashedNodeIds
     })
   };

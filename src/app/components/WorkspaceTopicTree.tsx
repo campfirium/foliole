@@ -6,7 +6,9 @@ import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/
 import { buildNodeTree } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
+import { normalizeWorkspaceContentSort, sortWorkspaceContentNodeIds } from './workspaceContentSort';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import {
   renderWorkspaceTopicTreeBody,
@@ -27,8 +29,18 @@ interface WorkspaceTopicTreeProps {
   onSelectNode: (nodeId: string) => void;
 }
 
-function useWorkspaceTopicTreeState(itemIds: string[], nodesById: WorkspaceListNodesById) {
-  return useMemo(() => buildNodeTree(itemIds, nodesById), [itemIds, nodesById]);
+function useWorkspaceTopicTreeState(
+  itemIds: string[],
+  nodesById: WorkspaceListNodesById,
+  sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
+  nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
+) {
+  const contentSort = normalizeWorkspaceContentSort(sort, ['savedAt', 'lastOpenedAt', 'name']);
+  const sortedItemIds = useMemo(
+    () => sortWorkspaceContentNodeIds(itemIds, nodesById, contentSort, nodeViewById),
+    [contentSort, itemIds, nodeViewById, nodesById]
+  );
+  return useMemo(() => buildNodeTree(sortedItemIds, nodesById), [nodesById, sortedItemIds]);
 }
 
 function useWorkspaceTopicTreeActions() {
@@ -99,20 +111,13 @@ function useWorkspaceTopicTreeInteraction(args: {
   };
 }
 
-export function WorkspaceTopicTree({
-  activeFolderId,
-  activeNodeId,
-  emptyStateDescription = 'Add a topic to get started.',
-  emptyStateTitle = 'No topics in this folder',
-  itemIds,
-  nodesById,
-  onOpenMoveToNode,
-  onSelectNode
-}: WorkspaceTopicTreeProps) {
-  const tree = useWorkspaceTopicTreeState(itemIds, nodesById);
+export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
+  const contentSort = useWorkspaceContentSort();
+  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const tree = useWorkspaceTopicTreeState(props.itemIds, props.nodesById, contentSort.sort, nodeViewById);
   const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeCollapse(
-    activeFolderId,
-    activeNodeId,
+    props.activeFolderId,
+    props.activeNodeId,
     tree.rows,
     tree.parentById
   );
@@ -120,42 +125,89 @@ export function WorkspaceTopicTree({
     tree.rows,
     collapsedNodeIds
   );
-  const hasCollapsedNodes =
-    collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
+  const hasCollapsedNodes = collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
   const interaction = useWorkspaceTopicTreeInteraction({
-    activeFolderId,
-    activeNodeId,
+    activeFolderId: props.activeFolderId,
+    activeNodeId: props.activeNodeId,
     collapsedNodeIds,
-    itemIds,
-    nodesById,
-    onOpenMoveToNode,
-    onSelectNode
+    itemIds: props.itemIds,
+    nodesById: props.nodesById,
+    onOpenMoveToNode: props.onOpenMoveToNode,
+    onSelectNode: props.onSelectNode
+  });
+  const headerArgs = buildWorkspaceTopicTreeHeaderArgs({
+    activeFolderId: props.activeFolderId,
+    collapsibleNodeIds,
+    contentSort,
+    hasCollapsedNodes,
+    interaction,
+    searchQuery,
+    setCollapsedNodeIds,
+    setSearchQuery
   });
 
   return (
     <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
-      <WorkspaceTopicTreeHeader
-        hasCollapsibleNodes={collapsibleNodeIds.length > 0}
-        hasCollapsedNodes={hasCollapsedNodes}
-        onCreateTopic={() => interaction.createChildNode(activeFolderId, '', 'topic')}
-        onToggleCollapseAll={() =>
-          setCollapsedNodeIds(hasCollapsedNodes ? new Set() : new Set(collapsibleNodeIds))
-        }
-        onSearchQueryChange={setSearchQuery}
-        searchQuery={searchQuery}
-      />
+      {renderWorkspaceTopicTreeHeader(headerArgs)}
       {renderWorkspaceTopicTreeBody({
-        activeNodeId,
+        activeNodeId: props.activeNodeId,
         collapsedNodeIds,
         contextMenu: interaction.contextMenu,
-        emptyStateDescription,
-        emptyStateTitle,
-        nodesById,
+        emptyStateDescription: props.emptyStateDescription ?? 'Add a topic to get started.',
+        emptyStateTitle: props.emptyStateTitle ?? 'No topics in this folder',
+        nodesById: props.nodesById,
         onSelectNode: interaction.handleSelectNode,
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
         visibleRows
       })}
       {interaction.topicTreeMenu}
     </aside>
+  );
+}
+
+function buildWorkspaceTopicTreeHeaderArgs(args: {
+  activeFolderId: string;
+  collapsibleNodeIds: string[];
+  contentSort: ReturnType<typeof useWorkspaceContentSort>;
+  hasCollapsedNodes: boolean;
+  interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
+  searchQuery: string;
+  setCollapsedNodeIds: ReturnType<typeof useWorkspaceTopicTreeCollapse>['setCollapsedNodeIds'];
+  setSearchQuery: (value: string) => void;
+}) {
+  return {
+    ...args,
+    contentSort: {
+      ...args.contentSort,
+      sort: normalizeWorkspaceContentSort(args.contentSort.sort, ['savedAt', 'lastOpenedAt', 'name'])
+    }
+  };
+}
+
+function renderWorkspaceTopicTreeHeader(args: {
+  activeFolderId: string;
+  collapsibleNodeIds: string[];
+  contentSort: ReturnType<typeof useWorkspaceContentSort>;
+  hasCollapsedNodes: boolean;
+  interaction: ReturnType<typeof useWorkspaceTopicTreeInteraction>;
+  searchQuery: string;
+  setCollapsedNodeIds: ReturnType<typeof useWorkspaceTopicTreeCollapse>['setCollapsedNodeIds'];
+  setSearchQuery: (value: string) => void;
+}) {
+  return (
+    <WorkspaceTopicTreeHeader
+      hasCollapsibleNodes={args.collapsibleNodeIds.length > 0}
+      hasCollapsedNodes={args.hasCollapsedNodes}
+      onChangeSortDirection={args.contentSort.setSortDirection}
+      onChangeSortKey={args.contentSort.setSortKey}
+      onCreateTopic={() => args.interaction.createChildNode(args.activeFolderId, '', 'topic')}
+      onSearchQueryChange={args.setSearchQuery}
+      onToggleCollapseAll={() =>
+        args.setCollapsedNodeIds(args.hasCollapsedNodes ? new Set() : new Set(args.collapsibleNodeIds))
+      }
+      searchQuery={args.searchQuery}
+      sortDirection={args.contentSort.sort.direction}
+      sortKey={args.contentSort.sort.key}
+    />
   );
 }

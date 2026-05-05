@@ -1,24 +1,26 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { HardDrive } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
-import type { NodeTreeRow as NodeTreeRowModel } from '../../features/nodes/model/nodeTree';
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
 } from '../../shared/platform/externalSearchBridge';
 
-import {
-  buildExternalLibraryFolderBrowseState,
-  resolveExternalFolderLabel,
-  type ExternalLibraryDirectoryNode,
-  type ExternalLibrarySelection
-} from './externalLibraryBrowseModel';
+import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import {
   loadExternalCollapsedRowIds,
   saveExternalCollapsedRowIds
 } from './externalLibraryCollapseSettings';
+import {
+  buildExternalTreeRows,
+  buildFolderRowId,
+  createExternalRowKeyDown,
+  handleExternalRowKeyDown,
+  openRowSelection,
+  type ExternalTreeRowRecord
+} from './ExternalLibrarySectionModel';
 import { ExternalLibrarySetupRow } from './ExternalLibrarySetupRow';
 
 interface ExternalLibrarySectionProps {
@@ -28,16 +30,6 @@ interface ExternalLibrarySectionProps {
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;
   selection: ExternalLibrarySelection;
-}
-
-interface ExternalTreeRowRecord {
-  depth: number;
-  hasChildren: boolean;
-  id: string;
-  isSelected: boolean;
-  label: string;
-  secondaryLabel?: string;
-  selection: Extract<ExternalLibrarySelection, { folderId: string }>;
 }
 
 function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>) {
@@ -81,6 +73,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               rowSpacing={rowSpacing}
               secondaryLabel={row.secondaryLabel}
               showIcon={false}
+              trailingLabelContent={renderExternalTrailingLabelContent(row)}
               onKeyDown={(nodeId, event) => handleExternalRowKeyDown(nodeId, event, onRowKeyDown)}
               onSelect={(nodeId) => openRowSelection(nodeId, rows, props.onOpenExternalSelection)}
               onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, setCollapsedIds)}
@@ -89,6 +82,17 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
         </section>
       )}
     </div>
+  );
+}
+
+function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
+  if (row.secondaryIconKind !== 'external-folder') {
+    return null;
+  }
+  return (
+    <span aria-label="External folder" className="inline-flex items-center text-foreground/45">
+      <HardDrive aria-hidden="true" size={15} strokeWidth={1.8} />
+    </span>
   );
 }
 
@@ -134,102 +138,17 @@ function useExternalRowKeyDown(
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void,
   setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>
 ) {
-  const keyboardRows = useMemo(() => rows.map(createKeyboardRow), [rows]);
-
   return useMemo(
     () =>
-      createNodeListRowKeydownHandler({
-        collapsedNodeIds: collapsedIds,
-        onSelect: (rowId) => openRowSelection(rowId, rows, onOpenExternalSelection),
-        onToggleCollapse: (rowId) => toggleCollapsed(rowId, setCollapsedIds),
-        rows: keyboardRows
+      createExternalRowKeyDown({
+        collapsedIds,
+        onOpenExternalSelection,
+        rows,
+        setCollapsedIds,
+        toggleCollapsed
       }),
-    [collapsedIds, keyboardRows, onOpenExternalSelection, rows, setCollapsedIds]
+    [collapsedIds, onOpenExternalSelection, rows, setCollapsedIds]
   );
-}
-
-function buildVisibleDirectoryNodes(
-  folderId: string,
-  nodes: ExternalLibraryDirectoryNode[],
-  collapsedIds: Set<string>
-) {
-  return nodes.filter((node) => {
-    if (collapsedIds.has(buildFolderRowId(folderId))) {
-      return false;
-    }
-    let currentParent = node.parentDirectoryPath;
-    while (currentParent) {
-      if (collapsedIds.has(buildDirectoryRowId(folderId, currentParent))) {
-        return false;
-      }
-      currentParent = nodes.find((candidate) => candidate.directoryPath === currentParent)?.parentDirectoryPath ?? null;
-    }
-    return true;
-  });
-}
-
-function buildExternalTreeRows(
-  folders: RuntimeExternalSearchFolder[],
-  entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>,
-  selection: ExternalLibrarySelection,
-  isExternalViewOpen: boolean,
-  collapsedIds: Set<string>
-) {
-  return folders.flatMap((folder) => buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds));
-}
-
-function buildFolderTreeRows(
-  folder: RuntimeExternalSearchFolder,
-  entries: RuntimeExternalSearchBrowseEntry[],
-  selection: ExternalLibrarySelection,
-  isExternalViewOpen: boolean,
-  collapsedIds: Set<string>
-) {
-  const browseState = buildExternalLibraryFolderBrowseState(folder, entries, { folderId: folder.id, kind: 'folder' });
-  const rows: ExternalTreeRowRecord[] = [
-    {
-      depth: 0,
-      hasChildren: browseState.directoryNodes.length > 0 || (entries.length === 0 && folder.documentCount > 0),
-      id: buildFolderRowId(folder.id),
-      isSelected:
-        isExternalViewOpen &&
-        selection.kind !== 'root' &&
-        selection.folderId === folder.id &&
-        (selection.kind === 'folder' || browseState.selectedDirectoryPath === null),
-      label: `${resolveExternalFolderLabel(folder.folderPath)} *`,
-      selection: { folderId: folder.id, kind: 'folder' }
-    }
-  ];
-  buildVisibleDirectoryNodes(folder.id, browseState.directoryNodes, collapsedIds).forEach((node) => {
-    rows.push(buildDirectoryTreeRow(node, selection));
-  });
-  return rows;
-}
-
-function buildDirectoryTreeRow(
-  node: ExternalLibraryDirectoryNode,
-  selection: ExternalLibrarySelection
-): ExternalTreeRowRecord {
-  return {
-    depth: node.directoryPath.split('/').length,
-    hasChildren: node.hasChildren,
-    id: buildDirectoryRowId(node.folderId, node.directoryPath),
-    isSelected: selection.kind === 'directory' && selection.folderId === node.folderId && selection.directoryPath === node.directoryPath,
-    label: node.name,
-    selection: {
-      directoryPath: node.directoryPath,
-      folderId: node.folderId,
-      kind: 'directory'
-    }
-  };
-}
-
-function buildDirectoryRowId(folderId: string, directoryPath: string) {
-  return `${folderId}:${directoryPath}`;
-}
-
-function buildFolderRowId(folderId: string) {
-  return folderId;
 }
 
 function loadInitialCollapsedIds(folders: RuntimeExternalSearchFolder[]) {
@@ -238,45 +157,4 @@ function loadInitialCollapsedIds(folders: RuntimeExternalSearchFolder[]) {
     return new Set(storedRowIds);
   }
   return new Set(folders.map((folder) => buildFolderRowId(folder.id)));
-}
-
-function createKeyboardRow(row: ExternalTreeRowRecord): NodeTreeRowModel {
-  return {
-    depth: row.depth,
-    descendantCount: 0,
-    hasChildren: row.hasChildren,
-    node: {
-      anchorLink: null,
-      createdAt: '',
-      hasContent: false,
-      hasReveal: false,
-      id: row.id,
-      kind: 'folder',
-      parentNodeId: null,
-      reading: null,
-      review: null,
-      specialKind: undefined,
-      title: row.label,
-      updatedAt: ''
-    }
-  };
-}
-
-function openRowSelection(
-  rowId: string,
-  rows: ExternalTreeRowRecord[],
-  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void
-) {
-  const row = rows.find((candidate) => candidate.id === rowId);
-  if (row) {
-    onOpenExternalSelection(row.selection);
-  }
-}
-
-function handleExternalRowKeyDown(
-  nodeId: string,
-  event: ReactKeyboardEvent<HTMLButtonElement>,
-  onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void
-) {
-  onRowKeyDown(nodeId, event);
 }

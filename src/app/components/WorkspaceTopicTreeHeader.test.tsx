@@ -10,10 +10,14 @@ it('adds a create topic action alongside current folder tools', () => {
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
       onCreateTopic={onCreateTopic}
       onSearchQueryChange={vi.fn()}
       onToggleCollapseAll={vi.fn()}
       searchQuery=""
+      sortDirection="desc"
+      sortKey="savedAt"
     />
   );
 
@@ -27,10 +31,14 @@ it('shows an expand action after some items are collapsed', () => {
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes
       hasCollapsedNodes
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
       onCreateTopic={vi.fn()}
       onSearchQueryChange={vi.fn()}
       onToggleCollapseAll={vi.fn()}
       searchQuery=""
+      sortDirection="desc"
+      sortKey="savedAt"
     />
   );
 
@@ -43,10 +51,14 @@ it('disables the toggle when the current folder has no collapsible items', () =>
     <WorkspaceTopicTreeHeader
       hasCollapsibleNodes={false}
       hasCollapsedNodes={false}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
       onCreateTopic={vi.fn()}
       onSearchQueryChange={vi.fn()}
       onToggleCollapseAll={vi.fn()}
       searchQuery=""
+      sortDirection="desc"
+      sortKey="savedAt"
     />
   );
 

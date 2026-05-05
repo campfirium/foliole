@@ -12,8 +12,8 @@ import type { ExternalLibrarySelection } from '../components/externalLibraryBrow
 export function useExternalLibraryView() {
   const [isExternalViewOpen, setIsExternalViewOpen] = useState(false);
   const [selection, setSelection] = useState<ExternalLibrarySelection>({ kind: 'root' });
-  const folders = useExternalFoldersState(setSelection);
   const [entriesByFolderId, setEntriesByFolderId] = useExternalFolderEntries(selection);
+  const folders = useExternalFoldersState(setSelection, setEntriesByFolderId);
   usePreloadExternalFolderEntries(folders, entriesByFolderId, setEntriesByFolderId);
 
   return {
@@ -93,7 +93,8 @@ function usePreloadExternalFolderEntries(
 }
 
 function useExternalFoldersState(
-  setSelection: (update: (current: ExternalLibrarySelection) => ExternalLibrarySelection) => void
+  setSelection: (update: (current: ExternalLibrarySelection) => ExternalLibrarySelection) => void,
+  setEntriesByFolderId: Dispatch<SetStateAction<Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>>>
 ) {
   const [folders, setFolders] = useState<RuntimeExternalSearchFolder[]>([]);
 
@@ -103,6 +104,7 @@ function useExternalFoldersState(
       if (!alive || result === null) {
         return;
       }
+      setEntriesByFolderId((current) => retainEntriesForCurrentFolders(current, [], result));
       setFolders(result);
       setSelection((current) => {
         if (current.kind === 'root') {
@@ -119,19 +121,61 @@ function useExternalFoldersState(
   useEffect(
     () =>
       subscribeRuntimeExternalSearchFolders((nextFolders) => {
+        setEntriesByFolderId((current) => retainEntriesForCurrentFolders(current, folders, nextFolders));
         setFolders(nextFolders);
         setSelection((current) => resolveExternalSelectionAfterFoldersChanged(current, nextFolders));
       }),
-    [setSelection]
+    [folders, setEntriesByFolderId, setSelection]
   );
 
   return folders;
 }
 
+function retainEntriesForCurrentFolders(
+  current: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>,
+  previousFolders: RuntimeExternalSearchFolder[],
+  nextFolders: RuntimeExternalSearchFolder[]
+) {
+  const previousById = new Map(previousFolders.map((folder) => [folder.id, folder]));
+  const next: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined> = {};
+  let changed = false;
+
+  nextFolders.forEach((folder) => {
+    const cachedEntries = current[folder.id];
+    if (cachedEntries === undefined) {
+      return;
+    }
+    const previousFolder = previousById.get(folder.id);
+    if (previousFolder && isExternalFolderEntryCacheCurrent(previousFolder, folder)) {
+      next[folder.id] = cachedEntries;
+    } else {
+      changed = true;
+    }
+  });
+
+  if (Object.keys(current).some((folderId) => !Object.prototype.hasOwnProperty.call(next, folderId))) {
+    changed = true;
+  }
+
+  return changed ? next : current;
+}
+
+function isExternalFolderEntryCacheCurrent(
+  previousFolder: RuntimeExternalSearchFolder,
+  nextFolder: RuntimeExternalSearchFolder
+) {
+  return (
+    previousFolder.documentCount === nextFolder.documentCount &&
+    previousFolder.folderPath === nextFolder.folderPath &&
+    previousFolder.indexedAt === nextFolder.indexedAt &&
+    previousFolder.status === nextFolder.status
+  );
+}
+
 function resolveExternalSelectionAfterFoldersChanged(
   current: ExternalLibrarySelection,
   folders: RuntimeExternalSearchFolder[]
-) {
+): ExternalLibrarySelection {
   if (current.kind === 'root') {
     return current;
   }

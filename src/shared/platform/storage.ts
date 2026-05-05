@@ -77,6 +77,7 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.nodeListManualCollapsed,
   APP_SETTINGS_STORAGE_KEYS.nodeListManualExpanded,
   APP_SETTINGS_STORAGE_KEYS.nodeTrashManualCollapsed,
+  APP_SETTINGS_STORAGE_KEYS.workspaceContentSort,
   APP_SETTINGS_STORAGE_KEYS.externalLibraryCollapsed,
   APP_SETTINGS_STORAGE_KEYS.listCollapsed,
   APP_SETTINGS_STORAGE_KEYS.listWidth,
