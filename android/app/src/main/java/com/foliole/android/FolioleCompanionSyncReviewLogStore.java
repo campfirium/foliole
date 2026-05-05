@@ -7,8 +7,6 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 final class FolioleCompanionSyncReviewLogStore {
@@ -20,7 +18,6 @@ final class FolioleCompanionSyncReviewLogStore {
             context,
             database,
             "syncReviewLog",
-            cursorFilterReplacement(cursor),
             cursorArgs(cursor, deviceId, limit)
         );
     }
@@ -71,25 +68,14 @@ final class FolioleCompanionSyncReviewLogStore {
         });
     }
 
-    private static String whereAfterCursor(JSONObject cursor) {
-        return cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()
-            ? ""
-            : "AND (reviewed_at > ? OR (reviewed_at = ? AND op_id > ?))";
-    }
-
-    private static Map<String, String> cursorFilterReplacement(JSONObject cursor) {
-        Map<String, String> replacements = new HashMap<>();
-        String filter = whereAfterCursor(cursor);
-        replacements.put(":cursorFilter", filter.isEmpty() ? "" : " " + filter);
-        return replacements;
-    }
-
     private static String[] cursorArgs(JSONObject cursor, String deviceId, int limit) {
         if (cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()) {
-            return new String[] { deviceId, String.valueOf(normalizeLimit(limit)) };
+            return new String[] { deviceId, "", "", "", "", "", String.valueOf(normalizeLimit(limit)) };
         }
         return new String[] {
             deviceId,
+            cursor.optString("created_at"),
+            cursor.optString("change_id"),
             cursor.optString("created_at"),
             cursor.optString("created_at"),
             cursor.optString("change_id"),
