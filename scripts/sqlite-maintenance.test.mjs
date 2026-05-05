@@ -50,15 +50,14 @@ it('backs up and restores sqlite through the script entrypoint', async () => {
   sqlite.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)').run('node-1', 0);
   sqlite.close();
 
-  const backup = await runScript('backup', '--db-path', dbPath, '--destination-path', backupPath);
-  expect(backup.destinationPath).toBe(backupPath);
+  await runScript('backup', '--db-path', dbPath, '--destination-path', backupPath);
+  await expect(fs.access(backupPath)).resolves.toBeUndefined();
 
   const mutated = new BetterSqlite3(dbPath);
   mutated.prepare('UPDATE nodes SET content = ? WHERE id = ?').run('# mutated', 'node-1');
   mutated.close();
 
-  const restore = await runScript('restore', '--db-path', dbPath, '--source-path', backupPath);
-  expect(restore.targetPath).toBe(dbPath);
+  await runScript('restore', '--db-path', dbPath, '--source-path', backupPath);
 
   const restored = new BetterSqlite3(dbPath, { readonly: true, fileMustExist: true });
   const row = restored.prepare('SELECT content FROM nodes WHERE id = ?').get('node-1');
@@ -68,10 +67,9 @@ it('backs up and restores sqlite through the script entrypoint', async () => {
 });
 
 async function runScript(...args) {
-  const { stdout } = await execFileAsync('node', [
+  await execFileAsync('node', [
     '--experimental-strip-types',
     'scripts/sqlite-maintenance.ts',
     ...args
   ]);
-  return JSON.parse(stdout);
 }

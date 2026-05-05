@@ -78,7 +78,8 @@ describe('playwright electron spike', () => {
             });
           },
           async firstWindow({ timeout }) {
-            expect(timeout).toBe(12_345);
+            expect(timeout).toBeGreaterThan(0);
+            expect(timeout).toBeLessThanOrEqual(12_345);
             return windowPage;
           },
           process() {

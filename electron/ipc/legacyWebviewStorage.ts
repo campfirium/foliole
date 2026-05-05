@@ -7,6 +7,14 @@ import { resolveAppPaths } from './paths.js';
 const MIGRATION_MARKER_FILE = '.tauri-webview-storage-migrated';
 const LEGACY_PROFILE_DIR_NAME = 'webview-main';
 
+function resolveHomeDirectory(platform = process.platform) {
+  if (platform === 'win32') {
+    return process.env.USERPROFILE ?? process.env.HOME ?? os.homedir();
+  }
+
+  return process.env.HOME ?? os.homedir();
+}
+
 function toUniquePaths(paths: string[]) {
   return [...new Set(paths.map((item) => path.normalize(item)))];
 }
@@ -31,7 +39,7 @@ async function isDirectoryEmpty(dirPath: string): Promise<boolean> {
 export function resolveLegacyWebviewProfileCandidates(
   appDataDir = resolveAppPaths().app_data_dir,
   platform = process.platform,
-  homeDir = os.homedir()
+  homeDir = resolveHomeDirectory(platform)
 ): string[] {
   const candidates: string[] = [];
   if (platform === 'win32') {

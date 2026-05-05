@@ -34,7 +34,7 @@
     "quality:fast": "bash scripts/quality-gate-fast.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --pool=threads",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui"
