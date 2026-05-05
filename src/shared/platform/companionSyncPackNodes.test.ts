@@ -14,9 +14,11 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
+    deviceId: 'android-device',
     packPath: '/tmp/incoming pack.db'
   }, manager as never)).resolves.toEqual({
     applied: true,
+    appliedObjectCount: 0,
     fromStateSeq: 0,
     toStateSeq: 4
   });

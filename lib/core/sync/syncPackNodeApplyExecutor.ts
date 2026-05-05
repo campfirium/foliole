@@ -9,9 +9,11 @@ import {
   assertContiguousSyncPackCursor,
   readSyncPackCursorWithDbPort
 } from './syncPackCursor.js';
+import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
+  deviceId: string;
 }
 
 export async function applySyncPackNodesWithDbPort(
@@ -29,11 +31,14 @@ export async function applySyncPackNodeSurfaceWithDbPort(
 ) {
   const cursor = await readSyncPackCursorWithDbPort(port, options.incomingAlias);
   const shouldApply = assertContiguousSyncPackCursor(cursor, options.currentCursor);
+  let appliedObjectCount = 0;
   if (shouldApply) {
     await applySyncPackNodesWithDbPort(port, options);
+    appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, options);
   }
   return {
     applied: shouldApply,
+    appliedObjectCount,
     fromStateSeq: cursor.fromStateSeq,
     toStateSeq: cursor.toStateSeq
   };

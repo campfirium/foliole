@@ -53,9 +53,9 @@ function loadPackStateRows(port: DbPort, options: SyncPackStateRowsApplyOptions)
 function insertCleanStateRow(port: DbPort, row: PackStateRow, deviceId: string, stateSeq: number) {
   return port.run(
     `INSERT OR REPLACE INTO sync_object_state (` +
-    `object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash, ` +
+    `object_type, object_id, state_seq, current_version_id, content_hash, ` +
     `last_modified_by_device_id, updated_at, deleted_at, sync_dirty` +
-    `) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, 0)`,
+    `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     [
       row.object_type,
       row.object_id,

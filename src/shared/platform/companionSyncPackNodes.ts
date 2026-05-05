@@ -11,7 +11,7 @@ import {
 const INCOMING_PACK_ALIAS = 'inc';
 
 export async function applyCompanionSyncPackNodesWithSharedCore(
-  args: { currentCursor: number; packPath: string },
+  args: { currentCursor: number; deviceId: string; packPath: string },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
@@ -20,6 +20,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
   try {
     return await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.currentCursor,
+      deviceId: args.deviceId,
       incomingAlias: INCOMING_PACK_ALIAS
     });
   } finally {

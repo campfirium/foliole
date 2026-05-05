@@ -71,18 +71,35 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-surface-test' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
-    await expect(applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 0 })).resolves.toMatchObject({
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0,
+      deviceId: 'android-device'
+    })).resolves.toMatchObject({
       applied: true,
+      appliedObjectCount: 1,
       fromStateSeq: 0,
       toStateSeq: 1
     });
-    await expect(applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 1 })).resolves.toMatchObject({
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 1,
+      deviceId: 'android-device'
+    })).resolves.toMatchObject({
+      appliedObjectCount: 0,
       applied: false,
       toStateSeq: 1
     });
   } finally {
     await port.run('DETACH DATABASE inc');
   }
+
+  expect(connection.sqlite.prepare(
+    `SELECT current_version_id, last_modified_by_device_id, sync_dirty
+     FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'`
+  ).get()).toEqual({
+    current_version_id: 'desktop#1',
+    last_modified_by_device_id: 'android-device',
+    sync_dirty: 0
+  });
 });
 
 function createIncomingPack(filePath: string) {
