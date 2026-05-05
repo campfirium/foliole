@@ -1,6 +1,7 @@
 import { BrowserWindow, app, shell } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
@@ -95,6 +96,9 @@ function handleUtilityCommand(request: InvokeRequest) {
     return {
       main_process_rss_bytes: process.memoryUsage().rss
     };
+  }
+  if (request.command === NATIVE_COMMANDS.clearLinkPanelBrowsingData) {
+    return clearLinkPanelBrowsingData();
   }
   if (request.command === NATIVE_COMMANDS.syncAppMenuState) {
     syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'));

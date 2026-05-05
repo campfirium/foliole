@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeBackupSettings,
+  NativeClearLinkPanelBrowsingDataResult,
   NativeCopyAttachmentImageResult,
   NativeExportAttachmentImageResult,
   NativeExportCurrentArticleMirrorResult,
@@ -37,6 +38,10 @@ export type NativeUtilityCommandMap = {
       node_id: string;
     };
     result: NativeExportCurrentArticleMirrorResult;
+  };
+  [NATIVE_COMMANDS.clearLinkPanelBrowsingData]: {
+    args: undefined;
+    result: NativeClearLinkPanelBrowsingDataResult;
   };
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {
     args: undefined;

@@ -1,5 +1,14 @@
+import { useState } from 'react';
+
 import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchBridge';
-import { SettingsSection } from '../../../../shared/ui';
+import { clearLinkPanelBrowsingData } from '../../../../shared/platform/linkPanelBrowsingData';
+import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection,
+  settingsButtonClassName
+} from '../../../../shared/ui';
 
 import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
 
@@ -18,6 +27,48 @@ interface SettingsExternalSearchSectionProps {
     folderId: string,
     patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
   ) => void;
+}
+
+function LinkPanelBrowsingDataRow(props: { isDesktopRuntime: boolean }) {
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isClearing, setIsClearing] = useState(false);
+  const description = (
+    <>
+      <span className="block">Clear cookies, local storage, and other site data saved by link panels.</span>
+      {feedback ? <span className="mt-1 block text-foreground/70">{feedback}</span> : null}
+      {error ? <span className="mt-1 block text-error">{error}</span> : null}
+    </>
+  );
+  const handleClear = async () => {
+    setError(null);
+    setFeedback(null);
+    setIsClearing(true);
+    try {
+      const status = await clearLinkPanelBrowsingData();
+      setFeedback(status === 'cleared' ? 'Link panel browsing data cleared.' : 'Available in the desktop app.');
+    } catch {
+      setError('Link panel browsing data could not be cleared.');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  return (
+    <SettingsRow description={description} title="Link panel browsing data">
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <button
+          aria-label="Clear link panel browsing data"
+          className={settingsButtonClassName()}
+          disabled={!props.isDesktopRuntime || isClearing}
+          onClick={() => void handleClear()}
+          type="button"
+        >
+          {isClearing ? 'Clearing...' : 'Clear'}
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
@@ -48,6 +99,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
           ))}
         </ExternalLibraryTable>
       </div>
+      <LinkPanelBrowsingDataRow isDesktopRuntime={props.isDesktopRuntime} />
       {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
     </SettingsSection>
   );

@@ -99,6 +99,11 @@ export type NativeExportCurrentArticleMirrorResult =
       path: null;
     };
 
+export interface NativeClearLinkPanelBrowsingDataResult {
+  cleared_at: string;
+  status: 'cleared';
+}
+
 export interface NativeSystemFontCatalog {
   fonts: unknown[];
   monospace_fonts: unknown[];

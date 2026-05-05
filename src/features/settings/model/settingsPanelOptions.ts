@@ -27,9 +27,9 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
   { id: 'library', label: 'Library', description: 'Set library, assets, inbox, and mirror folders.' },
   { id: 'companion-sync', label: 'Sync', description: 'Pair other devices and manage local sync.' },
   { id: 'backups', label: 'Backups', description: 'Manage backup location and retention.' },
-  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader import.' },
   { id: 'import', label: 'Watched folders', description: 'Configure folders watched for import.' },
-  { id: 'external-search', label: 'External sources', description: 'Search and import from external folders.' }
+  { id: 'external-search', label: 'External sources', description: 'Search and import from external folders.' },
+  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader import.' }
 ];
 
 export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [
@@ -50,8 +50,8 @@ export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]
     categoryIds: ['library', 'companion-sync', 'backups']
   },
   {
-    label: 'Connections',
-    categoryIds: ['readwise-reader', 'import', 'external-search']
+    label: 'Sources',
+    categoryIds: ['import', 'external-search', 'readwise-reader']
   }
 ];
 

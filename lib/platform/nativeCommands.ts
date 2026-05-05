@@ -41,6 +41,7 @@ export const NATIVE_COMMANDS = {
   rebuildMirrorOutput: 'rebuild_mirror_output',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
   exportCurrentArticleMirror: 'export_current_article_mirror',
+  clearLinkPanelBrowsingData: 'clear_link_panel_browsing_data',
   updateLibraryPathSetting: 'update_library_path_setting',
   saveBackupSettings: 'save_backup_settings',
   reviewGrade: 'review_grade',

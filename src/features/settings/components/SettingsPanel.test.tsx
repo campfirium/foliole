@@ -64,7 +64,7 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-it('groups settings sidebar entries by general, workspace, input, storage, and connections', async () => {
+it('groups settings sidebar entries by general, workspace, input, storage, and sources', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
   const buttons = screen.getAllByRole('button');
@@ -74,7 +74,7 @@ it('groups settings sidebar entries by general, workspace, input, storage, and c
   expect(screen.getByText('Workspace')).toBeInTheDocument();
   expect(screen.getByText('Input')).toBeInTheDocument();
   expect(screen.getByText('Storage')).toBeInTheDocument();
-  expect(screen.getByText('Connections')).toBeInTheDocument();
+  expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
   expect(labels.slice(0, 6)).toEqual(['About', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures']);
   expect(labels).toContain('Library');
@@ -86,8 +86,9 @@ it('groups settings sidebar entries by general, workspace, input, storage, and c
   expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Mouse gestures'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('Backups'));
-  expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Readwise Reader'));
+  expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));
+  expect(labels.indexOf('External sources')).toBeGreaterThan(labels.indexOf('Watched folders'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External sources'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });
