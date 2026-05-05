@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionNamedMutationStore {
@@ -20,6 +21,15 @@ final class FolioleCompanionNamedMutationStore {
             bindArgs(compiled, args);
             return compiled.executeUpdateDelete();
         }
+    }
+
+    static JSONArray appDataClearMutations(Context context) throws Exception {
+        JSONObject payload = loadPayload(context);
+        JSONArray mutations = payload.optJSONArray("appDataClearMutations");
+        if (mutations == null) {
+            throw new IllegalStateException("Companion mutation definitions asset is missing app data clear mutations.");
+        }
+        return mutations;
     }
 
     static void upsertSyncStateRow(
@@ -70,7 +80,7 @@ final class FolioleCompanionNamedMutationStore {
     }
 
     private static String statement(Context context, String name) throws Exception {
-        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
+        JSONObject payload = loadPayload(context);
         JSONObject statements = payload.optJSONObject("statements");
         if (statements == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing statements.");
@@ -80,6 +90,10 @@ final class FolioleCompanionNamedMutationStore {
             throw new IllegalStateException("Companion mutation definitions asset is missing statement: " + name);
         }
         return statement;
+    }
+
+    private static JSONObject loadPayload(Context context) throws Exception {
+        return new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
     }
 
     private static void bindArgs(SQLiteStatement statement, Object[] args) {

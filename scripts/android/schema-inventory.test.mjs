@@ -9,7 +9,10 @@ import { describe, expect, it } from 'vitest';
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import { ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
-import { ANDROID_COMPANION_MUTATION_DEFINITIONS } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
+import {
+  ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
+  ANDROID_COMPANION_MUTATION_DEFINITIONS
+} from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
@@ -58,6 +61,18 @@ const COMPANION_SYNC_STATE_ROWS = path.join(
   'android',
   'FolioleCompanionSyncStateRows.java'
 );
+const COMPANION_APP_DATA_STORE = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionAppDataStore.java'
+);
 
 describe('schema inventory drift gate', () => {
   it('generates the Android schema asset from the shared schema source', async () => {
@@ -92,7 +107,15 @@ describe('schema inventory drift gate', () => {
     const schema = JSON.parse(await readFile(COMPANION_MUTATION_DEFINITIONS, 'utf8'));
 
     expect(schema.statements).toEqual(ANDROID_COMPANION_MUTATION_DEFINITIONS);
+    expect(schema.appDataClearMutations).toEqual(ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS);
     await expect(readFile(COMPANION_SYNC_STATE_ROWS, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('moves Android app data clear table order out of Java', async () => {
+    const source = await readFile(COMPANION_APP_DATA_STORE, 'utf8');
+
+    expect(source).toContain('FolioleCompanionNamedMutationStore.appDataClearMutations(context)');
+    expect(source).not.toContain('new ClearMutation("');
   });
 
   it('keeps generated mutation definitions write-only', async () => {

@@ -7,7 +7,10 @@ import { fileURLToPath } from 'node:url';
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import { ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
-import { ANDROID_COMPANION_MUTATION_DEFINITIONS } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
+import {
+  ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
+  ANDROID_COMPANION_MUTATION_DEFINITIONS
+} from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
@@ -34,7 +37,14 @@ await fs.writeFile(
   `${JSON.stringify({ statementsByName: ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS }, null, 2)}\n`,
   'utf8'
 );
-await fs.writeFile(mutationOutputPath, `${JSON.stringify({ statements: ANDROID_COMPANION_MUTATION_DEFINITIONS }, null, 2)}\n`, 'utf8');
+await fs.writeFile(
+  mutationOutputPath,
+  `${JSON.stringify({
+    appDataClearMutations: ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
+    statements: ANDROID_COMPANION_MUTATION_DEFINITIONS
+  }, null, 2)}\n`,
+  'utf8'
+);
 await fs.writeFile(queryOutputPath, `${JSON.stringify({ queries: ANDROID_COMPANION_QUERY_DEFINITIONS }, null, 2)}\n`, 'utf8');
 await fs.writeFile(syncProtocolOutputPath, `${JSON.stringify(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS, null, 2)}\n`, 'utf8');
 console.info('[android-schema] wrote companion schema artifact', outputPath);
