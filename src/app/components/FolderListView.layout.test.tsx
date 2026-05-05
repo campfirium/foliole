@@ -89,7 +89,7 @@ it('hides the embedded folder header when requested', () => {
     />
   );
 
-  expect(screen.queryByRole('button', { name: 'Sort list by Date saved' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sort list by Import time' })).not.toBeInTheDocument();
   expect(screen.queryByRole('searchbox', { name: 'Search folder contents' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 2, name: 'Library root' })).not.toBeInTheDocument();
 });

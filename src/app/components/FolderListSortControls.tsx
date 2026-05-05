@@ -10,7 +10,7 @@ import {
 
 export const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
   { key: 'dateLastOpened', label: 'Date last opened' },
-  { key: 'dateSaved', label: 'Date saved' },
+  { key: 'dateImported', label: 'Import time' },
   { key: 'title', label: 'Title' }
 ];
 
@@ -34,7 +34,7 @@ export function FolderListSortControls(props: {
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
-  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Date saved';
+  const activeLabel = FOLDER_LIST_SORT_OPTIONS.find((option) => option.key === props.sortKey)?.label ?? 'Import time';
   const orderOptions = getOrderOptions(props.sortKey);
 
   return (

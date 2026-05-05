@@ -140,14 +140,14 @@ function stripLeadingTitleEcho(summary: string, normalizedTitle: string) {
 }
 
 function resolveWorkspaceListDateTimestamp(node: Pick<Node, 'createdAt' | 'updatedAt'>) {
-  const updatedAt = node.updatedAt?.trim();
-  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
-    return updatedAt;
-  }
-
   const createdAt = node.createdAt?.trim();
   if (createdAt && !Number.isNaN(new Date(createdAt).getTime())) {
     return createdAt;
+  }
+
+  const updatedAt = node.updatedAt?.trim();
+  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
+    return updatedAt;
   }
 
   return null;

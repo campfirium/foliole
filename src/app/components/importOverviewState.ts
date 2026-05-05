@@ -158,7 +158,7 @@ export function useImportOverviewState(input: {
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const { booksInventory, errorMessage, isLoading, pdfInventory, refresh } = useOverviewInventories(input.open);
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<OverviewSortKey>('dateImported');
+  const [sortKey, setSortKey] = useState<OverviewSortKey>('dateSaved');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filters = useOverviewFilters({
     booksInventory,

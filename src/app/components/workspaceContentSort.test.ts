@@ -18,13 +18,13 @@ const baseDocument = {
   relativePath: 'doc.md'
 };
 
-function createRow(id: string, title: string, updatedAt: string) {
+function createRow(id: string, title: string, updatedAt: string, createdAt = '2026-04-20T00:00:00.000Z') {
   return {
     depth: 0,
     descendantCount: 0,
     hasChildren: false,
     node: {
-      createdAt: '2026-04-20T00:00:00.000Z',
+      createdAt,
       hasContent: true,
       hasReveal: false,
       id,
@@ -49,6 +49,12 @@ it('persists the workspace content sort preference', () => {
   expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'asc', key: 'name' });
 });
 
+it('migrates the previous saved time sort key to import time', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort, JSON.stringify({ direction: 'desc', key: 'savedAt' }));
+
+  expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'desc', key: 'importedAt' });
+});
+
 it('sorts external documents by newest date by default and supports name descending', () => {
   const documents = [
     { ...baseDocument, modifiedAt: '2026-04-20T00:00:00.000Z', title: 'Alpha' },
@@ -70,4 +76,13 @@ it('sorts workspace content by last opened time when that context supports it', 
   };
 
   expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'lastOpenedAt' }, nodeViewById).map((row) => row.node.id)).toEqual(['new', 'old']);
+});
+
+it('sorts workspace content by import time instead of later edits', () => {
+  const rows = [
+    createRow('edited-later', 'Edited later', '2026-04-25T00:00:00.000Z', '2026-04-20T00:00:00.000Z'),
+    createRow('imported-later', 'Imported later', '2026-04-21T00:00:00.000Z', '2026-04-24T00:00:00.000Z')
+  ];
+
+  expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'importedAt' }).map((row) => row.node.id)).toEqual(['imported-later', 'edited-later']);
 });

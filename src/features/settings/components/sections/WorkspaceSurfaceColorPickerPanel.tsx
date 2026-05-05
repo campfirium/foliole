@@ -64,7 +64,7 @@ function WorkspaceSurfaceColorArea(props: {
     >
       <div className="absolute inset-0 bg-[linear-gradient(90deg,#ffffff_0%,transparent_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,#000000_100%)]" />
-      <div className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgba(32,33,36,0.45)]" style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }} />
+      <div className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgb(var(--color-foreground)_/_0.45)]" style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }} />
     </div>
   );
 }
@@ -94,17 +94,17 @@ function WorkspaceSurfaceColorSliderSection(props: {
           role="presentation"
           style={{ backgroundImage: 'linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)' }}
         >
-          <div className="absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgba(32,33,36,0.32)]" style={{ left: `${(hsv.h / 360) * 100}%` }} />
+          <div className="absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgb(var(--color-foreground)_/_0.32)]" style={{ left: `${(hsv.h / 360) * 100}%` }} />
         </div>
       </div>
       <div
         aria-label="Workspace surface alpha slider"
-        className="relative h-5 rounded-md bg-[linear-gradient(45deg,rgba(32,33,36,0.08)_25%,transparent_25%,transparent_50%,rgba(32,33,36,0.08)_50%,rgba(32,33,36,0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]"
+        className="relative h-5 rounded-md bg-[linear-gradient(45deg,rgb(var(--color-foreground)_/_0.08)_25%,transparent_25%,transparent_50%,rgb(var(--color-foreground)_/_0.08)_50%,rgb(var(--color-foreground)_/_0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]"
         onPointerDown={(event) => trackSlider(event, (percent) => props.onAlphaChange(Math.round(percent)))}
         role="presentation"
       >
         <div className="absolute inset-0 rounded-md" style={{ backgroundImage: `linear-gradient(90deg, transparent 0%, ${formatWorkspaceSurfaceColorCss({ ...props.color, a: 1 })} 100%)` }} />
-        <div className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgba(32,33,36,0.32)]" style={{ left: `${props.color.a * 100}%` }} />
+        <div className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-white shadow-[0_0_0_1px_rgb(var(--color-foreground)_/_0.32)]" style={{ left: `${props.color.a * 100}%` }} />
       </div>
     </div>
   );

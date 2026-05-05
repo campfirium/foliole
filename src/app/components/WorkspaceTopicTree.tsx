@@ -34,7 +34,7 @@ function useWorkspaceTopicTreeState(
   sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
   nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
 ) {
-  const contentSort = normalizeWorkspaceContentSort(sort, ['savedAt', 'lastOpenedAt', 'name']);
+  const contentSort = normalizeWorkspaceContentSort(sort, ['importedAt', 'lastOpenedAt', 'name']);
   const sortedItemIds = useMemo(
     () => sortWorkspaceContentNodeIds(itemIds, nodesById, contentSort, nodeViewById),
     [contentSort, itemIds, nodeViewById, nodesById]
@@ -182,7 +182,7 @@ function buildWorkspaceTopicTreeHeaderArgs(args: {
     ...args,
     contentSort: {
       ...args.contentSort,
-      sort: normalizeWorkspaceContentSort(args.contentSort.sort, ['savedAt', 'lastOpenedAt', 'name'])
+      sort: normalizeWorkspaceContentSort(args.contentSort.sort, ['importedAt', 'lastOpenedAt', 'name'])
     }
   };
 }

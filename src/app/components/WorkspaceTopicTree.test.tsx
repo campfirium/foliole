@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 function createNode(args: {
+  createdAt?: string;
   id: string;
   parentNodeId?: string | null;
   title: string;
@@ -14,7 +15,7 @@ function createNode(args: {
 }) {
   return {
     anchorLink: null,
-    createdAt: '2026-04-20T00:00:00.000Z',
+    createdAt: args.createdAt ?? '2026-04-20T00:00:00.000Z',
     hasContent: true,
     hasReveal: false,
     id: args.id,
@@ -86,19 +87,22 @@ function WorkspaceTopicTreeSortedSelectionHarness() {
   const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a');
   const nodesById = {
     'article-a': createNode({
+      createdAt: '2026-04-23T00:00:00.000Z',
       id: 'article-a',
       title: 'Alpha Notes',
-      updatedAt: '2026-04-23T00:00:00.000Z'
+      updatedAt: '2026-04-20T00:00:00.000Z'
     }),
     'article-b': createNode({
+      createdAt: '2026-04-21T00:00:00.000Z',
       id: 'article-b',
       title: 'Middle Notes',
-      updatedAt: '2026-04-21T00:00:00.000Z'
+      updatedAt: '2026-04-24T00:00:00.000Z'
     }),
     'article-c': createNode({
+      createdAt: '2026-04-22T00:00:00.000Z',
       id: 'article-c',
       title: 'Omega Notes',
-      updatedAt: '2026-04-22T00:00:00.000Z'
+      updatedAt: '2026-04-19T00:00:00.000Z'
     })
   };
 
@@ -128,7 +132,7 @@ it('places title search in the item column and keeps matches visible while searc
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Sort list by Saved time' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Sort list by Import time' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all topics' }));

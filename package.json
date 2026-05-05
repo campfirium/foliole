@@ -9,9 +9,11 @@
   "type": "module",
   "main": "electron-dist/electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "npm run appearance:colors:generate && vite",
+    "build": "npm run appearance:colors:generate && tsc -b && vite build",
     "preview": "vite preview",
+    "appearance:colors:generate": "node --experimental-strip-types scripts/generate-appearance-colors.ts",
+    "appearance:colors:check": "node --experimental-strip-types scripts/generate-appearance-colors.ts --check",
     "deps:scan": "knip --dependencies --reporter compact",
     "deps:hardening:check": "bash scripts/npm-hardening-check.sh",
     "copy:guard": "node scripts/check-ui-copy-guard.mjs",

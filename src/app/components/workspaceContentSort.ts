@@ -5,7 +5,7 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 
 import type { ExternalLibraryDocumentItem } from './externalLibraryBrowseModel';
 
-export type WorkspaceContentSortKey = 'deletedAt' | 'lastOpenedAt' | 'modifiedAt' | 'name' | 'savedAt';
+export type WorkspaceContentSortKey = 'deletedAt' | 'importedAt' | 'lastOpenedAt' | 'modifiedAt' | 'name' | 'savedAt';
 export type WorkspaceContentSortDirection = 'asc' | 'desc';
 
 export interface WorkspaceContentSortState {
@@ -15,7 +15,7 @@ export interface WorkspaceContentSortState {
 
 export const DEFAULT_WORKSPACE_CONTENT_SORT: WorkspaceContentSortState = {
   direction: 'desc',
-  key: 'savedAt'
+  key: 'importedAt'
 };
 
 function compareText(left: string, right: string) {
@@ -47,6 +47,7 @@ export function resolveDefaultWorkspaceContentSortDirection(key: WorkspaceConten
 function isWorkspaceContentSortKey(value: string): value is WorkspaceContentSortKey {
   return (
     value === 'deletedAt' ||
+    value === 'importedAt' ||
     value === 'lastOpenedAt' ||
     value === 'modifiedAt' ||
     value === 'name' ||
@@ -75,7 +76,7 @@ export function loadWorkspaceContentSortPreference(): WorkspaceContentSortState 
 }
 
 function migrateWorkspaceContentSortKey(value: string) {
-  if (value === 'date') return 'savedAt';
+  if (value === 'date' || value === 'savedAt') return 'importedAt';
   if (value === 'title') return 'name';
   return isWorkspaceContentSortKey(value) ? value : null;
 }
@@ -111,7 +112,7 @@ export function compareWorkspaceContentNodes(
     const dateResult = compareTimestampDesc(nodeViewById[left.id]?.updatedAt, nodeViewById[right.id]?.updatedAt) * directionMultiplier(sort.direction);
     if (dateResult !== 0) return dateResult;
   } else {
-    const dateResult = compareTimestampDesc(left.updatedAt, right.updatedAt) * directionMultiplier(sort.direction);
+    const dateResult = compareTimestampDesc(left.createdAt, right.createdAt) * directionMultiplier(sort.direction);
     if (dateResult !== 0) return dateResult;
   }
   const fallbackTitleResult = compareText(left.title, right.title);

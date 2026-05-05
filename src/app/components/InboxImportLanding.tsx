@@ -47,7 +47,7 @@ function useInboxCatalogState(nodesById: Record<string, Node>) {
   const formalImport = useFormalImport();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<InboxSortKey>('dateImported');
+  const [sortKey, setSortKey] = useState<InboxSortKey>('dateSaved');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredRecentRuns = useMemo(
     () => filterRecentRuns(query, nodesById, formalImport.overview.recentRuns),
@@ -62,16 +62,16 @@ function useInboxCatalogState(nodesById: Record<string, Node>) {
             entry,
             key: `linked-${entry.importId}`,
             kind: 'linked' as const,
-            sortImported: entry.importedAt,
             sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeViewById),
+            sortSaved: entry.importedAt,
             sortTitle: nodesById[entry.nodeId!]?.title ?? entry.sourceName
           })),
           ...filteredRecentRuns.map((entry) => ({
             entry,
             key: `run-${entry.importId}`,
             kind: 'run' as const,
-            sortImported: entry.importedAt,
             sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeViewById),
+            sortSaved: entry.importedAt,
             sortTitle: entry.nodeId ? nodesById[entry.nodeId]?.title ?? entry.sourceName : entry.sourceName
           }))
         ],

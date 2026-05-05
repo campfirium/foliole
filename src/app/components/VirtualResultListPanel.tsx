@@ -34,7 +34,7 @@ function useVirtualResultRows(
   sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
   nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
 ) {
-  const normalizedSort = normalizeWorkspaceContentSort(sort, ['savedAt', 'lastOpenedAt', 'name']);
+  const normalizedSort = normalizeWorkspaceContentSort(sort, ['importedAt', 'lastOpenedAt', 'name']);
   return useMemo(() => {
     const rows = buildFlatNodeRows(nodes.map((node) => node.id), nodesById as WorkspaceListNodesById);
     const sortedRows = sortWorkspaceContentRows(rows, normalizedSort, nodeViewById);
@@ -47,7 +47,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['savedAt', 'lastOpenedAt', 'name']);
+  const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['importedAt', 'lastOpenedAt', 'name']);
   const rowSpacing = getNodeListRowSpacing();
   const rows = useVirtualResultRows(props.nodes, props.nodesById, searchQuery, contentSort.sort, nodeViewById);
   const selectedNodeIds = props.activeNodeId && rows.some((row) => row.node.id === props.activeNodeId) ? [props.activeNodeId] : [];
@@ -61,7 +61,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
             onChangeSortDirection={contentSort.setSortDirection}
             onChangeSortKey={contentSort.setSortKey}
             options={[
-              { key: 'savedAt', label: 'Saved time' },
+              { key: 'importedAt', label: 'Import time' },
               { key: 'lastOpenedAt', label: 'Last opened' },
               { key: 'name', label: 'Name' }
             ]}

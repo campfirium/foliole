@@ -2,10 +2,10 @@ import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
 import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
-export type FolderListSortKey = 'dateSaved' | 'dateLastOpened' | 'title';
+export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'title';
 export type FolderListSortDirection = 'desc' | 'asc';
 
-export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateSaved';
+export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateImported';
 export const DEFAULT_FOLDER_LIST_SORT_DIRECTION: FolderListSortDirection = 'desc';
 
 export function resolveDefaultFolderListSortDirection(sortKey: FolderListSortKey): FolderListSortDirection {
@@ -59,7 +59,7 @@ function compareTitle(
   return compareWorkspaceListNodeDateDesc(left.node, right.node);
 }
 
-function compareSavedDate(
+function compareImportedDate(
   left: { node: Node; title: string },
   right: { node: Node; title: string },
   directionMultiplier: number
@@ -85,9 +85,9 @@ function compareLastOpened(
   if (titleResult !== 0) {
     return titleResult;
   }
-  const savedDateResult = compareWorkspaceListNodeDateDesc(left.node, right.node);
-  if (savedDateResult !== 0) {
-    return savedDateResult;
+  const importedDateResult = compareWorkspaceListNodeDateDesc(left.node, right.node);
+  if (importedDateResult !== 0) {
+    return importedDateResult;
   }
   return compareWorkspaceListNodeAuthor(left.node, right.node);
 }
@@ -114,8 +114,8 @@ export function sortFolderListNodes(
         }
       }
 
-      if (sortKey === 'dateSaved') {
-        const dateResult = compareSavedDate(left, right, directionMultiplier);
+      if (sortKey === 'dateImported' || sortKey === 'dateSaved') {
+        const dateResult = compareImportedDate(left, right, directionMultiplier);
         if (dateResult !== 0) {
           return dateResult;
         }

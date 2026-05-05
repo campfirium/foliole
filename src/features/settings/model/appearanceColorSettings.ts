@@ -1,4 +1,12 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import {
+  DEFAULT_APPEARANCE_COLORS,
+  deriveMutedForegroundRgb,
+  getClozeSurfaceAlpha,
+  getHighlightSurfaceAlpha,
+  getSelectionSurfaceAlpha,
+  hexColorToRgbChannels
+} from '../../../shared/config/defaultAppearanceColors';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 export type AccentColorPreset = string;
@@ -8,16 +16,16 @@ export type HighlightColorPreset = string;
 export type ClozeColorPreset = string;
 export type AppearanceResolvedColorMode = 'dark' | 'light';
 
-export const DEFAULT_FONT_COLOR_PRESET: FontColorPreset = '#202124';
-export const DEFAULT_ACCENT_COLOR_PRESET: AccentColorPreset = '#3f8f68';
-export const DEFAULT_SELECTION_COLOR_PRESET: SelectionColorPreset = '#3876ff';
-export const DEFAULT_HIGHLIGHT_COLOR_PRESET: HighlightColorPreset = '#38bdf8';
-export const DEFAULT_CLOZE_COLOR_PRESET: ClozeColorPreset = '#facc15';
-export const DEFAULT_DARK_FONT_COLOR_PRESET: FontColorPreset = '#e8e6df';
-export const DEFAULT_DARK_ACCENT_COLOR_PRESET: AccentColorPreset = '#7fb18d';
-export const DEFAULT_DARK_SELECTION_COLOR_PRESET: SelectionColorPreset = '#78a6ff';
-export const DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET: HighlightColorPreset = '#5cc8f3';
-export const DEFAULT_DARK_CLOZE_COLOR_PRESET: ClozeColorPreset = '#e1c15a';
+export const DEFAULT_FONT_COLOR_PRESET: FontColorPreset = DEFAULT_APPEARANCE_COLORS.light.font;
+export const DEFAULT_ACCENT_COLOR_PRESET: AccentColorPreset = DEFAULT_APPEARANCE_COLORS.light.accent;
+export const DEFAULT_SELECTION_COLOR_PRESET: SelectionColorPreset = DEFAULT_APPEARANCE_COLORS.light.selection;
+export const DEFAULT_HIGHLIGHT_COLOR_PRESET: HighlightColorPreset = DEFAULT_APPEARANCE_COLORS.light.highlight;
+export const DEFAULT_CLOZE_COLOR_PRESET: ClozeColorPreset = DEFAULT_APPEARANCE_COLORS.light.cloze;
+export const DEFAULT_DARK_FONT_COLOR_PRESET: FontColorPreset = DEFAULT_APPEARANCE_COLORS.dark.font;
+export const DEFAULT_DARK_ACCENT_COLOR_PRESET: AccentColorPreset = DEFAULT_APPEARANCE_COLORS.dark.accent;
+export const DEFAULT_DARK_SELECTION_COLOR_PRESET: SelectionColorPreset = DEFAULT_APPEARANCE_COLORS.dark.selection;
+export const DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET: HighlightColorPreset = DEFAULT_APPEARANCE_COLORS.dark.highlight;
+export const DEFAULT_DARK_CLOZE_COLOR_PRESET: ClozeColorPreset = DEFAULT_APPEARANCE_COLORS.dark.cloze;
 
 const LEGACY_DEFAULT_HIGHLIGHT_COLOR_PRESETS = new Set<string>(['#3f8f68', '#202124']);
 
@@ -84,44 +92,10 @@ function getDefaultClozeColor(mode: AppearanceResolvedColorMode) {
   return mode === 'dark' ? DEFAULT_DARK_CLOZE_COLOR_PRESET : DEFAULT_CLOZE_COLOR_PRESET;
 }
 
-function toColorRgb(value: string): string {
-  const red = Number.parseInt(value.slice(1, 3), 16);
-  const green = Number.parseInt(value.slice(3, 5), 16);
-  const blue = Number.parseInt(value.slice(5, 7), 16);
-  return `${red} ${green} ${blue}`;
-}
-
-function rgbStringToTuple(value: string) {
-  return value.split(' ').map((channel) => Number(channel)) as [number, number, number];
-}
-
-function blendRgb(sourceRgb: string, targetRgb: string, sourceWeight: number) {
-  const source = rgbStringToTuple(sourceRgb);
-  const target = rgbStringToTuple(targetRgb);
-  return source.map((channel, index) => Math.round(channel * sourceWeight + target[index]! * (1 - sourceWeight))).join(' ');
-}
-
-function deriveMutedForegroundRgb(fontRgb: string, mode: AppearanceResolvedColorMode) {
-  const canvasRgb = mode === 'dark' ? '24 25 24' : '255 255 255';
-  return blendRgb(fontRgb, canvasRgb, mode === 'dark' ? 0.68 : 0.72);
-}
-
-function getSelectionSurfaceAlpha(mode: AppearanceResolvedColorMode) {
-  return mode === 'dark' ? 0.42 : 0.2;
-}
-
 function getTextSelectionBackgroundColor(selectionColor: string, mode: AppearanceResolvedColorMode) {
   return mode === 'dark'
     ? `color-mix(in srgb, ${selectionColor} 50%, rgb(var(--color-background)) 50%)`
     : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
-}
-
-function getHighlightSurfaceAlpha(mode: AppearanceResolvedColorMode) {
-  return mode === 'dark' ? 0.28 : 0.34;
-}
-
-function getClozeSurfaceAlpha(mode: AppearanceResolvedColorMode) {
-  return mode === 'dark' ? 0.24 : 0.34;
 }
 
 function getSelectionForegroundColor(mode: AppearanceResolvedColorMode) {
@@ -219,11 +193,11 @@ export function applyAppearanceColorSettings(root: HTMLElement, input: ApplyAppe
   const normalizedSelectionColor = normalizeSelectionColor(input.selectionColor);
   const normalizedHighlightColor = normalizeHighlightColor(input.highlightColor);
   const normalizedClozeColor = normalizeClozeColor(input.clozeColor);
-  const accentRgb = toColorRgb(normalizedAccentColor);
-  const fontRgb = toColorRgb(normalizedFontColor);
-  const selectionRgb = toColorRgb(normalizedSelectionColor);
-  const highlightRgb = toColorRgb(normalizedHighlightColor);
-  const clozeRgb = toColorRgb(normalizedClozeColor);
+  const accentRgb = hexColorToRgbChannels(normalizedAccentColor);
+  const fontRgb = hexColorToRgbChannels(normalizedFontColor);
+  const selectionRgb = hexColorToRgbChannels(normalizedSelectionColor);
+  const highlightRgb = hexColorToRgbChannels(normalizedHighlightColor);
+  const clozeRgb = hexColorToRgbChannels(normalizedClozeColor);
 
   root.style.setProperty('--color-foreground', fontRgb);
   root.style.setProperty('--color-muted-foreground', deriveMutedForegroundRgb(fontRgb, input.mode));

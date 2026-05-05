@@ -32,22 +32,22 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-widgetBuffer': { width: '0px' },
   '.cm-line': { padding: 0 },
   '.cm-line:has(.cm-md-image-widget-block)': { fontSize: '0', lineHeight: '0', minHeight: '0' },
-  '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: '0.25rem', paddingTop: '0.75rem' },
+  '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: 'var(--editor-space-xs)', paddingTop: 'var(--editor-space-md)' },
   '.cm-line.cm-line-h2': { fontSize: 'var(--content-panel-h2-font-size, 1.25rem)', fontWeight: '700', paddingBottom: '0.2rem', paddingTop: '0.65rem' },
   '.cm-line.cm-line-h3': { fontSize: 'var(--content-panel-h3-font-size, 1.08rem)', fontWeight: '650', paddingTop: '0.5rem' },
   '.cm-line.cm-line-list, .cm-line.cm-line-list-unordered': { paddingLeft: '0.2rem' },
-  '.cm-line.cm-line-quote': { borderLeft: '2px solid var(--app-accent-color)', color: 'var(--color-text-primary)', paddingBottom: '0.15rem', paddingTop: '0.15rem', paddingLeft: '0.75rem' },
+  '.cm-line.cm-line-quote': { borderLeft: 'var(--editor-border-width-accent) solid var(--app-accent-color)', color: 'var(--color-text-primary)', paddingBottom: 'var(--editor-space-xxs)', paddingTop: 'var(--editor-space-xxs)', paddingLeft: 'var(--editor-space-md)' },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': { backgroundColor: 'rgb(var(--color-foreground) / 0.06)', borderRadius: 0, fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.5rem' },
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
   '.cm-line.cm-md-table-source-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', overflow: 'hidden', padding: '0 !important' },
   '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-line-title-heading-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
-  '.cm-line.cm-diff-line': { borderRadius: '0.35rem' },
+  '.cm-line.cm-diff-line': { borderRadius: 'var(--editor-radius-lg)' },
   '.cm-line.cm-diff-line-added': { backgroundColor: DIFF_ADDED_SURFACE_COLOR },
   '.cm-line.cm-diff-line-removed': { backgroundColor: DIFF_REMOVED_SURFACE_COLOR },
   '.cm-diff-spacer': { pointerEvents: 'none' },
-  '.cm-diff-spacer-added': { backgroundColor: DIFF_ADDED_SPACER_COLOR, borderRadius: '0.35rem' },
-  '.cm-diff-spacer-removed': { backgroundColor: DIFF_REMOVED_SPACER_COLOR, borderRadius: '0.35rem' },
+  '.cm-diff-spacer-added': { backgroundColor: DIFF_ADDED_SPACER_COLOR, borderRadius: 'var(--editor-radius-lg)' },
+  '.cm-diff-spacer-removed': { backgroundColor: DIFF_REMOVED_SPACER_COLOR, borderRadius: 'var(--editor-radius-lg)' },
   '.cm-diff-spacer-line': { color: 'transparent', userSelect: 'none' },
   '.cm-md-syntax-visible': { color: 'var(--app-accent-color)', opacity: '0.74' },
   '.cm-md-frontmatter-summary': {
@@ -64,7 +64,7 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-strong': { fontWeight: '600' },
   '.cm-md-strikethrough': { textDecoration: 'line-through' },
-  '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: '0.25rem', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.15rem' },
+  '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: 'var(--editor-radius-md)', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 var(--editor-space-xxs)' },
   '.cm-md-footnote-widget': { display: 'inline-block', lineHeight: '1', marginInline: '0.05em', position: 'relative', verticalAlign: 'super' },
   '.cm-md-footnote-marker': {
     borderBottom: '1px dotted color-mix(in srgb, var(--app-accent-color) 60%, transparent)',
@@ -81,15 +81,15 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-footnote-tooltip': {
     backgroundColor: 'var(--color-bg-elevated)',
     border: '1px solid var(--color-border)',
-    borderRadius: '0.75rem',
-    bottom: 'calc(100% + 0.45rem)',
+    borderRadius: 'var(--editor-radius-popover)',
+    bottom: 'calc(100% + var(--editor-space-sm))',
     boxShadow: 'var(--shadow-popover)',
     color: 'var(--color-text-primary)',
     left: '50%',
     lineHeight: '1.45',
     maxWidth: 'min(24rem, 60vw)',
     minWidth: '12rem',
-    padding: '0.6rem 0.75rem',
+    padding: '0.6rem var(--editor-space-md)',
     position: 'absolute',
     transform: 'translateX(-50%)',
     whiteSpace: 'normal',
@@ -97,14 +97,14 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },
   '.cm-md-source-highlight': {
-    backgroundColor: 'rgb(245 194 83 / 0.34)',
-    borderRadius: '0.2rem'
+    backgroundColor: 'var(--editor-source-highlight-surface-color)',
+    borderRadius: 'var(--editor-radius-sm)'
   },
-  '.cm-md-highlight': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
-  '.cm-md-cloze': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: '0.25rem' },
-  '.cm-md-anchor-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
-  '.cm-md-highlight-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: '0.25rem' },
-  '.cm-md-cloze-placeholder': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: '0.25rem' },
+  '.cm-md-highlight': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-cloze': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-anchor-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-highlight-overlap': { backgroundColor: SHARED_HIGHLIGHT_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
+  '.cm-md-cloze-placeholder': { backgroundColor: SHARED_CLOZE_SURFACE_COLOR, borderRadius: 'var(--editor-radius-md)' },
   '.cm-md-anchor-tag-token': { color: 'var(--app-accent-color)', opacity: '0.9' },
   '.cm-md-anchor-tag-delimiter': { color: 'var(--app-accent-color)', opacity: '0.7' },
   '.cm-md-anchor-tag-kind': { color: 'var(--app-accent-color)', fontWeight: '700', opacity: '1' },
@@ -115,7 +115,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-prefix-task-list': { display: 'inline-flex', alignItems: 'center', height: '1em', marginRight: '0.1rem', verticalAlign: '-0.08em' },
   '.cm-md-task-checkbox': {
     border: '1px solid rgb(var(--color-border-strong) / 0.72)',
-    borderRadius: '0.2rem',
+    borderRadius: 'var(--editor-radius-sm)',
     boxSizing: 'border-box',
     display: 'inline-block',
     height: '0.86em',
@@ -150,7 +150,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-image-widget-inline': { display: 'inline-block', height: '1lh', lineHeight: '1', margin: '0 0.18rem', maxWidth: '100%', overflow: 'hidden', verticalAlign: 'text-bottom' },
   '.cm-md-image-element': {
     border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)',
-    borderRadius: '0.45rem',
+    borderRadius: 'var(--editor-radius-xl)',
     boxSizing: 'border-box',
     display: 'block',
     height: 'auto',
@@ -167,17 +167,17 @@ export const liveMarkdownTheme = EditorView.theme({
     alignItems: 'center',
     backgroundColor: 'color-mix(in srgb, var(--color-bg-muted) 88%, transparent)',
     border: '1px dashed color-mix(in srgb, var(--color-border-strong) 40%, transparent)',
-    borderRadius: '0.45rem',
+    borderRadius: 'var(--editor-radius-xl)',
     color: 'var(--color-text-secondary)',
     display: 'flex',
     fontSize: '0.9rem',
     justifyContent: 'center',
     minHeight: '5rem',
-    padding: '0.75rem'
+    padding: 'var(--editor-space-md)'
   },
-  '.cm-md-image-status-block': { minHeight: '5rem', padding: '0.75rem' },
+  '.cm-md-image-status-block': { minHeight: '5rem', padding: 'var(--editor-space-md)' },
   '.cm-md-image-status-inline': {
-    borderRadius: '0.35rem',
+    borderRadius: 'var(--editor-radius-lg)',
     display: 'inline-flex',
     fontSize: '0.72em',
     height: '1lh',
@@ -187,12 +187,12 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-topic-search-match': {
     backgroundColor: 'color-mix(in srgb, var(--app-highlight-surface-color) 68%, transparent)',
-    borderRadius: '0.25rem'
+    borderRadius: 'var(--editor-radius-md)'
   },
   '.cm-topic-search-match-active': {
     backgroundColor: 'color-mix(in srgb, var(--app-selection-surface-color) 78%, var(--app-highlight-surface-color))',
-    borderRadius: '0.25rem',
-    boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--app-accent-color) 30%, transparent)'
+    borderRadius: 'var(--editor-radius-md)',
+    boxShadow: 'var(--editor-shadow-inset-match)'
   },
   '.cm-paragraph-marker-line': {
     position: 'relative'
@@ -210,7 +210,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, & > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
     backgroundColor: TEXT_SELECTION_BACKGROUND_COLOR,
-    borderRadius: '0.16rem'
+    borderRadius: 'var(--editor-radius-xs)'
   },
   '.cm-content ::selection': {
     backgroundColor: 'transparent',

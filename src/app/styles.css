@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @config "../../tailwind.config.js";
+@import "./generated/appearance-colors.css";
 
 * {
   box-sizing: border-box;
@@ -12,8 +13,6 @@
   --color-settings-group: 246 246 244;
   --color-bg-panel: 246 246 246;
   --color-bg-elevated: 255 255 255;
-  --color-foreground: 32 33 36;
-  --color-muted-foreground: 95 99 104;
   --color-border: 188 189 187;
   --color-border-strong: 124 126 123;
   --color-settings-divider: 226 228 231;
@@ -61,24 +60,30 @@
   --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 34%, var(--workspace-region-main-document-bg) 66%);
   --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 48%, var(--workspace-region-main-document-bg) 52%);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 86%, var(--workspace-region-main-topic-scrollbar-thumb-color) 14%);
-  --app-accent-color: #3f8f68;
-  --app-accent-color-rgb: 63 143 104;
-  --app-selection-color: #3876ff;
-  --app-selection-color-rgb: 56 118 255;
-  --app-text-selection-bg-color: rgb(var(--app-selection-color-rgb) / 0.2);
-  --app-text-selection-fg-color: rgb(var(--color-foreground));
-  --app-selection-foreground-color: rgb(var(--color-foreground));
-  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.2);
-  --app-highlight-color: #38bdf8;
-  --app-highlight-color-rgb: 56 189 248;
-  --app-highlight-surface-color: rgb(var(--app-highlight-color-rgb) / 0.34);
-  --app-cloze-color: #facc15;
-  --app-cloze-color-rgb: 250 204 21;
-  --app-cloze-surface-color: rgb(var(--app-cloze-color-rgb) / 0.34);
   --app-diff-added-surface-color: rgb(var(--app-accent-color-rgb) / 0.16);
   --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.12);
   --app-diff-removed-surface-color: rgb(var(--color-error) / 0.14);
   --app-diff-removed-spacer-color: rgb(var(--color-error) / 0.1);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-popover: 0 18px 40px rgb(15 17 19 / 0.12);
+  --shadow-panel: 0 10px 24px rgb(15 17 19 / 0.08);
+  --shadow-settings: 0 18px 42px rgb(15 17 19 / 0.08), 0 2px 6px rgb(15 17 19 / 0.03);
+  --editor-radius-xs: 0.16rem;
+  --editor-radius-sm: 0.2rem;
+  --editor-radius-md: 0.25rem;
+  --editor-radius-lg: 0.35rem;
+  --editor-radius-xl: 0.45rem;
+  --editor-radius-popover: 0.75rem;
+  --editor-space-xxs: 0.15rem;
+  --editor-space-xs: 0.25rem;
+  --editor-space-sm: 0.45rem;
+  --editor-space-md: 0.75rem;
+  --editor-border-width-accent: 2px;
+  --editor-source-highlight-surface-color: rgb(var(--app-cloze-color-rgb) / 0.34);
+  --editor-shadow-inset-match: inset 0 0 0 1px color-mix(in srgb, var(--app-accent-color) 30%, transparent);
   --app-scrollbar-size: 10px;
   --app-scrollbar-thumb-inset: 3px;
   --app-scrollbar-thumb-color: color-mix(in srgb, var(--app-surface) 98%, var(--app-scrollbar-thumb-hover-color) 2%);
@@ -213,8 +218,6 @@
   --color-settings-group: 35 37 35;
   --color-bg-panel: 37 40 36;
   --color-bg-elevated: 42 45 41;
-  --color-foreground: 232 230 223;
-  --color-muted-foreground: 166 164 156;
   --color-border: 78 80 75;
   --color-border-strong: 122 124 116;
   --color-settings-divider: 96 99 104;
@@ -235,12 +238,6 @@
   --app-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);
-  --app-text-selection-bg-color: color-mix(in srgb, var(--app-selection-color) 50%, rgb(var(--color-background)) 50%);
-  --app-text-selection-fg-color: #ffffff;
-  --app-selection-foreground-color: #ffffff;
-  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.42);
-  --app-highlight-surface-color: rgb(var(--app-highlight-color-rgb) / 0.28);
-  --app-cloze-surface-color: rgb(var(--app-cloze-color-rgb) / 0.24);
   --content-panel-text-color: #d8d8d8;
   --app-diff-added-surface-color: rgb(var(--app-accent-color-rgb) / 0.18);
   --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.14);
@@ -1028,7 +1025,7 @@ b {
   min-height: 34px;
   min-width: 34px;
   padding: 0;
-  box-shadow: var(--shadow-popover, 0 18px 40px rgba(15, 17, 19, 0.12));
+  box-shadow: var(--shadow-popover);
 }
 
 .cm-md-image-cloze-action:disabled {
@@ -1215,7 +1212,7 @@ body.link-panel-dragging {
 
 .settings-root {
   align-items: center;
-  background: rgba(20, 22, 25, 0.08);
+  background: rgb(var(--color-foreground) / 0.08);
   display: flex;
   inset: 0;
   justify-content: center;

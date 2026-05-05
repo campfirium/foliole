@@ -100,7 +100,7 @@ it('keeps Inbox focused on a single continuous imports list', () => {
 
   expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: 'Search inbox imports' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sort imports by Import time' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort imports by Date saved' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Books inventory' })).not.toBeInTheDocument();
   expect(screen.getByText('No imported Inbox topics or recent runs yet.')).toBeInTheDocument();
 });

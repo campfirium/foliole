@@ -22,8 +22,8 @@ function useSortedInboxItems(input: {
       sortImportCatalogItems(
         collectRecentInboxEntries(input.filteredInboxRuns).map((entry) => ({
           entry,
-          sortImported: entry.importedAt,
           sortLastOpened: resolveImportLastOpened(entry.nodeId, input.nodeViewById),
+          sortSaved: entry.importedAt,
           sortTitle: input.nodesById[entry.nodeId!]?.title ?? entry.sourceName
         })),
         input.sortKey,
@@ -36,8 +36,8 @@ function useSortedInboxItems(input: {
       sortImportCatalogItems(
         input.filteredInboxRuns.map((entry) => ({
           entry,
-          sortImported: entry.importedAt,
           sortLastOpened: resolveImportLastOpened(entry.nodeId, input.nodeViewById),
+          sortSaved: entry.importedAt,
           sortTitle: entry.nodeId ? input.nodesById[entry.nodeId]?.title ?? entry.sourceName : entry.sourceName
         })),
         input.sortKey,
@@ -61,8 +61,8 @@ function useSortedLibraryItems(input: {
       sortImportCatalogItems(
         input.filteredBooks.map((book) => ({
           book,
-          sortImported: input.booksInventory?.scannedAt ?? '',
           sortLastOpened: resolveImportLastOpened(book.generatedNodeId, input.nodeViewById),
+          sortSaved: input.booksInventory?.scannedAt ?? '',
           sortTitle: book.title
         })),
         input.sortKey,
@@ -75,8 +75,8 @@ function useSortedLibraryItems(input: {
       sortImportCatalogItems(
         input.filteredPdfItems.map((item) => ({
           item,
-          sortImported: item.lastImportedAt,
           sortLastOpened: resolveImportLastOpened(item.latestNodeId, input.nodeViewById),
+          sortSaved: item.lastImportedAt,
           sortTitle: item.sourceName
         })),
         input.sortKey,

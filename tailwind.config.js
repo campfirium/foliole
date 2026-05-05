@@ -108,15 +108,15 @@ export default {
         mono: ['var(--font-family-mono)']
       },
       boxShadow: {
-        popover: '0 18px 40px rgba(15, 17, 19, 0.12)',
-        panel: '0 10px 24px rgba(15, 17, 19, 0.08)',
-        settings: '0 18px 42px rgba(15, 17, 19, 0.08), 0 2px 6px rgba(15, 17, 19, 0.03)'
+        popover: 'var(--shadow-popover)',
+        panel: 'var(--shadow-panel)',
+        settings: 'var(--shadow-settings)'
       },
       borderRadius: {
-        sm: '4px',
-        md: '8px',
-        lg: '12px',
-        xl: '16px',
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
         companion: '10px'
       }
     }

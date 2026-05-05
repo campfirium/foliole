@@ -102,8 +102,8 @@ export function sortBooks(
   return sortImportCatalogItems(
     books.map((book) => ({
       book,
-      sortImported: input.scannedAt,
       sortLastOpened: resolveImportLastOpened(book.generatedNodeId, input.nodeViewById ?? {}),
+      sortSaved: input.scannedAt,
       sortTitle: book.title
     })),
     sortKey,
@@ -120,7 +120,7 @@ function useReadwiseBookCatalogState(
   nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
 ) {
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<ReadwiseSortKey>('dateImported');
+  const [sortKey, setSortKey] = useState<ReadwiseSortKey>('dateSaved');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredInventory = filterBooksInventory(query, booksInventory);
   const filteredBooks = useMemo(

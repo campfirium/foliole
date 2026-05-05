@@ -84,7 +84,7 @@ it('shows the import management navigation shell without readwise settings contr
   await waitFor(() => {
     expect(within(importsPage).getByRole('heading', { level: 2, name: 'Imports' })).toBeInTheDocument();
   });
-  expect(screen.getByRole('button', { name: 'Sort imports by Import time' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort imports by Date saved' })).toBeInTheDocument();
 });
 
 it('switches the content container when a navigation item is selected', async () => {

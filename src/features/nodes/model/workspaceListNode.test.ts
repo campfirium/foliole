@@ -183,7 +183,7 @@ it('uses the same date fallback chain for display and descending comparison', ()
   };
   const updatedNode = {
     createdAt: '2026-04-01T09:00:00.000Z',
-    updatedAt: '2026-04-02T09:00:00.000Z'
+    updatedAt: '2026-04-05T09:00:00.000Z'
   };
   const unknownNode = {
     createdAt: '',

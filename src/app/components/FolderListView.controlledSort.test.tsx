@@ -31,7 +31,7 @@ function getRenderedEntryTitles() {
 
 it('updates a controlled sort key through the toolbar menu', () => {
   function ControlledFolderList() {
-    const [sortKey, setSortKey] = useState<FolderListSortKey>('dateSaved');
+    const [sortKey, setSortKey] = useState<FolderListSortKey>('dateImported');
     const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('desc');
     const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
     const children = [
@@ -58,7 +58,7 @@ it('updates a controlled sort key through the toolbar menu', () => {
 
   render(<ControlledFolderList />);
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date saved' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Import time' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Title' }));
 
   expect(screen.getByRole('button', { name: 'Sort list by Title' })).toBeInTheDocument();
@@ -67,12 +67,12 @@ it('updates a controlled sort key through the toolbar menu', () => {
 
 it('updates a controlled sort direction through the toolbar menu', () => {
   function ControlledFolderList() {
-    const [sortKey] = useState<FolderListSortKey>('dateSaved');
+    const [sortKey] = useState<FolderListSortKey>('dateImported');
     const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('desc');
     const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
     const children = [
-      createNode({ id: 'node-1', title: 'First saved', updatedAt: '2026-04-01T09:00:00.000Z' }),
-      createNode({ id: 'node-2', title: 'Last saved', updatedAt: '2026-04-03T09:00:00.000Z' })
+      createNode({ createdAt: '2026-04-01T09:00:00.000Z', id: 'node-1', title: 'First imported', updatedAt: '2026-04-03T09:00:00.000Z' }),
+      createNode({ createdAt: '2026-04-03T09:00:00.000Z', id: 'node-2', title: 'Last imported', updatedAt: '2026-04-01T09:00:00.000Z' })
     ];
     const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
 
@@ -93,8 +93,8 @@ it('updates a controlled sort direction through the toolbar menu', () => {
 
   render(<ControlledFolderList />);
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date saved' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Import time' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Old -> Recent' }));
 
-  expect(getRenderedEntryTitles()).toEqual(['First saved', 'Last saved']);
+  expect(getRenderedEntryTitles()).toEqual(['First imported', 'Last imported']);
 });

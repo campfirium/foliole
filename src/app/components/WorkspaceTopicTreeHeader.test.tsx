@@ -17,7 +17,7 @@ it('adds a create topic action alongside current folder tools', () => {
       onToggleCollapseAll={vi.fn()}
       searchQuery=""
       sortDirection="desc"
-      sortKey="savedAt"
+      sortKey="importedAt"
     />
   );
 
@@ -38,7 +38,7 @@ it('shows an expand action after some items are collapsed', () => {
       onToggleCollapseAll={vi.fn()}
       searchQuery=""
       sortDirection="desc"
-      sortKey="savedAt"
+      sortKey="importedAt"
     />
   );
 
@@ -58,7 +58,7 @@ it('disables the toggle when the current folder has no collapsible items', () =>
       onToggleCollapseAll={vi.fn()}
       searchQuery=""
       sortDirection="desc"
-      sortKey="savedAt"
+      sortKey="importedAt"
     />
   );
 
