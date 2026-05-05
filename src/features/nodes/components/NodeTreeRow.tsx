@@ -156,7 +156,7 @@ function NodeTreeRowButton({
   const rename = useRenameState(label, nodeId, onRename);
   return (
     <AppButton
-      active={isSelected}
+      active={false}
       aria-current={isActive ? 'page' : undefined}
       aria-expanded={hasChildren ? !isCollapsed : undefined}
       aria-level={depth + 1}
@@ -164,8 +164,9 @@ function NodeTreeRowButton({
       aria-selected={isSelected}
       className={cn(
         'gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4',
-        !isSelected && !isDerived && 'text-foreground',
-        !isSelected && isDerived && 'text-foreground/70'
+        !isDerived && 'text-[#111317] font-medium',
+        isDerived && 'text-foreground/70',
+        isSelected && 'bg-foreground/[0.05]'
       )}
       data-node-derived={isDerived ? 'true' : 'false'}
       data-node-id={nodeId}
