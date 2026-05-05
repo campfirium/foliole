@@ -16,7 +16,17 @@ export function useCompanionMissingBodySync(args: {
   const [fetchingBodyKey, setFetchingBodyKey] = useState<string | null>(null);
 
   useEffect(() => {
-    currentArticleNodeIdRef.current = args.readableArticle?.nodeId ?? null;
+    const previousArticleNodeId = currentArticleNodeIdRef.current;
+    const nextArticleNodeId = args.readableArticle?.nodeId ?? null;
+    if (nextArticleNodeId && previousArticleNodeId !== nextArticleNodeId) {
+      const retryPrefix = `${nextArticleNodeId}:`;
+      for (const syncKey of attemptedBodySyncKeysRef.current) {
+        if (syncKey.startsWith(retryPrefix)) {
+          attemptedBodySyncKeysRef.current.delete(syncKey);
+        }
+      }
+    }
+    currentArticleNodeIdRef.current = nextArticleNodeId;
   }, [args.readableArticle?.nodeId]);
 
   useEffect(() => {
