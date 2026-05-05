@@ -15,7 +15,10 @@ const capacitorMock = vi.hoisted(() => ({
     })),
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
-    loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
+    loadMissingContentBlobHashes: vi.fn(async () => ({
+      blobs: [{ hash: 'a'.repeat(64), size_bytes: 1024 }],
+      hashes: ['a'.repeat(64)]
+    })),
     loadMissingAttachmentResources: vi.fn(async () => ({
       resources: [{ attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }]
     })),
@@ -139,6 +142,7 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
+  await expect(api.loadCompanionMissingContentBlobs(3)).resolves.toEqual([{ hash: 'a'.repeat(64), size_bytes: 1024 }]);
   expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
   await expect(api.loadCompanionMissingAttachmentResources(4)).resolves.toEqual([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }

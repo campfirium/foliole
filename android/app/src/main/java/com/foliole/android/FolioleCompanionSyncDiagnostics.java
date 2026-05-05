@@ -95,6 +95,9 @@ final class FolioleCompanionSyncDiagnostics {
         content.put("missing_content_blob_count", count(database,
             "SELECT COUNT(*) FROM content_blobs WHERE availability <> 'cached'"
         ));
+        content.put("missing_content_blob_bytes", count(database,
+            "SELECT COALESCE(SUM(stored_size_bytes), 0) FROM content_blobs WHERE availability <> 'cached'"
+        ));
         content.put("missing_topic_body_count", count(database,
             "SELECT COUNT(DISTINCT n.body_blob_hash) FROM nodes n " +
                 "JOIN content_blobs cb ON cb.hash = n.body_blob_hash " +

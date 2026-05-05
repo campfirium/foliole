@@ -60,7 +60,7 @@ export interface CompanionWorkspaceSyncPlugin {
   }): Promise<{ objects: NativeSyncStateObjectRecord[] }>;
   loadMissingContentBlobHashes(args: {
     limit?: number;
-  }): Promise<{ hashes: string[] }>;
+  }): Promise<{ blobs?: Array<{ hash: string; size_bytes?: number }>; hashes: string[] }>;
   loadMissingAttachmentResources(args: {
     limit?: number;
   }): Promise<{ resources: Array<{ attachment_id: string; content_hash: string; size_bytes?: number }> }>;

@@ -72,6 +72,7 @@ export interface SyncDiagnosticContent {
   missing_attachment_resource_count?: number;
   missing_attachment_resource_bytes?: number;
   missing_content_blob_count: number;
+  missing_content_blob_bytes?: number;
   missing_external_document_body_count?: number;
   missing_topic_body_count?: number;
   recent_topics?: Array<{

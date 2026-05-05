@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const syncBridgeMock = vi.hoisted(() => ({
   applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 2, applied_object_count: 3, to_state_seq: 8 })),
   loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>),
+  loadCompanionMissingContentBlobs: vi.fn(async () => [] as Array<{ hash: string; size_bytes?: number }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
@@ -45,8 +46,8 @@ vi.mock('@capacitor/core', () => ({
 
 async function testPullsStructurePackAndContentBlobs() {
   const bodyHash = 'a'.repeat(64);
-  syncBridgeMock.loadCompanionMissingContentBlobHashes
-    .mockResolvedValueOnce([bodyHash])
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
     .mockResolvedValueOnce([]);
   const fetchMock = vi.fn(async () => ({ ok: true }));
   fetchMock.mockResolvedValue(new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 }));
@@ -145,8 +146,8 @@ async function testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails() {
 
 async function testRefreshesStructureBeforeContentBatchCompletes() {
   const hashes = Array.from({ length: 32 }, (_, index) => `${String(index % 10)}`.repeat(64));
-  syncBridgeMock.loadCompanionMissingContentBlobHashes
-    .mockResolvedValueOnce(hashes)
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce(hashes.map((hash) => ({ hash })))
     .mockResolvedValueOnce([]);
   const onStructureSynced = vi.fn();
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [], status: 'ok' }), { status: 200 })));
@@ -155,31 +156,31 @@ async function testRefreshesStructureBeforeContentBatchCompletes() {
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onStructureSynced });
 
   expect(onStructureSynced.mock.invocationCallOrder[0])
-    .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobHashes.mock.invocationCallOrder[0]);
-  expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
+    .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
   expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(hashes.length);
 }
 
 async function testContinuesContentCachingAcrossBoundedBatches() {
   const firstBatch = Array.from({ length: 64 }, (_, index) => index.toString(16).padStart(2, '0').repeat(32));
   const secondBatch = ['b'.repeat(64), 'c'.repeat(64)];
-  syncBridgeMock.loadCompanionMissingContentBlobHashes
-    .mockResolvedValueOnce(firstBatch)
-    .mockResolvedValueOnce(secondBatch);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce(firstBatch.map((hash) => ({ hash })))
+    .mockResolvedValueOnce(secondBatch.map((hash) => ({ hash })));
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [], status: 'ok' }), { status: 200 })));
 
   const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-  expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledTimes(2);
-  expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledTimes(2);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
   expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(66);
   expect(result.syncedContentBlobHashes).toHaveLength(66);
 }
 
 async function testKeepsStructureSyncSuccessfulWhenContentBatchFails() {
   const bodyHash = 'c'.repeat(64);
-  syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValueOnce([bodyHash]);
+  syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }]);
   syncBridgeMock.syncCompanionContentBlob.mockRejectedValueOnce(new Error('blob unavailable'));
   vi.stubGlobal('fetch', vi.fn());
 
@@ -195,8 +196,8 @@ async function testRoutesAckThroughNativeDesktopHttp() {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
   const bodyHash = 'b'.repeat(64);
-  syncBridgeMock.loadCompanionMissingContentBlobHashes
-    .mockResolvedValueOnce([bodyHash])
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
     .mockResolvedValueOnce([]);
   capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
     body: JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }),
@@ -275,6 +276,7 @@ describe('companion desktop sync objects', () => {
       to_state_seq: 8
     });
     syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValue([]);
+    syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue([]);
     syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
     syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);

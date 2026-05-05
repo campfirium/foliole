@@ -17,6 +17,7 @@ final class FolioleCompanionContentBlobStore {
 
     static JSObject loadMissingHashes(SQLiteDatabase database, int limit) {
         JSArray hashes = new JSArray();
+        JSArray blobs = new JSArray();
         try (Cursor cursor = database.rawQuery(
             "WITH body_refs AS (" +
                 "SELECT n.body_blob_hash AS hash, " +
@@ -29,7 +30,7 @@ final class FolioleCompanionContentBlobStore {
             "), ranked_refs AS (" +
                 "SELECT hash, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM body_refs GROUP BY hash" +
             ") " +
-            "SELECT cb.hash FROM content_blobs cb " +
+            "SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) FROM content_blobs cb " +
                 "JOIN ranked_refs refs ON refs.hash = cb.hash " +
                 "LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash " +
                 "WHERE cb.kind = 'text_body' AND cbd.hash IS NULL " +
@@ -38,10 +39,15 @@ final class FolioleCompanionContentBlobStore {
         )) {
             while (cursor.moveToNext()) {
                 hashes.put(cursor.getString(0));
+                JSObject blob = new JSObject();
+                blob.put("hash", cursor.getString(0));
+                blob.put("size_bytes", cursor.getLong(1));
+                blobs.put(blob);
             }
         }
         JSObject result = new JSObject();
         result.put("hashes", hashes);
+        result.put("blobs", blobs);
         return result;
     }
 

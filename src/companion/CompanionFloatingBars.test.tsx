@@ -13,14 +13,14 @@ describe('CompanionBottomTabBar', () => {
         config={DEFAULT_COMPANION_TAB_CONFIG}
         onAction={vi.fn()}
         onSecondaryDestination={vi.fn()}
-        syncProgress={{ completed: 128, phase: 'content', total: 616 }}
+        syncProgress={{ completed: 128, completedBytes: 1048576, phase: 'content', total: 616, totalBytes: 2097152 }}
         visible
       />
     );
 
     expect(screen.getByLabelText('Sync progress')).toBeInTheDocument();
     expect(screen.getByText('Topic body cache')).toBeInTheDocument();
-    expect(screen.getByText('128/616')).toBeInTheDocument();
+    expect(screen.getByText('128/616 - 1.0 MB/2.0 MB')).toBeInTheDocument();
   });
 
   it('shows attachment resource progress above the bottom tabs', () => {

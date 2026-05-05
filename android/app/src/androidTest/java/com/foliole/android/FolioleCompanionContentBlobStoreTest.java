@@ -59,6 +59,10 @@ public class FolioleCompanionContentBlobStoreTest {
         assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
             .getJSONArray("hashes")
             .getString(0));
+        assertEquals(body.getBytes(StandardCharsets.UTF_8).length, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("blobs")
+            .getJSONObject(0)
+            .getLong("size_bytes"));
         JSObject result = FolioleCompanionContentBlobStore.syncBlob(database, hash, server.url(), new JSONObject());
 
         assertEquals("cached", result.getString("availability"));

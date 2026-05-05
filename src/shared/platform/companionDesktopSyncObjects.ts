@@ -5,7 +5,7 @@ import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionMissingAttachmentResources,
-  loadCompanionMissingContentBlobHashes,
+  loadCompanionMissingContentBlobs,
   loadCompanionSyncPackCursor,
   saveCompanionSyncPackCursor,
   syncCompanionContentBlob
@@ -97,6 +97,14 @@ async function loadMissingContentBlobCount() {
   return diagnostics?.content.missing_content_blob_count ?? null;
 }
 
+async function loadMissingContentBlobSummary() {
+  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
+  return {
+    total: diagnostics?.content.missing_content_blob_count ?? null,
+    totalBytes: diagnostics?.content.missing_content_blob_bytes ?? null
+  };
+}
+
 async function loadMissingAttachmentResourceCount() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return diagnostics?.content.missing_attachment_resource_count ?? null;
@@ -113,16 +121,28 @@ async function loadMissingAttachmentResourceSummary() {
 async function pullMissingContentBlobs(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
-  const total = await loadMissingContentBlobCount();
-  onProgress?.({ completed: 0, phase: 'content', total });
+  const { total, totalBytes } = await loadMissingContentBlobSummary();
+  let syncedBytes = 0;
+  onProgress?.({ completed: 0, completedBytes: 0, phase: 'content', total, totalBytes });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
-    const hashes = await loadCompanionMissingContentBlobHashes(CONTENT_BLOB_BATCH_LIMIT);
-    if (hashes.length === 0) {
+    const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
+    if (blobs.length === 0) {
       break;
     }
+    const hashes = blobs.map((blob) => blob.hash);
     const syncedBatchHashes = await pullContentBlobBatch(endpoint, hashes);
     syncedContentBlobHashes.push(...syncedBatchHashes);
-    onProgress?.({ completed: syncedContentBlobHashes.length, phase: 'content', total });
+    const syncedHashSet = new Set(syncedBatchHashes);
+    syncedBytes += blobs
+      .filter((blob) => syncedHashSet.has(blob.hash))
+      .reduce((sum, blob) => sum + Math.max(0, blob.size_bytes ?? 0), 0);
+    onProgress?.({
+      completed: syncedContentBlobHashes.length,
+      completedBytes: syncedBytes,
+      phase: 'content',
+      total,
+      totalBytes
+    });
     if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) {
       break;
     }

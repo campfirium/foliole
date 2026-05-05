@@ -98,6 +98,17 @@ export async function loadCompanionMissingContentBlobHashes(limit = 50) {
   return (await FolioleCompanionSync.loadMissingContentBlobHashes({ limit })).hashes;
 }
 
+export async function loadCompanionMissingContentBlobs(limit = 50): Promise<Array<{ hash: string; size_bytes?: number }>> {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as Array<{ hash: string; size_bytes?: number }>;
+  }
+  const result = await FolioleCompanionSync.loadMissingContentBlobHashes({ limit });
+  if (Array.isArray(result.blobs)) {
+    return result.blobs;
+  }
+  return result.hashes.map((hash) => ({ hash }));
+}
+
 export async function loadCompanionMissingAttachmentResources(limit = 50) {
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>;

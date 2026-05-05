@@ -2,6 +2,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const syncBridgeMock = vi.hoisted(() => ({
   applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
+  loadCompanionMissingAttachmentResources: vi.fn(async () => []),
+  loadCompanionMissingContentBlobs: vi.fn(async () => [] as Array<{ hash: string; size_bytes?: number }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async () => null),
   loadCompanionSyncReviewLog: vi.fn(async () => []),
