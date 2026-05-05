@@ -14,6 +14,7 @@ import type {
   NativeRelearnNodeArgs,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
+  NativeResetImportDataResult,
   NativeReviewSchedulerSettings,
   NativeSaveReadingProgressArgs,
   NativeWorkspaceSnapshot
@@ -33,6 +34,7 @@ export type {
   NativeRelearnNodeArgs,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
+  NativeResetImportDataResult,
   NativeReviewSchedulerSettings,
   NativeSaveReadingProgressArgs,
   NativeWorkspaceSnapshot
@@ -190,6 +192,10 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.saveReadingProgress]: {
     args: NativeSaveReadingProgressArgs;
     result: null;
+  };
+  [NATIVE_COMMANDS.resetImportData]: {
+    args: undefined;
+    result: NativeResetImportDataResult;
   };
   [NATIVE_COMMANDS.backupSqliteDatabase]: {
     args: { destinationPath?: string };

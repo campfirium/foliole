@@ -218,3 +218,12 @@ export async function loadRuntimeImportOverview(): Promise<RuntimeImportOverview
     return null;
   }
 }
+
+export async function resetRuntimeImportData() {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  return runtimeInvoke(NATIVE_COMMANDS.resetImportData);
+}

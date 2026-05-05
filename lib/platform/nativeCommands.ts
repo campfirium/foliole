@@ -29,6 +29,7 @@ export const NATIVE_COMMANDS = {
   saveReviewSchedulerSettings: 'save_review_scheduler_settings',
   loadReadingProgress: 'load_reading_progress',
   saveReadingProgress: 'save_reading_progress',
+  resetImportData: 'reset_import_data',
   listSqliteBackups: 'list_sqlite_backups',
   backupSqliteDatabase: 'backup_sqlite_database',
   restoreSqliteDatabase: 'restore_sqlite_database',

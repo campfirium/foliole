@@ -5,6 +5,9 @@ import {
   restoreApplicationDatabaseBackup
 } from '../database/backupRestore.js';
 import {
+  resetImportData
+} from '../database/importMaintenance.js';
+import {
   loadImportOverview
 } from '../database/importOverview.js';
 import {
@@ -185,6 +188,9 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();
+  }
+  if (command === NATIVE_COMMANDS.resetImportData) {
+    return resetImportData();
   }
   const settingsResult = await handleSettingsStorageCommand(command, args);
   if (settingsResult !== undefined) {

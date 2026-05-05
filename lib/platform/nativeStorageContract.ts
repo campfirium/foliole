@@ -111,3 +111,11 @@ export interface NativeApplyReviewGradeArgs {
 export interface NativeRelearnNodeArgs {
   nodeId: string;
 }
+
+export interface NativeResetImportDataResult {
+  clearedImportRunCount: number;
+  clearedImportSourceCount: number;
+  clearedKeepImportItemCount: number;
+  deletedNodeCount: number;
+  deletedRootNodeCount: number;
+}

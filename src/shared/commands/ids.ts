@@ -21,6 +21,7 @@ export const APP_COMMAND_IDS = {
   importFolder: 'import.folderToInbox',
   clipboardImport: 'import.clipboard',
   openImportManagement: 'import.openManagement',
+  resetImportData: 'dev.resetImportData',
   openNotes: 'workspace.openNotes',
   openTrash: 'workspace.openTrash',
   openSettings: 'workspace.openSettings',

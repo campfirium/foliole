@@ -67,6 +67,7 @@ function buildControllerPaletteState(args: {
     gradeReviewCard: args.ws.gradeReviewCard,
     importDirectory: args.formalImport.startImportDirectory,
     importSingleFile: args.formalImport.startImportFile,
+    resetImportData: args.formalImport.resetImportData,
     isReviewMode: args.isStudyMode,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onToggleEditorDisplayMode: args.layoutProps.onToggleEditorDisplayMode,
@@ -109,6 +110,7 @@ function useReviewPaletteItems(args: {
       buildAppPaletteItems({
         canImportFile: args.formalImportAvailable,
         canImportFolder: args.formalImportAvailable,
+        canResetImportData: args.formalImportAvailable,
         canGoBack: args.nav.canGoBack,
         canGoForward: args.nav.canGoForward,
         canGoParent: args.nav.canGoParent,

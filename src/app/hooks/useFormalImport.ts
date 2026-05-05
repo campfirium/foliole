@@ -12,17 +12,19 @@ import {
 } from '../../shared/platform/importBridge';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { runResetImportDataFlow } from './formalImportReset';
+import {
+  buildStatusFromOverview,
+  buildSuccessStatus,
+  DEFAULT_FORMAL_IMPORT_STATUS,
+  formatImportTimestamp
+} from './formalImportStatus';
+
 export interface FormalImportStatus {
   failures: string;
   inboxLanding: string;
   lastRun: string;
 }
-
-const DEFAULT_FORMAL_IMPORT_STATUS: FormalImportStatus = {
-  failures: 'Nothing recorded',
-  inboxLanding: 'Imported files land as child nodes under Inbox',
-  lastRun: 'No imports yet'
-};
 
 const DEFAULT_IMPORT_OVERVIEW: RuntimeImportOverview = {
   latestFailure: null,
@@ -48,63 +50,11 @@ const useFormalImportState = create<FormalImportUiState>(() => ({
 
 let managedInboxRefreshInFlight: Promise<void> | null = null;
 
-function formatImportTimestamp(timestamp: string) {
-  return timestamp.replace('T', ' ').slice(0, 16);
-}
-
-function buildSuccessStatus(result: RuntimeTextImportResult, timestamp: string): FormalImportStatus {
-  if (result.resultStatus === 'degraded') {
-    return {
-      failures: result.degradedReason ?? 'Import degraded',
-      inboxLanding: `Degraded import recorded for ${result.sourceName}`,
-      lastRun: `Import degraded ${result.sourceName} · ${timestamp}`
-    };
-  }
-  if (result.resultStatus === 'failed') {
-    return {
-      ...useFormalImportState.getState().status,
-      failures: result.failureReason ?? 'Unknown import failure',
-      lastRun: `Import failed ${result.sourceName} · ${timestamp}`
-    };
-  }
-  return {
-    failures: 'Nothing recorded',
-    inboxLanding:
-      result.duplicateSemantic === 'duplicate'
-        ? `Existing Inbox import reused for ${result.sourceName}`
-        : result.duplicateSemantic === 'updated'
-          ? `Inbox import updated from ${result.sourceName}`
-          : `Inbox child created from ${result.sourceName}`,
-    lastRun:
-      result.duplicateSemantic === 'duplicate'
-        ? `Reused ${result.sourceName} · ${timestamp}`
-        : result.duplicateSemantic === 'updated'
-          ? `Updated ${result.sourceName} · ${timestamp}`
-          : `Imported ${result.sourceName} · ${timestamp}`
-  };
-}
-
-function buildStatusFromOverview(overview: RuntimeImportOverview): FormalImportStatus {
-  const latestResult = overview.latestResult;
-  const latestFailure = overview.latestFailure;
-  return {
-    failures: latestFailure
-      ? `${latestFailure.sourceName} · ${latestFailure.failureReason ?? 'Unknown import failure'}`
-      : DEFAULT_FORMAL_IMPORT_STATUS.failures,
-    inboxLanding: latestResult
-      ? buildSuccessStatus(latestResult, formatImportTimestamp(latestResult.importedAt)).inboxLanding
-      : DEFAULT_FORMAL_IMPORT_STATUS.inboxLanding,
-    lastRun: latestResult
-      ? buildSuccessStatus(latestResult, formatImportTimestamp(latestResult.importedAt)).lastRun
-      : DEFAULT_FORMAL_IMPORT_STATUS.lastRun
-  };
-}
-
 function applyImportResultStatus(result: RuntimeTextImportResult) {
   useFormalImportState.setState({
     isImporting: false,
     lastSeenResultImportId: result.importId,
-    status: buildSuccessStatus(result, formatImportTimestamp(result.importedAt))
+    status: buildSuccessStatus(result, formatImportTimestamp(result.importedAt), useFormalImportState.getState().status)
   });
 }
 
@@ -222,7 +172,27 @@ function useFormalImportActions() {
     () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport, false),
     []
   );
-  return { startImportDirectory, startImportFile };
+  const resetImportData = useCallback(
+    () =>
+      runResetImportDataFlow({
+        getIsImporting: () => useFormalImportState.getState().isImporting,
+        rehydrateWorkspace: () => useWorkspaceStore.persist.rehydrate(),
+        refreshOverview: refreshFormalImportOverview,
+        setFailureStatus: applyImportFailureStatus,
+        setImporting: (isImporting) => useFormalImportState.setState({ isImporting }),
+        setResetStatus: (deletedRootNodeCount) =>
+          useFormalImportState.setState((current) => ({
+            isImporting: false,
+            status: {
+              ...current.status,
+              inboxLanding: 'Imported content and records cleared',
+              lastRun: `Import reset · ${deletedRootNodeCount} root items removed`
+            }
+          }))
+      }),
+    []
+  );
+  return { resetImportData, startImportDirectory, startImportFile };
 }
 
 async function runImportFlow<Result extends RuntimeTextImportResult | RuntimeDirectoryImportResult>(

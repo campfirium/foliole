@@ -5,6 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { loadImportOverview } = vi.hoisted(() => ({
   loadImportOverview: vi.fn()
 }));
+const { resetImportData } = vi.hoisted(() => ({
+  resetImportData: vi.fn()
+}));
 
 const IMPORT_OVERVIEW_RECORD = {
   latestFailure: {
@@ -75,6 +78,7 @@ const IMPORT_OVERVIEW_PAYLOAD = {
 };
 
 vi.mock('../database/importOverview.js', () => ({ loadImportOverview }));
+vi.mock('../database/importMaintenance.js', () => ({ resetImportData }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
   replaceNodeOrder: vi.fn(),
@@ -115,4 +119,22 @@ it('serializes persisted import overview to native payload', async () => {
   loadImportOverview.mockReturnValue(IMPORT_OVERVIEW_RECORD);
 
   await expect(handleStorageCommand('load_import_overview', {})).resolves.toEqual(IMPORT_OVERVIEW_PAYLOAD);
+});
+
+it('dispatches import reset through storage commands', async () => {
+  resetImportData.mockReturnValue({
+    clearedImportRunCount: 3,
+    clearedImportSourceCount: 2,
+    clearedKeepImportItemCount: 1,
+    deletedNodeCount: 4,
+    deletedRootNodeCount: 2
+  });
+
+  await expect(handleStorageCommand('reset_import_data', {})).resolves.toEqual({
+    clearedImportRunCount: 3,
+    clearedImportSourceCount: 2,
+    clearedKeepImportItemCount: 1,
+    deletedNodeCount: 4,
+    deletedRootNodeCount: 2
+  });
 });

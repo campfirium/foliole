@@ -12,6 +12,7 @@ interface PaletteCommandRunnerArgs {
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
   importSingleFile: () => Promise<boolean>;
+  resetImportData: () => Promise<boolean>;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
   dismissReviewItem: () => boolean;
@@ -60,6 +61,12 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
         void args.importSingleFile();
       },
       openImportManagement: args.openImportManagement,
+      resetImportData: () => {
+        if (!window.confirm('Reset imported content and import records? This cannot be undone.')) {
+          return false;
+        }
+        void args.resetImportData();
+      },
       openNotes: args.closeTrashView,
       openSettings: () => args.setSettingsOpen(true),
       openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),

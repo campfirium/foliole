@@ -13,6 +13,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
     openImportManagement: () => undefined,
+    resetImportData: () => undefined,
     openNotes: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
@@ -39,6 +40,7 @@ describe('buildAppPaletteItems', () => {
     const items = buildAppPaletteItems({
       canImportFile: true,
       canImportFolder: true,
+      canResetImportData: true,
       canGoBack: true,
       canGoForward: true,
       canGoParent: true,
@@ -59,6 +61,7 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importFolder)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.openImportManagement)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
   });
 
@@ -66,6 +69,7 @@ describe('buildAppPaletteItems', () => {
     const items = buildAppPaletteItems({
       canImportFile: true,
       canImportFolder: true,
+      canResetImportData: true,
       canGoBack: true,
       canGoForward: true,
       canGoParent: true,
@@ -126,6 +130,18 @@ describe('runAppCommand', () => {
     ).toBe(true);
 
     expect(restartApp).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets reset import data cancel without reporting success', () => {
+    const resetImportData = vi.fn(() => false);
+
+    expect(
+      runAppCommand(APP_COMMAND_IDS.resetImportData, createCommandActions({
+        resetImportData
+      }))
+    ).toBe(false);
+
+    expect(resetImportData).toHaveBeenCalledTimes(1);
   });
 });
 

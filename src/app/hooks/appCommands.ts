@@ -5,6 +5,7 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 interface BuildAppPaletteItemsOptions {
   canImportFile: boolean;
   canImportFolder: boolean;
+  canResetImportData: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -25,6 +26,7 @@ interface RunAppCommandActions {
   goForward: () => void;
   goParent: () => void;
   importSingleFile: () => void | Promise<void>;
+  resetImportData: () => boolean | void;
   startClipboardImport: () => void;
   openNotes: () => void;
   openSettings: () => void;
@@ -56,6 +58,8 @@ interface AppPaletteCommandMeta {
   keywords?: string[];
 }
 
+type CommandActionResult = boolean | void | Promise<void>;
+
 const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   {
     id: APP_COMMAND_IDS.importSingleFile,
@@ -80,6 +84,12 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     title: 'Import Management',
     section: 'Import',
     keywords: ['import', 'management', 'sources', 'readwise', 'inbox']
+  },
+  {
+    id: APP_COMMAND_IDS.resetImportData,
+    title: 'DEV Reset Import Data',
+    section: 'Developer',
+    keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records']
   },
   { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
@@ -119,6 +129,9 @@ function isCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   }
   if (id === APP_COMMAND_IDS.goBack) {
     return options.canGoBack;
+  }
+  if (id === APP_COMMAND_IDS.resetImportData) {
+    return options.canResetImportData;
   }
   if (id === APP_COMMAND_IDS.goForward) {
     return options.canGoForward;
@@ -172,11 +185,12 @@ export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeTo
 }
 
 export function runAppCommand(id: string, actions: RunAppCommandActions) {
-  const handlers: Record<string, () => void> = {
+  const handlers: Record<string, () => CommandActionResult> = {
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.importFolder]: actions.importDirectory,
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,
     [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
+    [APP_COMMAND_IDS.resetImportData]: actions.resetImportData,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.restartApp]: actions.restartApp,
@@ -203,6 +217,6 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
   if (!handler) {
     return false;
   }
-  handler();
-  return true;
+  const result = handler();
+  return result !== false;
 }
