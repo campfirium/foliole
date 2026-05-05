@@ -41,7 +41,7 @@ final class FolioleCompanionNetworkPluginActions {
         new Thread(() -> {
             try {
                 JSArray endpointUrls = new JSArray();
-                addEndpoint(endpointUrls, "10.0.2.2");
+                addEndpoint(context, endpointUrls, FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
                 for (String endpointUrl : FolioleCompanionNsdDiscovery.discoverEndpointUrls(context)) {
                     endpointUrls.put(endpointUrl);
                 }
@@ -54,8 +54,8 @@ final class FolioleCompanionNetworkPluginActions {
         }).start();
     }
 
-    private static void addEndpoint(JSArray endpointUrls, String hostAddress) {
-        endpointUrls.put("http://" + hostAddress + ":38641");
+    private static void addEndpoint(Context context, JSArray endpointUrls, String hostAddress) throws Exception {
+        endpointUrls.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress));
     }
 
 }

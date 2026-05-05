@@ -12,6 +12,11 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       runtimeKind: 'android-capacitor'
     },
     network: {
+      discoveryDefaults: {
+        emulatorHost: '10.0.2.2',
+        endpointTemplate: 'http://{host}:38641',
+        hostToken: '{host}'
+      },
       discoveryResponseKeys: {
         endpointUrls: 'endpoint_urls'
       },

@@ -39,6 +39,11 @@ describe('Android host bridge contract metadata', () => {
     const definitions = JSON.parse(await readFile(BRIDGE_CONTRACT_DEFINITIONS, 'utf8'));
 
     expect(definitions.hostApi).toEqual(ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS.hostApi);
+    expect(definitions.hostApi.network.discoveryDefaults).toMatchObject({
+      emulatorHost: '10.0.2.2',
+      endpointTemplate: 'http://{host}:38641',
+      hostToken: '{host}'
+    });
     expect(definitions.hostApi.workspaceSync.requestKeys).toMatchObject({
       endpointUrl: 'endpoint_url',
       message: 'message',
@@ -56,6 +61,7 @@ describe('Android host bridge contract metadata', () => {
     expect(hostBridgeSource).toContain('workspaceSyncRequestKey(context, "endpointUrl")');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapBootedAtOutputKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext())');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey');
     expect(combinedSource).not.toContain('getString("endpoint_url"');
@@ -65,5 +71,8 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).not.toContain('put("status"');
     expect(combinedSource).not.toContain('put("body"');
     expect(combinedSource).not.toContain('optJSONObject("headers"');
+    expect(combinedSource).not.toContain('"10.0.2.2"');
+    expect(combinedSource).not.toContain('"http://"');
+    expect(combinedSource).not.toContain('":38641"');
   });
 });
