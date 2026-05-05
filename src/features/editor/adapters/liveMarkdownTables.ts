@@ -1,14 +1,11 @@
 import type { Range, Text } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
+import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import type { MarkdownTableCellPlan, MarkdownTablePlan } from '../model/markdownTablePlans';
 import { dispatchMarkdownTablePreviewRequest } from '../model/markdownTablePreview';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
-
-const INLINE_TABLE_TOKEN_PATTERN =
-  /~~(.+?)~~|\b(?:https?:\/\/[^\s<>()\]]+|www\.[^\s<>()\]]+|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
-const AUTOLINK_TRAILING_PUNCTUATION_PATTERN = /[.,;:!?]+$/;
 
 function getCellAnchorClasses(cell: MarkdownTableCellPlan, decorations: readonly EditorTextAnchorDecoration[]) {
   const overlapping = decorations.filter((decoration) => decoration.from < cell.to && decoration.to > cell.from);
@@ -19,25 +16,19 @@ function getCellAnchorClasses(cell: MarkdownTableCellPlan, decorations: readonly
 }
 
 function appendInlineText(container: HTMLElement, text: string) {
-  let cursor = 0;
-  let match = INLINE_TABLE_TOKEN_PATTERN.exec(text);
-
-  while (match) {
-    const start = match.index;
-    if (start > cursor) container.append(document.createTextNode(text.slice(cursor, start)));
-
-    const matchText = match[0] ?? '';
-    if (matchText.startsWith('~~')) {
-      appendStrikethroughElement(container, match[1] ?? '');
-    } else {
-      appendAutolinkElement(container, matchText);
-    }
-
-    cursor = start + matchText.length;
-    match = INLINE_TABLE_TOKEN_PATTERN.exec(text);
+  for (const token of tokenizeMarkdownTableInlineText(text)) {
+    if (token.kind === 'text') container.append(document.createTextNode(token.text));
+    if (token.kind === 'strong') appendStrongElement(container, token.text);
+    if (token.kind === 'strikethrough') appendStrikethroughElement(container, token.text);
+    if (token.kind === 'autolink') appendAutolinkElement(container, token.text, token.href);
   }
+}
 
-  if (cursor < text.length) container.append(document.createTextNode(text.slice(cursor)));
+function appendStrongElement(container: HTMLElement, text: string) {
+  const strong = document.createElement('span');
+  strong.className = 'cm-md-strong';
+  strong.textContent = text;
+  container.append(strong);
 }
 
 function appendStrikethroughElement(container: HTMLElement, text: string) {
@@ -47,21 +38,12 @@ function appendStrikethroughElement(container: HTMLElement, text: string) {
   container.append(strike);
 }
 
-function appendAutolinkElement(container: HTMLElement, rawText: string) {
-  const linkText = rawText.replace(AUTOLINK_TRAILING_PUNCTUATION_PATTERN, '');
-  const trailingText = rawText.slice(linkText.length);
+function appendAutolinkElement(container: HTMLElement, linkText: string, href: string) {
   const link = document.createElement('span');
   link.className = 'cm-md-link-text';
-  link.dataset.mdLinkUrl = normalizeAutolinkHref(linkText);
+  link.dataset.mdLinkUrl = href;
   link.textContent = linkText;
   container.append(link);
-  if (trailingText) container.append(document.createTextNode(trailingText));
-}
-
-function normalizeAutolinkHref(text: string) {
-  if (text.startsWith('www.')) return `https://${text}`;
-  if (text.includes('@') && !text.includes('://')) return `mailto:${text}`;
-  return text;
 }
 
 function createCellElement(

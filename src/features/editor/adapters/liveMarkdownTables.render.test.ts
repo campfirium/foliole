@@ -11,15 +11,26 @@ function createAdapterHost(initialContent: string) {
   return { adapter, host };
 }
 
+beforeEach(() => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
+});
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+describe('live markdown thematic break rendering', () => {
+  it('renders thematic breaks as horizontal rule widgets', () => {
+    const { adapter, host } = createAdapterHost('Before\n---\nAfter');
+
+    expect(host.querySelector('.cm-md-thematic-break')).not.toBeNull();
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('---');
+
+    adapter.destroy();
+  });
+});
+
 describe('live markdown table rendering', () => {
-  beforeEach(() => {
-    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
-  });
-
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
-
   it('renders an inactive GFM table as a table widget', () => {
     const { adapter, host } = createAdapterHost('| A | B |\n| --- | --- |\n| 1 | 2 |');
 
@@ -79,6 +90,15 @@ describe('live markdown table rendering', () => {
 
     expect(host.querySelector('td.cm-md-table-cell .cm-md-strikethrough')?.textContent).toBe('Gone');
     expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Gone');
+
+    adapter.destroy();
+  });
+
+  it('renders strong text inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| **Important** |');
+
+    expect(host.querySelector('td.cm-md-table-cell .cm-md-strong')?.textContent).toBe('Important');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Important');
 
     adapter.destroy();
   });

@@ -1,7 +1,9 @@
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
+import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import type { MarkdownTablePreviewRequest } from '../model/markdownTablePreview';
 
-const tableClassName = 'w-full table-fixed border-separate border-spacing-0 border-y border-border-strong/70 text-left text-[0.92rem] leading-6';
+const tableClassName =
+  'w-full table-fixed border-separate border-spacing-0 border-y border-border-strong/70 text-left [font-size:var(--content-panel-font-size,1.0625rem)] [line-height:var(--content-panel-line-height,1.75)]';
 const cellClassName =
   'min-w-[2ch] whitespace-normal border-b border-border/45 px-3 py-2 text-left align-top break-words [overflow-wrap:anywhere]';
 const headerCellClassName = `${cellClassName} border-b border-border-strong/70 bg-canvas font-semibold`;
@@ -130,12 +132,23 @@ function renderTableRow(previewRow: MarkdownTablePreviewRequest['table']['rows']
         const Tag = previewRow.kind === 'header' ? 'th' : 'td';
         return (
           <Tag className={previewRow.kind === 'header' ? headerCellClassName : cellClassName} key={columnIndex}>
-            {cell.text.trim()}
+            {renderCellInlineContent(cell.text.trim())}
           </Tag>
         );
       })}
     </tr>
   );
+}
+
+function renderCellInlineContent(text: string) {
+  return tokenizeMarkdownTableInlineText(text).map((token, index) => {
+    if (token.kind === 'strong') return <strong className="font-semibold" key={index}>{token.text}</strong>;
+    if (token.kind === 'strikethrough') return <s key={index}>{token.text}</s>;
+    if (token.kind === 'autolink') {
+      return <span className="cursor-pointer text-accent underline" data-md-link-url={token.href} key={index}>{token.text}</span>;
+    }
+    return token.text;
+  });
 }
 
 export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProps) {

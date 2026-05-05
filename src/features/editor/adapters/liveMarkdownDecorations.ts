@@ -18,7 +18,8 @@ import {
   addLine,
   addMark,
   addPrefixDecoration,
-  addReplace
+  addReplace,
+  addThematicBreakDecoration
 } from './liveMarkdownPrimitives';
 import { getTextAnchorDecorations } from './liveMarkdownState';
 import { addTableDecorations } from './liveMarkdownTables';
@@ -87,6 +88,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     if (plan.prefixVisible) {
       addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, { forceHideHeadingSyntax: true });
     }
+    addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine);
     addCodeFenceDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);
@@ -106,6 +108,7 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     addPrefixDecoration(ranges, lineFrom, lineText, true);
+    addThematicBreakDecoration(ranges, lineFrom, lineText, true);
     addCodeFenceDecoration(ranges, lineFrom, lineText, true);
     addFootnoteDecorations(ranges, plan.footnoteMatches);
     for (const inlinePlan of plan.inlinePresentationPlans) applyInlinePresentationPlan(ranges, inlinePlan);

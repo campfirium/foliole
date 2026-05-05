@@ -4,6 +4,7 @@ import { Decoration, WidgetType } from '@codemirror/view';
 import { CODE_FENCE_PATTERN } from '../model/markdownLineSyntax';
 
 const HEADING_PREFIX_PATTERN = /^\s*#{1,6}(?:\s+|$)/;
+const THEMATIC_BREAK_PATTERN = /^ {0,3}(?:(?:-\s*){3,}|(?:_\s*){3,}|(?:\*\s*){3,})$/;
 const QUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const CALLOUT_PREFIX_PATTERN = /^(\[!([A-Za-z][\w-]*)\]\s*)/;
 const TASK_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+\[)([ xX])(\]\s+)/;
@@ -112,6 +113,27 @@ export function addCodeFenceDecoration(
   addReplace(ranges, from, lineTo);
 }
 
+export function addThematicBreakDecoration(
+  ranges: Range<Decoration>[],
+  from: number,
+  text: string,
+  showSyntax: boolean
+) {
+  if (!THEMATIC_BREAK_PATTERN.test(text)) return;
+
+  const lineTo = from + text.length;
+  if (showSyntax) {
+    addMark(ranges, from, lineTo, 'cm-md-syntax-visible');
+    return;
+  }
+  ranges.push(
+    Decoration.replace({
+      inclusive: false,
+      widget: new ThematicBreakWidget()
+    }).range(from, lineTo)
+  );
+}
+
 function collectPrefixWidgetMatch(from: number, text: string): PrefixWidgetMatch | null {
   const taskListMatch = text.match(TASK_LIST_PREFIX_PATTERN);
   if (taskListMatch) {
@@ -135,6 +157,19 @@ function collectPrefixWidgetMatch(from: number, text: string): PrefixWidgetMatch
   const trailingWhitespace = orderedListMatch[4] ?? ' ';
   const prefixLength = indent.length + numberText.length + delimiter.length + trailingWhitespace.length;
   return { from, to: from + prefixLength, kind: 'ordered-list', markerText: `${numberText}${delimiter} ` };
+}
+
+class ThematicBreakWidget extends WidgetType {
+  eq(other: ThematicBreakWidget) {
+    return other instanceof ThematicBreakWidget;
+  }
+
+  toDOM() {
+    const rule = document.createElement('span');
+    rule.className = 'cm-md-thematic-break';
+    rule.setAttribute('aria-hidden', 'true');
+    return rule;
+  }
 }
 
 class PrefixWidget extends WidgetType {

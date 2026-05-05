@@ -71,6 +71,20 @@ const SIMPLE_TABLE_PREVIEW_DETAIL = {
   }
 };
 
+const INLINE_TABLE_PREVIEW_DETAIL = {
+  table: {
+    active: false,
+    anchorDecorations: [],
+    columnCount: 1,
+    from: 0,
+    rows: [
+      { cells: [{ from: 2, text: 'A', to: 3 }], from: 0, kind: 'header', to: 5 },
+      { cells: [{ from: 18, text: '**Alpha**', to: 27 }], from: 16, kind: 'body', to: 29 }
+    ],
+    to: 29
+  }
+};
+
 const WEIGHTED_TABLE_PREVIEW_DETAIL = {
   table: {
     active: false,
@@ -196,6 +210,19 @@ describe('MarkdownEditor table preview', () => {
     const widths = Array.from(dialog.querySelectorAll('col')).map((column) => Number.parseFloat((column as HTMLTableColElement).style.width));
     expect(widths[1]).toBeGreaterThan(widths[0]);
     expect(widths[1]).toBeGreaterThan(widths[2]);
+  });
+
+  it('renders inline markdown inside the table preview dialog', async () => {
+    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="| A |" />);
+    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
+
+    act(() => {
+      dispatchTablePreview(host, INLINE_TABLE_PREVIEW_DETAIL);
+    });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td strong.font-semibold')?.textContent).toBe('Alpha');
+    expect(screen.getByRole('cell', { name: 'Alpha' })).toBeInTheDocument();
   });
 });
 
