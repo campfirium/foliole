@@ -47,11 +47,14 @@ if grep -q "status: RUNNING" "${status_log}"; then
 fi
 
 if [[ "${needs_restart}" == "true" ]]; then
-  WINDOWS_CLIENT_ACTION=restart bash scripts/windows/windows-restart-client.sh
-  echo "[windows-deliver] restart: RESTARTED"
+  if [[ "${client_running}" == "true" ]]; then
+    WINDOWS_CLIENT_ACTION=stop bash scripts/windows/windows-restart-client.sh
+    echo "[windows-deliver] restart: STOPPED (manual start required in original console)"
+  else
+    echo "[windows-deliver] restart: SKIPPED (client already stopped; manual start required in original console)"
+  fi
 elif [[ "${client_running}" != "true" ]]; then
-  WINDOWS_CLIENT_ACTION=start bash scripts/windows/windows-restart-client.sh
-  echo "[windows-deliver] restart: STARTED"
+  echo "[windows-deliver] restart: SKIPPED (client stopped; manual start required in original console)"
 else
   echo "[windows-deliver] restart: SKIPPED"
 fi

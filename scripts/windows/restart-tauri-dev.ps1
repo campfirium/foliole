@@ -30,13 +30,22 @@ function Get-TrackedPid {
   }
 }
 
+function Get-ProcessById {
+  param([int]$ProcessId)
+  if ($ProcessId -le 0) {
+    return $null
+  }
+
+  return Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+}
+
 function Get-TrackedProcess {
   $trackedPid = Get-TrackedPid
   if ($null -eq $trackedPid) {
     return $null
   }
 
-  $process = Get-Process -Id $trackedPid -ErrorAction SilentlyContinue
+  $process = Get-ProcessById -ProcessId $trackedPid
   if ($null -eq $process) {
     Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
     return $null
@@ -45,34 +54,82 @@ function Get-TrackedProcess {
   return $process
 }
 
+function Get-TauriDevShell {
+  $candidates = Get-CimInstance Win32_Process -Filter "Name='cmd.exe' OR Name='powershell.exe'" |
+    Where-Object {
+      $cmd = $_.CommandLine
+      $null -ne $cmd -and $cmd -match 'npm(\.cmd)?\s+run\s+tauri:dev'
+    }
+
+  if ($null -eq $candidates -or $candidates.Count -eq 0) {
+    return $null
+  }
+
+  return $candidates | Select-Object -First 1
+}
+
+function Save-TrackedPid {
+  param([int]$ProcessId)
+  if ($ProcessId -le 0) {
+    return
+  }
+
+  Set-Content -Path $PidFile -Value $ProcessId -NoNewline
+}
+
+function Stop-ProcessTree {
+  param([int]$ProcessId)
+  if ($ProcessId -le 0) {
+    return
+  }
+
+  Start-Process -FilePath 'taskkill.exe' -ArgumentList '/PID', "$ProcessId", '/T', '/F' -NoNewWindow -Wait
+}
+
 function Start-Client {
   if (!(Test-Path -Path $WindowsWorkDir)) {
     throw "Workdir not found: $WindowsWorkDir"
   }
 
-  $existing = Get-TrackedProcess
-  if ($null -ne $existing) {
-    Write-Info "status: RUNNING pid=$($existing.Id)"
+  $tracked = Get-TrackedProcess
+  if ($null -ne $tracked) {
+    Write-Info "status: RUNNING pid=$($tracked.Id)"
     return
   }
 
-  $command = "Set-Location -Path '$WindowsWorkDir'; npm run tauri:dev"
-  $process = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-NoExit', '-Command', $command -WorkingDirectory $WindowsWorkDir -PassThru
+  $existingShell = Get-TauriDevShell
+  if ($null -ne $existingShell) {
+    Save-TrackedPid -ProcessId ([int]$existingShell.ProcessId)
+    Write-Info "status: RUNNING pid=$($existingShell.ProcessId) (existing tauri:dev shell detected)"
+    return
+  }
 
-  Set-Content -Path $PidFile -Value $process.Id -NoNewline
-  Write-Info "status: STARTED pid=$($process.Id)"
+  $command = "cd /d `"$WindowsWorkDir`" && npm run tauri:dev"
+  $process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', $command -WorkingDirectory $WindowsWorkDir -NoNewWindow -PassThru
+  Save-TrackedPid -ProcessId $process.Id
+  Write-Info "status: STARTED pid=$($process.Id) (same console)"
+  Wait-Process -Id $process.Id
+  Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
 }
 
 function Stop-Client {
   $existing = Get-TrackedProcess
-  if ($null -eq $existing) {
+  if ($null -ne $existing) {
+    Stop-ProcessTree -ProcessId $existing.Id
+    Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
+    Write-Info "status: STOPPED pid=$($existing.Id)"
+    return
+  }
+
+  $shell = Get-TauriDevShell
+  if ($null -eq $shell) {
     Write-Info 'status: STOPPED (no tracked process)'
     return
   }
 
-  Stop-Process -Id $existing.Id -Force -ErrorAction SilentlyContinue
+  Stop-ProcessTree -ProcessId ([int]$shell.ProcessId)
   Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
-  Write-Info "status: STOPPED pid=$($existing.Id)"
+  Write-Info "status: STOPPED pid=$($shell.ProcessId) (detected tauri:dev shell)"
 }
 
 switch ($Action) {
@@ -92,10 +149,17 @@ switch ($Action) {
   }
   'status' {
     $existing = Get-TrackedProcess
-    if ($null -eq $existing) {
+    if ($null -ne $existing) {
+      Write-Info "status: RUNNING pid=$($existing.Id)"
+      break
+    }
+
+    $shell = Get-TauriDevShell
+    if ($null -eq $shell) {
       Write-Info 'status: STOPPED'
     } else {
-      Write-Info "status: RUNNING pid=$($existing.Id)"
+      Save-TrackedPid -ProcessId ([int]$shell.ProcessId)
+      Write-Info "status: RUNNING pid=$($shell.ProcessId) (existing tauri:dev shell detected)"
     }
     break
   }

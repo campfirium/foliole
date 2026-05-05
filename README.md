@@ -32,11 +32,11 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 ## Windows Native Dev Loop From WSL
 1. After code changes in WSL, run `npm run windows:deliver`.
 2. `windows:deliver` executes `lint -> typecheck -> test -> build`, then syncs code to `C:\dev\foliole`.
-3. `windows:deliver` now manages client lifecycle automatically:
-   - client not running -> auto start
-   - client running + restart-sensitive changes -> auto restart
+3. Client startup is manual: run `npm run tauri:dev` in your original Windows console.
+4. `windows:deliver` does not spawn new client consoles:
+   - client running + restart-sensitive changes -> stop client and ask for manual start
+   - client stopped -> keep stopped and ask for manual start
    - client running + normal `src/**` changes -> keep running (no restart)
-4. Restart mode is `auto` by default and can be overridden:
-   - force restart delivery: `npm run windows:deliver:restart`
 5. Optional one-shot sync only: `npm run windows:sync`.
-6. Manual client helpers (optional): `npm run windows:client:status`, `npm run windows:client:start`, `npm run windows:client:stop`.
+6. Manual client helpers: `npm run windows:client:status`, `npm run windows:client:start`, `npm run windows:client:stop`.
+7. `npm run windows:client:start` starts `tauri:dev` in the same console (foreground, blocking) and does not open a new console window.
