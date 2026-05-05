@@ -198,12 +198,14 @@ export function installDevRendererReloadIntentWatcher(options: {
   };
 
   fileSystem.watchIntentFile(intentPath, checkNow);
+  const pollInterval = setInterval(checkNow, 1000);
   logger.info('[electron-main] watching dev renderer reload intent', { intentPath, rootDir });
   checkNow();
 
   return {
     checkNow,
     close() {
+      clearInterval(pollInterval);
       fileSystem.unwatchIntentFile(intentPath, checkNow);
     },
     intentPath
