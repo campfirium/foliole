@@ -34,6 +34,13 @@ export interface CompanionDesktopSyncOptions {
 export interface CompanionDesktopSyncProgress {
   completed: number;
   completedBytes?: number;
+  contentBreakdown?: {
+    dueReviewBodies?: number;
+    externalDocumentBodies?: number;
+    nestedTopicBodies?: number;
+    topLevelTopicBodies?: number;
+    topicBodies?: number;
+  };
   phase: 'attachment' | 'content' | 'structure';
   total: number | null;
   totalBytes?: number | null;
@@ -128,6 +135,13 @@ async function pullRemoteStructurePack(endpointUrl: string) {
 async function loadMissingContentBlobSummary() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
+    contentBreakdown: diagnostics ? {
+      dueReviewBodies: diagnostics.content.missing_due_review_body_count,
+      externalDocumentBodies: diagnostics.content.missing_external_document_body_count,
+      nestedTopicBodies: diagnostics.content.missing_nested_topic_body_count,
+      topLevelTopicBodies: diagnostics.content.missing_top_level_topic_body_count,
+      topicBodies: diagnostics.content.missing_topic_body_count
+    } : undefined,
     total: diagnostics?.content.missing_content_blob_count ?? null,
     totalBytes: diagnostics?.content.missing_content_blob_bytes ?? null
   };
@@ -156,9 +170,9 @@ async function loadFinalLocalSyncSummary() {
 async function pullMissingContentBlobs(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
-  const { total, totalBytes } = await loadMissingContentBlobSummary();
+  const { contentBreakdown, total, totalBytes } = await loadMissingContentBlobSummary();
   let syncedBytes = 0;
-  onProgress?.({ completed: 0, completedBytes: 0, phase: 'content', total, totalBytes });
+  onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, phase: 'content', total, totalBytes });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
     if (blobs.length === 0) {
@@ -174,6 +188,7 @@ async function pullMissingContentBlobs(endpointUrl: string, onProgress?: Compani
     onProgress?.({
       completed: syncedContentBlobHashes.length,
       completedBytes: syncedBytes,
+      contentBreakdown,
       phase: 'content',
       total,
       totalBytes
