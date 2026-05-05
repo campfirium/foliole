@@ -4,7 +4,7 @@ import {
   toRuntimePdfImportsInventory,
   type RuntimePdfImportInventoryItem,
   type RuntimePdfImportsInventory
-} from './pdfImportsBridgePayloads';
+} from './pdfImportsRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
