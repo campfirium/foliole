@@ -1,17 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
+import { buildNodeTree } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
 
+import { useCollapsedNodeState } from './NodeListCollapseState';
 import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
 import { NodeListTreeContent } from './NodeListTreeContent';
 import { useNodeCollapseControls, useNodeListContextMenu } from './NodeListTreeHooks';
-import {
-  useCollapsedNodeState,
-  useNodeListState,
-  useNodeSelectionHandler
-} from './NodeListTreeState';
+import { useNodeListState, useNodeSelectionHandler } from './NodeListTreeState';
 import { useNodeBulkDeleteFeedback } from './useNodeBulkDeleteFeedback';
 
 interface NodeListTreeProps {
@@ -27,6 +25,12 @@ interface NodeListTreeProps {
 
 interface NodeListTreeRuntimeState {
   reviewSession: ReviewSessionState;
+}
+
+interface NodeListTreeData {
+  noteParentById: Record<string, string | null>;
+  noteRowsAll: ReturnType<typeof buildNodeTree>['rows'];
+  trashRowsAll: ReturnType<typeof buildNodeTree>['rows'];
 }
 
 function useNodeWorkspaceActions() {
@@ -45,6 +49,71 @@ function useNodeWorkspaceActions() {
   };
 }
 
+function useNodeListTreeData(
+  nodeOrder: string[],
+  nodesById: Record<string, Node>,
+  trashedNodeIds: string[]
+): NodeListTreeData {
+  const visibleNodeOrder = useMemo(
+    () => nodeOrder.filter((id) => !trashedNodeIds.includes(id)),
+    [nodeOrder, trashedNodeIds]
+  );
+  const trashedNodeOrder = useMemo(
+    () => nodeOrder.filter((id) => trashedNodeIds.includes(id)),
+    [nodeOrder, trashedNodeIds]
+  );
+  const noteTree = useMemo(
+    () => buildNodeTree(visibleNodeOrder, nodesById),
+    [visibleNodeOrder, nodesById]
+  );
+  const trashTree = useMemo(
+    () => buildNodeTree(trashedNodeOrder, nodesById),
+    [trashedNodeOrder, nodesById]
+  );
+
+  return {
+    noteParentById: noteTree.parentById,
+    noteRowsAll: noteTree.rows,
+    trashRowsAll: trashTree.rows
+  };
+}
+
+function useNodeListTreeControllers(args: {
+  activeNodeId: string | null;
+  collapsedState: ReturnType<typeof useCollapsedNodeState>;
+  onSelectNode: (nodeId: string) => void;
+  onSelectTrashNode: (nodeId: string) => void;
+  selectedTrashNodeId: string | null;
+  state: ReturnType<typeof useNodeListState>;
+  trashedNodeIds: string[];
+  trashRowsAll: ReturnType<typeof buildNodeTree>['rows'];
+}) {
+  const contextMenu = useNodeListContextMenu(args.state.selectedNodeIds, args.trashedNodeIds);
+  const collapse = useNodeCollapseControls({
+    collapseAllNotes: args.collapsedState.collapseAllNotes,
+    expandAllNotes: args.collapsedState.expandAllNotes,
+    setCollapsedTrashNodeIdList: args.collapsedState.setCollapsedTrashNodeIdList,
+    toggleNoteCollapse: args.collapsedState.toggleNoteCollapse,
+    trashRowsAll: args.trashRowsAll,
+    trashedNodeIds: args.trashedNodeIds
+  });
+  const handleSelectNode = useNodeSelectionHandler({
+    activeNodeId: args.activeNodeId,
+    onSelectNode: args.onSelectNode,
+    onSelectTrashNode: args.onSelectTrashNode,
+    selectedTrashNodeId: args.selectedTrashNodeId,
+    state: args.state,
+    trashedNodeIds: args.trashedNodeIds
+  });
+
+  useEffect(
+    () => onWindowKeydown((event) => event.key === 'Escape' && contextMenu.closeContextMenu()),
+    []
+  );
+
+  return { collapse, contextMenu, handleSelectNode };
+}
+
 function useNodeListTreeModel({
   activeNodeId,
   nodeOrder,
@@ -54,7 +123,14 @@ function useNodeListTreeModel({
   selectedTrashNodeId
 }: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'onOpenNotesView'>) {
   const workspace = useNodeWorkspaceActions();
-  const collapsedState = useCollapsedNodeState();
+  const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
+  const collapsedState = useCollapsedNodeState({
+    activeNodeId,
+    nodesById,
+    noteParentById: treeData.noteParentById,
+    noteRowsAll: treeData.noteRowsAll,
+    trashRowsAll: treeData.trashRowsAll
+  });
   const state = useNodeListState(
     activeNodeId,
     nodeOrder,
@@ -63,40 +139,27 @@ function useNodeListTreeModel({
     collapsedState.collapsedNoteNodeIds,
     collapsedState.collapsedTrashNodeIds
   );
-  const contextMenu = useNodeListContextMenu(state.selectedNodeIds, workspace.trashedNodeIds);
-  const collapse = useNodeCollapseControls({
+  const controllers = useNodeListTreeControllers({
     activeNodeId,
-    noteParentById: state.noteParentById,
-    noteRowsAll: state.noteRowsAll,
-    setCollapsedNoteNodeIdList: collapsedState.setCollapsedNoteNodeIdList,
-    setCollapsedTrashNodeIdList: collapsedState.setCollapsedTrashNodeIdList,
-    trashRowsAll: state.trashRowsAll,
-    trashedNodeIds: workspace.trashedNodeIds
-  });
-  const handleSelectNode = useNodeSelectionHandler({
-    activeNodeId,
+    collapsedState,
     onSelectNode,
     onSelectTrashNode,
     selectedTrashNodeId,
     state,
-    trashedNodeIds: workspace.trashedNodeIds
+    trashedNodeIds: workspace.trashedNodeIds,
+    trashRowsAll: state.trashRowsAll
   });
 
-  useEffect(
-    () => onWindowKeydown((event) => event.key === 'Escape' && contextMenu.closeContextMenu()),
-    []
-  );
-
   return {
-    collapse,
+    collapse: controllers.collapse,
     collapsedState,
-    contextMenu,
+    contextMenu: controllers.contextMenu,
     createChildNode: workspace.createChildNode,
     createRootNode: workspace.createRootNode,
     deleteNodes: workspace.deleteNodes,
     deleteNodesPermanently: workspace.deleteNodesPermanently,
     dismissNode: workspace.dismissNode,
-    handleSelectNode,
+    handleSelectNode: controllers.handleSelectNode,
     moveNodes: workspace.moveNodes,
     returnNode: workspace.relearnNode,
     reviewSession: workspace.reviewSession,

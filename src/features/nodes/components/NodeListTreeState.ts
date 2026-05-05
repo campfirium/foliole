@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type Dispatch,
-  type SetStateAction
-} from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTree, buildVisibleNodeTreeRows, type NodeTreeRow } from '../model/nodeTree';
@@ -143,33 +137,6 @@ export function handleToggleSelection(
     setSelectionAnchorNodeId(nodeId);
     notify(nodeId);
   }
-}
-
-interface CollapsedNodeState {
-  collapsedNoteNodeIds: ReadonlySet<string>;
-  collapsedTrashNodeIds: ReadonlySet<string>;
-  setCollapsedNoteNodeIdList: Dispatch<SetStateAction<string[]>>;
-  setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
-}
-
-export function useCollapsedNodeState(): CollapsedNodeState {
-  const [collapsedNoteNodeIdList, setCollapsedNoteNodeIdList] = useState<string[]>([]);
-  const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useState<string[]>([]);
-  const collapsedNoteNodeIds = useMemo(
-    () => new Set(collapsedNoteNodeIdList),
-    [collapsedNoteNodeIdList]
-  );
-  const collapsedTrashNodeIds = useMemo(
-    () => new Set(collapsedTrashNodeIdList),
-    [collapsedTrashNodeIdList]
-  );
-
-  return {
-    collapsedNoteNodeIds,
-    collapsedTrashNodeIds,
-    setCollapsedNoteNodeIdList,
-    setCollapsedTrashNodeIdList
-  };
 }
 
 export function useNodeSelectionHandler({

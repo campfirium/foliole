@@ -6,7 +6,7 @@ import {
   type SetStateAction
 } from 'react';
 
-import { collectNodeAncestorIds, type NodeTreeRow } from '../model/nodeTree';
+import type { NodeTreeRow } from '../model/nodeTree';
 
 type MenuMode = 'notes' | 'trash' | null;
 
@@ -61,56 +61,39 @@ export interface NodeListCollapseController {
 }
 
 interface UseNodeCollapseControlsInput {
-  activeNodeId: string | null;
-  noteParentById: Record<string, string | null>;
-  noteRowsAll: NodeTreeRow[];
-  setCollapsedNoteNodeIdList: Dispatch<SetStateAction<string[]>>;
+  collapseAllNotes: () => void;
+  expandAllNotes: () => void;
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
+  toggleNoteCollapse: (nodeId: string) => void;
   trashRowsAll: NodeTreeRow[];
   trashedNodeIds: string[];
 }
 
 export function useNodeCollapseControls({
-  activeNodeId,
-  noteParentById,
-  noteRowsAll,
-  setCollapsedNoteNodeIdList,
+  collapseAllNotes,
+  expandAllNotes,
   setCollapsedTrashNodeIdList,
+  toggleNoteCollapse,
   trashRowsAll,
   trashedNodeIds
 }: UseNodeCollapseControlsInput): NodeListCollapseController {
   useEffect(() => {
-    const noteIds = new Set(noteRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id));
     const trashIds = new Set(
       trashRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id)
     );
-    setCollapsedNoteNodeIdList((prev) => prev.filter((id) => noteIds.has(id)));
     setCollapsedTrashNodeIdList((prev) => prev.filter((id) => trashIds.has(id)));
-  }, [noteRowsAll, setCollapsedNoteNodeIdList, setCollapsedTrashNodeIdList, trashRowsAll]);
-
-  useEffect(() => {
-    if (!activeNodeId || trashedNodeIds.includes(activeNodeId)) return;
-    const ancestorIds = new Set(collectNodeAncestorIds(activeNodeId, noteParentById));
-    if (ancestorIds.size === 0) return;
-    setCollapsedNoteNodeIdList((prev) => {
-      const next = prev.filter((id) => !ancestorIds.has(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [activeNodeId, noteParentById, setCollapsedNoteNodeIdList, trashedNodeIds]);
+  }, [setCollapsedTrashNodeIdList, trashRowsAll]);
 
   const toggleCollapse = (nodeId: string) => {
-    const setCollapsed = trashedNodeIds.includes(nodeId)
-      ? setCollapsedTrashNodeIdList
-      : setCollapsedNoteNodeIdList;
-    setCollapsed((prev) =>
+    if (!trashedNodeIds.includes(nodeId)) {
+      toggleNoteCollapse(nodeId);
+      return;
+    }
+
+    setCollapsedTrashNodeIdList((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
     );
   };
 
-  const collapseAllNotes = () =>
-    setCollapsedNoteNodeIdList(
-      noteRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id)
-    );
-
-  return { collapseAllNotes, expandAllNotes: () => setCollapsedNoteNodeIdList([]), toggleCollapse };
+  return { collapseAllNotes, expandAllNotes, toggleCollapse };
 }
