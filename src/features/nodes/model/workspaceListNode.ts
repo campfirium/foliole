@@ -8,6 +8,14 @@ import type {
   NodeSpecialKind
 } from './nodeTypes';
 import { hasNodeContent, hasNodeReveal } from './nodeTypes';
+export {
+  compareWorkspaceListNodeDateDesc,
+  getWorkspaceListNodeAuthor,
+  getWorkspaceListNodeDateLabel,
+  getWorkspaceListNodeSummary,
+  WORKSPACE_LIST_DATE_FALLBACK,
+  WORKSPACE_LIST_SUMMARY_FALLBACK
+} from './workspaceListNodeMetadata';
 
 export interface WorkspaceListNode {
   anchorLink?: NodeAnchorLink | null;

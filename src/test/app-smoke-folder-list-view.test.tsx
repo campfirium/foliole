@@ -197,6 +197,60 @@ it('keeps author sorting stable when some items have no author metadata', () => 
   expect(screen.getByTestId('folder-list-author-note-1')).toHaveAttribute('aria-label', 'Author unavailable');
 });
 
+it('falls back to the empty summary copy when a child node has no usable body text', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'folder-1',
+    nodeOrder: ['folder-1', 'note-1'],
+    nodesById: {
+      ...state.nodesById,
+      'folder-1': createNode({ id: 'folder-1', kind: 'folder', title: 'Project folder', content: '' }),
+      'note-1': createNode({
+        id: 'note-1',
+        parentNodeId: 'folder-1',
+        title: 'Empty child',
+        content: '---\nauthor: Ada\n---\n# Empty child\n'
+      })
+    }
+  }));
+
+  render(<App />);
+
+  expect(screen.getByTestId('folder-list-excerpt-note-1')).toHaveTextContent('No summary yet.');
+});
+
+it('keeps date display and date sorting on the same fallback field chain', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'folder-1',
+    nodeOrder: ['folder-1', 'note-1', 'note-2'],
+    nodesById: {
+      ...state.nodesById,
+      'folder-1': createNode({ id: 'folder-1', kind: 'folder', title: 'Project folder', content: '' }),
+      'note-1': createNode({
+        id: 'note-1',
+        parentNodeId: 'folder-1',
+        title: 'Created fallback',
+        content: '# Created fallback',
+        createdAt: '2026-04-03T09:00:00.000Z',
+        updatedAt: ''
+      }),
+      'note-2': createNode({
+        id: 'note-2',
+        parentNodeId: 'folder-1',
+        title: 'Updated value',
+        content: '# Updated value',
+        createdAt: '2026-04-01T09:00:00.000Z',
+        updatedAt: '2026-04-02T09:00:00.000Z'
+      })
+    }
+  }));
+
+  render(<App />);
+
+  expect(getFolderListTitles()).toEqual(['Created fallback', 'Updated value']);
+  expect(screen.getByTestId('folder-list-date-note-1')).toHaveTextContent('2026-04-03');
+  expect(screen.getByTestId('folder-list-date-note-2')).toHaveTextContent('2026-04-02');
+});
+
 it('still shows the normal document view for content nodes', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'note-1',

@@ -75,9 +75,25 @@ describe('FolderListView content', () => {
     expect(authorSlot.className).toContain('min-h-4');
   });
 
+  it('skips frontmatter in summaries and falls back to created date when updated date is unusable', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-3',
+        title: 'Child topic',
+        content: '---\nauthor: Ada\n---\n# Child topic\nUseful body text',
+        createdAt: '2026-04-03T10:30:00.000Z',
+        updatedAt: ''
+      })
+    ]);
+
+    expect(screen.getByTestId('folder-list-excerpt-node-3')).toHaveTextContent('Useful body text');
+    expect(screen.getByTestId('folder-list-excerpt-node-3')).not.toHaveTextContent('author: Ada');
+    expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('2026-04-03');
+  });
+
 });
 
-describe('FolderListView sorting', () => {
+describe('FolderListView date sorting', () => {
   it('sorts by latest updated date by default', () => {
     renderFolderList([
       createNode({ id: 'node-1', title: 'Old note', updatedAt: '2026-04-01T09:00:00.000Z' }),
@@ -88,6 +104,29 @@ describe('FolderListView sorting', () => {
     expect(getRenderedEntryTitles()).toEqual(['Newest note', 'Middle note', 'Old note']);
   });
 
+  it('uses the same date fallback chain for sorting and display', () => {
+    renderFolderList([
+      createNode({
+        id: 'node-4',
+        title: 'Created fallback',
+        createdAt: '2026-04-03T09:00:00.000Z',
+        updatedAt: ''
+      }),
+      createNode({
+        id: 'node-5',
+        title: 'Updated value',
+        createdAt: '2026-04-01T09:00:00.000Z',
+        updatedAt: '2026-04-02T09:00:00.000Z'
+      })
+    ]);
+
+    expect(getRenderedEntryTitles()).toEqual(['Created fallback', 'Updated value']);
+    expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('2026-04-03');
+    expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('2026-04-02');
+  });
+});
+
+describe('FolderListView secondary sorting', () => {
   it('switches to stable title sorting', () => {
     renderFolderList([
       createNode({ id: 'node-1', title: 'Beta', updatedAt: '2026-04-01T09:00:00.000Z' }),

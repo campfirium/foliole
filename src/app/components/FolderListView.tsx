@@ -2,11 +2,15 @@ import { useMemo, useState } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
-  getFolderListNodeAuthor,
   sortFolderListNodes,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import {
+  getWorkspaceListNodeAuthor,
+  getWorkspaceListNodeDateLabel,
+  getWorkspaceListNodeSummary
+} from '../../features/nodes/model/workspaceListNode';
 
 interface FolderListViewProps {
   folderNodeId: string;
@@ -14,9 +18,6 @@ interface FolderListViewProps {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
 }
-
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
-const SUMMARY_FALLBACK = 'No summary yet.';
 
 function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesById: Record<string, Node>) {
   return nodeOrder
@@ -26,59 +27,6 @@ function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesByI
 
 function formatItemCount(count: number) {
   return `${count} ${count === 1 ? 'item' : 'items'}`;
-}
-
-function stripMarkdownLinePrefix(line: string) {
-  return line
-    .trim()
-    .replace(/^>\s*/, '')
-    .replace(/^[-*+]\s+/, '')
-    .replace(/^\d+\.\s+/, '')
-    .replace(/^#{1,6}\s+/, '');
-}
-
-function stripMarkdownInline(value: string) {
-  return value
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[*_~`]+/g, '');
-}
-
-function normalizePreviewText(content: string) {
-  return stripMarkdownInline(
-    content
-      .replace(ANCHOR_TAG_PATTERN, '')
-      .split(/\r?\n/)
-      .map((line) => stripMarkdownLinePrefix(line))
-      .join(' ')
-  )
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getNodeExcerpt(node: Node) {
-  const normalizedContent = normalizePreviewText(node.content);
-  if (!normalizedContent) {
-    return SUMMARY_FALLBACK;
-  }
-
-  const normalizedTitle = node.title.trim().replace(/\s+/g, ' ');
-  const lowerTitle = normalizedTitle.toLocaleLowerCase();
-  const lowerContent = normalizedContent.toLocaleLowerCase();
-  if (lowerTitle && lowerContent.startsWith(lowerTitle)) {
-    const remainder = normalizedContent.slice(normalizedTitle.length).replace(/^[\s:：,-]+/, '').trim();
-    return remainder || SUMMARY_FALLBACK;
-  }
-
-  return normalizedContent;
-}
-
-function formatNodeDate(timestamp: string) {
-  const parsedDate = new Date(timestamp);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return 'Unknown date';
-  }
-  return parsedDate.toISOString().slice(0, 10);
 }
 
 function renderAuthorSlot(nodeId: string) {
@@ -161,7 +109,7 @@ function FolderListEmptyState() {
 }
 
 function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => void }) {
-  const author = getFolderListNodeAuthor(props.node);
+  const author = getWorkspaceListNodeAuthor(props.node);
 
   return (
     <li>
@@ -182,7 +130,7 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
             className="mt-1 block min-h-10 line-clamp-2 text-xs leading-5 text-foreground/62"
             data-testid={`folder-list-excerpt-${props.node.id}`}
           >
-            {getNodeExcerpt(props.node)}
+            {getWorkspaceListNodeSummary(props.node)}
           </span>
         </span>
         <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -197,7 +145,7 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
             renderAuthorSlot(props.node.id)
           )}
           <span className="shrink-0 text-xs text-foreground/56" data-testid={`folder-list-date-${props.node.id}`}>
-            {formatNodeDate(props.node.updatedAt)}
+            {getWorkspaceListNodeDateLabel(props.node)}
           </span>
         </span>
       </button>
