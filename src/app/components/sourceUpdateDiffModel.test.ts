@@ -33,4 +33,29 @@ describe('buildSourceUpdateDiffModel', () => {
       { beforeLineNumber: 3, kind: 'removed', lines: [{ className: null, lineNumber: 3, text: 'beta' }] }
     ]);
   });
+
+  it('keeps rendered headings paired while leaving inserted noise as gaps', () => {
+    const model = buildSourceUpdateDiffModel(
+      ['alpha', '### 📂 其他重要观点摘要 (Brief Summary)', 'omega'].join('\n'),
+      ['alpha', '123', '123', '### 📂 其他重要观点摘要 (Brief Summary)123132', 'omega'].join('\n')
+    );
+
+    expect(model.current.decorations.lineDecorations).toEqual([{ kind: 'removed', lineNumber: 2 }]);
+    expect(model.updated.decorations.lineDecorations).toEqual([
+      { kind: 'added', lineNumber: 2 },
+      { kind: 'added', lineNumber: 3 },
+      { kind: 'added', lineNumber: 4 }
+    ]);
+    expect(model.current.decorations.spacerDecorations).toEqual([
+      {
+        beforeLineNumber: 2,
+        kind: 'added',
+        lines: [
+          { className: null, lineNumber: 2, text: '123' },
+          { className: null, lineNumber: 3, text: '123' }
+        ]
+      }
+    ]);
+    expect(model.updated.decorations.spacerDecorations).toEqual([]);
+  });
 });
