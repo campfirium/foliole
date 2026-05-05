@@ -188,6 +188,23 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void recordWorkspaceSyncEvent(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.recordWorkspaceSyncEvent(
+                call.getString("endpoint_url"),
+                call.getString("status"),
+                call.getString("message"),
+                call.getString("occurred_at")
+            ));
+        } catch (Exception exception) {
+            call.reject("Failed to record companion workspace sync event.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+    @PluginMethod
     public void saveSyncOnboardingStatus(PluginCall call) {
         FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
         try {

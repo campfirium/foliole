@@ -47,6 +47,7 @@ function mockCompanionWorkspaceSync() {
       endpoint_url: null,
       last_synced_at: null,
       remembered_targets: [],
+      sync_events: [],
       sync_onboarding_status: 'dismissed',
       workspace_snapshot: null
     },
@@ -86,7 +87,7 @@ describe('CompanionApp bootstrap states', () => {
 
     render(<CompanionApp />);
 
-    expect(screen.getByText('Set up sync')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByLabelText('Review')).toBeInTheDocument();
   });
 

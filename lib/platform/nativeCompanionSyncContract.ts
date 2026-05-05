@@ -1,9 +1,18 @@
 import type { WorkspaceSnapshot } from '../core/database/workspaceSnapshot.js';
 
+export interface NativeCompanionSyncEvent {
+  endpoint_url: string | null;
+  id: string;
+  message: string;
+  occurred_at: string;
+  status: 'completed' | 'failed' | 'skipped' | 'started';
+}
+
 export interface NativeCompanionWorkspaceSyncState {
   endpoint_url: string | null;
   last_synced_at: string | null;
   remembered_targets: string[];
+  sync_events: NativeCompanionSyncEvent[];
   sync_onboarding_status: 'accepted' | 'completed' | 'dismissed' | 'pending';
   workspace_snapshot: WorkspaceSnapshot | null;
 }

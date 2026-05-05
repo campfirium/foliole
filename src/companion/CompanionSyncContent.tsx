@@ -76,6 +76,7 @@ export function CompanionSyncContent(props: { workspaceSync: ReturnType<typeof u
       error={workspaceSync.error}
       lastSyncedAt={workspaceSync.state.last_synced_at}
       rememberedTargets={workspaceSync.state.remembered_targets}
+      syncEvents={workspaceSync.state.sync_events}
       onCancelPairing={workspaceSync.cancelPairing}
       onCheckDesktop={workspaceSync.checkDesktop}
       onClearError={workspaceSync.clearError}

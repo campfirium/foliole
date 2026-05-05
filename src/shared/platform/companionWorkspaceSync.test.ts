@@ -341,6 +341,7 @@ function registerSnapshotPersistenceTest() {
       endpoint_url: updatedSnapshot.endpointUrl,
       last_synced_at: updatedSnapshot.lastSyncedAt,
       remembered_targets: ['http://10.0.2.2:38641'],
+      sync_events: [],
       sync_onboarding_status: 'completed',
       workspace_snapshot: updatedSnapshot.workspaceSnapshot
     });

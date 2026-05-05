@@ -8,6 +8,7 @@ import { RecentArticleList } from './CompanionRecentArticleList';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
+import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -67,10 +68,19 @@ function renderMainContent(
   workspaceError: string | null,
   hasSnapshot: boolean,
   reviewBreadcrumbItems: { id: string; isCurrent?: boolean; label: string; targetNodeId: string }[],
-  onSelectReviewBreadcrumbItem: (id: string) => void
+  onSelectReviewBreadcrumbItem: (id: string) => void,
+  settingsPage: 'list' | 'sync',
+  onOpenSyncSettings: () => void,
+  onBackToSettingsList: () => void
 ) {
   if (surface.activeAction === 'more') {
-    return <CompanionSyncContent workspaceSync={workspaceSync} />;
+    return settingsPage === 'sync' ? (
+      <CompanionSettingsDetail onBack={onBackToSettingsList} page="sync" title="Sync">
+        <CompanionSyncContent workspaceSync={workspaceSync} />
+      </CompanionSettingsDetail>
+    ) : (
+      <CompanionSettingsList onOpenSync={onOpenSyncSettings} />
+    );
   }
   if (surface.activeAction === 'recent') {
     return renderRecentBrowseContent(surface);
@@ -193,6 +203,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
   const floatingBar = useFloatingBarVisibility('companion-top-bar');
   const workspaceSync = useCompanionWorkspaceSync(props.bootstrapState);
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar);
+  const [settingsPage, setSettingsPage] = useState<'list' | 'sync'>('list');
   const isBottomBarDisabled = surface.isSubmittingGrade || surface.isSubmittingReadingAction;
   const isImmersiveReview = surface.activeAction === 'review' && Boolean(surface.reviewSession.currentCard);
   const reviewBreadcrumbItems = useReviewBreadcrumbItems(
@@ -204,6 +215,12 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
     isImmersiveReview,
     surface.reviewSession.currentCard?.nodeId
   );
+
+  useEffect(() => {
+    if (surface.activeAction !== 'more') {
+      setSettingsPage('list');
+    }
+  }, [surface.activeAction]);
 
   return (
     <>
@@ -227,7 +244,10 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
               workspaceSync.error,
               Boolean(workspaceSync.state.workspace_snapshot),
               reviewBreadcrumbItems,
-              surface.handleSelectBrowseNode
+              surface.handleSelectBrowseNode,
+              settingsPage,
+              () => setSettingsPage('sync'),
+              () => setSettingsPage('list')
             )}
           </div>
         </div>

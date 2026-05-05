@@ -28,6 +28,12 @@ export interface CompanionWorkspaceSyncPlugin {
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
   loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
   removeWorkspaceSyncRememberedTarget(args: { endpoint_url: string }): Promise<NativeCompanionWorkspaceSyncState>;
+  recordWorkspaceSyncEvent(args: {
+    endpoint_url: string | null;
+    message: string;
+    occurred_at: string;
+    status: 'completed' | 'failed' | 'skipped' | 'started';
+  }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncOnboardingStatus(args: { status: NativeCompanionWorkspaceSyncState['sync_onboarding_status'] }): Promise<NativeCompanionWorkspaceSyncState>;
   savePairingCredentials(args: {
     device_id: string;

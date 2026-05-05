@@ -9,6 +9,7 @@ import {
   loadCompanionWorkspaceVersion,
   persistCompanionWorkspaceSnapshot,
   pullCompanionWorkspaceSnapshot,
+  recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
@@ -24,6 +25,7 @@ const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
   last_synced_at: null,
   remembered_targets: [],
+  sync_events: [],
   sync_onboarding_status: 'pending',
   workspace_snapshot: null
 };
@@ -43,8 +45,14 @@ async function applyPulledSnapshot(args: {
   if (args.cancelled()) {
     return;
   }
-  args.setState(syncedState);
-  args.setReadableArticle(await syncReadableArticle(syncedState.workspace_snapshot));
+  const completedState = await recordCompanionWorkspaceSyncEvent({
+    endpointUrl: args.endpointUrl,
+    message: 'Auto sync completed.',
+    occurredAt: syncedState.last_synced_at ?? undefined,
+    status: 'completed'
+  });
+  args.setState(completedState);
+  args.setReadableArticle(await syncReadableArticle(completedState.workspace_snapshot));
   args.setStatus('idle');
 }
 
@@ -87,10 +95,17 @@ async function tryForegroundAutoSync(args: {
       })
     ) {
       if (!args.cancelled()) {
+        const skippedState = await recordCompanionWorkspaceSyncEvent({
+          endpointUrl,
+          message: version.has_snapshot ? 'Checked desktop. No new changes.' : 'Checked desktop. No snapshot available.',
+          status: 'skipped'
+        });
+        args.setState(skippedState);
         args.setStatus('idle');
       }
       return;
     }
+    await recordCompanionWorkspaceSyncEvent({ endpointUrl, message: 'Auto sync started.', status: 'started' });
     await applyPulledSnapshot({
       cancelled: args.cancelled,
       endpointUrl,
@@ -102,8 +117,13 @@ async function tryForegroundAutoSync(args: {
     if (args.cancelled()) {
       return;
     }
+    const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
     args.setStatus('idle');
-    args.setError(syncError instanceof Error ? syncError.message : 'Desktop sync failed.');
+    args.setError(message);
+    const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);
+    if (failedState) {
+      args.setState(failedState);
+    }
   }
 }
 
@@ -130,14 +150,31 @@ function useWorkspaceSnapshotActions(args: {
     args.setStatus('syncing');
     args.setError(null);
     try {
-      const nextState = await pullCompanionWorkspaceSnapshot(endpointUrl);
+      const startedState = await recordCompanionWorkspaceSyncEvent({
+        endpointUrl,
+        message: 'Manual sync started.',
+        status: 'started'
+      });
+      args.setState(startedState);
+      const pulledState = await pullCompanionWorkspaceSnapshot(endpointUrl);
+      const nextState = await recordCompanionWorkspaceSyncEvent({
+        endpointUrl,
+        message: 'Sync completed.',
+        occurredAt: pulledState.last_synced_at ?? undefined,
+        status: 'completed'
+      });
       args.setState(nextState);
       args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
       args.setStatus('idle');
       return nextState;
     } catch (syncError) {
+      const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
       args.setStatus('idle');
-      args.setError(syncError instanceof Error ? syncError.message : 'Desktop sync failed.');
+      args.setError(message);
+      const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);
+      if (failedState) {
+        args.setState(failedState);
+      }
       throw syncError;
     }
   }

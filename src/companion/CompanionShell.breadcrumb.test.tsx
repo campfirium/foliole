@@ -192,6 +192,7 @@ function mockBreadcrumbEnvironment(snapshot: WorkspaceSnapshot) {
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-22T09:00:00.000Z',
       remembered_targets: ['http://10.0.2.2:38641'],
+      sync_events: [],
       sync_onboarding_status: 'completed',
       workspace_snapshot: snapshot
     },

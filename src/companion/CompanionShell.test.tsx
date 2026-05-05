@@ -110,6 +110,7 @@ function mockWorkspaceSync(args: {
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-22T09:00:00.000Z',
       remembered_targets: ['http://10.0.2.2:38641'],
+      sync_events: [],
       sync_onboarding_status: args.syncOnboardingStatus ?? 'completed',
       workspace_snapshot: snapshot
     },
@@ -244,15 +245,24 @@ describe('CompanionShell review surfaces', () => {
     expect(floatingBar.revealBar).toHaveBeenCalled();
   });
 
-  it('shows the compact sync status panel from the more action', async () => {
+  it('opens settings from the more action before entering sync details', async () => {
     await renderShellWithSurface({
       ...createReviewEmptySurface(),
       activeAction: 'more'
     });
 
-    expect(screen.getByText('Set up sync')).toBeInTheDocument();
-    expect(screen.getByText('Paired')).toBeInTheDocument();
-    expect(screen.queryByText('This device')).not.toBeInTheDocument();
-    expect(screen.queryByDisplayValue('http://10.0.2.2:38641')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
+    expect(screen.queryByText('Paired')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Sync/ }));
+
+    expect(screen.getByRole('heading', { name: 'Sync' })).toBeInTheDocument();
+    expect(screen.getByText('Last sync')).toBeInTheDocument();
+    expect(screen.getByText('Sync log')).toBeInTheDocument();
+    expect(screen.getByText('Android companion (Android)')).toBeInTheDocument();
+    expect(screen.getByText('No sync records yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(2);
   });
 });

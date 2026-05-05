@@ -1,7 +1,8 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
-import type { NativeCompanionPairingState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 
 import { CompanionSyncDeviceList } from './CompanionSyncDeviceList';
+import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 type CompanionSyncPanelProps = {
@@ -12,6 +13,7 @@ type CompanionSyncPanelProps = {
   error: string | null;
   lastSyncedAt: string | null;
   rememberedTargets: string[];
+  syncEvents: NativeCompanionSyncEvent[];
   onCancelPairing(): void;
   onCheckDesktop(endpointUrl: string): Promise<unknown>;
   onClearError(): void;
@@ -59,24 +61,41 @@ function PrimaryAction(props: {
 
 function SyncStatusCard(props: {
   children?: React.ReactNode;
-  detail: React.ReactNode;
+  detail?: React.ReactNode;
   title: string;
 }) {
   return (
     <div className="rounded-3xl border border-border bg-canvas px-5 py-5 text-foreground">
       <h3 className="text-lg font-semibold leading-tight">{props.title}</h3>
-      <div className="mt-3 text-sm leading-6 text-accent">{props.detail}</div>
+      {props.detail ? <div className="mt-3 text-sm leading-6 text-accent">{props.detail}</div> : null}
       {props.children ? <div className="mt-5">{props.children}</div> : null}
     </div>
   );
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'status'>) {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'pairingState' | 'status' | 'syncEvents'> & {
+  endpointUrl: string;
+  onSyncNow(): void;
+}) {
+  const isSyncing = props.status === 'syncing';
   return (
     <SyncStatusCard
-      detail={props.status === 'syncing' ? 'Syncing data from the paired device.' : 'This device is paired. Data sync can continue from here.'}
-      title={props.status === 'syncing' ? 'Syncing data' : 'Paired'}
-    />
+      detail={isSyncing ? 'Sync is running now.' : 'This device is paired and ready to sync.'}
+      title="Sync status"
+    >
+      <CompanionSyncStatusDetails
+        endpointUrl={props.endpointUrl}
+        lastSyncedAt={props.lastSyncedAt}
+        pairingState={props.pairingState}
+        status={props.status}
+        syncEvents={props.syncEvents}
+      />
+      <div className="mt-5">
+        <PrimaryAction disabled={isSyncing} onClick={props.onSyncNow}>
+          {isSyncing ? 'Syncing...' : 'Sync now'}
+        </PrimaryAction>
+      </div>
+    </SyncStatusCard>
   );
 }
 
@@ -160,7 +179,14 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
         {props.pairingState.is_paired ? (
-          <ConnectedState status={props.status} />
+          <ConnectedState
+            endpointUrl={endpointUrl}
+            lastSyncedAt={props.lastSyncedAt}
+            onSyncNow={() => void props.onPull(endpointUrl)}
+            pairingState={props.pairingState}
+            status={props.status}
+            syncEvents={props.syncEvents}
+          />
         ) : props.pairingRequest ? (
           <AwaitingApprovalState
             disabled={props.pairingStatus === 'completing-pair'}

@@ -20,13 +20,14 @@ import java.util.UUID;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
     private static final String META_TABLE = "companion_meta";
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
     private static final String WORKSPACE_SYNC_LAST_SYNCED_AT_KEY = "workspace_sync_last_synced_at";
     private static final String WORKSPACE_SYNC_ONBOARDING_STATUS_KEY = "workspace_sync_onboarding_status";
     private static final String WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY = "workspace_sync_remembered_targets";
+    private static final String WORKSPACE_SYNC_EVENTS_KEY = "workspace_sync_events";
     private final Context context;
 
     FolioleCompanionDatabaseHelper(Context context) {
@@ -75,9 +76,16 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);
         result.put("remembered_targets", new JSONArray(loadRememberedTargets(database)));
+        result.put("sync_events", new JSONArray(loadSyncEvents(database)));
         result.put("sync_onboarding_status", loadSyncOnboardingStatus(database, lastSyncedAt, workspaceSnapshot));
         result.put("workspace_snapshot", workspaceSnapshot);
         return result;
+    }
+
+    JSObject recordWorkspaceSyncEvent(String endpointUrl, String status, String message, String occurredAt) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        saveSyncEvent(database, endpointUrl, status, message, occurredAt);
+        return loadWorkspaceSyncState();
     }
 
     JSObject saveSyncOnboardingStatus(String status) throws Exception {
@@ -193,6 +201,49 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     private void deleteMetaValue(SQLiteDatabase database, String key) {
         database.delete(META_TABLE, "key = ?", new String[] { key });
+    }
+
+    private List<JSONObject> loadSyncEvents(SQLiteDatabase database) throws Exception {
+        String stored = loadMetaValue(database, WORKSPACE_SYNC_EVENTS_KEY);
+        List<JSONObject> events = new ArrayList<>();
+        if (stored == null || stored.trim().isEmpty()) {
+            return events;
+        }
+        JSONArray items = new JSONArray(stored);
+        for (int index = 0; index < items.length(); index += 1) {
+            JSONObject event = items.optJSONObject(index);
+            if (event != null) {
+                events.add(event);
+            }
+        }
+        return events;
+    }
+
+    private void saveSyncEvent(SQLiteDatabase database, String endpointUrl, String status, String message, String occurredAt) throws Exception {
+        List<JSONObject> events = loadSyncEvents(database);
+        JSONArray nextEvents = new JSONArray();
+        JSONObject event = new JSONObject();
+        event.put("id", UUID.randomUUID().toString());
+        event.put("endpoint_url", endpointUrl == null || endpointUrl.trim().isEmpty() ? JSONObject.NULL : endpointUrl.trim());
+        event.put("status", normalizeSyncEventStatus(status));
+        event.put("message", message == null || message.trim().isEmpty() ? normalizeSyncEventStatus(status) : message.trim());
+        event.put("occurred_at", occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim());
+        nextEvents.put(event);
+        for (int index = 0; index < events.size() && index < 19; index += 1) {
+            nextEvents.put(events.get(index));
+        }
+        saveMetaValue(database, WORKSPACE_SYNC_EVENTS_KEY, nextEvents.toString(), Instant.now().toString());
+    }
+
+    private String normalizeSyncEventStatus(String status) {
+        if (status == null) {
+            return "failed";
+        }
+        String normalized = status.trim();
+        if (normalized.equals("started") || normalized.equals("completed") || normalized.equals("failed") || normalized.equals("skipped")) {
+            return normalized;
+        }
+        return "failed";
     }
 
     private List<String> loadRememberedTargets(SQLiteDatabase database) throws Exception {

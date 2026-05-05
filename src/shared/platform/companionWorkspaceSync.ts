@@ -27,6 +27,7 @@ import {
   type CompanionSyncOnboardingStatus,
   normalizePersistedSyncState,
   normalizeWorkspaceSyncState,
+  prependSyncEvent,
   readWebSyncState,
   removeRememberedTarget,
   writeWebSyncState
@@ -154,6 +155,30 @@ export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnb
   return normalizeWorkspaceSyncState(await FolioleCompanionSync.saveSyncOnboardingStatus({ status }));
 }
 
+export async function recordCompanionWorkspaceSyncEvent(args: {
+  endpointUrl: string | null;
+  message: string;
+  occurredAt?: string;
+  status: 'completed' | 'failed' | 'skipped' | 'started';
+}) {
+  const occurredAt = args.occurredAt ?? new Date().toISOString();
+  if (!isNativeAndroidCompanionRuntime()) {
+    const current = readWebSyncState();
+    return writeWebSyncState(prependSyncEvent(current, {
+      endpoint_url: args.endpointUrl,
+      message: args.message,
+      occurred_at: occurredAt,
+      status: args.status
+    }));
+  }
+  return normalizeWorkspaceSyncState(await FolioleCompanionSync.recordWorkspaceSyncEvent({
+    endpoint_url: args.endpointUrl,
+    message: args.message,
+    occurred_at: occurredAt,
+    status: args.status
+  }));
+}
+
 export async function loadCompanionReadableArticle(snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   if (!isNativeAndroidCompanionRuntime()) {
     return resolveReadableCompanionArticle(snapshot ?? readWebSyncState().workspace_snapshot);
@@ -188,6 +213,7 @@ export async function pullCompanionWorkspaceSnapshot(endpointUrl: string) {
     endpoint_url: normalizedEndpointUrl,
     last_synced_at: lastSyncedAt,
     remembered_targets: appendRememberedTarget(currentState?.remembered_targets ?? [], normalizedEndpointUrl),
+    sync_events: currentState?.sync_events ?? [],
     sync_onboarding_status: 'completed',
     workspace_snapshot: payload.workspace_snapshot ?? null
   };
@@ -212,7 +238,10 @@ export async function persistCompanionWorkspaceSnapshot(args: {
   rememberedTargets: NativeCompanionWorkspaceSyncState['remembered_targets'];
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
-  const nextState = normalizePersistedSyncState(args);
+  const nextState = normalizePersistedSyncState({
+    ...args,
+    syncEvents: readWebSyncState().sync_events
+  });
   if (!isNativeAndroidCompanionRuntime()) {
     return writeWebSyncState(nextState);
   }

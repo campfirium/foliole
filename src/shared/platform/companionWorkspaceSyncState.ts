@@ -1,4 +1,4 @@
-import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
+import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
 export const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
 
@@ -18,12 +18,54 @@ function normalizeSyncOnboardingStatus(raw: Record<string, unknown>): CompanionS
   return 'pending';
 }
 
+
+function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  const status = raw.status;
+  if (status !== 'completed' && status !== 'failed' && status !== 'skipped' && status !== 'started') {
+    return null;
+  }
+  const occurredAt = typeof raw.occurred_at === 'string' && raw.occurred_at.trim() ? raw.occurred_at.trim() : null;
+  if (!occurredAt) {
+    return null;
+  }
+  return {
+    endpoint_url: typeof raw.endpoint_url === 'string' && raw.endpoint_url.trim() ? raw.endpoint_url.trim() : null,
+    id: typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `${status}:${occurredAt}`,
+    message: typeof raw.message === 'string' && raw.message.trim() ? raw.message.trim() : status,
+    occurred_at: occurredAt,
+    status
+  };
+}
+
+function normalizeSyncEvents(raw: Record<string, unknown>) {
+  if (!Array.isArray(raw.sync_events)) {
+    return [];
+  }
+  return raw.sync_events.map(normalizeSyncEvent).filter((event): event is NativeCompanionSyncEvent => event !== null);
+}
+
+export function prependSyncEvent(
+  state: NativeCompanionWorkspaceSyncState,
+  event: Omit<NativeCompanionSyncEvent, 'id'> & { id?: string }
+): NativeCompanionWorkspaceSyncState {
+  const id = event.id ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${event.status}:${event.occurred_at}`);
+  return {
+    ...state,
+    sync_events: [{ ...event, id }, ...state.sync_events].slice(0, 20)
+  };
+}
+
 export function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWorkspaceSyncState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
       endpoint_url: null,
       last_synced_at: null,
       remembered_targets: [],
+      sync_events: [],
       sync_onboarding_status: 'pending',
       workspace_snapshot: null
     };
@@ -36,6 +78,7 @@ export function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWork
     remembered_targets: Array.isArray(raw.remembered_targets)
       ? raw.remembered_targets.filter((target): target is string => typeof target === 'string' && target.trim().length > 0)
       : [],
+    sync_events: normalizeSyncEvents(raw),
     sync_onboarding_status: normalizeSyncOnboardingStatus(raw),
     workspace_snapshot:
       raw.workspace_snapshot && typeof raw.workspace_snapshot === 'object' && !Array.isArray(raw.workspace_snapshot)
@@ -84,6 +127,7 @@ export function normalizePersistedSyncState(args: {
   endpointUrl: string | null;
   lastSyncedAt: string | null;
   rememberedTargets: NativeCompanionWorkspaceSyncState['remembered_targets'];
+  syncEvents?: NativeCompanionWorkspaceSyncState['sync_events'];
   syncOnboardingStatus?: CompanionSyncOnboardingStatus;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
@@ -91,6 +135,7 @@ export function normalizePersistedSyncState(args: {
     endpoint_url: args.endpointUrl,
     last_synced_at: args.lastSyncedAt,
     remembered_targets: args.rememberedTargets,
+    sync_events: args.syncEvents ?? [],
     sync_onboarding_status: args.syncOnboardingStatus ?? (args.workspaceSnapshot ? 'completed' : 'accepted'),
     workspace_snapshot: args.workspaceSnapshot
   } satisfies NativeCompanionWorkspaceSyncState;

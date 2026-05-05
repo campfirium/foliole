@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CompanionSyncContent } from './CompanionSyncContent';
@@ -36,6 +36,7 @@ function createWorkspaceSync() {
       endpoint_url: null,
       last_synced_at: null,
       remembered_targets: [],
+      sync_events: [],
       sync_onboarding_status: 'pending',
       workspace_snapshot: null
     },
@@ -80,6 +81,39 @@ describe('CompanionSyncContent', () => {
     expect(workspaceSync.checkDesktop).toHaveBeenCalledTimes(2);
   });
 
+
+
+  it('shows sync status details for a paired device', () => {
+    const workspaceSync = createWorkspaceSync();
+    workspaceSync.pairingState = {
+      device_id: 'android-test-device',
+      device_kind: 'android-capacitor',
+      device_name: 'Android Emulator',
+      is_paired: true,
+      paired_at: '2026-04-24T10:03:00.000Z'
+    };
+    workspaceSync.state = {
+      ...workspaceSync.state,
+      endpoint_url: 'http://10.0.2.2:38641',
+      last_synced_at: '2026-04-24T10:04:00.000Z',
+      sync_events: [{
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'sync-event-1',
+        message: 'Sync completed.',
+        occurred_at: '2026-04-24T10:04:00.000Z',
+        status: 'completed'
+      }]
+    };
+
+    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+
+    expect(screen.getByText('Sync status')).toBeInTheDocument();
+    expect(screen.getByText('Last sync')).toBeInTheDocument();
+    expect(screen.getByText('Android Emulator (Android)')).toBeInTheDocument();
+    expect(screen.getByText('Sync log')).toBeInTheDocument();
+    expect(screen.getByText('Sync completed.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument();
+  });
 
   it('automatically completes pairing after desktop approval', async () => {
     vi.useFakeTimers();
