@@ -1,8 +1,8 @@
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import {
   recordPreparedImportFailure as recordPreparedImportFailureViaDriver,
   runPreparedImport as runPreparedImportViaDriver
 } from '../../lib/core/database/index.js';
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';

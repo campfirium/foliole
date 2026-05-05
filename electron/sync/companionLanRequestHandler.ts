@@ -22,10 +22,6 @@ import {
   handleSyncReviewLogPush
 } from './companionLanSyncObjectPush.js';
 import {
-  buildCompanionSyncPackResource,
-  SYNC_PACK_PATH
-} from './companionLanSyncPack.js';
-import {
   buildSyncIndexPayload,
   buildSyncNodeVersionsPayload,
   buildSyncObjectsPayload,
@@ -38,6 +34,10 @@ import {
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 } from './companionLanSyncObjects.js';
+import {
+  buildCompanionSyncPackResource,
+  SYNC_PACK_PATH
+} from './companionLanSyncPack.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 const ALLOWED_CORS_PROTOCOLS = new Set(['capacitor:', 'http:', 'https:']);

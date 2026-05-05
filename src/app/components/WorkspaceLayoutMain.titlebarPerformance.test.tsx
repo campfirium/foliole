@@ -31,6 +31,15 @@ vi.mock('./ImportSourceWorkspace', () => ({
 }));
 
 vi.mock('./WorkspaceSettingsOverlay', () => ({
+  selectWorkspaceSettingsOverlayProps: (props: {
+    isSettingsOpen: boolean;
+    onCloseSettings: () => void;
+    requestedSettingsCategory: unknown;
+  }) => ({
+    isSettingsOpen: props.isSettingsOpen,
+    onClose: props.onCloseSettings,
+    requestedCategory: props.requestedSettingsCategory
+  }),
   WorkspaceSettingsOverlay: () => null
 }));
 

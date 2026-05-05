@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -6,11 +6,11 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, getCurrentFolderPanel, getTopicListPanel } from './app-smoke.shared';
 
 function buildAutoExpandNodes(includeSecondFolder = false) {
   return {
-    'folder-a': createNode({ id: 'folder-a', title: 'Folder A', content: '# Folder A' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A', content: '# Folder A' }),
     'article-a': createNode({
       id: 'article-a',
       parentNodeId: 'folder-a',
@@ -46,7 +46,7 @@ function buildAutoExpandNodes(includeSecondFolder = false) {
     }),
     ...(includeSecondFolder
       ? {
-          'folder-b': createNode({ id: 'folder-b', title: 'Folder B', content: '# Folder B' }),
+          'folder-b': createNode({ id: 'folder-b', kind: 'folder', title: 'Folder B', content: '# Folder B' }),
           'article-c': createNode({
             id: 'article-c',
             parentNodeId: 'folder-b',
@@ -89,16 +89,21 @@ it('keeps derived branches collapsed by default while still showing the active p
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
+  const listPanel = getTopicListPanel();
+  const currentFolderPanel = getCurrentFolderPanel();
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight A2' })).toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Article B' })).toBeInTheDocument();
-  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
+  expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
+  expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Highlight A1' })).toBeInTheDocument();
+  expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Highlight A2' })).toBeInTheDocument();
+  expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Article B' })).toBeInTheDocument();
+  expect(within(currentFolderPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder B' })).toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Article C' })).toBeInTheDocument();
-  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight C1' })).not.toBeInTheDocument();
+  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Folder B' }));
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('folder-b');
+  });
+  expect(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Article C' })).toBeInTheDocument();
+  expect(within(getCurrentFolderPanel()).queryByRole('treeitem', { name: 'Highlight C1' })).not.toBeInTheDocument();
 });
 
 it('keeps manual collapse and does not auto-expand another derived branch after focus moves', () => {
@@ -106,12 +111,15 @@ it('keeps manual collapse and does not auto-expand another derived branch after 
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
+  const listPanel = getCurrentFolderPanel();
   fireEvent.click(within(listPanel).getByRole('button', { name: 'Collapse Article A' }));
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A2' })).not.toBeInTheDocument();
 
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article B' }));
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('article-b');
+  });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('article-b');
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Highlight B1' })).toBeInTheDocument();

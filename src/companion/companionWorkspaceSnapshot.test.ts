@@ -16,6 +16,7 @@ describe('resolveReadableCompanionArticle', () => {
     } as never);
 
     expect(result).toEqual({
+      bodyStatus: 'ready',
       content: 'Readable body',
       hideTitleHeading: false,
       nodeId: 'node-2',

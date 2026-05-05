@@ -67,9 +67,8 @@ describe('live markdown frontmatter rendering', () => {
     const { adapter, host } = createAdapterHost(content);
 
     expect(getLineTexts(host, '.cm-line.cm-line-code')).toEqual(['# abc', '- item', '1. item']);
-    expect(getLineTexts(host)).toContain('Heading');
+    expect(getLineTexts(host)).toContain('# Heading');
     expect(getLineTexts(host)).toContain('• outside');
-    expect(host.textContent).not.toContain('# Heading');
     expect(host.textContent).not.toContain('- outside');
 
     const codeHeadingOffset = content.indexOf('# abc');

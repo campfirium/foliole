@@ -63,7 +63,6 @@ it('renders note list and single document panel', () => {
   expect(screen.getByRole('heading', { name: 'Topics' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Content' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'Workspace side toolbar' })).toBeInTheDocument();
-  expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
 });

@@ -60,7 +60,8 @@ it('loads workspace snapshot through query helpers only', () => {
         review_lapses: null
       }
     ])
-    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+    .mockReturnValueOnce([{ node_id: 'node-1' }])
+    .mockReturnValueOnce([]);
   queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceSnapshot(driver)).toEqual({
@@ -89,6 +90,6 @@ it('loads workspace snapshot through query helpers only', () => {
     untitledSequenceByParent: {}
   });
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(2);
+  expect(queryAllSpy).toHaveBeenCalledTimes(3);
   expect(queryOneSpy).toHaveBeenCalledTimes(2);
 });

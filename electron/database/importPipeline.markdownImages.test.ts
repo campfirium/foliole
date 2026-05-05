@@ -86,6 +86,42 @@ function expectAttachmentSyncRows(count: number) {
     .get()).toEqual({ count });
 }
 
+function expectImportedMarkdownImageContent(nodeRow: { body_blob_data: string; body_blob_hash: string; content: string }) {
+  expect(nodeRow.content).toContain('![Cover](asset://');
+  expect(nodeRow.content).toContain('![Chart](asset://');
+  expect(nodeRow.content).toContain('![Absolute](asset://');
+  expect(nodeRow.content).toContain('![Mood Board](asset://');
+  expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](asset://');
+  expect(nodeRow.content).toContain('![Chart alias](asset://');
+  expect(nodeRow.content).toContain('![[Linked note]]');
+  expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
+  expect(nodeRow.content).toContain('[Missing local image:');
+  expect(nodeRow.content).toContain('asset://');
+  expect(nodeRow.content).toContain('.png)');
+  expect(nodeRow.content).toContain('.webp)');
+  expect(nodeRow.content).toContain('.jpg)');
+  expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
+  expect(nodeRow.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(nodeRow.body_blob_data).toBe(nodeRow.content);
+}
+
+async function expectStoredAttachmentFiles(args: {
+  assetsDir: string;
+  attachments: ReturnType<typeof listNodeAttachments>;
+}) {
+  for (const entry of args.attachments) {
+    const expectedStoragePath = resolveAttachmentStoragePath(entry.attachmentId, args.assetsDir, entry.attachment.originalName);
+
+    await expect(fs.access(expectedStoragePath)).resolves.toBeUndefined();
+    await expect(fs.access(path.join(args.assetsDir, entry.attachmentId))).rejects.toThrow();
+    expect(resolveAttachmentResource(entry.attachmentId, args.assetsDir)).toEqual({
+      mime_type: entry.attachment.mimeType,
+      resource_url: buildAttachmentAssetUrl(entry.attachmentId),
+      status: 'ready'
+    });
+  }
+}
+
 it('routes local markdown images into attachments, leaves remote links unchanged, and degrades missing files visibly', async () => {
   const sourceRoot = await fs.mkdtemp(path.join(tempRoot, 'markdown-images-'));
   const { sourceMarkdownPath } = await createMarkdownImportFixture(sourceRoot);
@@ -120,22 +156,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
     degraded_reason: imported.degradedReason,
     result_status: 'degraded'
   });
-  expect(nodeRow.content).toContain('![Cover](asset://');
-  expect(nodeRow.content).toContain('![Chart](asset://');
-  expect(nodeRow.content).toContain('![Absolute](asset://');
-  expect(nodeRow.content).toContain('![Mood Board](asset://');
-  expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](asset://');
-  expect(nodeRow.content).toContain('![Chart alias](asset://');
-  expect(nodeRow.content).toContain('![[Linked note]]');
-  expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
-  expect(nodeRow.content).toContain('[Missing local image:');
-  expect(nodeRow.content).toContain('asset://');
-  expect(nodeRow.content).toContain('.png)');
-  expect(nodeRow.content).toContain('.webp)');
-  expect(nodeRow.content).toContain('.jpg)');
-  expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
-  expect(nodeRow.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
-  expect(nodeRow.body_blob_data).toBe(nodeRow.content);
+  expectImportedMarkdownImageContent(nodeRow);
   expect(attachments).toHaveLength(5);
   expect(new Set(attachments.map((entry) => entry.attachment.originalName))).toEqual(
     new Set(['absolute.jpg', 'chart.webp', 'cover.png', 'Mood Board (Final).png', 'Pasted image 2026-03-30 100000.png'])
@@ -144,17 +165,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
 
   await fs.rm(sourceRoot, { recursive: true, force: true });
 
-  for (const entry of attachments) {
-    const expectedStoragePath = resolveAttachmentStoragePath(entry.attachmentId, assetsDir, entry.attachment.originalName);
-
-    await expect(fs.access(expectedStoragePath)).resolves.toBeUndefined();
-    await expect(fs.access(path.join(assetsDir, entry.attachmentId))).rejects.toThrow();
-    expect(resolveAttachmentResource(entry.attachmentId, assetsDir)).toEqual({
-      mime_type: entry.attachment.mimeType,
-      resource_url: buildAttachmentAssetUrl(entry.attachmentId),
-      status: 'ready'
-    });
-  }
+  await expectStoredAttachmentFiles({ assetsDir, attachments });
 });
 
 it('resolves obsidian image embeds from the configured external attachment folder during import', async () => {

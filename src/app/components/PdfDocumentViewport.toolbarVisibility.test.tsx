@@ -77,17 +77,7 @@ function createToolbarReplayAction(shouldReplayToolbarScrollRef: MutableRefObjec
   };
 }
 
-function buildToolbarHarnessProps(input: {
-  page: number;
-  searchQuery: string;
-  searchStatus: { current: number; hasQuery: boolean; total: number };
-  setPage: (value: number | ((current: number) => number)) => void;
-  setSearchQuery: (value: string) => void;
-  setSearchStatus: (value: { current: number; hasQuery: boolean; total: number }) => void;
-  setZoom: (value: number | ((current: number) => number)) => void;
-  shouldReplayToolbarScrollRef: MutableRefObject<boolean>;
-  zoom: number;
-}) {
+function buildBaseToolbarHarnessProps() {
   return {
     clearPageJumpRequest: () => undefined,
     highlightLocators: [],
@@ -97,25 +87,11 @@ function buildToolbarHarnessProps(input: {
     onContextMenu: () => undefined,
     onLoadError: () => undefined,
     onLoadSuccess: () => undefined,
-    onNextPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => current + 1)),
-    onPageChange: input.setPage,
     onPdfReadingModeChange: () => undefined,
-    onPreviousPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => Math.max(1, current - 1))),
     onRotateClockwise: () => undefined,
-    onSearchQueryChange: input.setSearchQuery,
     onSearchRequest: () => undefined,
     onSearchRequestHandled: () => undefined,
-    onSearchStatusChange: input.setSearchStatus,
     onSearchTargetHandled: () => undefined,
-    onSetFitWidth: createToolbarReplayAction(input.shouldReplayToolbarScrollRef),
-    onSetZoom: (value: number) => {
-      input.shouldReplayToolbarScrollRef.current = true;
-      input.setZoom(value);
-    },
-    onZoomIn: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current + 10)),
-    onZoomOut: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current - 10)),
-    visiblePage: input.page,
-    page: input.page,
     pageJumpRequest: null,
     persistedPageCount: 3,
     persistedPageDimensions: {
@@ -128,13 +104,43 @@ function buildToolbarHarnessProps(input: {
     pdfSource: '/tmp/sample.pdf',
     rotation: 0,
     searchIndexingHint: null,
-    searchQuery: input.searchQuery,
     searchRequest: null,
     searchTarget: null,
-    searchStatus: input.searchStatus,
     setVisibleLocation: () => undefined,
     totalPages: 3,
-    zoomMode: 'fit-width' as const,
+    zoomMode: 'fit-width' as const
+  };
+}
+
+function buildToolbarHarnessProps(input: {
+  page: number;
+  searchQuery: string;
+  searchStatus: { current: number; hasQuery: boolean; total: number };
+  setPage: (value: number | ((current: number) => number)) => void;
+  setSearchQuery: (value: string) => void;
+  setSearchStatus: (value: { current: number; hasQuery: boolean; total: number }) => void;
+  setZoom: (value: number | ((current: number) => number)) => void;
+  shouldReplayToolbarScrollRef: MutableRefObject<boolean>;
+  zoom: number;
+}) {
+  return {
+    ...buildBaseToolbarHarnessProps(),
+    onNextPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => current + 1)),
+    onPageChange: input.setPage,
+    onPreviousPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => Math.max(1, current - 1))),
+    onSearchQueryChange: input.setSearchQuery,
+    onSearchStatusChange: input.setSearchStatus,
+    onSetFitWidth: createToolbarReplayAction(input.shouldReplayToolbarScrollRef),
+    onSetZoom: (value: number) => {
+      input.shouldReplayToolbarScrollRef.current = true;
+      input.setZoom(value);
+    },
+    onZoomIn: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current + 10)),
+    onZoomOut: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setZoom((current) => current - 10)),
+    visiblePage: input.page,
+    page: input.page,
+    searchQuery: input.searchQuery,
+    searchStatus: input.searchStatus,
     zoom: input.zoom
   };
 }

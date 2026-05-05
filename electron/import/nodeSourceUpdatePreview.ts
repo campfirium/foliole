@@ -50,7 +50,7 @@ function countCurrentHighlights(nodeId: string) {
   return row?.count ?? 0;
 }
 
-function normalizeComparableContent(content: string, sourceProfile?: string) {
+function normalizeComparableContent(content: string) {
   const normalized = content.replace(/\r\n?/g, '\n').trim();
   return normalized;
 }
@@ -171,8 +171,8 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
     loadPreparedKeepImportRecord(rule.config, source, checkedAt),
     resolveKeepImportSourceSignature(rule.config, source)
   ]);
-  const comparableCurrentContent = normalizeComparableContent(sourceNode.content, prepared.sourceProfile);
-  const comparablePreparedContent = normalizeComparableContent(prepared.content, prepared.sourceProfile);
+  const comparableCurrentContent = normalizeComparableContent(sourceNode.content);
+  const comparablePreparedContent = normalizeComparableContent(prepared.content);
   const sourceSignatureChanged = hasSourceSignatureChanged(keepImportItem, sourceSignature);
   const hasUpdate =
     prepared.sourceProfile === 'body_with_highlight_sidecar'

@@ -32,6 +32,6 @@ describe('liveMarkdownViewportPlans', () => {
     });
 
     expect(plans.map((item) => item.plan.nextInCodeBlock)).toEqual([true, true, false]);
-    expect(plans[1]?.plan.textDecorationPlans).toHaveLength(3);
+    expect(plans[1]?.plan.textDecorationPlans).toHaveLength(2);
   });
 });

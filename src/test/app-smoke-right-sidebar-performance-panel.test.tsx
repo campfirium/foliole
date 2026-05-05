@@ -37,7 +37,7 @@ it('renders the standalone performance panel with timing, memory, and cache grou
     expect(screen.getByRole('heading', { name: 'Timing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Memory' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cache' })).toBeInTheDocument();
-    expect(screen.getByText('Node blocks')).toBeInTheDocument();
+    expect(screen.getByText('Topic blocks')).toBeInTheDocument();
     expect(screen.getByText('Image results')).toBeInTheDocument();
   });
 });

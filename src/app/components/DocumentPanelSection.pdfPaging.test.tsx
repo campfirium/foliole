@@ -89,7 +89,7 @@ it('keeps the visible page number stable until the next-page scroll actually set
   render(<DocumentPanelSection {...defaultProps} />);
 
   await waitFor(() => {
-    expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);
+    expect(screen.getByTestId('pdf-document-toolbar')).toBeInTheDocument();
   });
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('1');
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));

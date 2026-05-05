@@ -61,32 +61,32 @@ function createMobileLearningStateRecords(): NativeSyncObjectRecord[] {
   return [{
     content_hash: 'hash-reading-mobile',
     deleted_at: null,
-    object_id: 'node-1',
-    object_type: 'node_reading',
-    payload_json: JSON.stringify({
-      intervalDurationMs: 1200,
-      intervalGrowthFactor: 1.2,
-      lastHandledAt: '2026-04-25T00:09:00.000Z',
-      nextAt: '2026-04-25T02:09:00.000Z',
+      object_id: 'node-1',
+      object_type: 'node_reading',
+      payload_json: JSON.stringify({
+      interval_duration_ms: 1200,
+      interval_growth_factor: 1.2,
+      last_handled_at: '2026-04-25T00:09:00.000Z',
+      next_at: '2026-04-25T02:09:00.000Z',
       priority: 1,
-      readingPosition: 512,
-      repetitionCount: 2,
+      reading_position: 512,
+      repetition_count: 2,
       state: 'active'
     }),
     updated_at: '2026-04-25T00:09:00.000Z'
   }, {
     content_hash: 'hash-review-mobile',
     deleted_at: null,
-    object_id: 'node-1',
-    object_type: 'node_review',
-    payload_json: JSON.stringify({
-      difficulty: 3.4,
-      due: '2026-04-26T00:00:00.000Z',
-      elapsedDays: 0,
+      object_id: 'node-1',
+      object_type: 'node_review',
+      payload_json: JSON.stringify({
+        difficulty: 3.4,
+        due: '2026-04-26T00:00:00.000Z',
+      elapsed_days: 0,
       lapses: 0,
-      lastReviewAt: '2026-04-25T00:10:00.000Z',
+      last_review_at: '2026-04-25T00:10:00.000Z',
       reps: 4,
-      scheduledDays: 1,
+      scheduled_days: 1,
       stability: 2.8,
       state: 2
     }),
@@ -131,15 +131,15 @@ it('applies mobile review state and review log without duplicating op ids', () =
     content_hash: 'hash-review-mobile',
     deleted_at: null,
     object_id: 'node-1',
-    object_type: 'node_review',
-    payload_json: JSON.stringify({
-      difficulty: 3.4,
-      due: '2026-04-26T00:00:00.000Z',
-      elapsedDays: 0,
+      object_type: 'node_review',
+      payload_json: JSON.stringify({
+        difficulty: 3.4,
+        due: '2026-04-26T00:00:00.000Z',
+      elapsed_days: 0,
       lapses: 0,
-      lastReviewAt: '2026-04-25T00:10:00.000Z',
+      last_review_at: '2026-04-25T00:10:00.000Z',
       reps: 4,
-      scheduledDays: 1,
+      scheduled_days: 1,
       stability: 2.8,
       state: 2
     }),

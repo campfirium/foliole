@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 vi.mock('../shared/platform/bridge', async (importOriginal) => {
@@ -12,10 +12,11 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, getCurrentFolderTreeItem } from './app-smoke.shared';
 
 it('keeps the previous node document warm after switching once', async () => {
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
@@ -44,16 +45,16 @@ it('keeps the previous node document warm after switching once', async () => {
 
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2'],
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
       'node-1': {
-        ...createNode({ id: 'node-1', title: 'Node 1', content: 'Loaded node 1 body' }),
+        ...createNode({ id: 'node-1', parentNodeId: INBOX_NODE_ID, title: 'Node 1', content: 'Loaded node 1 body' }),
         hasContent: true,
         hasReveal: false
       },
       'node-2': {
-        ...createNode({ id: 'node-2', title: 'Node 2', content: '' }),
+        ...createNode({ id: 'node-2', parentNodeId: INBOX_NODE_ID, title: 'Node 2', content: '' }),
         hasContent: true,
         hasReveal: false
       }
@@ -62,8 +63,7 @@ it('keeps the previous node document warm after switching once', async () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Node 2' }));
+  fireEvent.click(getCurrentFolderTreeItem('Node 2'));
 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('Loaded node 2 body');

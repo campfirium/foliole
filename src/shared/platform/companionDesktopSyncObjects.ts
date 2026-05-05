@@ -1,4 +1,3 @@
-import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionMissingContentBlobHashes,
@@ -6,6 +5,7 @@ import {
   saveCompanionSyncPackCursor,
   syncCompanionContentBlob
 } from './companionSyncObjects';
+import { createSignedRequestHeaders } from './companionWorkspacePairing';
 export { bootstrapCompanionFromDesktopState } from './companionDesktopSyncBootstrap';
 
 const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';

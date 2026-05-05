@@ -1,3 +1,4 @@
+import { screen, within } from '@testing-library/react';
 import { useEffect } from 'react';
 import { beforeEach, vi } from 'vitest';
 
@@ -5,6 +6,7 @@ import './reactPdfMock';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { resetPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { resetWorkspaceNodeDocumentPrefetchForTest } from '../store/workspaceNodeDocumentPrefetch';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
@@ -145,6 +147,15 @@ vi.mock('../app/components/ReadwiseBookActionsPanel', () => ({
 }));
 
 vi.mock('../app/components/WorkspaceSettingsOverlay', () => ({
+  selectWorkspaceSettingsOverlayProps: (props: {
+    isSettingsOpen: boolean;
+    onCloseSettings: () => void;
+    requestedSettingsCategory: unknown;
+  }) => ({
+    isSettingsOpen: props.isSettingsOpen,
+    onClose: props.onCloseSettings,
+    requestedCategory: props.requestedSettingsCategory
+  }),
   WorkspaceSettingsOverlay: () => null
 }));
 
@@ -180,7 +191,7 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
   return {
     id: partial.id,
     parentNodeId: partial.parentNodeId ?? null,
-    kind: partial.kind ?? (partial.specialKind === 'inbox' ? 'folder' : partial.reveal !== null ? 'item' : 'topic'),
+    kind: partial.kind ?? (partial.specialKind === 'inbox' ? 'folder' : partial.reveal != null ? 'item' : 'topic'),
     priority: partial.priority ?? null,
     desiredRetention: partial.desiredRetention ?? null,
     specialKind: partial.specialKind,
@@ -210,6 +221,7 @@ export function resetAppSmokeState() {
       ...initial.nodesById,
       'node-1': createNode({
         id: 'node-1',
+        parentNodeId: INBOX_NODE_ID,
         title: 'Welcome to Foliole',
         content: '# Welcome to Foliole\n\nStart writing markdown here.'
       })
@@ -218,6 +230,22 @@ export function resetAppSmokeState() {
   mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
   mockEditorState.selectionFrom = 0;
   mockEditorState.selectionTo = 0;
+}
+
+export function getTopicListPanel() {
+  return screen.getByRole('complementary', { name: 'Topic list panel' });
+}
+
+export function getCurrentFolderPanel() {
+  return screen.getByRole('complementary', { name: 'Current folder contents' });
+}
+
+export function getCurrentFolderTreeItem(name: string | RegExp) {
+  return within(getCurrentFolderPanel()).getByRole('treeitem', { name });
+}
+
+export function queryCurrentFolderTreeItem(name: string | RegExp) {
+  return within(getCurrentFolderPanel()).queryByRole('treeitem', { name });
 }
 
 beforeEach(() => {

@@ -1,6 +1,9 @@
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
+import {
+  getNodeListRowSpacing,
+  resolveNodeListRowGap
+} from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from '../../features/nodes/components/NodeTreeRow';
@@ -36,6 +39,7 @@ function renderWorkspaceTopicTreeRow(
 ) {
   const node = args.nodesById[row.node.id];
   const isSelected = args.selectedNodeIds.includes(row.node.id);
+  const isDerivedNode = Boolean(node?.anchorLink);
   const isReviewCard = isFsrsWorkspaceListNode(node);
   const nodeIconState = resolveNodeTreeRowIconState({
     isDismissed: node?.reading?.state === 'dismissed',
@@ -52,6 +56,7 @@ function renderWorkspaceTopicTreeRow(
       isActive={args.activeNodeId === row.node.id}
       isBulkSelectionActive={args.selectedNodeIds.length > 1}
       isCollapsed={args.collapsedNodeIds.has(row.node.id)}
+      isDerived={isDerivedNode}
       isSelected={isSelected}
       key={row.node.id}
       label={row.node.title}
@@ -63,7 +68,7 @@ function renderWorkspaceTopicTreeRow(
         kind: node?.kind ?? 'topic'
       })}
       nodeIconState={nodeIconState}
-      showIcon={false}
+      showIcon
       onContextMenu={args.onContextMenu}
       rowSpacing={args.rowSpacing}
       onKeyDown={args.onRowKeyDown}
@@ -84,6 +89,7 @@ export function WorkspaceTopicTreeRows({
   selectedNodeIds
 }: WorkspaceTopicTreeRowsProps) {
   const rowSpacing = getNodeListRowSpacing();
+  const rowGap = resolveNodeListRowGap(rowSpacing);
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -96,7 +102,14 @@ export function WorkspaceTopicTreeRows({
   );
 
   return (
-    <section aria-label="Current folder item list" className="flex flex-col" role="tree">
+    <section
+      aria-label="Current folder item list"
+      className="flex flex-1 flex-col"
+      data-node-list-row-gap={String(rowGap)}
+      data-node-list-row-spacing={String(rowSpacing)}
+      role="tree"
+      style={{ gap: `${rowGap}px` }}
+    >
       {rows.map((row) =>
         renderWorkspaceTopicTreeRow(row, {
           activeNodeId,

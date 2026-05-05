@@ -49,9 +49,10 @@ it('shows inherited values, writes explicit overrides, and falls back to ancesto
   }));
 
   render(<App />);
+  openRightPanelFromMenu('Dev');
 
-  expect(screen.getByText('84.0% · Inherited')).toBeInTheDocument();
-  expect(screen.getByText('P2 · Inherited')).toBeInTheDocument();
+  expect(screen.getByText(/(Inherited · 0\.84 from Root node|84\.0% · Inherited)/)).toBeInTheDocument();
+  expect(screen.getByText(/(Inherited · P2 from Root node|P2 · Inherited)/)).toBeInTheDocument();
 });
 
 it('updates the default priority copy when the global fallback changes', () => {

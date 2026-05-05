@@ -68,19 +68,6 @@ function createEntry(objectId: string, contentHash: string, updatedAt: string): 
   };
 }
 
-function stubFetchForPagedPull(firstPage: NativeSyncStateObjectRecord[], secondPage: NativeSyncStateObjectRecord[]) {
-  return vi.fn(async (url: string) => ({
-    json: async () => {
-      if (url.includes('/companion/sync-index')) return { entries: [] };
-      if (url.includes('/companion/sync-node-versions')) return { nodes: [] };
-      if (url.includes('/companion/sync-review-log')) return { reviews: [] };
-      if (url.includes('after_state_seq=500')) return { objects: secondPage };
-      return { objects: firstPage };
-    },
-    ok: true
-  }));
-}
-
 async function runSync() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   return await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
@@ -113,25 +100,23 @@ function resetSyncMocks() {
 describe('companion desktop sync object paging', () => {
   beforeEach(resetSyncMocks);
 
-  it('pulls multiple remote change pages without invoking state diff', async () => {
-    const firstPage = Array.from({ length: 500 }, (_, index) => createStateObject(index));
-    const secondPage = [createStateObject(500)];
-    const fetchMock = stubFetchForPagedPull(firstPage, secondPage);
-    vi.stubGlobal('fetch', fetchMock);
+  it('applies the remote structure pack and saves its pack cursor', async () => {
+    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
+      applied_blob_count: 3,
+      applied_object_count: 501,
+      to_state_seq: 501
+    });
 
     const result = await runSync();
 
-    expect(result.changedObjectIds).toHaveLength(501);
-    expect(syncBridgeMock.applyCompanionSyncObjects).toHaveBeenCalledTimes(2);
-    expect(syncBridgeMock.saveCompanionSyncStateCursor).toHaveBeenLastCalledWith(501);
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('after_state_seq=500'),
-      expect.any(Object)
-    );
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-index'), expect.any(Object));
+    expect(result.changedObjectIds).toEqual([]);
+    expect(result.appliedPackObjectCount).toBe(501);
+    expect(result.appliedPackBlobCount).toBe(3);
+    expect(syncBridgeMock.applyCompanionSyncObjects).not.toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501);
   });
 
-  it('pushes multiple local change pages before saving the final push cursor', async () => {
+  it('keeps legacy local change paging disabled while pack sync is active', async () => {
     const firstPage = Array.from({ length: 500 }, (_, index) => createStateObject(index));
     const secondPage = [createStateObject(500)];
     syncBridgeMock.loadCompanionSyncStateChanges
@@ -150,9 +135,9 @@ describe('companion desktop sync object paging', () => {
 
     const result = await runSync();
 
-    expect(result.pushedObjectIds).toHaveLength(501);
-    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenLastCalledWith(500, 500);
-    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).toHaveBeenLastCalledWith(501);
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(syncBridgeMock.loadCompanionSyncStateChanges).not.toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 
   it('keeps state diff behind the explicit bootstrap entry point', async () => {

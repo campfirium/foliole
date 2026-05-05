@@ -144,6 +144,7 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     1,
     0,
     '# Node 1',
+    expect.stringMatching(/^[a-f0-9]{64}$/),
     null,
     null,
     'Answer',

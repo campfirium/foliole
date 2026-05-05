@@ -4,17 +4,16 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 function createTopicFromHeaderMenu() {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'New' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
 }
 
 function findCreatedNoteId() {
   const workspace = useWorkspaceStore.getState();
-  return workspace.nodeOrder.find((nodeId) => nodeId !== INBOX_NODE_ID && nodeId !== 'node-1');
+  return workspace.nodeOrder.find((nodeId) => ![INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1'].includes(nodeId));
 }
 
 function keepOnlyInboxWithoutActiveNode() {
@@ -66,7 +65,7 @@ it('creates a new empty note from node panel action', () => {
   }
   expect(workspace.nodeOrder).toHaveLength(initialNodeOrder.length + 1);
   expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('');
-  expect(workspace.nodesById[workspace.activeNodeId]?.parentNodeId).toBeNull();
+  expect(workspace.nodesById[workspace.activeNodeId]?.parentNodeId).toBe(INBOX_NODE_ID);
   expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
 });
 
@@ -78,7 +77,7 @@ it('increments Untitled titles when creating multiple empty notes', () => {
   const titles = useWorkspaceStore
     .getState()
     .nodeOrder
-    .filter((nodeId) => nodeId !== INBOX_NODE_ID)
+    .filter((nodeId) => ![INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID].includes(nodeId))
     .map((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title);
   const untitledTitles = titles.filter((title): title is string => title?.startsWith('Untitled') ?? false);
 

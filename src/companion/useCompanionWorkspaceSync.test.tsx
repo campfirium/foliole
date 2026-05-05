@@ -112,82 +112,86 @@ function createConflictSnapshot(title: string): NativeSyncNodeConflictRecord['sn
   };
 }
 
+function resetCompanionWorkspaceSyncMocks() {
+  vi.resetAllMocks();
+  workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState(null));
+  syncObjectsMock.loadCompanionSyncNodeConflicts.mockResolvedValue([]);
+  workspaceSyncMock.recordCompanionWorkspaceSyncEvent
+    .mockResolvedValueOnce(createSyncState(null))
+    .mockResolvedValueOnce(createSyncState(createSnapshot()));
+  workspaceSyncMock.loadCompanionReadableArticle.mockResolvedValue({
+    content: '# Synced topic\n\nBody',
+    hideTitleHeading: false,
+    nodeId: 'topic-1',
+    pdfAttachmentId: null,
+    textAnchorDecorations: [],
+    title: 'Synced topic'
+  });
+}
+
+function renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync: typeof import('./useCompanionWorkspaceSync').useCompanionWorkspaceSync) {
+  return renderHook(() => useCompanionWorkspaceSync({
+    booted_at: '2026-04-25T09:00:00.000Z',
+    database_path: 'foliole-companion.db',
+    database_ready: true,
+    device_id: 'android-test-device',
+    runtime_kind: 'android-capacitor'
+  }));
+}
+
+async function testManualSyncRefreshesReadableArticle() {
+  const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
+  const { result } = renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync);
+
+  await waitFor(() => expect(result.current.status).toBe('idle'));
+  await act(async () => {
+    await result.current.pullFromDesktop('http://10.0.2.2:38641');
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  expect(result.current.state.workspace_snapshot?.activeNodeId).toBe('topic-1');
+  expect(result.current.readableArticle?.nodeId).toBe('topic-1');
+  expect(result.current.status).toBe('idle');
+}
+
+async function testManualSyncRefreshesConflictCount() {
+  syncObjectsMock.loadCompanionSyncNodeConflicts
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([
+      {
+        conflict_version_id: 'phone#1',
+        content_hash: null,
+        device_id: 'android-test-device',
+        object_id: 'topic-1',
+        parent_version_id: null,
+        snapshot: createConflictSnapshot('Topic 1'),
+        updated_at: '2026-04-25T09:06:00.000Z'
+      },
+      {
+        conflict_version_id: 'phone#2',
+        content_hash: null,
+        device_id: 'android-test-device',
+        object_id: 'topic-2',
+        parent_version_id: null,
+        snapshot: createConflictSnapshot('Topic 2'),
+        updated_at: '2026-04-25T09:06:00.000Z'
+      }
+    ]);
+  const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
+  const { result } = renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync);
+
+  await waitFor(() => expect(result.current.status).toBe('idle'));
+  await act(async () => {
+    await result.current.pullFromDesktop('http://10.0.2.2:38641');
+  });
+
+  expect(result.current.syncConflictCount).toBe(2);
+}
+
 describe('useCompanionWorkspaceSync', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState(null));
-    syncObjectsMock.loadCompanionSyncNodeConflicts.mockResolvedValue([]);
-    workspaceSyncMock.recordCompanionWorkspaceSyncEvent
-      .mockResolvedValueOnce(createSyncState(null))
-      .mockResolvedValueOnce(createSyncState(createSnapshot()));
-    workspaceSyncMock.loadCompanionReadableArticle.mockResolvedValue({
-      content: '# Synced topic\n\nBody',
-      hideTitleHeading: false,
-      nodeId: 'topic-1',
-      pdfAttachmentId: null,
-      textAnchorDecorations: [],
-      title: 'Synced topic'
-    });
-  });
+  beforeEach(resetCompanionWorkspaceSyncMocks);
 
-  it('refreshes local state and readable article after manual stream sync', async () => {
-    const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
-    const { result } = renderHook(() => useCompanionWorkspaceSync({
-      booted_at: '2026-04-25T09:00:00.000Z',
-      database_path: 'foliole-companion.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor'
-    }));
+  it('refreshes local state and readable article after manual stream sync', testManualSyncRefreshesReadableArticle);
 
-    await waitFor(() => expect(result.current.status).toBe('idle'));
-    await act(async () => {
-      await result.current.pullFromDesktop('http://10.0.2.2:38641');
-    });
-
-    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
-    expect(result.current.state.workspace_snapshot?.activeNodeId).toBe('topic-1');
-    expect(result.current.readableArticle?.nodeId).toBe('topic-1');
-    expect(result.current.status).toBe('idle');
-  });
-
-  it('refreshes the visible sync conflict count after manual sync', async () => {
-    syncObjectsMock.loadCompanionSyncNodeConflicts
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          conflict_version_id: 'phone#1',
-          content_hash: null,
-          device_id: 'android-test-device',
-          object_id: 'topic-1',
-          parent_version_id: null,
-          snapshot: createConflictSnapshot('Topic 1'),
-          updated_at: '2026-04-25T09:06:00.000Z'
-        },
-        {
-          conflict_version_id: 'phone#2',
-          content_hash: null,
-          device_id: 'android-test-device',
-          object_id: 'topic-2',
-          parent_version_id: null,
-          snapshot: createConflictSnapshot('Topic 2'),
-          updated_at: '2026-04-25T09:06:00.000Z'
-        }
-      ]);
-    const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
-    const { result } = renderHook(() => useCompanionWorkspaceSync({
-      booted_at: '2026-04-25T09:00:00.000Z',
-      database_path: 'foliole-companion.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor'
-    }));
-
-    await waitFor(() => expect(result.current.status).toBe('idle'));
-    await act(async () => {
-      await result.current.pullFromDesktop('http://10.0.2.2:38641');
-    });
-
-    expect(result.current.syncConflictCount).toBe(2);
-  });
+  it('refreshes the visible sync conflict count after manual sync', testManualSyncRefreshesConflictCount);
 });

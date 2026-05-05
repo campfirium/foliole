@@ -7,10 +7,10 @@ import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, getCurrentFolderPanel, getTopicListPanel } from './app-smoke.shared';
 
 function getNodeListPanel() {
-  return screen.getByRole('complementary', { name: 'Topic list panel' });
+  return getCurrentFolderPanel();
 }
 
 function seedTopicInInbox(args: {
@@ -37,7 +37,7 @@ function seedTopicInInbox(args: {
 }
 
 function openNodeMenu(name: string) {
-  const panel = getNodeListPanel();
+  const panel = name === 'Inbox' ? getTopicListPanel() : getNodeListPanel();
   fireEvent.contextMenu(within(panel).getByRole('treeitem', { name }), { clientX: 56, clientY: 64 });
   return panel;
 }
@@ -62,10 +62,10 @@ it('shows relearn actions for pending reading nodes and keeps the pending icon s
 
   const panel = openNodeMenu('Pending note');
   expect(screen.getByRole('menuitem', { name: 'Relearn' })).toBeInTheDocument();
-  expect(screen.queryByRole('menuitem', { name: 'Dismiss' })).toBeNull();
+  expect(screen.getByRole('menuitem', { name: 'Dismiss' })).toBeInTheDocument();
   expect(within(panel).getByRole('treeitem', { hidden: true, name: 'Pending note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
-    'pending'
+    'scheduled'
   );
 });
 
@@ -101,43 +101,45 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
 
 it('creates a child node from the inbox menu', () => {
   render(<App />);
+  const initialInboxChildCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node?.parentNodeId === INBOX_NODE_ID
+  ).length;
 
   openNodeMenu('Inbox');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 
   const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node?.parentNodeId === INBOX_NODE_ID);
-  expect(inboxChildren).toHaveLength(1);
+  expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
 });
 
-it('creates a root node from the blank node-list area menu', () => {
+it('creates an inbox topic from the blank current-folder area menu', () => {
   render(<App />);
-  const initialRootCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.parentNodeId === null && node.id !== INBOX_NODE_ID
+  const initialInboxChildCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node && node.parentNodeId === INBOX_NODE_ID
   ).length;
 
   const tree = within(getNodeListPanel()).getAllByRole('tree')[0];
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 
-  const rootNodes = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.parentNodeId === null && node.id !== INBOX_NODE_ID
+  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node && node.parentNodeId === INBOX_NODE_ID
   );
-  expect(rootNodes).toHaveLength(initialRootCount + 1);
+  expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
 });
 
-it('creates a root node from the global new button', () => {
+it('creates an inbox topic from the current folder create button', () => {
   render(<App />);
-  const initialRootCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.parentNodeId === null && node.id !== INBOX_NODE_ID
+  const initialInboxChildCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node && node.parentNodeId === INBOX_NODE_ID
   ).length;
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'New' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
 
-  const rootNodes = Object.values(useWorkspaceStore.getState().nodesById).filter(
-    (node) => node && node.parentNodeId === null && node.id !== INBOX_NODE_ID
+  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node && node.parentNodeId === INBOX_NODE_ID
   );
-  expect(rootNodes).toHaveLength(initialRootCount + 1);
+  expect(inboxChildren).toHaveLength(initialInboxChildCount + 1);
 });
 
 it('shows merge import actions on ordinary article topics', () => {
@@ -157,6 +159,6 @@ it('shows merge import actions on ordinary article topics', () => {
 
   openNodeMenu('Source node');
   expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste here' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
 });

@@ -1,0 +1,64 @@
+export const PACK_SCHEMA = [
+  `CREATE TABLE pack_manifest (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`,
+  `CREATE TABLE sync_object_state (
+    object_type TEXT NOT NULL,
+    object_id TEXT NOT NULL,
+    state_seq INTEGER NOT NULL,
+    content_hash TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    PRIMARY KEY (object_type, object_id)
+  )`,
+  `CREATE TABLE nodes (
+    id TEXT PRIMARY KEY,
+    parent_id TEXT,
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    is_title_manual INTEGER NOT NULL DEFAULT 0,
+    hide_title_heading INTEGER NOT NULL DEFAULT 0,
+    body_blob_hash TEXT,
+    content TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+  )`,
+  `CREATE TABLE external_documents (
+    document_id TEXT PRIMARY KEY,
+    folder_id TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    extension TEXT NOT NULL,
+    source_size_bytes INTEGER NOT NULL,
+    source_modified_at TEXT NOT NULL,
+    source_modified_ms INTEGER NOT NULL,
+    content_hash TEXT NOT NULL,
+    title TEXT,
+    opening_text TEXT,
+    body_blob_hash TEXT,
+    content TEXT NOT NULL DEFAULT '',
+    indexed_at TEXT NOT NULL,
+    is_present INTEGER NOT NULL DEFAULT 1,
+    missing_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE content_blobs (
+    hash TEXT PRIMARY KEY,
+    storage_key TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    mime_type TEXT,
+    compression TEXT NOT NULL DEFAULT 'none',
+    original_size_bytes INTEGER NOT NULL,
+    stored_size_bytes INTEGER NOT NULL,
+    original_sha256 TEXT NOT NULL,
+    stored_sha256 TEXT NOT NULL,
+    availability TEXT NOT NULL DEFAULT 'missing',
+    source_device_id TEXT,
+    created_at TEXT NOT NULL,
+    cached_at TEXT,
+    last_verified_at TEXT
+  )`
+];

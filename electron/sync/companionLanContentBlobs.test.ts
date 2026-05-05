@@ -19,7 +19,6 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
 import { loadCompanionContentBlobResource } from './companionLanContentBlobs.js';

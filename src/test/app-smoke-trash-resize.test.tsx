@@ -217,7 +217,7 @@ it('empties all trash items from trash header action', () => {
   });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   openTrashView();
-  fireEvent.click(screen.getByRole('button', { name: 'Empty' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Empty trash' }));
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.nodesById['node-2']).toBeUndefined();

@@ -58,7 +58,8 @@ it('prefers the persisted active node for full workspace snapshots', () => {
       { ...nodeRow, id: 'node-1', title: 'Node 1' },
       { ...nodeRow, id: 'node-2', title: 'Node 2' }
     ])
-    .mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }]);
+    .mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }])
+    .mockReturnValueOnce([]);
   queryOneSpy.mockReturnValueOnce({ value: 'node-2' }).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceSnapshot(driver)?.activeNodeId).toBe('node-2');

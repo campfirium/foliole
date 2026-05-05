@@ -176,6 +176,7 @@ describe('companionReadableArticle title and reading helpers', () => {
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
     expect(result).toEqual({
+      bodyStatus: 'ready',
       content: '# First\n\nBody',
       hideTitleHeading: false,
       nodeId: 'node-1',

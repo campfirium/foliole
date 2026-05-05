@@ -1,5 +1,5 @@
-import { openDatabaseConnection } from '../database/connection.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { openDatabaseConnection } from '../database/connection.js';
 
 export const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
 

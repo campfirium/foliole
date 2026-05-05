@@ -100,21 +100,16 @@ describe('companion desktop sync all local streams', () => {
     stubDesktopAcceptsAllStreams();
   });
 
-  it('advances every push cursor after desktop accepts node, state, and review streams', async () => {
+  it('uses the structure pack path instead of legacy local push streams', async () => {
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(result.pushedNodeIds).toEqual(['node-1']);
-    expect(result.pushedObjectIds).toEqual(['node-1']);
-    expect(result.pushedReviewOpIds).toEqual(['op-1']);
-    expect(syncBridgeMock.saveCompanionSyncNodeVersionPushCursor).toHaveBeenCalledWith({
-      change_id: 'version-1',
-      created_at: '2026-04-25T00:03:00.000Z'
-    });
-    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).toHaveBeenCalledWith(7);
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).toHaveBeenCalledWith({
-      change_id: 'op-1',
-      created_at: '2026-04-25T00:04:00.000Z'
-    });
+    expect(result.pushedNodeIds).toEqual([]);
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(result.pushedReviewOpIds).toEqual([]);
+    expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledTimes(1);
+    expect(syncBridgeMock.saveCompanionSyncNodeVersionPushCursor).not.toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 });

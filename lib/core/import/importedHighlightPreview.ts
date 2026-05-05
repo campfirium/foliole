@@ -10,6 +10,7 @@ function selectPreviewHighlights<T>(items: T[]) {
 }
 
 export function buildImportedHighlightPreview(input: { content: string; sourceName: string }) {
+  void input;
   return {
     detectedHighlightCount: 0,
     samples: [] as NativeReadwiseDetectionSample[]

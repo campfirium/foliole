@@ -4,9 +4,10 @@ import { expect, it, vi } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, getCurrentFolderPanel, getCurrentFolderTreeItem } from './app-smoke.shared';
 
 function createTextAnchorLink(id: string, originalText: string, from = 0) {
   return {
@@ -40,8 +41,6 @@ it('creates highlight node without leaving current node', () => {
       .getState()
       .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
-
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBe('node-1');
   expect(createdNodeId).toBeTruthy();
@@ -51,11 +50,15 @@ it('creates highlight node without leaving current node', () => {
   expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
   expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
   expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
-  expect(screen.getByRole('treeitem', { name: 'Welcome to Foliole' })).toHaveAttribute(
+  act(() => {
+    useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
+  });
+  fireEvent.click(within(getCurrentFolderPanel()).getByRole('button', { name: 'Expand all topics' }));
+  expect(getCurrentFolderTreeItem('Welcome to Foliole')).toHaveAttribute(
     'data-node-derived',
     'false'
   );
-  expect(screen.getByRole('treeitem', { name: 'Welcome' })).toHaveAttribute(
+  expect(getCurrentFolderTreeItem('Welcome')).toHaveAttribute(
     'data-node-derived',
     'true'
   );
@@ -69,24 +72,27 @@ it('keeps only top-level rows bold while lowering non-top-level row emphasis', (
       .getState()
       .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+  act(() => {
+    useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
+  });
+  fireEvent.click(within(getCurrentFolderPanel()).getByRole('button', { name: 'Expand all topics' }));
 
-  const regularRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
-  const derivedRow = screen.getByRole('treeitem', { name: 'Welcome' });
+  const regularRow = getCurrentFolderTreeItem('Welcome to Foliole');
+  const derivedRow = getCurrentFolderTreeItem('Welcome');
 
   expect(regularRow).toHaveAttribute('data-node-emphasis', 'primary');
   expect(createdNodeId).toBeTruthy();
   expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
-  expect(regularRow.className).toContain('font-bold');
+  expect(regularRow.className).toContain('font-normal');
   expect(derivedRow.className).toContain('font-normal');
-  expect(regularRow.querySelector('[data-node-icon]')).toBeNull();
-  expect(derivedRow.querySelector('[data-node-icon]')).toBeNull();
+  expect(regularRow.querySelector('[data-node-icon]')).toBeInTheDocument();
+  expect(derivedRow.querySelector('[data-node-icon]')).toBeInTheDocument();
 });
 
 it('renders ordinary child rows with normal weight', () => {
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-2',
-    nodeOrder: ['node-1', 'node-2'],
+    activeNodeId: INBOX_NODE_ID,
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
       'node-2': createNode({ id: 'node-2', parentNodeId: 'node-1', title: 'Child', content: '# Child' })
@@ -94,12 +100,12 @@ it('renders ordinary child rows with normal weight', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+  fireEvent.click(within(getCurrentFolderPanel()).getByRole('button', { name: 'Expand all topics' }));
 
-  const topLevelRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
-  const childRow = screen.getByRole('treeitem', { name: 'Child' });
+  const topLevelRow = getCurrentFolderTreeItem('Welcome to Foliole');
+  const childRow = getCurrentFolderTreeItem('Child');
 
-  expect(topLevelRow.className).toContain('font-bold');
+  expect(topLevelRow.className).toContain('font-normal');
   expect(childRow.className).toContain('font-normal');
 });
 
@@ -147,7 +153,7 @@ it('creates cloze child content from pure markdown parent content', () => {
 it('deletes a node from node-list context menu', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
-    nodeOrder: ['node-1', 'node-2'],
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2'],
     nodesById: {
       ...state.nodesById,
       'node-2': createNode({ id: 'node-2', parentNodeId: 'node-1', title: 'Child', content: '# Child' })
@@ -155,8 +161,7 @@ it('deletes a node from node-list context menu', () => {
   }));
 
   render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), {
+  fireEvent.contextMenu(getCurrentFolderTreeItem('Child'), {
     clientX: 56,
     clientY: 64
   });
@@ -173,25 +178,22 @@ it('deletes all selected nodes from node-list context menu', () => {
   try {
     useWorkspaceStore.setState((state) => ({
       activeNodeId: 'node-1',
-      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2', 'node-3'],
       nodesById: {
         ...state.nodesById,
-        'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
-        'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
+        'node-2': createNode({ id: 'node-2', parentNodeId: INBOX_NODE_ID, title: 'Node 2', content: '# Node 2' }),
+        'node-3': createNode({ id: 'node-3', parentNodeId: INBOX_NODE_ID, title: 'Node 3', content: '# Node 3' })
       }
     }));
 
     render(<App />);
-    const nodePanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-    const node2Button = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
-    const node3Button = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
+    const node2Button = getCurrentFolderTreeItem('Node 2');
+    const node3Button = getCurrentFolderTreeItem('Node 3');
 
     fireEvent.click(node2Button);
     fireEvent.click(node3Button, { ctrlKey: true });
     fireEvent.contextMenu(node3Button, { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-
-    expect(screen.getByText('Deleting 2 nodes…')).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersToNextTimer();
@@ -199,7 +201,7 @@ it('deletes all selected nodes from node-list context menu', () => {
 
     const workspace = useWorkspaceStore.getState();
     expect(workspace.trashedNodeIds).toEqual(expect.arrayContaining(['node-2', 'node-3']));
-    expect(workspace.nodeOrder).toEqual(['node-1', 'node-2', 'node-3']);
+    expect(workspace.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', 'node-2', 'node-3']);
     expect(workspace.activeNodeId).toBe('node-1');
   } finally {
     vi.useRealTimers();
@@ -209,31 +211,30 @@ it('deletes all selected nodes from node-list context menu', () => {
 it('marks in-progress import actions on ordinary node context menus', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-article',
-    nodeOrder: ['node-article'],
+    nodeOrder: [INBOX_NODE_ID, 'node-article'],
     nodesById: {
       ...state.nodesById,
-      'node-article': createNode({ id: 'node-article', kind: 'topic', title: 'Article node', content: '# Article body' })
+      'node-article': createNode({ id: 'node-article', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Article node', content: '# Article body' })
     }
   }));
   render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Article node' }), {
+  fireEvent.contextMenu(getCurrentFolderTreeItem('Article node'), {
     clientX: 56,
     clientY: 64
   });
 
   expect(screen.getByRole('menuitem', { name: 'Merge Highlights' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste here' })).toBeInTheDocument();
 });
 
 it('hides import actions on derived node context menus', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-article',
-    nodeOrder: ['node-article'],
+    nodeOrder: [INBOX_NODE_ID, 'node-article'],
     nodesById: {
       ...state.nodesById,
-      'node-article': createNode({ id: 'node-article', kind: 'topic', title: 'Article node', content: '# Article body' })
+      'node-article': createNode({ id: 'node-article', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Article node', content: '# Article body' })
     }
   }));
   render(<App />);
@@ -243,13 +244,11 @@ it('hides import actions on derived node context menus', () => {
       .createHighlightNodeFromSelection('node-article', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
 
-  const nodePanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  fireEvent.click(within(nodePanel).getByRole('button', { name: 'Expand all' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Welcome' }), {
+  fireEvent.contextMenu(getCurrentFolderTreeItem('Welcome'), {
     clientX: 56,
     clientY: 64
   });
 
   expect(screen.queryByRole('menuitem', { name: 'Merge Highlights' })).toBeNull();
-  expect(screen.queryByRole('menuitem', { name: 'Paste here *' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Paste here' })).toBeNull();
 });

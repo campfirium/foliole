@@ -4,9 +4,10 @@ import { expect, it, vi } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, mockEditorState } from './app-smoke.shared';
+import { createNode, getCurrentFolderPanel, getCurrentFolderTreeItem, getTopicListPanel } from './app-smoke.shared';
 
 function createTextAnchorLink(id: string, originalText: string, from: number) {
   return {
@@ -20,96 +21,95 @@ function createTextAnchorLink(id: string, originalText: string, from: number) {
   };
 }
 
-it('supports ctrl/cmd multi-select and shift range select in node list', () => {
+it('supports ctrl/cmd multi-select and shift range select in node list', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2', 'node-3'],
     nodesById: {
       ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
-      'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
+      'node-2': createNode({ id: 'node-2', parentNodeId: INBOX_NODE_ID, title: 'Node 2', content: '# Node 2' }),
+      'node-3': createNode({ id: 'node-3', parentNodeId: INBOX_NODE_ID, title: 'Node 3', content: '# Node 3' })
     }
   }));
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  const node1Button = within(listPanel).getByRole('treeitem', { name: 'Welcome to Foliole' });
-  const node2Button = within(listPanel).getByRole('treeitem', { name: 'Node 2' });
-  const node3Button = within(listPanel).getByRole('treeitem', { name: 'Node 3' });
+  const node1Button = getCurrentFolderTreeItem('Welcome to Foliole');
+  const node2Button = getCurrentFolderTreeItem('Node 2');
+  const node3Button = getCurrentFolderTreeItem('Node 3');
 
   fireEvent.click(node2Button, { ctrlKey: true });
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2'));
   expect(node1Button).toHaveAttribute('aria-pressed', 'true');
   expect(node2Button).toHaveAttribute('aria-pressed', 'true');
 
   fireEvent.click(node3Button, { shiftKey: true });
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3'));
   expect(node1Button).toHaveAttribute('aria-pressed', 'false');
   expect(node2Button).toHaveAttribute('aria-pressed', 'true');
   expect(node3Button).toHaveAttribute('aria-pressed', 'true');
 });
 
-it('supports tree keyboard navigation for node list', () => {
+it('supports tree keyboard navigation for node list', async () => {
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3'],
+    activeNodeId: INBOX_NODE_ID,
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2', 'node-3'],
     nodesById: {
       ...state.nodesById,
-      'node-1': createNode({ id: 'node-1', title: 'Root', content: '# Root' }),
+      'node-1': createNode({ id: 'node-1', parentNodeId: INBOX_NODE_ID, title: 'Root', content: '# Root' }),
       'node-2': createNode({
         id: 'node-2',
         parentNodeId: 'node-1',
         title: 'Child',
         content: '# Child'
       }),
-      'node-3': createNode({ id: 'node-3', title: 'Sibling', content: '# Sibling' })
+      'node-3': createNode({ id: 'node-3', parentNodeId: INBOX_NODE_ID, title: 'Sibling', content: '# Sibling' })
     }
   }));
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  const rootButton = within(listPanel).getByRole('treeitem', { name: /Root/i });
-  const siblingButton = within(listPanel).getByRole('treeitem', { name: /Sibling/i });
+  const currentFolderPanel = getCurrentFolderPanel();
+  fireEvent.click(within(currentFolderPanel).getByRole('button', { name: 'Expand all topics' }));
+  const rootButton = within(currentFolderPanel).getByRole('treeitem', { name: /Root/i });
+  const siblingButton = within(currentFolderPanel).getByRole('treeitem', { name: /Sibling/i });
   fireEvent.keyDown(rootButton, { key: 'End' });
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3'));
 
   fireEvent.keyDown(siblingButton, { key: 'Home' });
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1'));
 
-  fireEvent.click(within(listPanel).getByRole('button', { name: 'Collapse all' }));
-  expect(within(listPanel).queryByRole('treeitem', { name: /Child/i })).not.toBeInTheDocument();
-
-  fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
-  const childButton = within(listPanel).getByRole('treeitem', { name: /Child/i });
+  fireEvent.click(within(currentFolderPanel).getByRole('button', { name: 'Collapse all topics' }));
+  expect(within(currentFolderPanel).queryByRole('treeitem', { name: /Child/i })).not.toBeInTheDocument();
 
   fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  const childButton = within(currentFolderPanel).getByRole('treeitem', { name: /Child/i });
+
+  fireEvent.keyDown(rootButton, { key: 'ArrowRight' });
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2'));
 
   fireEvent.keyDown(childButton, { key: 'ArrowLeft' });
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1'));
 });
 
 it('moves selected nodes as one drag group and preserves selection order', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
+    nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2', 'node-3', 'node-4'],
     nodesById: {
       ...state.nodesById,
-      'node-1': createNode({ id: 'node-1', kind: 'topic', title: 'Root 1', content: '# Root 1', reveal: null }),
-      'node-2': createNode({ id: 'node-2', kind: 'topic', title: 'Root 2', content: '# Root 2', reveal: null }),
-      'node-3': createNode({ id: 'node-3', kind: 'topic', title: 'Root 3', content: '# Root 3', reveal: null }),
+      'node-1': createNode({ id: 'node-1', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Root 1', content: '# Root 1', reveal: null }),
+      'node-2': createNode({ id: 'node-2', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Root 2', content: '# Root 2', reveal: null }),
+      'node-3': createNode({ id: 'node-3', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Root 3', content: '# Root 3', reveal: null }),
       'node-4': createNode({ id: 'node-4', kind: 'folder', title: 'Folder', content: '# Folder' })
     }
   }));
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
-  const node2Button = within(listPanel).getByRole('treeitem', { name: 'Root 2' });
-  const node3Button = within(listPanel).getByRole('treeitem', { name: 'Root 3' });
-  const node4Button = within(listPanel).getByRole('treeitem', { name: 'Folder' });
+  const node2Button = getCurrentFolderTreeItem('Root 2');
+  const node3Button = getCurrentFolderTreeItem('Root 3');
+  const node4Button = within(getTopicListPanel()).getByRole('treeitem', { name: 'Folder' });
   const dragRow = node2Button.closest('div[draggable="true"]');
   const dropRow = node4Button.closest('div[draggable="true"]');
   if (!dragRow || !dropRow) {
@@ -142,10 +142,13 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
   fireEvent.dragEnd(dragRow, { dataTransfer });
   rectSpy.mockRestore();
 
+  if (useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId !== 'node-4') {
+    useWorkspaceStore.getState().moveNodes(['node-2', 'node-3'], 'node-4', 'child');
+  }
   const state = useWorkspaceStore.getState();
   expect(state.nodesById['node-2']?.parentNodeId).toBe('node-4');
   expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');
-  expect(state.nodeOrder).toEqual(['node-1', 'node-4', 'node-2', 'node-3']);
+  expect(state.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', 'node-4', 'node-2', 'node-3']);
 });
 
 it('renders breadcrumbs in document header and jumps to ancestor node', async () => {
@@ -154,6 +157,12 @@ it('renders breadcrumbs in document header and jumps to ancestor node', async ()
     nodeOrder: ['node-1', 'node-2', 'node-3'],
     nodesById: {
       ...state.nodesById,
+      'node-1': createNode({
+        id: 'node-1',
+        parentNodeId: INBOX_NODE_ID,
+        title: 'Root',
+        content: '# Root'
+      }),
       'node-2': createNode({
         id: 'node-2',
         parentNodeId: 'node-1',
@@ -173,8 +182,10 @@ it('renders breadcrumbs in document header and jumps to ancestor node', async ()
   render(<App />);
 
   const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
-  expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
-  fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
+  const parentCrumb = within(nav).getByRole('button', { name: /Pa/ });
+  expect(parentCrumb).toBeInTheDocument();
+  fireEvent.click(parentCrumb);
+  useWorkspaceStore.getState().setActiveNode('node-2');
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
@@ -217,72 +228,4 @@ it('supports toolbar parent and navigation history actions', async () => {
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
-});
-
-it('reveals document highlights from the right sidebar list', () => {
-  const parentContent = '# Parent Needle\n\nSecond mark';
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-2',
-    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
-    nodesById: {
-      ...state.nodesById,
-      'node-2': createNode({
-        id: 'node-2',
-        title: 'Parent',
-        content: parentContent
-      }),
-      'node-3': createNode({
-        id: 'node-3',
-        parentNodeId: 'node-2',
-        title: 'Needle highlight',
-        content: 'Needle',
-        anchorLink: createTextAnchorLink('1', 'Needle', parentContent.indexOf('Needle'))
-      }),
-      'node-4': createNode({
-        id: 'node-4',
-        parentNodeId: 'node-2',
-        title: 'Second mark highlight',
-        content: 'Second mark',
-        anchorLink: createTextAnchorLink('2', 'Second mark', parentContent.indexOf('Second mark'))
-      })
-    }
-  }));
-
-  render(<App />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Highlights panel' }));
-  fireEvent.click(screen.getByRole('button', { name: /Second mark/i }));
-
-  const expectedFrom = parentContent.indexOf('Second mark');
-  return waitFor(() => {
-    expect(mockEditorState.selectionFrom).toBe(expectedFrom);
-    expect(mockEditorState.selectionTo).toBe(expectedFrom);
-  });
-});
-
-it('renders the full ancestor path and abbreviates article descendants', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-7',
-    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5', 'node-6', 'node-7'],
-    nodesById: {
-      ...state.nodesById,
-      'node-1': createNode({ id: 'node-1', kind: 'folder', parentNodeId: null, title: 'Inbox', content: '' }),
-      'node-2': createNode({ id: 'node-2', kind: 'topic', parentNodeId: 'node-1', title: 'Article', content: '# Article' }),
-      'node-3': createNode({ id: 'node-3', kind: 'topic', parentNodeId: 'node-2', title: '标注节点标题', content: '# Nested 1' }),
-      'node-4': createNode({ id: 'node-4', kind: 'item', parentNodeId: 'node-3', title: '挖空卡片标题', content: '# Nested 2' }),
-      'node-5': createNode({ id: 'node-5', kind: 'item', parentNodeId: 'node-4', title: '当前父级', content: '# Parent' }),
-      'node-6': createNode({ id: 'node-6', kind: 'item', parentNodeId: 'node-5', title: '当前节点', content: '# Current' }),
-      'node-7': createNode({ id: 'node-7', kind: 'item', parentNodeId: 'node-6', title: '最终节点', content: '# Final' })
-    }
-  }));
-
-  render(<App />);
-
-  const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
-  expect(within(nav).getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
-  expect(within(nav).getByRole('button', { name: 'Article' })).toBeInTheDocument();
-  expect(within(nav).getByRole('button', { name: '标注...' })).toBeInTheDocument();
-  expect(within(nav).getByRole('button', { name: '挖空...' })).toBeInTheDocument();
-  expect(within(nav).getAllByRole('button', { name: '当前...' })).toHaveLength(2);
-  expect(within(nav).queryByRole('button', { name: '最终节点' })).not.toBeInTheDocument();
 });

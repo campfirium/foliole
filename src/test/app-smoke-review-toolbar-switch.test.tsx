@@ -12,10 +12,11 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+import { createNode, FIXED_TIMESTAMP, getCurrentFolderTreeItem } from './app-smoke.shared';
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -52,6 +53,7 @@ function createReadingNode(id: string, title: string, content: string) {
   return createNode({
     id,
     kind: 'topic',
+    parentNodeId: INBOX_NODE_ID,
     title,
     content,
     reveal: null,
@@ -72,12 +74,13 @@ it('switches toolbar actions when review queue advances from fsrs card to readin
   mockDocumentLoad();
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'reading-1',
-    nodeOrder: ['reading-1', 'fsrs-1'],
+    nodeOrder: [INBOX_NODE_ID, 'reading-1', 'fsrs-1'],
     nodesById: {
       ...state.nodesById,
       'reading-1': createReadingNode('reading-1', 'Reading 1', 'Read this first'),
       'fsrs-1': createNode({
         id: 'fsrs-1',
+        parentNodeId: INBOX_NODE_ID,
         title: 'QA 1',
         content: 'Prompt 1',
         reveal: 'Answer 1',
@@ -120,12 +123,13 @@ it('switches the review session when clicking another queued node during study',
   mockDocumentLoad();
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'reading-1',
-    nodeOrder: ['reading-1', 'fsrs-1'],
+    nodeOrder: [INBOX_NODE_ID, 'reading-1', 'fsrs-1'],
     nodesById: {
       ...state.nodesById,
       'reading-1': createReadingNode('reading-1', 'Reading 1', 'Read this first'),
       'fsrs-1': createNode({
         id: 'fsrs-1',
+        parentNodeId: INBOX_NODE_ID,
         title: 'QA 1',
         content: 'Prompt 1',
         reveal: 'Answer 1',
@@ -158,7 +162,7 @@ it('switches the review session when clicking another queued node during study',
   });
   expect(screen.getByTestId('editor-value')).toHaveValue('Prompt 1');
 
-  fireEvent.click(screen.getByRole('treeitem', { name: 'Reading 1' }));
+  fireEvent.click(getCurrentFolderTreeItem('Reading 1'));
 
   await waitFor(() => {
     expect(screen.getByLabelText('Review mode toolbar')).toHaveAttribute('data-review-item-kind', 'reading');

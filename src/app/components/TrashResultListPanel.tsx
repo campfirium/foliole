@@ -3,6 +3,9 @@ import { useMemo, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
+import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
+import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
+import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { TrashListRows } from '../../features/nodes/components/TrashListRows';
 import { buildFlatNodeRows, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -37,14 +40,84 @@ function useTrashRows(props: TrashResultListPanelProps, searchQuery: string) {
   return { contentSort, normalizedSort, rows };
 }
 
+function TrashRowsBody(props: {
+  contextMenu: ReturnType<typeof useNodeListContextMenu>;
+  nodesById: WorkspaceListNodesById;
+  rowSpacing: number;
+  rows: ReturnType<typeof useTrashRows>['rows'];
+  selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
+  selectedNodeIds: string[];
+}) {
+  if (props.rows.length === 0) {
+    return (
+      <div className="flex min-h-full items-center justify-center py-6">
+        <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
+      </div>
+    );
+  }
+
+  return (
+    <div aria-label="Trash section" className="flex flex-col gap-2" role="tree">
+      <TrashListRows
+        activeNodeId={props.selectedNodeIds[0] ?? null}
+        nodesById={props.nodesById}
+        onContextMenu={props.contextMenu.openContextMenu}
+        onKeyDown={() => undefined}
+        onSelect={props.selectTrashNode}
+        rows={props.rows}
+        rowSpacing={props.rowSpacing}
+        selectedNodeIds={props.selectedNodeIds}
+      />
+    </div>
+  );
+}
+
+function TrashContextMenu(props: {
+  contextMenu: ReturnType<typeof useNodeListContextMenu>;
+  listState: ReturnType<typeof useNodeListState>;
+  nodesById: WorkspaceListNodesById;
+  selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
+  workspaceActions: ReturnType<typeof useTrashWorkspaceActions>;
+}) {
+  return (
+    <NodeListTreeMenu
+      contextMenu={props.contextMenu}
+      createChildNode={props.workspaceActions.createChildNode}
+      createGlobalNode={props.workspaceActions.createGlobalNode}
+      createVirtualNode={props.workspaceActions.createVirtualNode}
+      deleteNodes={props.workspaceActions.deleteNodes}
+      deleteNodesPermanently={props.workspaceActions.deleteNodesPermanently}
+      dismissNode={props.workspaceActions.dismissNode}
+      isVirtualViewOpen={false}
+      nodesById={props.nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelect={props.selectTrashNode}
+      restoreNode={props.workspaceActions.restoreNode}
+      returnNode={props.workspaceActions.returnNode}
+      state={props.listState}
+    />
+  );
+}
+
 export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const rowSpacing = getNodeListRowSpacing();
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
-  const selectedNodeIds = props.selectedTrashNodeId && rows.some((row) => row.node.id === props.selectedTrashNodeId)
-    ? [props.selectedTrashNodeId]
-    : [];
+  const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, new Set());
+  const selectedNodeIds = listState.selectedNodeIds.filter((nodeId) => props.trashedNodeIds.includes(nodeId));
+  const contextMenu = useNodeListContextMenu(selectedNodeIds, props.trashedNodeIds);
+  const selectTrashNode = useNodeSelectionHandler({
+    activeNodeId: null,
+    isSelectionScopeActive: true,
+    nodesById: props.nodesById,
+    onSelectNode: () => undefined,
+    onSelectTrashNode: props.onSelectTrashNode,
+    selectedTrashNodeId: props.selectedTrashNodeId,
+    state: listState,
+    trashedNodeIds: props.trashedNodeIds
+  });
+  const workspaceActions = useTrashWorkspaceActions();
 
   return (
     <aside aria-label="Topic list panel" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
@@ -62,27 +135,37 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
         trashedNodeIds={props.trashedNodeIds}
       />
       <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2">
-        {rows.length === 0 ? (
-          <div className="flex min-h-full items-center justify-center py-6">
-            <AppEmptyState description="Deleted topics will appear here." title="Trash is empty" />
-          </div>
-        ) : (
-          <div aria-label="Trash section" className="flex flex-col gap-2" role="tree">
-            <TrashListRows
-              activeNodeId={selectedNodeIds[0] ?? null}
-              nodesById={props.nodesById}
-              onContextMenu={() => undefined}
-              onKeyDown={() => undefined}
-              onSelect={(nodeId) => props.onSelectTrashNode(nodeId)}
-              rows={rows}
-              rowSpacing={rowSpacing}
-              selectedNodeIds={selectedNodeIds}
-            />
-          </div>
-        )}
+        <TrashRowsBody
+          contextMenu={contextMenu}
+          nodesById={props.nodesById}
+          rowSpacing={rowSpacing}
+          rows={rows}
+          selectTrashNode={selectTrashNode}
+          selectedNodeIds={selectedNodeIds}
+        />
       </div>
+      <TrashContextMenu
+        contextMenu={contextMenu}
+        listState={listState}
+        nodesById={props.nodesById}
+        selectTrashNode={selectTrashNode}
+        workspaceActions={workspaceActions}
+      />
     </aside>
   );
+}
+
+function useTrashWorkspaceActions() {
+  return {
+    createChildNode: useWorkspaceStore((state) => state.createChildNode),
+    createGlobalNode: useWorkspaceStore((state) => state.createRootNode),
+    createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
+    deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
+    deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
+    dismissNode: useWorkspaceStore((state) => state.dismissNode),
+    restoreNode: useWorkspaceStore((state) => state.restoreNode),
+    returnNode: useWorkspaceStore((state) => state.relearnNode)
+  };
 }
 
 function TrashResultHeader(props: {

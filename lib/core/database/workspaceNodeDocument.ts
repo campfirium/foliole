@@ -1,8 +1,8 @@
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
-import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { decodeTextBodyBlobData } from './contentBodyBlobs.js';
+import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { parseStoredImageRegions } from './imageRegionCodec.js';
 
 interface WorkspaceNodeDocumentRow extends DatabaseRow {

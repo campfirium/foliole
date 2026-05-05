@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -6,12 +6,14 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 
+import { getCurrentFolderPanel } from './app-smoke.shared';
+
 function getNodeListTree() {
-  return within(screen.getByRole('complementary', { name: 'Topic list panel' })).getByRole('tree');
+  return within(getCurrentFolderPanel()).getByRole('tree');
 }
 
 function getTreeItem(name: string) {
-  return within(screen.getByRole('complementary', { name: 'Topic list panel' })).getByRole('treeitem', { name });
+  return within(getCurrentFolderPanel()).getByRole('treeitem', { name });
 }
 
 beforeEach(() => {

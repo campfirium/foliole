@@ -10,6 +10,7 @@ export default [
       'dist/**',
       'electron-dist/**',
       'coverage/**',
+      '.claude/**',
       'node_modules/**',
       'playwright-report/**',
       'test-results/**',

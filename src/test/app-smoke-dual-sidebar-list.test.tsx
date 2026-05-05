@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -10,6 +10,13 @@ import { createNode } from './app-smoke.shared';
 
 function expectCurrentFolderPanel() {
   return screen.getByRole('complementary', { name: 'Current folder contents' });
+}
+
+function expandCurrentFolderTopicsIfAvailable() {
+  const button = within(expectCurrentFolderPanel()).queryByRole('button', { name: 'Expand all topics' });
+  if (button) {
+    fireEvent.click(button);
+  }
 }
 
 function buildDualTreeSwitchState() {
@@ -108,6 +115,7 @@ it('shows folders in the left tree and topics in the adjacent topic tree', () =>
   expect(within(listPanel).queryByRole('treeitem', { name: 'Overview' })).not.toBeInTheDocument();
 
   const currentFolderPanel = screen.getByRole('complementary', { name: 'Current folder contents' });
+  expandCurrentFolderTopicsIfAvailable();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Overview' })).toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Nested idea' })).toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Key Card' })).toBeInTheDocument();
@@ -143,6 +151,7 @@ it('keeps the dual tree visible when inbox is selected', () => {
   expect(within(listPanel).getByRole('treeitem', { name: 'Inbox' })).toBeInTheDocument();
 
   const currentFolderPanel = screen.getByRole('complementary', { name: 'Current folder contents' });
+  expandCurrentFolderTopicsIfAvailable();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Inbox topic' })).toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Inbox child' })).toBeInTheDocument();
 });
@@ -155,10 +164,15 @@ it('keeps the dual tree visible while switching between inbox, folder, and topic
   const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
 
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox topic' })).toBeInTheDocument();
+  expandCurrentFolderTopicsIfAvailable();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox child' })).toBeInTheDocument();
 
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Case' }));
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('folder-case');
+  });
   expect(expectCurrentFolderPanel()).toBeInTheDocument();
+  expandCurrentFolderTopicsIfAvailable();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Case topic' })).toBeInTheDocument();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Case child' })).toBeInTheDocument();
   expect(within(expectCurrentFolderPanel()).queryByRole('treeitem', { name: 'Inbox topic' })).not.toBeInTheDocument();
@@ -169,7 +183,11 @@ it('keeps the dual tree visible while switching between inbox, folder, and topic
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Case child' })).toBeInTheDocument();
 
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Inbox' }));
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('special-inbox');
+  });
   expect(expectCurrentFolderPanel()).toBeInTheDocument();
+  expandCurrentFolderTopicsIfAvailable();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox topic' })).toBeInTheDocument();
   expect(within(expectCurrentFolderPanel()).getByRole('treeitem', { name: 'Inbox child' })).toBeInTheDocument();
 });

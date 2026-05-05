@@ -1,20 +1,21 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode } from './app-smoke.shared';
+import { createNode, getCurrentFolderPanel } from './app-smoke.shared';
 
 it('shows total descendant counts at the end of node rows', () => {
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'root',
-    nodeOrder: ['root', 'child-1', 'grandchild', 'child-2'],
+    activeNodeId: INBOX_NODE_ID,
+    nodeOrder: [INBOX_NODE_ID, 'root', 'child-1', 'grandchild', 'child-2'],
     nodesById: {
       ...state.nodesById,
-      root: createNode({ id: 'root', title: 'Root', content: '# Root' }),
+      root: createNode({ id: 'root', parentNodeId: INBOX_NODE_ID, title: 'Root', content: '# Root' }),
       'child-1': createNode({
         id: 'child-1',
         parentNodeId: 'root',
@@ -38,7 +39,8 @@ it('shows total descendant counts at the end of node rows', () => {
 
   render(<App />);
 
-  const listPanel = screen.getByRole('complementary', { name: 'Topic list panel' });
+  const listPanel = getCurrentFolderPanel();
+  fireEvent.click(within(listPanel).getByRole('button', { name: 'Expand all topics' }));
 
   expect(within(listPanel).getByRole('treeitem', { name: 'Root' })).toHaveTextContent('Root(3)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).toHaveTextContent('Child 1(1)');

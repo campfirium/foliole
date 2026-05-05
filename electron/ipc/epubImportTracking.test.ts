@@ -55,12 +55,6 @@ function createPreparedRecord(): PreparedImportRecord {
 
 function readSyncRows() {
   return {
-    change: openDatabaseConnection().driver.queryOne<{ object_type: string; payload_json: string }>(
-      `SELECT object_type, payload_json
-       FROM sync_change_log
-       WHERE object_type = 'import_source' AND object_id = ?`,
-      ['epub-source-1']
-    ),
     state: openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
       `SELECT sync_dirty
        FROM sync_object_state
@@ -70,16 +64,9 @@ function readSyncRows() {
   };
 }
 
-it('records EPUB import source tracking writes in the change log', () => {
+it('records EPUB import source tracking writes in sync state', () => {
   ensureTrackedImportTarget(createPreparedRecord(), 'node-book');
 
   const rows = readSyncRows();
   expect(rows.state).toEqual({ sync_dirty: 1 });
-  expect(rows.change?.object_type).toBe('import_source');
-  expect(JSON.parse(rows.change?.payload_json ?? '{}')).toMatchObject({
-    latestNodeId: 'node-book',
-    sourceFingerprint: 'epub-source-1',
-    sourceKind: 'epub',
-    sourceName: 'book.epub'
-  });
 });

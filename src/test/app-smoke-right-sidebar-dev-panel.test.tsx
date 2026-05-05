@@ -49,7 +49,7 @@ it('renders the dev panel with resolved scheduling and raw node fields', () => {
   expect(screen.queryByText('Reading position log')).not.toBeInTheDocument();
   expect(screen.getByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Review' })).toBeInTheDocument();
-  expect(screen.getByText('Node')).toBeInTheDocument();
+  expect(screen.getByText('Topic')).toBeInTheDocument();
   expect(screen.getByText('88.0% · Explicit')).toBeInTheDocument();
   expect(screen.getByText('P2 · Explicit')).toBeInTheDocument();
   expect(screen.queryByText('Node info')).not.toBeInTheDocument();

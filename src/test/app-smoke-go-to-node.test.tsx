@@ -36,10 +36,10 @@ it('runs go to node from the command palette without replacing workspace search'
 
   fireEvent.change(commandInput, { target: { value: 'go to' } });
   await waitFor(() => {
-    expect(within(commandDialog).getByRole('button', { name: /^Go to/i })).toBeInTheDocument();
+    expect(within(commandDialog).getByRole('button', { name: 'Go to…' })).toBeInTheDocument();
   });
 
-  fireEvent.keyDown(commandInput, { key: 'Enter' });
+  fireEvent.click(within(commandDialog).getByRole('button', { name: 'Go to…' }));
 
   const goToNodeDialog = await screen.findByRole('dialog', { name: 'Go to' });
   const goToNodeInput = within(goToNodeDialog).getByLabelText('Go to');
@@ -82,7 +82,7 @@ it('shows nodes immediately and puts the last used target first when reopened', 
   fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
   let commandInput = within(screen.getByRole('dialog', { name: 'Command palette' })).getByLabelText('Search commands');
   fireEvent.change(commandInput, { target: { value: 'go to' } });
-  fireEvent.keyDown(commandInput, { key: 'Enter' });
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Command palette' })).getByRole('button', { name: 'Go to…' }));
 
   const firstDialog = await screen.findByRole('dialog', { name: 'Go to' });
   expect(within(firstDialog).getByRole('button', { name: /Welcome to Foliole/i })).toBeInTheDocument();
@@ -91,7 +91,7 @@ it('shows nodes immediately and puts the last used target first when reopened', 
   fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
   commandInput = within(screen.getByRole('dialog', { name: 'Command palette' })).getByLabelText('Search commands');
   fireEvent.change(commandInput, { target: { value: 'go to' } });
-  fireEvent.keyDown(commandInput, { key: 'Enter' });
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Command palette' })).getByRole('button', { name: 'Go to…' }));
 
   const secondDialog = await screen.findByRole('dialog', { name: 'Go to' });
   const resultButtons = within(secondDialog).getAllByRole('button');

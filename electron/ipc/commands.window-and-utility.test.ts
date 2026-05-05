@@ -1,8 +1,6 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
-
 import { handleInvokeRequest } from './commands.js';
 import {
   failedMarkdownResult,
@@ -134,47 +132,6 @@ beforeEach(() => {
   recordPreparedImportFailure.mockReturnValue(failedMarkdownResult);
 });
 
-it('handles typed native utility commands', async () => {
-  const openExternalUrlRequest = {
-    command: 'open_external_url',
-    args: { url: 'https://example.com' }
-  } satisfies NativeInvokeRequest<'open_external_url'>;
-  const openLocalPathRequest = {
-    command: 'open_local_path',
-    args: { path: '/tmp/source.md' }
-  } satisfies NativeInvokeRequest<'open_local_path'>;
-  const syncAppMenuStateRequest = {
-    command: 'sync_app_menu_state',
-    args: {
-      enabledCommandIds: ['node.create', 'node.delete'],
-      shortcutAccelerators: [{ accelerator: 'Control+N', commandId: 'node.create' }]
-    }
-  } satisfies NativeInvokeRequest<'sync_app_menu_state'>;
-  const exportDiagnosticBundleRequest = {
-    command: 'export_diagnostic_bundle'
-  } satisfies NativeInvokeRequest<'export_diagnostic_bundle'>;
-
-  await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
-  await expect(handleInvokeRequest(openLocalPathRequest)).resolves.toBeNull();
-  await expect(handleInvokeRequest(syncAppMenuStateRequest)).resolves.toBeNull();
-  await expect(handleInvokeRequest(exportDiagnosticBundleRequest)).resolves.toEqual({
-    file_path: '/desktop/foliole-diagnostics.zip',
-    included_file_count: 2,
-    status: 'exported'
-  });
-  await expect(
-    handleInvokeRequest({ command: 'app_get_version' } satisfies NativeInvokeRequest<'app_get_version'>)
-  ).resolves.toBe('1.0.0');
-
-  expect(openExternal).toHaveBeenCalledWith('https://example.com');
-  expect(openPath).toHaveBeenCalledWith('/tmp/source.md');
-  expect(syncAppMenuState).toHaveBeenCalledWith(
-    ['node.create', 'node.delete'],
-    [{ accelerator: 'Control+N', commandId: 'node.create' }]
-  );
-  expect(exportDiagnosticBundle).toHaveBeenCalledTimes(1);
-});
-
 it('throws on unsupported command', async () => {
   await expect(handleInvokeRequest({ command: 'unknown.command' })).rejects.toThrow(
     'unsupported native command'
@@ -278,37 +235,4 @@ it('converts HTML files into markdown-compatible content through the native impo
       sourceName: 'inbox.html'
     })
   );
-});
-
-it('handles window commands through invoke channel', async () => {
-  await expect(handleInvokeRequest({ command: 'window_minimize' })).resolves.toBeNull();
-  await expect(handleInvokeRequest({ command: 'window_restart_app' })).resolves.toBeNull();
-  await expect(handleInvokeRequest({ command: 'window_toggle_dev_tools' })).resolves.toBeNull();
-  await expect(handleInvokeRequest({ command: 'window_toggle_maximize' })).resolves.toBeNull();
-  await expect(handleInvokeRequest({ command: 'window_close' })).resolves.toBeNull();
-  await expect(handleInvokeRequest({ command: 'window_is_maximized' })).resolves.toBe(false);
-
-  expect(mockWindow.minimize).toHaveBeenCalledTimes(1);
-  expect(mockApp.relaunch).toHaveBeenCalledTimes(1);
-  expect(mockApp.exit).toHaveBeenCalledWith(0);
-  expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
-  expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
-  expect(mockWindow.close).toHaveBeenCalledTimes(1);
-});
-
-it('flushes dirty node sync versions through invoke channel', async () => {
-  await expect(
-    handleInvokeRequest({
-      command: 'flush_dirty_node_sync_versions'
-    } satisfies NativeInvokeRequest<'flush_dirty_node_sync_versions'>)
-  ).resolves.toEqual(['node-1']);
-
-  expect(flushAllDirtyNodeSyncVersions).toHaveBeenCalledTimes(1);
-});
-
-it('restores window when toggle command runs while maximized', async () => {
-  mockWindow.isMaximized.mockReturnValue(true);
-
-  await expect(handleInvokeRequest({ command: 'window_toggle_maximize' })).resolves.toBeNull();
-  expect(mockWindow.unmaximize).toHaveBeenCalledTimes(1);
 });

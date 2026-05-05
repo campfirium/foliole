@@ -3,8 +3,8 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
-import type { DatabaseDriver } from './driver.js';
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
+import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
