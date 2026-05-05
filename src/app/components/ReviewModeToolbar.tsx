@@ -24,12 +24,22 @@ interface ReviewModeToolbarProps {
   style?: CSSProperties;
 }
 
-function ReviewCompleteBar({ onExitReviewMode }: { onExitReviewMode: () => void }) {
+function ReviewCompleteBar({
+  className,
+  onExitReviewMode,
+  style
+}: {
+  className?: string;
+  onExitReviewMode: () => void;
+  style?: CSSProperties;
+}) {
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
+      className={className}
       mode="study"
       primary={<ReviewCompleteAction onExitReviewMode={onExitReviewMode} />}
+      style={style}
     />
   );
 }
@@ -106,7 +116,7 @@ export function ReviewModeToolbar({
   }
 
   if (!reviewCurrentNodeId) {
-    return <ReviewCompleteBar onExitReviewMode={onExitReviewMode} />;
+    return <ReviewCompleteBar className={className} onExitReviewMode={onExitReviewMode} style={style} />;
   }
 
   return (

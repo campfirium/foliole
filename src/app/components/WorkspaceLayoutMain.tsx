@@ -68,6 +68,9 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
+    '--workspace-list-folder-current-width': props.isListCollapsed
+      ? '0px'
+      : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
     '--workspace-list-current-width': props.isListCollapsed ? '0px' : `${props.listWidth}px`,
     '--workspace-list-splitter-width': props.isListCollapsed ? '0px' : '1px',
     '--workspace-right-sidebar-current-width': props.isRightSidebarCollapsed ? '0px' : `${props.rightSidebarWidth}px`,

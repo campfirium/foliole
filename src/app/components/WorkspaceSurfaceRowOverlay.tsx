@@ -11,8 +11,8 @@ type WorkspaceSurfaceOverlayRow = Exclude<WorkspaceSurfaceRow, 'main'>;
 
 const WORKSPACE_SURFACE_ROW_TEMPLATE = [
   'var(--workspace-rail-width)',
-  'var(--workspace-folder-column-width)',
-  'minmax(0, max(0px, calc(var(--workspace-list-current-width, 300px) - var(--workspace-folder-column-width))))',
+  'var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))',
+  'minmax(0, max(0px, calc(var(--workspace-list-current-width, 300px) - var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))))',
   'minmax(0, 1fr)',
   'minmax(0, var(--workspace-right-sidebar-current-width, 320px))'
 ].join(' ');
@@ -140,16 +140,16 @@ export function WorkspaceTitlebarDividers({
   );
 }
 
-export function WorkspaceFooterRowDividers() {
+export function WorkspaceFooterRowDividers({ isListCollapsed }: { isListCollapsed: boolean }) {
   const hasFolderTopicDivider = useHasFolderTopicDivider('footer');
-  if (!hasFolderTopicDivider) {
+  if (isListCollapsed || !hasFolderTopicDivider) {
     return null;
   }
   return (
     <WorkspaceSurfaceRowDivider
       className="max-[1080px]:hidden"
       column="folder"
-      left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
+      left="calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))"
       row="footer"
     />
   );

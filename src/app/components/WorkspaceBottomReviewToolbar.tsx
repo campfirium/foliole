@@ -9,12 +9,16 @@ function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayout
     <div
       className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
     >
-      <div className="flex min-w-0 items-center bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
-        {Math.max(props.reviewQueueCount, 0)} left · {Math.max(props.reviewCompletedCount, 0)} done
-      </div>
-      <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
+      {props.isListCollapsed ? null : (
+        <>
+          <div className="flex min-w-0 items-center bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
+            {Math.max(props.reviewQueueCount, 0)} left · {Math.max(props.reviewCompletedCount, 0)} done
+          </div>
+          <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
+        </>
+      )}
       <ReviewModeToolbar
-        className="h-full bg-transparent px-6"
+        className="col-start-3 h-full bg-transparent px-6 max-[1080px]:col-start-1"
         style={{ borderTopColor: 'transparent' }}
         showSummary={false}
         isAnswerRevealed={props.isAnswerRevealed}
@@ -58,7 +62,7 @@ export function WorkspaceBottomReviewToolbar({ props }: { props: WorkspaceLayout
         }`}
       >
         {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
-        {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers />}
+        {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers isListCollapsed={props.isListCollapsed} />}
         {props.isImmersiveMode ? null : (
           <div className="relative z-[1]">
             <WorkspaceStudyDockTrigger
