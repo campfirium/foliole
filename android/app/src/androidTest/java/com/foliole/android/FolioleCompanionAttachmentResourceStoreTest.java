@@ -81,7 +81,7 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     public void listsMissingManifestResourcesForMainSync() throws Exception {
         FolioleCompanionSyncObjectApply.applyPayload(database, attachmentRecord());
 
-        JSObject result = FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10);
+        JSObject result = FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10);
         JSONObject resource = result.getJSONArray("resources").getJSONObject(0);
 
         assertEquals(1, result.getJSONArray("resources").length());
@@ -126,6 +126,34 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     }
 
     @Test
+    public void includesCachedManifestWithoutLocalFileInMainSync() throws Exception {
+        insertAttachmentManifest("cached-ready-att", "hash-cached", "2026-04-24T00:00:00.000Z");
+        insertAttachmentManifest("cached-missing-file-att", "hash-missing-file", "2026-04-25T00:00:00.000Z");
+        database.execSQL("UPDATE attachment_blobs SET availability = 'cached' " +
+            "WHERE attachment_id IN ('cached-ready-att', 'cached-missing-file-att')");
+        writeAttachmentFile("hash-cached", "cached-bytes");
+
+        JSObject result = FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10);
+
+        assertEquals(1, result.getJSONArray("resources").length());
+        assertEquals("cached-missing-file-att", result.getJSONArray("resources").getJSONObject(0).getString("attachment_id"));
+    }
+
+    @Test
+    public void summarizesCachedManifestWithoutLocalFileAsMissing() throws Exception {
+        insertAttachmentManifest("cached-ready-att", "hash-cached", "2026-04-24T00:00:00.000Z");
+        insertAttachmentManifest("cached-missing-file-att", "hash-missing-file", "2026-04-25T00:00:00.000Z");
+        database.execSQL("UPDATE attachment_blobs SET availability = 'cached' " +
+            "WHERE attachment_id IN ('cached-ready-att', 'cached-missing-file-att')");
+        writeAttachmentFile("hash-cached", "cached-bytes");
+
+        JSObject summary = FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database);
+
+        assertEquals(1, summary.getLong("missing_attachment_resource_count"));
+        assertEquals(11, summary.getLong("missing_image_attachment_resource_bytes"));
+    }
+
+    @Test
     public void ordersMissingManifestResourcesByActiveThenRecentTopicLinks() throws Exception {
         insertAttachmentManifest("old-att", "hash-old", "2026-04-25T00:00:00.000Z");
         insertAttachmentManifest("active-att", "hash-active", "2026-04-25T00:00:00.000Z");
@@ -140,19 +168,19 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
             "('active_node_id', 'active-node', '2026-04-28T00:00:00.000Z')");
 
-        assertEquals("active-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("active-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(0)
             .getString("attachment_id"));
-        assertEquals("recent-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("recent-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(1)
             .getString("attachment_id"));
-        assertEquals("old-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("old-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(2)
             .getString("attachment_id"));
-        assertEquals("unlinked-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("unlinked-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(3)
             .getString("attachment_id"));
@@ -171,15 +199,15 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         insertNodeAttachment("old-node", "old-att");
         insertReviewDue("due-review-node", "2026-04-20T00:00:00.000Z");
 
-        assertEquals("due-review-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("due-review-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(0)
             .getString("attachment_id"));
-        assertEquals("recent-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("recent-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(1)
             .getString("attachment_id"));
-        assertEquals("old-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(database, 10)
+        assertEquals("old-att", FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, 10)
             .getJSONArray("resources")
             .getJSONObject(2)
             .getString("attachment_id"));

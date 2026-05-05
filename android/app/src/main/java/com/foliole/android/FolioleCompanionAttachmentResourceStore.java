@@ -18,7 +18,7 @@ import java.time.Instant;
 final class FolioleCompanionAttachmentResourceStore {
     private FolioleCompanionAttachmentResourceStore() {}
 
-    static JSObject loadMissingResources(SQLiteDatabase database, int limit) {
+    static JSObject loadMissingResources(Context context, SQLiteDatabase database, int limit) {
         JSArray resources = new JSArray();
         try (Cursor cursor = database.rawQuery(
             "WITH attachment_refs AS (" +
@@ -35,14 +35,17 @@ final class FolioleCompanionAttachmentResourceStore {
                 "SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at " +
                 "FROM attachment_refs GROUP BY attachment_id" +
             ") " +
-            "SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) FROM attachment_blobs b " +
+            "SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0), b.availability, b.storage_key FROM attachment_blobs b " +
                 "LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id " +
                 "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
-                "AND b.availability != 'cached' " +
-                "ORDER BY COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC LIMIT ?",
-            new String[] { String.valueOf(Math.max(1, limit)) }
+                "ORDER BY COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",
+            null
         )) {
-            while (cursor.moveToNext()) {
+            int maxResources = Math.max(1, limit);
+            while (cursor.moveToNext() && resources.length() < maxResources) {
+                if (!isMissingResource(context, cursor.getString(3), cursor.isNull(4) ? null : cursor.getString(4))) {
+                    continue;
+                }
                 JSObject resource = new JSObject();
                 resource.put("attachment_id", cursor.getString(0));
                 resource.put("content_hash", cursor.getString(1));
@@ -53,6 +56,64 @@ final class FolioleCompanionAttachmentResourceStore {
         JSObject result = new JSObject();
         result.put("resources", resources);
         return result;
+    }
+
+    static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) {
+        long count = 0;
+        long bytes = 0;
+        long imageCount = 0;
+        long imageBytes = 0;
+        long pdfCount = 0;
+        long pdfBytes = 0;
+        long otherCount = 0;
+        long otherBytes = 0;
+        long dueReviewCount = 0;
+        try (Cursor cursor = database.rawQuery(
+            "SELECT b.availability, b.storage_key, COALESCE(b.size_bytes, 0), lower(COALESCE(b.mime_type, '')), " +
+                "EXISTS(" +
+                    "SELECT 1 FROM node_attachments na " +
+                    "JOIN nodes n ON n.id = na.node_id " +
+                    "JOIN node_review nr ON nr.node_id = n.id " +
+                    "WHERE na.attachment_id = b.attachment_id AND n.deleted_at IS NULL " +
+                    "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1" +
+                ") " +
+            "FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                if (!isMissingResource(context, cursor.getString(0), cursor.isNull(1) ? null : cursor.getString(1))) {
+                    continue;
+                }
+                long sizeBytes = cursor.getLong(2);
+                String mimeType = cursor.getString(3);
+                count++;
+                bytes += sizeBytes;
+                if (mimeType.startsWith("image/")) {
+                    imageCount++;
+                    imageBytes += sizeBytes;
+                } else if (mimeType.equals("application/pdf")) {
+                    pdfCount++;
+                    pdfBytes += sizeBytes;
+                } else {
+                    otherCount++;
+                    otherBytes += sizeBytes;
+                }
+                if (cursor.getLong(4) > 0) {
+                    dueReviewCount++;
+                }
+            }
+        }
+        JSObject summary = new JSObject();
+        summary.put("missing_attachment_resource_count", count);
+        summary.put("missing_attachment_resource_bytes", bytes);
+        summary.put("missing_image_attachment_resource_count", imageCount);
+        summary.put("missing_image_attachment_resource_bytes", imageBytes);
+        summary.put("missing_pdf_attachment_resource_count", pdfCount);
+        summary.put("missing_pdf_attachment_resource_bytes", pdfBytes);
+        summary.put("missing_other_attachment_resource_count", otherCount);
+        summary.put("missing_other_attachment_resource_bytes", otherBytes);
+        summary.put("missing_due_review_attachment_resource_count", dueReviewCount);
+        return summary;
     }
 
     static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) {
@@ -70,7 +131,7 @@ final class FolioleCompanionAttachmentResourceStore {
             }
             String availability = cursor.getString(3);
             String storageKey = cursor.isNull(4) ? null : cursor.getString(4);
-            if ("cached".equals(availability) && hasAttachmentFile(context, storageKey)) {
+            if (!isMissingResource(context, availability, storageKey)) {
                 result.put("resource", null);
                 return result;
             }
@@ -81,6 +142,10 @@ final class FolioleCompanionAttachmentResourceStore {
             result.put("resource", resource);
             return result;
         }
+    }
+
+    private static boolean isMissingResource(Context context, String availability, String storageKey) {
+        return !"cached".equals(availability) || !hasAttachmentFile(context, storageKey);
     }
 
     private static boolean hasAttachmentFile(Context context, String storageKey) {

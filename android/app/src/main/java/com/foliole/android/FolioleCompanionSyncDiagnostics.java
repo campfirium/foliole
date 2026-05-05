@@ -27,7 +27,7 @@ final class FolioleCompanionSyncDiagnostics {
         result.put("connection", connection);
         result.put("storage", storage);
         result.put("sync_state", syncState);
-        JSObject content = loadContent(database);
+        JSObject content = loadContent(context, database);
         JSArray events = loadEvents(database);
         result.put("content", content);
         result.put("events", events);
@@ -96,7 +96,7 @@ final class FolioleCompanionSyncDiagnostics {
         return state;
     }
 
-    private static JSObject loadContent(SQLiteDatabase database) throws Exception {
+    private static JSObject loadContent(Context context, SQLiteDatabase database) throws Exception {
         JSObject content = new JSObject();
         content.put("missing_content_blob_count", count(database,
             "SELECT COUNT(*) FROM content_blobs WHERE availability <> 'cached'"
@@ -141,58 +141,22 @@ final class FolioleCompanionSyncDiagnostics {
                 "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') " +
                 "AND cb.kind = 'text_body' AND cbd.hash IS NULL"
         ));
-        content.put("missing_attachment_resource_count", count(database,
-            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached'"
-        ));
-        content.put("missing_attachment_resource_bytes", count(database,
-            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached'"
-        ));
-        content.put("missing_image_attachment_resource_count", count(database,
-            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
-                "AND lower(COALESCE(mime_type, '')) LIKE 'image/%'"
-        ));
-        content.put("missing_image_attachment_resource_bytes", count(database,
-            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
-                "AND lower(COALESCE(mime_type, '')) LIKE 'image/%'"
-        ));
-        content.put("missing_pdf_attachment_resource_count", count(database,
-            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
-                "AND lower(COALESCE(mime_type, '')) = 'application/pdf'"
-        ));
-        content.put("missing_pdf_attachment_resource_bytes", count(database,
-            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
-                "AND lower(COALESCE(mime_type, '')) = 'application/pdf'"
-        ));
-        content.put("missing_other_attachment_resource_count", count(database,
-            "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
-                "AND lower(COALESCE(mime_type, '')) NOT LIKE 'image/%' " +
-                "AND lower(COALESCE(mime_type, '')) != 'application/pdf'"
-        ));
-        content.put("missing_other_attachment_resource_bytes", count(database,
-            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
-                "AND TRIM(content_hash) != '' AND availability <> 'cached' " +
-                "AND lower(COALESCE(mime_type, '')) NOT LIKE 'image/%' " +
-                "AND lower(COALESCE(mime_type, '')) != 'application/pdf'"
-        ));
-        content.put("missing_due_review_attachment_resource_count", count(database,
-            "SELECT COUNT(DISTINCT b.attachment_id) FROM attachment_blobs b " +
-                "JOIN node_attachments na ON na.attachment_id = b.attachment_id " +
-                "JOIN nodes n ON n.id = na.node_id " +
-                "JOIN node_review nr ON nr.node_id = n.id " +
-                "WHERE n.deleted_at IS NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') " +
-                "AND b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
-                "AND b.availability <> 'cached'"
-        ));
+        copyAttachmentSummary(content, FolioleCompanionAttachmentResourceStore.summarizeMissingResources(context, database));
         content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
         return content;
+    }
+
+    private static void copyAttachmentSummary(JSObject content, JSObject summary) throws Exception {
+        content.put("missing_attachment_resource_count", summary.optLong("missing_attachment_resource_count", 0));
+        content.put("missing_attachment_resource_bytes", summary.optLong("missing_attachment_resource_bytes", 0));
+        content.put("missing_image_attachment_resource_count", summary.optLong("missing_image_attachment_resource_count", 0));
+        content.put("missing_image_attachment_resource_bytes", summary.optLong("missing_image_attachment_resource_bytes", 0));
+        content.put("missing_pdf_attachment_resource_count", summary.optLong("missing_pdf_attachment_resource_count", 0));
+        content.put("missing_pdf_attachment_resource_bytes", summary.optLong("missing_pdf_attachment_resource_bytes", 0));
+        content.put("missing_other_attachment_resource_count", summary.optLong("missing_other_attachment_resource_count", 0));
+        content.put("missing_other_attachment_resource_bytes", summary.optLong("missing_other_attachment_resource_bytes", 0));
+        content.put("missing_due_review_attachment_resource_count", summary.optLong("missing_due_review_attachment_resource_count", 0));
     }
 
     private static JSObject loadActiveTopic(SQLiteDatabase database) throws Exception {
