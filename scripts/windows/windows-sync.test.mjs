@@ -73,11 +73,16 @@ describe('windows-sync script', () => {
       expect(args).toContain('.tmp-vitest/');
       expect(args).toContain('.tmp-vitest-*/');
       expect(args).toContain('.tmp-npm/');
+      expect(args).toContain('.claude/');
       expect(args).toContain('.windows-native-boot-ready.json');
       expect(args).toContain('.windows-native-bridge-ready.json');
       expect(args).toContain('--inplace');
       expect(args).toContain('android/app/src/main/assets/public/');
       expect(args).toContain('android/app/src/main/assets/capacitor.config.json');
+      expect(args).toContain('android/app/src/main/assets/capacitor.plugins.json');
+      expect(args).toContain('android/app/src/main/res/xml/config.xml');
+      expect(args).toContain('android/app/capacitor.build.gradle');
+      expect(args).toContain('android/capacitor.settings.gradle');
       expect(args).toContain('android/capacitor-cordova-android-plugins/');
       expect(result.stdout).toContain('[windows-sync] lock acquired');
     } finally {

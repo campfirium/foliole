@@ -42,6 +42,50 @@ async function writeExecutable(rootDir, relativePath, content) {
 }
 
 describe('windows-cap-sync.sh', () => {
+  it('defaults sync and PowerShell calls to the dedicated Android workspace', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-cap-sync-default-workdir-'));
+    try {
+      const mockBinDir = path.join(tempRoot, 'bin');
+      const powershellArgsLog = path.join(tempRoot, 'powershell-args.log');
+      await mkdir(mockBinDir, { recursive: true });
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho cap-sync-target:${WINDOWS_MIRROR_DIR}\n');
+      await writeFile(
+        path.join(mockBinDir, 'powershell.exe'),
+        ['#!/usr/bin/env bash', 'set -euo pipefail', 'printf "%s\\n" "$@" > "${POWERSHELL_ARGS_LOG}"'].join('\n'),
+        { encoding: 'utf8', mode: 0o755 }
+      );
+      await writeFile(
+        path.join(mockBinDir, 'wslpath'),
+        [
+          '#!/usr/bin/env bash',
+          'set -euo pipefail',
+          'if [[ "$1" == "-u" && "$2" == *"foliole-android-preview"* ]]; then echo "/mnt/c/dev/foliole-android-preview"; exit 0; fi',
+          'if [[ "$1" == "-w" ]]; then echo "$2"; exit 0; fi',
+          'echo "/mnt/c/dev/foliole"'
+        ].join('\n'),
+        { encoding: 'utf8', mode: 0o755 }
+      );
+      await chmod(path.join(mockBinDir, 'powershell.exe'), 0o755);
+      await chmod(path.join(mockBinDir, 'wslpath'), 0o755);
+
+      const result = await runCapSync(tempRoot, {
+        PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
+        WINDOWS_SYNC_SCRIPT: windowsSync,
+        WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-cap-sync.ps1'),
+        POWERSHELL_ARGS_LOG: powershellArgsLog
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('cap-sync-target:/mnt/c/dev/foliole-android-preview');
+      const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
+      expect(args).toContain('-WindowsWorkDir');
+      expect(args).toContain('C:\\dev\\foliole-android-preview');
+      expect(args).not.toContain('C:\\dev\\foliole');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('passes dependency refresh mode to the Windows PowerShell sync script', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-cap-sync-'));
     try {

@@ -1,5 +1,5 @@
 param(
-  [string]$WindowsWorkDir = "C:\dev\foliole",
+  [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
   [string]$AndroidHostDir = "android",
   [string]$AppId = "com.foliole.android",
   [string]$MainActivity = "com.foliole.android.MainActivity",

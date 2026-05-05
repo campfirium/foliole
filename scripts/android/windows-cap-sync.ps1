@@ -1,5 +1,5 @@
 param(
-  [string]$WindowsWorkDir = "C:\dev\foliole",
+  [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
   [string]$AndroidHostDir = "android",
   [string]$AndroidWebBuildScript = "android:web:build",
   [string]$CapCliPackage = "@capacitor/cli",

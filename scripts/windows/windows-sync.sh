@@ -37,6 +37,7 @@ RSYNC_ARGS=(
   --no-perms
   --no-owner
   --no-group
+  --exclude ".claude/"
   --exclude ".git/"
   --exclude ".lab/"
   --exclude ".tmp/"
