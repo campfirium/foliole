@@ -21,7 +21,7 @@ export async function loadRuntimePdfImportsInventory(): Promise<RuntimePdfImport
     if (!inventory) {
       logRuntimeWarning('native pdf imports inventory payload invalid', {
         action: 'load_runtime_pdf_imports_inventory',
-        area: 'repository',
+        area: 'bridge',
         command: NATIVE_COMMANDS.loadPdfImportsInventory,
         fallback: 'return_null'
       });
@@ -30,7 +30,7 @@ export async function loadRuntimePdfImportsInventory(): Promise<RuntimePdfImport
   } catch (error) {
     logRuntimeWarning('native pdf imports inventory loading failed', {
       action: 'load_runtime_pdf_imports_inventory',
-      area: 'repository',
+      area: 'bridge',
       command: NATIVE_COMMANDS.loadPdfImportsInventory,
       fallback: 'return_null',
       error
