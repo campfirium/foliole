@@ -11,6 +11,7 @@ import {
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
 import { loadPreparedKeepImportRecord } from './keepImportPreparedRecord.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
+import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
 type KeepImportPreviewStatus = NativeKeepImportPreviewResult['entries'][number]['status'];
 
@@ -153,6 +154,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
     return {
       detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
       failureReason: blockedRecord.failureReason,
+      importId: blockedRecord.importId,
       importStatus: 'blocked_deleted' as const
     };
   }
@@ -174,6 +176,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
             ? record.degradedReason ?? 'Imported with degraded content.'
             : 'Imported successfully.',
       failureReason: record.failureReason,
+      importId: record.importId,
       importStatus
     };
   } catch (error) {
@@ -186,6 +189,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
     return {
       detail: failureReason,
       failureReason,
+      importId: record.importId,
       importStatus: 'failed' as const
     };
   }
@@ -218,6 +222,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
         continue;
       }
       const result = await runKeepImportSource(config, source);
+      notifyManagedInboxUpdated(result.importId);
       runEntries.push({
         action: 'import_attempted',
         detail: result.detail,

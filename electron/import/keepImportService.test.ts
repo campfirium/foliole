@@ -7,6 +7,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-keep-import-tests';
+const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
+  notifyManagedInboxUpdated: vi.fn()
+}));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -15,6 +18,10 @@ vi.mock('../ipc/paths.js', () => ({
     app_config_dir: path.join(mockedAppDataDir, 'config'),
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
+}));
+
+vi.mock('./managedInboxEvents.js', () => ({
+  notifyManagedInboxUpdated
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -35,6 +42,7 @@ beforeEach(async () => {
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
+  notifyManagedInboxUpdated.mockReset();
 });
 
 async function seedReadwiseArticleFixture(root: string) {
@@ -227,4 +235,19 @@ it('wires readwise keep import into existing highlight-derived child creation', 
     content: 'Another matching excerpt.',
     title: 'Another matching excerpt.'
   });
+});
+
+it('notifies the renderer after keep imports write a new record', async () => {
+  const sourceDir = path.join(tempRoot, 'sources');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Imported\nBody\n', 'utf8');
+
+  await runKeepImportRule({
+    directoryPath: sourceDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-301'
+  });
+
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledTimes(1);
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.stringMatching(/^import-/));
 });
