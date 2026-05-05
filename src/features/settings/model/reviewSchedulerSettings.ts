@@ -73,15 +73,23 @@ export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSett
 }
 
 export async function saveReviewSchedulerSettings(
-  settings: Pick<ReviewSchedulerSettings, 'desiredRetention'>
+  settings: Partial<
+    Pick<
+      ReviewSchedulerSettings,
+      'desiredRetention' | 'maximumIntervalDays' | 'enableFuzz' | 'enableShortTerm'
+    >
+  >
 ): Promise<ReviewSchedulerSettings> {
   const runtimeInvoke = getRuntimeInvoke();
-  const payload = {
-    ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  const baseSettings = runtimeInvoke
+    ? await loadReviewSchedulerSettings()
+    : DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+  const payload = normalizeReviewSchedulerSettings({
+    ...baseSettings,
     ...settings
-  };
+  });
   if (!runtimeInvoke) {
-    return normalizeReviewSchedulerSettings(payload);
+    return payload;
   }
   try {
     return normalizeReviewSchedulerSettings(

@@ -2,6 +2,8 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { saveReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
+
 import { handleInvokeRequest } from './commands.js';
 
 vi.mock('electron', () => ({
@@ -44,9 +46,9 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   saveReviewSchedulerSettings: vi.fn().mockReturnValue({
     algorithm: 'ts-fsrs@4.3.0',
     desiredRetention: 0.8,
-    maximumIntervalDays: 36500,
-    enableFuzz: false,
-    enableShortTerm: false,
+    maximumIntervalDays: 180,
+    enableFuzz: true,
+    enableShortTerm: true,
     updatedAt: '2026-03-06T00:05:00.000Z'
   })
 }));
@@ -83,11 +85,24 @@ it('handles app settings storage commands', async () => {
       command: 'save_review_scheduler_settings',
       args: {
         settings: {
-          desiredRetention: 0.8
+          desiredRetention: 0.8,
+          maximumIntervalDays: 180,
+          enableFuzz: true,
+          enableShortTerm: true
         }
       }
     })
   ).resolves.toMatchObject({
-    desiredRetention: 0.8
+    desiredRetention: 0.8,
+    maximumIntervalDays: 180,
+    enableFuzz: true,
+    enableShortTerm: true
+  });
+
+  expect(saveReviewSchedulerSettings).toHaveBeenCalledWith({
+    desiredRetention: 0.8,
+    maximumIntervalDays: 180,
+    enableFuzz: true,
+    enableShortTerm: true
   });
 });

@@ -39,17 +39,25 @@ afterEach(async () => {
 });
 
 it('persists normalized review scheduler settings into sqlite settings table', () => {
-  const saved = saveReviewSchedulerSettings({ desiredRetention: 0.8 });
+  const saved = saveReviewSchedulerSettings({
+    desiredRetention: 0.8,
+    maximumIntervalDays: 180,
+    enableFuzz: true,
+    enableShortTerm: true
+  });
 
   expect(saved).toMatchObject({
     algorithm: DEFAULT_REVIEW_SCHEDULER_SETTINGS.algorithm,
     desiredRetention: 0.8,
-    maximumIntervalDays: DEFAULT_REVIEW_SCHEDULER_SETTINGS.maximumIntervalDays,
-    enableFuzz: DEFAULT_REVIEW_SCHEDULER_SETTINGS.enableFuzz,
-    enableShortTerm: DEFAULT_REVIEW_SCHEDULER_SETTINGS.enableShortTerm
+    maximumIntervalDays: 180,
+    enableFuzz: true,
+    enableShortTerm: true
   });
   expect(loadReviewSchedulerSettings()).toMatchObject({
-    desiredRetention: 0.8
+    desiredRetention: 0.8,
+    maximumIntervalDays: 180,
+    enableFuzz: true,
+    enableShortTerm: true
   });
 });
 
@@ -61,4 +69,27 @@ it('clamps malformed desired retention values back into supported range', () => 
 it('accepts low but still valid desired retention values', () => {
   const saved = saveReviewSchedulerSettings({ desiredRetention: 0.01 });
   expect(saved.desiredRetention).toBe(0.01);
+});
+
+it('preserves existing non-updated scheduler settings on partial save', () => {
+  saveReviewSchedulerSettings({
+    desiredRetention: 0.87,
+    maximumIntervalDays: 240,
+    enableFuzz: true,
+    enableShortTerm: true,
+    updatedAt: '2026-03-14T00:00:00.000Z'
+  });
+
+  const saved = saveReviewSchedulerSettings({
+    desiredRetention: 0.84,
+    updatedAt: '2026-03-14T01:00:00.000Z'
+  });
+
+  expect(saved).toMatchObject({
+    desiredRetention: 0.84,
+    maximumIntervalDays: 240,
+    enableFuzz: true,
+    enableShortTerm: true,
+    updatedAt: '2026-03-14T01:00:00.000Z'
+  });
 });

@@ -83,8 +83,9 @@ export function saveReviewSchedulerSettings(
   }
 ): ReviewSchedulerSettings {
   const now = settings.updatedAt ?? new Date().toISOString();
+  const current = loadReviewSchedulerSettings();
   const normalized = normalizeReviewSchedulerSettings({
-    ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+    ...current,
     ...settings,
     algorithm: REVIEW_SCHEDULER_ALGORITHM,
     updatedAt: now
