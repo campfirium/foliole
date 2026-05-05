@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
@@ -7,6 +7,7 @@ import type { CompanionReadableArticle } from '../shared/platform/companionReada
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import {
   type CompanionWorkspaceSyncStatus,
@@ -78,9 +79,12 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   const [syncProgress, setSyncProgress] = useState<CompanionDesktopSyncProgress | null>(null);
   const [status, setStatus] = useState<CompanionWorkspaceSyncStatus>('loading');
   const [error, setError] = useState<string | null>(null);
+  const setMergedSyncProgress = useCallback((progress: CompanionDesktopSyncProgress | null) => {
+    setSyncProgress((previous) => mergeCompanionSyncProgressSession(previous, progress));
+  }, []);
 
   useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
-  useForegroundAutoSync(setError, setReadableArticle, setState, setSyncProgress, setStatus, state, tryForegroundAutoSync);
+  useForegroundAutoSync(setError, setReadableArticle, setState, setMergedSyncProgress, setStatus, state, tryForegroundAutoSync);
 
   function clearError() {
     setError(null);
@@ -91,7 +95,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     setReadableArticle,
     setSyncConflictCount,
     setState,
-    setSyncProgress,
+    setSyncProgress: setMergedSyncProgress,
     setStatus,
     state
   });
