@@ -25,7 +25,14 @@ const mockEditorAdapter: EditorAdapter = {
     mockEditorState.content = content;
   },
   getSelection: () => ({ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }),
-  setSelection: () => undefined,
+  revealSelection: (selection) => {
+    mockEditorState.selectionFrom = selection.from;
+    mockEditorState.selectionTo = selection.to;
+  },
+  setSelection: (selection) => {
+    mockEditorState.selectionFrom = selection.from;
+    mockEditorState.selectionTo = selection.to;
+  },
   getScrollTop: () => 0,
   setScrollTop: () => undefined,
   replaceSelection: (content: string) => {
@@ -81,6 +88,7 @@ describe('App', () => {
   it('renders note list and single document panel', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: 'Nodes' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Workspace toolbar' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Review' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
@@ -179,13 +187,13 @@ describe('App', () => {
     expect(node3Button).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('renders breadcrumbs in document header and supports ancestor jump', () => {
+  it('renders breadcrumbs in document header and jumps to ancestor anchor', () => {
     const timestamp = '2026-02-25T00:00:00.000Z';
     const parentNode: Node = {
       id: 'node-2',
       parentNodeId: 'node-1',
       title: 'Parent',
-      content: '# Parent',
+      content: '# Parent <highlight id="1">Needle</highlight>',
       reveal: null,
       review: null,
       createdAt: timestamp,
@@ -196,6 +204,7 @@ describe('App', () => {
       parentNodeId: 'node-2',
       title: 'Child',
       content: '# Child',
+      anchorLink: { id: '1', kind: 'highlight' },
       reveal: null,
       review: null,
       createdAt: timestamp,
@@ -218,6 +227,54 @@ describe('App', () => {
     expect(nav).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
     fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+    const expectedFrom = parentNode.content.indexOf('Needle');
+    expect(mockEditorState.selectionFrom).toBe(expectedFrom);
+    expect(mockEditorState.selectionTo).toBe(expectedFrom + 'Needle'.length);
+  });
+
+  it('supports toolbar parent and navigation history actions', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const parentNode: Node = {
+      id: 'node-2',
+      parentNodeId: 'node-1',
+      title: 'Parent',
+      content: '# Parent <highlight id="1">Needle</highlight>',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const childNode: Node = {
+      id: 'node-3',
+      parentNodeId: 'node-2',
+      title: 'Child',
+      content: '# Child',
+      anchorLink: { id: '1', kind: 'highlight' },
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-3',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': parentNode,
+        'node-3': childNode
+      },
+      navigation: { backStack: [], forwardStack: [] }
+    }));
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to parent node' }));
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+    fireEvent.click(screen.getByRole('button', { name: 'Go forward' }));
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
 

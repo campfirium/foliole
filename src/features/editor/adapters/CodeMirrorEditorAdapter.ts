@@ -3,6 +3,8 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorState } from '@codemirror/state';
 import { EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
+import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
+
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
 import type { EditorAdapter, EditorSelection } from './EditorAdapter';
 import { liveMarkdown } from './liveMarkdown';
@@ -77,13 +79,47 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   setSelection(selection: EditorSelection) {
-    const max = this.view.state.doc.length;
-    const anchor = Math.max(0, Math.min(selection.from, max));
-    const head = Math.max(0, Math.min(selection.to, max));
-
+    const { anchor, head } = this.clampSelection(selection);
     this.view.dispatch({
       selection: { anchor, head },
       scrollIntoView: false
+    });
+  }
+
+  revealSelection(selection: EditorSelection) {
+    const { anchor, head } = this.clampSelection(selection);
+    this.view.dispatch({
+      selection: { anchor, head },
+      scrollIntoView: true
+    });
+    this.view.focus();
+    this.alignSelectionInViewport(anchor);
+  }
+
+  private clampSelection(selection: EditorSelection) {
+    const max = this.view.state.doc.length;
+    const anchor = Math.max(0, Math.min(selection.from, max));
+    const head = Math.max(0, Math.min(selection.to, max));
+    return { anchor, head };
+  }
+
+  private alignSelectionInViewport(position: number) {
+    requestAnimationFrame(() => {
+      const scroller = this.view.scrollDOM;
+      const cursorRect = this.view.coordsAtPos(position) ?? this.view.coordsAtPos(position, -1);
+      if (!cursorRect) {
+        return;
+      }
+
+      const viewportRect = scroller.getBoundingClientRect();
+      const nextScrollTop = alignScrollTopToViewportRatio({
+        currentScrollTop: scroller.scrollTop,
+        cursorViewportTop: cursorRect.top,
+        scrollHeight: scroller.scrollHeight,
+        viewportHeight: scroller.clientHeight,
+        viewportTop: viewportRect.top
+      });
+      scroller.scrollTop = nextScrollTop;
     });
   }
 

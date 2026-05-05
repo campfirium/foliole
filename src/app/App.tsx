@@ -13,9 +13,16 @@ import {
 } from './contextCommands';
 import { useDocumentWidthResizer } from './hooks/useDocumentWidthResizer';
 import { useListResizer } from './hooks/useListResizer';
+import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 
 export function App() {
   const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
+  const goBack = useWorkspaceStore((state) => state.goBack);
+  const goForward = useWorkspaceStore((state) => state.goForward);
+  const goToParent = useWorkspaceStore((state) => state.goToParent);
+  const jumpToAncestorNode = useWorkspaceStore((state) => state.jumpToAncestorNode);
+  const navigation = useWorkspaceStore((state) => state.navigation);
+  const openNode = useWorkspaceStore((state) => state.openNode);
   const createHighlightNodeFromSelection = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
   const createRootNode = useWorkspaceStore((state) => state.createRootNode);
   const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
@@ -26,7 +33,6 @@ export function App() {
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const resetLayout = useWorkspaceStore((state) => state.resetLayout);
   const setNodeViewState = useWorkspaceStore((state) => state.setNodeViewState);
-  const setActiveNode = useWorkspaceStore((state) => state.setActiveNode);
   const setDocumentMaxWidth = useWorkspaceStore((state) => state.setDocumentMaxWidth);
   const setListWidth = useWorkspaceStore((state) => state.setListWidth);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
@@ -70,11 +76,34 @@ export function App() {
     updateNodeReveal(activeNodeId, answer);
   };
 
-  const handleSelectNode = (nodeId: string) => {
+  const closeContextMenu = () => {
     setContextMenu(null);
-    saveActiveNodeView();
-    setActiveNode(nodeId);
   };
+
+  const {
+    canGoBack,
+    canGoForward,
+    canGoParent,
+    handleGoBack,
+    handleGoForward,
+    handleGoParent,
+    handleSelectBreadcrumbNode,
+    handleSelectNode
+  } = useWorkspaceNavigation({
+    activeNodeContent: activeNode?.content ?? null,
+    activeNodeId,
+    activeNodeParentId: activeNode?.parentNodeId ?? null,
+    backStackSize: navigation.backStack.length,
+    closeContextMenu,
+    editorRef,
+    forwardStackSize: navigation.forwardStack.length,
+    goBack,
+    goForward,
+    goToParent,
+    jumpToAncestorNode,
+    openNode,
+    saveActiveNodeView
+  });
 
   const handleEditorContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -90,10 +119,6 @@ export function App() {
       payload: commandPayload,
       top: position.top
     });
-  };
-
-  const closeContextMenu = () => {
-    setContextMenu(null);
   };
 
   const syncActiveNodeContentFromEditor = () => {
@@ -171,6 +196,9 @@ export function App() {
   return (
     <WorkspaceLayout
       activeNodeId={activeNodeId}
+      canGoBack={canGoBack}
+      canGoForward={canGoForward}
+      canGoParent={canGoParent}
       contextMenu={contextMenu ? { canRunCommands: contextMenu.canRunCommands, left: contextMenu.left, top: contextMenu.top } : null}
       documentMaxWidth={documentMaxWidth}
       editorContent={editorContent}
@@ -188,7 +216,11 @@ export function App() {
       onEditorChange={handleEditorChange}
       onEditorContextMenu={handleEditorContextMenu}
       onEditorReady={handleEditorReady}
+      onGoBack={handleGoBack}
+      onGoForward={handleGoForward}
+      onGoParent={handleGoParent}
       onResetLayout={resetLayout}
+      onSelectBreadcrumbNode={handleSelectBreadcrumbNode}
       onStartDocumentResize={documentResize.startResize}
       onSelectNode={handleSelectNode}
       onSplitterKeyDown={listResize.handleSplitterKeyDown}

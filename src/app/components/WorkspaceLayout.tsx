@@ -7,6 +7,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
+import { WorkspaceToolbar } from './WorkspaceToolbar';
 
 export interface WorkspaceEditorContextMenu {
   canRunCommands: boolean;
@@ -16,6 +17,9 @@ export interface WorkspaceEditorContextMenu {
 
 export interface WorkspaceLayoutProps {
   activeNodeId: string | null;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  canGoParent: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
@@ -31,9 +35,13 @@ export interface WorkspaceLayoutProps {
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onResetLayout: () => void;
+  onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onGoBack: () => void;
+  onGoForward: () => void;
+  onGoParent: () => void;
   onCloseContextMenu: () => void;
   onCreateHighlight: () => void;
   onCreateCloze: () => void;
@@ -45,6 +53,9 @@ export interface WorkspaceLayoutProps {
 
 export function WorkspaceLayout({
   activeNodeId,
+  canGoBack,
+  canGoForward,
+  canGoParent,
   contextMenu,
   documentMaxWidth,
   editorContent,
@@ -60,9 +71,13 @@ export function WorkspaceLayout({
   onEditorReady,
   onEditorContextMenu,
   onResetLayout,
+  onSelectBreadcrumbNode,
   onSelectNode,
   onSplitterKeyDown,
   onSplitterPointerDown,
+  onGoBack,
+  onGoForward,
+  onGoParent,
   onCloseContextMenu,
   onCreateHighlight,
   onCreateCloze,
@@ -74,6 +89,14 @@ export function WorkspaceLayout({
 
   return (
     <main aria-label="Foliole workspace" className="workspace-shell">
+      <WorkspaceToolbar
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        canGoParent={canGoParent}
+        onGoBack={onGoBack}
+        onGoForward={onGoForward}
+        onGoParent={onGoParent}
+      />
       <div className="workspace-grid" data-resizing={isResizingList} style={workspaceGridStyle}>
         <NodeListTree
           activeNodeId={activeNodeId}
@@ -103,7 +126,7 @@ export function WorkspaceLayout({
           onCreateHighlight={onCreateHighlight}
           onCreateCloze={onCreateCloze}
           onResetLayout={onResetLayout}
-          onSelectNode={onSelectNode}
+          onSelectNode={onSelectBreadcrumbNode}
           onStartDocumentResize={onStartDocumentResize}
           nodesById={nodesById}
         />

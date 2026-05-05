@@ -19,15 +19,38 @@ body {
 }
 
 .workspace-shell {
-  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  height: 100dvh;
+  overflow: hidden;
   padding: var(--layout-shell-padding);
 }
 
 .workspace-grid {
+  flex: 1;
   display: grid;
   gap: var(--space-4);
   grid-template-columns: minmax(0, var(--workspace-list-width, var(--layout-left-width))) 4px minmax(0, 1fr);
-  height: calc(100dvh - 2 * var(--layout-shell-padding));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace-toolbar {
+  align-items: center;
+  background: linear-gradient(170deg, var(--color-bg-panel), var(--color-bg-subtle));
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-16);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: var(--space-8) var(--space-12);
+}
+
+.workspace-toolbar-group {
+  display: inline-flex;
+  gap: var(--space-4);
 }
 
 .panel-list {
@@ -364,7 +387,7 @@ body.workspace-resizing {
   .workspace-grid {
     gap: var(--space-8);
     grid-template-columns: 1fr;
-    height: auto;
+    grid-template-rows: minmax(0, 38dvh) minmax(0, 1fr);
   }
 
   .workspace-splitter {
@@ -373,7 +396,11 @@ body.workspace-resizing {
 
   .panel-list,
   .panel-editor {
-    min-height: 220px;
+    min-height: 0;
+  }
+
+  .panel-list {
+    max-height: none;
   }
 
   .editor-body {

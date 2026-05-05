@@ -66,6 +66,21 @@ function createTestStore(now: Date) {
         return { activeNodeId: nodeId };
       });
     },
+    openNode: (nodeId) => {
+      let result: { focusAnchor: null; nodeId: string } | null = null;
+      set((state) => {
+        if (!state.nodesById[nodeId]) {
+          return state;
+        }
+        result = { focusAnchor: null, nodeId };
+        return { activeNodeId: nodeId };
+      });
+      return result;
+    },
+    goBack: () => null,
+    goForward: () => null,
+    goToParent: () => null,
+    jumpToAncestorNode: () => null,
     updateNodeContent: (nodeId, content) => {
       set((state) => {
         const node = state.nodesById[nodeId];
