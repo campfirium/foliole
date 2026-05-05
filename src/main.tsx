@@ -11,6 +11,8 @@ import {
   resolveRuntimeAppPaths
 } from './shared/platform/bridge';
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
+import { installRendererErrorDiagnostics } from './shared/platform/rendererErrorDiagnostics';
+import { logRuntimeError } from './shared/platform/runtimeLogging';
 import { bootstrapApp } from './startupBootstrap';
 import { renderStartupErrorView } from './startupErrorView';
 
@@ -19,7 +21,11 @@ const ROOT_ID = 'root';
 function renderStartupError(message: string) {
   const rootElement = document.getElementById(ROOT_ID);
   if (!rootElement) {
-    console.error(`[startup] ${message}`);
+    logRuntimeError('startup root missing', {
+      action: 'render_startup_error',
+      area: 'bridge',
+      message
+    });
     return;
   }
 
@@ -28,7 +34,6 @@ function renderStartupError(message: string) {
 
 function registerBootDiagnostics() {
   window.addEventListener('error', (event) => {
-    console.error('[startup] uncaught error', event.error);
     reportRuntimeBootStage('window_error', {
       message: event.message,
       source: event.filename,
@@ -37,7 +42,6 @@ function registerBootDiagnostics() {
     });
   });
   window.addEventListener('unhandledrejection', (event) => {
-    console.error('[startup] unhandled rejection', event.reason);
     reportRuntimeBootStage('unhandled_rejection', {
       reason: String(event.reason)
     });
@@ -145,6 +149,7 @@ async function reportDesktopBridgeReady() {
 }
 
 installDesktopDebugProbe();
+installRendererErrorDiagnostics();
 bootstrapApp({
   mountApp,
   renderStartupError,

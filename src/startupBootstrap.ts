@@ -1,3 +1,5 @@
+import { logRuntimeError } from './shared/platform/runtimeLogging';
+
 type BootStageReporter = (stage: string, payload?: Record<string, unknown>) => void;
 
 interface StartupBootstrapArgs {
@@ -22,7 +24,11 @@ async function runBackgroundTask(
     await task();
     reportBootStage(`${stage}_completed`);
   } catch (error) {
-    console.error(`[startup] ${stage}`, error);
+    logRuntimeError('startup task failed', {
+      action: stage,
+      area: 'bridge',
+      error
+    });
     reportBootStage(stage, {
       message: toErrorMessage(error)
     });
@@ -39,7 +45,11 @@ export function bootstrapApp(args: StartupBootstrapArgs) {
       await args.mountApp();
       args.reportBootStage('mount_complete');
     } catch (error) {
-      console.error('[startup] fatal bootstrap error', error);
+      logRuntimeError('fatal bootstrap error', {
+        action: 'bootstrap',
+        area: 'bridge',
+        error
+      });
       args.reportBootStage('fatal_bootstrap_error', {
         message: toErrorMessage(error)
       });

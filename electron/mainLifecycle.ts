@@ -7,6 +7,7 @@ import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
+import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, startExternalSearchBackgroundRefresh, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor, stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
@@ -48,16 +49,16 @@ function installBeforeQuitLifecycle() {
     stopExternalSearchBackgroundRefresh();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
-    void stopLanWorkspaceSyncServer().catch((error) => console.error('[companion-sync] stop lan workspace sync server failed', error));
+    void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
     if (mirrorFlushed) return;
     mirrorFlushed = true;
     event.preventDefault();
     try {
       flushAllDirtyNodeSyncVersions();
     } catch (error) {
-      console.error('[database] flush dirty node sync versions on quit failed', error);
+      appendMainProcessDiagnosticLog('node_sync_flush_on_quit_failed', { error });
     }
-    flushMirrorSync().catch((error) => console.error('[mirror] flush on quit failed', error)).finally(() => app.quit());
+    flushMirrorSync().catch((error) => appendMainProcessDiagnosticLog('mirror_flush_on_quit_failed', { error })).finally(() => app.quit());
   });
 }
 
@@ -65,7 +66,10 @@ async function initializeRuntimeServices(args: MainLifecycleArgs) {
   await appendBootEvent('database_init_start');
   await appendBootEvent('database_initialize_call_start');
   initializeDatabase((stage, payload = null) => {
-    void appendBootEvent(stage, payload).catch((error) => console.error(`[electron-main] boot log failed: ${stage}`, error));
+    void appendBootEvent(stage, payload).catch((error) => appendMainProcessDiagnosticLog('boot_log_failed', {
+      error,
+      stage
+    }));
   });
   await appendBootEvent('database_initialize_call_complete');
   await appendBootEvent('node_sync_flush_start');
@@ -107,8 +111,8 @@ function startFollowupTasks() {
 
 function installAppProcessDiagnostics() {
   installMainRuntimeDiagnostics();
-  app.on('render-process-gone', (_, webContents, details) => console.error('[electron-main] render-process-gone', { ...details, url: webContents.getURL() }));
-  app.on('child-process-gone', (_, details) => console.error('[electron-main] child-process-gone', details));
+  app.on('render-process-gone', (_, webContents, details) => appendMainProcessDiagnosticLog('render_process_gone', { ...details, url: webContents.getURL() }));
+  app.on('child-process-gone', (_, details) => appendMainProcessDiagnosticLog('child_process_gone', { ...details }));
   app.on('web-contents-created', (_, contents) => bindEmbeddedLinkPanelContents(contents));
 }
 

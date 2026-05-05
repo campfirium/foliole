@@ -3,6 +3,7 @@ import type {
   NativeBackupSettings,
   NativeClearLinkPanelBrowsingDataResult,
   NativeCopyAttachmentImageResult,
+  NativeExportDiagnosticBundleResult,
   NativeExportAttachmentImageResult,
   NativeExportCurrentArticleMirrorResult,
   NativeLibraryPaths,
@@ -42,6 +43,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.clearLinkPanelBrowsingData]: {
     args: undefined;
     result: NativeClearLinkPanelBrowsingDataResult;
+  };
+  [NATIVE_COMMANDS.exportDiagnosticBundle]: {
+    args: undefined;
+    result: NativeExportDiagnosticBundleResult;
   };
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {
     args: undefined;

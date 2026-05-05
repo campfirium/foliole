@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
+import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
 import type { PersistedWindowState } from './ipc/windowState.js';
 
-const LOG_DIR = path.join(process.cwd(), 'logs', 'windows');
-const LOG_PATH = path.join(LOG_DIR, 'window-state-lifecycle.ndjson');
+const LOG_FILE_NAME = 'window-state-lifecycle.ndjson';
 
 interface WindowRuntimeStateSnapshot {
   bounds: ReturnType<BrowserWindow['getBounds']> | null;
@@ -18,8 +18,9 @@ interface WindowRuntimeStateSnapshot {
 }
 
 function appendLog(entry: Record<string, unknown>) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-  fs.appendFileSync(LOG_PATH, `${JSON.stringify(entry)}\n`, 'utf8');
+  const logPath = resolveWindowsDiagnosticLogPath(LOG_FILE_NAME);
+  fs.mkdirSync(path.dirname(logPath), { recursive: true });
+  fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`, 'utf8');
 }
 
 function collectRuntimeState(window: BrowserWindow): WindowRuntimeStateSnapshot {

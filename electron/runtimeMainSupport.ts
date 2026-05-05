@@ -1,5 +1,6 @@
 import type { BrowserWindowConstructorOptions, Session, WebContents } from 'electron';
 
+import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
 import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import type { RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
@@ -38,10 +39,10 @@ export function focusWindow(window: import('electron').BrowserWindow | undefined
 
 export function installMainRuntimeDiagnostics() {
   process.on('uncaughtException', (error) => {
-    console.error('[electron-main] uncaughtException', error);
+    logMainProcessException('main_uncaught_exception', error);
   });
   process.on('unhandledRejection', (reason) => {
-    console.error('[electron-main] unhandledRejection', reason);
+    logMainProcessException('main_unhandled_rejection', reason);
   });
 }
 

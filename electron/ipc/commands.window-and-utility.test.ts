@@ -15,9 +15,11 @@ const {
   mockWindow,
   openExternal,
   openPath,
+  exportDiagnosticBundle,
   readFile,
   recordPreparedImportFailure,
   runPreparedImport,
+  showItemInFolder,
   showOpenDialog,
   syncAppMenuState,
   flushAllDirtyNodeSyncVersions
@@ -39,6 +41,7 @@ const {
   },
   mockApp: {
     exit: vi.fn(),
+    getPath: vi.fn((name: string) => ({ crashDumps: '/crash', desktop: '/desktop', logs: '/log' })[name] ?? '/tmp'),
     getVersion: () => '1.0.0',
     relaunch: vi.fn()
   },
@@ -58,9 +61,15 @@ const {
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
   openPath: vi.fn().mockResolvedValue(''),
+  exportDiagnosticBundle: vi.fn().mockResolvedValue({
+    file_path: '/desktop/foliole-diagnostics.zip',
+    included_file_count: 2,
+    status: 'exported'
+  }),
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
   recordPreparedImportFailure: vi.fn(),
   runPreparedImport: vi.fn(),
+  showItemInFolder: vi.fn(),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] }),
   syncAppMenuState: vi.fn(),
   flushAllDirtyNodeSyncVersions: vi.fn(() => ['node-1'])
@@ -74,13 +83,14 @@ vi.mock('electron', () => ({
   },
   app: mockApp,
   dialog: { showOpenDialog },
-  shell: { openExternal, openPath }
+  shell: { openExternal, openPath, showItemInFolder }
 }));
 vi.mock('node:fs/promises', () => ({
   default: { readFile },
   readFile
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState }));
+vi.mock('../diagnostics/diagnosticBundle.js', () => ({ exportDiagnosticBundle }));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
     app_data_dir: '/data',
@@ -140,10 +150,18 @@ it('handles typed native utility commands', async () => {
       shortcutAccelerators: [{ accelerator: 'Control+N', commandId: 'node.create' }]
     }
   } satisfies NativeInvokeRequest<'sync_app_menu_state'>;
+  const exportDiagnosticBundleRequest = {
+    command: 'export_diagnostic_bundle'
+  } satisfies NativeInvokeRequest<'export_diagnostic_bundle'>;
 
   await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
   await expect(handleInvokeRequest(openLocalPathRequest)).resolves.toBeNull();
   await expect(handleInvokeRequest(syncAppMenuStateRequest)).resolves.toBeNull();
+  await expect(handleInvokeRequest(exportDiagnosticBundleRequest)).resolves.toEqual({
+    file_path: '/desktop/foliole-diagnostics.zip',
+    included_file_count: 2,
+    status: 'exported'
+  });
   await expect(
     handleInvokeRequest({ command: 'app_get_version' } satisfies NativeInvokeRequest<'app_get_version'>)
   ).resolves.toBe('1.0.0');
@@ -154,6 +172,7 @@ it('handles typed native utility commands', async () => {
     ['node.create', 'node.delete'],
     [{ accelerator: 'Control+N', commandId: 'node.create' }]
   );
+  expect(exportDiagnosticBundle).toHaveBeenCalledTimes(1);
 });
 
 it('throws on unsupported command', async () => {

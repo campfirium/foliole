@@ -104,6 +104,12 @@ export interface NativeClearLinkPanelBrowsingDataResult {
   status: 'cleared';
 }
 
+export interface NativeExportDiagnosticBundleResult {
+  file_path: string;
+  included_file_count: number;
+  status: 'exported';
+}
+
 export interface NativeSystemFontCatalog {
   fonts: unknown[];
   monospace_fonts: unknown[];

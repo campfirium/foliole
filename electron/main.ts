@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   app,
   BrowserWindow,
+  crashReporter,
   ipcMain,
   type BrowserWindow as ElectronBrowserWindow
 } from 'electron';
@@ -12,6 +13,7 @@ import {
 import { registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
 import { installMainWindowContentSecurityPolicy } from './contentSecurityPolicy.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
+import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
@@ -58,11 +60,15 @@ const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
 console.info('[electron-main] app identity configured', configuredIdentity);
 console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
 registerAttachmentProtocolScheme();
+startLocalCrashReporter(crashReporter, configuredIdentity.appName);
 void appendBootEvent('main_process_start', {
   appName: configuredIdentity.appName,
   runtimeMode
 }).catch((error) => {
-  console.error('[electron-main] boot log failed: main_process_start', error);
+  appendMainProcessDiagnosticLog('boot_log_failed', {
+    error,
+    stage: 'main_process_start'
+  });
 });
 
 function bindWindowIpc(window: ElectronBrowserWindow) {

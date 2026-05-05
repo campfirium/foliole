@@ -3,15 +3,17 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
+import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
+import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
 import { appendBootEvent } from './ipc/boot.js';
 
-const LOG_DIR = path.join(process.cwd(), 'logs', 'windows');
-const LOG_PATH = path.join(LOG_DIR, 'renderer-state.ndjson');
+const LOG_FILE_NAME = 'renderer-state.ndjson';
 
 function appendRendererStateLog(label: string, snapshot: unknown) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
+  const logPath = resolveWindowsDiagnosticLogPath(LOG_FILE_NAME);
+  fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.appendFileSync(
-    LOG_PATH,
+    logPath,
     `${JSON.stringify({ label, snapshot, timestamp: new Date().toISOString() })}\n`,
     'utf8'
   );
@@ -20,7 +22,10 @@ function appendRendererStateLog(label: string, snapshot: unknown) {
 function appendRuntimeEventLog(label: string, payload: Record<string, unknown> = {}) {
   appendRendererStateLog(`event:${label}`, payload);
   void appendBootEvent(`window_${label}`, payload).catch((error) => {
-    console.error(`[electron-main] boot log failed: window_${label}`, error);
+    appendMainProcessDiagnosticLog('boot_log_failed', {
+      error,
+      stage: `window_${label}`
+    });
   });
 }
 
@@ -55,7 +60,7 @@ function logRendererStateSnapshot(window: BrowserWindow, label: string) {
       appendRendererStateLog(label, snapshot);
     })
     .catch((error) => {
-      console.error(`[electron-main] renderer state snapshot failed:${label}`, error);
+      appendMainProcessDiagnosticLog('renderer_state_snapshot_failed', { error, label });
       appendRendererStateLog(label, {
         error: error instanceof Error ? error.message : String(error)
       });
@@ -77,7 +82,7 @@ function logBridgeSnapshot(window: BrowserWindow) {
       console.info('[electron-main] renderer bridge snapshot', snapshot);
     })
     .catch((error) => {
-      console.error('[electron-main] renderer bridge snapshot failed', error);
+      appendMainProcessDiagnosticLog('renderer_bridge_snapshot_failed', { error });
     });
 }
 
@@ -127,7 +132,7 @@ export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
       errorDescription,
       validatedURL
     });
-    console.error('[electron-main] did-fail-load', {
+    appendMainProcessDiagnosticLog('renderer_did_fail_load', {
       errorCode,
       errorDescription,
       validatedURL

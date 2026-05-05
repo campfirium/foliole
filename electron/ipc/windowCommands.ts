@@ -1,6 +1,7 @@
 import { BrowserWindow, app, shell } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { exportDiagnosticBundle } from '../diagnostics/diagnosticBundle.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
@@ -114,6 +115,9 @@ function handleUtilityCommand(request: InvokeRequest) {
   }
   if (request.command === NATIVE_COMMANDS.clearLinkPanelBrowsingData) {
     return clearLinkPanelBrowsingData();
+  }
+  if (request.command === NATIVE_COMMANDS.exportDiagnosticBundle) {
+    return exportDiagnosticBundle({ app, shell });
   }
   if (request.command === NATIVE_COMMANDS.syncAppMenuState) {
     syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'), asShortcutAccelerators(args.shortcutAccelerators));

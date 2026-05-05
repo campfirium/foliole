@@ -1,6 +1,8 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { resolveWindowsDiagnosticLogDir } from '../diagnostics/windowsDiagnosticPaths.js';
+
 const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson');
 const READY_MARKER_FILE = '.windows-native-boot-ready.json';
 const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
@@ -36,12 +38,14 @@ function createBootEvent(stage: string, payload: unknown, source: BootEventSourc
   };
 }
 
-export function resolveBootArtifactPaths(repoRoot = resolveRepoRoot()) {
+export function resolveBootArtifactPaths(repoRoot?: string) {
+  const markerRoot = repoRoot ?? resolveRepoRoot();
+  const logDir = repoRoot ? path.join(repoRoot, 'logs', 'windows') : resolveWindowsDiagnosticLogDir();
   return {
-    bridgeReadyMarkerPath: path.join(repoRoot, BRIDGE_READY_MARKER_FILE),
-    eventLogPath: path.join(repoRoot, BOOT_EVENT_LOG),
-    readyMarkerPath: path.join(repoRoot, READY_MARKER_FILE),
-    repoRoot
+    bridgeReadyMarkerPath: path.join(markerRoot, BRIDGE_READY_MARKER_FILE),
+    eventLogPath: path.join(logDir, path.basename(BOOT_EVENT_LOG)),
+    readyMarkerPath: path.join(markerRoot, READY_MARKER_FILE),
+    repoRoot: markerRoot
   };
 }
 
