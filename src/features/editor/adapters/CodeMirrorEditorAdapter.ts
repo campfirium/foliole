@@ -40,6 +40,7 @@ import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
   type EditorTextAnchorDecoration,
   type EditorAdapter,
+  type EditorRevealOptions,
   type EditorScrollMetrics,
   type EditorSearchDecorations,
   type EditorSelection
@@ -177,20 +178,20 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       scrollIntoView: false
     });
   }
-  revealSelection(selection: EditorSelection) {
-    revealEditorSelection(this.view, selection, (position) => this.clampPosition(position));
+  revealSelection(selection: EditorSelection, options?: EditorRevealOptions) {
+    revealEditorSelection(this.view, selection, (position) => this.clampPosition(position), undefined, options);
   }
-  revealSelectionCentered(selection: EditorSelection) {
-    revealEditorSelectionCentered(this.view, selection, (position) => this.clampPosition(position));
+  revealSelectionCentered(selection: EditorSelection, options?: EditorRevealOptions) {
+    revealEditorSelectionCentered(this.view, selection, (position) => this.clampPosition(position), options);
   }
-  revealSelectionNearest(selection: EditorSelection) {
-    revealEditorSelectionNearest(this.view, selection, (position) => this.clampPosition(position));
+  revealSelectionNearest(selection: EditorSelection, options?: EditorRevealOptions) {
+    revealEditorSelectionNearest(this.view, selection, (position) => this.clampPosition(position), options);
   }
-  revealSelectionAtViewportRatio(selection: EditorSelection, ratio: number) {
-    revealEditorSelection(this.view, selection, (position) => this.clampPosition(position), ratio);
+  revealSelectionAtViewportRatio(selection: EditorSelection, ratio: number, options?: EditorRevealOptions) {
+    revealEditorSelection(this.view, selection, (position) => this.clampPosition(position), ratio, options);
   }
-  restoreSelection(selection: EditorSelection) {
-    restoreEditorSelection(this.view, selection, (position) => this.clampPosition(position));
+  restoreSelection(selection: EditorSelection, options?: EditorRevealOptions) {
+    restoreEditorSelection(this.view, selection, (position) => this.clampPosition(position), options);
   }
   private clampPosition(position: number) {
     return clampEditorPosition(position, this.view.state.doc.length);

@@ -3,13 +3,14 @@ import { EditorView, type EditorView as CodeMirrorView } from '@codemirror/view'
 import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 
 import { alignSelectionInViewport } from './codeMirrorEditorAdapterView';
-import type { EditorSelection } from './EditorAdapter';
+import type { EditorRevealOptions, EditorSelection } from './EditorAdapter';
 
 export function revealEditorSelection(
   view: CodeMirrorView,
   selection: EditorSelection,
   clampPosition: (position: number) => number,
-  targetRatio?: number
+  targetRatio?: number,
+  options?: EditorRevealOptions
 ) {
   const anchor = clampPosition(selection.from);
   const head = clampPosition(selection.to);
@@ -22,14 +23,17 @@ export function revealEditorSelection(
     selection: { anchor, head },
     scrollIntoView: targetRatio == null
   });
-  view.focus();
+  if (!options?.preserveFocus) {
+    view.focus();
+  }
   alignSelectionInViewport(view, anchor, targetRatio);
 }
 
 export function revealEditorSelectionCentered(
   view: CodeMirrorView,
   selection: EditorSelection,
-  clampPosition: (position: number) => number
+  clampPosition: (position: number) => number,
+  options?: EditorRevealOptions
 ) {
   const anchor = clampPosition(selection.from);
   const head = clampPosition(selection.to);
@@ -42,13 +46,16 @@ export function revealEditorSelectionCentered(
     selection: { anchor, head },
     scrollIntoView: false
   });
-  view.focus();
+  if (!options?.preserveFocus) {
+    view.focus();
+  }
 }
 
 export function revealEditorSelectionNearest(
   view: CodeMirrorView,
   selection: EditorSelection,
-  clampPosition: (position: number) => number
+  clampPosition: (position: number) => number,
+  options?: EditorRevealOptions
 ) {
   const anchor = clampPosition(selection.from);
   const head = clampPosition(selection.to);
@@ -61,13 +68,16 @@ export function revealEditorSelectionNearest(
     selection: { anchor, head },
     scrollIntoView: false
   });
-  view.focus();
+  if (!options?.preserveFocus) {
+    view.focus();
+  }
 }
 
 export function restoreEditorSelection(
   view: CodeMirrorView,
   selection: EditorSelection,
-  clampPosition: (position: number) => number
+  clampPosition: (position: number) => number,
+  options?: EditorRevealOptions
 ) {
   const anchor = clampPosition(selection.from);
   const head = clampPosition(selection.to);
@@ -82,4 +92,5 @@ export function restoreEditorSelection(
     },
     scrollIntoView: true
   });
+  void options;
 }

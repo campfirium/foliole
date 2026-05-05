@@ -5,6 +5,10 @@ export interface EditorSelection {
 
 export type EditorViewportMode = 'center' | 'nearest';
 
+export interface EditorRevealOptions {
+  preserveFocus?: boolean;
+}
+
 export interface EditorSearchDecorations {
   activeIndex: number;
   matches: EditorSelection[];
@@ -36,15 +40,15 @@ export interface EditorAdapter {
   isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
-  revealSelectionCentered?(selection: EditorSelection): void;
-  revealSelectionNearest?(selection: EditorSelection): void;
-  revealSelectionAtViewportRatio?(selection: EditorSelection, ratio: number): void;
+  revealSelectionCentered?(selection: EditorSelection, options?: EditorRevealOptions): void;
+  revealSelectionNearest?(selection: EditorSelection, options?: EditorRevealOptions): void;
+  revealSelectionAtViewportRatio?(selection: EditorSelection, ratio: number, options?: EditorRevealOptions): void;
   setParagraphMarker?(selection: EditorSelection | null): void;
-  restoreSelection(selection: EditorSelection): void;
+  restoreSelection(selection: EditorSelection, options?: EditorRevealOptions): void;
   setContent(content: string): void;
   getSelection(): EditorSelection;
   getSelectionRanges(): EditorSelection[];
-  revealSelection(selection: EditorSelection): void;
+  revealSelection(selection: EditorSelection, options?: EditorRevealOptions): void;
   setSelection(selection: EditorSelection): void;
   setSelectionRanges(selections: EditorSelection[]): void;
   getLineBlockHeight(lineNumber: number): number;

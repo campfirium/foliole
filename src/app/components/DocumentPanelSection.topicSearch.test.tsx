@@ -4,16 +4,18 @@ import { describe, expect, it, vi } from 'vitest';
 import { documentPanelBodyMock, renderSectionWithProps } from './DocumentPanelSection.testSupport';
 
 async function expectTopicSearchMatch(args: {
-  restoreSelection: ReturnType<typeof vi.fn>;
+  revealSelectionCentered: ReturnType<typeof vi.fn>;
   input: HTMLElement;
   selection: { from: number; to: number };
   status: string;
 }) {
   await waitFor(() => {
-    expect(args.restoreSelection).toHaveBeenLastCalledWith(args.selection);
+    expect(args.revealSelectionCentered).toHaveBeenLastCalledWith(args.selection, {
+      preserveFocus: true
+    });
     expect(screen.getByTestId('topic-search-status')).toHaveTextContent(args.status);
+    expect(args.input).toHaveFocus();
   });
-  expect(args.input).toHaveFocus();
 }
 
 async function openTopicSearchInput() {
@@ -25,6 +27,12 @@ async function openTopicSearchInput() {
 
 async function createTopicSearchSession() {
   const revealSelection = vi.fn();
+  const revealSelectionCentered = vi.fn(() => {
+    const editorSink = document.createElement('button');
+    editorSink.type = 'button';
+    document.body.append(editorSink);
+    editorSink.focus();
+  });
   const restoreSelection = vi.fn();
   const setSearchDecorations = vi.fn();
 
@@ -33,12 +41,13 @@ async function createTopicSearchSession() {
     onRevealDocumentSelection: revealSelection
   });
   const bodyProps = documentPanelBodyMock.mock.calls.at(-1)?.[0];
-  bodyProps?.onEditorReady?.({ restoreSelection, setSearchDecorations } as never);
+  bodyProps?.onEditorReady?.({ revealSelectionCentered, restoreSelection, setSearchDecorations } as never);
 
   return {
     input: await openTopicSearchInput(),
-    restoreSelection,
     revealSelection,
+    revealSelectionCentered,
+    restoreSelection,
     setSearchDecorations
   };
 }
@@ -63,22 +72,23 @@ function clickNextMatchButton() {
 
 describe('DocumentPanelSection topic search', () => {
   it('opens topic search with Ctrl+F and navigates topic matches', async () => {
-    const { input, restoreSelection, revealSelection, setSearchDecorations } = await createTopicSearchSession();
+    const { input, restoreSelection, revealSelection, revealSelectionCentered, setSearchDecorations } = await createTopicSearchSession();
     fireEvent.change(input, { target: { value: 'alpha' } });
 
     await expectTopicSearchMatch({
-      restoreSelection,
+      revealSelectionCentered,
       input,
       selection: { from: 0, to: 5 },
       status: '1 / 2'
     });
     expect(revealSelection).not.toHaveBeenCalled();
+    expect(restoreSelection).not.toHaveBeenCalled();
     expectSearchDecorations(setSearchDecorations, 0);
 
     fireEvent.keyDown(input, { key: 'Enter' });
 
     await expectTopicSearchMatch({
-      restoreSelection,
+      revealSelectionCentered,
       input,
       selection: { from: 11, to: 16 },
       status: '2 / 2'
@@ -88,7 +98,7 @@ describe('DocumentPanelSection topic search', () => {
     fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
 
     await expectTopicSearchMatch({
-      restoreSelection,
+      revealSelectionCentered,
       input,
       selection: { from: 0, to: 5 },
       status: '1 / 2'
@@ -97,7 +107,7 @@ describe('DocumentPanelSection topic search', () => {
     clickNextMatchButton();
 
     await expectTopicSearchMatch({
-      restoreSelection,
+      revealSelectionCentered,
       input,
       selection: { from: 11, to: 16 },
       status: '2 / 2'

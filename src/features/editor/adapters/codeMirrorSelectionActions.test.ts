@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { revealEditorSelection, revealEditorSelectionNearest } from './codeMirrorSelectionActions';
+import { revealEditorSelection, revealEditorSelectionCentered, revealEditorSelectionNearest } from './codeMirrorSelectionActions';
 
 function createViewHarness() {
   return {
@@ -53,5 +53,20 @@ describe('codeMirrorSelectionActions', () => {
       selection: { anchor: 30, head: 36 }
     });
     expect(view.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the current focus owner when centered reveal asks to preserve focus', () => {
+    const view = createViewHarness();
+
+    revealEditorSelectionCentered(view as never, { from: 30, to: 36 }, (position) => position, {
+      preserveFocus: true
+    });
+
+    expect(view.dispatch).toHaveBeenCalledWith({
+      effects: expect.anything(),
+      scrollIntoView: false,
+      selection: { anchor: 30, head: 36 }
+    });
+    expect(view.focus).not.toHaveBeenCalled();
   });
 });

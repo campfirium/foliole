@@ -40,7 +40,11 @@ export function useDocumentPanelInteractions(props: DocumentPanelSectionProps) {
         props.onSelectNode(targetNodeId);
       }
     },
-    handlePreviewDocumentSelection: (selection: EditorSelection) => {
+    handlePreviewDocumentSelection: (selection: EditorSelection, targetViewportMode?: 'center' | 'nearest') => {
+      if (targetViewportMode === 'center' && editorAdapterRef.current?.revealSelectionCentered) {
+        editorAdapterRef.current.revealSelectionCentered(selection, { preserveFocus: true });
+        return;
+      }
       editorAdapterRef.current?.restoreSelection(selection);
     },
     handlePreviewTopicSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => {

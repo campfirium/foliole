@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type KeyboardEvent
 
 import type {
   EditorSearchDecorations,
-  EditorSelection
+  EditorSelection,
+  EditorViewportMode
 } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
@@ -23,7 +24,7 @@ interface DocumentTopicSearchToolbarProps {
   activeNode: Node | undefined;
   activeNodeId: string | null;
   editorContent: string;
-  onRevealDocumentSelection: (selection: EditorSelection) => void;
+  onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onUpdateSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => void;
 }
 
@@ -85,7 +86,7 @@ function useTopicSearchState(args: DocumentTopicSearchToolbarProps): TopicSearch
   const matches = useMemo(() => buildTopicSearchMatches(args.editorContent, query), [args.editorContent, query]);
 
   useResetTopicSearchState(args.activeNodeId, isSearchAvailable, setCurrentIndex, setIsOpen, setQueryState);
-  useRevealTopicSearchMatch(currentIndex, isOpen, matches, args.onRevealDocumentSelection, setCurrentIndex);
+  useRevealTopicSearchMatch(currentIndex, inputRef, isOpen, matches, args.onRevealDocumentSelection, setCurrentIndex);
   useTopicSearchDecorations(query, matches, currentIndex, isOpen, args.onUpdateSearchDecorations);
   useFocusTopicSearchInput(focusRequestId, inputRef);
   useTopicSearchActivation(findShortcut, isSearchAvailable, setFocusRequestId, setIsOpen);
@@ -137,9 +138,10 @@ function useResetTopicSearchState(
 
 function useRevealTopicSearchMatch(
   currentIndex: number,
+  inputRef: RefObject<HTMLInputElement>,
   isOpen: boolean,
   matches: EditorSelection[],
-  onRevealDocumentSelection: (selection: EditorSelection) => void,
+  onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void,
   setCurrentIndex: Dispatch<SetStateAction<number>>
 ) {
   useEffect(() => {
@@ -153,9 +155,10 @@ function useRevealTopicSearchMatch(
     }
     const activeMatch = matches[nextIndex];
     if (activeMatch) {
-      onRevealDocumentSelection(activeMatch);
+      onRevealDocumentSelection(activeMatch, 'center');
+      refocusTopicSearchInput(inputRef);
     }
-  }, [currentIndex, isOpen, matches, onRevealDocumentSelection, setCurrentIndex]);
+  }, [currentIndex, inputRef, isOpen, matches, onRevealDocumentSelection, setCurrentIndex]);
 }
 
 function useTopicSearchDecorations(
