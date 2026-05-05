@@ -4,6 +4,7 @@ import { markNodePositionRequested } from '../../../shared/platform/performanceD
 import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
+import { canEditorRestoreTargetMatchDocument } from '../model/editorRestoreStateMachine';
 
 import {
   beginRestoreSelection,
@@ -117,13 +118,18 @@ export function resolveRestoreTarget(args: {
     return null;
   }
   const restoreScrollTop = resolveRestoreScrollTop(args.readingSelection, args.nodeViewState);
-  if (Math.max(selection.from, selection.to) > args.value.length) {
-    return null;
-  }
-  if (
-    args.value.length === 0 &&
-    (Math.max(selection.from, selection.to) > 0 || (typeof restoreScrollTop === 'number' && restoreScrollTop > 0))
-  ) {
+  if (!canEditorRestoreTargetMatchDocument(
+    {
+      nodeId: args.nodeId,
+      scrollTop: restoreScrollTop ?? 0,
+      selectionFrom: selection.from,
+      selectionTo: selection.to,
+      updatedAt: new Date(0).toISOString(),
+      source: 'user-scroll',
+      mode: 'selection'
+    },
+    { nodeId: args.nodeId, valueLength: args.value.length }
+  )) {
     return null;
   }
   const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}:${args.readingTargetViewportMode ?? 'default'}`;

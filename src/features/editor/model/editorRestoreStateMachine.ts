@@ -62,6 +62,13 @@ export function isEditorRestoreOriginatedScroll(state: EditorRestoreState) {
   return state.kind === 'matched' || state.kind === 'applied';
 }
 
+export function canEditorRestoreTargetMatchDocument(
+  target: EditorRestoreTarget,
+  documentState: EditorRestoreDocumentState
+) {
+  return target.nodeId === documentState.nodeId && canMatchDocument(target, documentState);
+}
+
 function reduceDocumentChanged(
   state: Exclude<EditorRestoreState, { kind: 'idle' }>,
   documentState: EditorRestoreDocumentState
@@ -69,7 +76,7 @@ function reduceDocumentChanged(
   if (state.target.nodeId !== documentState.nodeId) {
     return { kind: 'invalidated', target: state.target, reason: 'node-changed' };
   }
-  if (!canMatchDocument(state.target, documentState)) {
+  if (!canEditorRestoreTargetMatchDocument(state.target, documentState)) {
     return { kind: 'pending', target: state.target };
   }
   if (state.kind === 'applied' || state.kind === 'settled') {

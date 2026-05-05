@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { PersistedNodeViewState } from '../../../../lib/platform/persistedNodeViewState';
 
 import {
+  canEditorRestoreTargetMatchDocument,
   isEditorRestoreOriginatedScroll,
   reduceEditorRestoreState,
   resolveEditorRestoreTarget,
@@ -32,6 +33,9 @@ describe('editorRestoreStateMachine', () => {
       mode: 'scroll-only'
     });
   });
+});
+
+describe('editorRestoreStateMachine document matching', () => {
 
   it('keeps selection restore pending until the document is long enough', () => {
     const state = createPendingState({ ...baseState, selectionFrom: 500, selectionTo: 540 });
@@ -61,6 +65,20 @@ describe('editorRestoreStateMachine', () => {
       }).kind
     ).toBe('matched');
   });
+
+  it('keeps scroll-only restore pending while an empty document cannot scroll yet', () => {
+    const target = resolveEditorRestoreTarget(
+      { ...baseState, selectionFrom: null, selectionTo: null },
+      { nodeId: 'node-1', valueLength: 0 }
+    );
+
+    expect(target).not.toBeNull();
+    expect(canEditorRestoreTargetMatchDocument(target!, { nodeId: 'node-1', valueLength: 0 })).toBe(false);
+    expect(canEditorRestoreTargetMatchDocument(target!, { nodeId: 'node-1', valueLength: 10 })).toBe(true);
+  });
+});
+
+describe('editorRestoreStateMachine lifecycle', () => {
 
   it('marks restore-time scroll as restore originated until the restore settles', () => {
     const matched = reduceEditorRestoreState(createPendingState(baseState), {
