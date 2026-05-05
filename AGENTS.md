@@ -86,5 +86,5 @@
 ## 细则入口
 - agent 执行细则：`.lab/agent/workflow.md`
 - 文档结构与 spec 拆分细则：`.lab/specs/38-document-structure-governance-v1.md`
-- UI 规范：`.lab/specs/ui.md`、`.lab/specs/18-ui-design-system-execution-v1.md`
+- UI 规范：`.lab/specs/ui.md`、`.lab/specs/app/design-tokens.md`、`.lab/specs/shared/ui/primitives.md`、`.lab/specs/desktop/workspace/shell-layout.md`
 - Windows Native 开发与启动排障：`.lab/specs/17-windows-native-dev-loop-v1.md`、`.lab/specs/19-webview2-startup-diagnosis-playbook-v1.md`
