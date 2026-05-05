@@ -24,34 +24,27 @@ import {
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
-import { resolvePreloadScriptPath, resolveRendererIndexPath } from './runtimePaths.js';
+import {
+  collectRuntimeDiagnosticsSnapshot,
+  configureRuntimeAppIdentity,
+  formatRuntimeDiagnosticsSnapshot,
+  resolveRendererTargetUrl
+} from './runtimeIdentity.js';
+import { resolveRendererIndexPath } from './runtimePaths.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const FOLIOLE_APP_NAME = 'foliole';
+const configuredIdentity = configureRuntimeAppIdentity(app, fs.mkdirSync.bind(fs));
+const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
+  appName: configuredIdentity.appName,
+  existsSync: fs.existsSync,
+  runtimeDir: __dirname,
+  userDataPath: configuredIdentity.userDataPath
+});
 
-function configureAppIdentity() {
-  app.setName(FOLIOLE_APP_NAME);
-  const appDataRoot = app.getPath('appData');
-  const userDataPath = path.join(appDataRoot, FOLIOLE_APP_NAME);
-  fs.mkdirSync(userDataPath, { recursive: true });
-  app.setPath('userData', userDataPath);
-  app.setPath('sessionData', userDataPath);
-  if (process.platform === 'win32') {
-    app.setAppUserModelId(FOLIOLE_APP_NAME);
-  }
-  console.info('[electron-main] app identity configured', {
-    appDataRoot,
-    appName: app.getName(),
-    sessionDataPath: app.getPath('sessionData'),
-    userDataPath: app.getPath('userData')
-  });
-}
-
-function resolvePreloadPath() {
-  return resolvePreloadScriptPath(__dirname, fs.existsSync);
-}
+console.info('[electron-main] app identity configured', configuredIdentity);
+console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
 
 function resolveRendererUrl() {
   return process.env.ELECTRON_RENDERER_URL ?? null;
@@ -72,7 +65,7 @@ function createWindowOptions(): BrowserWindowConstructorOptions {
     autoHideMenuBar: false,
     show: false,
     webPreferences: {
-      preload: resolvePreloadPath(),
+      preload: runtimeDiagnostics.preloadPath,
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false
@@ -105,6 +98,14 @@ async function loadRenderer(window: ElectronBrowserWindow) {
     return;
   }
   await window.loadFile(resolveRendererFilePath());
+}
+
+function resolveActiveRendererUrl(window: ElectronBrowserWindow) {
+  const activeUrl = window.webContents.getURL();
+  if (activeUrl) {
+    return activeUrl;
+  }
+  return resolveRendererTargetUrl(__dirname, fs.existsSync);
 }
 
 async function loadRendererUrlWithRetry(
@@ -200,6 +201,13 @@ async function createMainWindow() {
     }
   );
   await loadRenderer(window);
+  console.info(
+    '[electron-main] active runtime diagnostics',
+    formatRuntimeDiagnosticsSnapshot({
+      ...runtimeDiagnostics,
+      rendererUrl: resolveActiveRendererUrl(window)
+    })
+  );
 }
 
 function installInvokeHandler() {
@@ -207,8 +215,6 @@ function installInvokeHandler() {
     handleInvokeRequest(request, { sender: event.sender })
   );
 }
-
-configureAppIdentity();
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
