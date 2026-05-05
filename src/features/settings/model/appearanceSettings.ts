@@ -1,8 +1,12 @@
 export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
+export const BASE_COLOR_OPTIONS = ['light'] as const;
 
 export type InterfaceFontPreset = (typeof INTERFACE_FONT_OPTIONS)[number];
 export type MonospaceFontPreset = (typeof MONOSPACE_FONT_OPTIONS)[number];
+export type BaseColorMode = (typeof BASE_COLOR_OPTIONS)[number];
+export type AccentColorPreset = string;
+export const DEFAULT_ACCENT_COLOR_PRESET: AccentColorPreset = '#3f8f68';
 
 export const INTERFACE_FONT_SIZE_MIN = 12;
 export const INTERFACE_FONT_SIZE_MAX = 36;
@@ -13,6 +17,8 @@ const STORAGE_KEYS = {
   customUiFont: 'foliole-custom-ui-font-family',
   interfaceFont: 'foliole-interface-font-preset',
   monospaceFont: 'foliole-monospace-font-preset',
+  baseColor: 'foliole-base-color',
+  accentColor: 'foliole-accent-color',
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
   customMonospaceFont: 'foliole-custom-monospace-font-family'
@@ -53,6 +59,10 @@ function isMonospaceFontPreset(value: string): value is MonospaceFontPreset {
   return MONOSPACE_FONT_OPTIONS.includes(value as MonospaceFontPreset);
 }
 
+function isBaseColorMode(value: string): value is BaseColorMode {
+  return BASE_COLOR_OPTIONS.includes(value as BaseColorMode);
+}
+
 function clampFontSize(value: number) {
   return Math.max(INTERFACE_FONT_SIZE_MIN, Math.min(INTERFACE_FONT_SIZE_MAX, Math.round(value)));
 }
@@ -67,6 +77,20 @@ function quoteFontFamilyName(value: string) {
 
 function toPx(value: number) {
   return `${Math.round(value * 100) / 100}px`;
+}
+
+function normalizeAccentColor(value: string): string {
+  const trimmed = value.trim();
+  const match = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
+  return match ? `#${match[1].toLowerCase()}` : DEFAULT_ACCENT_COLOR_PRESET;
+}
+
+function toAccentColorRgb(value: string): string {
+  const normalized = normalizeAccentColor(value);
+  const red = Number.parseInt(normalized.slice(1, 3), 16);
+  const green = Number.parseInt(normalized.slice(3, 5), 16);
+  const blue = Number.parseInt(normalized.slice(5, 7), 16);
+  return `${red} ${green} ${blue}`;
 }
 
 function applyEditorTypographyScale(root: HTMLElement, baseFontSize: number) {
@@ -167,6 +191,36 @@ export function setMonospaceFontPreset(value: MonospaceFontPreset) {
   window.localStorage.setItem(STORAGE_KEYS.monospaceFont, value);
 }
 
+export function getBaseColorMode(): BaseColorMode {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+  const raw = window.localStorage.getItem(STORAGE_KEYS.baseColor);
+  return raw && isBaseColorMode(raw) ? raw : 'light';
+}
+
+export function setBaseColorMode(value: BaseColorMode) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEYS.baseColor, value);
+}
+
+export function getAccentColorPreset(): AccentColorPreset {
+  if (typeof window === 'undefined') {
+    return DEFAULT_ACCENT_COLOR_PRESET;
+  }
+  const raw = window.localStorage.getItem(STORAGE_KEYS.accentColor);
+  return raw ? normalizeAccentColor(raw) : DEFAULT_ACCENT_COLOR_PRESET;
+}
+
+export function setAccentColorPreset(value: AccentColorPreset) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEYS.accentColor, normalizeAccentColor(value));
+}
+
 export function getInterfaceFontSize() {
   if (typeof window === 'undefined') {
     return INTERFACE_FONT_SIZE_DEFAULT;
@@ -184,6 +238,8 @@ export function setInterfaceFontSize(value: number) {
 }
 
 interface ApplyAppearanceSettingsInput {
+  baseColor: BaseColorMode;
+  accentColor: AccentColorPreset;
   uiFont: InterfaceFontPreset;
   customUiFont: string;
   interfaceFont: InterfaceFontPreset;
@@ -212,6 +268,8 @@ function resolveMonospaceFontFamily(monospaceFont: MonospaceFontPreset, customMo
 }
 
 export function applyAppearanceSettings({
+  baseColor,
+  accentColor,
   uiFont,
   customUiFont,
   interfaceFont,
@@ -227,7 +285,11 @@ export function applyAppearanceSettings({
   const uiFontValue = resolveInterfaceFontFamily(uiFont, customUiFont);
   const interfaceFontValue = resolveInterfaceFontFamily(interfaceFont, customInterfaceFont);
   const monospaceFontValue = resolveMonospaceFontFamily(monospaceFont, customMonospaceFont);
+  const normalizedAccentColor = normalizeAccentColor(accentColor);
   const root = document.documentElement;
+  root.dataset.baseColor = baseColor;
+  root.style.setProperty('--app-accent-color', normalizedAccentColor);
+  root.style.setProperty('--app-accent-color-rgb', toAccentColorRgb(normalizedAccentColor));
   root.style.setProperty('--app-interface-font-family', uiFontValue);
   root.style.setProperty('--content-panel-font-family', interfaceFontValue);
   root.style.setProperty('--content-panel-mono-font-family', monospaceFontValue);

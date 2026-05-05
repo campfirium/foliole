@@ -6,7 +6,12 @@ import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
-import type { InterfaceFontPreset, MonospaceFontPreset } from '../../features/settings/model/appearanceSettings';
+import type {
+  AccentColorPreset,
+  BaseColorMode,
+  InterfaceFontPreset,
+  MonospaceFontPreset
+} from '../../features/settings/model/appearanceSettings';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -65,6 +70,9 @@ export interface WorkspaceLayoutProps {
   onStartStudyMode: () => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
+  onBaseColorModeChange: (value: BaseColorMode) => void;
+  onAccentColorPresetChange: (value: AccentColorPreset) => void;
+  onAccentColorPresetReset: () => void;
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
   onUiFontPresetChange: (value: InterfaceFontPreset) => void;
   onCustomUiFontChange: (value: string) => void;
@@ -79,6 +87,8 @@ export interface WorkspaceLayoutProps {
   customUiFont: string;
   customInterfaceFont: string;
   customMonospaceFont: string;
+  baseColorMode: BaseColorMode;
+  accentColorPreset: AccentColorPreset;
   uiFontPreset: InterfaceFontPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
@@ -131,6 +141,9 @@ export function WorkspaceLayout({
   onStartStudyMode,
   onOpenSettings,
   onCloseSettings,
+  onBaseColorModeChange,
+  onAccentColorPresetChange,
+  onAccentColorPresetReset,
   onInterfaceFontPresetChange,
   onUiFontPresetChange,
   onCustomUiFontChange,
@@ -145,6 +158,8 @@ export function WorkspaceLayout({
   customUiFont,
   customInterfaceFont,
   customMonospaceFont,
+  baseColorMode,
+  accentColorPreset,
   uiFontPreset,
   interfaceFontPreset,
   interfaceFontSize,
@@ -254,12 +269,17 @@ export function WorkspaceLayout({
           customUiFont={customUiFont}
           customInterfaceFont={customInterfaceFont}
           customMonospaceFont={customMonospaceFont}
+          baseColorMode={baseColorMode}
+          accentColorPreset={accentColorPreset}
           uiFontPreset={uiFontPreset}
           interfaceFontPreset={interfaceFontPreset}
           interfaceFontSize={interfaceFontSize}
           markdownSyntaxVisibility={markdownSyntaxVisibility}
           monospaceFontPreset={monospaceFontPreset}
           onClose={onCloseSettings}
+          onBaseColorModeChange={onBaseColorModeChange}
+          onAccentColorPresetChange={onAccentColorPresetChange}
+          onAccentColorPresetReset={onAccentColorPresetReset}
           onUiFontPresetChange={onUiFontPresetChange}
           onCustomUiFontChange={onCustomUiFontChange}
           onCustomInterfaceFontChange={onCustomInterfaceFontChange}

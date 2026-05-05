@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import {
+  DEFAULT_ACCENT_COLOR_PRESET,
+  type AccentColorPreset,
+  type BaseColorMode,
   INTERFACE_FONT_SIZE_MAX,
   INTERFACE_FONT_SIZE_MIN,
   type InterfaceFontPreset,
@@ -12,6 +15,8 @@ import { listAvailableSystemFonts } from '../model/systemFonts';
 type SettingsCategoryId = 'about' | 'editor' | 'appearance' | 'hotkeys';
 
 interface SettingsPanelProps {
+  baseColorMode: BaseColorMode;
+  accentColorPreset: AccentColorPreset;
   customUiFont: string;
   customInterfaceFont: string;
   customMonospaceFont: string;
@@ -21,6 +26,9 @@ interface SettingsPanelProps {
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   onClose: () => void;
+  onBaseColorModeChange: (value: BaseColorMode) => void;
+  onAccentColorPresetChange: (value: AccentColorPreset) => void;
+  onAccentColorPresetReset: () => void;
   onCustomUiFontChange: (value: string) => void;
   onCustomInterfaceFontChange: (value: string) => void;
   onCustomMonospaceFontChange: (value: string) => void;
@@ -93,7 +101,13 @@ function monospacePresetLabel(preset: MonospaceFontPreset) {
   }
 }
 
+function ensureAccentHex(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_ACCENT_COLOR_PRESET;
+}
+
 export function SettingsPanel({
+  baseColorMode,
+  accentColorPreset,
   customUiFont,
   customInterfaceFont,
   customMonospaceFont,
@@ -103,6 +117,9 @@ export function SettingsPanel({
   markdownSyntaxVisibility,
   monospaceFontPreset,
   onClose,
+  onBaseColorModeChange,
+  onAccentColorPresetChange,
+  onAccentColorPresetReset,
   onCustomUiFontChange,
   onCustomInterfaceFontChange,
   onCustomMonospaceFontChange,
@@ -113,6 +130,8 @@ export function SettingsPanel({
   onMarkdownSyntaxVisibilityChange,
   onMonospaceFontPresetChange
 }: SettingsPanelProps) {
+  const accentColorInputRef = useRef<HTMLInputElement | null>(null);
+  const safeAccentColor = ensureAccentHex(accentColorPreset);
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => getInitialSettingsCategory());
   const [availableSystemFonts, setAvailableSystemFonts] = useState<string[]>([]);
   const [availableMonospaceFonts, setAvailableMonospaceFonts] = useState<string[]>([]);
@@ -223,6 +242,10 @@ export function SettingsPanel({
     }
   };
 
+  const handleOpenAccentColorPicker = () => {
+    accentColorInputRef.current?.click();
+  };
+
   return (
     <section aria-label="Settings" className="settings-root" onMouseDown={onClose} role="presentation">
       <div aria-label="Settings dialog" aria-modal="true" className="settings-shell" onMouseDown={(event) => event.stopPropagation()} role="dialog">
@@ -272,6 +295,60 @@ export function SettingsPanel({
 
           {activeCategory === 'appearance' ? (
             <>
+              <section aria-label="Appearance fonts section" className="settings-group">
+                <h3 className="settings-group-title">Color</h3>
+                <div className="settings-row">
+                  <div className="settings-row-copy">
+                    <h4>Base color</h4>
+                    <p>Choose the foundation color mode for the interface.</p>
+                  </div>
+                  <label className="settings-select-wrap">
+                    <span className="sr-only">Base color</span>
+                    <select
+                      className="settings-select"
+                      onChange={(event) => onBaseColorModeChange(event.target.value as BaseColorMode)}
+                      value={baseColorMode}
+                    >
+                      <option value="light">Light</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-copy">
+                    <h4>Accent color</h4>
+                    <p>Choose accent color for selected states, links, and quote rendering.</p>
+                  </div>
+                  <div className="settings-accent-controls">
+                    <button
+                      aria-label="Reset accent color"
+                      className="settings-reset"
+                      disabled={safeAccentColor === DEFAULT_ACCENT_COLOR_PRESET}
+                      onClick={onAccentColorPresetReset}
+                      type="button"
+                    >
+                      ↺
+                    </button>
+                    <button aria-label="Pick accent color" className="settings-accent-trigger" onClick={handleOpenAccentColorPicker} type="button">
+                      <span aria-hidden="true" className="settings-accent-swatch" style={{ backgroundColor: safeAccentColor }} />
+                    </button>
+                    <input
+                      aria-label="Accent color picker"
+                      className="settings-accent-native-input"
+                      onChange={(event) => onAccentColorPresetChange(event.target.value)}
+                      ref={accentColorInputRef}
+                      type="color"
+                      value={safeAccentColor}
+                    />
+                  </div>
+                </div>
+                <div className="settings-row settings-row-readonly">
+                  <div className="settings-row-copy">
+                    <h4>Theme</h4>
+                    <p>Theme package management will be added in a follow-up task.</p>
+                  </div>
+                  <span className="settings-pill">Planned</span>
+                </div>
+              </section>
               <section aria-label="Appearance fonts section" className="settings-group">
                 <h3 className="settings-group-title">Fonts</h3>
                 <div className="settings-row">

@@ -7,6 +7,8 @@
 }
 
 :root {
+  --app-accent-color: #3f8f68;
+  --app-accent-color-rgb: 63 143 104;
   --font-family-interface:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
@@ -357,6 +359,43 @@ body.workspace-resizing {
   max-width: 100%;
 }
 
+.settings-accent-controls {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 360px;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.settings-accent-trigger {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+
+.settings-accent-swatch {
+  border: 1px solid rgba(36, 42, 47, 0.22);
+  border-radius: 999px;
+  display: inline-flex;
+  height: 30px;
+  width: 30px;
+}
+
+.settings-accent-native-input {
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+}
+
 .settings-select {
   border: 1px solid #ccd0d6;
   border-radius: 8px;
@@ -434,6 +473,11 @@ body.workspace-resizing {
   }
 
   .settings-select-wrap {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .settings-accent-controls {
     width: 100%;
     flex-basis: auto;
   }

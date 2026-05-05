@@ -594,7 +594,7 @@ const liveMarkdownTheme = EditorView.theme({
     paddingLeft: '0.2rem'
   },
   '.cm-line.cm-line-quote': {
-    borderLeft: '2px solid #8b5cf6',
+    borderLeft: '2px solid var(--app-accent-color)',
     color: 'var(--color-text-primary)',
     paddingBottom: '0.15rem',
     paddingTop: '0.15rem',
@@ -663,7 +663,7 @@ const liveMarkdownTheme = EditorView.theme({
     backgroundColor: 'transparent'
   },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: 'rgba(56, 189, 248, 0.26)'
+    backgroundColor: 'rgba(var(--app-accent-color-rgb), 0.26)'
   }
 });
 

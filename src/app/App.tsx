@@ -10,6 +10,9 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import {
   INTERFACE_FONT_SIZE_DEFAULT,
   applyAppearanceSettings,
+  DEFAULT_ACCENT_COLOR_PRESET,
+  getAccentColorPreset,
+  getBaseColorMode,
   getCustomUiFont,
   getCustomInterfaceFont,
   getCustomMonospaceFont,
@@ -17,6 +20,8 @@ import {
   getInterfaceFontSize,
   getMonospaceFontPreset,
   getUiFontPreset,
+  setAccentColorPreset,
+  setBaseColorMode,
   setCustomUiFont,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
@@ -24,6 +29,8 @@ import {
   setInterfaceFontSize,
   setMonospaceFontPreset,
   setUiFontPreset,
+  type AccentColorPreset,
+  type BaseColorMode,
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../features/settings/model/appearanceSettings';
@@ -86,6 +93,8 @@ export function App() {
   const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() =>
     getMarkdownSyntaxVisibility()
   );
+  const [baseColorMode, setBaseColorModeState] = useState<BaseColorMode>(() => getBaseColorMode());
+  const [accentColorPreset, setAccentColorPresetState] = useState<AccentColorPreset>(() => getAccentColorPreset());
   const [uiFontPreset, setUiFontPresetState] = useState<InterfaceFontPreset>(() => getUiFontPreset());
   const [customUiFont, setCustomUiFontState] = useState(() => getCustomUiFont());
   const [interfaceFontPreset, setInterfaceFontPresetState] = useState<InterfaceFontPreset>(() => getInterfaceFontPreset());
@@ -278,6 +287,21 @@ export function App() {
     setInterfaceFontPresetState(value);
   };
 
+  const handleBaseColorModeChange = (value: BaseColorMode) => {
+    setBaseColorMode(value);
+    setBaseColorModeState(value);
+  };
+
+  const handleAccentColorPresetChange = (value: AccentColorPreset) => {
+    setAccentColorPreset(value);
+    setAccentColorPresetState(value);
+  };
+
+  const handleAccentColorPresetReset = () => {
+    setAccentColorPreset(DEFAULT_ACCENT_COLOR_PRESET);
+    setAccentColorPresetState(DEFAULT_ACCENT_COLOR_PRESET);
+  };
+
   const handleUiFontPresetChange = (value: InterfaceFontPreset) => {
     setUiFontPreset(value);
     setUiFontPresetState(value);
@@ -370,6 +394,8 @@ export function App() {
 
   useEffect(() => {
     applyAppearanceSettings({
+      baseColor: baseColorMode,
+      accentColor: accentColorPreset,
       uiFont: uiFontPreset,
       customUiFont,
       interfaceFont: interfaceFontPreset,
@@ -378,7 +404,17 @@ export function App() {
       customInterfaceFont,
       customMonospaceFont
     });
-  }, [customInterfaceFont, customMonospaceFont, customUiFont, interfaceFontPreset, interfaceFontSize, monospaceFontPreset, uiFontPreset]);
+  }, [
+    accentColorPreset,
+    baseColorMode,
+    customInterfaceFont,
+    customMonospaceFont,
+    customUiFont,
+    interfaceFontPreset,
+    interfaceFontSize,
+    monospaceFontPreset,
+    uiFontPreset
+  ]);
 
   return (
     <WorkspaceLayout
@@ -424,6 +460,9 @@ export function App() {
       onStartStudyMode={handleStartStudyMode}
       onOpenSettings={handleOpenSettings}
       onCloseSettings={handleCloseSettings}
+      onBaseColorModeChange={handleBaseColorModeChange}
+      onAccentColorPresetChange={handleAccentColorPresetChange}
+      onAccentColorPresetReset={handleAccentColorPresetReset}
       onInterfaceFontPresetChange={handleInterfaceFontPresetChange}
       onUiFontPresetChange={handleUiFontPresetChange}
       onCustomUiFontChange={handleCustomUiFontChange}
@@ -439,6 +478,8 @@ export function App() {
       customUiFont={customUiFont}
       customInterfaceFont={customInterfaceFont}
       customMonospaceFont={customMonospaceFont}
+      baseColorMode={baseColorMode}
+      accentColorPreset={accentColorPreset}
       uiFontPreset={uiFontPreset}
       interfaceFontPreset={interfaceFontPreset}
       interfaceFontSize={interfaceFontSize}
