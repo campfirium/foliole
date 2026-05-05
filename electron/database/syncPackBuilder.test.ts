@@ -20,8 +20,10 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { upsertExternalDocuments } from './externalDocuments.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
 const require = createRequire(import.meta.url);
@@ -69,6 +71,7 @@ function readPackRows(packPath: string) {
     return {
       blobDataTable: db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blob_data'").get(),
       blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
+      externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
       manifest: JSON.parse(manifestRow.value),
       nodes: db.prepare('SELECT id, content, body_blob_hash FROM nodes').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all()
@@ -107,5 +110,55 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
       id: 'node-1'
     })],
     stateRows: [{ object_id: 'node-1', object_type: 'node', state_seq: 1 }]
+  });
+});
+
+it('packs external document structure with body blob manifests but no body bytes', async () => {
+  const folder: NativeExternalSearchFolder = {
+    attachment_mode: 'document_relative',
+    attachment_root_path: null,
+    created_at: '2026-04-27T00:00:00.000Z',
+    document_count: 0,
+    excluded_dirs: [],
+    folder_path: '/library',
+    id: 'folder-1',
+    indexed_at: null,
+    last_error: null,
+    status: 'ready',
+    updated_at: '2026-04-27T00:00:00.000Z'
+  };
+  upsertExternalDocuments(folder, [{
+    absolutePath: '/library/doc.md',
+    content: '# External Doc\n\nExternal body must stay out of pack',
+    extension: 'md',
+    fileName: 'doc.md',
+    modifiedAt: '2026-04-27T00:00:00.000Z',
+    modifiedMs: 1777,
+    relativePath: 'doc.md',
+    sizeBytes: 48
+  }], '2026-04-27T00:00:00.000Z');
+  const packPath = path.join(tempRoot, 'incoming-external.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-external-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    bodyBlobCount: 1,
+    objectCount: 1,
+    packId: 'pack-external-1'
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    blobDataTable: undefined,
+    blobs: [expect.objectContaining({ kind: 'text_body' })],
+    externalDocuments: [expect.objectContaining({
+      body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      content: '',
+      document_id: 'folder-1:doc.md',
+      opening_text: expect.stringContaining('External body')
+    })],
+    stateRows: [{ object_id: 'folder-1:doc.md', object_type: 'external_document', state_seq: 1 }]
   });
 });
