@@ -29,6 +29,7 @@ function IconToggleButton(props: {
   active: boolean;
   ariaLabel: string;
   children: ReactNode;
+  title?: string;
   onClick: () => void;
   triggerRef?: Ref<HTMLButtonElement>;
 }) {
@@ -39,6 +40,7 @@ function IconToggleButton(props: {
       className={settingsUtilityIconButtonClassName(props.active, 'size-8 rounded-sm px-0')}
       onClick={props.onClick}
       ref={props.triggerRef}
+      title={props.title}
       type="button"
     >
       {props.children}
@@ -132,14 +134,16 @@ function ThemeToolbarRow(props: {
             active={props.isFavorited}
             ariaLabel={props.isFavorited ? 'Remove current theme from favorites' : 'Add current theme to favorites'}
             onClick={props.onToggleFavorite}
+            title={props.isFavorited ? 'Favorited' : 'Add to favorites'}
           >
-            <Star aria-hidden="true" className="text-current" fill="none" size={22} strokeWidth={1.8} />
+            <Star aria-hidden="true" className="text-current" fill={props.isFavorited ? 'currentColor' : 'none'} fillOpacity={props.isFavorited ? 0.16 : undefined} size={22} strokeWidth={1.9} />
           </IconToggleButton>
           <IconToggleButton
             active={props.favoritesOpen}
             ariaLabel="Open theme collection"
             onClick={props.onToggleFavorites}
             triggerRef={props.triggerRef}
+            title="Theme collection"
           >
             <Library aria-hidden="true" className="text-current" size={22} strokeWidth={1.8} />
           </IconToggleButton>

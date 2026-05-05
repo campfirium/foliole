@@ -1,7 +1,12 @@
 import { RotateCcw } from 'lucide-react';
 import { useEffect } from 'react';
 
-import { SettingsSection, settingsButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
+import {
+  SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME,
+  SettingsSection,
+  settingsButtonClassName,
+  settingsUtilityIconButtonClassName
+} from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import { type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
 
@@ -81,7 +86,7 @@ function WorkspaceSurfaceSectionContent(props: {
   painting: ReturnType<typeof useWorkspaceSurfacePainting>;
 }) {
   return (
-    <div className="relative grid gap-5 px-5 py-5 xl:grid-cols-[minmax(0,1fr)_320px]" ref={props.editor.editorHostRef}>
+    <div className={`relative grid gap-5 px-5 py-5 ${SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME}`} ref={props.editor.editorHostRef}>
       <WorkspaceSurfaceGrid
         appearance={props.editor.appearance}
         isPainting={props.painting.isPainting}

@@ -33,7 +33,7 @@ export function WorkspaceSurfaceGrid(props: {
 }) {
   return (
     <div className="overflow-hidden rounded-sm bg-transparent">
-      <div className="grid gap-px bg-settings-divider" style={{ aspectRatio: '16 / 9', gridTemplateColumns: GRID_TEMPLATE_COLUMNS, gridTemplateRows: GRID_TEMPLATE_ROWS }}>
+      <div className="grid gap-px bg-divider" style={{ aspectRatio: '16 / 9', gridTemplateColumns: GRID_TEMPLATE_COLUMNS, gridTemplateRows: GRID_TEMPLATE_ROWS }}>
         {GRID_CELLS.map((cell) => {
           const swatchIndex = props.appearance.workspaceSurfaceAssignments[cell.id];
           const backgroundColor = props.appearance.workspaceSurfacePalette[swatchIndex] ?? props.appearance.workspaceSurfacePalette[0];

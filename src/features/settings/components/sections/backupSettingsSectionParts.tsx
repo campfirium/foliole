@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import {
   ObjectConfigPathButton,
+  SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
   SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
@@ -22,9 +23,9 @@ const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   hour12: false
 });
 
-export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName();
+export const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
-const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName();
+const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
 function describeBackupKind(entry: DatabaseBackupEntry) {
   if (entry.kind === 'manual') return 'Manual backup';
@@ -85,25 +86,29 @@ export function BackupPathRow(props: {
 }) {
   return (
     <SettingsRow description="Backups, auto backups, and safety snapshots are all stored in this folder." title="Backup location">
-      <SettingsControlSlot className={`${SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME} items-start gap-2 max-[1080px]:flex-auto`}>
-        <button
-          aria-label="Restore default"
-          className={settingsResetButtonClassName()}
-          disabled={!props.isDesktopRuntime}
-          onClick={props.onRestoreDefault}
-          title="Restore default"
-          type="button"
-        >
-          <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
-        </button>
-        <ObjectConfigPathButton
-          disabled={!props.isDesktopRuntime}
-          emptyLabel="Backups"
-          label="Change location"
-          onClick={props.onChangePath}
-          path={props.backupPath}
-        />
-        {props.errorMessage ? <p className="text-sm text-red-700">{props.errorMessage}</p> : null}
+      <SettingsControlSlot className={`${SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME} items-start max-[1080px]:flex-auto`}>
+        <div className="flex max-w-full flex-col items-end gap-1.5 max-[1080px]:items-start">
+          <div className="flex max-w-full items-center gap-2">
+            <button
+              aria-label="Restore default"
+              className={settingsResetButtonClassName('size-9 rounded-sm')}
+              disabled={!props.isDesktopRuntime}
+              onClick={props.onRestoreDefault}
+              title="Restore default"
+              type="button"
+            >
+              <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+            </button>
+            <ObjectConfigPathButton
+              disabled={!props.isDesktopRuntime}
+              emptyLabel="Backups"
+              label="Change location"
+              onClick={props.onChangePath}
+              path={props.backupPath}
+            />
+          </div>
+          {props.errorMessage ? <p className="max-w-80 text-right text-sm text-red-700 max-[1080px]:text-left">{props.errorMessage}</p> : null}
+        </div>
       </SettingsControlSlot>
     </SettingsRow>
   );

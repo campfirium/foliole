@@ -12,7 +12,7 @@ import { WorkspaceSurfaceAutomaticSeedPopover } from './WorkspaceSurfaceAutomati
 import { WorkspaceSurfaceRandomPalettePanel } from './WorkspaceSurfaceRandomPalettePanel';
 import { WorkspaceSurfaceThemeToolbar } from './WorkspaceSurfaceThemeToolbar';
 
-import { settingsSwitchClassName, settingsSwitchKnobClassName } from '@/shared/ui';
+import { SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME, settingsSwitchClassName, settingsSwitchKnobClassName } from '@/shared/ui';
 
 function InlineSwitch(props: {
   checked: boolean;
@@ -112,7 +112,7 @@ export function WorkspaceSurfaceColorModePanel(props: {
   resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className={`grid gap-5 ${SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME}`}>
       <WorkspaceSurfaceRandomPalettePanel
         currentPalette={props.currentPalette}
         onApplyPalette={props.onApplyRandomPalette}

@@ -20,6 +20,7 @@ interface SettingsRowProps {
 }
 
 export const SETTINGS_BUTTON_WIDTH_CLASS_NAME = '';
+export const SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME = 'w-36';
 export const SETTINGS_INPUT_WIDTH_CLASS_NAME = 'flex-[0_0_160px] max-w-full';
 export const SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME = 'flex-[0_0_auto] max-w-full';
 export const SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME = SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME;
@@ -28,8 +29,9 @@ export const SETTINGS_RANGE_WIDTH_CLASS_NAME = 'w-36';
 export const SETTINGS_VALUE_WIDTH_CLASS_NAME = 'min-w-10';
 export const SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME = SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME;
 export const SETTINGS_PATH_VALUE_WIDTH_CLASS_NAME = 'max-w-80';
-export const SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME = 'max-w-44';
+export const SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME = 'w-56 max-w-full';
 export const SETTINGS_SELECT_WIDTH_CLASS_NAME = 'w-auto max-w-[260px]';
+export const SETTINGS_SURFACE_SIDEBAR_GRID_CLASS_NAME = 'xl:grid-cols-[minmax(0,1fr)_300px]';
 
 export function settingsFieldClassName(className?: string) {
   return cn(
@@ -79,10 +81,10 @@ export function settingsIconButtonClassName(className?: string) {
 export function settingsUtilityIconButtonClassName(active = false, className?: string) {
   return cn(
     'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent px-0 text-sm transition-colors',
-    active ? 'text-muted-foreground/90' : 'text-muted-foreground/78',
+    active ? 'text-settings-icon-active' : 'text-settings-icon',
     '[&>svg]:pointer-events-none [&>svg]:text-current',
-    'hover:border-transparent hover:bg-transparent hover:text-muted-foreground',
-    'active:bg-transparent active:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'hover:border-transparent hover:bg-transparent hover:text-settings-icon-hover',
+    'active:bg-transparent active:text-settings-icon-active focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     'disabled:pointer-events-none disabled:opacity-45',
     className
   );
