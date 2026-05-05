@@ -14,7 +14,8 @@ export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
   '.cm-scroller': {
     color: 'var(--content-panel-text-color, var(--color-text-primary))',
-    lineHeight: 'var(--content-panel-line-height, 1.75)'
+    lineHeight: 'var(--content-panel-line-height, 1.75)',
+    scrollbarGutter: 'stable both-edges'
   },
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: 'var(--color-text-primary)'

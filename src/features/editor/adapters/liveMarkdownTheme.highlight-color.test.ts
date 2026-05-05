@@ -54,5 +54,8 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('var(--content-panel-text-color, var(--color-text-primary))');
   expect(cssText).toContain('border-left-color: var(--color-text-primary);');
   expect(cssText).toContain('caret-color: var(--color-text-primary);');
-  expect(cssText).toContain('padding: 0.25rem var(--document-content-inline-padding, 1.5rem) var(--editor-content-padding-bottom, 0.6rem);');
+  expect(cssText).toContain('scrollbar-gutter: stable both-edges;');
+  expect(cssText).toContain(
+    'padding: var(--editor-content-padding-top, 0.25rem) var(--document-content-inline-padding, 1.5rem) var(--editor-content-padding-bottom, 0.6rem);'
+  );
 });
