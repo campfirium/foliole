@@ -248,6 +248,13 @@ describe('workspaceStore', () => {
     expect(store.getState().nodesById['node-1']?.title).toBe('First clause, second clause. Third sentence.');
   });
 
+  it('does not include anchor tags in derived title', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().updateNodeContent('node-1', '# Intro <cloze id="1">answer</cloze>');
+
+    expect(store.getState().nodesById['node-1']?.title).toBe('Intro answer');
+  });
+
   it('applies fixed title max length from code config', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
     const longContent = `# ${'x'.repeat(NODE_TITLE_MAX_CHARS + 20)}`;
@@ -268,15 +275,15 @@ describe('workspaceStore', () => {
 
     const childNodeId = store.getState().createQANodeFromSelection(
       'node-1',
-      'What is [[...]]?',
+      'What is [...]?',
       'quoted text'
     );
 
     expect(childNodeId).toBe('node-test-id');
     expect(store.getState().nodeOrder).toContain('node-test-id');
     expect(store.getState().nodesById['node-test-id']?.parentNodeId).toBe('node-1');
-    expect(store.getState().nodesById['node-test-id']?.title).toBe('What is quoted text?');
-    expect(store.getState().nodesById['node-test-id']?.content).toBe('What is [[...]]?');
+    expect(store.getState().nodesById['node-test-id']?.title).toBe('What is [...]?');
+    expect(store.getState().nodesById['node-test-id']?.content).toBe('What is [...]?');
     expect(store.getState().nodesById['node-test-id']?.reveal).toBe('quoted text');
     expect(store.getState().nodesById['node-test-id']?.review).not.toBeNull();
   });

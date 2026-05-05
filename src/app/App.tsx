@@ -112,7 +112,7 @@ export function App() {
     if (!payload) {
       return;
     }
-    const childNodeId = createQANodeFromSelection(payload.parentNodeId, payload.promptContent, payload.selectionText);
+    const childNodeId = createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText);
     if (childNodeId && applySelectionMarkup(editorRef.current, 'cloze')) {
       syncActiveNodeContentFromEditor();
     }

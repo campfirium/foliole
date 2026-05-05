@@ -4,9 +4,12 @@ export type CommandMarkupType = 'cloze' | 'highlight';
 
 export interface SelectionCommandPayload {
   parentNodeId: string;
-  promptContent: string;
+  clozeContent: string;
   selectionText: string;
 }
+
+const CLOZE_PLACEHOLDER = '[...]';
+const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)\s+id="[^"]+"\s*>/g;
 
 export function normalizeContextMenuPosition(left: number, top: number) {
   const menuWidth = 200;
@@ -35,22 +38,16 @@ export function getSelectionCommandPayload(
     return null;
   }
 
-  const selectionText = content.slice(from, to).trim();
+  const selectionText = content.slice(from, to).replace(ANCHOR_TAG_PATTERN, '').trim();
   if (!selectionText) {
     return null;
   }
 
-  const lineStart = content.lastIndexOf('\n', from - 1) + 1;
-  const lineEndIndex = content.indexOf('\n', to);
-  const lineEnd = lineEndIndex === -1 ? content.length : lineEndIndex;
-  const lineContent = content.slice(lineStart, lineEnd);
-  const localFrom = from - lineStart;
-  const localTo = to - lineStart;
-  const promptContent = `${lineContent.slice(0, localFrom)}[[...]]${lineContent.slice(localTo)}`.trim() || '[[...]]';
+  const clozeContent = `${content.slice(0, from)}${CLOZE_PLACEHOLDER}${content.slice(to)}`.trim() || CLOZE_PLACEHOLDER;
 
   return {
     parentNodeId,
-    promptContent,
+    clozeContent,
     selectionText
   };
 }

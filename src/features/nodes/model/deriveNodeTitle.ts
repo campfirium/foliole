@@ -1,7 +1,7 @@
 import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
 
 export const UNTITLED_NODE_TITLE = 'Untitled';
-const CLOZE_PLACEHOLDER = '[[...]]';
+const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 
 function sanitizeTitleCandidate(value: string) {
   return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
@@ -24,7 +24,8 @@ function stripMarkdownInline(value: string) {
 }
 
 function normalizeMarkdownContent(content: string) {
-  const normalized = content
+  const noAnchorTags = content.replace(ANCHOR_TAG_PATTERN, '');
+  const normalized = noAnchorTags
     .split(/\r?\n/)
     .map((line) => stripMarkdownPrefixes(line))
     .join(' ');
@@ -39,10 +40,9 @@ export function deriveNodeTitleFromContent(content: string) {
 export function deriveNodeTitleForCloze(promptContent: string, answerContent: string) {
   const prompt = promptContent.trim();
   const answer = answerContent.trim();
-  const reconstructed = prompt.includes(CLOZE_PLACEHOLDER) ? prompt.replace(CLOZE_PLACEHOLDER, answer) : prompt;
-  const reconstructedTitle = deriveNodeTitleFromContent(reconstructed);
-  if (reconstructedTitle !== UNTITLED_NODE_TITLE) {
-    return reconstructedTitle;
+  const promptTitle = deriveNodeTitleFromContent(prompt);
+  if (promptTitle !== UNTITLED_NODE_TITLE) {
+    return promptTitle;
   }
 
   const answerTitle = deriveNodeTitleFromContent(answer);

@@ -90,7 +90,7 @@ describe('App', () => {
       id: 'node-2',
       parentNodeId: 'node-1',
       title: 'QA 2',
-      content: 'Prompt [[...]]',
+      content: 'Prompt [...]',
       reveal: 'Answer',
       review: null,
       createdAt: timestamp,
@@ -111,7 +111,7 @@ describe('App', () => {
     expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
     fireEvent.click(screen.getByRole('button', { name: 'QA 2' }));
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-    expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [[...]]');
+    expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
   });
 
   it('renders breadcrumbs in document header and supports ancestor jump', () => {
@@ -334,8 +334,8 @@ describe('App', () => {
       throw new Error('expected a child node');
     }
     expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
-    expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome to Foliole');
-    expect(workspace.nodesById[createdNodeId]?.content).toBe('# [[...]] to Foliole');
+    expect(workspace.nodesById[createdNodeId]?.title).toBe('[...] to Foliole Start writing markdown here.');
+    expect(workspace.nodesById[createdNodeId]?.content).toBe('# [...] to Foliole\n\nStart writing markdown here.');
     expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
     expect(workspace.nodesById['node-1']?.content).toContain('<cloze id="1">Welcome</cloze>');
   });
