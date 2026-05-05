@@ -44,6 +44,43 @@ function WorkspaceTopicTreeHarness() {
   );
 }
 
+function WorkspaceTopicTreeCollapseHarness() {
+  const [activeFolderId, setActiveFolderId] = useState('folder-a');
+  const [activeNodeId, setActiveNodeId] = useState<string | null>('article-a');
+  const nodesById = {
+    'article-a': createNode({ id: 'article-a', title: 'React Notes' }),
+    'highlight-a': createNode({ id: 'highlight-a', parentNodeId: 'article-a', title: 'Hook Summary' }),
+    'article-b': createNode({ id: 'article-b', title: 'Vue Notes' }),
+    'section-b': createNode({ id: 'section-b', title: 'Section B' }),
+    'child-b': createNode({ id: 'child-b', parentNodeId: 'section-b', title: 'Child B' })
+  };
+  const itemIds = activeFolderId === 'folder-a'
+    ? ['article-a', 'highlight-a', 'article-b']
+    : ['section-b', 'child-b'];
+
+  return (
+    <>
+      <button
+        onClick={() => {
+          setActiveFolderId('folder-b');
+          setActiveNodeId('section-b');
+        }}
+        type="button"
+      >
+        Open folder B
+      </button>
+      <WorkspaceTopicTree
+        activeFolderId={activeFolderId}
+        activeNodeId={activeNodeId}
+        itemIds={itemIds}
+        nodesById={nodesById}
+        onOpenMoveToNode={() => undefined}
+        onSelectNode={setActiveNodeId}
+      />
+    </>
+  );
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   useWorkspaceStore.setState((state) => ({
@@ -76,4 +113,18 @@ it('places title search in the item column and keeps matches visible while searc
   expect(within(itemColumn).getByRole('treeitem', { name: 'React Notes' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Vue Notes' })).toBeNull();
+});
+
+it('collapses a newly opened folder by default but expands the selected topic itself', () => {
+  render(<WorkspaceTopicTreeCollapseHarness />);
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open folder B' }));
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Section B' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Child B' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Collapse all items' })).toBeInTheDocument();
 });

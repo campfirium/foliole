@@ -151,24 +151,60 @@ function renderWorkspaceTopicTreeBody(args: {
   );
 }
 
-function useWorkspaceTopicTreeCollapse(activeNodeId: string | null, parentById: Record<string, string | null>) {
+/**
+ * Right-column item tree collapse rules live here.
+ *
+ * Rule 1: when `activeFolderId` changes, reset to "all collapsible nodes collapsed".
+ * Rule 2: when `activeNodeId` changes to a topic/item in the current tree, expand its
+ * ancestors and the target node itself.
+ *
+ * Manual toggle does not go through this hook. It mutates local state directly and is
+ * only overwritten by Rule 1 when the active folder changes.
+ *
+ * If we later need a third input or source-specific navigation rules, re-evaluate
+ * whether this should become a reducer.
+ */
+function useWorkspaceTopicTreeCollapse(
+  activeFolderId: string,
+  activeNodeId: string | null,
+  treeRows: ReturnType<typeof buildNodeTree>['rows'],
+  parentById: Record<string, string | null>
+) {
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
+  const collapsibleNodeIds = useMemo(
+    () => treeRows.filter((row) => row.hasChildren).map((row) => row.node.id),
+    [treeRows]
+  );
+  const treeRowById = useMemo(
+    () => new Map(treeRows.map((row) => [row.node.id, row])),
+    [treeRows]
+  );
 
   useEffect(() => {
-    if (!activeNodeId || !parentById[activeNodeId]) {
+    setCollapsedNodeIds(new Set(collapsibleNodeIds));
+  }, [activeFolderId, collapsibleNodeIds]);
+
+  useEffect(() => {
+    if (!activeNodeId) {
       return;
     }
-
-    const ancestorIds = collectNodeAncestorIds(activeNodeId, parentById);
+    const activeRow = treeRowById.get(activeNodeId);
+    if (!activeRow || activeRow.node.kind === 'folder') {
+      return;
+    }
+    const expandedNodeIds = new Set(collectNodeAncestorIds(activeNodeId, parentById));
+    if (activeRow.hasChildren) {
+      expandedNodeIds.add(activeNodeId);
+    }
     setCollapsedNodeIds((current) => {
-      if (ancestorIds.every((nodeId) => !current.has(nodeId))) {
+      if ([...expandedNodeIds].every((nodeId) => !current.has(nodeId))) {
         return current;
       }
       const next = new Set(current);
-      ancestorIds.forEach((nodeId) => next.delete(nodeId));
+      expandedNodeIds.forEach((nodeId) => next.delete(nodeId));
       return next;
     });
-  }, [activeNodeId, parentById]);
+  }, [activeNodeId, parentById, treeRowById]);
 
   return { collapsedNodeIds, setCollapsedNodeIds };
 }
@@ -214,7 +250,12 @@ export function WorkspaceTopicTree({
   onSelectNode
 }: WorkspaceTopicTreeProps) {
   const tree = useWorkspaceTopicTreeState(itemIds, nodesById);
-  const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeCollapse(activeNodeId, tree.parentById);
+  const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeCollapse(
+    activeFolderId,
+    activeNodeId,
+    tree.rows,
+    tree.parentById
+  );
   const { collapsibleNodeIds, searchQuery, setSearchQuery, visibleRows } = useWorkspaceTopicTreeRows(
     tree.rows,
     collapsedNodeIds
