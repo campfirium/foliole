@@ -6,6 +6,9 @@ import type {
   NativeLibraryPaths,
   NativeMirrorAttachmentLinkRebuildResult,
   NativeMirrorOutputRebuildResult,
+  NativeSqliteBackupEntry,
+  NativeSqliteBackupResult,
+  NativeSqliteRestoreResult,
   NativeUpdateLibraryPathSettingArgs
 } from './nativeUtilityContract.js';
 
@@ -31,6 +34,18 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {
     args: undefined;
     result: NativeLibraryPaths;
+  };
+  [NATIVE_COMMANDS.listSqliteBackups]: {
+    args: undefined;
+    result: NativeSqliteBackupEntry[];
+  };
+  [NATIVE_COMMANDS.backupSqliteDatabase]: {
+    args: { destinationPath?: string };
+    result: NativeSqliteBackupResult;
+  };
+  [NATIVE_COMMANDS.restoreSqliteDatabase]: {
+    args: { sourcePath: string };
+    result: NativeSqliteRestoreResult;
   };
   [NATIVE_COMMANDS.rebuildMirrorOutput]: {
     args: undefined;

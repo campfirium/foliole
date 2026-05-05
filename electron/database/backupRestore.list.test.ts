@@ -35,25 +35,42 @@ afterEach(async () => {
 
 it('lists sqlite backups newest first from the managed backup directory', async () => {
   const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'backups');
+  const snapshotDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'snapshots');
   await fs.mkdir(backupDirectoryPath, { recursive: true });
+  await fs.mkdir(snapshotDirectoryPath, { recursive: true });
 
   const olderPath = path.join(backupDirectoryPath, 'foliole-older.db');
   const newerPath = path.join(backupDirectoryPath, 'foliole-newer.db');
+  const snapshotPath = path.join(snapshotDirectoryPath, 'pre-restore-2026-03-14_10-30-00-000.db');
   await fs.writeFile(olderPath, 'older-backup');
   await fs.writeFile(newerPath, 'newer-backup');
+  await fs.writeFile(snapshotPath, 'snapshot');
   await fs.utimes(olderPath, new Date('2026-03-14T10:00:00.000Z'), new Date('2026-03-14T10:00:00.000Z'));
   await fs.utimes(newerPath, new Date('2026-03-14T11:00:00.000Z'), new Date('2026-03-14T11:00:00.000Z'));
+  await fs.utimes(snapshotPath, new Date('2026-03-14T10:30:00.000Z'), new Date('2026-03-14T10:30:00.000Z'));
 
   await expect(listApplicationDatabaseBackups()).resolves.toEqual([
     {
       fileName: 'foliole-newer.db',
       filePath: newerPath,
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 12,
       updatedAt: '2026-03-14T11:00:00.000Z'
     },
     {
+      fileName: 'pre-restore-2026-03-14_10-30-00-000.db',
+      filePath: snapshotPath,
+      kind: 'snapshot',
+      snapshotReason: 'pre-restore',
+      sizeBytes: 8,
+      updatedAt: '2026-03-14T10:30:00.000Z'
+    },
+    {
       fileName: 'foliole-older.db',
       filePath: olderPath,
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 12,
       updatedAt: '2026-03-14T10:00:00.000Z'
     }

@@ -19,6 +19,8 @@ const {
     {
       fileName: 'foliole-2026-03-14_10-00-00-000.db',
       filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 4096,
       updatedAt: '2026-03-14T10:00:00.000Z'
     }
@@ -105,6 +107,8 @@ it('dispatches sqlite backup listing command through invoke handler', async () =
     {
       fileName: 'foliole-2026-03-14_10-00-00-000.db',
       filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 4096,
       updatedAt: '2026-03-14T10:00:00.000Z'
     }

@@ -20,7 +20,7 @@ import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type {
   NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
   NativeReviewPreviewArgs, NativeReviewPreviewResult,
-  NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog
+  NativeSystemFontCatalog
 } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
@@ -206,14 +206,6 @@ export type NativeCommandMap = NativeUtilityCommandMap & {
   [NATIVE_COMMANDS.resetImportData]: {
     args: undefined;
     result: NativeResetImportDataResult;
-  };
-  [NATIVE_COMMANDS.backupSqliteDatabase]: {
-    args: { destinationPath?: string };
-    result: NativeSqliteBackupResult;
-  };
-  [NATIVE_COMMANDS.restoreSqliteDatabase]: {
-    args: { sourcePath: string };
-    result: NativeSqliteRestoreResult;
   };
   [NATIVE_COMMANDS.createFolder]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.createTopic]: NativeNodeSnapshotMutationSpec;

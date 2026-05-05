@@ -22,6 +22,8 @@ export interface RestoreApplicationDatabaseBackupOptions {
 export interface ApplicationDatabaseBackupEntry {
   fileName: string;
   filePath: string;
+  kind: 'backup' | 'snapshot';
+  snapshotReason: 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
 }
@@ -54,11 +56,27 @@ export async function restoreApplicationDatabaseBackup(
 }
 
 export async function listApplicationDatabaseBackups(): Promise<ApplicationDatabaseBackupEntry[]> {
-  const backupDirectoryPath = path.join(path.dirname(resolveDatabasePath()), 'backups');
+  const databaseDirectoryPath = path.dirname(resolveDatabasePath());
+  const [backupEntries, snapshotEntries] = await Promise.all([
+    listDatabaseFiles(path.join(databaseDirectoryPath, 'backups'), 'backup'),
+    listDatabaseFiles(path.join(databaseDirectoryPath, 'snapshots'), 'snapshot')
+  ]);
 
+  return [...backupEntries, ...snapshotEntries]
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
+export function getApplicationDatabasePath() {
+  return openDatabaseConnection().dbPath;
+}
+
+async function listDatabaseFiles(
+  directoryPath: string,
+  kind: ApplicationDatabaseBackupEntry['kind']
+): Promise<ApplicationDatabaseBackupEntry[]> {
   let fileNames: string[];
   try {
-    fileNames = await fs.readdir(backupDirectoryPath);
+    fileNames = await fs.readdir(directoryPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
@@ -70,7 +88,7 @@ export async function listApplicationDatabaseBackups(): Promise<ApplicationDatab
     fileNames
       .filter((fileName) => fileName.endsWith('.db'))
       .map(async (fileName) => {
-        const filePath = path.join(backupDirectoryPath, fileName);
+        const filePath = path.join(directoryPath, fileName);
         const stats = await fs.stat(filePath);
         if (!stats.isFile()) {
           return null;
@@ -78,17 +96,23 @@ export async function listApplicationDatabaseBackups(): Promise<ApplicationDatab
         return {
           fileName,
           filePath,
+          kind,
+          snapshotReason: kind === 'snapshot' ? readSnapshotReason(fileName) : null,
           sizeBytes: stats.size,
           updatedAt: stats.mtime.toISOString()
         } satisfies ApplicationDatabaseBackupEntry;
       })
   );
 
-  return entries
-    .filter((entry): entry is ApplicationDatabaseBackupEntry => entry !== null)
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  return entries.filter((entry): entry is ApplicationDatabaseBackupEntry => entry !== null);
 }
 
-export function getApplicationDatabasePath() {
-  return openDatabaseConnection().dbPath;
+function readSnapshotReason(fileName: string): ApplicationDatabaseBackupEntry['snapshotReason'] {
+  if (fileName.startsWith('pre-restore-')) {
+    return 'pre-restore';
+  }
+  if (fileName.startsWith('pre-migration-')) {
+    return 'pre-migration';
+  }
+  return null;
 }

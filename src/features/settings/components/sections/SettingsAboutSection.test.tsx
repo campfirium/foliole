@@ -45,6 +45,8 @@ beforeEach(() => {
     {
       fileName: 'foliole-2026-03-14_10-00-00-000.db',
       filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 4096,
       updatedAt: '2026-03-14T10:00:00.000Z'
     }
@@ -80,6 +82,8 @@ it('creates a backup and refreshes the visible list', async () => {
     {
       fileName: 'foliole-2026-03-15_08-00-00-000.db',
       filePath: '/app/backups/foliole-2026-03-15_08-00-00-000.db',
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 81920,
       updatedAt: '2026-03-15T08:00:00.000Z'
     }
@@ -108,6 +112,28 @@ it('creates a backup and refreshes the visible list', async () => {
   expect(mockedListDatabaseBackups).toHaveBeenCalledTimes(2);
   expect(screen.getByText('Backup created: foliole-2026-03-15_08-00-00-000.db.')).toBeInTheDocument();
   expect(screen.getByText('foliole-2026-03-15_08-00-00-000.db')).toBeInTheDocument();
+});
+
+it('shows auto safety snapshots in the same list with a clear label', async () => {
+  mockedListDatabaseBackups.mockResolvedValue([
+    {
+      fileName: 'pre-restore-2026-03-15_08-45-00-000.db',
+      filePath: '/app/snapshots/pre-restore-2026-03-15_08-45-00-000.db',
+      kind: 'snapshot',
+      snapshotReason: 'pre-restore',
+      sizeBytes: 4096,
+      updatedAt: '2026-03-15T08:45:00.000Z'
+    }
+  ]);
+
+  render(<SettingsAboutSection />);
+
+  await waitFor(() => {
+    expect(screen.getByText('pre-restore-2026-03-15_08-45-00-000.db')).toBeInTheDocument();
+  });
+
+  expect(screen.getByText(/Auto safety snapshot before restore/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Restore' })).toBeEnabled();
 });
 
 it('keeps the success status even when the refreshed list stays empty', async () => {
@@ -203,6 +229,8 @@ it('enables backup actions after desktop bridge becomes available post-mount', a
     {
       fileName: 'foliole-2026-03-15_09-00-00-000.db',
       filePath: '/app/backups/foliole-2026-03-15_09-00-00-000.db',
+      kind: 'backup',
+      snapshotReason: null,
       sizeBytes: 10240,
       updatedAt: '2026-03-15T09:00:00.000Z'
     }

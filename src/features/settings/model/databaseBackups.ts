@@ -5,6 +5,8 @@ import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 export interface DatabaseBackupEntry {
   fileName: string;
   filePath: string;
+  kind: 'backup' | 'snapshot';
+  snapshotReason: 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
 }
@@ -48,12 +50,18 @@ function normalizeDatabaseBackupEntry(value: unknown): DatabaseBackupEntry | nul
   const payload = value as Record<string, unknown>;
   const fileName = readString(payload.fileName);
   const filePath = readString(payload.filePath);
+  const kind = payload.kind === 'snapshot' ? 'snapshot' : payload.kind === 'backup' ? 'backup' : null;
+  const snapshotReason = payload.snapshotReason === 'pre-migration' || payload.snapshotReason === 'pre-restore'
+    ? payload.snapshotReason
+    : payload.snapshotReason === null || payload.snapshotReason === undefined
+      ? null
+      : null;
   const sizeBytes = readNumber(payload.sizeBytes);
   const updatedAt = readString(payload.updatedAt);
-  if (!fileName || !filePath || sizeBytes === null || !updatedAt) {
+  if (!fileName || !filePath || !kind || sizeBytes === null || !updatedAt) {
     return null;
   }
-  return { fileName, filePath, sizeBytes, updatedAt };
+  return { fileName, filePath, kind, snapshotReason, sizeBytes, updatedAt };
 }
 
 function normalizeSqliteBackupResult(value: unknown): NativeSqliteBackupResult | null {

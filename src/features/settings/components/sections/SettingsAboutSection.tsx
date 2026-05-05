@@ -35,12 +35,25 @@ function formatBackupMeta(entry: DatabaseBackupEntry) {
     ? entry.updatedAt
     : BACKUP_DATE_FORMATTER.format(new Date(entry.updatedAt));
   const sizeInKilobytes = `${Math.max(1, Math.round(entry.sizeBytes / 1024))} KB`;
-  return `${updatedAt} · ${sizeInKilobytes}`;
+  return `${describeBackupKind(entry)} · ${updatedAt} · ${sizeInKilobytes}`;
 }
 
 function getBackupFileName(filePath: string) {
   const parts = filePath.split(/[/\\]/);
   return parts.at(-1) || filePath;
+}
+
+function describeBackupKind(entry: DatabaseBackupEntry) {
+  if (entry.kind === 'backup') {
+    return 'Manual backup';
+  }
+  if (entry.snapshotReason === 'pre-restore') {
+    return 'Auto safety snapshot before restore';
+  }
+  if (entry.snapshotReason === 'pre-migration') {
+    return 'Auto safety snapshot before upgrade';
+  }
+  return 'Auto safety snapshot';
 }
 
 function loadInitialBackups(
@@ -125,6 +138,7 @@ function BackupHeaderRow(props: Pick<BackupSectionState, 'createBackup' | 'isBac
       description={
         <>
           Save a SQLite snapshot into the managed backups folder.
+          Auto safety snapshots created before restore also appear below.
           {props.statusMessage ? <span className="mt-1 block text-emerald-700">{props.statusMessage}</span> : null}
         </>
       }
@@ -150,7 +164,7 @@ function BackupStateRows(props: Pick<BackupSectionState, 'backups' | 'isBackupAc
   }
 
   if (props.isLoadingBackups) {
-    return <SettingsRow description="Scanning the managed backup folder." readonly title="Loading backups" />;
+    return <SettingsRow description="Scanning backup and safety snapshot folders." readonly title="Loading backups" />;
   }
 
   if (props.backups.length === 0) {

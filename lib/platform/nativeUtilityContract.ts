@@ -140,6 +140,15 @@ export interface NativeSqliteBackupResult {
   remainingPages: number;
 }
 
+export interface NativeSqliteBackupEntry {
+  fileName: string;
+  filePath: string;
+  kind: 'backup' | 'snapshot';
+  snapshotReason: 'pre-migration' | 'pre-restore' | null;
+  sizeBytes: number;
+  updatedAt: string;
+}
+
 export interface NativeSqliteRestoreResult {
   sourcePath: string;
   targetPath: string;
