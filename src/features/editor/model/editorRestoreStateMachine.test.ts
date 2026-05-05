@@ -4,6 +4,8 @@ import type { PersistedNodeViewState } from '../../../../lib/platform/persistedN
 
 import {
   canEditorRestoreTargetMatchDocument,
+  createEditorRestoreTarget,
+  createEditorRestoreTargetKey,
   isEditorRestoreOriginatedScroll,
   reduceEditorRestoreState,
   resolveEditorRestoreTarget,
@@ -32,6 +34,25 @@ describe('editorRestoreStateMachine', () => {
       selectionTo: null,
       mode: 'scroll-only'
     });
+  });
+
+  it('creates stable target keys for selection and scroll-only restores', () => {
+    const scrollOnlyTarget = createEditorRestoreTarget({
+      nodeId: 'node-1',
+      scrollTop: 5400,
+      selectionFrom: null,
+      selectionTo: null
+    });
+    const selectionTarget = createEditorRestoreTarget({
+      nodeId: 'node-1',
+      scrollTop: undefined,
+      selectionFrom: 24,
+      selectionTo: 24
+    });
+
+    expect(scrollOnlyTarget?.mode).toBe('scroll-only');
+    expect(createEditorRestoreTargetKey(scrollOnlyTarget!)).toBe('node-1:scroll-only:5400:default');
+    expect(createEditorRestoreTargetKey(selectionTarget!, 'center')).toBe('node-1:24:24:auto:center');
   });
 });
 

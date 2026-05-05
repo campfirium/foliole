@@ -19,6 +19,15 @@ export interface EditorRestoreDocumentState {
   valueLength: number;
 }
 
+export interface EditorRestoreTargetInput {
+  nodeId: string | null;
+  scrollTop: number | undefined;
+  selectionFrom: number | null;
+  selectionTo: number | null;
+  targetViewportMode?: string | null;
+  updatedAt?: string;
+}
+
 export type EditorRestoreEvent =
   | { type: 'target-changed'; target: EditorRestoreTarget | null }
   | { type: 'document-changed'; document: EditorRestoreDocumentState }
@@ -34,6 +43,41 @@ export function resolveEditorRestoreTarget(
     return null;
   }
   return resolveNodeViewStateRestoreTarget(persistedState);
+}
+
+export function createEditorRestoreTarget(input: EditorRestoreTargetInput): EditorRestoreTarget | null {
+  if (!input.nodeId) {
+    return null;
+  }
+  const hasSelection = input.selectionFrom !== null && input.selectionTo !== null;
+  const scrollTop = typeof input.scrollTop === 'number' && Number.isFinite(input.scrollTop)
+    ? Math.max(0, Math.trunc(input.scrollTop))
+    : 0;
+  if (!hasSelection && scrollTop <= 0) {
+    return null;
+  }
+  const selectionFrom = hasSelection ? Math.max(0, Math.trunc(input.selectionFrom as number)) : null;
+  const selectionTo = hasSelection ? Math.max(0, Math.trunc(input.selectionTo as number)) : null;
+  return {
+    nodeId: input.nodeId,
+    scrollTop,
+    selectionFrom,
+    selectionTo,
+    updatedAt: input.updatedAt ?? new Date(0).toISOString(),
+    source: 'user-scroll',
+    mode: hasSelection ? 'selection' : 'scroll-only'
+  };
+}
+
+export function createEditorRestoreTargetKey(
+  target: EditorRestoreTarget,
+  targetViewportMode?: string | null
+) {
+  const viewportMode = targetViewportMode ?? 'default';
+  if (target.mode === 'scroll-only') {
+    return `${target.nodeId}:scroll-only:${target.scrollTop}:${viewportMode}`;
+  }
+  return `${target.nodeId}:${target.selectionFrom}:${target.selectionTo}:${target.scrollTop || 'auto'}:${viewportMode}`;
 }
 
 export function reduceEditorRestoreState(

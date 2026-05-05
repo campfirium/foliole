@@ -1,4 +1,8 @@
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
+import {
+  createEditorRestoreTarget,
+  createEditorRestoreTargetKey
+} from '../model/editorRestoreStateMachine';
 
 import type { EditorViewState } from './markdownEditorTypes';
 
@@ -51,11 +55,14 @@ export function createPendingRestoreSelectionKey(
   const selectionSource = readingSelection ?? nodeViewState?.selection;
   const selection = selectionSource ? normalizeRestoreSelection(selectionSource) : null;
   const scrollTop = resolveRestoreScrollTop(readingSelection, nodeViewState);
-  if (!nodeId || (!selection && !(typeof scrollTop === 'number' && scrollTop > 0))) {
+  const target = createEditorRestoreTarget({
+    nodeId,
+    scrollTop,
+    selectionFrom: selection?.from ?? null,
+    selectionTo: selection?.to ?? null
+  });
+  if (!target) {
     return null;
   }
-  if (!selection) {
-    return `${nodeId}:scroll-only:${scrollTop}:${targetViewportMode ?? 'default'}`;
-  }
-  return `${nodeId}:${selection.from}:${selection.to}:${scrollTop ?? 'auto'}:${targetViewportMode ?? 'default'}`;
+  return createEditorRestoreTargetKey(target, targetViewportMode);
 }

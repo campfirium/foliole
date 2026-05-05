@@ -4,7 +4,11 @@ import { markNodePositionRequested } from '../../../shared/platform/performanceD
 import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
-import { canEditorRestoreTargetMatchDocument } from '../model/editorRestoreStateMachine';
+import {
+  canEditorRestoreTargetMatchDocument,
+  createEditorRestoreTarget,
+  createEditorRestoreTargetKey
+} from '../model/editorRestoreStateMachine';
 
 import {
   beginRestoreSelection,
@@ -119,26 +123,22 @@ export function resolveRestoreTarget(args: {
     return null;
   }
   const restoreScrollTop = resolveRestoreScrollTop(args.readingSelection, args.nodeViewState);
-  if (!selection && !(typeof restoreScrollTop === 'number' && restoreScrollTop > 0)) {
+  const stateTarget = createEditorRestoreTarget({
+    nodeId: args.nodeId,
+    scrollTop: restoreScrollTop,
+    selectionFrom: selection?.from ?? null,
+    selectionTo: selection?.to ?? null
+  });
+  if (!stateTarget) {
     return null;
   }
   if (!canEditorRestoreTargetMatchDocument(
-    {
-      nodeId: args.nodeId,
-      scrollTop: restoreScrollTop ?? 0,
-      selectionFrom: selection?.from ?? null,
-      selectionTo: selection?.to ?? null,
-      updatedAt: new Date(0).toISOString(),
-      source: 'user-scroll',
-      mode: selection ? 'selection' : 'scroll-only'
-    },
+    stateTarget,
     { nodeId: args.nodeId, valueLength: args.value.length }
   )) {
     return null;
   }
-  const selectionKey = selection
-    ? `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}:${args.readingTargetViewportMode ?? 'default'}`
-    : `${args.nodeId}:scroll-only:${restoreScrollTop}:${args.readingTargetViewportMode ?? 'default'}`;
+  const selectionKey = createEditorRestoreTargetKey(stateTarget, args.readingTargetViewportMode);
   if (args.pendingRestoreSelectionKey !== selectionKey) {
     return null;
   }
