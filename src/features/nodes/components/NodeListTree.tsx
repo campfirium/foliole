@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
-import { useWorkspaceStore } from '../../../store/workspaceStore';
+import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import type { Node } from '../model/nodeTypes';
 
 import { NodeListTreeContent } from './NodeListTreeContent';
@@ -23,6 +23,10 @@ interface NodeListTreeProps {
   selectedTrashNodeId: string | null;
 }
 
+interface NodeListTreeRuntimeState {
+  reviewSession: ReviewSessionState;
+}
+
 function useNodeWorkspaceActions() {
   return {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
@@ -31,6 +35,7 @@ function useNodeWorkspaceActions() {
     deleteNodePermanently: useWorkspaceStore((state) => state.deleteNodePermanently),
     moveNodes: useWorkspaceStore((state) => state.moveNodes),
     relearnNode: useWorkspaceStore((state) => state.relearnNode),
+    reviewSession: useWorkspaceStore((state) => state.reviewSession),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle),
     trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds)
@@ -90,6 +95,7 @@ function useNodeListTreeModel({
     handleSelectNode,
     moveNodes: workspace.moveNodes,
     relearnNode: workspace.relearnNode,
+    reviewSession: workspace.reviewSession,
     restoreNode: workspace.restoreNode,
     updateNodeTitle: workspace.updateNodeTitle,
     state
@@ -115,6 +121,7 @@ export function NodeListTree({
     selectedTrashNodeId
   });
   const state = model.state;
+  const runtimeState: NodeListTreeRuntimeState = { reviewSession: model.reviewSession };
   const collapsedNodeIds = isTrashViewOpen
     ? model.collapsedState.collapsedTrashNodeIds
     : model.collapsedState.collapsedNoteNodeIds;
@@ -136,6 +143,7 @@ export function NodeListTree({
       nodesById={nodesById}
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}
+      reviewSession={runtimeState.reviewSession}
       relearnNode={model.relearnNode}
       updateNodeTitle={model.updateNodeTitle}
       restoreNode={model.restoreNode}

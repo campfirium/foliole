@@ -1,7 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-
-import { AppEmptyState } from '../../../shared/ui';
-import { isFsrsReviewItemNode } from '../../review/model/reviewItemKind';
+import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
 
@@ -13,74 +10,8 @@ import type {
   NodeListCollapseController,
   NodeListContextMenuController
 } from './NodeListTreeHooks';
-import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
+import { NodeListRows } from './NodeListTreeRows';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
-import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
-
-interface NodeListRowsProps {
-  activeNodeId: string | null;
-  collapsedNodeIds: ReadonlySet<string>;
-  drag: ReturnType<typeof useNodeListDragController>;
-  isTrashViewOpen: boolean;
-  nodesById: Record<string, Node>;
-  onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
-  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
-  onRename: (nodeId: string, title: string) => void;
-  onToggleCollapse: (nodeId: string) => void;
-  rows: NodeTreeRow[];
-  selectedNodeIds: string[];
-  selectedTrashNodeId: string | null;
-}
-
-function NodeListRows(props: NodeListRowsProps) {
-  if (props.rows.length === 0) {
-    return props.isTrashViewOpen ? (
-      <AppEmptyState description="Deleted nodes will appear here." title="Trash is empty" />
-    ) : (
-      <AppEmptyState description="Create or import a node to start editing." title="No nodes" />
-    );
-  }
-
-  const onRowKeyDown = createNodeListRowKeydownHandler({
-    collapsedNodeIds: props.collapsedNodeIds,
-    onSelect: (nodeId) => props.onSelect(nodeId),
-    onToggleCollapse: props.onToggleCollapse,
-    rows: props.rows
-  });
-
-  return props.rows.map((row) => {
-    const isDerivedNode = Boolean(props.nodesById[row.node.id]?.anchorLink);
-    return (
-      <NodeTreeRowItem
-        depth={row.depth}
-        hasChildren={row.hasChildren}
-        isActive={
-          (props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id
-        }
-        isCollapsed={props.collapsedNodeIds.has(row.node.id)}
-        isDerived={isDerivedNode}
-        isReviewCard={isFsrsReviewItemNode(props.nodesById[row.node.id])}
-        isDragDisabled={props.isTrashViewOpen || isDerivedNode}
-        isDropTarget={props.drag.dropTargetNodeId === row.node.id}
-        dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
-        isSelected={props.selectedNodeIds.includes(row.node.id)}
-        key={row.node.id}
-        label={row.node.title}
-        nodeId={row.node.id}
-        onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
-        onDragEnter={props.drag.onDragEnterNode}
-        onDragOver={props.drag.onDragOverNode}
-        onDragStart={props.drag.onDragStartNode}
-        onDrop={props.drag.onDropOnNode}
-        onKeyDown={onRowKeyDown}
-        onContextMenu={props.onContextMenu}
-        onSelect={props.onSelect}
-        onRename={props.onRename}
-        onToggleCollapse={props.onToggleCollapse}
-      />
-    );
-  });
-}
 
 interface NodeListPanelProps {
   activeCollapsedNodeIds: ReadonlySet<string>;
@@ -101,6 +32,7 @@ interface NodeListPanelProps {
   onOpenNotesView: () => void;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  reviewSession: ReviewSessionState;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
   trashRowIds: string[];
@@ -158,6 +90,7 @@ function NodeListPanel(props: NodeListPanelProps) {
             onSelect={props.onSelect}
             onToggleCollapse={props.collapse.toggleCollapse}
             rows={props.activeRows}
+            reviewSession={props.reviewSession}
             selectedNodeIds={props.selectedNodeIds}
             selectedTrashNodeId={props.selectedTrashNodeId}
           />
@@ -181,6 +114,7 @@ interface NodeListTreeContentProps {
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: 'before' | 'after' | 'child' | 'root') => boolean; nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  reviewSession: ReviewSessionState;
   relearnNode: (nodeId: string, now?: string) => boolean;
   updateNodeTitle: (nodeId: string, title: string) => void;
   restoreNode: (nodeId: string) => void;
@@ -231,6 +165,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         onOpenNotesView={props.onOpenNotesView}
         onRenameNode={props.updateNodeTitle}
         onSelect={props.onSelect}
+        reviewSession={props.reviewSession}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
         trashRowIds={props.state.trashRowIds}

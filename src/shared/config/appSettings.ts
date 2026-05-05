@@ -11,6 +11,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
   customMonospaceFont: 'foliole-custom-monospace-font-family',
+  nodeIconPrimarySvg: 'foliole-node-icon-primary-svg',
+  nodeIconSecondarySvg: 'foliole-node-icon-secondary-svg',
   listCollapsed: 'foliole-workspace-list-collapsed',
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   commandRecents: 'foliole-command-recents',

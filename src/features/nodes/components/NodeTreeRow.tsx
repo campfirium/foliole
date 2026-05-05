@@ -10,6 +10,7 @@ import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRowIcon } from './NodeTreeRowIcon';
+import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 import { NodeRenameInput, useRenameState } from './NodeTreeRowRename';
 
 interface NodeTreeRowProps {
@@ -17,7 +18,8 @@ interface NodeTreeRowProps {
   isActive: boolean;
   isCollapsed: boolean;
   isDerived?: boolean;
-  isReviewCard?: boolean;
+  nodeIconKind?: NodeTreeRowIconKind;
+  nodeIconState?: NodeTreeRowIconState;
   isSelected: boolean;
   hasChildren: boolean;
   isDragDisabled?: boolean;
@@ -67,7 +69,8 @@ export function NodeTreeRow({
   isActive,
   isCollapsed,
   isDerived = false,
-  isReviewCard = false,
+  nodeIconKind = 'reading',
+  nodeIconState = 'default',
   isSelected,
   hasChildren,
   isDragDisabled = false,
@@ -105,7 +108,8 @@ export function NodeTreeRow({
         isActive={isActive}
         isCollapsed={isCollapsed}
         isDerived={isDerived}
-        isReviewCard={isReviewCard}
+        nodeIconKind={nodeIconKind}
+        nodeIconState={nodeIconState}
         isSelected={isSelected}
         label={label}
         nodeId={nodeId}
@@ -126,7 +130,8 @@ interface NodeTreeRowButtonProps {
   isActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
-  isReviewCard: boolean;
+  nodeIconKind: NodeTreeRowIconKind;
+  nodeIconState: NodeTreeRowIconState;
   isSelected: boolean;
   label: string;
   nodeId: string;
@@ -159,7 +164,8 @@ function NodeTreeRowButton({
   isActive,
   isCollapsed,
   isDerived,
-  isReviewCard,
+  nodeIconKind,
+  nodeIconState,
   isSelected,
   label,
   nodeId,
@@ -173,8 +179,9 @@ function NodeTreeRowButton({
   const rename = useRenameState(label, nodeId, onRename);
   const buttonClassName = cn(
     'gap-0 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4',
-    !isDerived && 'text-[#111317] font-medium',
-    isDerived && 'text-foreground/70',
+    'text-[#111317]',
+    !isDerived && 'font-medium',
+    isDerived && 'font-normal',
     isSelected && 'bg-foreground/[0.05]'
   );
   return (
@@ -187,6 +194,7 @@ function NodeTreeRowButton({
       aria-selected={isSelected}
       className={buttonClassName}
       data-node-derived={isDerived ? 'true' : 'false'}
+      data-node-emphasis={isDerived ? 'secondary' : 'primary'}
       data-node-id={nodeId}
       id={`node-treeitem-${nodeId}`}
       onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
@@ -196,7 +204,7 @@ function NodeTreeRowButton({
       role="treeitem"
       style={style}
       variant="list"
-    >
+      >
       <NodeTreeRowExpandToggle
         hasChildren={hasChildren}
         isCollapsed={isCollapsed}
@@ -204,7 +212,7 @@ function NodeTreeRowButton({
         nodeId={nodeId}
         onToggleCollapse={onToggleCollapse}
       />
-      <NodeTreeRowIcon isDerived={isDerived} isReviewCard={isReviewCard} />
+      <NodeTreeRowIcon kind={nodeIconKind} state={nodeIconState} />
       {renderNodeLabel(label, rename)}
     </AppButton>
   );

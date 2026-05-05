@@ -37,6 +37,30 @@ it('creates highlight node from editor context menu without leaving current node
   );
 });
 
+it('keeps derived node icons at normal tone while lowering row emphasis', () => {
+  render(<App />);
+  const editor = screen.getByLabelText('Prompt editor');
+  mockEditorState.selectionFrom = 2;
+  mockEditorState.selectionTo = 9;
+
+  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
+
+  const regularRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
+  const derivedRow = screen.getByRole('treeitem', { name: 'Welcome' });
+
+  expect(regularRow).toHaveAttribute('data-node-emphasis', 'primary');
+  expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
+  expect(regularRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+    'data-node-icon-tone',
+    'normal'
+  );
+  expect(derivedRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+    'data-node-icon-tone',
+    'normal'
+  );
+});
+
 it('creates cloze node from editor context menu without leaving current node', () => {
   render(<App />);
   const editor = screen.getByLabelText('Prompt editor');

@@ -15,6 +15,8 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
   APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
   APP_SETTINGS_STORAGE_KEYS.customMonospaceFont,
+  APP_SETTINGS_STORAGE_KEYS.nodeIconPrimarySvg,
+  APP_SETTINGS_STORAGE_KEYS.nodeIconSecondarySvg,
   APP_SETTINGS_STORAGE_KEYS.listCollapsed,
   APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed,
   APP_SETTINGS_STORAGE_KEYS.commandRecents,
