@@ -16,6 +16,10 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
+import {
+  buildRemainingStructureProgress,
+  shouldClearCompanionSyncProgress
+} from './companionSyncProgressVisibility';
 import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
 
 interface WorkspaceSnapshotActionArgs {
@@ -68,11 +72,10 @@ async function syncDesktopStreams(args: {
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  if (
-    result.attachmentResourceError ||
-    result.contentBlobError ||
-    (result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0)
-  ) {
+  const remainingStructureProgress = buildRemainingStructureProgress(result);
+  if (remainingStructureProgress) {
+    args.setSyncProgress(remainingStructureProgress);
+  } else if (shouldClearCompanionSyncProgress(result)) {
     args.setSyncProgress(null);
   }
   return nextState;

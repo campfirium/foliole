@@ -11,6 +11,10 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
+import {
+  buildRemainingStructureProgress,
+  shouldClearCompanionSyncProgress
+} from './companionSyncProgressVisibility';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
@@ -51,11 +55,10 @@ export async function runCompanionStreamSync(args: {
   args.setState(completedState);
   args.setReadableArticle(await syncReadableArticle(completedState.workspace_snapshot));
   args.setStatus('idle');
-  if (
-    result.attachmentResourceError ||
-    result.contentBlobError ||
-    (result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0)
-  ) {
+  const remainingStructureProgress = buildRemainingStructureProgress(result);
+  if (remainingStructureProgress) {
+    args.setSyncProgress(remainingStructureProgress);
+  } else if (shouldClearCompanionSyncProgress(result)) {
     args.setSyncProgress(null);
   }
   return passResult.outcome;

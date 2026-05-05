@@ -207,6 +207,33 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
 }
 
+async function testKeepsProgressVisibleWhenStructureLagRemains() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingAttachmentResourceCount: 0,
+    remainingContentBlobCount: 0,
+    remainingStructureChangeCount: 4
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setSyncProgress = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress,
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(setSyncProgress).not.toHaveBeenCalledWith(null);
+  expect(setSyncProgress).toHaveBeenCalledWith({
+    completed: 0,
+    phase: 'structure',
+    total: 4
+  });
+}
+
 async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     localDirtyCount: 1,
@@ -321,6 +348,8 @@ describe('tryForegroundAutoSync', () => {
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 
   it('keeps sync progress visible when a pass leaves resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
+
+  it('keeps sync progress visible when a pass leaves structure lag', testKeepsProgressVisibleWhenStructureLagRemains);
 
   it('does not record completed while local work is waiting', testDoesNotCompleteWhileLocalWorkIsWaiting);
 
