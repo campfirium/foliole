@@ -30,6 +30,7 @@ export interface WorkspaceState {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   setDocumentMaxWidth: (width: number) => void;
   setListWidth: (width: number) => void;
+  setRightSidebarWidth: (width: number) => void;
   setActiveNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
@@ -72,6 +73,7 @@ interface WorkspacePersistedState {
 export interface WorkspaceLayoutState {
   documentMaxWidth: number;
   listWidth: number;
+  rightSidebarWidth: number;
 }
 
 export interface ReviewSessionState {
@@ -92,10 +94,12 @@ export interface NodeViewState {
 export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';
 export const LIST_WIDTH_DEFAULT = 300;
 export const DOCUMENT_WIDTH_DEFAULT = 860;
+export const RIGHT_SIDEBAR_WIDTH_DEFAULT = 320;
 
 const defaultLayoutState: WorkspaceLayoutState = {
   documentMaxWidth: DOCUMENT_WIDTH_DEFAULT,
-  listWidth: LIST_WIDTH_DEFAULT
+  listWidth: LIST_WIDTH_DEFAULT,
+  rightSidebarWidth: RIGHT_SIDEBAR_WIDTH_DEFAULT
 };
 
 export function createInitialWorkspaceState(now = new Date()): Pick<
@@ -151,6 +155,18 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           layout: {
             ...state.layout,
             listWidth: normalizedWidth
+          }
+        }));
+      },
+      setRightSidebarWidth: (width) => {
+        const normalizedWidth = normalizeWidth(width);
+        if (!normalizedWidth) {
+          return;
+        }
+        set((state) => ({
+          layout: {
+            ...state.layout,
+            rightSidebarWidth: normalizedWidth
           }
         }));
       },

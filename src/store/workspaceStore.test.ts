@@ -6,6 +6,7 @@ import {
   createInitialWorkspaceState,
   DOCUMENT_WIDTH_DEFAULT,
   LIST_WIDTH_DEFAULT,
+  RIGHT_SIDEBAR_WIDTH_DEFAULT,
   useWorkspaceStore
 } from './workspaceStore';
 
@@ -27,6 +28,7 @@ it('creates seed node as initial state', () => {
   expect(initial.nodesById['node-1']?.review).toBeNull();
   expect(initial.layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
   expect(initial.layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
+  expect(initial.layout.rightSidebarWidth).toBe(RIGHT_SIDEBAR_WIDTH_DEFAULT);
 });
 
 it('updates node content and title', () => {
@@ -223,11 +225,14 @@ it('keeps parent content unchanged when deleting unlinked child node', () => {
 it('updates layout widths and resets to defaults', () => {
   useWorkspaceStore.getState().setListWidth(1200);
   useWorkspaceStore.getState().setDocumentMaxWidth(2400);
+  useWorkspaceStore.getState().setRightSidebarWidth(420);
 
   expect(useWorkspaceStore.getState().layout.listWidth).toBe(1200);
   expect(useWorkspaceStore.getState().layout.documentMaxWidth).toBe(2400);
+  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBe(420);
 
   useWorkspaceStore.getState().resetLayout();
   expect(useWorkspaceStore.getState().layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
   expect(useWorkspaceStore.getState().layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
+  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBe(RIGHT_SIDEBAR_WIDTH_DEFAULT);
 });

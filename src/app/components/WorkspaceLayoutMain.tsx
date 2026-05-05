@@ -68,7 +68,8 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
-    '--workspace-list-width': `${props.listWidth}px`
+    '--workspace-list-width': `${props.listWidth}px`,
+    '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
   } as CSSProperties;
   const documentNodeId = props.isViewingTrashNode ? props.selectedTrashNodeId : props.activeNodeId;
 

@@ -137,7 +137,10 @@ export function DocumentPanelNodeReviewSettings({
   const isEditable = editableNodeId === activeNodeId;
 
   return (
-    <section aria-label="Node review settings" className="rounded-xl border border-border bg-bg-panel p-4">
+    <section
+      aria-label="Node review settings"
+      className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+    >
       <div className="flex w-full flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h3 className="text-sm font-semibold text-foreground">Review scheduling</h3>

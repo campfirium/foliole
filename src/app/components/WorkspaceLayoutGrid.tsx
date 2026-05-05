@@ -5,6 +5,7 @@ import { ReviewModeToolbar } from './ReviewModeToolbar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListSplitter } from './WorkspaceListSplitter';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
+import { WorkspaceRightSidebarSplitter } from './WorkspaceRightSidebarSplitter';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
@@ -145,9 +146,8 @@ export function WorkspaceLayoutGrid({
       </div>
       <div className="col-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
         <div
-          className="grid h-full min-h-0 gap-0 overflow-hidden max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
-          data-resizing={props.isResizingList}
-          style={{ gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 1px minmax(0, 1fr) auto' }}
+          className="grid h-full min-h-0 gap-0 overflow-hidden [grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))] max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
+          data-resizing={props.isResizingList || props.isResizingRightSidebar}
         >
           <WorkspaceListArea props={props} />
           <WorkspaceListSplitter
@@ -158,6 +158,13 @@ export function WorkspaceLayoutGrid({
             onSplitterPointerDown={props.onSplitterPointerDown}
           />
           <WorkspaceDocumentArea documentNodeId={documentNodeId} props={props} />
+          <WorkspaceRightSidebarSplitter
+            isResizingRightSidebar={props.isResizingRightSidebar}
+            onResetLayout={props.onResetLayout}
+            onRightSidebarSplitterKeyDown={props.onRightSidebarSplitterKeyDown}
+            onRightSidebarSplitterPointerDown={props.onRightSidebarSplitterPointerDown}
+            rightSidebarWidth={props.rightSidebarWidth}
+          />
           <WorkspaceRightSidebar
             activeNodeId={documentNodeId}
             editorNodeId={props.editorNodeId}

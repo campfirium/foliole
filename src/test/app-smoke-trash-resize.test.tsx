@@ -4,7 +4,12 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
-import { DOCUMENT_WIDTH_DEFAULT, LIST_WIDTH_DEFAULT, useWorkspaceStore } from '../store/workspaceStore';
+import {
+  DOCUMENT_WIDTH_DEFAULT,
+  LIST_WIDTH_DEFAULT,
+  RIGHT_SIDEBAR_WIDTH_DEFAULT,
+  useWorkspaceStore
+} from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
@@ -123,4 +128,14 @@ it('resets document width by double click handle', () => {
   const rightHandle = screen.getByRole('separator', { name: 'Resize document width from right' });
   fireEvent.doubleClick(rightHandle);
   expect(useWorkspaceStore.getState().layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
+});
+
+it('supports keyboard resize on inspector splitter and reset by double click', () => {
+  render(<App />);
+  const splitter = screen.getByRole('separator', { name: 'Resize inspector sidebar' });
+  fireEvent.keyDown(splitter, { key: 'ArrowLeft' });
+  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBeGreaterThan(RIGHT_SIDEBAR_WIDTH_DEFAULT);
+
+  fireEvent.doubleClick(splitter);
+  expect(useWorkspaceStore.getState().layout.rightSidebarWidth).toBe(RIGHT_SIDEBAR_WIDTH_DEFAULT);
 });

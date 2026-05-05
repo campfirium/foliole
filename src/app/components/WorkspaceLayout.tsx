@@ -51,10 +51,12 @@ export interface WorkspaceLayoutProps {
   reviewStatus: 'awaiting-answer' | 'answer-revealed' | 'completed';
   isDocumentResizing: boolean;
   isResizingList: boolean;
+  isResizingRightSidebar: boolean;
   isTrashViewOpen: boolean;
   isViewingTrashNode: boolean;
   showAnswerSection: boolean;
   listWidth: number;
+  rightSidebarWidth: number;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   onAnswerChange: (answer: string) => void;
@@ -67,6 +69,8 @@ export interface WorkspaceLayoutProps {
   onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onRightSidebarSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onToggleListVisibility: () => void;
