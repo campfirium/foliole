@@ -1,6 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
-import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
+import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppButton, AppStatusBadge } from '../../shared/ui';
 
 import { ImportCatalogListItem } from './ImportCatalogListItem';

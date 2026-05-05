@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
-import { loadRuntimeReadwiseBooksInventory, onRuntimeReadwiseBookEpubProgress } from './readwiseBooksBridge';
+import { loadRuntimeReadwiseBooksInventory, onRuntimeReadwiseBookEpubProgress } from './readwiseBooksRuntimeRepository';
 
 function createMockElectronApi(invoke: NativeInvoke) {
   return {

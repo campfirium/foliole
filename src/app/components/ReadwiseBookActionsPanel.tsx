@@ -11,7 +11,7 @@ import {
   openRuntimeReadwiseBookDownload,
   type RuntimeReadwiseBookEpubProgressEvent,
   type RuntimeReadwiseBookInventoryItem
-} from '../../shared/platform/readwiseBooksBridge';
+} from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 

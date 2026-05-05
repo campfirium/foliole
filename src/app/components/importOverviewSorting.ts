@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
-import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
+import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import type { NodeViewState } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 

@@ -1,5 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
+import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 
 import { PdfInventoryItem, ReadwiseBookInventoryItem } from './ImportInventoryListItems';
 import { InboxImportedNodeRow, InboxRecentRunRow } from './ImportOverviewSections';

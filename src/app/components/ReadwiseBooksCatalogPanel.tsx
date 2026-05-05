@@ -1,4 +1,4 @@
-import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
+import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';

@@ -12,7 +12,7 @@ const { loadRuntimeReadwiseBookEpub, loadRuntimeReadwiseBooksInventory, resetRun
   loadRuntimePdfImportsInventory: vi.fn()
 }));
 
-vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
+vi.mock('../../shared/platform/readwiseBooksRuntimeRepository', () => ({
   loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport

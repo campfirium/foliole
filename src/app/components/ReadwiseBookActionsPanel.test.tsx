@@ -15,7 +15,7 @@ const {
   openRuntimeReadwiseBookDownload: vi.fn()
 }));
 
-vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
+vi.mock('../../shared/platform/readwiseBooksRuntimeRepository', () => ({
   loadRuntimeReadwiseBookEpub,
   loadRuntimeReadwiseBooksInventory,
   onRuntimeReadwiseBookEpubProgress,

@@ -4,7 +4,7 @@ import {
   loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport,
   type RuntimeReadwiseBooksInventory
-} from '../../shared/platform/readwiseBooksBridge';
+} from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
