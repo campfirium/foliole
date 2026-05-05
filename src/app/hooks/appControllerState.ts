@@ -153,7 +153,7 @@ function useWorkspaceEditorController(
   return { editorCtx, nav };
 }
 
-function useEditorDraftCloseBridge(
+function useEditorDraftCloseFlushRegistration(
   isWorkspaceHydrated: boolean,
   flushPendingEditorDraftImmediately: () => Promise<boolean>
 ) {
@@ -197,7 +197,7 @@ export function useWorkspaceControllerState(
     saveActiveNodeView,
     navigationReadingPosition
   );
-  useEditorDraftCloseBridge(isWorkspaceHydrated, runtime.flushPendingEditorDraftImmediately);
+  useEditorDraftCloseFlushRegistration(isWorkspaceHydrated, runtime.flushPendingEditorDraftImmediately);
   useWorkspaceReadingProgressPersistence({
     activeNodeId: ws.activeNodeId,
     editorRef: runtime.editorRef,

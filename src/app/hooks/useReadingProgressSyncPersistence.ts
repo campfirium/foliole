@@ -80,7 +80,7 @@ export function flushReadingProgressToRuntime(args: {
   );
 }
 
-export async function flushReadingProgressToCloseBridge(args: {
+export async function flushReadingProgressBeforeClose(args: {
   lastSyncedSignatureRef: MutableRefObject<string | null>;
   persistence: ReadingProgressPersistenceArgs;
 }) {
@@ -102,7 +102,7 @@ export async function flushReadingProgressToCloseBridge(args: {
     pendingNodeViewByIdRef: args.persistence.pendingNodeViewByIdRef,
     setNodeViewState: args.persistence.setNodeViewState
   });
-  pushDebugTrace('reading-progress.flush-close-bridge', {
+  pushDebugTrace('reading-progress.flush-before-close', {
     activeNodeId: resolved.resolvedActiveNodeId,
     capturedNodeId: resolved.captured?.nodeId ?? null,
     nodeViewStateCount: Object.keys(resolved.mergedNodeViewById).length

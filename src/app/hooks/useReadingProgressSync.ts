@@ -4,9 +4,9 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
-import { useCloseBridgeRegistration, useDebouncedReadingProgressPersistence, useImmediateReadingProgressCapture, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
+import { useDebouncedReadingProgressPersistence, useImmediateReadingProgressCapture, useReadingProgressCloseFlushRegistration, useReadingProgressLifecycle } from './useReadingProgressSyncEffects';
 import {
-  flushReadingProgressToCloseBridge,
+  flushReadingProgressBeforeClose,
   flushReadingProgressToRuntime,
   type ReadingProgressPersistenceArgs
 } from './useReadingProgressSyncPersistence';
@@ -135,7 +135,7 @@ function useReadingProgressFlushCallbacks(args: {
 
   const flushReadingProgressImmediately = useCallback(
     () =>
-      flushReadingProgressToCloseBridge({
+      flushReadingProgressBeforeClose({
         lastSyncedSignatureRef,
         persistence
       }),
@@ -204,7 +204,7 @@ export function useReadingProgressSync({
     setNodeViewState,
     pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
   });
-  useCloseBridgeRegistration(isWorkspaceHydrated, flushReadingProgressImmediately);
+  useReadingProgressCloseFlushRegistration(isWorkspaceHydrated, flushReadingProgressImmediately);
   useReadingProgressLifecycle({
     activeNodeId,
     flushReadingProgress,

@@ -115,7 +115,7 @@ function PollutedPendingHarness(props: {
 }
 
 function registerCloseFlushTests() {
-  it('flushes the latest reading position through the close bridge handler', async () => {
+  it('flushes the latest reading position through the before-close handler', async () => {
     const invoke = vi.fn(() => Promise.resolve(null));
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     render(
@@ -132,7 +132,7 @@ function registerCloseFlushTests() {
     expectCurrentNodeCloseFlush(invoke);
   });
 
-  it('flushes the full node position table through the close bridge handler', async () => {
+  it('flushes the full node position table through the before-close handler', async () => {
     const invoke = vi.fn(() => Promise.resolve(null));
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     render(

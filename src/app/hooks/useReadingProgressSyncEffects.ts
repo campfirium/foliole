@@ -94,7 +94,7 @@ function useReadingProgressEffects({
   }, [isWorkspaceHydrated, lifecycleFlush]);
 }
 
-export function useCloseBridgeRegistration(
+export function useReadingProgressCloseFlushRegistration(
   isWorkspaceHydrated: boolean,
   flushReadingProgressImmediately: () => Promise<boolean>
 ) {
