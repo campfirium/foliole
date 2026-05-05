@@ -25,3 +25,13 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(screen.getByText('Ready').tagName).toBe('SPAN');
   expect(container.querySelector('.radix-themes')).toBeNull();
 });
+
+it('applies shared scrollbar styling to scrollable panel bodies', () => {
+  const { container } = render(
+    <AppPanel scrollBody title="Queue summary">
+      <p>Panel body</p>
+    </AppPanel>
+  );
+
+  expect(container.querySelector('.app-scrollbar.overflow-auto')).not.toBeNull();
+});

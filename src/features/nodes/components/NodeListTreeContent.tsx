@@ -61,7 +61,7 @@ function NodeListPanel(props: NodeListPanelProps) {
         onOpenNotesView={props.onOpenNotesView}
         trashCount={props.trashRowsLength}
       />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
+      <div className="app-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
         <section
           aria-multiselectable="true"
           aria-label={props.isTrashViewOpen ? 'Trash section' : undefined}

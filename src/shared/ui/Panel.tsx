@@ -63,7 +63,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
           <div className="min-w-0 flex-1 overflow-hidden">{center}</div>
           <div className="ml-auto shrink-0">{actions}</div>
         </header>
-        <div className={cn('min-h-0 flex-1', scrollBody && 'overflow-auto', bodyClassName)}>{children}</div>
+        <div className={cn('min-h-0 flex-1', scrollBody && 'app-scrollbar overflow-auto', bodyClassName)}>{children}</div>
         {footer ? <footer className="p-3">{footer}</footer> : null}
       </div>
     </Component>

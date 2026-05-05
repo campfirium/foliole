@@ -9,6 +9,9 @@
 :root {
   --app-accent-color: #3f8f68;
   --app-accent-color-rgb: 63 143 104;
+  --app-scrollbar-size: 12px;
+  --app-scrollbar-thumb-inset: 2px;
+  --app-scrollbar-thumb-color: #e5e5e5;
   --font-family-interface:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
@@ -317,21 +320,42 @@ body {
   height: 0;
 }
 
+.app-scrollbar {
+  scrollbar-color: var(--app-scrollbar-thumb-color) transparent;
+  scrollbar-width: thin;
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+}
+
+.app-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  border: var(--app-scrollbar-thumb-inset) solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: var(--app-scrollbar-thumb-color);
+}
+
 .editor-scrollbar-track {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 12px;
+  width: var(--app-scrollbar-size);
   z-index: 2;
 }
 
 .editor-scrollbar-thumb {
   position: absolute;
-  left: 2px;
-  width: 8px;
+  left: var(--app-scrollbar-thumb-inset);
+  width: calc(var(--app-scrollbar-size) - (var(--app-scrollbar-thumb-inset) * 2));
   border-radius: 999px;
-  background-color: #e5e5e5;
+  background-color: var(--app-scrollbar-thumb-color);
   cursor: grab;
 }
 

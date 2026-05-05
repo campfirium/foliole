@@ -221,7 +221,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
           className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1180px,calc(100vw-36px))] max-w-none overflow-hidden grid-cols-[260px_minmax(0,1fr)]"
         >
           <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
-          <div className="overflow-auto p-4 pb-5">
+          <div className="app-scrollbar overflow-auto p-4 pb-5">
             <header className="mb-2">
               <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
               <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>

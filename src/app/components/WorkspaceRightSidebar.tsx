@@ -26,7 +26,7 @@ export function WorkspaceRightSidebar(props: Pick<
           <h2 className="text-sm font-semibold text-foreground">{panelTitle}</h2>
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="app-scrollbar flex-1 overflow-y-auto px-3 py-3">
         {props.activePanelId === 'dev' ? (
           <WorkspaceRightSidebarDevPanel
             activeNodeId={props.activeNodeId}

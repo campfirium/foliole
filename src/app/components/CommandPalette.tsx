@@ -101,14 +101,14 @@ function PaletteInput({
 function CommandPaletteList({ activeIndex, emptyLabel, onRunItem, sections, visibleItems }: CommandPaletteListProps) {
   if (!visibleItems.length) {
     return (
-      <ul className="max-h-[50vh] overflow-y-auto p-1">
+      <ul className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
         <li className="px-3 py-8 text-center text-sm text-foreground/55">{emptyLabel}</li>
       </ul>
     );
   }
 
   return (
-    <ul className="max-h-[50vh] overflow-y-auto p-1">
+    <ul className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
       {sections.map((section) => (
         <li key={section.id} className="mb-1">
           <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-foreground/45">{section.title}</p>
