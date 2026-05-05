@@ -11,6 +11,7 @@ import {
   insertNodeBlockUnderParent,
   isNodeInSubtree
 } from './workspaceNodeTreeOrder';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -183,19 +184,30 @@ export function createChildNodeAction(
         updatedAt: timestamp
       };
       createdNode = nextNode;
+      const insertedNodeOrder = insertNodeBlockUnderParent(
+        state.nodeOrder,
+        [nodeId],
+        parentNodeId,
+        state.nodesById
+      );
+      const nextNodesById = {
+        ...state.nodesById,
+        [nodeId]: nextNode
+      };
 
       return {
         activeNodeId: nodeId,
-        nodeOrder: (nextNodeOrder = insertNodeBlockUnderParent(
-          state.nodeOrder,
-          [nodeId],
-          parentNodeId,
-          state.nodesById
-        )),
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
+        nodeOrder: (nextNodeOrder = insertedNodeOrder),
+        nodesById: nextNodesById,
+        reviewSession: reconcileReviewSession(
+          {
+            ...state,
+            activeNodeId: nodeId,
+            nodeOrder: insertedNodeOrder,
+            nodesById: nextNodesById
+          },
+          nodeId
+        )
       };
     });
     if (createdNode) {

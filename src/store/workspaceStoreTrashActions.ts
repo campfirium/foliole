@@ -4,6 +4,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -26,7 +27,10 @@ interface DeleteNodeMutationResult {
   deletedAt: string;
   nodeIds: string[];
   parentNodesToSync: Node[];
-  patch: Pick<WorkspaceState, 'activeNodeId' | 'navigation' | 'nodesById' | 'trashedNodeIds'>;
+  patch: Pick<
+    WorkspaceState,
+    'activeNodeId' | 'navigation' | 'nodesById' | 'reviewSession' | 'trashedNodeIds'
+  >;
 }
 
 function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
@@ -38,6 +42,29 @@ function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'h
   const inner = content.slice(matchedBlock.openTagTo, matchedBlock.closeTagFrom);
   const after = content.slice(matchedBlock.closeTagTo);
   return `${before}${inner}${after}`;
+}
+
+function buildDeleteNodePatch(args: {
+  state: WorkspaceState;
+  nextActiveNodeId: string | null;
+  nextNavigation: WorkspaceState['navigation'];
+  nextNodesById: WorkspaceState['nodesById'];
+  nextTrashedNodeIds: string[];
+}): DeleteNodeMutationResult['patch'] {
+  const nextState = {
+    ...args.state,
+    activeNodeId: args.nextActiveNodeId,
+    navigation: args.nextNavigation,
+    nodesById: args.nextNodesById,
+    trashedNodeIds: args.nextTrashedNodeIds
+  };
+  return {
+    activeNodeId: args.nextActiveNodeId,
+    navigation: args.nextNavigation,
+    nodesById: args.nextNodesById,
+    reviewSession: reconcileReviewSession(nextState, args.nextActiveNodeId),
+    trashedNodeIds: args.nextTrashedNodeIds
+  };
 }
 
 function computeDeleteNodeMutation(state: WorkspaceState, nodeId: string): DeleteNodeMutationResult | null {
@@ -90,12 +117,13 @@ function computeDeleteNodeMutation(state: WorkspaceState, nodeId: string): Delet
     deletedAt,
     nodeIds,
     parentNodesToSync: [...parentNodesToSync.values()],
-    patch: {
-      activeNodeId: nextActiveNodeId,
-      navigation: nextNavigation,
-      nodesById: nextNodesById,
-      trashedNodeIds: nextTrashedNodeIds
-    }
+    patch: buildDeleteNodePatch({
+      state,
+      nextActiveNodeId,
+      nextNavigation,
+      nextNodesById,
+      nextTrashedNodeIds
+    })
   };
 }
 
@@ -136,8 +164,14 @@ function createRestoreNodeAction(set: WorkspaceSet, runtimeHandlers: TrashRuntim
       const nextTrashedNodeIds = state.trashedNodeIds.filter((id) => !idsToRestoreSet.has(id));
       const nextActiveNodeId = state.activeNodeId ?? nodeId;
       idsToRestoreForSync = idsToRestore;
+      const nextState = {
+        ...state,
+        activeNodeId: nextActiveNodeId,
+        trashedNodeIds: nextTrashedNodeIds
+      };
       return {
         activeNodeId: nextActiveNodeId,
+        reviewSession: reconcileReviewSession(nextState, nextActiveNodeId),
         trashedNodeIds: nextTrashedNodeIds
       };
     });
@@ -184,12 +218,21 @@ function createDeleteNodePermanentlyAction(
 
       idsToDeleteForSync = idsToDelete;
       nodeOrderForSync = nextNodeOrder;
+      const nextState = {
+        ...state,
+        activeNodeId: nextActiveNodeId,
+        navigation: nextNavigation,
+        nodeOrder: nextNodeOrder,
+        nodesById: nextNodesById,
+        trashedNodeIds: nextTrashedNodeIds
+      };
 
       return {
         activeNodeId: nextActiveNodeId,
         navigation: nextNavigation,
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
+        reviewSession: reconcileReviewSession(nextState, nextActiveNodeId),
         trashedNodeIds: nextTrashedNodeIds
       };
     });

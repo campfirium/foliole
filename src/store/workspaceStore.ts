@@ -10,6 +10,7 @@ import {
 } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
 import { workspacePersistStorage } from './workspacePersistStorage';
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
@@ -155,7 +156,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (!state.nodesById[nodeId] || state.trashedNodeIds.includes(nodeId)) {
             return state;
           }
-          return { activeNodeId: nodeId };
+          return {
+            activeNodeId: nodeId,
+            reviewSession: reconcileReviewSession(state, nodeId)
+          };
         });
       },
       ...createWorkspaceNavigationActions(set),

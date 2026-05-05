@@ -1,5 +1,6 @@
 import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 
+import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -37,13 +38,23 @@ export function createRootNodeAction(
 
     set((state) => {
       nextNodeOrder = [...state.nodeOrder, nodeId];
+      const nextNodesById = {
+        ...state.nodesById,
+        [nodeId]: createdNode
+      };
       return {
         activeNodeId: nodeId,
         nodeOrder: nextNodeOrder,
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: createdNode
-        }
+        nodesById: nextNodesById,
+        reviewSession: reconcileReviewSession(
+          {
+            ...state,
+            activeNodeId: nodeId,
+            nodeOrder: nextNodeOrder,
+            nodesById: nextNodesById
+          },
+          nodeId
+        )
       };
     });
     handlers.syncNodeContent(createdNode);
@@ -84,12 +95,18 @@ export function createHighlightFromSelectionAction(
         updatedAt: timestamp
       };
       nextNodeOrder = [...state.nodeOrder, childNodeId];
+      const nextNodesById = {
+        ...state.nodesById,
+        [childNodeId]: createdNode
+      };
       return {
         nodeOrder: nextNodeOrder,
-        nodesById: {
-          ...state.nodesById,
-          [childNodeId]: createdNode
-        }
+        nodesById: nextNodesById,
+        reviewSession: reconcileReviewSession({
+          ...state,
+          nodeOrder: nextNodeOrder,
+          nodesById: nextNodesById
+        })
       };
     });
     if (createdNode && nextNodeOrder) {
@@ -133,12 +150,18 @@ export function createQAFromSelectionAction(
         updatedAt: timestamp
       };
       nextNodeOrder = [...state.nodeOrder, childNodeId];
+      const nextNodesById = {
+        ...state.nodesById,
+        [childNodeId]: createdNode
+      };
       return {
         nodeOrder: nextNodeOrder,
-        nodesById: {
-          ...state.nodesById,
-          [childNodeId]: createdNode
-        }
+        nodesById: nextNodesById,
+        reviewSession: reconcileReviewSession({
+          ...state,
+          nodeOrder: nextNodeOrder,
+          nodesById: nextNodesById
+        })
       };
     });
     if (createdNode && nextNodeOrder) {
