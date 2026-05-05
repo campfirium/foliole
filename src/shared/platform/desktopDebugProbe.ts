@@ -1,6 +1,21 @@
 import { getElectronAPI } from './electronApi';
 
 const MAX_RECENT_INVOKE_FAILURES = 5;
+const MAX_RECENT_INVOKES = 20;
+
+export type DesktopDebugInvokeStatus = 'resolved' | 'rejected';
+
+export interface DesktopDebugInvokeRecord {
+  args?: unknown;
+  command: string;
+  durationMs: number;
+  error?: {
+    message: string;
+    name?: string;
+  };
+  status: DesktopDebugInvokeStatus;
+  timestamp: string;
+}
 
 export interface DesktopDebugInvokeFailure {
   args?: unknown;
@@ -14,6 +29,7 @@ export interface DesktopDebugInvokeFailure {
 
 export interface DesktopDebugProbeSnapshot {
   bridgeAvailable: boolean;
+  recentInvokes: DesktopDebugInvokeRecord[];
   recentInvokeFailures: DesktopDebugInvokeFailure[];
   runtimeHead: string | null;
 }
@@ -29,6 +45,7 @@ declare global {
 }
 
 let recentInvokeFailures: DesktopDebugInvokeFailure[] = [];
+let recentInvokes: DesktopDebugInvokeRecord[] = [];
 
 function cloneValue<T>(value: T): T {
   if (typeof globalThis.structuredClone === 'function') {
@@ -60,9 +77,17 @@ function toErrorDetails(error: unknown) {
   };
 }
 
+function cloneArgs(args: unknown) {
+  if (args === undefined) {
+    return undefined;
+  }
+  return cloneValue(args);
+}
+
 function getSnapshot(): DesktopDebugProbeSnapshot {
   return {
     bridgeAvailable: Boolean(getElectronAPI()),
+    recentInvokes: recentInvokes.map((entry) => cloneValue(entry)),
     recentInvokeFailures: recentInvokeFailures.map((entry) => cloneValue(entry)),
     runtimeHead: getRuntimeHead()
   };
@@ -84,12 +109,33 @@ export function readDesktopDebugProbe(): DesktopDebugProbeSnapshot | null {
   return getSnapshot();
 }
 
+export function recordDesktopDebugInvoke(entry: {
+  args?: unknown;
+  command: string;
+  durationMs: number;
+  error?: unknown;
+  status: DesktopDebugInvokeStatus;
+}) {
+  if (!isDesktopDebugProbeEnabled()) {
+    return;
+  }
+  const nextEntry: DesktopDebugInvokeRecord = {
+    args: cloneArgs(entry.args),
+    command: entry.command,
+    durationMs: entry.durationMs,
+    error: entry.error === undefined ? undefined : toErrorDetails(entry.error),
+    status: entry.status,
+    timestamp: new Date().toISOString()
+  };
+  recentInvokes = [nextEntry, ...recentInvokes].slice(0, MAX_RECENT_INVOKES);
+}
+
 export function recordDesktopDebugInvokeFailure(entry: { args?: unknown; command: string; error: unknown }) {
   if (!isDesktopDebugProbeEnabled()) {
     return;
   }
   const nextEntry: DesktopDebugInvokeFailure = {
-    args: entry.args === undefined ? undefined : cloneValue(entry.args),
+    args: cloneArgs(entry.args),
     command: entry.command,
     error: toErrorDetails(entry.error),
     timestamp: new Date().toISOString()
@@ -99,6 +145,7 @@ export function recordDesktopDebugInvokeFailure(entry: { args?: unknown; command
 
 export function resetDesktopDebugProbeState() {
   recentInvokeFailures = [];
+  recentInvokes = [];
   if (typeof window !== 'undefined') {
     window.__FOLIOLE_DESKTOP_DEBUG_PROBE__ = undefined;
   }

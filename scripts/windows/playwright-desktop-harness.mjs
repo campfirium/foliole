@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+import { collectDesktopFailureDiagnostics, createMainProcessLogCollector, createRendererConsoleCollector } from './playwright-desktop-diagnostics.mjs';
+
 const DEFAULT_TIMEOUT_MS = 30_000;
 const WINDOWS_MIRROR_ROOT = '/mnt/c/dev/foliole';
 export const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
@@ -77,6 +79,27 @@ export async function acquireStableDesktopWindow(electronApp, timeoutMs) {
   return windowPage;
 }
 
+async function acquireDesktopWindowWithConsole(electronApp, timeoutMs) {
+  const windowPage = await electronApp.firstWindow({ timeout: timeoutMs });
+  const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
+
+  try {
+    await windowPage.waitForLoadState('domcontentloaded', { timeout: timeoutMs });
+    await windowPage.waitForFunction(
+      () =>
+        globalThis.location.href !== 'about:blank' &&
+        globalThis.document.readyState !== 'loading' &&
+        Boolean(globalThis.document.getElementById('root')),
+      undefined,
+      { timeout: timeoutMs }
+    );
+    return { rendererConsoleCollector, windowPage };
+  } catch (error) {
+    rendererConsoleCollector.dispose();
+    throw error;
+  }
+}
+
 export async function waitForDesktopAppReady(windowPage, timeoutMs) {
   await windowPage.waitForFunction((appReadyFlag) => globalThis[appReadyFlag] === true, APP_READY_FLAG, {
     timeout: timeoutMs
@@ -120,18 +143,31 @@ export async function launchDesktopSession({
   const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env);
   const deadline = Date.now() + timeoutMs;
   const electronApp = await launcher.launch(launchOptions);
-  const firstWindow = await acquireStableDesktopWindow(electronApp, getRemainingTimeout(deadline));
+  const mainProcessCollector = createMainProcessLogCollector(electronApp.process());
+  const { rendererConsoleCollector, windowPage: firstWindow } = await acquireDesktopWindowWithConsole(
+    electronApp,
+    getRemainingTimeout(deadline)
+  );
   const appReady = await waitForDesktopAppReady(firstWindow, getRemainingTimeout(deadline));
   const snapshot = await readMainProcessSnapshot(electronApp);
 
   let closed = false;
 
   return {
+    collectDiagnostics: () =>
+      collectDesktopFailureDiagnostics({
+        appRoot: target.appRoot,
+        mainProcessCollector,
+        rendererConsoleCollector,
+        windowPage: firstWindow
+      }),
     close: async () => {
       if (closed) {
         return;
       }
       closed = true;
+      rendererConsoleCollector.dispose();
+      mainProcessCollector.dispose();
       await electronApp.close();
     },
     appReady,

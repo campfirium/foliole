@@ -26,22 +26,40 @@ it('exposes desktop debug probe snapshot with bridge availability and runtime he
 
   expect(window.__FOLIOLE_DESKTOP_DEBUG_PROBE__?.getSnapshot()).toEqual({
     bridgeAvailable: true,
+    recentInvokes: [],
     recentInvokeFailures: [],
     runtimeHead: 'abc123'
   });
 });
 
-it('records recent native invoke failures through runtime invoke wrapper', async () => {
-  const invoke = vi.fn().mockRejectedValue(new Error('bridge down'));
+it('records recent native invoke history through runtime invoke wrapper', async () => {
+  const invoke = vi.fn(((command: string) => {
+    if (command === 'app_get_version') {
+      return Promise.resolve('0.1.0');
+    }
+    return Promise.reject(new Error('bridge down'));
+  }) as ElectronAPI['invoke']);
   window.electronAPI = createMockElectronApi(invoke, 'head-1');
   installDesktopDebugProbe();
 
   const runtimeInvoke = getRuntimeInvoke();
   expect(runtimeInvoke).not.toBeNull();
+  await expect(runtimeInvoke!('app_get_version')).resolves.toBe('0.1.0');
   await expect(runtimeInvoke!('resolve_app_paths')).rejects.toThrow('bridge down');
 
   expect(readDesktopDebugProbe()).toEqual({
     bridgeAvailable: true,
+    recentInvokes: [
+      expect.objectContaining({
+        command: 'resolve_app_paths',
+        error: { message: 'bridge down', name: 'Error' },
+        status: 'rejected'
+      }),
+      expect.objectContaining({
+        command: 'app_get_version',
+        status: 'resolved'
+      })
+    ],
     recentInvokeFailures: [
       expect.objectContaining({
         command: 'resolve_app_paths',

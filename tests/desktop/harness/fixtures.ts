@@ -18,6 +18,7 @@ export type DesktopLaunchTarget = {
 
 export type DesktopSession = {
   appReady: { href: string; readyState: string; reported: boolean };
+  collectDiagnostics: () => Promise<unknown>;
   close: () => Promise<void>;
   electronApp: ElectronApplication;
   firstWindow: Page;
@@ -40,13 +41,19 @@ type DesktopFixtures = {
 };
 
 export const test = base.extend<DesktopFixtures>({
-  desktopSession: async ({ browserName }, use) => {
+  desktopSession: async ({ browserName }, use, testInfo) => {
     void browserName;
     const session = (await launchDesktopSession()) as DesktopSession;
 
     try {
       await use(session);
     } finally {
+      if (testInfo.status !== testInfo.expectedStatus) {
+        await testInfo.attach('desktop-failure-diagnostics', {
+          body: JSON.stringify(await session.collectDiagnostics(), null, 2),
+          contentType: 'application/json'
+        });
+      }
       await session.close();
     }
   },

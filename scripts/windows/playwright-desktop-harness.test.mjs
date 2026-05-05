@@ -1,5 +1,8 @@
 // @vitest-environment node
 
+import { Buffer } from 'node:buffer';
+import { EventEmitter } from 'node:events';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -124,6 +127,45 @@ describe('playwright desktop harness', () => {
   it('launches electron and returns a reusable session envelope', async () => {
     const calls = [];
     let closed = false;
+    const childProcess = {
+      stderr: new EventEmitter(),
+      stdout: new EventEmitter()
+    };
+    const windowPage = new EventEmitter();
+    windowPage.evaluate = async (_pageFunction, appReadyFlag) => {
+      if (appReadyFlag === APP_READY_FLAG) {
+        return {
+          href: 'file:///workspace/foliole/dist/index.html',
+          readyState: 'complete',
+          reported: true
+        };
+      }
+      globalThis.__FOLIOLE_DESKTOP_DEBUG_PROBE__ = {
+        getSnapshot: () => ({
+          bridgeAvailable: true,
+          recentInvokeFailures: [],
+          recentInvokes: [{ command: 'resolve_app_paths', durationMs: 4, status: 'resolved', timestamp: 'now' }],
+          runtimeHead: 'head-123'
+        })
+      };
+      return _pageFunction();
+    };
+    windowPage.title = async () => 'Foliole';
+    windowPage.url = () => 'file:///workspace/foliole/dist/index.html';
+    windowPage.waitForFunction = async (pageFunction, argOrOptions, options) => {
+      expect(pageFunction).toEqual(expect.any(Function));
+      if (typeof argOrOptions === 'string') {
+        expect(argOrOptions).toBe(APP_READY_FLAG);
+        expect(options.timeout).toBeGreaterThan(0);
+        return;
+      }
+      expect(argOrOptions).toBeUndefined();
+      expect(options.timeout).toBeGreaterThan(0);
+    };
+    windowPage.waitForLoadState = async (state, options) => {
+      expect(state).toBe('domcontentloaded');
+      expect(options.timeout).toBeGreaterThan(0);
+    };
     const electronLauncher = {
       async launch(options) {
         calls.push(options);
@@ -140,39 +182,13 @@ describe('playwright desktop harness', () => {
               }
             });
           },
+          process() {
+            return childProcess;
+          },
           async firstWindow({ timeout }) {
             expect(timeout).toBeGreaterThan(0);
             expect(timeout).toBeLessThanOrEqual(12_345);
-            return {
-              async evaluate(_pageFunction, appReadyFlag) {
-                expect(appReadyFlag).toBe(APP_READY_FLAG);
-                return {
-                  href: 'file:///workspace/foliole/dist/index.html',
-                  readyState: 'complete',
-                  reported: true
-                };
-              },
-              async title() {
-                return 'Foliole';
-              },
-              url() {
-                return 'file:///workspace/foliole/dist/index.html';
-              },
-              async waitForFunction(pageFunction, argOrOptions, options) {
-                expect(pageFunction).toEqual(expect.any(Function));
-                if (typeof argOrOptions === 'string') {
-                  expect(argOrOptions).toBe(APP_READY_FLAG);
-                  expect(options.timeout).toBeGreaterThan(0);
-                  return;
-                }
-                expect(argOrOptions).toBeUndefined();
-                expect(options.timeout).toBeGreaterThan(0);
-              },
-              async waitForLoadState(state, options) {
-                expect(state).toBe('domcontentloaded');
-                expect(options.timeout).toBeGreaterThan(0);
-              }
-            };
+            return windowPage;
           }
         };
       }
@@ -209,6 +225,18 @@ describe('playwright desktop harness', () => {
       isReady: true
     });
     expect(await session.firstWindow.title()).toBe('Foliole');
+    expect(session.collectDiagnostics).toEqual(expect.any(Function));
+
+    childProcess.stdout.emit('data', Buffer.from('main ok\n'));
+
+    await expect(session.collectDiagnostics()).resolves.toMatchObject({
+      bridgeAvailable: true,
+      mainProcessLogs: {
+        stdoutTail: ['main ok\n']
+      },
+      nativeInvokeHistory: [expect.objectContaining({ command: 'resolve_app_paths', status: 'resolved' })],
+      runtimeHead: 'head-123'
+    });
 
     await session.close();
     await session.close();
