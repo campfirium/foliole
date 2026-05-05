@@ -63,6 +63,11 @@ diff_has_mid_scope_signature() {
 resolve_quality_gate_level() {
   local changed="$1"
 
+  if printf '%s\n' "${changed}" | grep -E -q '^(android/|scripts/android/|src/companion/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)'; then
+    printf 'android'
+    return 0
+  fi
+
   if printf '%s\n' "${changed}" | grep -E -q '^(electron/|src/store/|src/shared/platform/|scripts/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
     printf 'full'
     return 0
@@ -270,6 +275,10 @@ fi
 
 if [[ "${level}" == "full" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
+fi
+
+if [[ "${level}" == "android" ]]; then
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" android
 fi
 
 lint_targets="$(collect_lint_targets "${all_changed}")"

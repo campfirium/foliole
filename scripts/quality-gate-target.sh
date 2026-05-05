@@ -45,6 +45,57 @@ run_gate_steps() {
   done
 }
 
+run_gate_steps_parallel() {
+  local mode step log_file pid exit_code failed
+  local -a steps=("$@")
+  local -a pids=()
+  local -a logs=()
+
+  if [[ "${#steps[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  mode="$(resolve_quality_gate_log_mode)"
+  if quality_gate_should_print_step; then
+    echo "[${prefix}] running in parallel: ${steps[*]}"
+  fi
+
+  for step in "${steps[@]}"; do
+    log_file="$(create_quality_gate_log_file "${step}.parallel")"
+    : >"${log_file}"
+    (
+      trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
+      run_quality_gate_script "${prefix}" "${pm}" "${step}" >"${log_file}" 2>&1
+    ) &
+    pid=$!
+    pids+=("${pid}")
+    logs+=("${log_file}")
+  done
+
+  failed=0
+  for index in "${!steps[@]}"; do
+    exit_code=0
+    if wait "${pids[${index}]}"; then
+      exit_code=0
+    else
+      exit_code=$?
+    fi
+
+    if [[ "${exit_code}" -ne 0 ]]; then
+      failed=1
+      echo "[${prefix}] ${steps[${index}]} failed:"
+      echo "[${prefix}] full log: ${logs[${index}]}"
+      cat "${logs[${index}]}"
+    elif [[ "${mode}" != "fail-only" ]]; then
+      cat "${logs[${index}]}"
+    fi
+  done
+
+  if [[ "${failed}" -ne 0 ]]; then
+    exit 1
+  fi
+}
+
 run_copy_guard_if_present() {
   if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
     run_quality_gate_script "${prefix}" "${pm}" "copy:guard"
@@ -81,13 +132,16 @@ case "${target}" in
   full)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint typecheck:desktop typecheck:android test build electron:compile android:web:build
+    run_gate_steps lint typecheck:desktop typecheck:android test:shared test:desktop test:android build
+    run_gate_steps_parallel electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
   release)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint typecheck:desktop typecheck:android test build electron:compile android:web:build android:sync android:host:lint android:host:test
+    run_gate_steps lint typecheck:desktop typecheck:android test:shared test:desktop test:android build
+    run_gate_steps_parallel electron:compile android:web:build
+    run_gate_steps android:sync android:host:lint android:host:test
     run_workspace_boundary_check_if_present
     ;;
   *)

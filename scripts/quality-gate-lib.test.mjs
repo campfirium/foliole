@@ -88,6 +88,16 @@ describe('quality-gate-lib.sh', () => {
     }
   });
 
+  it('keeps ten quality gate runs by default', async () => {
+    const result = await runBash(
+      [`source "${QUALITY_GATE_LIB}"`, 'printf "%s\\n" "$(resolve_quality_gate_log_retention_runs)"'].join('\n'),
+      REPO_ROOT
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe('10');
+  });
+
   it('uses longer default timeouts for android host tasks', async () => {
     const result = await runBash(
       [
