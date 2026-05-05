@@ -130,6 +130,36 @@ function insertNodeReviewSyncState() {
   );
 }
 
+function insertNodeReadingSyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('node-reading-1', 'topic', 'Reading Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO node_reading (
+       node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
+       next_at, priority, repetition_count, state
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'node-reading-1',
+      120000,
+      1.5,
+      '2026-04-27T00:05:00.000Z',
+      '2026-04-28T00:05:00.000Z',
+      0.75,
+      2,
+      'active'
+    ]
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node_reading', 'node-reading-1', 8, 'reading-hash',
+       'desktop', '2026-04-27T00:05:00.000Z', 0)`
+  );
+}
+
 function insertNodeAttachmentRows() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -470,6 +500,42 @@ it('packs review log rows with changed node review state', async () => {
     }),
     reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
     stateRows: [{ object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }]
+  });
+});
+
+it('packs node reading state as a generic sync object', async () => {
+  insertNodeReadingSyncState();
+  const packPath = path.join(tempRoot, 'incoming-node-reading.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-node-reading-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    objectCount: 1,
+    packId: 'pack-node-reading-1',
+    toStateSeq: 8
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    manifest: expect.objectContaining({
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_objects', row_count: 1 },
+        { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
+        { name: 'external_documents', row_count: 0 },
+        { name: 'content_blobs', row_count: 0 },
+        { name: 'review_log', row_count: 0 }
+      ]
+    }),
+    stateRows: [{ object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'node-reading-1',
+      object_type: 'node_reading',
+      payload_json: expect.stringContaining('interval_duration_ms')
+    })]
   });
 });
 

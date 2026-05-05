@@ -195,6 +195,26 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void appliesNodeReadingPayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingNodeReadingRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals(120000, selectInt(
+            "SELECT interval_duration_ms FROM node_reading WHERE node_id = 'node-reading-1'"
+        ));
+        assertEquals("active", selectString(
+            "SELECT state FROM node_reading WHERE node_id = 'node-reading-1'"
+        ));
+        assertEquals("reading-hash", selectString(
+            "SELECT content_hash FROM sync_object_state " +
+            "WHERE object_type = 'node_reading' AND object_id = 'node-reading-1'"
+        ));
+    }
+
+    @Test
     public void appliesExternalFolderPayloadRowsFromIncomingPack() throws Exception {
         createIncomingPack();
         appendIncomingExternalFolderRows();
@@ -318,6 +338,19 @@ public class FolioleCompanionSyncPackApplyTest {
             "node_id TEXT NOT NULL, device_id TEXT NOT NULL, scroll_top INTEGER NOT NULL DEFAULT 0, " +
             "selection_from INTEGER, selection_to INTEGER, source TEXT NOT NULL DEFAULT 'restore', " +
             "updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
+        mainDatabase.execSQL("CREATE TABLE node_reading (" +
+            "node_id TEXT PRIMARY KEY, interval_duration_ms INTEGER NOT NULL DEFAULT 0, " +
+            "interval_growth_factor REAL NOT NULL DEFAULT 1, last_handled_at TEXT NOT NULL, " +
+            "next_at TEXT NOT NULL, priority REAL NOT NULL DEFAULT 0, " +
+            "repetition_count INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL DEFAULT 'active')");
+        mainDatabase.execSQL("CREATE TABLE node_reading_device_state (" +
+            "node_id TEXT NOT NULL, device_id TEXT NOT NULL, reading_position INTEGER NOT NULL DEFAULT 0, " +
+            "updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
+        mainDatabase.execSQL("CREATE TABLE node_review (" +
+            "node_id TEXT PRIMARY KEY, due TEXT NOT NULL, last_review_at TEXT, state INTEGER NOT NULL DEFAULT 0, " +
+            "stability REAL NOT NULL DEFAULT 0, difficulty REAL NOT NULL DEFAULT 0, " +
+            "elapsed_days INTEGER NOT NULL DEFAULT 0, scheduled_days INTEGER NOT NULL DEFAULT 0, " +
+            "reps INTEGER NOT NULL DEFAULT 0, lapses INTEGER NOT NULL DEFAULT 0)");
         mainDatabase.execSQL("CREATE TABLE review_log (" +
             "id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, device_id TEXT NOT NULL, node_id TEXT NOT NULL, " +
             "grade INTEGER NOT NULL, scheduler_version TEXT NOT NULL, reviewed_at TEXT NOT NULL, " +
@@ -441,6 +474,26 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'attachment', 'att-1', 2, 'attachment-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingNodeReadingRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:12:00.000Z";
+            String payload = "{\"node_id\":\"node-reading-1\",\"interval_duration_ms\":120000," +
+                "\"interval_growth_factor\":1.5,\"last_handled_at\":\"" + now + "\"," +
+                "\"next_at\":\"2026-04-28T00:12:00.000Z\",\"priority\":0.75," +
+                "\"repetition_count\":2,\"state\":\"active\"}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'node_reading', 'node-reading-1', 'reading-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'node_reading', 'node-reading-1', 2, 'reading-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }
