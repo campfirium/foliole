@@ -83,8 +83,8 @@ describe('companion new selection annotation actions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.spyOn(crypto, 'randomUUID')
-      .mockReturnValueOnce('node-uuid')
-      .mockReturnValueOnce('version-uuid');
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
   });
 
   it('persists highlight annotations as Android node versions and updates the local snapshot', async () => {
@@ -97,8 +97,8 @@ describe('companion new selection annotation actions', () => {
       snapshot: createSnapshot()
     });
 
-    expect(result?.nodeId).toBe('node-node-uuid');
-    expect(result?.snapshot.nodesById['node-node-uuid']).toMatchObject({
+    expect(result?.nodeId).toBe('node-00000000-0000-4000-8000-000000000001');
+    expect(result?.snapshot.nodesById['node-00000000-0000-4000-8000-000000000001']).toMatchObject({
       anchorLink: { id: 'anchor-1', kind: 'highlight' },
       content: 'Beta',
       kind: 'topic',
@@ -108,8 +108,8 @@ describe('companion new selection annotation actions', () => {
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         device_id: 'android-device',
-        object_id: 'node-node-uuid',
-        version_id: 'android-device#version-uuid'
+        object_id: 'node-00000000-0000-4000-8000-000000000001',
+        version_id: 'android-device#00000000-0000-4000-8000-000000000002'
       })
     ]);
     expect(syncObjectsMock.saveCompanionSyncNodeReviewRecord).not.toHaveBeenCalled();
@@ -142,8 +142,8 @@ describe('companion existing highlight annotation actions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.spyOn(crypto, 'randomUUID')
-      .mockReturnValueOnce('node-uuid')
-      .mockReturnValueOnce('version-uuid');
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000003')
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000004');
   });
 
   it('adds a note to an existing highlight through a node version', async () => {
@@ -159,13 +159,13 @@ describe('companion existing highlight annotation actions', () => {
 
     expect(result?.snapshot.nodesById['highlight-1']).toMatchObject({
       content: 'Beta\n※ Remember this',
-      currentVersionId: 'android-device#node-uuid'
+      currentVersionId: 'android-device#00000000-0000-4000-8000-000000000003'
     });
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         object_id: 'highlight-1',
         parent_version_id: 'desktop#highlight-v1',
-        version_id: 'android-device#node-uuid'
+        version_id: 'android-device#00000000-0000-4000-8000-000000000003'
       })
     ]);
   });
@@ -186,7 +186,7 @@ describe('companion existing highlight annotation actions', () => {
         object_id: 'highlight-1',
         parent_version_id: 'desktop#highlight-v1',
         snapshot: expect.objectContaining({ deleted_at: expect.any(String) }),
-        version_id: 'android-device#node-uuid'
+        version_id: 'android-device#00000000-0000-4000-8000-000000000003'
       })
     ]);
   });

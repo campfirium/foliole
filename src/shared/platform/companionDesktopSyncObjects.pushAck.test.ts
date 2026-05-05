@@ -9,7 +9,12 @@ import type {
 } from '../../../lib/platform/nativeSyncContract';
 
 const syncBridgeMock = vi.hoisted(() => ({
-  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
+  applyCompanionDesktopSyncPack: vi.fn(async (): Promise<{
+    applied_blob_count: number;
+    applied_object_count: number;
+    applied_review_op_ids?: string[];
+    to_state_seq: number;
+  }> => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
   applyCompanionSyncNodeVersions: vi.fn(async () => [] as string[]),
   applyCompanionSyncObjects: vi.fn(async () => [] as string[]),
   applyCompanionSyncReviewLog: vi.fn(async () => [] as string[]),
@@ -39,8 +44,8 @@ const syncBridgeMock = vi.hoisted(() => ({
 }));
 
 const diagnosticsMock = vi.hoisted(() => ({
-  loadDesktopSyncDiagnostics: vi.fn(async () => null),
-  loadLocalSyncDiagnostics: vi.fn(async () => null)
+  loadDesktopSyncDiagnostics: vi.fn(async (): Promise<unknown> => null),
+  loadLocalSyncDiagnostics: vi.fn(async (): Promise<unknown> => null)
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);

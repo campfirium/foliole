@@ -5,6 +5,7 @@ import {
   type NodeAnchorLink
 } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import type { NodeViewState } from '../../store/workspaceStore';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 type PendingAnchor = NodeAnchorLink;
@@ -110,7 +111,7 @@ export function usePendingAnchorNavigation(args: {
   activeNodeContent: string | null;
   activeNodeId: string | null;
   applyNavigationReadingPosition: (result: NodeNavigationResult | null) => boolean;
-  nodeViewById: Record<string, { scrollTop: number; selection: { from: number; to: number } } | undefined>;
+  nodeViewById: Record<string, NodeViewState | undefined>;
 }) {
   const [pendingAnchorNodeId, setPendingAnchorNodeId] = useState<string | null>(null);
   const [pendingAnchor, setPendingAnchor] = useState<PendingAnchor | null>(null);

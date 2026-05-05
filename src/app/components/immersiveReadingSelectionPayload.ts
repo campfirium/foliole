@@ -11,7 +11,7 @@ interface ImmersiveSelectionPayloadSource {
 }
 
 export function resolveImmersiveSelectionPayload(args: {
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   props: ImmersiveSelectionPayloadSource;
 }) {
   const editor = args.props.editorAdapterRef.current;
@@ -21,7 +21,7 @@ export function resolveImmersiveSelectionPayload(args: {
   const editorSelection = editor.getSelection();
   const paragraphSelection = resolveCurrentParagraphSelection(
     editor.getContent(),
-    editorSelection.from === editorSelection.to ? args.getReadingSelection() : editorSelection
+    editorSelection.from === editorSelection.to ? args.getReadingSelection() ?? editorSelection : editorSelection
   );
   if (!paragraphSelection) {
     return null;

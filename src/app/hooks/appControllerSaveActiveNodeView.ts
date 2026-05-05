@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
 
+import type { NodeViewState } from '../../store/workspaceStore';
+
 import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
 import { useAppRuntime } from './useAppRuntime';
 
 interface SaveActiveNodeViewWorkspaceState {
   activeNodeId: string | null;
-  setNodeViewState: (nodeId: string, viewState: { scrollTop: number; selection: { from: number; to: number } }) => void;
+  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }
 
 function resolveSelectionToPersist(

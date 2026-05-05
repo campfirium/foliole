@@ -5,7 +5,7 @@ import { buildFootnotePresentation } from './footnotePresentation';
 describe('footnotePresentation', () => {
   it('builds resolved footnote display state', () => {
     expect(
-      buildFootnotePresentation({ from: 0, to: 10, label: '1', note: 'Alpha note' })
+      buildFootnotePresentation({ label: '1', note: 'Alpha note' })
     ).toEqual({
       ariaLabel: 'Footnote 1: Alpha note',
       hasTooltip: true,
@@ -17,7 +17,7 @@ describe('footnotePresentation', () => {
 
   it('builds unresolved footnote display state', () => {
     expect(
-      buildFootnotePresentation({ from: 0, to: 4, label: '2', note: null })
+      buildFootnotePresentation({ label: '2', note: null })
     ).toEqual({
       ariaLabel: 'Footnote 2',
       hasTooltip: false,

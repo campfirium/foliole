@@ -58,7 +58,9 @@ async function testAcknowledgesContentBodyBatchOnce() {
       { hash: secondHash, size_bytes: 2048 }
     ])
     .mockResolvedValueOnce([]);
-  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [firstHash, secondHash], status: 'ok' }), { status: 200 }));
+  const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+    new Response(JSON.stringify({ acked_hashes: [firstHash, secondHash], status: 'ok' }), { status: 200 })
+  );
   vi.stubGlobal('fetch', fetchMock);
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');

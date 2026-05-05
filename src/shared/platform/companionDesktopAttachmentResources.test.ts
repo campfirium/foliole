@@ -16,7 +16,11 @@ const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
 }));
 const syncObjectsMock = vi.hoisted(() => ({
-  loadCompanionMissingAttachmentResource: vi.fn(async () => ({
+  loadCompanionMissingAttachmentResource: vi.fn(async (): Promise<{
+    attachment_id: string;
+    content_hash: string;
+    size_bytes: number;
+  } | null> => ({
     attachment_id: 'att-3',
     content_hash: 'blob-hash-3',
     size_bytes: 4096

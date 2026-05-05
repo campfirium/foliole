@@ -25,7 +25,7 @@ function handleImmersiveExit(args: {
 }
 
 function selectParagraph(args: {
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   direction: 'backward' | 'forward';
   markNextProgrammaticScroll: () => void;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
@@ -41,6 +41,7 @@ function selectParagraph(args: {
   const currentSelection =
     editorSelection.from === 0 &&
     editorSelection.to === 0 &&
+    readingSelection &&
     (readingSelection.from !== 0 || readingSelection.to !== 0)
       ? readingSelection
       : editorSelection;
@@ -107,7 +108,7 @@ function handleImmersivePrimaryKey(args: {
 
 function handleImmersiveReadingKey(args: {
   event: KeyboardEvent;
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   markNextProgrammaticScroll: () => void;
   props: ImmersiveKeydownSource;
   readableNodeIds: string[];
@@ -167,7 +168,7 @@ function handleImmersiveToggleKey(args: {
   canToggleImmersiveMode: boolean;
   captureReadingSelectionFromViewport: () => void;
   event: KeyboardEvent;
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   isImmersiveEditing: boolean;
   props: ImmersiveKeydownSource;
   queueReadingSelectionRestore: () => void;
@@ -185,12 +186,13 @@ function handleImmersiveToggleKey(args: {
     isImmersiveEditing: args.isImmersiveEditing
   });
   args.suppressNextSelectionRestore();
+  const readingSelection = args.getReadingSelection() ?? args.props.editorAdapterRef.current?.getSelection() ?? { from: 0, to: 0 };
   if (!args.props.isImmersiveMode) {
     args.captureReadingSelectionFromViewport();
-    args.props.beginApplyingReadingPosition(args.getReadingSelection(), 'enter-immersive');
+    args.props.beginApplyingReadingPosition(readingSelection, 'enter-immersive');
   } else if (!args.isImmersiveEditing) {
     args.queueReadingSelectionRestore();
-    args.props.beginApplyingReadingPosition(args.getReadingSelection(), 'exit-immersive');
+    args.props.beginApplyingReadingPosition(readingSelection, 'exit-immersive');
   }
   args.props.onToggleImmersiveMode();
   return true;
@@ -200,7 +202,7 @@ export function handleImmersiveKeydown(args: {
   canToggleImmersiveMode: boolean;
   captureReadingSelectionFromViewport: () => void;
   event: KeyboardEvent;
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   isImmersiveEditing: boolean;
   markNextProgrammaticScroll: () => void;
   props: ImmersiveKeydownSource;

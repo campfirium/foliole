@@ -76,7 +76,7 @@ function getDebugApi() {
         title: string;
         trashed: boolean;
       } | null;
-      getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
+      getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } | null } | null;
       importClipboardImageAttachment: (args: {
         bytesBase64: string;
         mimeType: string;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  resolveDirectoryParentSelection,
   resolveDirectorySections
 } from './CompanionDirectoryModel';
+import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 
 const rootView = {
   items: [

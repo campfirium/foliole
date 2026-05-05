@@ -108,6 +108,7 @@ function createReadableSurface() {
       content: '# Readable article\n\nReadable topic body',
       hideTitleHeading: false,
       nodeId: 'topic-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: 'pdf-1',
       textAnchorDecorations: [],
       title: 'Readable article'
@@ -116,7 +117,7 @@ function createReadableSurface() {
   };
 }
 
-async function renderShellWithSurface(surface: ReturnType<typeof createSurface>) {
+async function renderShellWithSurface(surface: unknown) {
   mockFloatingBar();
   mockWorkspaceSync();
   useCompanionArticleSurface.mockReturnValue(surface);

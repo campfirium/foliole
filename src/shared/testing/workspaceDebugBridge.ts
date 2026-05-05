@@ -51,7 +51,7 @@ interface WorkspaceDebugApi {
     nodeId: string;
     originalName?: string;
   }) => Promise<string | null>;
-  getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } } | null;
+  getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } | null } | null;
   listNodes: () => Array<{ id: string; title: string }>;
   openNode: (nodeId: string) => Promise<boolean>;
   restoreNode: (nodeId: string) => Promise<boolean>;

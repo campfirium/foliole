@@ -77,7 +77,7 @@ export function useWorkspaceTopicTreeCollapse(
     const isNewFolder = previousActiveFolderIdRef.current !== activeFolderId;
     previousActiveFolderIdRef.current = activeFolderId;
     setCollapsedNodeIds((current) =>
-      isNewFolder ? new Set(collapsibleNodeIds) : pruneCollapsedNodeIds(current, collapsibleNodeIds)
+      isNewFolder ? new Set(collapsibleNodeIds) : new Set(pruneCollapsedNodeIds(current, collapsibleNodeIds))
     );
   }, [activeFolderId, collapsibleNodeIds]);
 

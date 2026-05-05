@@ -50,7 +50,7 @@ export function useImmersiveParagraphMarkerSync(
 }
 
 export function useImmersiveScrollSync(
-  getReadingSelection: () => { from: number; to: number },
+  getReadingSelection: () => { from: number; to: number } | null,
   props: ImmersiveScrollSyncSource,
   isImmersiveEditing: boolean,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
@@ -92,7 +92,7 @@ export function useImmersiveScrollSync(
 }
 
 export function useImmersiveEntrySelectionSync(
-  getReadingSelection: () => { from: number; to: number },
+  getReadingSelection: () => { from: number; to: number } | null,
   getPendingSelection: () => { from: number; to: number } | null,
   clearPendingSelection: () => void,
   props: ImmersiveScrollSyncSource,
@@ -148,7 +148,7 @@ export function useImmersiveEntrySelectionSync(
 
 function handleScrollSyncEvent(
   editor: EditorAdapter,
-  getReadingSelection: () => { from: number; to: number },
+  getReadingSelection: () => { from: number; to: number } | null,
   props: ImmersiveScrollSyncSource,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
@@ -169,7 +169,7 @@ function handleScrollSyncEvent(
 
 function syncViewportReadingSelection(
   editor: EditorAdapter,
-  getReadingSelection: () => { from: number; to: number },
+  getReadingSelection: () => { from: number; to: number } | null,
   props: ImmersiveScrollSyncSource,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void
 ) {
@@ -181,6 +181,16 @@ function syncViewportReadingSelection(
     return;
   }
   const previousSelection = getReadingSelection();
+  if (!previousSelection) {
+    setReadingSelection(selection, 'scroll-sync');
+    pushDebugTrace('immersive.scroll-sync.selection-initialized', {
+      isImmersiveMode: props.isImmersiveMode,
+      selection
+    });
+    editor.setSelection(selection);
+    syncParagraphMarkerToReadingPosition(props);
+    return;
+  }
   if (!props.isImmersiveMode || (previousSelection.from === selection.from && previousSelection.to === selection.to)) {
     return;
   }

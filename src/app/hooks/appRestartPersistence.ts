@@ -25,10 +25,12 @@ interface RestartWithReadingProgressArgs {
 function normalizeViewState(viewState: NodeViewState): NodeViewState {
   return {
     scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
-    selection: {
-      from: Math.max(0, Math.trunc(viewState.selection.from)),
-      to: Math.max(0, Math.trunc(viewState.selection.to))
-    }
+    selection: viewState.selection
+      ? {
+          from: Math.max(0, Math.trunc(viewState.selection.from)),
+          to: Math.max(0, Math.trunc(viewState.selection.to))
+        }
+      : null
   };
 }
 
@@ -49,8 +51,8 @@ function captureReadingProgressForRestart(args: RestartWithReadingProgressArgs) 
   if (
     existingViewState &&
     existingViewState.scrollTop === viewState.scrollTop &&
-    existingViewState.selection.from === viewState.selection.from &&
-    existingViewState.selection.to === viewState.selection.to
+    existingViewState.selection?.from === viewState.selection?.from &&
+    existingViewState.selection?.to === viewState.selection?.to
   ) {
     return {
       nodeId: args.activeNodeId,

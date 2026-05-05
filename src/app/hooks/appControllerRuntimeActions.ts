@@ -2,7 +2,7 @@ import type { EditorSelection, EditorViewportMode } from '../../features/editor/
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
-import { LIST_WIDTH_DEFAULT, RIGHT_SIDEBAR_WIDTH_DEFAULT } from '../../store/workspaceStore';
+import { LIST_WIDTH_DEFAULT, RIGHT_SIDEBAR_WIDTH_DEFAULT, type NodeViewState } from '../../store/workspaceStore';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { requestReadingPositionApply } from './readingPositionRequests';
@@ -170,7 +170,7 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
 }
 
 export function createPersistPdfViewState(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string, viewState: { scrollTop: number; selection: { from: number; to: number } }) => {
+  return (nodeId: string, viewState: NodeViewState) => {
     if (args.runtime.isViewingTrashNode || !nodeId) {
       return;
     }

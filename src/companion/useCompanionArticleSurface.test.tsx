@@ -120,6 +120,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
       content: '# First article\n\nBody',
       hideTitleHeading: false,
       nodeId: 'article-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'First article'
@@ -132,6 +133,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
     saveEndpoint: vi.fn(),
     state,
     syncConflictCount: 0,
+    syncProgress: null,
     status: 'idle' as const
   };
 }

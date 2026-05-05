@@ -76,6 +76,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     replaceSnapshot: vi.fn(),
+    refreshFromDevice: vi.fn(),
     removeRememberedTarget: vi.fn(),
     requestPairing: vi.fn(),
     saveEndpoint: vi.fn(),
@@ -89,6 +90,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
       workspace_snapshot: snapshot
     },
     syncConflictCount: 0,
+    syncProgress: null,
     status: 'idle' as const
   };
 }

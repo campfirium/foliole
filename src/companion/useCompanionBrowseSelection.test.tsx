@@ -38,6 +38,7 @@ describe('useCompanionBrowseSelection', () => {
       content: '# Paper\n\nExtracted PDF text',
       hideTitleHeading: false,
       nodeId: 'pdf-node',
+      persistedNodeViewState: null,
       pdfAttachmentId: 'pdf-att',
       textAnchorDecorations: [],
       title: 'Paper'

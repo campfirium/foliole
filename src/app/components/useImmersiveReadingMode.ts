@@ -60,7 +60,7 @@ function useImmersiveLifecycleReset(
 function useImmersiveKeyboardHandler(args: {
   canToggleImmersiveMode: boolean;
   captureReadingSelectionFromViewport: () => void;
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   isImmersiveEditing: boolean;
   markNextProgrammaticScroll: () => void;
   props: ImmersiveReadingModeSource;
@@ -125,7 +125,7 @@ function useImmersiveModeDependencies(props: ImmersiveReadingModeSource) {
 function useImmersiveReadingPositionSync(args: {
   clearPendingSelection: () => void;
   getPendingSelection: () => { from: number; to: number } | null;
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   isImmersiveEditing: boolean;
   props: ImmersiveReadingModeSource;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;

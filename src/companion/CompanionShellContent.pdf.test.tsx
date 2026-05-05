@@ -41,6 +41,7 @@ function createPdfReadableSurface() {
       content: '# Extracted PDF text\n\nReadable body',
       hideTitleHeading: false,
       nodeId: 'topic-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: 'pdf-attachment-1',
       textAnchorDecorations: [],
       title: 'Extracted PDF text'
@@ -57,6 +58,7 @@ function createSecondPdfReadableSurface() {
       content: '# Second PDF text\n\nReadable body',
       hideTitleHeading: false,
       nodeId: 'topic-2',
+      persistedNodeViewState: null,
       pdfAttachmentId: 'pdf-attachment-2',
       textAnchorDecorations: [],
       title: 'Second PDF text'
@@ -73,6 +75,7 @@ function createMissingBodySurface() {
       content: '',
       hideTitleHeading: false,
       nodeId: 'topic-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Synced topic'
@@ -88,6 +91,7 @@ function createEmptyBodySurface() {
       content: '',
       hideTitleHeading: false,
       nodeId: 'topic-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Empty topic'
@@ -103,6 +107,7 @@ function createFailedBodySurface() {
       content: '',
       hideTitleHeading: false,
       nodeId: 'topic-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Failed topic'
@@ -112,10 +117,24 @@ function createFailedBodySurface() {
 
 function renderSurfaceElement(surface: unknown, workspaceSync: unknown = {}) {
   return renderCompanionShellContent({
+    companionTabConfig: {
+      orderedTabIds: ['browse', 'learn', 'search', 'settings', 'shortcut'],
+      shortcut: { destinationId: 'directory', enabled: false }
+    },
+    browseSortDirection: 'desc',
+    browseSortKey: 'dateLastOpened',
+    directorySelection: { kind: 'root' },
     hasSnapshot: true,
+    isBrowseDirectoryOpen: false,
+    isOnlyReviewOpen: false,
+    onBackDirectorySelection: vi.fn(),
+    onChangeDirectorySelection: vi.fn(),
+    onCompanionTabConfigChange: vi.fn(),
     onBackToSettingsList: vi.fn(),
     onOpenSyncSettingsPage: vi.fn(),
     onOpenSyncSettings: vi.fn(),
+    onOpenTabsSettings: vi.fn(),
+    onResetDirectorySelection: vi.fn(),
     onSelectReviewBreadcrumbItem: vi.fn(),
     reviewBreadcrumbItems: [],
     settingsPage: 'list',

@@ -68,7 +68,7 @@ export function shouldIgnoreWhitespaceViewportSample(
 
 export function commitReadingSelectionUpdate(args: {
   props: ReadingSelectionCommitSource;
-  readingSelectionRef: MutableRefObject<{ from: number; to: number }>;
+  readingSelectionRef: MutableRefObject<{ from: number; to: number } | null>;
   selection: { from: number; to: number };
   source: string;
 }) {
@@ -87,7 +87,7 @@ export function commitReadingSelectionUpdate(args: {
 export function captureReadingSelection(args: {
   pendingSelectionRef: MutableRefObject<{ from: number; to: number } | null>;
   props: ReadingSelectionCaptureSource;
-  readingSelectionRef: MutableRefObject<{ from: number; to: number }>;
+  readingSelectionRef: MutableRefObject<{ from: number; to: number } | null>;
 }) {
   const selection = getViewportReadingSelection(args.props);
   if (!selection) {

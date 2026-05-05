@@ -18,16 +18,16 @@ afterEach(() => {
 it('applies node versions through the Capacitor DbPort adapter and shared core', async () => {
   db = new Database(':memory:');
   installNodeApplySchema(db);
-  const applied = await applyCompanionSyncNodeVersionsWithSharedCore(createFakeCapacitorConnection(db), [
+  const applied = await applyCompanionSyncNodeVersionsWithSharedCore(createFakeCapacitorConnection(db) as never, [
     nodeVersion()
   ]);
 
   expect(applied).toEqual(['node-1']);
-  expect(db.prepare('SELECT title, current_version_id FROM nodes WHERE id = ?').get('node-1')).toEqual({
+  expect(db.prepare('SELECT title, current_version_id FROM nodes WHERE id = ?').get('node-1') as unknown).toEqual({
     current_version_id: 'android#1',
     title: 'Android Node'
   });
-  expect(db.prepare('SELECT version_id, object_id FROM node_sync_versions').all()).toEqual([{
+  expect(db.prepare('SELECT version_id, object_id FROM node_sync_versions').all() as unknown).toEqual([{
     object_id: 'node-1',
     version_id: 'android#1'
   }]);
@@ -95,7 +95,8 @@ function createFakeCapacitorConnection(database: Database.Database) {
     },
     execute: async (sql: string) => {
       database.exec(sql);
-      return { changes: { changes: database.prepare('SELECT changes() AS count').get().count } };
+      const row = database.prepare('SELECT changes() AS count').get() as { count: number };
+      return { changes: { changes: row.count } };
     },
     open: vi.fn(async () => undefined),
     query: async (sql: string, params: unknown[] = []) => ({
@@ -108,7 +109,7 @@ function createFakeCapacitorConnection(database: Database.Database) {
       const info = database.prepare(sql).run(...decodeParams(params));
       return { changes: { changes: info.changes, lastId: Number(info.lastInsertRowid) } };
     }
-  } as never;
+  };
 }
 
 function decodeParams(params: unknown[]) {
@@ -119,7 +120,7 @@ function decodeParams(params: unknown[]) {
 }
 
 function isBufferJson(value: unknown): value is { data: number[]; type: 'Buffer' } {
-  return Boolean(value) && typeof value === 'object' && 'type' in value && 'data' in value;
+  return value !== null && typeof value === 'object' && 'type' in value && 'data' in value;
 }
 
 function installNodeApplySchema(database: Database.Database) {

@@ -22,6 +22,7 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     appliedPackBlobCount: 0,
     appliedPackObjectCount: 0,
     appliedObjectCount: 0,
+    appliedReviewOpIds: [],
     fromStateSeq: 0,
     toStateSeq: 4
   });
@@ -42,7 +43,7 @@ function createFakeConnection() {
     commitTransaction: vi.fn(),
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
     open: vi.fn(async () => undefined),
-    query: vi.fn(async () => ({ values: [] })),
+    query: vi.fn(async (): Promise<{ values: Array<{ value: string }> }> => ({ values: [] })),
     rollbackTransaction: vi.fn(),
     run: vi.fn(async () => ({ changes: { changes: 0 } }))
   };

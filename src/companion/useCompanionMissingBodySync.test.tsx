@@ -22,6 +22,7 @@ function createMissingArticle(nodeId = 'article-2'): MissingBodyArticle {
     content: '',
     hideTitleHeading: false,
     nodeId,
+    persistedNodeViewState: null,
     pdfAttachmentId: null,
     textAnchorDecorations: [],
     title: 'Missing article'
@@ -33,6 +34,7 @@ function createReadyArticle(): MissingBodyArticle {
     content: 'Ready',
     hideTitleHeading: false,
     nodeId: 'article-1',
+    persistedNodeViewState: null,
     pdfAttachmentId: null,
     textAnchorDecorations: [],
     title: 'Ready article'
@@ -49,7 +51,7 @@ function createWorkspaceSync() {
       remembered_targets: [],
       workspace_snapshot: {}
     }
-  } as Parameters<typeof useCompanionMissingBodySync>[0]['workspaceSync'];
+  } as unknown as Parameters<typeof useCompanionMissingBodySync>[0]['workspaceSync'];
 }
 
 async function flushBodySync() {

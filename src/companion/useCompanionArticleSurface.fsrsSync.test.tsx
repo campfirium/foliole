@@ -91,12 +91,14 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     replaceSnapshot: vi.fn(async () => state),
+    refreshFromDevice: vi.fn(async () => state),
     removeRememberedTarget: vi.fn(),
     requestPairing: vi.fn(),
     saveEndpoint: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(async () => state),
     state,
     syncConflictCount: 0,
+    syncProgress: null,
     status: 'idle' as const
   };
 }

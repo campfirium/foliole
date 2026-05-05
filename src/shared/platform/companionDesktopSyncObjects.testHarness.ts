@@ -1,7 +1,18 @@
 import { vi } from 'vitest';
 
+type DesktopSyncPackApplyResult = {
+  applied_blob_count: number;
+  applied_object_count: number;
+  applied_review_op_ids?: string[];
+  to_state_seq: number;
+};
+
 export const syncBridgeMock = {
-  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 2, applied_object_count: 3, to_state_seq: 8 })),
+  applyCompanionDesktopSyncPack: vi.fn(async (): Promise<DesktopSyncPackApplyResult> => ({
+    applied_blob_count: 2,
+    applied_object_count: 3,
+    to_state_seq: 8
+  })),
   loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>),
   loadCompanionMissingContentBlobs: vi.fn(async () => [] as Array<{ hash: string; size_bytes?: number }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
@@ -49,8 +60,8 @@ export const capacitorMock = {
 };
 
 export const diagnosticsMock = {
-  loadDesktopSyncDiagnostics: vi.fn(async () => null),
-  loadLocalSyncDiagnostics: vi.fn(async () => null)
+  loadDesktopSyncDiagnostics: vi.fn(async (): Promise<unknown> => null),
+  loadLocalSyncDiagnostics: vi.fn(async (): Promise<unknown> => null)
 };
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);

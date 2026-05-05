@@ -19,7 +19,7 @@ function createTopBarProps(args: {
     true,
     false,
     args.directorySelection,
-    'lastOpenedAt',
+    'dateLastOpened',
     'desc',
     vi.fn(),
     vi.fn(),
@@ -42,7 +42,7 @@ describe('CompanionShellContent directory navigation', () => {
     const root = createTopBarProps({ directorySelection: { kind: 'root' } });
 
     expect(root.onBack).toBeUndefined();
-    expect(root.rightSlot).toBeTruthy();
+    expect('rightSlot' in root ? root.rightSlot : null).toBeTruthy();
   });
 
   it('returns nested directory pages to their parent', () => {

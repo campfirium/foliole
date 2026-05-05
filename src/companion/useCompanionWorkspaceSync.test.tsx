@@ -150,11 +150,12 @@ function resetCompanionWorkspaceSyncMocks() {
   workspaceSyncMock.recordCompanionWorkspaceSyncEvent
     .mockResolvedValueOnce(createSyncState(null))
     .mockResolvedValueOnce(createSyncState(createSnapshot()));
-  workspaceSyncMock.loadCompanionReadableArticle.mockResolvedValue({
-    content: '# Synced topic\n\nBody',
-    hideTitleHeading: false,
-    nodeId: 'topic-1',
-    pdfAttachmentId: null,
+    workspaceSyncMock.loadCompanionReadableArticle.mockResolvedValue({
+      content: '# Synced topic\n\nBody',
+      hideTitleHeading: false,
+      nodeId: 'topic-1',
+      persistedNodeViewState: null,
+      pdfAttachmentId: null,
     textAnchorDecorations: [],
     title: 'Synced topic'
   });

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 
@@ -25,7 +26,7 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
     APP_SETTINGS_STORAGE_KEYS.nodeIconDismissedTopicAppearance,
     JSON.stringify({ fadeEnabled: true, fadeOpacity: 0.42, fadeWholeRow: true })
   );
-  const node = {
+  const node: WorkspaceListNode = {
       anchorLink: null,
       createdAt: '2026-05-02T00:00:00.000Z',
       hasContent: true,
@@ -46,7 +47,7 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
       review: null,
       title: 'Dismissed topic',
       updatedAt: '2026-05-02T00:00:00.000Z'
-    };
+  };
   const nodesById: WorkspaceListNodesById = {
     'node-1': node
   };

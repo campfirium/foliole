@@ -2,7 +2,7 @@ import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 import { resolveImmersiveSelectionPayload } from './immersiveReadingSelectionPayload';
 
 export function runImmersiveSelectionAction(args: {
-  getReadingSelection: () => { from: number; to: number };
+  getReadingSelection: () => { from: number; to: number } | null;
   props: ImmersiveKeydownSource;
   type: 'highlight' | 'note';
 }) {

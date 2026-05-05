@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { NodeViewState } from '../../store/workspaceStore';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 import { usePreparedNavigationHandlers } from './useWorkspaceNavigationPrefetch';
@@ -25,7 +26,7 @@ interface WorkspaceNavigationDependencies {
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
   nodesById: Record<string, Node>;
-  nodeViewById?: Record<string, { scrollTop: number; selection: { from: number; to: number } } | undefined>;
+  nodeViewById?: Record<string, NodeViewState | undefined>;
   openNode: (nodeId: string) => NodeNavigationResult | null;
   saveActiveNodeView: (nodeIdOverride?: string | null) => void;
 }

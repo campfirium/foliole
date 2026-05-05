@@ -15,7 +15,7 @@ function createSyncState(endpointUrl: string | null) {
 async function renderAutoSyncHook(
   isNativeRuntime: boolean,
   endpointUrl: string | null = 'http://10.0.2.2:38641',
-  tryForegroundAutoSync = vi.fn(async () => 'completed' as const)
+  tryForegroundAutoSync: (args: unknown) => Promise<'backlog' | 'completed' | 'failed' | 'skipped'> = vi.fn(async () => 'completed' as const)
 ) {
   vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
     isNativeAndroidCompanionRuntime: () => isNativeRuntime

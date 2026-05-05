@@ -118,7 +118,7 @@ it('opens after a dragged mobile selection settles without an extra tap', () => 
     vi.advanceTimersByTime(240);
   });
 
-  expect(result.current.selectionToolbar?.payload.selectionText).toBe('Welcome');
+  expect(result.current.selectionToolbar?.payload?.selectionText).toBe('Welcome');
   expect(result.current.selectionToolbar).toMatchObject({
     left: expect.any(Number),
     top: expect.any(Number)
