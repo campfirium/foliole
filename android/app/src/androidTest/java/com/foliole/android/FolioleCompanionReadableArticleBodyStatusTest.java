@@ -36,7 +36,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
         saveActiveNode("article-1");
 
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
 
         JSONObject article = readable.getJSONObject("readable_article");
         assertEquals("article-1", article.getString("node_id"));
@@ -54,7 +54,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
         saveActiveNode("fetching-article");
 
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
 
         assertEquals("fetching", readable.getJSONObject("readable_article").getString("content_status"));
         assertEquals("fetching", snapshot.getJSONObject("nodesById").getJSONObject("fetching-article").getString("bodyStatus"));
@@ -67,7 +67,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
         saveActiveNode("article-1");
 
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
 
         JSONObject article = readable.getJSONObject("readable_article");
         assertEquals("article-1", article.getString("node_id"));

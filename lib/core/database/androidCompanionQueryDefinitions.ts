@@ -59,6 +59,19 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
       { key: 'detected_at', source: 'detected_at', type: 'string' }
     ]
   },
+  nodeAttachments: {
+    resultKey: 'attachments',
+    sql:
+      'SELECT na.attachment_id, na.role, a.mime_type, a.original_name ' +
+      'FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id ' +
+      'WHERE na.node_id = ? ORDER BY na.role ASC, na.attachment_id ASC',
+    columns: [
+      { key: 'attachmentId', source: 'attachment_id', type: 'string' },
+      { key: 'role', source: 'role', type: 'string' },
+      { key: 'mimeType', source: 'mime_type', type: 'nullableString' },
+      { key: 'originalName', source: 'original_name', type: 'nullableString' }
+    ]
+  },
   syncPayloadAttachment: {
     sql:
       "SELECT json_object('attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, " +

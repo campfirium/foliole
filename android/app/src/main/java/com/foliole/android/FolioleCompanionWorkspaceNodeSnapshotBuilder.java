@@ -1,17 +1,19 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 
 final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
     private FolioleCompanionWorkspaceNodeSnapshotBuilder() {}
 
-    static JSObject build(SQLiteDatabase database, Cursor cursor, String deletedAt) throws JSONException {
+    static JSObject build(Context context, SQLiteDatabase database, Cursor cursor, String deletedAt) throws Exception {
         JSObject node = new JSObject();
         node.put("id", cursor.getString(0));
         node.put("parentNodeId", cursor.isNull(1) ? null : cursor.getString(1));
@@ -24,7 +26,7 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         node.put("content", cursor.getString(8));
         node.put("bodyBlobHash", cursor.isNull(36) ? null : cursor.getString(36));
         putBodyStatus(node, cursor.getString(10));
-        JSArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(database, cursor.getString(0));
+        JSONArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(context, database, cursor.getString(0));
         if (attachments.length() > 0) node.put("attachments", attachments);
         node.put("openingText", cursor.isNull(9) ? null : cursor.getString(9));
         node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(cursor.isNull(11) ? null : cursor.getString(11)));

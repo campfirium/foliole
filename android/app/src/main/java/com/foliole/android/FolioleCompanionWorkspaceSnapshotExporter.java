@@ -1,5 +1,6 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -17,7 +18,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private FolioleCompanionWorkspaceSnapshotExporter() {}
 
-    static JSObject loadWorkspaceSnapshot(SQLiteDatabase database, String deviceId) throws JSONException {
+    static JSObject loadWorkspaceSnapshot(Context context, SQLiteDatabase database, String deviceId) throws Exception {
         JSONArray orderedNodeIds = loadOrderedNodeIds(database);
         if (orderedNodeIds.length() == 0) {
             return null;
@@ -64,7 +65,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
                 } else if (firstActiveNodeId == null) {
                     firstActiveNodeId = nodeId;
                 }
-                nodesById.put(nodeId, FolioleCompanionWorkspaceNodeSnapshotBuilder.build(database, cursor, deletedAt));
+                nodesById.put(nodeId, FolioleCompanionWorkspaceNodeSnapshotBuilder.build(context, database, cursor, deletedAt));
             }
         }
 

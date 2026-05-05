@@ -29,7 +29,7 @@ final class FolioleCompanionSyncMetaStore {
         String endpointUrl = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
         String lastSyncedAt = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
-        JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, deviceId);
+        JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(context, database, deviceId);
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);
         result.put("remembered_targets", new JSONArray(loadRememberedTargets(database)));

@@ -54,7 +54,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "{\"active_node_id\":\"article-2\"}"
         ));
 
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "remote-device");
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "remote-device");
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
 
         assertNotNull(snapshot);
@@ -110,7 +110,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "{\"active_node_id\":\"article-2\"}"
         ));
 
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
         JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
 
         assertEquals("Blob article body", snapshot.getJSONObject("nodesById")
@@ -178,7 +178,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
                 "VALUES ('article-2', 'other-device', 99, 1, 2, 'user-scroll', '2026-04-25T09:40:00.000Z')"
         );
 
-        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database, "android-test");
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
         JSONObject state = snapshot.getJSONObject("persistedNodeViewById").getJSONObject("article-1");
 
         assertEquals(5400, state.getInt("scrollTop"));

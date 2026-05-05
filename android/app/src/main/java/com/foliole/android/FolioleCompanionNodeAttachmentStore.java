@@ -4,9 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.getcapacitor.JSArray;
-import com.getcapacitor.JSObject;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -52,25 +49,12 @@ final class FolioleCompanionNodeAttachmentStore {
         }
     }
 
-    static JSArray loadNodeAttachments(SQLiteDatabase database, String nodeId) {
-        JSArray attachments = new JSArray();
-        try (Cursor cursor = database.rawQuery(
-            "SELECT na.attachment_id, na.role, a.mime_type, a.original_name " +
-                "FROM node_attachments na " +
-                "LEFT JOIN attachments a ON a.id = na.attachment_id " +
-                "WHERE na.node_id = ? " +
-                "ORDER BY na.role ASC, na.attachment_id ASC",
+    static JSONArray loadNodeAttachments(Context context, SQLiteDatabase database, String nodeId) throws Exception {
+        return FolioleCompanionNamedQueryStore.loadArray(
+            context,
+            database,
+            "nodeAttachments",
             new String[] { nodeId }
-        )) {
-            while (cursor.moveToNext()) {
-                JSObject attachment = new JSObject();
-                attachment.put("attachmentId", cursor.getString(0));
-                attachment.put("role", cursor.getString(1));
-                attachment.put("mimeType", cursor.isNull(2) ? null : cursor.getString(2));
-                attachment.put("originalName", cursor.isNull(3) ? null : cursor.getString(3));
-                attachments.put(attachment);
-            }
-        }
-        return attachments;
+        ).getJSONArray("attachments");
     }
 }
