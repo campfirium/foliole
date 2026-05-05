@@ -6,30 +6,19 @@ import type {
   DatabaseBindParams,
   DatabaseDriver,
   DatabaseExecuteResult,
-  DatabaseRow,
   DatabaseStatement
 } from '../../lib/core/database/driver.js';
-import {
-  applyReviewGrade,
-  loadWorkspaceSnapshot,
-  upsertNodeSnapshot
-} from '../../lib/core/database/index.js';
+import { applyReviewGrade, upsertNodeSnapshot } from '../../lib/core/database/index.js';
 
 const prepareSpy = vi.fn<(sql: string) => DatabaseStatement>();
 const executeSpy = vi.fn<(sql: string, params?: DatabaseBindParams) => DatabaseExecuteResult>();
-const queryOneSpy = vi.fn<(sql: string, params?: DatabaseBindParams) => DatabaseRow | undefined>();
-const queryAllSpy = vi.fn<(sql: string, params?: DatabaseBindParams) => DatabaseRow[]>();
 const transactionSpy = vi.fn();
 
 const driver: DatabaseDriver = {
   prepare: prepareSpy,
   execute: executeSpy,
-  queryOne<T extends DatabaseRow = DatabaseRow>(sql: string, params?: DatabaseBindParams): T | undefined {
-    return queryOneSpy(sql, params) as T | undefined;
-  },
-  queryAll<T extends DatabaseRow = DatabaseRow>(sql: string, params?: DatabaseBindParams): T[] {
-    return queryAllSpy(sql, params) as T[];
-  },
+  queryOne: vi.fn(),
+  queryAll: vi.fn(),
   transaction<T>(execute: (innerDriver: DatabaseDriver) => T): T {
     transactionSpy(execute);
     return execute(driver);
@@ -70,67 +59,75 @@ const reviewMutationContext = {
   createId: vi.fn().mockReturnValueOnce('op-1').mockReturnValueOnce('log-1')
 };
 
+const nodeSnapshotInput = {
+  nodeId: 'node-1',
+  parentNodeId: null,
+  kind: 'item' as const,
+  title: 'Node 1',
+  isTitleManual: true,
+  content: '# Node 1',
+  reveal: 'Answer',
+  anchorLink: { id: 'anchor-1', kind: 'highlight' as const },
+  reading: {
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: '2026-03-14T00:00:00.000Z',
+    nextAt: '2026-03-14T00:00:00.000Z',
+    priority: 0,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state: 'dismissed' as const
+  },
+  position: 2,
+  createdAt: '2026-03-14T00:00:00.000Z',
+  updatedAt: '2026-03-14T00:00:00.000Z'
+};
+
 beforeEach(() => {
   prepareSpy.mockReset();
   executeSpy.mockReset();
-  queryOneSpy.mockReset();
-  queryAllSpy.mockReset();
   transactionSpy.mockReset();
   reviewMutationContext.createId.mockReset();
   reviewMutationContext.createId.mockReturnValueOnce('op-1').mockReturnValueOnce('log-1');
 });
 
-function mockNodeSnapshotStatements() {
-  const upsertNodeRun = vi.fn();
-  const upsertOrderRun = vi.fn();
-  const upsertReadingRun = vi.fn();
-  const deleteReadingRun = vi.fn();
+function createStatementRuns() {
+  return {
+    deleteNodeSearchRun: vi.fn(),
+    deletePdfSearchRun: vi.fn(),
+    deleteReadingRun: vi.fn(),
+    insertNodeSearchRun: vi.fn(),
+    insertPdfSearchRun: vi.fn(),
+    upsertNodeRun: vi.fn(),
+    upsertOrderRun: vi.fn(),
+    upsertReadingRun: vi.fn()
+  };
+}
 
+function resolveNodeSnapshotRunSpy(sql: string, runs: ReturnType<typeof createStatementRuns>) {
+  if (sql.includes('INSERT INTO nodes')) return runs.upsertNodeRun;
+  if (sql.includes('INSERT INTO node_order')) return runs.upsertOrderRun;
+  if (sql.includes('INSERT INTO node_reading')) return runs.upsertReadingRun;
+  if (sql === 'DELETE FROM node_reading WHERE node_id = ?') return runs.deleteReadingRun;
+  if (sql === 'DELETE FROM node_search WHERE node_id = ?') return runs.deleteNodeSearchRun;
+  if (sql.includes('INSERT INTO node_search')) return runs.insertNodeSearchRun;
+  if (sql === 'DELETE FROM pdf_search WHERE node_id = ?') return runs.deletePdfSearchRun;
+  return runs.insertPdfSearchRun;
+}
+
+function mockNodeSnapshotStatements() {
+  const runs = createStatementRuns();
   prepareSpy.mockImplementation((sql) => ({
     sql,
-    run: sql.includes('INSERT INTO nodes')
-      ? upsertNodeRun
-      : sql.includes('INSERT INTO node_order')
-        ? upsertOrderRun
-        : sql.includes('INSERT INTO node_reading')
-          ? upsertReadingRun
-          : deleteReadingRun,
+    run: resolveNodeSnapshotRunSpy(sql, runs),
     get: vi.fn(),
     all: vi.fn()
   }));
-  return { deleteReadingRun, upsertNodeRun, upsertOrderRun, upsertReadingRun };
+  return runs;
 }
 
-it('writes node snapshot via driver transaction and prepared statements', () => {
-  const { deleteReadingRun, upsertNodeRun, upsertOrderRun, upsertReadingRun } = mockNodeSnapshotStatements();
-
-  upsertNodeSnapshot(driver, {
-    nodeId: 'node-1',
-    parentNodeId: null,
-    kind: 'item',
-    title: 'Node 1',
-    isTitleManual: true,
-    content: '# Node 1',
-    reveal: 'Answer',
-    anchorLink: { id: 'anchor-1', kind: 'highlight' },
-    reading: {
-      intervalDurationMs: 0,
-      intervalGrowthFactor: 1,
-      lastHandledAt: '2026-03-14T00:00:00.000Z',
-      nextAt: '2026-03-14T00:00:00.000Z',
-      priority: 0,
-      readingPosition: 0,
-      repetitionCount: 0,
-      state: 'dismissed'
-    },
-    position: 2,
-    createdAt: '2026-03-14T00:00:00.000Z',
-    updatedAt: '2026-03-14T00:00:00.000Z'
-  });
-
-  expect(transactionSpy).toHaveBeenCalledTimes(1);
-  expect(prepareSpy).toHaveBeenCalledTimes(4);
-  expect(upsertNodeRun).toHaveBeenCalledWith([
+function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRuns>) {
+  expect(runs.upsertNodeRun).toHaveBeenCalledWith([
     'node-1',
     null,
     'item',
@@ -148,8 +145,8 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
     '2026-03-14T00:00:00.000Z',
     '2026-03-14T00:00:00.000Z'
   ]);
-  expect(upsertOrderRun).toHaveBeenCalledWith(['node-1', 2]);
-  expect(upsertReadingRun).toHaveBeenCalledWith([
+  expect(runs.upsertOrderRun).toHaveBeenCalledWith(['node-1', 2]);
+  expect(runs.upsertReadingRun).toHaveBeenCalledWith([
     'node-1',
     0,
     1,
@@ -160,7 +157,37 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
     0,
     'dismissed'
   ]);
-  expect(deleteReadingRun).not.toHaveBeenCalled();
+  expect(runs.deleteReadingRun).not.toHaveBeenCalled();
+}
+
+function expectNodeSnapshotSearchSync(runs: ReturnType<typeof createStatementRuns>) {
+  expect(runs.deleteNodeSearchRun).toHaveBeenCalledWith(['node-1']);
+  expect(runs.insertNodeSearchRun).toHaveBeenCalledWith(['node-1']);
+  expect(runs.deletePdfSearchRun).toHaveBeenCalledWith(['node-1']);
+  expect(runs.insertPdfSearchRun).toHaveBeenCalledWith(['node-1']);
+  expect(prepareSpy.mock.calls.map(([sql]) => sql)).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('INSERT INTO nodes'),
+      expect.stringContaining('INSERT INTO node_order'),
+      expect.stringContaining('INSERT INTO node_reading'),
+      'DELETE FROM node_reading WHERE node_id = ?',
+      'DELETE FROM node_search WHERE node_id = ?',
+      expect.stringContaining('INSERT INTO node_search'),
+      'DELETE FROM pdf_search WHERE node_id = ?',
+      expect.stringContaining('INSERT INTO pdf_search')
+    ])
+  );
+}
+
+it('writes node snapshot via driver transaction and prepared statements', () => {
+  const runs = mockNodeSnapshotStatements();
+
+  upsertNodeSnapshot(driver, nodeSnapshotInput);
+
+  expect(transactionSpy).toHaveBeenCalledTimes(1);
+  expect(prepareSpy).toHaveBeenCalledTimes(8);
+  expectNodeSnapshotPersistence(runs);
+  expectNodeSnapshotSearchSync(runs);
 });
 
 it('writes review mutation via driver contract with injected context', () => {
@@ -204,63 +231,4 @@ it('writes review mutation via driver contract with injected context', () => {
     2.5,
     3.1
   ]);
-});
-
-it('loads workspace snapshot through query helpers only', () => {
-  queryAllSpy
-    .mockReturnValueOnce([
-      {
-        id: 'node-1',
-        parent_id: null,
-        title: 'Node 1',
-        is_title_manual: 1,
-        opening_text: null,
-        content: 'content',
-        reveal: null,
-        anchor_link: null,
-        created_at: '2026-03-14T00:00:00.000Z',
-        updated_at: '2026-03-14T00:00:00.000Z',
-        deleted_at: null,
-        review_due: null,
-        review_last_review_at: null,
-        review_state: null,
-        review_stability: null,
-        review_difficulty: null,
-        review_elapsed_days: null,
-        review_scheduled_days: null,
-        review_reps: null,
-        review_lapses: null
-      }
-    ])
-    .mockReturnValueOnce([{ node_id: 'node-1' }]);
-  queryOneSpy.mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
-
-  expect(loadWorkspaceSnapshot(driver)).toEqual({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1'],
-    nodesById: {
-      'node-1': {
-        id: 'node-1',
-        parentNodeId: null,
-        kind: 'topic',
-        title: 'Node 1',
-        isTitleManual: true,
-        hideTitleHeading: false,
-        openingText: null,
-        content: 'content',
-        virtualFilter: null,
-        reveal: null,
-        anchorLink: null,
-        reading: null,
-        review: null,
-        createdAt: '2026-03-14T00:00:00.000Z',
-        updatedAt: '2026-03-14T00:00:00.000Z'
-      }
-    },
-    trashedNodeIds: [],
-    untitledSequenceByParent: {}
-  });
-
-  expect(queryAllSpy).toHaveBeenCalledTimes(2);
-  expect(queryOneSpy).toHaveBeenCalledTimes(2);
 });

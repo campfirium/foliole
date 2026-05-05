@@ -42,7 +42,12 @@ export function detectSystemFonts(): string[] {
   }
 
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  let context: CanvasRenderingContext2D | null = null;
+  try {
+    context = canvas.getContext('2d');
+  } catch {
+    return [];
+  }
   if (!context) {
     return [];
   }

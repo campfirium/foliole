@@ -6,7 +6,7 @@ import {
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
+export const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'review-queue',
   'source-info',
   'highlights',
@@ -26,4 +26,12 @@ export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelI
 
 export function saveWorkspaceRightPanelPreference(value: WorkspaceRightPanelId) {
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel, value);
+}
+
+export function loadWorkspaceRightPanelOrderPreference() {
+  return getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarPanelOrder);
+}
+
+export function saveWorkspaceRightPanelOrderPreference(value: WorkspaceRightPanelId[]) {
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarPanelOrder, value.join(','));
 }

@@ -153,12 +153,13 @@ it('waits for composition to finish before running pdf search', async () => {
   render(<DocumentPanelSection {...defaultProps} />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument());
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
+  const initialStatus = screen.getByTestId('pdf-search-status').textContent;
 
   fireEvent.compositionStart(searchInput);
   fireEvent.change(searchInput, { target: { value: 'key' }, nativeEvent: { isComposing: true } });
 
   await waitFor(() => expect(searchInput).toHaveValue('key'));
-  expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('');
+  expect(screen.getByTestId('pdf-search-status').textContent).toBe(initialStatus);
 
   fireEvent.compositionEnd(searchInput, { data: 'keyword' });
   fireEvent.change(searchInput, { target: { value: 'keyword' } });

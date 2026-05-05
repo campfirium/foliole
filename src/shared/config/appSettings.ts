@@ -58,6 +58,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   rightSidebarWidth: 'foliole-workspace-right-sidebar-width',
   rightSidebarActivePanel: 'foliole-workspace-right-sidebar-active-panel',
+  rightSidebarPanelOrder: 'foliole-workspace-right-sidebar-panel-order',
   importManagementActivePage: 'foliole-import-management-active-page',
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,
   commandRecents: 'foliole-command-recents',

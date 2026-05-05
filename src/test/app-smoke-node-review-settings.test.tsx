@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -10,11 +10,17 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+function openRightPanelFromMenu(label: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
+}
+
 it('shows default desired retention and priority fallbacks on nodes without overrides', () => {
   render(<App />);
 
   expect(screen.getByLabelText('Inspector')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Dev panel' })).toHaveAttribute('aria-pressed', 'true');
+  openRightPanelFromMenu('Dev');
+  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
   expect(screen.getByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByText('90.0% · Default')).toBeInTheDocument();
   expect(screen.getByText('P5 · Default')).toBeInTheDocument();

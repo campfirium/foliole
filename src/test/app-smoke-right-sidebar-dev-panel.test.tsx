@@ -8,6 +8,11 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 
+function openRightPanelFromMenu(label: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
+}
+
 it('renders the dev panel with resolved scheduling and raw node fields', () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
@@ -38,9 +43,9 @@ it('renders the dev panel with resolved scheduling and raw node fields', () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Dev panel' }));
+  openRightPanelFromMenu('Dev');
 
-  expect(screen.getByRole('button', { name: 'Dev panel' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
   expect(screen.queryByText('Reading position log')).not.toBeInTheDocument();
   expect(screen.getByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Review' })).toBeInTheDocument();

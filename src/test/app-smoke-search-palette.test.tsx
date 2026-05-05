@@ -17,6 +17,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const SEARCH_EXCERPT = '...Atlas launch checklist and follow-up notes....';
+
 function createSearchRuntimeInvoke() {
   return vi.fn().mockImplementation((command: string, args?: { nodeId?: string; query?: string }) => {
     if (command === 'search_workspace') {
@@ -84,8 +86,6 @@ it('keeps search results lightweight until the chosen node is opened', async () 
 
   seedSearchNodes();
 
-  const searchExcerpt = '...Atlas launch checklist and follow-up notes....';
-
   expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('');
   expect(useWorkspaceStore.getState().nodesById['node-2']?.hasContent).toBe(true);
   expect(useWorkspaceStore.getState().nodesById['node-3']?.content).toBe('');
@@ -103,8 +103,8 @@ it('keeps search results lightweight until the chosen node is opened', async () 
     expect(within(dialog).getByRole('button', { name: /Project Atlas/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Weekly Log/i })).toBeInTheDocument();
   });
-  expect(within(dialog).getByText(searchExcerpt)).toBeInTheDocument();
-  expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
+  expect(within(within(dialog).getByRole('button', { name: /Weekly Log/i })).getByText(/launch checklist and follow-up notes/i)).toBeInTheDocument();
+  expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(SEARCH_EXCERPT);
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([]);
 
   fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -127,7 +127,7 @@ it('keeps search results lightweight until the chosen node is opened', async () 
   expect(useWorkspaceStore.getState().nodeViewById['node-3']).toMatchObject({
     selection: { from: 0, to: 5 }
   });
-  expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
+  expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(SEARCH_EXCERPT);
   expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'Atlas' });
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-3' });
   expect(invoke.mock.calls).toContainEqual(['load_node_document', { nodeId: 'node-3' }]);

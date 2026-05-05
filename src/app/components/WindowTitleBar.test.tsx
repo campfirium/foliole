@@ -42,7 +42,26 @@ function renderTitleBar(overrides: Partial<ComponentProps<typeof WindowTitleBar>
   );
 }
 
+function openMoreRightPanelsMenu() {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+}
+
+function createDragTransfer() {
+  return {
+    dropEffect: 'move',
+    effectAllowed: 'move',
+    setData: () => undefined
+  };
+}
+
+function getVisibleRightSidebarButtonLabels() {
+  return Array.from(document.querySelectorAll('.window-titlebar-right-panel-actions > button[aria-label]')).map((node) =>
+    node.getAttribute('aria-label')
+  );
+}
+
 beforeEach(() => {
+  window.localStorage.clear();
   closeMainWindow.mockClear();
   isWindowControlsAvailable.mockReset();
   isWindowControlsAvailable.mockReturnValue(true);
@@ -146,6 +165,7 @@ describe('WindowTitleBar view switches', () => {
     expect(screen.queryByRole('button', { name: 'Source info panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Highlights panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();
   });
 
   it('collapses left titlebar actions down to the toggle button only', () => {
@@ -169,14 +189,76 @@ describe('WindowTitleBar view switches', () => {
   });
 });
 
-describe('WindowTitleBar right sidebar anchor', () => {
+describe('WindowTitleBar right sidebar anchor layout', () => {
   it('renders the expanded right sidebar toggle before the divider and the panel button inside the right zone', () => {
     const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
     expectExpandedRightAnchorLayout(container);
     expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Source info panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Highlights panel' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
+  });
+
+  it('uses the more menu as the visible active control for overflow panels', () => {
+    renderTitleBar({ activeRightPanelId: 'dev' });
+
+    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
+  });
+
+  it('shows every right sidebar panel in the more menu with icons', () => {
+    renderTitleBar({ activeRightPanelId: 'dev' });
+
+    openMoreRightPanelsMenu();
+
+    const devMenuItem = screen.getByRole('menuitem', { name: /Dev/ });
+    const reviewQueueMenuItem = screen.getByRole('menuitem', { name: /Review queue/ });
+
+    expect(devMenuItem.querySelector('svg')).not.toBeNull();
+    expect(reviewQueueMenuItem.querySelector('svg')).not.toBeNull();
+    expect(screen.getAllByText('Top')).toHaveLength(3);
+  });
+});
+
+describe('WindowTitleBar right sidebar anchor sorting', () => {
+  it('reorders visible panel buttons after drag sorting', () => {
+    renderTitleBar({ activeRightPanelId: 'dev' });
+
+    const reviewButton = screen.getByRole('button', { name: 'Review queue panel' });
+    const highlightsButton = screen.getByRole('button', { name: 'Highlights panel' });
+    const transfer = createDragTransfer();
+
+    fireEvent.dragStart(highlightsButton, { dataTransfer: transfer });
+    fireEvent.dragOver(reviewButton, { dataTransfer: transfer });
+    fireEvent.dragEnd(highlightsButton, { dataTransfer: transfer });
+
+    expect(getVisibleRightSidebarButtonLabels()).toEqual([
+      'Highlights panel',
+      'Review queue panel',
+      'Source info panel',
+      'More right sidebar panels'
+    ]);
+  });
+
+  it('reorders overflow menu items and updates the visible button row', () => {
+    renderTitleBar({ activeRightPanelId: 'dev' });
+
+    openMoreRightPanelsMenu();
+
+    const devMenuItem = screen.getByRole('menuitem', { name: /Dev/ });
+    const sourceInfoMenuItem = screen.getByRole('menuitem', { name: /Source info/ });
+    const transfer = createDragTransfer();
+
+    fireEvent.dragStart(devMenuItem, { dataTransfer: transfer });
+    fireEvent.dragOver(sourceInfoMenuItem, { dataTransfer: transfer });
+    fireEvent.dragEnd(devMenuItem, { dataTransfer: transfer });
+
+    expect(getVisibleRightSidebarButtonLabels()).toEqual([
+      'Review queue panel',
+      'Dev panel',
+      'Source info panel',
+      'More right sidebar panels'
+    ]);
   });
 
   it('keeps the window controls out of the titlebar grid flow', () => {

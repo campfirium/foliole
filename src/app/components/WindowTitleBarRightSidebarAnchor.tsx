@@ -1,10 +1,25 @@
-import { FileSearch, Gauge, Highlighter, Link2, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
-import { memo } from 'react';
+import { Grid2x2, PanelRight } from 'lucide-react';
+import { memo, useEffect, useState, type DragEvent as ReactDragEvent } from 'react';
 
+import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '../../shared/ui';
+
+import {
+  getWorkspaceRightPanelAriaLabel,
+  getWorkspaceRightPanelDefinition
+} from './workspaceRightPanelDefinitions';
+import {
+  moveWorkspaceRightPanel,
+  normalizeWorkspaceRightPanelOrder
+} from './workspaceRightPanelOrder';
+import {
+  loadWorkspaceRightPanelOrderPreference,
+  saveWorkspaceRightPanelOrderPreference
+} from './workspaceRightPanelPreference';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
+const VISIBLE_PANEL_COUNT = 3;
 
 function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   return (
@@ -20,27 +35,31 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
   );
 }
 
-function RightSidebarPanelButton({
-  active,
-  ariaLabel,
-  icon,
-  onClick
-}: {
+function RightSidebarPanelButton(props: {
   active: boolean;
-  ariaLabel: string;
-  icon: JSX.Element;
   onClick: () => void;
+  onDragEnd: () => void;
+  onDragOver: (event: ReactDragEvent<HTMLElement>) => void;
+  onDragStart: (event: ReactDragEvent<HTMLElement>) => void;
+  panelId: WorkspaceRightPanelId;
 }) {
+  const definition = getWorkspaceRightPanelDefinition(props.panelId);
   return (
     <button
-      aria-label={ariaLabel}
-      aria-pressed={active}
+      aria-label={getWorkspaceRightPanelAriaLabel(props.panelId)}
+      aria-pressed={props.active}
       className="window-titlebar-leading-button"
-      data-active={active}
-      onClick={onClick}
+      data-active={props.active}
+      data-panel-id={props.panelId}
+      draggable
+      onClick={props.onClick}
+      onDragEnd={props.onDragEnd}
+      onDragOver={props.onDragOver}
+      onDragStart={props.onDragStart}
+      onDrop={props.onDragOver}
       type="button"
     >
-      {icon}
+      {definition.icon}
     </button>
   );
 }
@@ -52,46 +71,127 @@ interface WindowTitleBarRightSidebarAnchorProps {
   onToggleRightSidebarVisibility: () => void;
 }
 
-function renderRightSidebarPanelActions(props: Pick<WindowTitleBarRightSidebarAnchorProps, 'activeRightPanelId' | 'onSelectRightPanel'>) {
-  const isActive = (panelId: WorkspaceRightPanelId) => props.activeRightPanelId === panelId;
+function useWorkspaceRightPanelOrder() {
+  const [orderedPanelIds, setOrderedPanelIds] = useState<WorkspaceRightPanelId[]>(() =>
+    normalizeWorkspaceRightPanelOrder(loadWorkspaceRightPanelOrderPreference())
+  );
+
+  useEffect(() => {
+    saveWorkspaceRightPanelOrderPreference(orderedPanelIds);
+  }, [orderedPanelIds]);
+
+  return {
+    orderedPanelIds,
+    setOrderedPanelIds
+  };
+}
+
+function useWorkspaceRightPanelDrag(orderState: ReturnType<typeof useWorkspaceRightPanelOrder>) {
+  const [draggingPanelId, setDraggingPanelId] = useState<WorkspaceRightPanelId | null>(null);
+
+  function reorderTo(targetId: WorkspaceRightPanelId) {
+    if (!draggingPanelId) {
+      return;
+    }
+    orderState.setOrderedPanelIds((currentOrder) => moveWorkspaceRightPanel(currentOrder, draggingPanelId, targetId));
+  }
+
+  return {
+    draggingPanelId,
+    handleDragEnd: () => setDraggingPanelId(null),
+    handleDragOver: (targetId: WorkspaceRightPanelId, event: ReactDragEvent<HTMLElement>) => {
+      if (!draggingPanelId || draggingPanelId === targetId) {
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      reorderTo(targetId);
+    },
+    handleDragStart: (panelId: WorkspaceRightPanelId, event: ReactDragEvent<HTMLElement>) => {
+      setDraggingPanelId(panelId);
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', panelId);
+    }
+  };
+}
+
+function renderVisiblePanelActions(args: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
+  orderedPanelIds: WorkspaceRightPanelId[];
+}) {
+  return args.orderedPanelIds.slice(0, VISIBLE_PANEL_COUNT).map((panelId) => (
+    <RightSidebarPanelButton
+      key={panelId}
+      active={args.activeRightPanelId === panelId}
+      onClick={() => args.onSelectRightPanel(panelId)}
+      onDragEnd={args.drag.handleDragEnd}
+      onDragOver={(event) => args.drag.handleDragOver(panelId, event)}
+      onDragStart={(event) => args.drag.handleDragStart(panelId, event)}
+      panelId={panelId}
+    />
+  ));
+}
+
+function OverflowPanelMenu(args: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
+  orderedPanelIds: WorkspaceRightPanelId[];
+}) {
+  const overflowPanelIds = args.orderedPanelIds.slice(VISIBLE_PANEL_COUNT);
+  const isActive = overflowPanelIds.includes(args.activeRightPanelId);
+  return (
+    <AppDropdownMenu>
+      <AppDropdownMenuTrigger asChild>
+        <button
+          aria-label="More right sidebar panels"
+          className="window-titlebar-leading-button"
+          data-active={isActive}
+          type="button"
+        >
+          <Grid2x2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+        </button>
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="end" className="min-w-[188px]" sideOffset={6}>
+        {args.orderedPanelIds.map((panelId) => {
+          const definition = getWorkspaceRightPanelDefinition(panelId);
+          const isPinned = !overflowPanelIds.includes(panelId);
+          return (
+            <AppDropdownMenuItem
+              key={panelId}
+              className="gap-2"
+              data-panel-id={panelId}
+              draggable
+              onDragEnd={args.drag.handleDragEnd}
+              onDragOver={(event) => args.drag.handleDragOver(panelId, event)}
+              onDragStart={(event) => args.drag.handleDragStart(panelId, event)}
+              onSelect={() => args.onSelectRightPanel(panelId)}
+            >
+              <span aria-hidden="true" className="inline-flex size-4 items-center justify-center text-foreground/70">
+                {definition.icon}
+              </span>
+              <span className="flex-1">{definition.menuLabel}</span>
+              {isPinned ? <span aria-hidden="true" className="text-xs uppercase text-foreground/35">Top</span> : null}
+            </AppDropdownMenuItem>
+          );
+        })}
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+}
+
+function renderRightSidebarPanelActions(args: {
+  activeRightPanelId: WorkspaceRightPanelId;
+  drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
+  orderedPanelIds: WorkspaceRightPanelId[];
+}) {
   return (
     <div className="window-titlebar-right-panel-actions">
-      <RightSidebarPanelButton
-        active={isActive('review-queue')}
-        ariaLabel="Review queue panel"
-        icon={<ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-        onClick={() => props.onSelectRightPanel('review-queue')}
-      />
-      <RightSidebarPanelButton
-        active={isActive('source-info')}
-        ariaLabel="Source info panel"
-        icon={<FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-        onClick={() => props.onSelectRightPanel('source-info')}
-      />
-      <RightSidebarPanelButton
-        active={isActive('highlights')}
-        ariaLabel="Highlights panel"
-        icon={<Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-        onClick={() => props.onSelectRightPanel('highlights')}
-      />
-      <RightSidebarPanelButton
-        active={isActive('backlinks')}
-        ariaLabel="Backlinks panel"
-        icon={<Link2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-        onClick={() => props.onSelectRightPanel('backlinks')}
-      />
-      <RightSidebarPanelButton
-        active={isActive('performance')}
-        ariaLabel="Performance panel"
-        icon={<Gauge aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-        onClick={() => props.onSelectRightPanel('performance')}
-      />
-      <RightSidebarPanelButton
-        active={isActive('dev')}
-        ariaLabel="Dev panel"
-        icon={<SlidersHorizontal aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
-        onClick={() => props.onSelectRightPanel('dev')}
-      />
+      {renderVisiblePanelActions(args)}
+      <OverflowPanelMenu {...args} />
     </div>
   );
 }
@@ -100,6 +200,9 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   props: WindowTitleBarRightSidebarAnchorProps
 ) {
   const isCollapsed = props.isRightSidebarCollapsed;
+  const orderState = useWorkspaceRightPanelOrder();
+  const drag = useWorkspaceRightPanelDrag(orderState);
+
   return (
     <div className="window-titlebar-right-anchor-shell" data-collapsed={isCollapsed}>
       {isCollapsed ? null : <div aria-hidden="true" className="window-titlebar-right-divider" />}
@@ -108,7 +211,14 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
           <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
         </div>
         <div className="window-titlebar-right-zone" hidden={isCollapsed}>
-          {isCollapsed ? null : renderRightSidebarPanelActions(props)}
+          {isCollapsed
+            ? null
+            : renderRightSidebarPanelActions({
+                activeRightPanelId: props.activeRightPanelId,
+                drag,
+                onSelectRightPanel: props.onSelectRightPanel,
+                orderedPanelIds: orderState.orderedPanelIds
+              })}
         </div>
       </div>
     </div>

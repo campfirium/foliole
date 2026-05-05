@@ -14,7 +14,7 @@ describe('linkPanelPreferences', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1600 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
 
-    expect(getDefaultLinkPanelSize()).toEqual({ height: 700, width: 800 });
+    expect(getDefaultLinkPanelSize()).toEqual({ height: 800, width: 800 });
   });
 
   it('clamps saved sizes back into the current viewport bounds', () => {

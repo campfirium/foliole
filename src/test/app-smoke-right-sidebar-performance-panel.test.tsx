@@ -8,6 +8,11 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+function openRightPanelFromMenu(label: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
+}
+
 it('renders the standalone performance panel with timing, memory, and cache groups', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
@@ -25,10 +30,10 @@ it('renders the standalone performance panel with timing, memory, and cache grou
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Performance panel' }));
+  openRightPanelFromMenu('Performance');
 
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Performance panel' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
     expect(screen.getByRole('heading', { name: 'Timing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Memory' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cache' })).toBeInTheDocument();

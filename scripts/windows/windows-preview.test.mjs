@@ -164,6 +164,70 @@ const timer = setInterval(() => {
   });
 }
 
+function startRestartDeliveryConsumer(rootDir, timeoutMs = 30000) {
+  const script = `
+const fs = require('node:fs');
+const path = require('node:path');
+
+const rootDir = process.argv[1];
+const timeoutMs = Number(process.argv[2]);
+const intentFile = path.join(rootDir, '${RESTART_INTENT_FILE}');
+const deliveryFile = path.join(rootDir, '${RESTART_DELIVERY_FILE}');
+const bootReadyFile = path.join(rootDir, '.windows-native-boot-ready.json');
+const bridgeReadyFile = path.join(rootDir, '.windows-native-bridge-ready.json');
+
+function writeJson(filePath, payload) {
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\\n', 'utf8');
+}
+
+const start = Date.now();
+const timer = setInterval(() => {
+  if (!fs.existsSync(intentFile)) {
+    if (Date.now() - start > timeoutMs) {
+      clearInterval(timer);
+      process.exit(0);
+    }
+    return;
+  }
+  const payload = JSON.parse(fs.readFileSync(intentFile, 'utf8'));
+  fs.unlinkSync(intentFile);
+  writeJson(deliveryFile, {
+    deliveredAt: new Date().toISOString(),
+    head: payload.head ?? null,
+    kind: 'foliole.electron.dev.restart-delivered.v1',
+    nonce: payload.nonce,
+    reason: payload.reason,
+    requestedAt: payload.requestedAt,
+    requestedBy: payload.requestedBy,
+    target: payload.target
+  });
+  const readyTimestamp = new Date(Date.parse(payload.requestedAt) + 1000).toISOString();
+  writeJson(bootReadyFile, {
+    head: payload.head ?? null,
+    pid: 501,
+    session: 'session-1',
+    stage: 'app_ready',
+    timestamp: readyTimestamp
+  });
+  writeJson(bridgeReadyFile, {
+    head: payload.head ?? null,
+    pid: 501,
+    session: 'session-1',
+    stage: 'bridge_ready',
+    timestamp: new Date(Date.parse(payload.requestedAt) + 2000).toISOString(),
+    payload: { bridgeAvailable: true }
+  });
+  clearInterval(timer);
+  process.exit(0);
+}, 50);
+`;
+
+  return spawn(process.execPath, ['-e', script, rootDir, String(timeoutMs)], {
+    cwd: REPO_ROOT,
+    stdio: 'ignore'
+  });
+}
+
 describe('windows-preview script', { timeout: 15000 }, () => {
   it('rebuilds stale electron-dist before sync instead of failing early', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
@@ -541,7 +605,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
   it('falls back to restart-intent when renderer reload delivery times out', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
-    const consumer = startIntentConsumer(tempRoot, 'restart');
+    const consumer = startRestartDeliveryConsumer(tempRoot);
     try {
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
