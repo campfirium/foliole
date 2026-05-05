@@ -7,6 +7,7 @@ const ROOT = process.cwd();
 const ANDROID_MAIN_JAVA = 'android/app/src/main/java/com/foliole/android';
 const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncPackApply\b/,
+  /\bclass\s+FolioleCompanionSyncObjectApply\b/,
   /\bapplyDesktopSyncPack\s*\(/,
   /\bapplySyncPack\s*\(/,
   /\bapplySyncNodeVersions\s*\(/,

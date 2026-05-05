@@ -44,7 +44,7 @@ public class FolioleCompanionPdfPageTextStoreTest {
             .put(record("pdf-1:2", "{\"attachment_id\":\"pdf-1\",\"page\":2,\"text\":\"second page\",\"page_width\":612,\"page_height\":792}"))
             .put(record("pdf-1:1", "{\"attachment_id\":\"pdf-1\",\"page\":1,\"text\":\"first page\",\"page_width\":612,\"page_height\":792}"));
 
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, records, "desktop-1");
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "desktop-1");
         JSObject loaded = FolioleCompanionPdfPageTextStore.loadPageText(database, "pdf-1");
 
         JSONArray pages = loaded.getJSONArray("pages");
@@ -63,7 +63,7 @@ public class FolioleCompanionPdfPageTextStoreTest {
             .put(record("pdf-2:1", "{\"attachment_id\":\"pdf-2\",\"page\":1,\"text\":\"another beta page\",\"page_width\":612,\"page_height\":792}"))
             .put(record("pdf-3:1", "{\"attachment_id\":\"pdf-3\",\"page\":1,\"text\":\"no match\",\"page_width\":612,\"page_height\":792}"));
 
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, records, "desktop-1");
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "desktop-1");
         JSObject loaded = FolioleCompanionPdfPageTextStore.searchPageText(database, "BETA", 10);
 
         JSONArray results = loaded.getJSONArray("results");

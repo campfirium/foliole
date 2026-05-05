@@ -55,7 +55,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
 
     @Test
     public void loadsCachedExternalDocumentAppliedFromSyncObjects() throws Exception {
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, new JSONArray()
             .put(record("folder-1:doc.md", "doc.md", "cached external content")), "desktop-1");
 
         JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:doc.md");
@@ -71,7 +71,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
     public void storesExternalDocumentBodyBlobHashFromSyncObjects() throws Exception {
         JSONObject payload = payload("blob-ref.md", "");
         payload.put("body_blob_hash", "blob-ref-hash");
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, new JSONArray()
             .put(record("folder-1:blob-ref.md", payload)), "desktop-1");
 
         assertEquals(
@@ -82,7 +82,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
 
     @Test
     public void searchesCachedExternalDocumentsAppliedFromSyncObjects() throws Exception {
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, new JSONArray()
             .put(record("folder-1:alpha.md", "alpha.md", "cached alpha body"))
             .put(record("folder-1:beta.md", "beta.md", "cached beta body")), "desktop-1");
 
@@ -104,7 +104,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
                 ") VALUES ('folder-1', '/library/two think', 'document_relative_first_then_fixed_root', 2, " +
                 "'2026-04-26T00:00:00.000Z', '2026-04-26T01:00:00.000Z')"
         );
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, new JSONArray()
             .put(record("folder-1:alpha.md", "alpha.md", "cached alpha body"))
             .put(record("folder-1:sub/beta.md", "sub/beta.md", "cached beta body")), "desktop-1");
 
@@ -186,8 +186,8 @@ public class FolioleCompanionExternalDocumentStoreTest {
     public void ignoresMissingExternalDocuments() throws Exception {
         JSONArray records = new JSONArray()
             .put(record("folder-1:doc.md", "doc.md", "cached external content"));
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, records, "desktop-1");
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, new JSONArray()
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "desktop-1");
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, new JSONArray()
             .put(new JSONObject()
                 .put("object_type", "external_document")
                 .put("object_id", "folder-1:doc.md")

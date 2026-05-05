@@ -141,7 +141,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
                 "{\"node_id\":\"article-1\",\"scroll_top\":128,\"selection_from\":5,\"selection_to\":13,\"source\":\"user-scroll\"}"
             ));
 
-        FolioleCompanionSyncObjectStore.applySyncObjects(database, records, "remote-device");
+        FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, records, "remote-device");
         JSObject loaded = FolioleCompanionSyncObjectStore.loadSyncObjects(
             database,
             new JSONArray()
