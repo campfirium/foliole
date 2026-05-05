@@ -1,7 +1,6 @@
-import {
-  applyCompanionSyncPush,
-  type CompanionSyncPushPayload,
-  type CompanionSyncPushResult
+import type {
+  CompanionSyncPushPayload,
+  CompanionSyncPushResult
 } from './companionSyncPushApply.js';
 import { applyNodeVersionPushAsync } from './companionSyncPushNodeVersionApply.js';
 import { applyReviewLogPushAsync } from './companionSyncPushReviewLogApply.js';
@@ -38,5 +37,15 @@ async function applySinglePushItemAsync(item: CompanionSyncPushPayload) {
   if (item.identity.objectType === 'node') return await applyNodeVersionPushAsync(item);
   if (isStateObjectPush(item)) return await applyStateObjectPushAsync(item);
   if (item.identity.objectType === 'review_log') return await applyReviewLogPushAsync(item);
-  return applyCompanionSyncPush([item]);
+  return {
+    acks: [{
+      clientOpId: item.clientOpId,
+      conflictReason: 'unsupported_object_type',
+      identity: item.identity,
+      status: 'rejected'
+    }],
+    appliedNodeIds: [],
+    appliedObjectIds: [],
+    appliedReviewOpIds: []
+  } satisfies CompanionSyncPushResult;
 }

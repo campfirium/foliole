@@ -128,4 +128,17 @@ describe('companion sync push async apply', () => {
       `SELECT COUNT(*) AS count FROM review_log WHERE op_id = 'op-async-1'`
     )).toEqual({ count: 1 });
   });
+
+  it('rejects unsupported push object types without falling back to legacy sync apply', async () => {
+    await expect(applyCompanionSyncPushAsync([{
+      base: { baseContentHash: null, kind: 'content_hash' },
+      clientOpId: 'attachment:att-1:1',
+      contentHash: 'hash-att-1',
+      identity: { objectId: 'att-1', objectType: 'attachment', scope: 'workspace' },
+      payloadJson: '{}',
+      updatedAt: '2026-04-30T01:00:00.000Z'
+    }])).resolves.toMatchObject({
+      acks: [{ conflictReason: 'unsupported_object_type', status: 'rejected' }]
+    });
+  });
 });
