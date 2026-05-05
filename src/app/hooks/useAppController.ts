@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
+import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -35,6 +36,12 @@ export interface AppPaletteState {
 }
 
 export interface AppControllerResult {
+  hotkeySettings: {
+    hotkeyItems: HotkeySettingItem[];
+    onHotkeyReset: (commandId: string) => void;
+    onHotkeyResetAll: () => void;
+    onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  };
   layoutProps: WorkspaceLayoutProps;
   paletteState: AppPaletteState;
 }
@@ -160,11 +167,9 @@ function buildControllerLayoutState(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   exitStudyMode: () => void;
   formalImport: ReturnType<typeof useFormalImport>;
-  hotkeys: ReturnType<typeof useCommandShortcutState>;
   isReviewEditing: boolean;
   isStudyMode: boolean;
   nowIso: string;
-  paletteItems: CommandPaletteItem[];
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
@@ -173,16 +178,13 @@ function buildControllerLayoutState(args: {
 }) {
   return buildAppControllerLayoutProps({
     activeNode: args.controller.activeNode,
-    blockedHotkeyUpdate: args.hotkeys.updateShortcut,
     canStartStudyMode: args.controller.study.canStartStudyMode,
     documentResize: args.controller.documentResize,
     editorCtx: args.controller.editorCtx,
     exitStudyMode: args.exitStudyMode,
-    hotkeyItems: args.paletteItems,
     isReviewEditing: args.isReviewEditing,
     isStudyMode: args.isStudyMode,
     listResize: args.controller.listResize,
-    mapPaletteItemsToHotkeyItems: (items) => mapPaletteItemsToHotkeyItems(items, args.hotkeys.overrides),
     nav: args.controller.nav,
     nowIso: args.nowIso,
     reviewDueCount: args.reviewDueCount,
@@ -219,11 +221,9 @@ export function useAppController(): AppControllerResult {
     controller,
     exitStudyMode,
     formalImport,
-    hotkeys,
     isReviewEditing,
     isStudyMode,
     nowIso,
-    paletteItems,
     reviewDueCount,
     reviewPreview,
     reviewSettings,
@@ -244,9 +244,16 @@ export function useAppController(): AppControllerResult {
   });
 
   useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
+  const hotkeySettings = {
+    hotkeyItems: mapPaletteItemsToHotkeyItems(paletteItems, hotkeys.overrides),
+    onHotkeyReset: hotkeys.resetShortcut,
+    onHotkeyResetAll: hotkeys.resetAllShortcuts,
+    onHotkeyUpdate: hotkeys.updateShortcut
+  };
 
   return {
-    layoutProps: { ...layoutProps, onHotkeyReset: hotkeys.resetShortcut, onHotkeyResetAll: hotkeys.resetAllShortcuts },
+    hotkeySettings,
+    layoutProps,
     paletteState
   };
 }

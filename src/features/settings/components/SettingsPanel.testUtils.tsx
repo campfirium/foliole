@@ -3,12 +3,17 @@ import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 
 import { AppearanceSettingsProvider } from '../context/AppearanceSettingsProvider';
+import type { HotkeySettingsContextValue } from '../context/hotkeySettingsContext';
+import { HotkeySettingsProvider } from '../context/HotkeySettingsProvider';
 import { MouseGestureSettingsProvider } from '../context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../context/ReviewSchedulerSettingsProvider';
 
 const DEFAULT_SETTINGS_PANEL_PROPS = {
+  onClose: () => undefined
+};
+
+const DEFAULT_HOTKEY_SETTINGS: HotkeySettingsContextValue = {
   hotkeyItems: [],
-  onClose: () => undefined,
   onHotkeyReset: () => undefined,
   onHotkeyResetAll: () => undefined,
   onHotkeyUpdate: () => ({ status: 'blocked' as const })
@@ -26,16 +31,28 @@ export function createProps() {
   return { ...DEFAULT_SETTINGS_PANEL_PROPS };
 }
 
-export function renderWithMouseGestureProvider(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+export function createHotkeySettings(overrides?: Partial<typeof DEFAULT_HOTKEY_SETTINGS>) {
+  return { ...DEFAULT_HOTKEY_SETTINGS, ...overrides };
+}
+
+export function renderWithMouseGestureProvider(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'> & { hotkeySettings?: Partial<typeof DEFAULT_HOTKEY_SETTINGS> }
+) {
+  const hotkeySettings = createHotkeySettings(options?.hotkeySettings);
+  const renderOptions = options ? { ...options } : {};
+  delete renderOptions.hotkeySettings;
   return render(ui, {
     wrapper: ({ children }) => (
       <AppearanceSettingsProvider>
         <MouseGestureSettingsProvider>
-          <ReviewSchedulerSettingsProvider>{children}</ReviewSchedulerSettingsProvider>
+          <ReviewSchedulerSettingsProvider>
+            <HotkeySettingsProvider {...hotkeySettings}>{children}</HotkeySettingsProvider>
+          </ReviewSchedulerSettingsProvider>
         </MouseGestureSettingsProvider>
       </AppearanceSettingsProvider>
     ),
-    ...options
+    ...renderOptions
   });
 }
 

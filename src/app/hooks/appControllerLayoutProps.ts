@@ -3,8 +3,6 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
-import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useCurrentReviewPreview } from './appControllerHelpers';
@@ -28,12 +26,10 @@ import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export interface BuildControllerLayoutPropsArgs {
   activeNode: Node | undefined;
-  blockedHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   canStartStudyMode: boolean;
   documentResize: ReturnType<typeof useDocumentWidthResizer>;
   editorCtx: ReturnType<typeof useEditorContextCommands>;
   exitStudyMode: () => void;
-  hotkeyItems: CommandPaletteItem[];
   isReviewEditing: boolean;
   isStudyMode: boolean;
   listResize: ReturnType<typeof useListResizer>;
@@ -78,7 +74,6 @@ export interface BuildControllerLayoutPropsArgs {
     updateNodePriority: (nodeId: string, priority: number | null) => void;
     updateNodeReveal: (nodeId: string, reveal: string) => void;
   };
-  mapPaletteItemsToHotkeyItems: (items: CommandPaletteItem[]) => HotkeySettingItem[];
   runImportDirectory: () => Promise<boolean>;
   runImportFile: () => Promise<boolean>;
 }
@@ -114,7 +109,6 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     documentNode: args.runtime.isViewingTrashNode ? args.selectedTrashNode : args.activeNode,
     documentResize: args.documentResize,
     ...resolveEditorBindingArgs(args),
-    hotkeyItems: args.mapPaletteItemsToHotkeyItems(args.hotkeyItems),
     isResizingList: args.listResize.isResizingList,
     isResizingRightSidebar: args.rightSidebarResize.isResizingRightSidebar,
     isSettingsOpen: args.runtime.isSettingsOpen,
@@ -190,7 +184,6 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onRevealDocumentPosition: revealDocumentPosition,
     onRevealDocumentSelection: revealDocumentSelection,
     onResolveDocumentPositionAtViewportY: resolveDocumentPositionAtViewportY,
-    onHotkeyUpdate: args.blockedHotkeyUpdate,
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
     onOpenNotesView: openNotesView,

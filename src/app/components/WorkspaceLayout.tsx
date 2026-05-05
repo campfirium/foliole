@@ -4,7 +4,6 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
@@ -104,11 +103,7 @@ export interface WorkspaceLayoutProps {
   onDismissReviewItem: () => boolean;
   onExitReviewMode: () => void;
   reviewSchedulerSettings: ReviewSchedulerSettings;
-  hotkeyItems: HotkeySettingItem[];
   selectedTrashNodeId: string | null;
-  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
-  onHotkeyReset: (commandId: string) => void;
-  onHotkeyResetAll: () => void;
 }
 
 export function WorkspaceLayout(props: WorkspaceLayoutProps) {

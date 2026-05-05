@@ -1,4 +1,5 @@
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
+import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 
@@ -9,10 +10,12 @@ import { useAppController } from './hooks/useAppController';
 function AppContent() {
   const controller = useAppController();
   return (
-    <>
-      <WorkspaceLayout {...controller.layoutProps} />
-      <CommandPalette {...controller.paletteState} />
-    </>
+    <HotkeySettingsProvider {...controller.hotkeySettings}>
+      <>
+        <WorkspaceLayout {...controller.layoutProps} />
+        <CommandPalette {...controller.paletteState} />
+      </>
+    </HotkeySettingsProvider>
   );
 }
 

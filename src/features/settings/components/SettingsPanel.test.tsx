@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import type { HotkeySettingItem } from '../model/hotkeySettings';
 import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -211,4 +212,51 @@ it('keeps push queue defaults, saved values, and reopened review fields in sync'
   openReviewSettings();
 
   await expectUpdatedPushQueueValues();
+});
+
+it('updates, resets, and resets all hotkeys from the dedicated section', async () => {
+  const hotkeyItems: HotkeySettingItem[] = [
+    {
+      commandId: 'review.good',
+      title: 'Grade Review: Good',
+      section: 'Review',
+      primaryShortcutLabel: '3',
+      secondaryShortcutLabel: '',
+      shortcutSummaryLabel: '3',
+      isCustomized: false
+    },
+    {
+      commandId: 'review.easy',
+      title: 'Grade Review: Easy',
+      section: 'Review',
+      primaryShortcutLabel: '4',
+      secondaryShortcutLabel: '',
+      shortcutSummaryLabel: '4',
+      isCustomized: true
+    }
+  ];
+  const onHotkeyReset = vi.fn();
+  const onHotkeyResetAll = vi.fn();
+  const onHotkeyUpdate = vi.fn(() => ({ status: 'applied' as const, normalizedShortcutLabel: 'Ctrl+G' }));
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />, {
+    hotkeySettings: { hotkeyItems, onHotkeyReset, onHotkeyResetAll, onHotkeyUpdate }
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Hotkeys' }));
+  fireEvent.change(screen.getByLabelText('Primary shortcut for Grade Review: Good'), {
+    target: { value: 'ctrl+g' }
+  });
+  fireEvent.blur(screen.getByLabelText('Primary shortcut for Grade Review: Good'));
+
+  await waitFor(() => {
+    expect(onHotkeyUpdate).toHaveBeenCalledWith('review.good', 'primary', 'ctrl+g');
+    expect(screen.getByLabelText('Primary shortcut for Grade Review: Good')).toHaveValue('Ctrl+G');
+  });
+
+  fireEvent.click(screen.getAllByRole('button', { name: '↺' })[1]!);
+  expect(onHotkeyReset).toHaveBeenCalledWith('review.easy');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reset all' }));
+  expect(onHotkeyResetAll).toHaveBeenCalledTimes(1);
 });

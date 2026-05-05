@@ -2,7 +2,6 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedPushQueueRules';
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { buildReviewQueuePlan } from '../../store/reviewQueuePlanner';
 import type { WorkspaceState } from '../../store/workspaceStore';
@@ -28,7 +27,6 @@ interface BuildLayoutPropsArgs {
   >;
   editorNodeId: string | null;
   editorNodeViewState: WorkspaceLayoutProps['editorNodeViewState'];
-  hotkeyItems: HotkeySettingItem[];
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isImportManagementOpen: boolean;
@@ -50,7 +48,6 @@ interface BuildLayoutPropsArgs {
   onAnswerChange: WorkspaceLayoutProps['onAnswerChange'];
   onEditorChange: WorkspaceLayoutProps['onEditorChange'];
   onEditorReady: WorkspaceLayoutProps['onEditorReady'];
-  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onOpenNotesView: () => void;
   onOpenImportManagement: () => void;
   onOpenSettings: () => void;
@@ -170,6 +167,6 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
     onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onCompleteReviewItem: () => args.completeReviewItem(), onDeferReviewItem: () => args.deferReviewItem(), onDismissReviewItem: () => args.dismissReviewItem(), onExitReviewMode: sessionActions.onToggleReviewSession,
-    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
+    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, selectedTrashNodeId: args.selectedTrashNodeId
   };
 }

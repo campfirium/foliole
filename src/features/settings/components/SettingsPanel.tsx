@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
+import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import {
   getInitialSettingsCategory,
   SETTINGS_CATEGORIES,
@@ -18,11 +18,7 @@ import {
 import { useManagedInboxSettings } from './useManagedInboxSettings';
 
 interface SettingsPanelProps {
-  hotkeyItems: HotkeySettingItem[];
   onClose: () => void;
-  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
-  onHotkeyReset: (commandId: string) => void;
-  onHotkeyResetAll: () => void;
 }
 
 export function SettingsPanel(props: SettingsPanelProps) {
@@ -49,18 +45,36 @@ function useSettingsPanelViewState() {
   };
 }
 
-type SettingsPanelBodyProps = SettingsCategoryContentProps & {
+type SettingsPanelBodyProps = {
   activeCategory: SettingsCategoryId;
-  hotkeyItems: HotkeySettingItem[];
+  inboxPath: string;
+  inboxPathError: string | null;
+  isInboxDesktopRuntime: boolean;
+  isInboxPathPending: boolean;
   onClose: () => void;
-  onHotkeyReset: (commandId: string) => void;
-  onHotkeyResetAll: () => void;
-  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onInboxPathChangeRequest: () => void;
+  onInboxPathRestoreDefault: () => void;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
 };
 
+type SettingsPanelCategoryProps = Omit<
+  SettingsCategoryContentProps,
+  'hotkeyItems' | 'onHotkeyReset' | 'onHotkeyResetAll' | 'onHotkeyUpdate'
+>;
+
 function SettingsPanelBody(props: SettingsPanelBodyProps) {
+  const hotkeys = useHotkeySettings();
+  const categoryProps: SettingsPanelCategoryProps = {
+    activeCategory: props.activeCategory,
+    inboxPath: props.inboxPath,
+    inboxPathError: props.inboxPathError,
+    isInboxDesktopRuntime: props.isInboxDesktopRuntime,
+    isInboxPathPending: props.isInboxPathPending,
+    onInboxPathChangeRequest: props.onInboxPathChangeRequest,
+    onInboxPathRestoreDefault: props.onInboxPathRestoreDefault
+  };
+
   return (
     <AppDialog modal open onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
@@ -76,7 +90,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
               <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
               <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>
             </header>
-            <SettingsCategoryContent {...props} />
+            <SettingsCategoryContent {...categoryProps} {...hotkeys} />
           </div>
         </AppDialogContent>
       </AppDialogPortal>
