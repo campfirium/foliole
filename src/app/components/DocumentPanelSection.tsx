@@ -95,11 +95,13 @@ function collectHiddenTextAnchorKeys(args: {
   return [...hiddenKeys];
 }
 
-export function DocumentPanelSection(props: DocumentPanelSectionProps) {
-  recordComponentRender('documentPanel');
+function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { bodyProps, documentLayoutStyle, isFolderListView, loadingLabel } = getDocumentPanelView(props, editorDisplayMode);
+  const { bodyProps, documentLayoutStyle, isFolderListView, loadingLabel } = getDocumentPanelView(
+    props,
+    editorDisplayMode
+  );
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
   const hiddenTextAnchorKeys = useMemo(
@@ -118,17 +120,46 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     isSourceUpdatePanelOpen,
     sourceUpdatePreview
   } = useDocumentPanelSourceUpdateState(props);
+  const emptyContent = loadingLabel ? <LoadingDocumentPanelContent loadingLabel={loadingLabel} /> : undefined;
 
+  useDocumentPanelPerformanceMarkers(props, Boolean(bodyProps.emptyState), isEditorDocumentLoaded);
+
+  useDocumentPanelImageClozePresentation({
+    activeNode,
+    editorNodeId: props.editorNodeId,
+    nodesById: props.nodesById,
+    trashedNodeIds: props.trashedNodeIds
+  });
+
+  return {
+    bodyProps,
+    documentLayoutStyle,
+    emptyContent,
+    hiddenTextAnchorKeys,
+    isFolderListView,
+    isSourceUpdatePanelOpen,
+    currentSourceUpdateContent,
+    handleSourceUpdateDraftChange,
+    handleSourceUpdatePanelOpenChange,
+    sourceUpdatePreview: sourceUpdatePreview.value
+  };
+}
+
+function useDocumentPanelPerformanceMarkers(
+  props: DocumentPanelSectionProps,
+  isEmptyState: boolean,
+  isEditorDocumentLoaded: boolean
+) {
   useLayoutEffect(() => {
-    if (!props.editorNodeId || bodyProps.emptyState) {
+    if (!props.editorNodeId || isEmptyState) {
       return;
     }
     markDocumentPanelBound(props.editorNodeId, `content:${props.editorContent.length}`);
-  }, [bodyProps.emptyState, props.editorContent.length, props.editorNodeId]);
+  }, [isEmptyState, props.editorContent.length, props.editorNodeId]);
 
   useEffect(() => {
     const editorNodeId = props.editorNodeId;
-    if (!editorNodeId || bodyProps.emptyState || !isEditorDocumentLoaded) {
+    if (!editorNodeId || isEmptyState || !isEditorDocumentLoaded) {
       return;
     }
     const frameId = window.requestAnimationFrame(() => {
@@ -138,43 +169,47 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       });
     });
     return () => window.cancelAnimationFrame(frameId);
-  }, [bodyProps.emptyState, bodyProps.reveal, isEditorDocumentLoaded, props.editorContent, props.editorNodeId]);
+  }, [isEditorDocumentLoaded, isEmptyState, props.editorContent, props.editorNodeId]);
+}
 
-  useDocumentPanelImageClozePresentation({
-    activeNode,
-    editorNodeId: props.editorNodeId,
-    nodesById: props.nodesById,
-    trashedNodeIds: props.trashedNodeIds
-  });
+function LoadingDocumentPanelContent({ loadingLabel }: { loadingLabel: string }) {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div
+        aria-label={loadingLabel}
+        className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-foreground/55"
+      />
+    </div>
+  );
+}
+
+export function DocumentPanelSection(props: DocumentPanelSectionProps) {
+  recordComponentRender('documentPanel');
+  const model = useDocumentPanelSectionModel(props);
 
   return (
-    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
+    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
         bodyProps={{
-          ...bodyProps,
-          hiddenTextAnchorKeys,
-          emptyContent: loadingLabel ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <div
-                aria-label={loadingLabel}
-                className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-foreground/55"
-              />
-            </div>
-          ) : undefined
+          ...model.bodyProps,
+          hiddenTextAnchorKeys: model.hiddenTextAnchorKeys,
+          emptyContent: model.emptyContent
         }}
-        isFolderListView={isFolderListView}
-        isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
-        onToggleSourceUpdatePanel={() => handleSourceUpdatePanelOpenChange(!isSourceUpdatePanelOpen)}
+        isFolderListView={model.isFolderListView}
+        isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
+        onToggleSourceUpdatePanel={() =>
+          model.handleSourceUpdatePanelOpenChange(!model.isSourceUpdatePanelOpen)
+        }
         props={props}
-        showSourceUpdateAction={Boolean(sourceUpdatePreview.value)}
+        showSourceUpdateAction={Boolean(model.sourceUpdatePreview)}
       />
       <DocumentPanelSectionOverlays
-        currentSourceUpdateContent={currentSourceUpdateContent}
-        handleSourceUpdateDraftChange={handleSourceUpdateDraftChange}
-        handleSourceUpdatePanelOpenChange={handleSourceUpdatePanelOpenChange}
-        isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
+        currentSourceUpdateContent={model.currentSourceUpdateContent}
+        handleSourceUpdateDraftChange={model.handleSourceUpdateDraftChange}
+        handleSourceUpdatePanelOpenChange={model.handleSourceUpdatePanelOpenChange}
+        isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
         props={props}
-        sourceUpdatePreview={sourceUpdatePreview.value}
+        sourceUpdatePreview={model.sourceUpdatePreview}
       />
     </section>
   );

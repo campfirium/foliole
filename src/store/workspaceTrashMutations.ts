@@ -2,13 +2,16 @@ import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
 import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
-import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import {
+  collectDeletedNodeIds,
+  collectRootDeleteTargets,
+  resolveFallbackFromTargets
+} from './workspaceTrashMutationTargets';
 
 export interface DeleteNodeMutationResult {
   deletedAt: string;
@@ -153,34 +156,6 @@ function buildDeleteNodePatch(args: {
   };
 }
 
-function collectRootDeleteTargets(state: WorkspaceState, nodeIds: string[], includeTrashed: boolean) {
-  const validIds = nodeIds.filter((nodeId) => {
-    const node = state.nodesById[nodeId];
-    if (!node || isProtectedRootNode(node)) {
-      return false;
-    }
-    return includeTrashed ? true : !state.trashedNodeIds.includes(nodeId);
-  });
-  const selectedSet = new Set(validIds);
-  return [...new Set(validIds)].filter((nodeId) => {
-    const parentNodeId = state.nodesById[nodeId]?.parentNodeId;
-    return !parentNodeId || !selectedSet.has(parentNodeId);
-  });
-}
-
-function resolveFallbackFromTargets(
-  targetNodeIds: string[],
-  state: WorkspaceState,
-  nextNodeOrder: string[],
-  nextNodesById: Record<string, Node>,
-  excludedNodeIds: ReadonlySet<string>
-) {
-  const fallbackParentId = targetNodeIds
-    .map((nodeId) => state.nodesById[nodeId]?.parentNodeId ?? null)
-    .find((parentNodeId) => parentNodeId && nextNodesById[parentNodeId] && !excludedNodeIds.has(parentNodeId));
-  return findFallbackActiveNodeId(fallbackParentId ?? null, nextNodeOrder, nextNodesById, excludedNodeIds);
-}
-
 export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: string[]): DeleteNodeMutationResult | null {
   const targetNodeIds = collectRootDeleteTargets(state, nodeIds, false);
   if (targetNodeIds.length === 0) {
@@ -190,13 +165,7 @@ export function computeDeleteNodesMutation(state: WorkspaceState, nodeIds: strin
   const deletedAt = new Date().toISOString();
   const nextNodesById = { ...state.nodesById };
   const parentNodesToSync = new Map<string, Node>();
-  const deletedNodeIds = new Set<string>();
-
-  for (const targetNodeId of targetNodeIds) {
-    for (const deletedNodeId of collectNodeSubtreeIds(targetNodeId, state.nodesById)) {
-      deletedNodeIds.add(deletedNodeId);
-    }
-  }
+  const deletedNodeIds = collectDeletedNodeIds(targetNodeIds, state.nodesById);
 
   syncDeletedAnchorParents({
     deletedAt,
@@ -241,12 +210,7 @@ export function computeDeleteNodesPermanentlyMutation(
     return null;
   }
 
-  const deletedNodeIds = new Set<string>();
-  for (const targetNodeId of targetNodeIds) {
-    for (const deletedNodeId of collectNodeSubtreeIds(targetNodeId, state.nodesById)) {
-      deletedNodeIds.add(deletedNodeId);
-    }
-  }
+  const deletedNodeIds = collectDeletedNodeIds(targetNodeIds, state.nodesById);
 
   const deletedAt = new Date().toISOString();
   const nextNodeOrder = state.nodeOrder.filter((nodeId) => !deletedNodeIds.has(nodeId));

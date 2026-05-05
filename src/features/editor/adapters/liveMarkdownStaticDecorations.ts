@@ -4,9 +4,9 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import { collectAnchorTagTokenRanges, collectAnchorTextSegments } from '../model/anchorTagSegments';
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
 
+import { getHiddenTextAnchorKeys } from './liveMarkdown';
 import { addAnchorTagDecorations } from './liveMarkdownAnchors';
 import { buildFrontmatterDecorationState, type FrontmatterDecorationState } from './liveMarkdownFrontmatter';
-import { getHiddenTextAnchorKeys } from './liveMarkdown';
 import { addSourceModeAnchorDecorations } from './liveMarkdownSourceAnchors';
 
 interface AnchorDecorationState {

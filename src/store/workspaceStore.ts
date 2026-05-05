@@ -1,23 +1,20 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
-import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
-import { workspacePersistStorage } from './workspacePersistStorage';
-import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
-import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
 import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createEmptyWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 
@@ -96,7 +93,7 @@ export interface WorkspaceState {
   ) => boolean;
 }
 
-interface WorkspacePersistedState {
+export interface WorkspacePersistedState {
   activeNodeId: string | null;
   layout: WorkspaceLayoutState;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -172,14 +169,14 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 }
 
 const initialState = createInitialWorkspaceState();
-let updateWorkspaceHydrationState = (_hydrated: boolean) => undefined;
+let updateWorkspaceHydrationState: () => void = () => undefined;
 let workspaceHydrationPromise: Promise<void> | null = null;
 
 const workspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => {
-      updateWorkspaceHydrationState = (hydrated) => {
-        set({ isHydrated: hydrated });
+      updateWorkspaceHydrationState = () => {
+        set({ isHydrated: true });
       };
       const boundaryAwareSet: typeof set = (partial) => {
         set((currentState) => {
@@ -210,53 +207,9 @@ const workspaceStore = create<WorkspaceState>()(
       ...createWorkspaceReviewActions(boundaryAwareSet, get)
     });
     },
-    {
-      name: WORKSPACE_STORAGE_KEY,
-      skipHydration: true,
-      storage: createJSONStorage(() => workspacePersistStorage),
-      partialize: (state): WorkspacePersistedState => ({
-        activeNodeId: state.activeNodeId,
-        layout: state.layout,
-        nodeViewById: state.nodeViewById,
-        nodeOrder: state.nodeOrder,
-        nodesById: trimWorkspaceNodesForRendererBoundary(
-          state.activeNodeId,
-          state.nodesById,
-          collectRendererBoundaryKeepNodeIds(state, state)
-        ),
-        trashedNodeIds: state.trashedNodeIds,
-        untitledSequenceByParent: state.untitledSequenceByParent
-      }),
-      merge: (persistedState, currentState) => {
-        const persisted = (persistedState ?? {}) as Partial<WorkspacePersistedState>;
-        const nextState = {
-          ...currentState,
-          ...persisted,
-          isHydrated: currentState.isHydrated,
-          layout: {
-            ...currentState.layout,
-            ...persisted.layout
-          },
-          nodeViewById: persisted.nodeViewById ?? currentState.nodeViewById,
-          untitledSequenceByParent:
-            persisted.untitledSequenceByParent ?? currentState.untitledSequenceByParent
-        };
-        return withWorkspaceRendererBoundary({
-          ...nextState,
-          ...ensureInboxNodeInSnapshot({
-            activeNodeId: nextState.activeNodeId,
-            nodeOrder: nextState.nodeOrder,
-            nodesById: nextState.nodesById,
-            trashedNodeIds: nextState.trashedNodeIds
-          })
-        }, currentState) as WorkspaceState;
-      },
-      onRehydrateStorage: () => {
-        return () => {
-          updateWorkspaceHydrationState(true);
-        };
-      }
-    }
+    createWorkspaceStorePersistConfig(() => {
+      updateWorkspaceHydrationState();
+    })
   )
 );
 

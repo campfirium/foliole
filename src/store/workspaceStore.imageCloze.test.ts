@@ -123,9 +123,8 @@ function seedLegacyMismatchedImageClozeChild() {
   }));
 }
 
-function expectCreatedImageClozeNodes(createdIds: string[]) {
+function expectFirstCreatedImageClozeNode(createdIds: string[]) {
   const firstNode = useWorkspaceStore.getState().nodesById[createdIds[0] as string];
-  const parentNode = useWorkspaceStore.getState().nodesById['node-1'];
 
   expect(firstNode?.parentNodeId).toBe('node-1');
   expect(firstNode?.kind).toBe('item');
@@ -142,7 +141,10 @@ function expectCreatedImageClozeNodes(createdIds: string[]) {
     x: 0.1,
     y: 0.2
   });
-  expect(firstNode?.imageRegions).toEqual([
+}
+
+function expectImageRegionState(parentNodeId: string) {
+  expect(useWorkspaceStore.getState().nodesById[parentNodeId]?.imageRegions).toEqual([
     {
       attachmentId: 'hash-1',
       regions: [
@@ -163,27 +165,12 @@ function expectCreatedImageClozeNodes(createdIds: string[]) {
       ]
     }
   ]);
-  expect(parentNode?.imageRegions).toEqual([
-    {
-      attachmentId: 'hash-1',
-      regions: [
-        {
-          height: 0.15,
-          id: 'region-1',
-          width: 0.2,
-          x: 0.1,
-          y: 0.2
-        },
-        {
-          height: 0.12,
-          id: 'region-2',
-          width: 0.18,
-          x: 0.42,
-          y: 0.55
-        }
-      ]
-    }
-  ]);
+}
+
+function expectCreatedImageClozeNodes(createdIds: string[]) {
+  expectFirstCreatedImageClozeNode(createdIds);
+  expectImageRegionState(createdIds[0] as string);
+  expectImageRegionState('node-1');
 }
 
 it('creates image cloze item nodes with prompt context and reveal image content', () => {

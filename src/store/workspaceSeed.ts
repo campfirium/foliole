@@ -18,7 +18,6 @@ export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile
 }
 
 export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: WorkspaceLayoutState) {
-  const timestamp = now.toISOString();
   return ensureInboxNodeInSnapshot({
     activeNodeId: null,
     layout: { ...defaultLayoutState },

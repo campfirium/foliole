@@ -1,22 +1,21 @@
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { markdown } from '@codemirror/lang-markdown';
 import { Compartment, EditorState } from '@codemirror/state';
-import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
-import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
+import { bypassAnchorStructureGuard } from './anchorStructureGuard';
+import {
+  createCodeMirrorEditorExtensions,
+  createLiveMarkdownEffect
+} from './codeMirrorEditorAdapterConfig';
 import {
   createEmptyDecorationsEffect,
-  createLiveMarkdownReconfigureEffect,
   RemoteImageLocalizationController,
   type CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 import { buildEditorDiffDecorations } from './lineDiffDecorations';
-import { createLiveMarkdown } from './liveMarkdown';
-import { markdownInputAssist } from './markdownInputAssist';
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
@@ -45,36 +44,22 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       parent: host,
       state: EditorState.create({
         doc: options.initialContent,
-        extensions: [
-          markdown(),
-          anchorStructureGuard,
-          history(),
-          EditorState.allowMultipleSelections.of(true),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
-          EditorState.readOnly.of(options.readOnly === true),
-          // Keep the DOM selectable even in read-only panes so users can copy text from comparison views.
-          EditorView.editable.of(true),
-          drawSelection(),
-          EditorView.lineWrapping,
-          highlightActiveLine(),
-          markdownInputAssist,
-          this.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
-          this.liveMarkdownCompartment.of(
-            createLiveMarkdown(
-              this.hideTitleHeading,
-              this.nodeId,
-              this.imageClozePresentationVersion,
-              this.hiddenTextAnchorKeys
-            )
-          ),
-          EditorView.updateListener.of((update) => {
-            if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
+        extensions: createCodeMirrorEditorExtensions({
+          diffDecorationsCompartment: this.diffDecorationsCompartment,
+          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
+          hideTitleHeading: this.hideTitleHeading,
+          imageClozePresentationVersion: this.imageClozePresentationVersion,
+          liveMarkdownCompartment: this.liveMarkdownCompartment,
+          nodeId: this.nodeId,
+          onDocChanged: (content) => {
+            if (!this.onChange || this.isApplyingExternalContent) {
               return;
             }
-            this.onChange(update.state.doc.toString());
+            this.onChange(content);
             this.remoteImageLocalization.schedule();
-          })
-        ]
+          },
+          options
+        })
       })
     });
   }
@@ -126,42 +111,18 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
 
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;
-    this.view.dispatch({
-        effects: createLiveMarkdownReconfigureEffect({
-          compartment: this.liveMarkdownCompartment,
-          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
-          hideTitleHeading: this.hideTitleHeading,
-          imageClozePresentationVersion: this.imageClozePresentationVersion,
-          nodeId: this.nodeId
-      })
-    });
+    this.reconfigureLiveMarkdown();
   }
 
   setNodeId(nodeId: string | null) {
     this.nodeId = nodeId;
-    this.view.dispatch({
-        effects: createLiveMarkdownReconfigureEffect({
-          compartment: this.liveMarkdownCompartment,
-          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
-          hideTitleHeading: this.hideTitleHeading,
-          imageClozePresentationVersion: this.imageClozePresentationVersion,
-          nodeId: this.nodeId
-      })
-    });
+    this.reconfigureLiveMarkdown();
     this.remoteImageLocalization.schedule();
   }
 
   refreshImageClozePresentation() {
     this.imageClozePresentationVersion += 1;
-    this.view.dispatch({
-        effects: createLiveMarkdownReconfigureEffect({
-          compartment: this.liveMarkdownCompartment,
-          hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
-          hideTitleHeading: this.hideTitleHeading,
-          imageClozePresentationVersion: this.imageClozePresentationVersion,
-          nodeId: this.nodeId
-      })
-    });
+    this.reconfigureLiveMarkdown();
   }
 
   setHiddenTextAnchorKeys(hiddenTextAnchorKeys: readonly string[]) {
@@ -172,15 +133,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       return;
     }
     this.hiddenTextAnchorKeys = [...hiddenTextAnchorKeys];
-    this.view.dispatch({
-      effects: createLiveMarkdownReconfigureEffect({
-        compartment: this.liveMarkdownCompartment,
-        hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
-        hideTitleHeading: this.hideTitleHeading,
-        imageClozePresentationVersion: this.imageClozePresentationVersion,
-        nodeId: this.nodeId
-      })
-    });
+    this.reconfigureLiveMarkdown();
   }
 
   getSelection(): EditorSelection {
@@ -318,5 +271,17 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return () => {
       scroller.removeEventListener('scroll', handleScroll);
     };
+  }
+
+  private reconfigureLiveMarkdown() {
+    this.view.dispatch({
+      effects: createLiveMarkdownEffect({
+        compartment: this.liveMarkdownCompartment,
+        hiddenTextAnchorKeys: this.hiddenTextAnchorKeys,
+        hideTitleHeading: this.hideTitleHeading,
+        imageClozePresentationVersion: this.imageClozePresentationVersion,
+        nodeId: this.nodeId
+      })
+    });
   }
 }

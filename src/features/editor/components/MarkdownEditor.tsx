@@ -150,6 +150,51 @@ function useMarkdownEditorSurfaceModel(args: {
   return { editorStyle, gestureTrailPath, mouseGesture };
 }
 
+function useMarkdownEditorModel(props: MarkdownEditorProps) {
+  const { bindings, settings } = useMouseGestureSettings();
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const adapterRef = useEditorAdapter(
+    hostRef,
+    props.debugId,
+    props.onChange,
+    props.onReady,
+    props.value,
+    props.hiddenTextAnchorKeys,
+    props.hideTitleHeading ?? false,
+    props.readOnly
+  );
+  const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
+  const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
+  useEditorLayoutEffects(
+    adapterRef,
+    hostRef,
+    props.nodeId,
+    props.nodeViewState,
+    syncScrollMetrics,
+    props.value,
+    props.lineDiffDecorations
+  );
+  useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
+  const surface = useMarkdownEditorSurfaceModel({
+    adapterRef,
+    bindings,
+    blockImageMaxHeightOverride: props.blockImageMaxHeightOverride,
+    contentPaddingBottom: props.contentPaddingBottom,
+    fitBlockImagesToViewport: props.fitBlockImagesToViewport ?? false,
+    hostRef,
+    nodeId: props.nodeId,
+    onFitBlockImageMetricsChange: props.onFitBlockImageMetricsChange,
+    onImageLoadStateChange: props.onImageLoadStateChange,
+    rootRef,
+    settings,
+    syncScrollMetrics,
+    value: props.value
+  });
+
+  return { closePreview, hostRef, previewImage, rootRef, surface };
+}
+
 export function MarkdownEditor({
   ariaLabel,
   blockImageMaxHeightOverride,
@@ -171,28 +216,28 @@ export function MarkdownEditor({
   onFitBlockImageMetricsChange,
   onReady
 }: MarkdownEditorProps) {
-  const { bindings, settings } = useMouseGestureSettings();
-  const hostRef = useRef<HTMLDivElement | null>(null), rootRef = useRef<HTMLDivElement | null>(null);
-  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hiddenTextAnchorKeys, hideTitleHeading, readOnly);
-  const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
-  const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
-  useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, lineDiffDecorations);
-  useEditorAppearanceEffects(adapterRef, hideTitleHeading, nodeId);
-  const surface = useMarkdownEditorSurfaceModel({
-    adapterRef,
-    bindings,
+  const { closePreview, hostRef, previewImage, rootRef, surface } = useMarkdownEditorModel({
+    ariaLabel,
     blockImageMaxHeightOverride,
+    className,
     contentPaddingBottom,
+    debugId,
     fitBlockImagesToViewport,
-    hostRef,
+    hiddenTextAnchorKeys,
+    hideScrollbar,
+    hideTitleHeading,
+    lineDiffDecorations,
     nodeId,
+    nodeViewState,
+    onChange,
+    onContextMenu,
     onFitBlockImageMetricsChange,
     onImageLoadStateChange,
-    rootRef,
-    settings,
-    syncScrollMetrics,
+    onReady,
+    readOnly,
     value
   });
+
   return (
     <>
       <MarkdownEditorSurface
