@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import { installDesktopDebugProbe, readDesktopDebugProbe, resetDesktopDebugProbeState } from './desktopDebugProbe';
 import type { ElectronAPI } from './electronApi';
 

@@ -5,7 +5,7 @@ import type {
   NativeSqliteRestoreResult
 } from '../../../lib/platform/nativeContract';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeBackupSettings = NativeBackupSettings;
 export type RuntimeSqliteBackupResult = NativeSqliteBackupResult;

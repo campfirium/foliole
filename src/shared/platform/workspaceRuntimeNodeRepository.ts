@@ -1,7 +1,7 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 import {

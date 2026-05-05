@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { create } from 'zustand';
 
-import { onManagedInboxUpdated } from '../../shared/platform/bridge';
+import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntimeCommandRepository';
 import {
   runRuntimeClipboardImport,

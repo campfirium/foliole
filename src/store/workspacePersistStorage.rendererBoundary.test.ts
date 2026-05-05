@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { appendReadingPositionTraceLog, getRuntimeInvoke } from '../shared/platform/bridge';
+import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { workspacePersistStorage } from './workspacePersistStorage';
 import {
@@ -10,8 +11,11 @@ import {
 } from './workspacePersistStorage.rendererBoundary.test-support';
 import { stagePendingAnchorChildNode, stagePendingNodeDocument } from './workspacePersistStorage.test-support';
 
-vi.mock('../shared/platform/bridge', () => ({
-  appendReadingPositionTraceLog: vi.fn(),
+vi.mock('../shared/platform/readingPositionTraceRuntimeRepository', () => ({
+  appendReadingPositionTraceLog: vi.fn()
+}));
+
+vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

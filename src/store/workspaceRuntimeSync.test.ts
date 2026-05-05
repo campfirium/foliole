@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { NativeWorkspaceNodeSnapshot } from '../../lib/platform/nativeStorageContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
@@ -12,7 +12,7 @@ import {
   syncNodeRevealToRuntime
 } from './workspaceRuntimeSync';
 
-vi.mock('../shared/platform/bridge', () => ({
+vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

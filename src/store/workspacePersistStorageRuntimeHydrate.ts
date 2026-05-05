@@ -1,5 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { appendReadingPositionTraceLog } from '../shared/platform/bridge';
+import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 import {
   hasWorkspaceRuntimeRepository,

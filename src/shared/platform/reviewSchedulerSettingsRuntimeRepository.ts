@@ -1,6 +1,6 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 export function hasReviewSchedulerSettingsRuntimeRepository() {
   return Boolean(getRuntimeInvoke());

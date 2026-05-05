@@ -1,7 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativePerformanceMemorySnapshot } from '../../../lib/platform/nativeUtilityContract';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
 function isPerformanceMemorySnapshot(value: unknown): value is NativePerformanceMemorySnapshot {

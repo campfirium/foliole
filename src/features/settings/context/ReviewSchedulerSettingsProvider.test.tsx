@@ -1,14 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from '../../../shared/platform/bridge';
+import { getRuntimeInvoke } from '../../../shared/platform/runtimeInvoke';
 
 import {
   ReviewSchedulerSettingsProvider,
   useReviewSchedulerSettings
 } from './ReviewSchedulerSettingsProvider';
 
-vi.mock('../../../shared/platform/bridge', () => ({
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

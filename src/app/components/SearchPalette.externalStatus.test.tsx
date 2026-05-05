@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-vi.mock('../../shared/platform/bridge', () => ({
+vi.mock('../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
@@ -11,7 +11,7 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
 
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 
 import { SearchPalette } from './SearchPalette';

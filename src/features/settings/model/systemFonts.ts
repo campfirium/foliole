@@ -1,4 +1,4 @@
-import { listRuntimeSystemFonts } from '../../../shared/platform/bridge';
+import { listRuntimeSystemFonts } from '../../../shared/platform/runtimeSystemFonts';
 
 const BASE_FONTS = ['monospace', 'sans-serif', 'serif'] as const;
 const FONT_CANDIDATES = [

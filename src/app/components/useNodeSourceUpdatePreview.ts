@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { onManagedInboxUpdated } from '../../shared/platform/bridge';
+import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 interface NodeSourceUpdatePreviewState {

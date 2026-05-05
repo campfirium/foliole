@@ -1,10 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../shared/platform/bridge', () => ({
+vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';

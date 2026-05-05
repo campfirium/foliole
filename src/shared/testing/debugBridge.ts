@@ -1,5 +1,5 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { appendReadingPositionTraceLog } from '../platform/bridge';
+import { appendReadingPositionTraceLog } from '../platform/readingPositionTraceRuntimeRepository';
 import { getElectronAPI } from '../platform/electronApi';
 
 interface FolioleDebugApi {

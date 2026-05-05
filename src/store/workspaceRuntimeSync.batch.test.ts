@@ -1,11 +1,11 @@
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { syncNodeContentWithAnchorsToRuntime } from './workspaceRuntimeSync';
 
-vi.mock('../shared/platform/bridge', () => ({
+vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

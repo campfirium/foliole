@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
-import { getRuntimeInvoke } from '../../../shared/platform/bridge';
+import { getRuntimeInvoke } from '../../../shared/platform/runtimeInvoke';
 
 import {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS,
@@ -11,7 +11,7 @@ import {
   saveReviewSchedulerSettings
 } from './reviewSchedulerSettings';
 
-vi.mock('../../../shared/platform/bridge', () => ({
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

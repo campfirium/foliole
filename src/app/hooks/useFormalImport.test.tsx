@@ -10,8 +10,11 @@ const { loadRuntimeImportOverview, onManagedInboxUpdated, runtimeInvoke } = vi.h
   runtimeInvoke: vi.fn(() => Promise.resolve(null))
 }));
 
-vi.mock('../../shared/platform/bridge', () => ({
-  getRuntimeInvoke: () => runtimeInvoke,
+vi.mock('../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: () => runtimeInvoke
+}));
+
+vi.mock('../../shared/platform/runtimeShellEvents', () => ({
   onManagedInboxUpdated
 }));
 

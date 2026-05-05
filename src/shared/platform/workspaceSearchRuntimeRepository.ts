@@ -1,7 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeWorkspaceSearchResult } from '../../../lib/platform/nativeContract';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeWorkspaceSearchResult = NativeWorkspaceSearchResult;
 

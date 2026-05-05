@@ -1,6 +1,6 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import type { WorkspaceRuntimeNodeDocument } from './workspaceRuntimeTypes';
 
 export async function loadWorkspaceNodeDocumentFromRuntime(nodeId: string): Promise<WorkspaceRuntimeNodeDocument | null> {

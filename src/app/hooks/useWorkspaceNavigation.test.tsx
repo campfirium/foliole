@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import {
@@ -30,7 +30,7 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump
 }));
 
-vi.mock('../../shared/platform/bridge', () => ({
+vi.mock('../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

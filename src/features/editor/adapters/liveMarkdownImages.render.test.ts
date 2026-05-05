@@ -5,8 +5,11 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => null)
+}));
+
 vi.mock('../../../shared/platform/bridge', () => ({
-  getRuntimeInvoke: vi.fn(() => null),
   openExternalUrl: vi.fn()
 }));
 

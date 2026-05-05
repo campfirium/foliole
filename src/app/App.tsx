@@ -5,7 +5,7 @@ import { HotkeySettingsProvider } from '../features/settings/context/HotkeySetti
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
-import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/bridge';
+import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBridge';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';

@@ -1,6 +1,6 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 function toStringRecord(value: unknown): Record<string, string> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

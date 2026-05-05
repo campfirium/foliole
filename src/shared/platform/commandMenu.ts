@@ -1,1 +1,1 @@
-export { onNativeMenuCommand, syncNativeMenuState, type NativeMenuUnlisten } from './bridge';
+export { onNativeMenuCommand, syncNativeMenuState, type NativeMenuUnlisten } from './nativeMenuRuntimeRepository';

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => null)
+}));
+
 vi.mock('../../../shared/platform/bridge', () => ({
-  getRuntimeInvoke: vi.fn(() => null),
   openExternalUrl: vi.fn()
 }));
 

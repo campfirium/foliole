@@ -3,8 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const onWorkspaceSyncApplied = vi.hoisted(() => vi.fn());
 
-vi.mock('../../shared/platform/bridge', async () => ({
-  ...await vi.importActual<typeof import('../../shared/platform/bridge')>('../../shared/platform/bridge'),
+vi.mock('../../shared/platform/runtimeShellEvents', async () => ({
+  ...await vi.importActual<typeof import('../../shared/platform/runtimeShellEvents')>('../../shared/platform/runtimeShellEvents'),
   onWorkspaceSyncApplied
 }));
 

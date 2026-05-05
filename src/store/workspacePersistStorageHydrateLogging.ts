@@ -1,4 +1,4 @@
-import { appendReadingPositionTraceLog } from '../shared/platform/bridge';
+import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 
 export function getSnapshotActiveNodeId(snapshot: unknown) {
   if (!snapshot || typeof snapshot !== 'object' || !('activeNodeId' in snapshot)) {

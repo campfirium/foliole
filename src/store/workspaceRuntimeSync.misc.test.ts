@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { isDesktopRuntime } from '../shared/platform/runtime';
 
 import { syncNodeContentToRuntime, syncNodeOrderToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 
-vi.mock('../shared/platform/bridge', () => ({ getRuntimeInvoke: vi.fn() }));
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 vi.mock('../shared/platform/runtime', () => ({ isDesktopRuntime: vi.fn(() => false) }));
 
 const REVIEW_GRADE_PAYLOAD = {

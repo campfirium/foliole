@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { onWorkspaceSyncApplied } from '../../shared/platform/bridge';
+import { onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 let workspaceSyncRefreshInFlight: Promise<void> | null = null;

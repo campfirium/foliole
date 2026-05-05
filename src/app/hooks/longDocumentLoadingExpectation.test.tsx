@@ -3,15 +3,15 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { workspacePersistStorage } from '../../store/workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from '../../store/workspacePersistStorage.test-support';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
 
-vi.mock('../../shared/platform/bridge', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../shared/platform/bridge')>();
+vi.mock('../../shared/platform/runtimeInvoke', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../shared/platform/runtimeInvoke')>();
   return {
     ...actual,
     getRuntimeInvoke: vi.fn()
@@ -243,7 +243,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
     />
   );
 
-  expect(mockSetSelection).not.toHaveBeenCalled();
+  expect(mockSetSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_000 });
   expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_000 });
   expect(mockRevealSelection).not.toHaveBeenCalled();
 });

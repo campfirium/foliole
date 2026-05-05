@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
-vi.mock('../shared/platform/bridge', () => ({
-  appendReadingPositionTraceLog: vi.fn(),
+vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

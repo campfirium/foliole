@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, ExternalLink, X } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
-import { openExternalUrl } from '../../shared/platform/bridge';
+import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppIconButton } from '../../shared/ui';
 
 import { useLinkPanelViewportBounds } from './linkPanelBounds';

@@ -1,7 +1,7 @@
 import type { ImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 export function hasImportManagerSettingsRuntimeRepository() {
   return Boolean(getRuntimeInvoke());

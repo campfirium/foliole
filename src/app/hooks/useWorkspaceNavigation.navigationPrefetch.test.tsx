@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import { resetWorkspaceNodeDocumentPrefetchForTest } from '../../store/workspaceNodeDocumentPrefetch';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -29,7 +29,7 @@ const {
   markNodeSelectionRequested: vi.fn()
 }));
 
-vi.mock('../../shared/platform/bridge', () => ({
+vi.mock('../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 

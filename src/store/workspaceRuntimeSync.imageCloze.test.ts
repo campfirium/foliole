@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../shared/platform/bridge', () => ({
+vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';

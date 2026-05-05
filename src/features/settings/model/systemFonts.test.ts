@@ -1,10 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../../../shared/platform/bridge', () => ({
+vi.mock('../../../shared/platform/runtimeSystemFonts', () => ({
   listRuntimeSystemFonts: vi.fn()
 }));
 
-import { listRuntimeSystemFonts } from '../../../shared/platform/bridge';
+import { listRuntimeSystemFonts } from '../../../shared/platform/runtimeSystemFonts';
 
 import { listAvailableSystemFonts } from './systemFonts';
 

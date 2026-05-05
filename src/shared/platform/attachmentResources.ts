@@ -4,7 +4,7 @@ import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime

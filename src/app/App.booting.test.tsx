@@ -21,8 +21,8 @@ vi.mock('../store/workspaceStoreHydration', () => ({
   ensureWorkspaceHydrated
 }));
 
-vi.mock('../shared/platform/bridge', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../shared/platform/bridge')>()),
+vi.mock('../shared/platform/runtimeBootTelemetry', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/platform/runtimeBootTelemetry')>()),
   reportRuntimeAppReady,
   reportRuntimeBootStage
 }));

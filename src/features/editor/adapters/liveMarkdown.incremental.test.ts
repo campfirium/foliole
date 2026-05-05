@@ -8,8 +8,11 @@ const bridgeSpies = vi.hoisted(() => ({
   openExternalUrl: vi.fn()
 }));
 
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => null)
+}));
+
 vi.mock('../../../shared/platform/bridge', () => ({
-  getRuntimeInvoke: vi.fn(() => null),
   openExternalUrl: bridgeSpies.openExternalUrl
 }));
 

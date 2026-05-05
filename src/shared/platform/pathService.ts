@@ -1,4 +1,4 @@
-import { resolveRuntimeAppPaths, type RuntimeAppPaths } from './bridge';
+import { resolveRuntimeAppPaths, type RuntimeAppPaths } from './runtimeAppPaths';
 
 let appPathsPromise: Promise<RuntimeAppPaths | null> | null = null;
 
