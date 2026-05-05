@@ -18,25 +18,40 @@ export type SettingsCategoryId =
   | 'hotkeys';
 
 export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCategoryId; label: string }> = [
-  { id: 'about', label: 'About', description: 'Version details, diagnostics, and workspace support tools.' },
-  { id: 'backups', label: 'Backups', description: 'Manage backup location, retention, and recovery tools.' },
+  { id: 'about', label: 'General', description: 'Version details, diagnostics, and workspace support tools.' },
+  { id: 'appearance', label: 'Appearance', description: 'Control the look and density of the workspace.' },
+  { id: 'editor', label: 'Editor', description: 'Choose how editing, images, and writing surfaces behave.' },
+  { id: 'review', label: 'Review', description: 'Set scheduler defaults and review queue behavior.' },
+  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts for common actions.' },
+  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Tune gesture actions, thresholds, and trail feedback.' },
+  { id: 'library', label: 'Library', description: 'Point Foliole to your library home, inbox, and mirror paths.' },
   {
     id: 'companion-sync',
     label: 'Sync',
     description: 'Let another device connect to this desktop and manage local sync availability.'
   },
-  { id: 'editor', label: 'Editor', description: 'Choose how editing, images, and writing surfaces behave.' },
-  { id: 'appearance', label: 'Appearance', description: 'Control the look and density of the workspace.' },
-  { id: 'library', label: 'Library', description: 'Point Foliole to your library home, inbox, and mirror paths.' },
-  { id: 'import', label: 'Import', description: 'Adjust import sources and intake behavior.' },
-  { id: 'mouse-gestures', label: 'Mouse gestures', description: 'Tune gesture actions, thresholds, and trail feedback.' },
+  { id: 'backups', label: 'Backups', description: 'Manage backup location, retention, and recovery tools.' },
   { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader folders and parsing rules.' },
-  { id: 'review', label: 'Review', description: 'Set scheduler defaults and review queue behavior.' },
-  { id: 'hotkeys', label: 'Hotkeys', description: 'Customize keyboard shortcuts for common actions.' },
+  { id: 'import', label: 'Watched folders', description: 'Adjust folder sources and intake behavior.' },
   {
     id: 'external-search',
-    label: 'External library',
+    label: 'External sources',
     description: 'Search, preview, and import content from your external library.'
+  }
+];
+
+export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [
+  {
+    label: 'Workspace',
+    categoryIds: ['about', 'appearance', 'editor', 'review', 'hotkeys', 'mouse-gestures']
+  },
+  {
+    label: 'Storage',
+    categoryIds: ['library', 'companion-sync', 'backups']
+  },
+  {
+    label: 'Connections',
+    categoryIds: ['readwise-reader', 'import', 'external-search']
   }
 ];
 
@@ -62,6 +77,10 @@ export const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = [
 
 export function isSettingsCategoryId(value: string): value is SettingsCategoryId {
   return SETTINGS_CATEGORIES.some((category) => category.id === value);
+}
+
+export function getSettingsCategoryOption(id: SettingsCategoryId) {
+  return SETTINGS_CATEGORIES.find((category) => category.id === id);
 }
 
 export function getInitialSettingsCategory(): SettingsCategoryId {

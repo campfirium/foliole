@@ -4,8 +4,8 @@ import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import {
+  getSettingsCategoryOption,
   getInitialSettingsCategory,
-  SETTINGS_CATEGORIES,
   SETTINGS_CATEGORY_STORAGE_KEY,
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
@@ -45,10 +45,9 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
       setActiveCategory(requestedCategory);
     }
   }, [requestedCategory]);
-  const title = SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings';
-  const description =
-    SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.description ??
-    'Adjust how Foliole looks and behaves.';
+  const category = getSettingsCategoryOption(activeCategory);
+  const title = category?.label ?? 'Settings';
+  const description = category?.description ?? 'Adjust how Foliole looks and behaves.';
 
   return {
     activeCategory,

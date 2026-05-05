@@ -30,7 +30,7 @@ export async function openSettingsCategory(windowPage: Page, categoryName: strin
 }
 
 export async function openBackupsSection(windowPage: Page) {
-  const settingsDialog = await openSettingsCategory(windowPage, 'About');
+  const settingsDialog = await openSettingsCategory(windowPage, 'General');
   await waitForVisible(settingsDialog.getByRole('heading', { name: 'Backups' }));
   return settingsDialog;
 }

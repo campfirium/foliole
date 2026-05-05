@@ -65,18 +65,26 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-it('shows Library, Import, and Readwise Reader as separate left sidebar entries', async () => {
+it('groups settings sidebar entries by workspace, storage, and connections', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
   const buttons = screen.getAllByRole('button');
   const labels = buttons.map((button) => button.textContent).filter(Boolean);
 
+  expect(screen.getByText('Workspace')).toBeInTheDocument();
+  expect(screen.getByText('Storage')).toBeInTheDocument();
+  expect(screen.getByText('Connections')).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
+  expect(labels.slice(0, 6)).toEqual(['General', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures']);
   expect(labels).toContain('Library');
-  expect(labels).toContain('Import');
+  expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
-  expect(labels.indexOf('Import')).toBeGreaterThan(labels.indexOf('Library'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('Import'));
-  expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+  expect(labels).toContain('External sources');
+  expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
+  expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('Backups'));
+  expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Readwise Reader'));
+  expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });
 
@@ -89,7 +97,7 @@ it('renders direct Import content in the right panel instead of a jump button', 
     />
   );
 
-  expect(screen.getByRole('heading', { level: 2, name: 'Import' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByText('Restored import panel content')).toBeInTheDocument();
 });
 
