@@ -1,7 +1,38 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
+
+const { loadRuntimeReadwiseBooksInventory } = vi.hoisted(() => ({
+  loadRuntimeReadwiseBooksInventory: vi.fn()
+}));
+
+vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
+  loadRuntimeReadwiseBooksInventory
+}));
+
+beforeEach(() => {
+  loadRuntimeReadwiseBooksInventory.mockReset();
+  loadRuntimeReadwiseBooksInventory.mockResolvedValue({
+    books: [
+      {
+        annotationStatus: 'has_highlights',
+        bookKey: 'book-a',
+        epubPath: '/tmp/Book A.epub',
+        epubStatus: 'received',
+        fullDocumentMarkdownPath: '/tmp/Book A.md',
+        generatedNodeId: 'node-book-a',
+        highlightMarkdownPath: '/tmp/Book A Highlights.md',
+        importStatus: 'completed',
+        nodeStatus: 'generated',
+        title: 'Book A'
+      }
+    ],
+    fullDocumentDirectoryPath: '/tmp/books',
+    highlightDirectoryPath: '/tmp/highlights',
+    scannedAt: '2026-04-03T10:00:00.000Z'
+  });
+});
 
 it('shows the import management navigation shell without readwise settings controls', () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
@@ -16,12 +47,14 @@ it('shows the import management navigation shell without readwise settings contr
   expect(screen.queryByRole('button', { name: 'Open Readwise Reader settings' })).not.toBeInTheDocument();
 });
 
-it('switches the content container when a navigation item is selected', () => {
+it('switches the content container when a navigation item is selected', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Books' }));
   expect(screen.getByRole('heading', { name: 'Readwise Books' })).toBeInTheDocument();
-  expect(screen.getByText('Readwise book content will appear here once the list view is ready.')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('Book A')).toBeInTheDocument();
+  });
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
   expect(screen.getByRole('heading', { name: 'Readwise Articles' })).toBeInTheDocument();

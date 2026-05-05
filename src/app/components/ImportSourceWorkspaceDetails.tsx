@@ -1,7 +1,13 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
+import {
+  loadRuntimeReadwiseBooksInventory,
+  type RuntimeReadwiseBooksInventory
+} from '../../shared/platform/readwiseBooksBridge';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
+
+import { ReadwiseBooksInventorySection } from './ImportOverviewSections';
 
 type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles';
 
@@ -75,7 +81,13 @@ function ImportSourceWorkspaceNavigation(props: {
   );
 }
 
-function ImportSourceWorkspacePage({ pageId }: { pageId: ImportManagementPageId }) {
+function ImportSourceWorkspacePage({
+  children,
+  pageId
+}: {
+  children?: ReactNode;
+  pageId: ImportManagementPageId;
+}) {
   const page = importManagementPages.find((entry) => entry.id === pageId) ?? importManagementPages[0];
 
   return (
@@ -84,11 +96,51 @@ function ImportSourceWorkspacePage({ pageId }: { pageId: ImportManagementPageId 
         <h2 className="text-lg font-semibold text-foreground">{page.title}</h2>
         <p className="mt-1 text-sm text-foreground/68">{page.description}</p>
       </div>
-      <div className="flex min-h-0 flex-1 items-center justify-center py-6">
-        <AppEmptyState description={page.emptyDescription} title={`${page.title} page`} />
-      </div>
+      {children ? (
+        <div className="app-scrollbar flex min-h-0 flex-1 overflow-auto py-6">{children}</div>
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center py-6">
+          <AppEmptyState description={page.emptyDescription} title={`${page.title} page`} />
+        </div>
+      )}
     </section>
   );
+}
+
+function ReadwiseBooksPage() {
+  const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
+
+  const refreshBooksInventory = useCallback(async () => {
+    setBooksInventory(await loadRuntimeReadwiseBooksInventory());
+  }, []);
+
+  useEffect(() => {
+    void refreshBooksInventory();
+  }, [refreshBooksInventory]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void refreshBooksInventory();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshBooksInventory]);
+
+  return <ReadwiseBooksInventorySection inventory={booksInventory} />;
+}
+
+function ImportSourceWorkspacePageContent({ pageId }: { pageId: ImportManagementPageId }) {
+  if (pageId === 'readwise-books') {
+    return (
+      <ImportSourceWorkspacePage pageId={pageId}>
+        <ReadwiseBooksPage />
+      </ImportSourceWorkspacePage>
+    );
+  }
+
+  return <ImportSourceWorkspacePage pageId={pageId} />;
 }
 
 export function ImportSourceWorkspaceDetails({ open, onOpenChange }: ImportSourceWorkspaceDetailsProps) {
@@ -106,7 +158,7 @@ export function ImportSourceWorkspaceDetails({ open, onOpenChange }: ImportSourc
             <ImportSourceWorkspaceHeader onClose={() => onOpenChange(false)} />
             <div className="flex min-h-0 flex-1 overflow-hidden">
               <ImportSourceWorkspaceNavigation activePageId={activePageId} onSelect={setActivePageId} />
-              <ImportSourceWorkspacePage pageId={activePageId} />
+              <ImportSourceWorkspacePageContent pageId={activePageId} />
             </div>
           </section>
         </AppDialogContent>
