@@ -1,19 +1,20 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke, listRuntimeSystemFonts, openExternalUrl, resolveRuntimeAppPaths } from './bridge';
+import {
+  getRuntimeInvoke,
+  listRuntimeSystemFonts,
+  onMainWindowResized,
+  onNativeMenuCommand,
+  openExternalUrl,
+  resolveRuntimeAppPaths
+} from './bridge';
 import type { ElectronAPI } from './electronApi';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,
-    on: () => () => undefined,
-    windowControls: {
-      close: async () => undefined,
-      isMaximized: async () => false,
-      minimize: async () => undefined,
-      onResized: () => () => undefined,
-      toggleMaximize: async () => undefined
-    }
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
   };
 }
 
@@ -71,4 +72,37 @@ it('opens external urls through typed native invoke when available', async () =>
   await openExternalUrl('https://example.com/docs');
 
   expect(invoke).toHaveBeenCalledWith('open_external_url', { url: 'https://example.com/docs' });
+});
+
+it('subscribes window resize through typed electron bridge', async () => {
+  const unlisten = vi.fn();
+  const onWindowResized = vi.fn().mockReturnValue(unlisten);
+  window.electronAPI = {
+    ...createMockElectronApi(vi.fn()),
+    onWindowResized
+  };
+  const handler = vi.fn();
+
+  await expect(onMainWindowResized(handler)).resolves.toBe(unlisten);
+
+  expect(onWindowResized).toHaveBeenCalledWith(handler);
+});
+
+it('filters empty native menu events before reaching the handler', async () => {
+  const onNativeMenuCommandBridge = vi.fn((handler: (commandId: string) => void) => {
+    handler('');
+    handler('__menu_focus_sync__');
+    handler('workspace.open-command-palette');
+    return () => undefined;
+  });
+  window.electronAPI = {
+    ...createMockElectronApi(vi.fn()),
+    onNativeMenuCommand: onNativeMenuCommandBridge
+  };
+  const handler = vi.fn();
+
+  await onNativeMenuCommand(handler);
+
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler).toHaveBeenCalledWith('workspace.open-command-palette');
 });

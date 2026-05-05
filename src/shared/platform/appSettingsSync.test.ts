@@ -7,14 +7,8 @@ import { syncAppSettingsWithRuntime } from './appSettingsSync';
 function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
   return {
     invoke,
-    on: () => () => undefined,
-    windowControls: {
-      close: async () => undefined,
-      isMaximized: async () => false,
-      minimize: async () => undefined,
-      onResized: () => () => undefined,
-      toggleMaximize: async () => undefined
-    }
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
   };
 }
 

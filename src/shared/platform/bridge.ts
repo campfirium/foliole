@@ -4,7 +4,10 @@ import { getElectronAPI } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 
 const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
+
 export type RuntimeInvoke = NativeInvoke;
+export type NativeMenuUnlisten = (() => void) | null;
+export type WindowResizeUnlisten = (() => void) | null;
 
 export interface RuntimeAppPaths {
   appDataDir: string;
@@ -37,6 +40,13 @@ export function getRuntimeInvoke(): RuntimeInvoke | null {
   return getElectronAPI()?.invoke ?? null;
 }
 
+function getElectronBridge() {
+  if (!isDesktopRuntime()) {
+    return null;
+  }
+  return getElectronAPI();
+}
+
 function resolveExternalUrl(target: string) {
   if (typeof window === 'undefined') {
     return null;
@@ -46,30 +56,6 @@ function resolveExternalUrl(target: string) {
   } catch {
     return null;
   }
-}
-
-export async function openExternalUrl(target: string) {
-  const trimmedTarget = target.trim();
-  if (!trimmedTarget) {
-    return;
-  }
-
-  const resolvedUrl = resolveExternalUrl(trimmedTarget);
-  if (!resolvedUrl) {
-    return;
-  }
-
-  const runtimeInvoke = getRuntimeInvoke();
-  if (runtimeInvoke) {
-    try {
-      await runtimeInvoke('open_external_url', { url: resolvedUrl });
-      return;
-    } catch {
-      // Fall back to browser behavior if native opener is unavailable.
-    }
-  }
-
-  window.open(resolvedUrl, '_blank', EXTERNAL_URL_WINDOW_FEATURES);
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -97,19 +83,6 @@ function toRuntimeAppPaths(value: unknown): RuntimeAppPaths | null {
   };
 }
 
-export async function resolveRuntimeAppPaths(): Promise<RuntimeAppPaths | null> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return null;
-  }
-  try {
-    const result = await runtimeInvoke('resolve_app_paths');
-    return toRuntimeAppPaths(result);
-  } catch {
-    return null;
-  }
-}
-
 function toRuntimeSystemFontCatalog(value: unknown): RuntimeSystemFontCatalog | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -122,15 +95,120 @@ function toRuntimeSystemFontCatalog(value: unknown): RuntimeSystemFontCatalog | 
   return { fonts, monospaceFonts };
 }
 
+export async function openExternalUrl(target: string) {
+  const trimmedTarget = target.trim();
+  if (!trimmedTarget) {
+    return;
+  }
+
+  const resolvedUrl = resolveExternalUrl(trimmedTarget);
+  if (!resolvedUrl) {
+    return;
+  }
+
+  const runtimeInvoke = getRuntimeInvoke();
+  if (runtimeInvoke) {
+    try {
+      await runtimeInvoke('open_external_url', { url: resolvedUrl });
+      return;
+    } catch {
+      // Fall back to browser behavior if native opener is unavailable.
+    }
+  }
+
+  window.open(resolvedUrl, '_blank', EXTERNAL_URL_WINDOW_FEATURES);
+}
+
+export async function resolveRuntimeAppPaths(): Promise<RuntimeAppPaths | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  try {
+    return toRuntimeAppPaths(await runtimeInvoke('resolve_app_paths'));
+  } catch {
+    return null;
+  }
+}
+
 export async function listRuntimeSystemFonts(): Promise<RuntimeSystemFontCatalog | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
   try {
-    const result = await runtimeInvoke('list_system_fonts');
-    return toRuntimeSystemFontCatalog(result);
+    return toRuntimeSystemFontCatalog(await runtimeInvoke('list_system_fonts'));
   } catch {
     return null;
   }
+}
+
+export async function onNativeMenuCommand(handler: (commandId: string) => void): Promise<NativeMenuUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge) {
+    return null;
+  }
+  return bridge.onNativeMenuCommand((commandId) => {
+    if (!commandId.trim() || commandId === '__menu_focus_sync__') {
+      return;
+    }
+    handler(commandId);
+  });
+}
+
+export async function syncNativeMenuState(enabledCommandIds: string[]) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  const uniqueEnabledCommandIds = [...new Set(enabledCommandIds)];
+  try {
+    await runtimeInvoke('sync_app_menu_state', { enabledCommandIds: uniqueEnabledCommandIds });
+  } catch {
+    // Ignore sync failures so command execution path is not blocked.
+  }
+}
+
+export function isWindowControlsAvailable() {
+  return Boolean(getRuntimeInvoke());
+}
+
+export async function queryMainWindowMaximized() {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return false;
+  }
+  try {
+    return (await runtimeInvoke('window_is_maximized')) === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function onMainWindowResized(handler: () => void): Promise<WindowResizeUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge) {
+    return null;
+  }
+  return bridge.onWindowResized(handler);
+}
+
+async function invokeWindowCommand(command: 'window_minimize' | 'window_toggle_maximize' | 'window_close') {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  await runtimeInvoke(command);
+}
+
+export function minimizeMainWindow() {
+  return invokeWindowCommand('window_minimize');
+}
+
+export function toggleMainWindowMaximize() {
+  return invokeWindowCommand('window_toggle_maximize');
+}
+
+export function closeMainWindow() {
+  return invokeWindowCommand('window_close');
 }
