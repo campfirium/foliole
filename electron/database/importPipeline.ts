@@ -2,6 +2,7 @@ import {
   recordPreparedImportFailure as recordPreparedImportFailureViaDriver,
   runPreparedImport as runPreparedImportViaDriver
 } from '../../lib/core/database/index.js';
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -59,8 +60,10 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   }
 
   const connection = openDatabaseConnection();
-  connection.driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, rewrittenContent, record.importedAt);
+  connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
     rewrittenContent,
+    bodyBlobHash,
     resolveNodeOpeningText(rewrittenContent, prepared.nodeTitle),
     record.importedAt,
     nodeId

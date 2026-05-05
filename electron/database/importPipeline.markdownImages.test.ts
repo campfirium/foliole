@@ -100,7 +100,14 @@ it('routes local markdown images into attachments, leaves remote links unchanged
     })
   );
   const nodeId = imported.nodeId as string;
-  const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(nodeId) as { content: string };
+  const nodeRow = openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
+       FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.id = ?`
+    )
+    .get(nodeId) as { body_blob_data: string; body_blob_hash: string; content: string };
   const persistedRun = openDatabaseConnection().sqlite
     .prepare('SELECT result_status, degraded_reason FROM import_runs WHERE id = ?')
     .get(imported.importId) as { degraded_reason: string | null; result_status: string };
@@ -127,6 +134,8 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   expect(nodeRow.content).toContain('.webp)');
   expect(nodeRow.content).toContain('.jpg)');
   expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
+  expect(nodeRow.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(nodeRow.body_blob_data).toBe(nodeRow.content);
   expect(attachments).toHaveLength(5);
   expect(new Set(attachments.map((entry) => entry.attachment.originalName))).toEqual(
     new Set(['absolute.jpg', 'chart.webp', 'cover.png', 'Mood Board (Final).png', 'Pasted image 2026-03-30 100000.png'])
