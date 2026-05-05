@@ -22,6 +22,15 @@ describe('windows-run-emulator.ps1', () => {
   it('cold starts the AVD instead of loading a stale snapshot', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
-    expect(script).toContain('"-avd", $AvdName, "-no-snapshot-load"');
+    expect(script).toContain('"-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone');
+  });
+
+  it('passes an explicit zoneinfo timezone to the emulator', async () => {
+    const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
+
+    expect(script).toContain('[string]$Timezone = "Asia/Shanghai"');
+    expect(script).toContain('Write-Info "timezone: $Timezone"');
+    expect(script).toContain('getprop persist.sys.timezone');
+    expect(script).toContain('restarting emulator with timezone: $Timezone');
   });
 });

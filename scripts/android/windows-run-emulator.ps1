@@ -1,5 +1,6 @@
 param(
   [string]$AvdName = "",
+  [string]$Timezone = "Asia/Shanghai",
   [int]$BootTimeoutSeconds = 180
 )
 
@@ -178,6 +179,9 @@ function Wait-ForEmulatorReady {
 if ([string]::IsNullOrWhiteSpace($AvdName)) {
   $AvdName = "Foliole_API_36"
 }
+if ([string]::IsNullOrWhiteSpace($Timezone)) {
+  $Timezone = "Asia/Shanghai"
+}
 
 $sdkRoot = Resolve-SdkRoot
 $env:ANDROID_SDK_ROOT = $sdkRoot
@@ -198,14 +202,26 @@ $adbPath = Resolve-ToolPath `
   -MissingMessage "adb not found. Install Android platform-tools first."
 
 Write-Info "avd: $AvdName"
+Write-Info "timezone: $Timezone"
 Write-Info "sdk: $sdkRoot"
 
 & $adbPath start-server | Out-Null
 Repair-OfflineEmulators -AdbPath $adbPath
 $existingSerial = Get-RunningEmulatorSerialForAvd -AdbPath $adbPath -AvdName $AvdName
 
+if ($null -ne $existingSerial) {
+  $existingTimezone = (& $adbPath -s $existingSerial shell getprop persist.sys.timezone 2>$null | Select-Object -First 1).Trim()
+  if ($existingTimezone -and $existingTimezone -ne $Timezone) {
+    Write-Info "timezone mismatch: $existingTimezone"
+    Write-Info "restarting emulator with timezone: $Timezone"
+    & $adbPath -s $existingSerial emu kill | Out-Null
+    Start-Sleep -Seconds 5
+    $existingSerial = $null
+  }
+}
+
 if ($null -eq $existingSerial) {
-  Start-Process -FilePath $emulatorPath -ArgumentList "-avd", $AvdName, "-no-snapshot-load"
+  Start-Process -FilePath $emulatorPath -ArgumentList "-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone
   Write-Info "launch: requested"
 } else {
   Write-Info "launch: already running ($existingSerial)"
