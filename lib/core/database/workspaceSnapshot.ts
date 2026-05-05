@@ -20,6 +20,8 @@ interface WorkspaceReviewProfile {
 interface WorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
+  priority?: number | null;
+  desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
   content: string;
@@ -40,6 +42,8 @@ export interface WorkspaceSnapshot {
 interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
   parent_id: string | null;
+  priority: number | null;
+  desired_retention: number | null;
   title: string;
   is_title_manual: number;
   content: string;
@@ -103,6 +107,8 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
     `SELECT
        n.id,
        n.parent_id,
+       n.priority,
+       n.desired_retention,
        n.title,
        n.is_title_manual,
        n.content,
@@ -134,7 +140,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
   const trashedNodeIds: string[] = [];
 
   for (const row of rows) {
-    nodesById[row.id] = {
+    const node: WorkspaceNodeSnapshot = {
       id: row.id,
       parentNodeId: row.parent_id,
       title: row.title,
@@ -146,6 +152,13 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };
+    if (typeof row.priority === 'number') {
+      node.priority = row.priority;
+    }
+    if (typeof row.desired_retention === 'number') {
+      node.desiredRetention = row.desired_retention;
+    }
+    nodesById[row.id] = node;
     if (row.deleted_at) {
       trashedNodeIds.push(row.id);
     }

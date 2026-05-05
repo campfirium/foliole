@@ -3,6 +3,8 @@ import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const nodes = sqliteTable('nodes', {
   id: text('id').primaryKey(),
   parentId: text('parent_id'),
+  priority: integer('priority'),
+  desiredRetention: real('desired_retention'),
   title: text('title').notNull(),
   isTitleManual: integer('is_title_manual', { mode: 'boolean' }).notNull().default(false),
   content: text('content').notNull().default(''),

@@ -22,6 +22,8 @@ export interface NativeWorkspaceReviewProfile {
 export interface NativeWorkspaceNodeSnapshot {
   id: string;
   parentNodeId: string | null;
+  priority?: number | null;
+  desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
   content: string;
@@ -52,6 +54,8 @@ export interface NativeReviewSchedulerSettings {
 export interface NativeNodeSnapshotArgs {
   nodeId: string;
   parentNodeId: string | null;
+  priority?: number | null;
+  desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
   content: string;

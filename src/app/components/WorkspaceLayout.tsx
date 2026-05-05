@@ -32,6 +32,8 @@ export interface WorkspaceLayoutProps {
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
+  onNodePriorityChange: (nodeId: string, priority: number | null) => void;
+  onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   canStartStudyMode: boolean;

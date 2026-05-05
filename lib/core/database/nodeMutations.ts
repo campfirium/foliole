@@ -8,6 +8,8 @@ interface NodeAnchorLinkPayload {
 export interface UpsertNodeSnapshotInput {
   nodeId: string;
   parentNodeId: string | null;
+  priority?: number | null;
+  desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
   content: string;
@@ -41,6 +43,8 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     `INSERT INTO nodes (
         id,
         parent_id,
+        priority,
+        desired_retention,
         title,
         is_title_manual,
         content,
@@ -49,9 +53,11 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
         created_at,
         updated_at,
         deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
       ON CONFLICT(id) DO UPDATE SET
         parent_id = excluded.parent_id,
+        priority = excluded.priority,
+        desired_retention = excluded.desired_retention,
         title = excluded.title,
         is_title_manual = excluded.is_title_manual,
         content = excluded.content,
@@ -70,6 +76,8 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
     upsertNodeStatement.run([
       input.nodeId,
       input.parentNodeId,
+      input.priority ?? null,
+      input.desiredRetention ?? null,
       input.title,
       input.isTitleManual ? 1 : 0,
       input.content,

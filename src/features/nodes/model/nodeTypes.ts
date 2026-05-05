@@ -30,6 +30,7 @@ export interface Node {
   id: string;
   parentNodeId: string | null;
   priority?: number | null;
+  desiredRetention?: number | null;
   title: string;
   isTitleManual?: boolean;
   content: string;

@@ -19,11 +19,21 @@ export function asBoolean(value: unknown, field: string): boolean {
   return value;
 }
 
-function asNullableNumber(value: unknown, field: string): number | null {
+function asNullableInteger(value: unknown, field: string): number | null {
   if (value === null || value === undefined) {
     return null;
   }
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value;
+}
+
+function asNullableFiniteNumber(value: unknown, field: string): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`invalid argument: ${field}`);
   }
   return value;
@@ -70,12 +80,14 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
     parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
+    priority: asNullableInteger(args.priority, 'priority'),
+    desiredRetention: asNullableFiniteNumber(args.desiredRetention, 'desiredRetention'),
     title: asString(args.title, 'title'),
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
     content: asString(args.content, 'content'),
     reveal: asNullableString(args.reveal, 'reveal'),
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
-    position: asNullableNumber(args.position, 'position'),
+    position: asNullableInteger(args.position, 'position'),
     createdAt: asString(args.createdAt, 'createdAt'),
     updatedAt: asString(args.updatedAt, 'updatedAt')
   };
@@ -95,9 +107,9 @@ function parseNodeViewStatePayload(value: unknown, field: string): NodeViewState
   const payload = value as Record<string, unknown>;
   return {
     nodeId: asString(payload.nodeId, `${field}.nodeId`),
-    scrollTop: asNullableNumber(payload.scrollTop, `${field}.scrollTop`) ?? 0,
-    selectionFrom: asNullableNumber(payload.selectionFrom, `${field}.selectionFrom`),
-    selectionTo: asNullableNumber(payload.selectionTo, `${field}.selectionTo`)
+    scrollTop: asNullableInteger(payload.scrollTop, `${field}.scrollTop`) ?? 0,
+    selectionFrom: asNullableInteger(payload.selectionFrom, `${field}.selectionFrom`),
+    selectionTo: asNullableInteger(payload.selectionTo, `${field}.selectionTo`)
   };
 }
 

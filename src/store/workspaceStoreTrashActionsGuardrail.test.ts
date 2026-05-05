@@ -32,6 +32,8 @@ function createWorkspaceFixture(): WorkspaceState {
     updateNodeTitle: () => undefined,
     updateNodeContent: () => undefined,
     updateNodeReveal: () => undefined,
+    updateNodePriority: () => undefined,
+    updateNodeDesiredRetention: () => undefined,
     startReviewSession: () => false,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,

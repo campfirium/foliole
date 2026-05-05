@@ -110,6 +110,8 @@ it('handles node mutation commands', async () => {
   expect(upsertNodeSnapshot).toHaveBeenNthCalledWith(1, {
     nodeId: 'node-1',
     parentNodeId: null,
+    priority: null,
+    desiredRetention: null,
     title: 'Node title',
     isTitleManual: false,
     content: '# Content',
@@ -144,6 +146,8 @@ it('handles node reveal mutation command', async () => {
   expect(upsertNodeSnapshot).toHaveBeenCalledWith({
     nodeId: 'node-2',
     parentNodeId: 'node-1',
+    priority: null,
+    desiredRetention: null,
     title: 'QA',
     isTitleManual: true,
     content: 'Question',

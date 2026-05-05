@@ -3,16 +3,19 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { DocumentPanelHeader } from './DocumentPanelHeader';
+import { DocumentPanelNodeReviewSettings } from './DocumentPanelNodeReviewSettings';
 import { EditorContextMenu } from './EditorContextMenu';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelSectionProps {
   activeNodeId: string | null;
+  editableNodeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -35,6 +38,8 @@ interface DocumentPanelSectionProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
+  onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onToggleEditorDisplayMode: () => void;
@@ -43,6 +48,7 @@ interface DocumentPanelSectionProps {
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
   nodesById: Record<string, Node>;
+  reviewSchedulerSettings: ReviewSchedulerSettings;
 }
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
@@ -66,6 +72,14 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onGoParent={props.onGoParent}
           onSelectNode={props.onSelectNode}
           onToggleEditorDisplayMode={props.onToggleEditorDisplayMode}
+        />
+        <DocumentPanelNodeReviewSettings
+          activeNodeId={props.activeNodeId}
+          editableNodeId={props.editableNodeId}
+          nodesById={props.nodesById}
+          onDesiredRetentionChange={props.onNodeDesiredRetentionChange}
+          onPriorityChange={props.onNodePriorityChange}
+          reviewSchedulerSettings={props.reviewSchedulerSettings}
         />
         <DocumentPanelBody
           editorAppearanceKey={props.editorAppearanceKey}

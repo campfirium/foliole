@@ -14,6 +14,10 @@ import {
   createQAFromSelectionAction,
   createRootNodeAction
 } from './workspaceStoreCreateActions';
+import {
+  createUpdateNodeDesiredRetentionAction,
+  createUpdateNodePriorityAction
+} from './workspaceStoreNodeSchedulerActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import { createChildNodeAction, createMoveNodeAction, createMoveNodesAction } from './workspaceStoreTreeActions';
 
@@ -36,6 +40,8 @@ type WorkspaceNodeActions = Pick<
   | 'moveNodes'
   | 'restoreNode'
   | 'setNodeViewState'
+  | 'updateNodeDesiredRetention'
+  | 'updateNodePriority'
   | 'updateNodeTitle'
   | 'updateNodeContent'
   | 'updateNodeReveal'
@@ -170,6 +176,8 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
+    updateNodePriority: createUpdateNodePriorityAction(set),
+    updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
     createChildNode: createChildNodeAction(set, syncNodeContentToRuntime, syncNodeOrderToRuntime),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),

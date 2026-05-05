@@ -76,6 +76,8 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
   return {
     id: partial.id,
     parentNodeId: partial.parentNodeId ?? null,
+    priority: partial.priority ?? null,
+    desiredRetention: partial.desiredRetention ?? null,
     title: partial.title,
     content: partial.content,
     reveal: partial.reveal ?? null,

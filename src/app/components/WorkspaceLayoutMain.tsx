@@ -86,6 +86,7 @@ function WorkspaceDocumentArea({ documentNodeId, props }: WorkspaceContentProps)
         canGoParent={props.canGoParent}
         contextMenu={props.contextMenu}
         documentMaxWidth={props.documentMaxWidth}
+        editableNodeId={props.editorNodeId}
         editorAppearanceKey={`${props.markdownSyntaxVisibility}-${props.editorDisplayMode}`}
         editorContent={props.editorContent}
         editorDisplayMode={props.editorDisplayMode}
@@ -103,10 +104,13 @@ function WorkspaceDocumentArea({ documentNodeId, props }: WorkspaceContentProps)
         onGoBack={props.onGoBack}
         onGoForward={props.onGoForward}
         onGoParent={props.onGoParent}
+        onNodeDesiredRetentionChange={props.onNodeDesiredRetentionChange}
+        onNodePriorityChange={props.onNodePriorityChange}
         onResetLayout={props.onResetLayout}
         onSelectNode={props.onSelectBreadcrumbNode}
         onStartDocumentResize={props.onStartDocumentResize}
         onToggleEditorDisplayMode={props.onToggleEditorDisplayMode}
+        reviewSchedulerSettings={props.reviewSchedulerSettings}
         showAnswerSection={props.showAnswerSection}
       />
       <ReviewModeToolbar

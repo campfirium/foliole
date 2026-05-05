@@ -42,7 +42,7 @@ it('quarantines a malformed sqlite database and recreates an empty schema on ini
   const recoveredDatabaseName = recoveredEntries.find((entry) => entry.endsWith('.db'));
 
   expect(recoveredConnection.sqlite.prepare('PRAGMA quick_check(1)').pluck().get()).toBe('ok');
-  expect(recoveredConnection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(2);
+  expect(recoveredConnection.sqlite.prepare('PRAGMA user_version').pluck().get()).toBe(3);
   expect(recoveredDatabaseName).toMatch(/^foliole-corrupt-.*\.db$/);
   expect(
     await fs.readFile(path.join(mockedAppDataDir, 'recovery', recoveredDatabaseName ?? ''), 'utf8')

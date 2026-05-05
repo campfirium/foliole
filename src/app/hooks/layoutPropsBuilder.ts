@@ -83,6 +83,8 @@ interface BuildLayoutPropsArgs {
   nav: Pick<WorkspaceLayoutProps, 'onGoBack' | 'onGoForward' | 'onGoParent' | 'onSelectBreadcrumbNode' | 'onSelectNode'>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  onNodeDesiredRetentionChange: WorkspaceLayoutProps['onNodeDesiredRetentionChange'];
+  onNodePriorityChange: WorkspaceLayoutProps['onNodePriorityChange'];
   onAnswerChange: WorkspaceLayoutProps['onAnswerChange'];
   onEditorChange: WorkspaceLayoutProps['onEditorChange'];
   onEditorReady: WorkspaceLayoutProps['onEditorReady'];
@@ -179,6 +181,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   return {
     activeNodeId: args.activeNodeId, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
+    onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isSettingsOpen: args.isSettingsOpen, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
     showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,

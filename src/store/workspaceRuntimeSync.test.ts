@@ -27,6 +27,8 @@ function createNodeFixture(): Node {
   return {
     id: 'node-1',
     parentNodeId: null,
+    priority: 0,
+    desiredRetention: 0.81,
     title: 'Seed',
     isTitleManual: false,
     content: '# Seed',
@@ -81,6 +83,8 @@ describe('workspaceRuntimeSync node mutations', () => {
     expect(invoke).toHaveBeenCalledWith('update_node_content', {
       nodeId: 'node-1',
       parentNodeId: null,
+      priority: 0,
+      desiredRetention: 0.81,
       title: 'Seed',
       isTitleManual: false,
       content: '# Seed',
@@ -102,6 +106,8 @@ describe('workspaceRuntimeSync node mutations', () => {
     expect(invoke).toHaveBeenCalledWith('update_node_reveal', {
       nodeId: 'node-1',
       parentNodeId: null,
+      priority: 0,
+      desiredRetention: 0.81,
       title: 'Seed',
       isTitleManual: false,
       content: '# Seed',

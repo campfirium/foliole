@@ -109,6 +109,8 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   expect(upsertNodeRun).toHaveBeenCalledWith([
     'node-1',
     null,
+    null,
+    null,
     'Node 1',
     1,
     '# Node 1',
