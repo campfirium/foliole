@@ -1,8 +1,11 @@
-import { Bug, FileText, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
+import { Bug, FileText, Import, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
-export type WorkspaceRightPanelId = 'review-queue' | 'dev';
+export type WorkspaceRightPanelId = 'review-queue' | 'import' | 'dev';
+
+const toolbarButtonClassName = 'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
+const activeToolbarButtonClassName = `${toolbarButtonClassName} data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground`;
 
 interface WorkspaceTopToolbarProps {
   isTrashViewOpen: boolean;
@@ -12,6 +15,29 @@ interface WorkspaceTopToolbarProps {
   onOpenTrashView: () => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleListVisibility: () => void;
+}
+
+function InspectorActionButton({
+  active,
+  icon,
+  label,
+  onClick
+}: {
+  active: boolean;
+  icon: JSX.Element;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <AppIconButton
+      aria-pressed={active}
+      className={activeToolbarButtonClassName}
+      data-active={active}
+      icon={icon}
+      label={label}
+      onClick={onClick}
+    />
+  );
 }
 
 export function WorkspaceTopToolbar({
@@ -27,20 +53,20 @@ export function WorkspaceTopToolbar({
     <AppToolbar aria-label="Workspace top toolbar" className="min-h-[40px] border-b border-border bg-[#f6f6f6] px-3">
       <ToolbarActionGroup ariaLabel="Workspace primary navigation actions">
         <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+          className={toolbarButtonClassName}
           icon={<PanelLeft aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Toggle node list"
           onClick={onToggleListVisibility}
         />
         <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+          className={activeToolbarButtonClassName}
           data-active={!isTrashViewOpen}
           icon={<FileText aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Open notes view"
           onClick={onOpenNotesView}
         />
         <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+          className={activeToolbarButtonClassName}
           data-active={isTrashViewOpen}
           icon={<Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Open trash view"
@@ -49,18 +75,20 @@ export function WorkspaceTopToolbar({
       </ToolbarActionGroup>
       <div className="flex-1" />
       <ToolbarActionGroup ariaLabel="Workspace inspector actions">
-        <AppIconButton
-          aria-pressed={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
-          data-active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
+        <InspectorActionButton
+          active={!isRightSidebarCollapsed && activeRightPanelId === 'import'}
+          icon={<Import aria-hidden="true" size={16} strokeWidth={1.75} />}
+          label="Import panel"
+          onClick={() => onSelectRightPanel('import')}
+        />
+        <InspectorActionButton
+          active={!isRightSidebarCollapsed && activeRightPanelId === 'review-queue'}
           icon={<ListOrdered aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Review queue panel"
           onClick={() => onSelectRightPanel('review-queue')}
         />
-        <AppIconButton
-          aria-pressed={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
-          data-active={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}
+        <InspectorActionButton
+          active={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}
           icon={<Bug aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Dev panel"
           onClick={() => onSelectRightPanel('dev')}

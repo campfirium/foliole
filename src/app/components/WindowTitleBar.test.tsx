@@ -121,6 +121,7 @@ describe('WindowTitleBar', () => {
     renderTitleBar({ isRightSidebarCollapsed: true });
 
     expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Import panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Review queue panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
   });
@@ -138,6 +139,7 @@ describe('WindowTitleBar right sidebar anchor', () => {
   it('renders the expanded right sidebar toggle before the divider and the panel button inside the right zone', () => {
     const { container } = renderTitleBar({ isRightSidebarCollapsed: false });
     expectExpandedRightAnchorLayout(container);
+    expect(screen.getByRole('button', { name: 'Import panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
   });
