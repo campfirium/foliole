@@ -5,26 +5,38 @@ const { useReadingProgressSyncMock } = vi.hoisted(() => ({
   useReadingProgressSyncMock: vi.fn()
 }));
 
+const runtimeRefs = vi.hoisted(() => ({
+  readingPositionRef: {
+    current: {
+      nodeId: 'node-1',
+      selection: { from: 12, to: 12 }
+    }
+  },
+  readingPositionSyncRef: {
+    current: {
+      nodeId: 'node-1',
+      state: {
+        reason: 'editor-restore-selection',
+        startedAt: 123,
+        targetSelection: { from: 12, to: 12 }
+      }
+    }
+  }
+}));
+
+const { useWorkspaceNavigationMock } = vi.hoisted(() => ({
+  useWorkspaceNavigationMock: vi.fn(() => ({
+    handleSelectNode: vi.fn()
+  }))
+}));
+
 vi.mock('./useAppRuntime', () => ({
   useAppRuntime: () => ({
+    bumpReadingPositionRequest: vi.fn(),
     editorRef: { current: null },
     isViewingTrashNode: false,
-    readingPositionRef: {
-      current: {
-        nodeId: 'node-1',
-        selection: { from: 12, to: 12 }
-      }
-    },
-    readingPositionSyncRef: {
-      current: {
-        nodeId: 'node-1',
-        state: {
-          reason: 'editor-restore-selection',
-          startedAt: 123,
-          targetSelection: { from: 12, to: 12 }
-        }
-      }
-    },
+    readingPositionRef: runtimeRefs.readingPositionRef,
+    readingPositionSyncRef: runtimeRefs.readingPositionSyncRef,
     setIsImmersiveMode: vi.fn()
   })
 }));
@@ -68,9 +80,7 @@ vi.mock('./useWorkspaceActiveNodeDocument', () => ({
 }));
 
 vi.mock('./useWorkspaceNavigation', () => ({
-  useWorkspaceNavigation: () => ({
-    handleSelectNode: vi.fn()
-  })
+  useWorkspaceNavigation: useWorkspaceNavigationMock
 }));
 
 import { useWorkspaceControllerState } from './appControllerState';
@@ -161,6 +171,28 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
       reason: 'editor-restore-selection',
       startedAt: 123,
       targetSelection: { from: 12, to: 12 }
+    });
+  });
+
+  it('updates the shared reading position value when anchor navigation begins', () => {
+    const ws = createWorkspaceState() as never;
+
+    render(<Harness ws={ws} />);
+
+    const navigationArgs = useWorkspaceNavigationMock.mock.calls[0][0];
+    navigationArgs.beginAnchorNavigationRestore('node-2', { from: 88, to: 88 });
+
+    expect(runtimeRefs.readingPositionRef.current).toEqual({
+      nodeId: 'node-2',
+      selection: { from: 88, to: 88 }
+    });
+    expect(runtimeRefs.readingPositionSyncRef.current).toEqual({
+      nodeId: 'node-2',
+      state: {
+        reason: 'anchor-navigation',
+        startedAt: expect.any(Number),
+        targetSelection: { from: 88, to: 88 }
+      }
     });
   });
 });

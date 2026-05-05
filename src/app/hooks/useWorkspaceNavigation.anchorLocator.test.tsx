@@ -22,12 +22,12 @@ vi.mock('../../shared/platform/bridge', () => ({
 function renderTextLocatorNavigationHook(args: {
   activeNodeContent: string | null;
   activeNodeId: string;
+  beginAnchorNavigationRestore?: ReturnType<typeof vi.fn>;
   jumpToAncestorNode?: ReturnType<typeof vi.fn>;
   openNode?: ReturnType<typeof vi.fn>;
-  revealPosition?: ReturnType<typeof vi.fn>;
   saveActiveNodeView?: ReturnType<typeof vi.fn>;
 }) {
-  const revealPosition = args.revealPosition ?? vi.fn();
+  const beginAnchorNavigationRestore = args.beginAnchorNavigationRestore ?? vi.fn();
   const saveActiveNodeView = args.saveActiveNodeView ?? vi.fn();
   const flushPendingEditorDraft = vi.fn();
   const jumpToAncestorNode = args.jumpToAncestorNode ?? vi.fn(() => null);
@@ -40,13 +40,12 @@ function renderTextLocatorNavigationHook(args: {
         activeNodeId,
         activeNodeParentId: null,
         backStackSize: 0,
-        beginAnchorNavigationRestore: vi.fn(),
+        beginAnchorNavigationRestore,
         closeContextMenu: vi.fn(),
         completeAnchorNavigationRestore: vi.fn(),
         editorRef: {
           current: {
-            isPositionNearViewportRatio: () => true,
-            revealPosition
+            isPositionNearViewportRatio: () => true
           } as unknown as EditorAdapter
         },
         flushPendingEditorDraft,
@@ -62,92 +61,16 @@ function renderTextLocatorNavigationHook(args: {
     { initialProps: { activeNodeContent: args.activeNodeContent, activeNodeId: args.activeNodeId } }
   );
 
-  return { ...view, openNode, revealPosition, saveActiveNodeView };
+  return { ...view, beginAnchorNavigationRestore, openNode };
 }
 
-async function runRevealTextLocatorBreadcrumbCase() {
-  const jumpToAncestorNode = vi.fn(() => ({
-    focusAnchor: {
-      id: 'text-hl-1',
-      kind: 'highlight' as const,
-      locator: { from: 6, originalText: 'Beta', to: 10 }
-    },
-    nodeId: 'node-1'
-  }));
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetWorkspaceNavigationTestState();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+});
 
-  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
-    activeNodeContent: 'Alpha Beta Gamma',
-    activeNodeId: 'text-hl-child',
-    jumpToAncestorNode
-  });
-
-  await act(async () => {
-    await result.current.handleSelectBreadcrumbNode('node-1');
-    rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
-  });
-
-  expect(revealPosition).toHaveBeenCalledWith(6);
-  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
-}
-
-async function runRevealTextLocatorDirectSelectionCase() {
-  const openNode = vi.fn(() => ({
-    focusAnchor: null,
-    nodeId: 'node-1'
-  }));
-
-  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
-    activeNodeContent: 'Other node',
-    activeNodeId: 'node-2',
-    openNode
-  });
-
-  await act(async () => {
-    await result.current.handleSelectNode('node-1', {
-      id: 'text-hl-3',
-      kind: 'highlight',
-      locator: { from: 6, originalText: 'Beta', to: 10 }
-    });
-    rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
-  });
-
-  expect(openNode).toHaveBeenCalledWith('node-1');
-  expect(revealPosition).toHaveBeenCalledWith(6);
-  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
-}
-
-async function runPendingTextLocatorUntilContentAvailableCase() {
-  const openNode = vi.fn(() => ({
-    focusAnchor: null,
-    nodeId: 'node-1'
-  }));
-
-  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
-    activeNodeContent: null,
-    activeNodeId: 'node-2',
-    openNode
-  });
-
-  await act(async () => {
-    await result.current.handleSelectNode('node-1', {
-      id: 'text-hl-4',
-      kind: 'highlight',
-      locator: { from: 6, originalText: 'Beta', to: 10 }
-    });
-    rerender({ activeNodeContent: null, activeNodeId: 'node-1' });
-  });
-
-  expect(revealPosition).not.toHaveBeenCalled();
-
-  await act(async () => {
-    rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
-  });
-
-  expect(revealPosition).toHaveBeenCalledWith(6);
-  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
-}
-
-async function runRestoreSuppressionLifetimeCase() {
+async function runRestoreSuppressionCase() {
   vi.useFakeTimers();
   const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
   const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
@@ -165,7 +88,7 @@ async function runRestoreSuppressionLifetimeCase() {
       nodeId: 'node-1'
     }));
 
-    const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
+    const { beginAnchorNavigationRestore, result, rerender } = renderTextLocatorNavigationHook({
       activeNodeContent: 'Alpha Beta Gamma',
       activeNodeId: 'text-hl-child',
       jumpToAncestorNode
@@ -176,7 +99,7 @@ async function runRestoreSuppressionLifetimeCase() {
       rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
     });
 
-    expect(revealPosition).toHaveBeenCalledWith(6);
+    expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
     expect(result.current.shouldSuppressSelectionRestore()).toBe(true);
 
     await act(async () => {
@@ -191,149 +114,83 @@ async function runRestoreSuppressionLifetimeCase() {
   }
 }
 
-async function runRevealAfterEditorReadyCase() {
-  vi.useFakeTimers();
-  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
-  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
-  globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) =>
-    window.setTimeout(() => callback(performance.now()), 16)) as typeof requestAnimationFrame;
-  globalThis.cancelAnimationFrame = ((handle: number) => window.clearTimeout(handle)) as typeof cancelAnimationFrame;
-
-  try {
+describe('useWorkspaceNavigation text locator basics', () => {
+  it('reveals text locator breadcrumbs inside the unified reading-position flow', async () => {
     const jumpToAncestorNode = vi.fn(() => ({
       focusAnchor: {
-        id: 'text-hl-late-editor-1',
+        id: 'text-hl-1',
         kind: 'highlight' as const,
         locator: { from: 6, originalText: 'Beta', to: 10 }
       },
       nodeId: 'node-1'
     }));
-    const revealPosition = vi.fn();
-    const editorRef: { current: EditorAdapter | null } = { current: null };
 
-    const view = renderHook(
-      ({ activeNodeContent, activeNodeId }) =>
-        useWorkspaceNavigation({
-          activeNodeContent,
-          activeNodeId,
-          activeNodeParentId: null,
-          backStackSize: 0,
-          beginAnchorNavigationRestore: vi.fn(),
-          closeContextMenu: vi.fn(),
-          completeAnchorNavigationRestore: vi.fn(),
-          editorRef,
-          flushPendingEditorDraft: vi.fn(),
-          forwardStackSize: 0,
-          goBack: vi.fn(() => null),
-          goForward: vi.fn(() => null),
-          goToParent: vi.fn(() => null),
-          jumpToAncestorNode,
-          nodesById: navigationTestNodes,
-          openNode: vi.fn(() => null),
-          saveActiveNodeView: vi.fn()
-        }),
-      { initialProps: { activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'text-hl-child' } }
-    );
-
-    await act(async () => {
-      await view.result.current.handleSelectBreadcrumbNode('node-1');
-      view.rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
+    const { beginAnchorNavigationRestore, result, rerender } = renderTextLocatorNavigationHook({
+      activeNodeContent: 'Alpha Beta Gamma',
+      activeNodeId: 'text-hl-child',
+      jumpToAncestorNode
     });
 
-    expect(revealPosition).not.toHaveBeenCalled();
-
-    editorRef.current = {
-      isPositionNearViewportRatio: () => true,
-      revealPosition
-    } as unknown as EditorAdapter;
-
     await act(async () => {
-      vi.advanceTimersByTime(20);
+      await result.current.handleSelectBreadcrumbNode('node-1');
+      rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
     });
 
-    expect(revealPosition).toHaveBeenCalledWith(6);
-  } finally {
-    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
-    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
-    vi.useRealTimers();
-  }
-}
-
-describe('useWorkspaceNavigation text locator', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetWorkspaceNavigationTestState();
-    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+    expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
+    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });
 
-  it('reveals text locator breadcrumbs inside the editor', runRevealTextLocatorBreadcrumbCase);
+  it('reveals text locator focus after selecting a different node directly', async () => {
+    const openNode = vi.fn(() => ({ focusAnchor: null, nodeId: 'node-1' }));
+    const { beginAnchorNavigationRestore, result, rerender } = renderTextLocatorNavigationHook({
+      activeNodeContent: 'Other node',
+      activeNodeId: 'node-2',
+      openNode
+    });
 
-  it('reveals text locator focus after selecting a different node directly', runRevealTextLocatorDirectSelectionCase);
+    await act(async () => {
+      await result.current.handleSelectNode('node-1', {
+        id: 'text-hl-3',
+        kind: 'highlight',
+        locator: { from: 6, originalText: 'Beta', to: 10 }
+      });
+      rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
+    });
 
-  it('keeps pending text locator focus until the target document content becomes available', runPendingTextLocatorUntilContentAvailableCase);
+    expect(openNode).toHaveBeenCalledWith('node-1');
+    expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
+    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+  });
 
-  it('keeps restore suppression active until the anchor reveal settles', runRestoreSuppressionLifetimeCase);
-
-  it('retries pending text locator reveal after the target editor becomes ready', runRevealAfterEditorReadyCase);
-
-  it('keeps using stored text locator offsets even when the current plain-text content no longer matches', runUnresolvedLocatorCase);
-  it('reveals unresolved zero-width text locators at their stored position', runUnresolvedZeroWidthLocatorCase);
 });
 
-async function runUnresolvedLocatorCase() {
-  const content = 'Start Legacy End';
-  const jumpToAncestorNode = vi.fn(() => ({
-    focusAnchor: {
-      id: 'text-hl-1',
-      kind: 'highlight' as const,
-      locator: { from: 0, originalText: 'Beta', to: 4 }
-    },
-    nodeId: 'node-1'
-  }));
-
-  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
-    activeNodeContent: content,
-    activeNodeId: 'text-hl-child',
-    jumpToAncestorNode
-  });
-
-  await act(async () => {
-    await result.current.handleSelectBreadcrumbNode('node-1');
-    rerender({
-      activeNodeContent: content,
-      activeNodeId: 'node-1'
+describe('useWorkspaceNavigation text locator pending flow', () => {
+  it('keeps pending text locator focus until the target document content becomes available', async () => {
+    const openNode = vi.fn(() => ({ focusAnchor: null, nodeId: 'node-1' }));
+    const { beginAnchorNavigationRestore, result, rerender } = renderTextLocatorNavigationHook({
+      activeNodeContent: null,
+      activeNodeId: 'node-2',
+      openNode
     });
-  });
 
-  expect(revealPosition).toHaveBeenCalledWith(0);
-  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
-}
-
-async function runUnresolvedZeroWidthLocatorCase() {
-  const content = 'Alpha  Gamma';
-  const jumpToAncestorNode = vi.fn(() => ({
-    focusAnchor: {
-      id: 'text-hl-2',
-      kind: 'highlight' as const,
-      locator: { from: 6, originalText: 'Beta', to: 6 }
-    },
-    nodeId: 'node-1'
-  }));
-
-  const { result, rerender, revealPosition } = renderTextLocatorNavigationHook({
-    activeNodeContent: content,
-    activeNodeId: 'text-hl-child',
-    jumpToAncestorNode
-  });
-
-  await act(async () => {
-    await result.current.handleSelectBreadcrumbNode('node-1');
-    rerender({
-      activeNodeContent: content,
-      activeNodeId: 'node-1'
+    await act(async () => {
+      await result.current.handleSelectNode('node-1', {
+        id: 'text-hl-4',
+        kind: 'highlight',
+        locator: { from: 6, originalText: 'Beta', to: 10 }
+      });
+      rerender({ activeNodeContent: null, activeNodeId: 'node-1' });
     });
+
+    expect(beginAnchorNavigationRestore).toHaveBeenCalledWith('node-1', { from: 6, to: 6 });
+
+    await act(async () => {
+      rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
+    });
+
+    expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
+    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });
 
-  expect(revealPosition).toHaveBeenCalledWith(6);
-  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
-}
+  it('keeps restore suppression active until the anchor reveal settles', runRestoreSuppressionCase);
+});

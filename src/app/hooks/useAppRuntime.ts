@@ -141,6 +141,7 @@ function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: n
 }
 
 function buildRuntimeState(args: {
+  bumpReadingPositionRequest: () => void;
   recentHistory: ReturnType<typeof useRecentHistory>;
   refs: ReturnType<typeof createRuntimeRefs>;
   requestedSettingsCategory: SettingsCategoryId | null;
@@ -168,6 +169,7 @@ function buildRuntimeState(args: {
 }) {
   return {
     ...args.refs,
+    bumpReadingPositionRequest: args.bumpReadingPositionRequest,
     ...args.state,
     recentCommandIds: args.recentHistory.recentCommandIds,
     recentNodeIds: args.recentHistory.recentNodeIds,
@@ -206,6 +208,7 @@ function useEditorDraftFlushRegistry(refs: ReturnType<typeof createRuntimeRefs>)
 
 export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
   const refs = createRuntimeRefs(initialListWidth, initialRightSidebarWidth);
+  const [, setReadingPositionRequestVersion] = useState(0);
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -225,9 +228,13 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   });
 
   const editorDraftFlush = useEditorDraftFlushRegistry(refs);
+  const bumpReadingPositionRequest = useCallback(() => {
+    setReadingPositionRequestVersion((current) => current + 1);
+  }, []);
 
   return {
     ...buildRuntimeState({
+      bumpReadingPositionRequest,
       recentHistory,
       refs,
       requestedSettingsCategory: settingsRequest.requestedSettingsCategory,

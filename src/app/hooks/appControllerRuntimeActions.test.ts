@@ -17,6 +17,7 @@ import {
 
 function createRuntimeState() {
   return {
+    bumpReadingPositionRequest: vi.fn(),
     readingPositionRef: {
       current: { nodeId: null, selection: null }
     },
@@ -100,22 +101,22 @@ function createZeroWidthAnchorRevealArgs(args: {
 }
 
 describe('createRevealDocumentPosition', () => {
-  it('stores the revealed document position as the new reading anchor', () => {
+  it('updates the reading anchor request without eagerly committing store state when editor is available', () => {
     const revealPosition = vi.fn();
     const getScrollTop = vi.fn(() => 320);
     const setNodeViewState = vi.fn();
 
-    const revealDocumentPosition = createRevealDocumentPosition(
-      createRevealDocumentPositionArgs({ getScrollTop, revealPosition, setNodeViewState }) as never
-    );
+    const args = createRevealDocumentPositionArgs({ getScrollTop, revealPosition, setNodeViewState }) as never;
+    const revealDocumentPosition = createRevealDocumentPosition(args);
 
     revealDocumentPosition(48000);
 
-    expect(revealPosition).toHaveBeenCalledWith(48000);
-    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
-      scrollTop: 320,
+    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+    expect(args.runtime.readingPositionRef.current).toEqual({
+      nodeId: 'node-1',
       selection: { from: 48000, to: 48000 }
     });
+    expect(setNodeViewState).not.toHaveBeenCalled();
   });
 
   it('still stores selection when editor adapter is unavailable', () => {
@@ -194,9 +195,8 @@ describe('createRevealAnchorInDocument', () => {
     const setNodeViewState = vi.fn();
     const content = 'AD';
     const anchorPosition = 1;
-    const revealAnchorInDocument = createRevealAnchorInDocument(
-      createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as never
-    );
+    const args = createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as never;
+    const revealAnchorInDocument = createRevealAnchorInDocument(args);
 
     revealAnchorInDocument({
       id: 'anchor-1',
@@ -204,11 +204,12 @@ describe('createRevealAnchorInDocument', () => {
       locator: { from: anchorPosition, originalText: '', to: anchorPosition }
     });
 
-    expect(revealSelection).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition });
-    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
-      scrollTop: 88,
+    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+    expect(args.runtime.readingPositionRef.current).toEqual({
+      nodeId: 'node-1',
       selection: { from: anchorPosition, to: anchorPosition }
     });
+    expect(setNodeViewState).not.toHaveBeenCalled();
   });
 });
 

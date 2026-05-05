@@ -5,6 +5,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { requestReadingPositionApply } from './readingPositionRequests';
 import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import { useEditorContextCommands } from './useEditorContextCommands';
@@ -123,16 +124,14 @@ function useSaveActiveNodeView(
 function useAnchorNavigationReadingPosition(runtime: ReturnType<typeof useAppRuntime>) {
   const beginAnchorNavigationRestore = useCallback(
     (nodeId: string, selection: { from: number; to: number }) => {
-      runtime.readingPositionSyncRef.current = {
+      requestReadingPositionApply({
         nodeId,
-        state: {
-          reason: 'anchor-navigation',
-          startedAt: Date.now(),
-          targetSelection: selection
-        }
-      };
+        reason: 'anchor-navigation',
+        runtime,
+        selection
+      });
     },
-    [runtime.readingPositionSyncRef]
+    [runtime]
   );
 
   const completeAnchorNavigationRestore = useCallback(

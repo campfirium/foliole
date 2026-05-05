@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import {
   getTextAnchorLocators,
@@ -11,8 +11,6 @@ import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 type PendingAnchor = NodeAnchorLink;
-
-const TEXT_ANCHOR_REVEAL_RATIO = 0.18;
 
 function resolveAnchorRestoreSelection(anchor: PendingAnchor | null): EditorSelection | null {
   if (!anchor || isPdfAnchorLocator(anchor.locator)) {
@@ -25,8 +23,8 @@ function resolveAnchorRestoreSelection(anchor: PendingAnchor | null): EditorSele
 function revealPendingAnchor(args: {
   activeNodeContent: string;
   activeNodeId: string;
+  beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => void;
   clearPendingAnchor: () => void;
-  editorRef: MutableRefObject<EditorAdapter | null>;
   pendingAnchor: PendingAnchor;
   scheduleRestoreSuppressionRelease: (nodeId: string) => void;
 }) {
@@ -36,32 +34,16 @@ function revealPendingAnchor(args: {
     args.clearPendingAnchor();
     return true;
   }
-  const adapter = args.editorRef.current;
-  if (!adapter) {
-    return false;
-  }
   const selection = findAnchorSelection(args.activeNodeContent, args.pendingAnchor);
   if (!selection) {
     args.scheduleRestoreSuppressionRelease(args.activeNodeId);
     args.clearPendingAnchor();
     return true;
   }
-  if (typeof adapter.revealPosition === 'function') {
-    adapter.revealPosition(selection.from);
-  } else if (adapter.revealSelectionAtViewportRatio) {
-    adapter.revealSelectionAtViewportRatio({ from: selection.from, to: selection.from }, TEXT_ANCHOR_REVEAL_RATIO);
-  } else {
-    adapter.revealSelection({ from: selection.from, to: selection.from });
-  }
-  const isSelectionPositioned =
-    typeof adapter.isPositionNearViewportRatio === 'function'
-      ? adapter.isPositionNearViewportRatio(selection.from, TEXT_ANCHOR_REVEAL_RATIO, 0.08)
-      : typeof adapter.getSelection === 'function'
-        ? adapter.getSelection().from === selection.from && adapter.getSelection().to === selection.to
-        : true;
-  if (!isSelectionPositioned) {
-    return false;
-  }
+  args.beginAnchorNavigationRestore(args.activeNodeId, {
+    from: selection.from,
+    to: selection.from
+  });
   args.scheduleRestoreSuppressionRelease(args.activeNodeId);
   args.clearPendingAnchor();
   return true;
@@ -108,9 +90,9 @@ function useRestoreSuppressionController(activeNodeId: string | null) {
 function usePendingAnchorReveal(args: {
   activeNodeContent: string | null;
   activeNodeId: string | null;
+  beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => void;
   clearPendingAnchor: () => void;
   completeAnchorNavigationRestore: (nodeId: string, reason: string) => void;
-  editorRef: MutableRefObject<EditorAdapter | null>;
   pendingAnchor: PendingAnchor | null;
   pendingAnchorNodeId: string | null;
   scheduleRestoreSuppressionRelease: (nodeId: string) => void;
@@ -127,25 +109,24 @@ function usePendingAnchorReveal(args: {
     const tryReveal = () => revealPendingAnchor({
       activeNodeContent: args.activeNodeContent ?? '',
       activeNodeId,
+      beginAnchorNavigationRestore: args.beginAnchorNavigationRestore,
       clearPendingAnchor: args.clearPendingAnchor,
-      editorRef: args.editorRef,
       pendingAnchor,
       scheduleRestoreSuppressionRelease: args.scheduleRestoreSuppressionRelease
     });
     if (tryReveal()) {
-      args.completeAnchorNavigationRestore(activeNodeId, 'anchor-revealed');
       return;
     }
     let frameId = 0;
     let attemptsRemaining = 8;
     const retryReveal = () => {
       if (tryReveal()) {
-        args.completeAnchorNavigationRestore(activeNodeId, 'anchor-revealed');
         return;
       }
       attemptsRemaining -= 1;
       if (attemptsRemaining <= 0) {
         args.completeAnchorNavigationRestore(activeNodeId, 'anchor-reveal-timeout');
+        args.clearPendingAnchor();
         return;
       }
       frameId = requestAnimationFrame(retryReveal);
@@ -164,7 +145,6 @@ export function usePendingAnchorNavigation(args: {
   activeNodeId: string | null;
   beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => void;
   completeAnchorNavigationRestore: (nodeId: string, reason: string) => void;
-  editorRef: MutableRefObject<EditorAdapter | null>;
 }) {
   const [pendingAnchorNodeId, setPendingAnchorNodeId] = useState<string | null>(null);
   const [pendingAnchor, setPendingAnchor] = useState<PendingAnchor | null>(null);
@@ -189,9 +169,9 @@ export function usePendingAnchorNavigation(args: {
   usePendingAnchorReveal({
     activeNodeContent: args.activeNodeContent,
     activeNodeId: args.activeNodeId,
+    beginAnchorNavigationRestore: args.beginAnchorNavigationRestore,
     clearPendingAnchor,
     completeAnchorNavigationRestore: args.completeAnchorNavigationRestore,
-    editorRef: args.editorRef,
     pendingAnchor,
     pendingAnchorNodeId,
     scheduleRestoreSuppressionRelease: restoreSuppression.scheduleRestoreSuppressionRelease

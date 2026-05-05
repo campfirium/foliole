@@ -4,16 +4,7 @@ import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTy
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
-
-function updateReadingPosition(
-  args: BuildControllerLayoutPropsArgs,
-  selection: EditorSelection
-) {
-  args.runtime.readingPositionRef.current = {
-    nodeId: args.ws.activeNodeId,
-    selection
-  };
-}
+import { requestReadingPositionApply } from './readingPositionRequests';
 
 export function createToggleListVisibility(args: BuildControllerLayoutPropsArgs) {
   return () => {
@@ -62,18 +53,10 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     if (!selection) {
       return;
     }
-    args.runtime.readingPositionSyncRef.current = {
+    requestReadingPositionApply({
       nodeId: args.ws.activeNodeId,
-      state: {
-        reason: 'reveal-anchor',
-        startedAt: Date.now(),
-        targetSelection: selection
-      }
-    };
-    adapter.revealSelection(selection);
-    updateReadingPosition(args, selection);
-    args.ws.setNodeViewState(args.ws.activeNodeId, {
-      scrollTop: adapter.getScrollTop(),
+      reason: 'reveal-anchor',
+      runtime: args.runtime,
       selection
     });
   };
@@ -86,21 +69,17 @@ export function createRevealDocumentSelection(args: BuildControllerLayoutPropsAr
     }
     const adapter = args.runtime.editorRef.current;
     if (adapter) {
-      args.runtime.readingPositionSyncRef.current = {
+      requestReadingPositionApply({
         nodeId: args.ws.activeNodeId,
-        state: {
-          reason: 'reveal-selection',
-          startedAt: Date.now(),
-          targetSelection: selection
-        }
-      };
-      adapter.revealSelection(selection);
+        reason: 'reveal-selection',
+        runtime: args.runtime,
+        selection
+      });
+      return;
     }
-    updateReadingPosition(args, selection);
-
     const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
     args.ws.setNodeViewState(args.ws.activeNodeId, {
-      scrollTop: adapter?.getScrollTop() ?? existingViewState?.scrollTop ?? 0,
+      scrollTop: existingViewState?.scrollTop ?? 0,
       selection
     });
   };
@@ -112,29 +91,23 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
       return;
     }
     const adapter = args.runtime.editorRef.current;
-    if (adapter) {
-      args.runtime.readingPositionSyncRef.current = {
-        nodeId: args.ws.activeNodeId,
-        state: {
-          reason: 'reveal-position',
-          startedAt: Date.now(),
-          targetSelection: { from: position, to: position }
-        }
-      };
-      adapter.revealPosition(position);
-    }
-    updateReadingPosition(args, {
+    const selection = {
       from: position,
       to: position
-    });
-
+    };
+    if (adapter) {
+      requestReadingPositionApply({
+        nodeId: args.ws.activeNodeId,
+        reason: 'reveal-position',
+        runtime: args.runtime,
+        selection
+      });
+      return;
+    }
     const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
     args.ws.setNodeViewState(args.ws.activeNodeId, {
-      scrollTop: adapter?.getScrollTop() ?? existingViewState?.scrollTop ?? 0,
-      selection: {
-        from: position,
-        to: position
-      }
+      scrollTop: existingViewState?.scrollTop ?? 0,
+      selection
     });
   };
 }

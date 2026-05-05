@@ -12,6 +12,7 @@ import { createRevealAnchorInDocument } from './appControllerRuntimeActions';
 
 function createRuntimeState() {
   return {
+    bumpReadingPositionRequest: vi.fn(),
     readingPositionRef: {
       current: { nodeId: null, selection: null }
     },
@@ -21,84 +22,13 @@ function createRuntimeState() {
   };
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
-describe('createRevealAnchorInDocument text locator', () => {
-  it('reveals text locators directly from plain markdown content', () => {
-    const revealSelection = vi.fn();
-    const getScrollTop = vi.fn(() => 64);
-    const setNodeViewState = vi.fn();
-    const content = 'Alpha Beta Gamma';
-    const revealAnchorInDocument = createRevealAnchorInDocument({
-      runtime: {
-        editorRef: {
-          current: {
-            getScrollTop,
-            revealSelection
-          }
-        },
-        ...createRuntimeState(),
-        isViewingTrashNode: false
-      },
-      ws: {
-        activeNodeId: 'node-1',
-        nodeViewById: {
-          'node-1': {
-            scrollTop: 12,
-            selection: { from: 1, to: 1 }
-          }
-        },
-        nodesById: {
-          'node-1': {
-            id: 'node-1',
-            parentNodeId: null,
-            kind: 'topic',
-            title: 'Parent',
-            content,
-            anchorLink: null,
-            reveal: null,
-            review: null,
-            createdAt: '2026-04-05T00:00:00.000Z',
-            updatedAt: '2026-04-05T00:00:00.000Z'
-          }
-        },
-        setNodeViewState
-      }
-    } as never);
-
-    revealAnchorInDocument({
-      id: 'anchor-2',
-      kind: 'highlight',
-      locator: {
-        from: content.indexOf('Beta'),
-        originalText: 'Beta',
-        to: content.indexOf('Beta') + 'Beta'.length
-      }
-    });
-
-    expect(revealSelection).toHaveBeenCalledWith({
-      from: content.indexOf('Beta'),
-      to: content.indexOf('Beta') + 'Beta'.length
-    });
-    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
-  });
-
-  it('does not reveal a text locator when the current plain-text content no longer matches', runUnresolvedRevealCase);
-});
-
-function runUnresolvedRevealCase() {
-  const revealSelection = vi.fn();
-  const getScrollTop = vi.fn(() => 64);
-  const setNodeViewState = vi.fn();
-  const content = 'Start Legacy End';
-  const revealAnchorInDocument = createRevealAnchorInDocument({
+function createRevealTextAnchorArgs(content: string) {
+  return {
     runtime: {
       editorRef: {
         current: {
-          getScrollTop,
-          revealSelection
+          getScrollTop: vi.fn(() => 64),
+          revealSelection: vi.fn()
         }
       },
       ...createRuntimeState(),
@@ -126,9 +56,53 @@ function runUnresolvedRevealCase() {
           updatedAt: '2026-04-05T00:00:00.000Z'
         }
       },
-      setNodeViewState
+      setNodeViewState: vi.fn()
     }
-  } as never);
+  } as never;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('createRevealAnchorInDocument text locator', () => {
+  it('reveals text locators directly from plain markdown content', () => {
+    const content = 'Alpha Beta Gamma';
+    const args = createRevealTextAnchorArgs(content);
+    const revealAnchorInDocument = createRevealAnchorInDocument(args);
+
+    revealAnchorInDocument({
+      id: 'anchor-2',
+      kind: 'highlight',
+      locator: {
+        from: content.indexOf('Beta'),
+        originalText: 'Beta',
+        to: content.indexOf('Beta') + 'Beta'.length
+      }
+    });
+
+    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+    expect(args.runtime.readingPositionRef.current).toEqual({
+      nodeId: 'node-1',
+      selection: {
+        from: content.indexOf('Beta'),
+        to: content.indexOf('Beta') + 'Beta'.length
+      }
+    });
+    expect(args.runtime.readingPositionSyncRef.current.state?.targetSelection).toEqual({
+      from: content.indexOf('Beta'),
+      to: content.indexOf('Beta') + 'Beta'.length
+    });
+    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+  });
+
+  it('reveals an unresolved text locator as a zero-width position when the current plain-text content no longer matches', runUnresolvedRevealCase);
+});
+
+function runUnresolvedRevealCase() {
+  const content = 'Start Legacy End';
+  const args = createRevealTextAnchorArgs(content);
+  const revealAnchorInDocument = createRevealAnchorInDocument(args);
 
   revealAnchorInDocument({
     id: 'anchor-2',
@@ -140,7 +114,14 @@ function runUnresolvedRevealCase() {
     }
   });
 
-  expect(revealSelection).not.toHaveBeenCalled();
-  expect(setNodeViewState).not.toHaveBeenCalled();
+  expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+  expect(args.runtime.readingPositionRef.current).toEqual({
+    nodeId: 'node-1',
+    selection: {
+      from: 0,
+      to: 4
+    }
+  });
+  expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }
