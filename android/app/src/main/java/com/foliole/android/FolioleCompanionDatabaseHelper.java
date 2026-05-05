@@ -569,17 +569,22 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private void saveSyncEvent(SQLiteDatabase database, String endpointUrl, String status, String message, String occurredAt) throws Exception {
         List<JSONObject> events = loadSyncEvents(database);
         JSONArray nextEvents = new JSONArray();
+        String normalizedStatus = normalizeSyncEventStatus(status);
+        String normalizedOccurredAt = occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim();
         JSONObject event = new JSONObject();
         event.put("id", UUID.randomUUID().toString());
         event.put("endpoint_url", endpointUrl == null || endpointUrl.trim().isEmpty() ? JSONObject.NULL : endpointUrl.trim());
-        event.put("status", normalizeSyncEventStatus(status));
-        event.put("message", message == null || message.trim().isEmpty() ? normalizeSyncEventStatus(status) : message.trim());
-        event.put("occurred_at", occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim());
+        event.put("status", normalizedStatus);
+        event.put("message", message == null || message.trim().isEmpty() ? normalizedStatus : message.trim());
+        event.put("occurred_at", normalizedOccurredAt);
         nextEvents.put(event);
         for (int index = 0; index < events.size() && index < 19; index += 1) {
             nextEvents.put(events.get(index));
         }
         saveMetaValue(database, WORKSPACE_SYNC_EVENTS_KEY, nextEvents.toString(), Instant.now().toString());
+        if ("completed".equals(normalizedStatus)) {
+            saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, normalizedOccurredAt, normalizedOccurredAt);
+        }
     }
 
     private String normalizeSyncEventStatus(String status) {
