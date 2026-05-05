@@ -1,7 +1,7 @@
 import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { isInboxNode } from '../features/nodes/model/specialNodes';
+import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
 import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
@@ -59,7 +59,7 @@ function buildDeleteNodePatch(args: {
 function collectRootDeleteTargets(state: WorkspaceState, nodeIds: string[], includeTrashed: boolean) {
   const validIds = nodeIds.filter((nodeId) => {
     const node = state.nodesById[nodeId];
-    if (!node || isInboxNode(node)) {
+    if (!node || isProtectedRootNode(node)) {
       return false;
     }
     return includeTrashed ? true : !state.trashedNodeIds.includes(nodeId);

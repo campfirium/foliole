@@ -6,6 +6,7 @@ import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -57,6 +58,7 @@ function createWorkspaceFixture(): WorkspaceState {
     deleteNodesPermanently: () => undefined,
     createRootNode: () => 'unused',
     createChildNode: () => 'unused',
+    createVirtualNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
     createQANodeFromSelection: () => null,
     moveNode: () => false,

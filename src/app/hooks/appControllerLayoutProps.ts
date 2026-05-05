@@ -47,6 +47,7 @@ export interface BuildControllerLayoutPropsArgs {
   ws: {
     activeNodeId: string | null;
     createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
+    createVirtualNode: () => string;
     createRootNode: (content?: string, kind?: NodeKind) => string;
     documentMaxWidth: number;
     exitReviewSession: () => void;

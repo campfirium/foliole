@@ -59,6 +59,7 @@ function createWorkspaceFixture(): WorkspaceState {
     deleteNodesPermanently: () => undefined,
     createRootNode: () => 'unused',
     createChildNode: () => 'unused',
+    createVirtualNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
     createQANodeFromSelection: () => null,
     moveNode: () => false,

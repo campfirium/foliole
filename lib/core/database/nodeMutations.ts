@@ -3,6 +3,11 @@ import type { NodeKind } from '../nodes/nodeKind.js';
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
+const SPECIAL_ROOT_NODE_RECORDS = {
+  'special-inbox': { title: 'Inbox' },
+  'special-virtual-root': { title: 'Virtual Nodes' }
+} as const;
+
 interface NodeAnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
@@ -125,6 +130,38 @@ function writeNodeReadingSnapshot(
   ]);
 }
 
+function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: keyof typeof SPECIAL_ROOT_NODE_RECORDS, updatedAt: string) {
+  const existingNode = driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [nodeId]);
+  if (existingNode) {
+    return;
+  }
+  driver.execute(
+    `INSERT INTO nodes (
+       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
+       content, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, ?, ?, NULL)`,
+    [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, updatedAt, updatedAt]
+  );
+}
+
+function ensureSpecialRootNodesForInput(driver: DatabaseDriver, input: UpsertNodeSnapshotInput) {
+  if (input.nodeId in SPECIAL_ROOT_NODE_RECORDS) {
+    ensureSpecialRootNode(driver, input.nodeId as keyof typeof SPECIAL_ROOT_NODE_RECORDS, input.updatedAt);
+  }
+  if (input.parentNodeId && input.parentNodeId in SPECIAL_ROOT_NODE_RECORDS) {
+    ensureSpecialRootNode(driver, input.parentNodeId as keyof typeof SPECIAL_ROOT_NODE_RECORDS, input.updatedAt);
+  }
+}
+
+function ensureSpecialRootNodesForOrder(driver: DatabaseDriver, nodeIds: string[]) {
+  const updatedAt = new Date().toISOString();
+  for (const nodeId of nodeIds) {
+    if (nodeId in SPECIAL_ROOT_NODE_RECORDS) {
+      ensureSpecialRootNode(driver, nodeId as keyof typeof SPECIAL_ROOT_NODE_RECORDS, updatedAt);
+    }
+  }
+}
+
 export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {
   const upsertNodeStatement = createUpsertNodeStatement(driver);
   const upsertNodeOrderStatement = createUpsertNodeOrderStatement(driver);
@@ -132,6 +169,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
 
   driver.transaction(() => {
+    ensureSpecialRootNodesForInput(driver, input);
     upsertNodeStatement.run([
       input.nodeId,
       input.parentNodeId,
@@ -164,6 +202,7 @@ export function replaceNodeOrder(driver: DatabaseDriver, nodeIds: string[]): voi
   const insertOrderStatement = driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 
   driver.transaction(() => {
+    ensureSpecialRootNodesForOrder(driver, nodeIds);
     deleteOrderStatement.run();
     for (let index = 0; index < nodeIds.length; index += 1) {
       insertOrderStatement.run([nodeIds[index], index]);

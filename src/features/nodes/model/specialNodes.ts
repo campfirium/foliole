@@ -1,6 +1,7 @@
 import type { Node } from './nodeTypes';
 
 export const INBOX_NODE_ID = 'special-inbox';
+export const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
 interface WorkspaceNodeSnapshot {
   activeNodeId: string | null;
@@ -25,12 +26,70 @@ export function createInboxNode(timestamp: string): Node {
   };
 }
 
+export function createVirtualRootNode(timestamp: string): Node {
+  return {
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    kind: 'folder',
+    specialKind: 'virtual-root',
+    title: 'Virtual Nodes',
+    isTitleManual: true,
+    content: '',
+    reveal: null,
+    review: null,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+}
+
 export function isInboxNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
   return node?.specialKind === 'inbox';
 }
 
+export function isVirtualRootNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
+  return node?.specialKind === 'virtual-root';
+}
+
+export function isVirtualNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
+  return node?.specialKind === 'virtual';
+}
+
+export function isProtectedRootNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
+  return isInboxNode(node) || isVirtualRootNode(node);
+}
+
+function resolveNodeSpecialKind(node: Node): Node['specialKind'] | undefined {
+  if (node.id === INBOX_NODE_ID) {
+    return 'inbox';
+  }
+  if (node.id === VIRTUAL_ROOT_NODE_ID) {
+    return 'virtual-root';
+  }
+  if (node.parentNodeId === VIRTUAL_ROOT_NODE_ID) {
+    return 'virtual';
+  }
+  return undefined;
+}
+
+function withResolvedSpecialKind(node: Node): Node {
+  const specialKind = resolveNodeSpecialKind(node);
+  if (!specialKind) {
+    return {
+      ...node,
+      specialKind: undefined
+    };
+  }
+  return {
+    ...node,
+    specialKind
+  };
+}
+
 export function ensureInboxNodeInSnapshot<T extends WorkspaceNodeSnapshot>(snapshot: T): T {
-  const existingInboxNode = snapshot.nodesById[INBOX_NODE_ID];
+  const resolvedNodesById = Object.fromEntries(
+    Object.entries(snapshot.nodesById).map(([nodeId, node]) => [nodeId, withResolvedSpecialKind(node)])
+  ) as Record<string, Node>;
+  const existingInboxNode = resolvedNodesById[INBOX_NODE_ID];
   const fallbackTimestamp = existingInboxNode?.updatedAt ?? new Date().toISOString();
   const inboxNode: Node = {
     ...createInboxNode(fallbackTimestamp),
@@ -45,14 +104,35 @@ export function ensureInboxNodeInSnapshot<T extends WorkspaceNodeSnapshot>(snaps
     reveal: null,
     review: null
   };
+  const existingVirtualRootNode = resolvedNodesById[VIRTUAL_ROOT_NODE_ID];
+  const virtualRootNode: Node = {
+    ...createVirtualRootNode(existingVirtualRootNode?.updatedAt ?? fallbackTimestamp),
+    ...existingVirtualRootNode,
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    kind: 'folder',
+    specialKind: 'virtual-root',
+    title: 'Virtual Nodes',
+    isTitleManual: true,
+    content: '',
+    reveal: null,
+    review: null
+  };
 
   return {
     ...snapshot,
-    nodeOrder: [INBOX_NODE_ID, ...snapshot.nodeOrder.filter((nodeId) => nodeId !== INBOX_NODE_ID)],
+    nodeOrder: [
+      INBOX_NODE_ID,
+      VIRTUAL_ROOT_NODE_ID,
+      ...snapshot.nodeOrder.filter((nodeId) => nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID)
+    ],
     nodesById: {
-      ...snapshot.nodesById,
-      [INBOX_NODE_ID]: inboxNode
+      ...resolvedNodesById,
+      [INBOX_NODE_ID]: inboxNode,
+      [VIRTUAL_ROOT_NODE_ID]: virtualRootNode
     },
-    trashedNodeIds: snapshot.trashedNodeIds.filter((nodeId) => nodeId !== INBOX_NODE_ID)
+    trashedNodeIds: snapshot.trashedNodeIds.filter(
+      (nodeId) => nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID
+    )
   };
 }

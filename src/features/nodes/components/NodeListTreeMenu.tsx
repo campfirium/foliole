@@ -3,8 +3,9 @@ import {
   findFolderTopicItemCommandByAppCommandId,
   resolveAllowedFolderTopicItemCommands
 } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_NODE_APP_COMMAND_ID, VIRTUAL_NODE_COMMAND } from '../../../../lib/core/nodes/virtualNodeCommands';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
-import { isInboxNode } from '../model/specialNodes';
+import { isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
@@ -17,6 +18,7 @@ interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
   createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
+  createVirtualNode: () => string;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
@@ -46,16 +48,32 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     isRootMenu,
     primaryTarget,
     primaryTargetId,
-    showDeleteAction: isSingleNodeTarget ? !isInboxNode(primaryTarget) : contextTargets.length > 0,
+    showDeleteAction: isSingleNodeTarget ? !isProtectedRootNode(primaryTarget) : contextTargets.length > 0,
     showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
-    showNodeImportActions: isSingleNodeTarget && !primaryTarget?.anchorLink
+    showNodeImportActions:
+      isSingleNodeTarget && !primaryTarget?.anchorLink && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
+    showVirtualCreateOnly: isSingleNodeTarget && isVirtualRootNode(primaryTarget)
   };
 }
 
-function createCreateNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: string | null, isRootMenu: boolean) {
+function createCreateNodeHandler(
+  props: NodeListTreeMenuProps,
+  primaryTargetId: string | null,
+  isRootMenu: boolean,
+  showVirtualCreateOnly: boolean
+) {
   return (commandId: string) => {
+    if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
+      props.createVirtualNode();
+      props.contextMenu.closeContextMenu();
+      return;
+    }
     const command = findFolderTopicItemCommandByAppCommandId(commandId);
     if (!command) {
+      props.contextMenu.closeContextMenu();
+      return;
+    }
+    if (showVirtualCreateOnly) {
       props.contextMenu.closeContextMenu();
       return;
     }
@@ -99,11 +117,22 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
 
   return (
     <NodeListContextMenu
-      createCommands={resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null)}
+      createCommands={
+        menuState.showVirtualCreateOnly
+          ? [VIRTUAL_NODE_COMMAND]
+          : isVirtualNode(menuState.primaryTarget)
+            ? []
+          : resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null)
+      }
       isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
       left={props.contextMenu.menuPosition.left}
       onClose={props.contextMenu.closeContextMenu}
-      onCreateCommand={createCreateNodeHandler(props, menuState.primaryTargetId, menuState.isRootMenu)}
+      onCreateCommand={createCreateNodeHandler(
+        props,
+        menuState.primaryTargetId,
+        menuState.isRootMenu,
+        menuState.showVirtualCreateOnly
+      )}
       onDeleteNode={() => (
         props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
         props.contextMenu.closeContextMenu()
@@ -123,7 +152,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
       showImportIntoNodeAction={menuState.showNodeImportActions}
       showMoveToNodeAction={menuState.showMoveToNodeAction}
       showPasteIntoNodeAction={menuState.showNodeImportActions}
-      showRootCreateOnly={menuState.isRootMenu}
+      showRootCreateOnly={menuState.isRootMenu || menuState.showVirtualCreateOnly}
       showReturnAction={menuState.isNotesMenu && hasReturnTargets(menuState.contextTargets, props.nodesById)}
       top={props.contextMenu.menuPosition.top}
     />

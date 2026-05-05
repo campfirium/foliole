@@ -26,6 +26,7 @@ it('renders node list actions inside the shared toolbar group', () => {
   expect(screen.getByRole('menuitem', { name: 'Create Folder' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Create Topic' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Create Item' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Create Virtual Node' })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
   expect(onCreateCommand).toHaveBeenCalledWith('workspace.createTopic');

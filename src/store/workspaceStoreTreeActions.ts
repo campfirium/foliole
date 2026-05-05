@@ -134,7 +134,8 @@ function buildCreatedChildState(
   nodeId: string,
   content: string,
   kind: NodeKind,
-  timestamp: string
+  timestamp: string,
+  specialKind?: NodeSnapshot['specialKind']
 ) {
   const untitledState = resolveCreatedNodeTitleState(
     deriveNodeTitleFromContent(content),
@@ -145,6 +146,7 @@ function buildCreatedChildState(
     id: nodeId,
     parentNodeId,
     kind,
+    specialKind,
     title: untitledState.title,
     content,
     anchorLink: null,
@@ -183,6 +185,7 @@ function buildCreatedChildState(
     }
   };
 }
+
 
 export function createChildNodeAction(
   set: WorkspaceSet,

@@ -1,6 +1,6 @@
 import { beforeEach, expect, it } from 'vitest';
 
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
@@ -19,7 +19,7 @@ it('creates child node under target parent', () => {
 
   expect(useWorkspaceStore.getState().nodesById[childId]?.parentNodeId).toBe(rootId);
   expect(useWorkspaceStore.getState().activeNodeId).toBe(childId);
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', rootId, childId]);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1', rootId, childId]);
 });
 
 it('keeps newest inbox child at the top of inbox children', () => {
@@ -30,6 +30,7 @@ it('keeps newest inbox child at the top of inbox children', () => {
     INBOX_NODE_ID,
     secondInboxChildId,
     firstInboxChildId,
+    VIRTUAL_ROOT_NODE_ID,
     'node-1'
   ]);
 });
@@ -43,7 +44,7 @@ it('moves regular node under new parent and reorders subtree block', () => {
 
   expect(moved).toBe(true);
   expect(useWorkspaceStore.getState().nodesById[folderBId]?.parentNodeId).toBe(folderAId);
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', folderAId, childId, folderBId]);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'node-1', folderAId, childId, folderBId]);
 });
 
 it('blocks moving derived nodes and cycle reparenting', () => {
@@ -83,6 +84,7 @@ it('moves selected root nodes before target and preserves relative order', () =>
   expect(useWorkspaceStore.getState().nodesById[rootDId]?.parentNodeId).toBeNull();
   expect(useWorkspaceStore.getState().nodeOrder).toEqual([
     INBOX_NODE_ID,
+    VIRTUAL_ROOT_NODE_ID,
     'node-1',
     rootAId,
     rootCId,
@@ -102,9 +104,37 @@ it('moves nodes into inbox as the newest inbox children', () => {
     INBOX_NODE_ID,
     rootId,
     firstInboxChildId,
+    VIRTUAL_ROOT_NODE_ID,
     'node-1'
   ]);
   expect(useWorkspaceStore.getState().nodesById[rootId]?.parentNodeId).toBe(INBOX_NODE_ID);
+});
+
+it('reorders virtual nodes within the fixed virtual root', () => {
+  const firstVirtualId = useWorkspaceStore.getState().createVirtualNode();
+  const secondVirtualId = useWorkspaceStore.getState().createVirtualNode();
+
+  const moved = useWorkspaceStore.getState().moveNodes([firstVirtualId], secondVirtualId, 'after');
+
+  expect(moved).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById[firstVirtualId]?.parentNodeId).toBe(VIRTUAL_ROOT_NODE_ID);
+  expect(useWorkspaceStore.getState().nodesById[secondVirtualId]?.parentNodeId).toBe(VIRTUAL_ROOT_NODE_ID);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([
+    INBOX_NODE_ID,
+    VIRTUAL_ROOT_NODE_ID,
+    secondVirtualId,
+    firstVirtualId,
+    'node-1'
+  ]);
+});
+
+it('blocks moving virtual nodes out of the fixed virtual root', () => {
+  const virtualNodeId = useWorkspaceStore.getState().createVirtualNode();
+
+  const moved = useWorkspaceStore.getState().moveNodes([virtualNodeId], INBOX_NODE_ID, 'child');
+
+  expect(moved).toBe(false);
+  expect(useWorkspaceStore.getState().nodesById[virtualNodeId]?.parentNodeId).toBe(VIRTUAL_ROOT_NODE_ID);
 });
 
 it('blocks placing folders under topics when moving nodes', () => {

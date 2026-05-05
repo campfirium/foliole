@@ -13,6 +13,7 @@ import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 
 vi.mock('./workspaceRuntimeSync', () => ({
+  syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -65,6 +66,7 @@ function createWorkspaceFixture(): WorkspaceState {
     deleteNodesPermanently: () => undefined,
     createRootNode: () => 'unused',
     createChildNode: () => 'unused',
+    createVirtualNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
     createQANodeFromSelection: () => null,
     moveNode: () => false,
@@ -161,7 +163,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: [nodeId],
-      nodeOrder: [INBOX_NODE_ID, 'node-1']
+      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
     });
   });
 
@@ -177,7 +179,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: expect.arrayContaining([firstNodeId, secondNodeId]),
-      nodeOrder: [INBOX_NODE_ID, 'node-1']
+      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
     });
   });
 

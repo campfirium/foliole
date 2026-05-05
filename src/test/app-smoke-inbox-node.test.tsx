@@ -130,6 +130,19 @@ it('shows Inbox in the node tree and opens its empty state landing', () => {
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
+it('shows the fixed virtual root in the node tree and opens its saved-node shell', () => {
+  render(<App />);
+
+  const virtualRootItem = within(getNodeListPanel()).getByRole('treeitem', { name: 'Virtual Nodes' });
+  expect(virtualRootItem).toBeInTheDocument();
+
+  fireEvent.click(virtualRootItem);
+
+  expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
+  expect(screen.getByText('0 items')).toBeInTheDocument();
+  expect(screen.getByText('This folder is empty')).toBeInTheDocument();
+});
+
 it('opens import management from the left toolbar instead of replacing Inbox', () => {
   render(<App />);
 

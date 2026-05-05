@@ -28,7 +28,7 @@ export interface NodeAnchorLink {
   kind: 'highlight' | 'cloze';
 }
 
-export type NodeSpecialKind = 'inbox';
+export type NodeSpecialKind = 'inbox' | 'virtual-root' | 'virtual';
 
 export interface Node {
   id: string;

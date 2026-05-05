@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../lib/core/nodes/virtualNodeCommands';
 
 export const APP_COMMAND_IDS = {
   toggleCommandPaletteMac: 'commandPalette.toggle.mac',
@@ -31,6 +32,7 @@ export const APP_COMMAND_IDS = {
   createFolder: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder,
   createTopic: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic,
   createItem: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem,
+  createVirtualNode: VIRTUAL_NODE_APP_COMMAND_ID,
   openSettings: 'workspace.openSettings',
   exportCurrentArticle: 'workspace.exportCurrentArticle',
   restartApp: 'workspace.restartApp',

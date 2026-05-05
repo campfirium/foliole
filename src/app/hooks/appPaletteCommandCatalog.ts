@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_NODE_COMMAND } from '../../../lib/core/nodes/virtualNodeCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 export interface BuildAppPaletteItemsOptions {
@@ -34,6 +35,12 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     section: 'Workspace',
     keywords: ['create', command.kind]
   })),
+  {
+    id: VIRTUAL_NODE_COMMAND.appCommandId,
+    title: VIRTUAL_NODE_COMMAND.paletteTitle,
+    section: 'Workspace',
+    keywords: ['create', 'virtual', 'saved', 'view']
+  },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Clipboard Import *', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },

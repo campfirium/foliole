@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -92,11 +93,11 @@ describe('workspace persistence runtime refresh', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     await useWorkspaceStore.persist.rehydrate();
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', 'node-1']);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-1']);
 
     await useWorkspaceStore.persist.rehydrate();
 
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', 'node-2', 'node-1']);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
     expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
       id: 'node-2',
       title: 'Node 2'
@@ -135,7 +136,7 @@ describe('workspace persistence runtime refresh', () => {
     await firstRehydrate;
     await secondRehydrate;
 
-    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', 'node-2', 'node-1']);
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
     expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(2);
   });
 });

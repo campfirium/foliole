@@ -2,7 +2,7 @@ import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nod
 import { isNodeContentLocked } from '../features/nodes/model/nodeContainers';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasNodeContent } from '../features/nodes/model/nodeTypes';
-import { isInboxNode } from '../features/nodes/model/specialNodes';
+import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
@@ -29,7 +29,12 @@ import {
 } from './workspaceStoreNodeSchedulerActions';
 import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
-import { createChildNodeAction, createMoveNodeAction, createMoveNodesAction } from './workspaceStoreTreeActions';
+import {
+  createChildNodeAction,
+  createMoveNodeAction,
+  createMoveNodesAction
+} from './workspaceStoreTreeActions';
+import { createVirtualNodeAction } from './workspaceStoreVirtualNodeActions';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
@@ -39,6 +44,7 @@ type WorkspaceNodeActions = Pick<
   | 'createHighlightNodeFromSelection'
   | 'createQANodeFromSelection'
   | 'createRootNode'
+  | 'createVirtualNode'
   | 'deleteNode'
   | 'deleteNodes'
   | 'deleteNodePermanently'
@@ -61,7 +67,7 @@ function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['u
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isInboxNode(node)) {
+      if (!node || isProtectedRootNode(node)) {
         return state;
       }
       const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
@@ -93,7 +99,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       if (
         !node ||
         !isNodeDocumentLoaded(node) ||
-        isInboxNode(node) ||
+        isProtectedRootNode(node) ||
         isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))
       ) {
         return state;
@@ -126,7 +132,7 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isInboxNode(node) || node.reveal === null) {
+      if (!node || isProtectedRootNode(node) || node.reveal === null) {
         return state;
       }
       const nextNode = {
@@ -157,7 +163,7 @@ function createDismissNodeAction(set: WorkspaceSet): WorkspaceNodeActions['dismi
       const node = state.nodesById[nodeId];
       if (
         !node ||
-        isInboxNode(node) ||
+        isProtectedRootNode(node) ||
         !hasNodeContent(node) ||
         !isReadingReviewItemNode(node) ||
         node.reading?.state === 'dismissed'
@@ -224,6 +230,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     createRootNode: createRootNodeAction(set, runtimeHandlers),
     createChildNode: createChildNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
+    createVirtualNode: createVirtualNodeAction(set, syncCreateNodeToRuntime, syncNodeOrderToRuntime),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
     createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
     moveNode: createMoveNodeAction(set, syncMovedNodes, syncNodeOrderToRuntime),

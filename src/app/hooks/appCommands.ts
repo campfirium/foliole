@@ -10,6 +10,7 @@ interface RunAppCommandActions {
   createFolder: () => void;
   createItem: () => void;
   createTopic: () => void;
+  createVirtualNode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
   openImportManagement: () => void;
   goBack: () => void;
@@ -65,6 +66,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.createFolder]: actions.createFolder,
     [APP_COMMAND_IDS.createTopic]: actions.createTopic,
     [APP_COMMAND_IDS.createItem]: actions.createItem,
+    [APP_COMMAND_IDS.createVirtualNode]: actions.createVirtualNode,
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.importFolder]: actions.importDirectory,
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,

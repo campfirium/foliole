@@ -1,9 +1,10 @@
 import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import type { VirtualNodeCommandDefinition } from '../../../../lib/core/nodes/virtualNodeCommands';
 
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '@/shared/ui';
 
 interface NodeListContextMenuProps {
-  createCommands: readonly FolderTopicItemCommandDefinition[];
+  createCommands: readonly (FolderTopicItemCommandDefinition | VirtualNodeCommandDefinition)[];
   isTrashMenu: boolean;
   left: number;
   onClose: () => void;

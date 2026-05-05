@@ -38,6 +38,7 @@ interface NodeListTreeData {
 function useNodeWorkspaceActions() {
   return {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
+    createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
     createRootNode: useWorkspaceStore((state) => state.createRootNode),
     deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
@@ -159,6 +160,7 @@ function useNodeListTreeModel({
     createChildNode: workspace.createChildNode,
     createGlobalNode: (content = '', kind: 'folder' | 'topic' | 'item' = 'topic') =>
       workspace.createChildNode(INBOX_NODE_ID, content, kind),
+    createVirtualNode: workspace.createVirtualNode,
     deleteNodes: workspace.deleteNodes,
     deleteNodesPermanently: workspace.deleteNodesPermanently,
     dismissNode: workspace.dismissNode,
@@ -209,6 +211,7 @@ export function NodeListTree({
       contextMenu={model.contextMenu}
       createChildNode={model.createChildNode}
       createGlobalNode={model.createGlobalNode}
+      createVirtualNode={model.createVirtualNode}
       deleteStatusLabel={deleteFeedback.deleteStatusLabel}
       deleteNodes={deleteFeedback.runDeleteNodes}
       deleteNodesPermanently={deleteFeedback.runDeleteNodesPermanently}

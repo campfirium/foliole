@@ -63,6 +63,7 @@ export interface WorkspaceState {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   createRootNode: (content?: string, kind?: NodeKind) => string;
   createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => string;
+  createVirtualNode: () => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,

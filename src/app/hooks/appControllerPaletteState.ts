@@ -20,6 +20,16 @@ function createDirectNodeCommand(kind: 'folder' | 'topic' | 'item', args: {
   };
 }
 
+function createVirtualNodeCommand(args: {
+  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return () => {
+    args.trash.closeTrashView();
+    args.ws.createVirtualNode();
+  };
+}
+
 function createExportCurrentArticleCommand(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
@@ -51,6 +61,7 @@ export function buildControllerPaletteState(args: {
     createFolder: createDirectNodeCommand('folder', args),
     createItem: createDirectNodeCommand('item', args),
     createTopic: createDirectNodeCommand('topic', args),
+    createVirtualNode: createVirtualNodeCommand(args),
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     deferReviewItem: args.ws.deferReviewItem,
     dismissReviewItem: args.ws.dismissReviewItem,

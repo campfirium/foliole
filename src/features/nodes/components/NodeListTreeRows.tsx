@@ -3,7 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent
 import { AppEmptyState } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
-import { isInboxNode } from '../model/specialNodes';
+import { isInboxNode, isVirtualRootNode } from '../model/specialNodes';
 import {
   isFsrsWorkspaceListNode,
   type WorkspaceListNodesById
@@ -40,6 +40,7 @@ function renderNodeListRow(
 ) {
   const node = props.nodesById[row.node.id];
   const isInbox = isInboxNode(node);
+  const isVirtualRoot = isVirtualRootNode(node);
   const isDerivedNode = Boolean(node?.anchorLink);
   const isReviewCard = isFsrsWorkspaceListNode(node);
   const nodeIconState = resolveNodeTreeRowIconState({
@@ -58,7 +59,7 @@ function renderNodeListRow(
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
       isCollapsed={props.collapsedNodeIds.has(row.node.id)}
       isDerived={isDerivedNode}
-      isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox}
+      isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox || isVirtualRoot}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={shouldFadeWholeRow}
       mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity() : 1}
@@ -82,7 +83,7 @@ function renderNodeListRow(
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}
       onKeyDown={onRowKeyDown}
-      onRename={isInbox ? undefined : props.onRename}
+      onRename={isInbox || isVirtualRoot ? undefined : props.onRename}
       onSelect={props.onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />

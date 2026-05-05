@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_NODE_COMMAND } from '../../../../lib/core/nodes/virtualNodeCommands';
 import {
   AppButton,
   AppDropdownMenu,
@@ -36,6 +37,9 @@ function renderCreateMenu(onCreateCommand: (commandId: string) => void) {
             {command.listLabel}
           </AppDropdownMenuItem>
         ))}
+        <AppDropdownMenuItem onSelect={() => onCreateCommand(VIRTUAL_NODE_COMMAND.appCommandId)}>
+          {VIRTUAL_NODE_COMMAND.listLabel}
+        </AppDropdownMenuItem>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

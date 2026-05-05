@@ -2,12 +2,12 @@ import { canCreateChildNodeKind } from '../../../../lib/core/nodes/folderTopicIt
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 
 import type { Node } from './nodeTypes';
-import { isInboxNode } from './specialNodes';
+import { isInboxNode, isVirtualRootNode, isVirtualNode } from './specialNodes';
 
 type MoveRuleNode = Pick<Node, 'anchorLink' | 'specialKind'> & { kind?: NodeKind };
 
 export function canNodeBeMoved(node: MoveRuleNode | null | undefined) {
-  if (!node || isInboxNode(node)) {
+  if (!node || isInboxNode(node) || isVirtualRootNode(node)) {
     return false;
   }
   if (node.anchorLink) {
@@ -21,6 +21,12 @@ export function canNodeAcceptMovedNode(
   movedNode: MoveRuleNode | null | undefined
 ) {
   if (!targetNode || targetNode.anchorLink || !movedNode) {
+    return false;
+  }
+  if (isVirtualRootNode(targetNode)) {
+    return isVirtualNode(movedNode);
+  }
+  if (isVirtualNode(movedNode)) {
     return false;
   }
   if (!movedNode.kind) {

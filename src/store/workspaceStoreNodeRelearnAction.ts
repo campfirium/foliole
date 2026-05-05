@@ -1,5 +1,5 @@
 import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
-import { isInboxNode } from '../features/nodes/model/specialNodes';
+import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import { syncNodeContentToRuntime, syncRelearnNodeToRuntime } from './workspaceRuntimeSync';
@@ -14,7 +14,7 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isInboxNode(node) || !hasNodeContent(node)) {
+      if (!node || isProtectedRootNode(node) || !hasNodeContent(node)) {
         return state;
       }
       if (!isFsrsReviewItemNode(node) && !(isReadingReviewItemNode(node) && node.reading !== null)) {

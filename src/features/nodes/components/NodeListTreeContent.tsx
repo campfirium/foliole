@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -24,6 +25,7 @@ interface NodeListPanelProps {
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
+  createVirtualNode: () => string;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   isTrashViewOpen: boolean;
@@ -120,6 +122,10 @@ function NodeListPanel(props: NodeListPanelProps) {
         isTrashViewOpen={props.isTrashViewOpen}
         onCollapseAll={props.collapse.collapseAllNotes}
         onCreateCommand={(commandId) => {
+          if (commandId === VIRTUAL_NODE_APP_COMMAND_ID) {
+            props.createVirtualNode();
+            return;
+          }
           const command = findFolderTopicItemCommandByAppCommandId(commandId);
           if (!command) {
             return;
@@ -158,6 +164,7 @@ interface NodeListTreeContentProps {
   contextMenu: NodeListContextMenuController;
   createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => string;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => string;
+  createVirtualNode: () => string;
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
@@ -192,6 +199,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         collapse={props.collapse}
         contextMenu={props.contextMenu}
         createGlobalNode={props.createGlobalNode}
+        createVirtualNode={props.createVirtualNode}
         deleteNodesPermanently={props.deleteNodesPermanently}
         deleteStatusLabel={props.deleteStatusLabel}
         isTrashViewOpen={props.isTrashViewOpen}

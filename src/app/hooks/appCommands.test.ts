@@ -10,6 +10,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createFolder: () => undefined,
     createItem: () => undefined,
     createTopic: () => undefined,
+    createVirtualNode: () => undefined,
     exportCurrentArticle: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
@@ -74,6 +75,7 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.createVirtualNode)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
@@ -149,6 +151,14 @@ describe('runAppCommand', () => {
     expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
 
     expect(createTopic).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs create virtual node through the shared command handler', () => {
+    const createVirtualNode = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.createVirtualNode, { createVirtualNode });
+
+    expect(createVirtualNode).toHaveBeenCalledTimes(1);
   });
 
   it('runs restart app through the shared command handler', () => {

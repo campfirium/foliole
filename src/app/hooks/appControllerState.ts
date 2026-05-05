@@ -18,6 +18,7 @@ export function useWorkspaceSelectors() {
   return {
     activeNodeId: useWorkspaceStore((state) => state.activeNodeId),
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
+    createVirtualNode: useWorkspaceStore((state) => state.createVirtualNode),
     createHighlightNodeFromSelection: useWorkspaceStore((state) => state.createHighlightNodeFromSelection),
     createQANodeFromSelection: useWorkspaceStore((state) => state.createQANodeFromSelection),
     createRootNode: useWorkspaceStore((state) => state.createRootNode),

@@ -1,7 +1,7 @@
 import { canNodeAcceptMovedNode } from './nodeMovementRules';
 import type { Node } from './nodeTypes';
 import { hasNodeContent } from './nodeTypes';
-import { isInboxNode } from './specialNodes';
+import { isInboxNode, isVirtualNode, isVirtualRootNode } from './specialNodes';
 
 function isVisibleNode(
   nodeId: string,
@@ -38,6 +38,12 @@ export function canNodeAcceptMovedChildren(
   void hiddenNodeIds;
   const node = nodesById[nodeId];
   if (!node) {
+    return false;
+  }
+  if (isVirtualRootNode(node)) {
+    return movedNodeId ? canNodeAcceptMovedNode(node, nodesById[movedNodeId]) : false;
+  }
+  if (isVirtualNode(node)) {
     return false;
   }
   if (!movedNodeId) {

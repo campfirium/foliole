@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
+import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+
 import { stagePendingNodeSync } from './workspacePendingNodeSync';
 import {
   createInitialWorkspaceState,
@@ -128,6 +130,35 @@ describe('workspace persistence storage', () => {
     const payload = raw ? (JSON.parse(raw) as { state: ReturnType<typeof createInitialWorkspaceState> }) : null;
     expect(payload?.state.nodesById['node-1']?.content).toBe('Persisted markdown');
     expect(payload?.state.trashedNodeIds).toContain(createdNodeId);
+  });
+
+  it('keeps the virtual root and saved virtual nodes after rehydrate', async () => {
+    const virtualNodeId = useWorkspaceStore.getState().createVirtualNode();
+    useWorkspaceStore.getState().updateNodeTitle(virtualNodeId, 'Saved virtual node');
+    await Promise.resolve();
+
+    const persisted = readPersistedWorkspacePayload()?.state;
+    expect(persisted?.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual Nodes');
+    expect(persisted?.nodesById[virtualNodeId]).toMatchObject({
+      parentNodeId: VIRTUAL_ROOT_NODE_ID,
+      title: 'Saved virtual node'
+    });
+
+    if (!persisted) {
+      throw new Error('expected persisted workspace payload');
+    }
+
+    await rehydrateWorkspaceFromLocalStorage(persisted);
+
+    expect(useWorkspaceStore.getState().nodesById[VIRTUAL_ROOT_NODE_ID]).toMatchObject({
+      title: 'Virtual Nodes',
+      specialKind: 'virtual-root'
+    });
+    expect(useWorkspaceStore.getState().nodesById[virtualNodeId]).toMatchObject({
+      parentNodeId: VIRTUAL_ROOT_NODE_ID,
+      title: 'Saved virtual node',
+      specialKind: 'virtual'
+    });
   });
 
   it('rehydrates workspace state from localStorage', async () => {
