@@ -14,6 +14,8 @@ vi.mock('./companionPairingStore.js', () => pairingStoreMock);
 import { handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import { clearCompanionPairRequests } from './companionPairingRequests.js';
 
+const TEST_PAIRING_PUBLIC_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString('base64url');
+
 afterEach(() => {
   clearCompanionPairRequests();
   vi.clearAllMocks();
@@ -41,7 +43,8 @@ it('does not revoke an existing paired device before desktop approval', async ()
     createRequest({
       device_id: 'android-1',
       device_kind: 'android-capacitor',
-      device_name: 'Pixel 9'
+      device_name: 'Pixel 9',
+      pairing_public_key: TEST_PAIRING_PUBLIC_KEY
     }),
     createResponse(),
     vi.fn(),

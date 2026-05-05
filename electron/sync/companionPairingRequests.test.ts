@@ -6,6 +6,8 @@ import {
   loadPendingCompanionPairRequests
 } from './companionPairingRequests.js';
 
+const TEST_PAIRING_PUBLIC_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString('base64url');
+
 describe('companion pairing requests', () => {
   afterEach(() => {
     clearCompanionPairRequests();
@@ -17,7 +19,8 @@ describe('companion pairing requests', () => {
       deviceId: 'android-1',
       deviceKind: 'android-capacitor',
       deviceName: 'Android companion android-1',
-      nowMs: Date.parse('2026-04-24T10:00:00.000Z')
+      nowMs: Date.parse('2026-04-24T10:00:00.000Z'),
+      pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
     });
 
     expect(loadPendingCompanionPairRequests(Date.parse('2026-04-24T10:00:01.000Z'))).toMatchObject([
@@ -37,7 +40,8 @@ describe('companion pairing requests', () => {
         deviceId: `android-${index}`,
         deviceKind: 'android-capacitor',
         deviceName: `Android companion ${index}`,
-        nowMs: nowMs + index
+        nowMs: nowMs + index,
+        pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
       })).toMatchObject({ created: true, rate_limited: false });
     }
 
@@ -46,7 +50,8 @@ describe('companion pairing requests', () => {
       deviceId: 'android-6',
       deviceKind: 'android-capacitor',
       deviceName: 'Android companion 6',
-      nowMs: nowMs + 5
+      nowMs: nowMs + 5,
+      pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
     })).toMatchObject({
       created: false,
       rate_limited: true

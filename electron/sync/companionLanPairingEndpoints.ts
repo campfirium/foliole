@@ -1,6 +1,7 @@
 import type http from 'node:http';
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
+import { encryptCompanionPairingSecret, isSupportedPairingPublicKey } from './companionPairingEncryption.js';
 import {
   consumeApprovedCompanionPairRequest,
   countPendingCompanionPairRequests,
@@ -78,11 +79,15 @@ export async function handlePairRequest(
     deviceKind: approvedRequest.device_kind,
     deviceName: approvedRequest.device_name
   });
+  const encryptedDeviceSecret = await encryptCompanionPairingSecret({
+    clientPublicKey: approvedRequest.pairing_public_key,
+    deviceSecret: paired.device_secret
+  });
   writePairingStatus(updatePairingStatus);
   writeJson(request, response, 200, {
     app_version: appVersion,
     device_id: paired.device_id,
-    device_secret: paired.device_secret,
+    encrypted_device_secret: encryptedDeviceSecret,
     paired_at: paired.paired_at,
     peer_id: peerId
   });
@@ -106,7 +111,8 @@ export async function handlePairRequestCreate(
   const deviceId = typeof payload.device_id === 'string' ? payload.device_id.trim() : '';
   const deviceKind = typeof payload.device_kind === 'string' ? payload.device_kind.trim() : '';
   const deviceName = typeof payload.device_name === 'string' ? payload.device_name.trim() : '';
-  if (!deviceId || !deviceKind || !deviceName) {
+  const pairingPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key.trim() : '';
+  if (!deviceId || !deviceKind || !deviceName || !isSupportedPairingPublicKey(pairingPublicKey)) {
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
@@ -114,7 +120,8 @@ export async function handlePairRequestCreate(
     clientAddress: normalizeClientAddress(request.socket.remoteAddress),
     deviceId,
     deviceKind,
-    deviceName
+    deviceName,
+    pairingPublicKey
   });
   if (created.rate_limited) {
     writeJson(request, response, 429, {

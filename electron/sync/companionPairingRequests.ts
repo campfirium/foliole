@@ -10,6 +10,7 @@ export interface PendingCompanionPairRequest {
   device_kind: string;
   device_name: string;
   expires_at: string;
+  pairing_public_key: string;
   pair_request_id: string;
   requested_at: string;
   status: 'approved' | 'pending' | 'rejected';
@@ -56,6 +57,7 @@ function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionP
     device_kind: request.device_kind,
     device_name: request.device_name,
     expires_at: request.expires_at,
+    pairing_public_key: request.pairing_public_key,
     pair_request_id: request.pair_request_id,
     requested_at: request.requested_at,
     status: request.status
@@ -68,6 +70,7 @@ export function createCompanionPairRequest(args: {
   deviceKind: string;
   deviceName: string;
   nowMs?: number;
+  pairingPublicKey: string;
 }) {
   const nowMs = args.nowMs ?? Date.now();
   pruneExpiredRequests(nowMs);
@@ -75,6 +78,7 @@ export function createCompanionPairRequest(args: {
     return request.device_id === args.deviceId.trim() && request.status === 'pending';
   });
   if (existingPendingRequest) {
+    existingPendingRequest.pairing_public_key = args.pairingPublicKey.trim();
     return {
       created: false,
       rate_limited: false,
@@ -97,6 +101,7 @@ export function createCompanionPairRequest(args: {
     device_name: args.deviceName.trim(),
     expires_at: new Date(expiresAtMs).toISOString(),
     expires_at_ms: expiresAtMs,
+    pairing_public_key: args.pairingPublicKey.trim(),
     pair_request_id: randomUUID(),
     requested_at: new Date(nowMs).toISOString(),
     status: 'pending'

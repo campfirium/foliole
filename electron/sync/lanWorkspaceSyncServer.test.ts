@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
+
 const electronMock = vi.hoisted(() => ({
   userDataPath: `/tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
 }));
@@ -54,11 +56,13 @@ function signRequest(args: { deviceId: string; method: string; pathWithQuery: st
 }
 
 async function pairDevice(endpoint: string) {
+  const clientKeyPair = await createTestPairingKeyPair();
   const createResponse = await fetch(`${endpoint}/companion/pair-requests`, {
     body: JSON.stringify({
       device_id: 'android-test-device',
       device_kind: 'android',
-      device_name: 'Pixel Test'
+      device_name: 'Pixel Test',
+      pairing_public_key: clientKeyPair.publicKey
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
@@ -79,7 +83,17 @@ async function pairDevice(endpoint: string) {
     method: 'POST'
   });
   expect(finalizeResponse.status).toBe(200);
-  return (await finalizeResponse.json()) as { device_id: string; device_secret: string };
+  const payload = await finalizeResponse.json() as {
+    device_id: string;
+    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
+  };
+  return {
+    device_id: payload.device_id,
+    device_secret: await decryptTestPairingSecret({
+      encrypted: payload.encrypted_device_secret,
+      privateKey: clientKeyPair.privateKey
+    })
+  };
 }
 
 async function resetLanWorkspaceSyncServerTestState() {
@@ -237,12 +251,15 @@ describe('lan workspace sync server', () => {
       peerId: 'desktop-local'
     });
     const endpoint = `http://127.0.0.1:${status.port}`;
+    const firstPairingKey = await createTestPairingKeyPair();
+    const secondPairingKey = await createTestPairingKeyPair();
 
     const response = await fetch(`${endpoint}/companion/pair-requests`, {
       body: JSON.stringify({
         device_id: 'android-test-device',
         device_kind: 'android-capacitor',
-        device_name: 'Android companion android-test-device'
+        device_name: 'Android companion android-test-device',
+        pairing_public_key: firstPairingKey.publicKey
       }),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST'
@@ -255,7 +272,8 @@ describe('lan workspace sync server', () => {
       body: JSON.stringify({
         device_id: 'android-test-device',
         device_kind: 'android-capacitor',
-        device_name: 'Android companion android-test-device'
+        device_name: 'Android companion android-test-device',
+        pairing_public_key: secondPairingKey.publicKey
       }),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST'

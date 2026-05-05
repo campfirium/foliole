@@ -76,9 +76,17 @@ export interface CompanionWorkspacePairRequestPayload {
   status: 'pending';
 }
 
+export interface CompanionPairingSecretPayload {
+  algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM';
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  server_public_key: string;
+}
+
 export interface CompanionWorkspacePairPayload {
   device_id: string;
-  device_secret: string;
+  encrypted_device_secret: CompanionPairingSecretPayload;
   paired_at: string;
   peer_id: string;
 }

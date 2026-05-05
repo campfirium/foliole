@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
 import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
@@ -30,8 +31,14 @@ vi.mock('./workspaceSyncAppliedEvents.js', () => ({
 }));
 
 async function pairDevice(endpoint: string) {
+  const clientKeyPair = await createTestPairingKeyPair();
   const createResponse = await fetch(`${endpoint}/companion/pair-requests`, {
-    body: JSON.stringify({ device_id: 'android-test-device', device_kind: 'android', device_name: 'Pixel Test' }),
+    body: JSON.stringify({
+      device_id: 'android-test-device',
+      device_kind: 'android',
+      device_name: 'Pixel Test',
+      pairing_public_key: clientKeyPair.publicKey
+    }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
   });
@@ -43,7 +50,17 @@ async function pairDevice(endpoint: string) {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
   });
-  return (await finalizeResponse.json()) as { device_id: string; device_secret: string };
+  const payload = await finalizeResponse.json() as {
+    device_id: string;
+    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
+  };
+  return {
+    device_id: payload.device_id,
+    device_secret: await decryptTestPairingSecret({
+      encrypted: payload.encrypted_device_secret,
+      privateKey: clientKeyPair.privateKey
+    })
+  };
 }
 
 async function resetTestState() {

@@ -19,6 +19,12 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 
+vi.mock('./companionPairingEncryption', () => ({
+  createCompanionPairingPublicKey: vi.fn(async () => 'client-public-key'),
+  decryptCompanionPairingSecret: vi.fn(async () => 'test-secret'),
+  dropCompanionPairingPrivateKey: vi.fn()
+}));
+
 import {
   loadCompanionDiscovery,
   loadCompanionPairingState,
@@ -27,13 +33,44 @@ import {
 } from './companionWorkspaceSync';
 import { mockFetchJson, resetCompanionWorkspaceSyncTestState } from './companionWorkspaceSync.testSupport';
 
+function createEncryptedSecretFixture() {
+  return {
+    algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM' as const,
+    ciphertext: 'ciphertext',
+    iv: 'iv',
+    salt: 'salt',
+    server_public_key: 'server-public-key'
+  };
+}
+
 function mockApprovedDesktopPairing(deviceId = 'web-preview-device') {
   mockFetchJson({
     device_id: deviceId,
-    device_secret: 'test-secret',
+    encrypted_device_secret: createEncryptedSecretFixture(),
     paired_at: '2026-04-22T12:00:00.000Z',
     peer_id: 'desktop-local'
   });
+}
+
+function mockNativePairingHttp() {
+  capacitorMock.plugin.desktopHttpRequest
+    .mockResolvedValueOnce({
+      body: JSON.stringify({
+        expires_at: '2026-04-22T12:02:00.000Z',
+        pair_request_id: 'pair-request-1',
+        status: 'pending'
+      }),
+      status: 202
+    })
+    .mockResolvedValueOnce({
+      body: JSON.stringify({
+        device_id: 'android-test-device',
+        encrypted_device_secret: createEncryptedSecretFixture(),
+        paired_at: '2026-04-22T12:00:00.000Z',
+        peer_id: 'desktop-local'
+      }),
+      status: 200
+    });
 }
 
 beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
@@ -70,15 +107,7 @@ describe('companionWorkspaceSync pairing', () => {
 it('verifies native pairing credentials are readable after saving', async () => {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
-  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
-    body: JSON.stringify({
-      device_id: 'android-test-device',
-      device_secret: 'test-secret',
-      paired_at: '2026-04-22T12:00:00.000Z',
-      peer_id: 'desktop-local'
-    }),
-    status: 200
-  });
+  mockNativePairingHttp();
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
@@ -94,13 +123,19 @@ it('verifies native pairing credentials are readable after saving', async () => 
     paired_at: '2026-04-22T12:00:00.000Z'
   });
 
+  await requestCompanionPairing({
+    deviceId: 'android-test-device',
+    deviceKind: 'android-capacitor',
+    deviceName: 'Pixel 9',
+    endpointUrl: 'http://10.0.2.2:38641'
+  });
   await expect(pairCompanionWithDesktop({
     deviceKind: 'android-capacitor',
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
   })).resolves.toMatchObject({ is_paired: true, device_name: 'Pixel 9' });
-  expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledWith({
+  expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenLastCalledWith({
     body: JSON.stringify({ pair_request_id: 'pair-request-1' }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
@@ -112,18 +147,16 @@ it('verifies native pairing credentials are readable after saving', async () => 
 it('fails native pairing when credentials cannot be read back locally', async () => {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
-  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
-    body: JSON.stringify({
-      device_id: 'android-test-device',
-      device_secret: 'test-secret',
-      paired_at: '2026-04-22T12:00:00.000Z',
-      peer_id: 'desktop-local'
-    }),
-    status: 200
-  });
+  mockNativePairingHttp();
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({ is_paired: false });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({ is_paired: false });
 
+  await requestCompanionPairing({
+    deviceId: 'android-test-device',
+    deviceKind: 'android-capacitor',
+    deviceName: 'Pixel 9',
+    endpointUrl: 'http://10.0.2.2:38641'
+  });
   await expect(pairCompanionWithDesktop({
     deviceKind: 'android-capacitor',
     deviceName: 'Pixel 9',

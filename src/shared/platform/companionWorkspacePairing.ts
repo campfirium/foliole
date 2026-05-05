@@ -1,5 +1,10 @@
 import type { NativeCompanionPairingState } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import {
+  createCompanionPairingPublicKey,
+  decryptCompanionPairingSecret,
+  dropCompanionPairingPrivateKey
+} from './companionPairingEncryption';
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
@@ -16,6 +21,7 @@ import {
 } from './companionWorkspaceSyncBridge';
 
 const WEB_PAIRING_STATE_KEY = 'foliole-companion-pairing-state';
+const pairingKeyIdsByRequestId = new Map<string, string>();
 
 type WebCompanionPairingState = NativeCompanionPairingState & { device_secret?: string };
 
@@ -151,19 +157,25 @@ export async function loadCompanionDiscovery(endpointUrl: string) {
 
 export async function requestCompanionPairing(args: RequestCompanionPairingArgs) {
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
+  const pairingKeyId = crypto.randomUUID();
+  const pairingPublicKey = await createCompanionPairingPublicKey(pairingKeyId);
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
       device_id: args.deviceId,
       device_kind: args.deviceKind,
-      device_name: args.deviceName
+      device_name: args.deviceName,
+      pairing_public_key: pairingPublicKey
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
   });
   if (response.status !== 202 && response.status !== 409) {
+    dropCompanionPairingPrivateKey(pairingKeyId);
     throw new Error(`Desktop pairing request failed with ${response.status}.`);
   }
-  return (await response.json()) as RequestCompanionPairingResponse;
+  const payload = (await response.json()) as RequestCompanionPairingResponse;
+  pairingKeyIdsByRequestId.set(payload.pair_request_id, pairingKeyId);
+  return payload;
 }
 
 export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArgs) {
@@ -186,12 +198,18 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     throw new Error(`Desktop pairing failed with ${response.status}: ${reason}.`);
   }
   const payload = (await response.json()) as PairCompanionWithDesktopResponse;
+  const pairingKeyId = pairingKeyIdsByRequestId.get(args.pairRequestId);
+  if (!pairingKeyId) {
+    throw new Error('Companion pairing key is no longer available.');
+  }
+  const deviceSecret = await decryptCompanionPairingSecret(pairingKeyId, payload.encrypted_device_secret);
+  pairingKeyIdsByRequestId.delete(args.pairRequestId);
   if (!isNativeAndroidCompanionRuntime()) {
     return writeWebPairingState({
       device_id: payload.device_id,
       device_kind: args.deviceKind,
       device_name: args.deviceName,
-      device_secret: payload.device_secret,
+      device_secret: deviceSecret,
       is_paired: true,
       paired_at: payload.paired_at
     });
@@ -200,7 +218,7 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     device_id: payload.device_id,
     device_kind: args.deviceKind,
     device_name: args.deviceName,
-    device_secret: payload.device_secret,
+    device_secret: deviceSecret,
     paired_at: payload.paired_at
   });
   const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
