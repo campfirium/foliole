@@ -78,6 +78,19 @@ function readNextNodePosition(driver: DatabaseDriver) {
   return typeof row?.position === 'number' ? row.position + 1 : 0;
 }
 
+function readInboxTopPosition(driver: DatabaseDriver, ignoredNodeId?: string) {
+  const ignoredClause = ignoredNodeId ? 'AND n.id <> ?' : '';
+  const row = driver.queryOne<{ position: number | null }>(
+    `SELECT MIN(o.position) AS position
+     FROM nodes n
+     JOIN node_order o ON o.node_id = n.id
+     WHERE n.parent_id = ?
+       ${ignoredClause}`,
+    ignoredNodeId ? [INBOX_NODE_ID, ignoredNodeId] : [INBOX_NODE_ID]
+  );
+  return typeof row?.position === 'number' ? row.position - 1 : readNextNodePosition(driver);
+}
+
 function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
   const existingInbox = driver.queryOne<ExistingInboxRow>('SELECT id FROM nodes WHERE id = ?', [INBOX_NODE_ID]);
   if (existingInbox) {
@@ -95,7 +108,7 @@ function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
 function writeNewNode(driver: DatabaseDriver, record: PersistedImportRecord, content: string) {
   ensureInboxNode(driver, record.importedAt);
   const nodeId = `node-${randomUUID()}`;
-  const position = readNextNodePosition(driver);
+  const position = readInboxTopPosition(driver);
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, priority, desired_retention, title, is_title_manual,
@@ -114,6 +127,15 @@ function updateExistingNode(driver: DatabaseDriver, existingNode: ExistingNodeRo
      WHERE id = ?`,
     [record.sourceName, content, record.importedAt, existingNode.id]
   );
+  if (existingNode.parent_id === INBOX_NODE_ID) {
+    const nextInboxTopPosition = readInboxTopPosition(driver, existingNode.id);
+    if (typeof existingNode.position === 'number') {
+      driver.execute('UPDATE node_order SET position = ? WHERE node_id = ?', [nextInboxTopPosition, existingNode.id]);
+    } else {
+      driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [existingNode.id, nextInboxTopPosition]);
+    }
+    return existingNode.id;
+  }
   if (typeof existingNode.position !== 'number') {
     driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [existingNode.id, readNextNodePosition(driver)]);
   }

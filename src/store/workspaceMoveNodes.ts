@@ -1,6 +1,7 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
-import { isNodeInSubtree } from './workspaceNodeTreeOrder';
+import { isNodeInSubtree, resolveFirstChildInsertIndex } from './workspaceNodeTreeOrder';
 
 export type NodeDropIntent = 'before' | 'after' | 'child' | 'root';
 
@@ -64,6 +65,9 @@ export function resolveInsertIndex(
     return remainingNodeOrder.length;
   }
   if (intent === 'child') {
+    if (targetNodeId === INBOX_NODE_ID) {
+      return resolveFirstChildInsertIndex(remainingNodeOrder, targetNodeId, nodesById);
+    }
     return resolveChildInsertIndex(remainingNodeOrder, targetNodeId, nodesById);
   }
   if (intent === 'before') {

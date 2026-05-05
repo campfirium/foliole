@@ -43,6 +43,8 @@ it('shows total descendant counts at the end of node rows', () => {
 
   expect(within(listPanel).getByRole('treeitem', { name: 'Root' })).toHaveTextContent('Root(3)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).toHaveTextContent('Child 1(1)');
-  expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).toHaveTextContent('Grandchild(0)');
-  expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).toHaveTextContent('Child 2(0)');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).toHaveTextContent('Grandchild');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).not.toHaveTextContent('(0)');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).toHaveTextContent('Child 2');
+  expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).not.toHaveTextContent('(0)');
 });

@@ -22,6 +22,18 @@ it('creates child node under target parent', () => {
   expect(useWorkspaceStore.getState().nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', rootId, childId]);
 });
 
+it('keeps newest inbox child at the top of inbox children', () => {
+  const firstInboxChildId = useWorkspaceStore.getState().createChildNode(INBOX_NODE_ID, 'First');
+  const secondInboxChildId = useWorkspaceStore.getState().createChildNode(INBOX_NODE_ID, 'Second');
+
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([
+    INBOX_NODE_ID,
+    secondInboxChildId,
+    firstInboxChildId,
+    'node-1'
+  ]);
+});
+
 it('moves regular node under new parent and reorders subtree block', () => {
   const folderAId = useWorkspaceStore.getState().createRootNode('A');
   const folderBId = useWorkspaceStore.getState().createRootNode('B');
@@ -77,4 +89,20 @@ it('moves selected root nodes before target and preserves relative order', () =>
     rootDId,
     rootBId
   ]);
+});
+
+it('moves nodes into inbox as the newest inbox children', () => {
+  const firstInboxChildId = useWorkspaceStore.getState().createChildNode(INBOX_NODE_ID, 'Old inbox item');
+  const rootId = useWorkspaceStore.getState().createRootNode('Moved into inbox');
+
+  const moved = useWorkspaceStore.getState().moveNodes([rootId], INBOX_NODE_ID, 'child');
+
+  expect(moved).toBe(true);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([
+    INBOX_NODE_ID,
+    rootId,
+    firstInboxChildId,
+    'node-1'
+  ]);
+  expect(useWorkspaceStore.getState().nodesById[rootId]?.parentNodeId).toBe(INBOX_NODE_ID);
 });

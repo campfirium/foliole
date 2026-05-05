@@ -1,5 +1,5 @@
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
-import { isInboxNode } from '../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, isInboxNode } from '../features/nodes/model/specialNodes';
 
 import {
   isSameNodeOrder,
@@ -9,6 +9,7 @@ import {
 } from './workspaceMoveNodes';
 import {
   collectOrderedSubtreeIds,
+  insertNodeBlockAsFirstChild,
   insertNodeBlockUnderParent,
   isNodeInSubtree
 } from './workspaceNodeTreeOrder';
@@ -185,12 +186,10 @@ export function createChildNodeAction(
         updatedAt: timestamp
       };
       createdNode = nextNode;
-      const insertedNodeOrder = insertNodeBlockUnderParent(
-        state.nodeOrder,
-        [nodeId],
-        parentNodeId,
-        state.nodesById
-      );
+      const insertedNodeOrder =
+        parentNodeId === INBOX_NODE_ID
+          ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)
+          : insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, state.nodesById);
       const nextNodesById = {
         ...state.nodesById,
         [nodeId]: nextNode

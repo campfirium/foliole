@@ -37,9 +37,11 @@ export function renderNodeTreeRowContent(props: {
     >
       <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} />
       {renderNodeLabel(props.label, props.rename)}
-      <span aria-hidden="true" className="flex-none text-foreground/55">
-        ({props.descendantCount})
-      </span>
+      {props.descendantCount > 0 ? (
+        <span aria-hidden="true" className="flex-none text-foreground/55">
+          ({props.descendantCount})
+        </span>
+      ) : null}
     </span>
   );
 }

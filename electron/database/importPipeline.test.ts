@@ -108,6 +108,18 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
   return { childRows, nodeRow, runRows, sourceRow };
 }
 
+function readInboxChildTitlesByOrder() {
+  return openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT n.title
+       FROM nodes n
+       JOIN node_order o ON o.node_id = n.id
+       WHERE n.parent_id = 'special-inbox'
+       ORDER BY o.position ASC`
+    )
+    .all() as Array<{ title: string }>;
+}
+
 it('persists new, duplicate, updated and degraded import semantics with traceability', () => {
   const first = runPreparedImport(createImport('# Imported\nBody', '2026-03-22T10:00:00.000Z'));
   const duplicate = runPreparedImport(createImport('# Imported\nBody', '2026-03-22T10:05:00.000Z'));
@@ -255,5 +267,24 @@ it('creates imported child nodes for matched sidecar highlights during the first
       node_id: imported.nodeId,
       result_status: 'degraded'
     }
+  ]);
+});
+
+it('keeps the newest inbox import at the top of inbox children', () => {
+  runPreparedImport(createImport('# First\nBody', '2026-03-22T10:00:00.000Z'));
+  runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: '# Second\nBody',
+      degradedReason: null,
+      fileName: 'second.md',
+      filePath: '/tmp/second.md',
+      importedAt: '2026-03-22T10:05:00.000Z',
+      kind: 'markdown'
+    })
+  );
+
+  expect(readInboxChildTitlesByOrder()).toEqual([
+    { title: 'second.md' },
+    { title: 'note.md' }
   ]);
 });
