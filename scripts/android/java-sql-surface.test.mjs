@@ -10,28 +10,16 @@ const SQL_LITERAL_PATTERN = /"[^"\n]*(?:SELECT|PRAGMA|sqlite_master)[^"\n]*"/g;
 
 const ALLOWED_SQL_LITERALS = [
   {
-    file: 'FolioleCompanionAppDataStore.java',
-    literal: '"SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ?"'
-  },
-  {
     file: 'FolioleCompanionDatabaseBackup.java',
     literal: '"PRAGMA wal_checkpoint(FULL)"'
   },
   {
-    file: 'FolioleCompanionDatabaseMigration.java',
-    literal: '"SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ?"'
+    file: 'FolioleCompanionSqliteRuntime.java',
+    literal: '"SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ? LIMIT 1"'
   },
   {
-    file: 'FolioleCompanionDatabaseMigration.java',
+    file: 'FolioleCompanionSqliteRuntime.java',
     literal: '"PRAGMA table_info("'
-  },
-  {
-    file: 'FolioleCompanionTextBodyBlobs.java',
-    literal: '"SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ? LIMIT 1"'
-  },
-  {
-    file: 'FolioleCompanionWorkspaceSnapshotExporter.java',
-    literal: '"SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ? LIMIT 1"'
   }
 ];
 
@@ -80,11 +68,8 @@ function isAllowedAccessLine(entry) {
     );
   }
   return [
-    'FolioleCompanionAppDataStore.java',
     'FolioleCompanionDatabaseBackup.java',
-    'FolioleCompanionDatabaseMigration.java',
-    'FolioleCompanionTextBodyBlobs.java',
-    'FolioleCompanionWorkspaceSnapshotExporter.java'
+    'FolioleCompanionSqliteRuntime.java'
   ].includes(entry.file);
 }
 

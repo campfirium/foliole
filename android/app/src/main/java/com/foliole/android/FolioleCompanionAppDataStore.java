@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
@@ -60,18 +59,9 @@ final class FolioleCompanionAppDataStore {
 
     private static void clearTables(Context context, SQLiteDatabase database) throws Exception {
         for (ClearMutation mutation : CLEAR_MUTATIONS) {
-            if (tableExists(database, mutation.table)) {
+            if (FolioleCompanionSqliteRuntime.tableExists(database, mutation.table)) {
                 FolioleCompanionNamedMutationStore.execute(context, database, mutation.statementName, null);
             }
-        }
-    }
-
-    private static boolean tableExists(SQLiteDatabase database, String table) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
-            new String[] { table }
-        )) {
-            return cursor.moveToFirst();
         }
     }
 

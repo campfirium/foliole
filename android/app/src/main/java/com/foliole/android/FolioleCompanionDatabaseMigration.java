@@ -64,7 +64,10 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     private static void migrateSyncObjectStateSequence(Context context, SQLiteDatabase database) {
-        if (!tableExists(database, "sync_object_state") || columnExists(database, "sync_object_state", "state_seq")) {
+        if (
+            !FolioleCompanionSqliteRuntime.tableExists(database, "sync_object_state") ||
+            FolioleCompanionSqliteRuntime.columnExists(database, "sync_object_state", "state_seq")
+        ) {
             return;
         }
         database.beginTransaction();
@@ -115,14 +118,14 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
-        if (columnExists(database, "sync_object_state", "base_content_hash")) {
+        if (FolioleCompanionSqliteRuntime.columnExists(database, "sync_object_state", "base_content_hash")) {
             return;
         }
         installMigrationStatement(context, database, "syncObjectStateBaseContentHashColumn", "Failed to add sync base content hash column.");
     }
 
     private static void addNodeViewStateSourceIfMissing(Context context, SQLiteDatabase database) {
-        if (columnExists(database, "node_view_state", "source")) {
+        if (FolioleCompanionSqliteRuntime.columnExists(database, "node_view_state", "source")) {
             return;
         }
         installMigrationStatement(context, database, "nodeViewStateSourceColumn", "Failed to add node view state source column.");
@@ -146,23 +149,4 @@ final class FolioleCompanionDatabaseMigration {
         }
     }
 
-    private static boolean tableExists(SQLiteDatabase database, String table) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
-            new String[] { table }
-        )) {
-            return cursor.moveToFirst();
-        }
-    }
-
-    private static boolean columnExists(SQLiteDatabase database, String table, String column) {
-        try (Cursor cursor = database.rawQuery("PRAGMA table_info(" + table + ")", null)) {
-            while (cursor.moveToNext()) {
-                if (column.equals(cursor.getString(cursor.getColumnIndexOrThrow("name")))) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 }

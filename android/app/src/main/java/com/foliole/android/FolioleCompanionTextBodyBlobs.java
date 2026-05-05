@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.nio.charset.StandardCharsets;
@@ -12,7 +11,10 @@ final class FolioleCompanionTextBodyBlobs {
     private FolioleCompanionTextBodyBlobs() {}
 
     static String upsert(Context context, SQLiteDatabase database, String content, String now) throws Exception {
-        if (!tableExists(database, "content_blobs") || !tableExists(database, "content_blob_data")) {
+        if (
+            !FolioleCompanionSqliteRuntime.tableExists(database, "content_blobs") ||
+            !FolioleCompanionSqliteRuntime.tableExists(database, "content_blob_data")
+        ) {
             return null;
         }
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
@@ -34,15 +36,6 @@ final class FolioleCompanionTextBodyBlobs {
         });
         FolioleCompanionNamedMutationStore.execute(context, database, "textBodyBlobDataInsert", new Object[] { hash, bytes });
         return hash;
-    }
-
-    private static boolean tableExists(SQLiteDatabase database, String tableName) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
-            new String[] { tableName }
-        )) {
-            return cursor.moveToFirst();
-        }
     }
 
     private static String sha256(byte[] bytes) throws Exception {

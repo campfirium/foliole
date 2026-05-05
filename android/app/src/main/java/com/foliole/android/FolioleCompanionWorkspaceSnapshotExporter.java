@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
@@ -24,7 +23,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         if (orderedNodeIds.length() == 0) {
             return null;
         }
-        boolean canReadBodyBlobData = hasTable(database, "content_blob_data");
+        boolean canReadBodyBlobData = FolioleCompanionSqliteRuntime.tableExists(database, "content_blob_data");
         String contentExpression = canReadBodyBlobData ? "COALESCE(CAST(cbd.data AS TEXT), n.content)" : "n.content";
         String contentBlobJoin = canReadBodyBlobData
             ? "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash "
@@ -78,15 +77,6 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         replacements.put("__CONTENT_BLOB_JOIN__", contentBlobJoin);
         replacements.put("__BODY_STATUS_EXPRESSION__", bodyStatusExpression);
         return replacements;
-    }
-
-    private static boolean hasTable(SQLiteDatabase database, String tableName) {
-        try (Cursor cursor = database.rawQuery(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
-            new String[] { tableName }
-        )) {
-            return cursor.moveToFirst();
-        }
     }
 
     private static JSONArray loadOrderedNodeIds(Context context, SQLiteDatabase database) throws Exception {
