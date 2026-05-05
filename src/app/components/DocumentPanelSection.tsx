@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { getNodeKindLabel } from '../../features/nodes/model/nodeKindLabel';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
@@ -97,6 +98,7 @@ function getDocumentPanelBodyProps(
     editorNodeId: props.editorNodeId,
     editorNodeViewState: props.editorNodeViewState,
     emptyState,
+    formalKindLabel: props.activeNodeId ? getNodeKindLabel(props.nodesById[props.activeNodeId]?.kind ?? 'topic') : undefined,
     hasAnswerSection,
     isDocumentResizing: props.isDocumentResizing,
     onAnswerChange: props.onAnswerChange,

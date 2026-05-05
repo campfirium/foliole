@@ -29,6 +29,7 @@ interface DocumentPanelBodyProps {
   };
   hasAnswerSection: boolean;
   isDocumentResizing: boolean;
+  formalKindLabel?: string;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -115,20 +116,30 @@ function AnswerSection({
 }
 
 function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
+  const formalKindLabel = props.formalKindLabel ? (
+    <div className="mx-auto flex w-full px-6 pb-2 [width:min(100%,var(--document-max-width))] max-[1080px]:px-4">
+      <p className="text-[11px] text-foreground/45">{props.formalKindLabel}</p>
+    </div>
+  ) : null;
+
   if (props.emptyState) {
     return (
-      <div className="flex min-h-0 flex-1 px-6 py-8">
-        {props.emptyContent ?? (
-          <div className="flex min-h-0 flex-1 items-center justify-center">
-            <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
-          </div>
-        )}
+      <div className="flex min-h-0 flex-1 flex-col py-8">
+        {formalKindLabel}
+        <div className="flex min-h-0 flex-1 px-6 max-[1080px]:px-4">
+          {props.emptyContent ?? (
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 w-full flex-1">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      {formalKindLabel}
       <MarkdownEditor
         ariaLabel="Prompt editor"
         className="prompt-editor-host"
