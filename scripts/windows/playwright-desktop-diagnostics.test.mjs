@@ -25,6 +25,7 @@ class MockPage extends EventEmitter {
   async evaluate(pageFunction, appReadyFlag) {
     if (appReadyFlag) {
       globalThis[appReadyFlag] = this.runtimeState.appReady ?? false;
+      globalThis.__FOLIOLE_BRIDGE_READY_REPORTED__ = this.runtimeState.bridgeReady ?? false;
       globalThis.location = { href: this.runtimeState.rendererUrl ?? 'about:blank' };
       globalThis.document = { readyState: this.runtimeState.readyState ?? 'loading' };
       return pageFunction(appReadyFlag);
@@ -50,6 +51,16 @@ describe('playwright desktop diagnostics', () => {
       await writeFile(
         path.join(logsDir, 'native-boot-events.ndjson'),
         `${JSON.stringify({ stage: 'boot_start' })}\n${JSON.stringify({ stage: 'app_ready' })}\n`,
+        'utf8'
+      );
+      await writeFile(
+        path.join(logsDir, 'renderer-state.ndjson'),
+        `${JSON.stringify({ label: 'did-finish-load', snapshot: {
+          bridgeAvailable: false,
+          href: 'file:///workspace/foliole/dist/index.html',
+          readyState: 'complete',
+          rootPresent: true
+        } })}\n`,
         'utf8'
       );
 
@@ -108,6 +119,8 @@ describe('playwright desktop diagnostics', () => {
       expect(diagnostics.currentRuntime).toEqual({
         appReady: true,
         bridgeAvailable: false,
+        bridgeReady: false,
+        navigationReady: true,
         pid: 4821,
         preloadPath: '/workspace/foliole/electron/preload.cjs',
         rendererUrl: 'file:///workspace/foliole/dist/index.html'
@@ -139,7 +152,35 @@ describe('playwright desktop diagnostics', () => {
         stage: 'app_ready',
         timestamp: '2026-03-14T00:00:00.000Z'
       });
+      expect(diagnostics.boot.bridgeReadyMarker).toBeNull();
       expect(diagnostics.boot.bootEvents).toEqual([{ stage: 'boot_start' }, { stage: 'app_ready' }]);
+      expect(diagnostics.rendererRuntime).toEqual({
+        appReady: true,
+        bridgeReady: false,
+        readyState: 'complete',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
+      expect(diagnostics.rendererState).toEqual({
+        entries: [
+          expect.objectContaining({
+            label: 'did-finish-load',
+            snapshot: expect.objectContaining({
+              bridgeAvailable: false,
+              href: 'file:///workspace/foliole/dist/index.html',
+              readyState: 'complete',
+              rootPresent: true
+            })
+          })
+        ],
+        latestSnapshot: {
+          bridgeAvailable: false,
+          href: 'file:///workspace/foliole/dist/index.html',
+          readyState: 'complete',
+          rootPresent: true
+        },
+        logPath: path.join(logsDir, 'renderer-state.ndjson'),
+        navigationReady: true
+      });
 
       rendererConsoleCollector.dispose();
       rendererPageEventCollector.dispose();
@@ -184,6 +225,8 @@ describe('playwright desktop diagnostics', () => {
       expect(diagnostics.currentRuntime).toEqual({
         appReady: true,
         bridgeAvailable: null,
+        bridgeReady: false,
+        navigationReady: true,
         pid: 4821,
         preloadPath: null,
         rendererUrl: 'file:///workspace/foliole/dist/index.html'
@@ -194,6 +237,88 @@ describe('playwright desktop diagnostics', () => {
         readyMarkerPid: 9911,
         visibleWindow: true
       });
+
+      rendererConsoleCollector.dispose();
+      rendererPageEventCollector.dispose();
+      mainProcessCollector.dispose();
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('marks bridge readiness only after the current runtime writes bridge_ready and the renderer reports the bridge flag', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'desktop-diagnostics-test-'));
+    try {
+      const logsDir = path.join(tempRoot, 'logs', 'windows');
+      await mkdir(logsDir, { recursive: true });
+      await writeFile(
+        path.join(tempRoot, '.windows-native-boot-ready.json'),
+        JSON.stringify({ pid: 4821, stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
+        'utf8'
+      );
+      await writeFile(
+        path.join(tempRoot, '.windows-native-bridge-ready.json'),
+        JSON.stringify({ pid: 4821, stage: 'bridge_ready', timestamp: '2026-03-14T00:00:01.000Z' }),
+        'utf8'
+      );
+      await writeFile(
+        path.join(logsDir, 'renderer-state.ndjson'),
+        `${JSON.stringify({ label: 'after-1000ms', snapshot: {
+          bridgeAvailable: true,
+          href: 'file:///workspace/foliole/dist/index.html',
+          readyState: 'complete',
+          rootPresent: true
+        } })}\n`,
+        'utf8'
+      );
+
+      const windowPage = new MockPage({
+        bridgeAvailable: true,
+        preloadPath: '/workspace/foliole/electron/preload.cjs',
+        runtimeHead: 'head-456'
+      }, {
+        appReady: true,
+        bridgeReady: true,
+        readyState: 'complete',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
+      const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
+      const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
+      const mainProcessCollector = createMainProcessLogCollector({
+        pid: 4821,
+        stderr: new EventEmitter(),
+        stdout: new EventEmitter()
+      });
+
+      const diagnostics = await collectDesktopFailureDiagnostics({
+        appRoot: tempRoot,
+        mainProcessCollector,
+        rendererPageEventCollector,
+        rendererConsoleCollector,
+        windowPage
+      });
+
+      expect(diagnostics.currentRuntime).toEqual({
+        appReady: true,
+        bridgeAvailable: true,
+        bridgeReady: true,
+        navigationReady: true,
+        pid: 4821,
+        preloadPath: '/workspace/foliole/electron/preload.cjs',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
+      expect(diagnostics.boot.bridgeReadyMarker).toEqual({
+        pid: 4821,
+        stage: 'bridge_ready',
+        timestamp: '2026-03-14T00:00:01.000Z'
+      });
+      expect(diagnostics.rendererRuntime).toEqual({
+        appReady: true,
+        bridgeReady: true,
+        readyState: 'complete',
+        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+      });
+      expect(diagnostics.rendererState.navigationReady).toBe(true);
 
       rendererConsoleCollector.dispose();
       rendererPageEventCollector.dispose();

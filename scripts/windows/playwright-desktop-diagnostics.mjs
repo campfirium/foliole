@@ -7,7 +7,34 @@ const MAX_BOOT_EVENTS = 20;
 const MAX_MAIN_PROCESS_LOGS = 120;
 const MAX_RENDERER_CONSOLE_MESSAGES = 80;
 const MAX_RENDERER_PAGE_EVENTS = 80;
+const MAX_RENDERER_STATE_ENTRIES = 20;
 const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
+
+function parsePositivePid(rawPid) {
+  const parsed = Number.parseInt(String(rawPid ?? ''), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function hasRendererNavigation(state) {
+  const rendererUrl = state?.rendererUrl ?? state?.href ?? null;
+  return Boolean(rendererUrl && rendererUrl !== 'about:blank' && state?.readyState && state.readyState !== 'loading');
+}
+
+function markerMatchesCurrentPid(marker, currentPid) {
+  const markerPid = parsePositivePid(marker?.pid);
+  const runtimePid = parsePositivePid(currentPid);
+  return markerPid !== null && runtimePid !== null && markerPid === runtimePid;
+}
+
+function getLatestRendererSnapshot(entries) {
+  return [...entries]
+    .reverse()
+    .find((entry) => entry?.snapshot && typeof entry.snapshot === 'object' && !String(entry?.label ?? '').startsWith('event:'))
+    ?.snapshot ?? null;
+}
 
 function createRingBuffer(limit) {
   const entries = [];
@@ -221,17 +248,20 @@ async function readRendererRuntimeState(windowPage) {
   try {
     const snapshot = await windowPage.evaluate((appReadyFlag) => ({
       appReady: globalThis[appReadyFlag] === true,
+      bridgeReady: globalThis.__FOLIOLE_BRIDGE_READY_REPORTED__ === true,
       readyState: globalThis.document?.readyState ?? null,
       rendererUrl: globalThis.location?.href ?? null
     }), APP_READY_FLAG);
     return {
       appReady: snapshot?.appReady ?? snapshot?.reported ?? null,
+      bridgeReady: snapshot?.bridgeReady ?? null,
       readyState: snapshot?.readyState ?? null,
       rendererUrl: snapshot?.rendererUrl ?? snapshot?.href ?? null
     };
   } catch (error) {
     return {
       appReady: null,
+      bridgeReady: null,
       error: error instanceof Error ? error.message : String(error),
       readyState: null,
       rendererUrl: null
@@ -272,18 +302,35 @@ async function readRendererPageState(windowPage) {
 
 async function readBootDiagnostics(appRoot) {
   const readyMarkerPath = path.join(appRoot, '.windows-native-boot-ready.json');
+  const bridgeReadyMarkerPath = path.join(appRoot, '.windows-native-bridge-ready.json');
   const bootEventLogPath = path.join(appRoot, 'logs', 'windows', 'native-boot-events.ndjson');
 
-  const [readyMarker, bootEvents] = await Promise.all([
+  const [readyMarker, bridgeReadyMarker, bootEvents] = await Promise.all([
     readJsonFile(readyMarkerPath),
+    readJsonFile(bridgeReadyMarkerPath),
     readNdjsonTail(bootEventLogPath, MAX_BOOT_EVENTS)
   ]);
 
   return {
     bootEventLogPath,
     bootEvents,
+    bridgeReadyMarker,
+    bridgeReadyMarkerPath,
     readyMarker,
     readyMarkerPath
+  };
+}
+
+async function readRendererStateDiagnostics(appRoot) {
+  const logPath = path.join(appRoot, 'logs', 'windows', 'renderer-state.ndjson');
+  const entries = await readNdjsonTail(logPath, MAX_RENDERER_STATE_ENTRIES);
+  const latestSnapshot = getLatestRendererSnapshot(entries);
+
+  return {
+    entries,
+    latestSnapshot,
+    logPath,
+    navigationReady: hasRendererNavigation(latestSnapshot)
   };
 }
 
@@ -294,13 +341,17 @@ export async function collectDesktopFailureDiagnostics({
   rendererConsoleCollector,
   windowPage
 }) {
-  const [boot, debugProbe, rendererRuntime, rendererPage] = await Promise.all([
+  const [boot, debugProbe, rendererRuntime, rendererPage, rendererState] = await Promise.all([
     readBootDiagnostics(appRoot),
     readDesktopDebugProbe(windowPage),
     readRendererRuntimeState(windowPage),
-    readRendererPageState(windowPage)
+    readRendererPageState(windowPage),
+    readRendererStateDiagnostics(appRoot)
   ]);
   const mainProcessLogs = mainProcessCollector.snapshot();
+  const bridgeReady =
+    rendererRuntime?.bridgeReady === true || markerMatchesCurrentPid(boot?.bridgeReadyMarker, mainProcessLogs.pid);
+  const navigationReady = rendererState?.navigationReady || hasRendererNavigation(rendererRuntime);
   const bridgeBreakpoint = classifyBridgeBreakpoint({
     boot,
     bridgeAvailable: debugProbe?.bridgeAvailable ?? null,
@@ -316,6 +367,8 @@ export async function collectDesktopFailureDiagnostics({
     currentRuntime: {
       appReady: rendererRuntime?.appReady ?? null,
       bridgeAvailable: debugProbe?.bridgeAvailable ?? null,
+      bridgeReady,
+      navigationReady,
       pid: mainProcessLogs.pid,
       preloadPath: debugProbe?.preloadPath ?? null,
       rendererUrl: rendererRuntime?.rendererUrl ?? null
@@ -327,6 +380,7 @@ export async function collectDesktopFailureDiagnostics({
     rendererPage,
     rendererPageEvents: rendererPageEventCollector?.snapshot?.() ?? [],
     rendererRuntime,
+    rendererState,
     runtimeHead: debugProbe?.runtimeHead ?? null
   };
 }
