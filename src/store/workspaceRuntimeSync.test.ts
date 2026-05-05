@@ -6,7 +6,8 @@ import { getRuntimeInvoke } from '../shared/platform/bridge';
 import {
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
-  syncNodeRevealToRuntime
+  syncNodeRevealToRuntime,
+  syncReviewGradeToRuntime
 } from './workspaceRuntimeSync';
 
 vi.mock('../shared/platform/bridge', () => ({
@@ -28,7 +29,40 @@ function createNodeFixture(): Node {
   };
 }
 
-describe('workspaceRuntimeSync', () => {
+const REVIEW_GRADE_PAYLOAD = {
+  nodeId: 'node-qa',
+  grade: 3 as const,
+  reviewedAt: '2026-03-06T00:00:00.000Z',
+  cardBefore: {
+    due: '2026-03-06T00:00:00.000Z',
+    last_review: null,
+    state: 0 as const,
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0
+  },
+  cardAfter: {
+    due: '2026-03-09T00:00:00.000Z',
+    last_review: '2026-03-06T00:00:00.000Z',
+    state: 1 as const,
+    stability: 1.4,
+    difficulty: 2.2,
+    elapsed_days: 1,
+    scheduled_days: 3,
+    reps: 1,
+    lapses: 0
+  }
+};
+
+function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
+  const invokedCommands = invoke.mock.calls.map((call) => call[0]);
+  expect(invokedCommands).not.toContain('save_workspace_state');
+}
+
+describe('workspaceRuntimeSync node mutations', () => {
   it('sends node content updates through update_node_content command', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -47,8 +81,7 @@ describe('workspaceRuntimeSync', () => {
       createdAt: '2026-03-06T00:00:00.000Z',
       updatedAt: '2026-03-06T00:00:01.000Z'
     });
-    const invokedCommands = invoke.mock.calls.map((call) => call[0]);
-    expect(invokedCommands).not.toContain('save_workspace_state');
+    expectNoWorkspacePersist(invoke);
   });
 
   it('skips sync when runtime invoke is unavailable', () => {
@@ -84,5 +117,17 @@ describe('workspaceRuntimeSync', () => {
     syncNodeOrderToRuntime(['node-1', 'node-2']);
 
     expect(invoke).toHaveBeenCalledWith('replace_node_order', { nodeIds: ['node-1', 'node-2'] });
+  });
+});
+
+describe('workspaceRuntimeSync review mutations', () => {
+  it('syncs review grade mutations through apply_review_grade command', () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
+
+    expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
+    expectNoWorkspacePersist(invoke);
   });
 });

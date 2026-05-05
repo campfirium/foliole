@@ -1,6 +1,7 @@
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -96,7 +97,8 @@ function createGradeReviewCardAction(
       return false;
     }
 
-    const result = await scheduler.grade({ card: toSchedulerCard(currentNode.review, now), grade, now });
+    const cardBefore = toSchedulerCard(currentNode.review, now);
+    const result = await scheduler.grade({ card: cardBefore, grade, now });
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     const nextNodeId = nextQueue[0] ?? null;
     const nextReviewProfile = toNodeReviewProfile(result.card);
@@ -128,6 +130,13 @@ function createGradeReviewCardAction(
             }
           : createEmptyReviewSession()
       };
+    });
+    syncReviewGradeToRuntime({
+      nodeId: currentNodeId,
+      grade,
+      reviewedAt: result.reviewed_at,
+      cardBefore,
+      cardAfter: result.card
     });
 
     return true;

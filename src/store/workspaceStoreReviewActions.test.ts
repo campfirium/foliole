@@ -3,9 +3,18 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
+
+vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
+  return {
+    ...actual,
+    syncReviewGradeToRuntime: vi.fn()
+  };
+});
 
 type WorkspaceSetInput =
   | WorkspaceState
@@ -122,6 +131,39 @@ function expectNextQueueState(state: WorkspaceState) {
   });
 }
 
+const EXPECTED_REVIEW_RUNTIME_SYNC = {
+  nodeId: 'qa-1',
+  grade: 3,
+  reviewedAt: '2026-03-03T00:00:00.000Z',
+  cardBefore: {
+    due: '2026-03-03T00:00:00.000Z',
+    last_review: null,
+    state: 0,
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0
+  },
+  cardAfter: {
+    due: '2026-03-10T00:00:00.000Z',
+    last_review: '2026-03-03T00:00:00.000Z',
+    state: 1,
+    stability: 3,
+    difficulty: 4,
+    elapsed_days: 1,
+    scheduled_days: 7,
+    reps: 1,
+    lapses: 0
+  }
+};
+
+function expectReviewRuntimeSyncCalled() {
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
+}
+
 describe('createWorkspaceReviewActions', () => {
   it('advances to next review node after show-answer and grade', async () => {
     const due = '2026-03-03T00:00:00.000Z';
@@ -142,6 +184,7 @@ describe('createWorkspaceReviewActions', () => {
     const graded = await actions.gradeReviewCard(3, due);
     expect(graded).toBe(true);
     expect(grade).toHaveBeenCalledTimes(1);
+    expectReviewRuntimeSyncCalled();
     expectNextQueueState(harness.getState());
   });
 

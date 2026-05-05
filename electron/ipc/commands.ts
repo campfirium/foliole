@@ -1,6 +1,7 @@
 import { BrowserWindow, app, shell, type WebContents } from 'electron';
 
 import { replaceNodeOrder, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { applyReviewGrade } from '../database/reviewMutations.js';
 import {
   clearWorkspaceStateFromSqlite,
   loadWorkspaceStateFromSqlite,
@@ -13,6 +14,7 @@ import { listSystemFonts } from './fonts.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
 import { reviewGrade, type ReviewGradeRequest } from './review.js';
+import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 
 function asString(value: unknown, field: string): string {
@@ -49,6 +51,21 @@ function asNullableNumber(value: unknown, field: string): number | null {
 interface AnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze';
+}
+
+function parseNodeSnapshotArgs(args: Record<string, unknown>) {
+  return {
+    nodeId: asString(args.nodeId, 'nodeId'),
+    parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
+    title: asString(args.title, 'title'),
+    isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
+    content: asString(args.content, 'content'),
+    reveal: asNullableString(args.reveal, 'reveal'),
+    anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
+    position: asNullableNumber(args.position, 'position'),
+    createdAt: asString(args.createdAt, 'createdAt'),
+    updatedAt: asString(args.updatedAt, 'updatedAt')
+  };
 }
 
 function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
@@ -140,37 +157,19 @@ async function handleStorageCommand(command: string, args: Record<string, unknow
     return null;
   }
   if (command === 'update_node_content') {
-    upsertNodeSnapshot({
-      nodeId: asString(args.nodeId, 'nodeId'),
-      parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
-      title: asString(args.title, 'title'),
-      isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
-      content: asString(args.content, 'content'),
-      reveal: asNullableString(args.reveal, 'reveal'),
-      anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
-      position: asNullableNumber(args.position, 'position'),
-      createdAt: asString(args.createdAt, 'createdAt'),
-      updatedAt: asString(args.updatedAt, 'updatedAt')
-    });
+    upsertNodeSnapshot(parseNodeSnapshotArgs(args));
     return null;
   }
   if (command === 'update_node_reveal') {
-    upsertNodeSnapshot({
-      nodeId: asString(args.nodeId, 'nodeId'),
-      parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
-      title: asString(args.title, 'title'),
-      isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
-      content: asString(args.content, 'content'),
-      reveal: asNullableString(args.reveal, 'reveal'),
-      anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
-      position: asNullableNumber(args.position, 'position'),
-      createdAt: asString(args.createdAt, 'createdAt'),
-      updatedAt: asString(args.updatedAt, 'updatedAt')
-    });
+    upsertNodeSnapshot(parseNodeSnapshotArgs(args));
     return null;
   }
   if (command === 'replace_node_order') {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
+    return null;
+  }
+  if (command === 'apply_review_grade') {
+    applyReviewGrade(parseApplyReviewGradeArgs(args));
     return null;
   }
   return undefined;
