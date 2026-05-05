@@ -7,8 +7,12 @@ const SHARED_CLOZE_SURFACE_COLOR = 'var(--app-cloze-surface-color)';
 export const liveMarkdownTheme = EditorView.theme({
   '&': { backgroundColor: 'transparent', height: '100%' },
   '.cm-scroller': { color: 'var(--color-text-primary)', lineHeight: '1.72' },
+  '.cm-cursor, .cm-dropCursor': {
+    borderLeftColor: 'var(--color-text-primary)'
+  },
   '.cm-content': {
     boxSizing: 'border-box',
+    caretColor: 'var(--color-text-primary)',
     fontFamily: 'var(--content-panel-font-family, var(--font-family-sans))',
     fontSize: 'var(--content-panel-font-size, 1.0625rem)',
     margin: '0 auto',

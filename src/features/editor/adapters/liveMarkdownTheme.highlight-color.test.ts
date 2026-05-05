@@ -37,4 +37,7 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('var(--app-highlight-surface-color)');
   expect(cssText).toContain('var(--app-cloze-surface-color)');
   expect(cssText).toContain('var(--app-accent-color)');
+  expect(cssText).toContain('.cm-cursor');
+  expect(cssText).toContain('border-left-color: var(--color-text-primary);');
+  expect(cssText).toContain('caret-color: var(--color-text-primary);');
 });
