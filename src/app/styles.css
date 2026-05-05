@@ -236,8 +236,14 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
   overflow: hidden;
+}
+
+strong,
+b {
+  font-weight: 600;
 }
 
 ::selection {
