@@ -119,6 +119,7 @@ function WorkspaceDocumentArea({ documentNodeId, props }: WorkspaceContentProps)
         isStudyMode={props.isStudyMode}
         reviewPreview={props.reviewPreview}
         reviewCurrentNodeId={props.reviewCurrentNodeId}
+        reviewQueueVisibility={props.reviewQueueVisibility}
         onExitReviewMode={props.onExitReviewMode}
         onGrade={props.onGradeReview}
         onRevealAnswer={props.onRevealAnswer}

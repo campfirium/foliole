@@ -9,10 +9,33 @@ const baseProps = {
   isReviewEditing: false,
   reviewCurrentNodeId: 'node-1',
   reviewPreview: null,
+  reviewQueueVisibility: null,
   onGrade: vi.fn(async () => true),
   onRevealAnswer: vi.fn(),
   onExitReviewMode: vi.fn()
 } as const;
+
+it('shows push queue visibility with source queues and live mix ratio', () => {
+  render(
+    <ReviewModeToolbar
+      {...baseProps}
+      reviewQueueVisibility={{
+        currentQueueLabel: 'FSRS queue',
+        fsrsQueueCount: 4,
+        readingQueueCount: 1,
+        queueMixRatioReading: 1,
+        queueMixRatioFsrs: 5
+      }}
+    />
+  );
+
+  expect(screen.getByLabelText('Push queue visibility')).toBeInTheDocument();
+  expect(screen.getByText('Push queue live')).toBeInTheDocument();
+  expect(screen.getByText('Current FSRS queue')).toBeInTheDocument();
+  expect(screen.getByText('FSRS queue 4 left')).toBeInTheDocument();
+  expect(screen.getByText('Reading queue 1 left')).toBeInTheDocument();
+  expect(screen.getByText('Mix 1:5')).toBeInTheDocument();
+});
 
 it('shows interval labels when preview payload is available', () => {
   render(

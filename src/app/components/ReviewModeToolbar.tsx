@@ -3,12 +3,16 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReviewGrade, SchedulerGradeResult, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { AppButton } from '../../shared/ui';
 
+import type { ReviewQueueVisibility } from './reviewQueueVisibility';
+import { ReviewQueueVisibilityText } from './ReviewQueueVisibilityText';
+
 interface ReviewModeToolbarProps {
   isStudyMode: boolean;
   isAnswerRevealed: boolean;
   isReviewEditing: boolean;
   reviewPreview: SchedulerPreviewResult | null;
   reviewCurrentNodeId: string | null;
+  reviewQueueVisibility: ReviewQueueVisibility | null;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;
@@ -174,6 +178,7 @@ export function ReviewModeToolbar({
   isReviewEditing,
   reviewPreview,
   reviewCurrentNodeId,
+  reviewQueueVisibility,
   onGrade,
   onRevealAnswer,
   onExitReviewMode
@@ -191,7 +196,7 @@ export function ReviewModeToolbar({
   return (
     <div
       aria-label="Review mode toolbar"
-      className="flex min-h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4 py-1"
+      className="flex min-h-[56px] w-full flex-none flex-col items-center justify-center gap-1 border-t border-border bg-bg-elevated px-4 py-1"
       data-mode={isStudyMode ? 'study' : 'edit'}
       data-review-input-mode={isReviewEditing ? 'editing' : 'hotkeys'}
     >
@@ -209,6 +214,7 @@ export function ReviewModeToolbar({
           submitGrade={submitGrade}
         />
       )}
+      {reviewQueueVisibility ? <ReviewQueueVisibilityText visibility={reviewQueueVisibility} /> : null}
     </div>
   );
 }

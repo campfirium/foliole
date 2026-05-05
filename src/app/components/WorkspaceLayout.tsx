@@ -16,6 +16,7 @@ import type { ReviewSchedulerSettings } from '../../features/settings/model/revi
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import type { ReviewQueueVisibility } from './reviewQueueVisibility';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 
 export interface WorkspaceEditorContextMenu {
@@ -44,6 +45,7 @@ export interface WorkspaceLayoutProps {
   isAnswerRevealed: boolean;
   isReviewEditing: boolean;
   reviewCurrentNodeId: string | null;
+  reviewQueueVisibility: ReviewQueueVisibility | null;
   reviewQueueCount: number;
   reviewCompletedCount: number;
   reviewStatus: 'awaiting-answer' | 'answer-revealed' | 'completed';

@@ -20,6 +20,7 @@ import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/setti
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { buildReviewQueuePlan } from '../../store/reviewQueuePlanner';
 import type { WorkspaceState } from '../../store/workspaceStore';
+import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { createReviewActions } from './reviewSettingsLayoutActions';
@@ -177,13 +178,19 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const { reviewCompletedCount, reviewQueueCount, reviewStatus } = getReviewSessionSummary(
     args.reviewSession
   );
+  const reviewQueueVisibility = buildReviewQueueVisibility({
+    currentNodeId: args.reviewSession.currentNodeId,
+    nodesById: args.nodesById,
+    queueNodeIds: args.reviewSession.queueNodeIds,
+    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
+  });
 
   return {
     activeNodeId: args.activeNodeId, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
     documentMaxWidth: args.documentMaxWidth, editorContent: args.documentNode?.content ?? '', editorNodeId: args.editorNodeId, editorNodeViewState: args.editorNodeViewState,
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange,
     canStartStudyMode: args.canStartStudyMode, reviewDueCount: args.reviewDueCount, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isSettingsOpen: args.isSettingsOpen, isReviewEditing: args.isReviewEditing,
-    isAnswerRevealed: args.reviewSession.isAnswerRevealed, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
+    isAnswerRevealed: args.reviewSession.isAnswerRevealed, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewQueueVisibility, reviewQueueCount, reviewCompletedCount, reviewStatus, isDocumentResizing: args.documentResize.isResizingDocument, isResizingList: args.isResizingList, isTrashViewOpen: args.isTrashViewOpen, isViewingTrashNode: args.isViewingTrashNode,
     showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, nodeOrder: args.nodeOrder, nodesById: args.nodesById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onSelectTrashNode: args.onSelectTrashNode, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
