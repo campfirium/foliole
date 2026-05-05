@@ -80,6 +80,7 @@ function createRestartAppCommand(args: {
         args.runtime.readingPositionRef.current.nodeId === latestWorkspaceState.activeNodeId
           ? args.runtime.readingPositionRef.current.selection
           : null,
+      isImmersiveMode: args.runtime.isImmersiveMode,
       isViewingTrashNode: args.runtime.isViewingTrashNode,
       nodeViewById: latestWorkspaceState.nodeViewById,
       setNodeViewState: latestWorkspaceState.setNodeViewState

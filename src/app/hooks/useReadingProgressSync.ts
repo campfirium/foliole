@@ -99,6 +99,7 @@ function useReadingProgressFlushCallbacks(args: {
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
+  pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
   resolveCapturedReadingProgress: (
     activeNodeIdOverride?: string | null,
     captureNodeIdOverride?: string | null
@@ -251,9 +252,9 @@ export function useReadingProgressSync({
     getReadingPositionSyncState,
     isWorkspaceHydrated,
     nodeViewById,
-    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
     resolveCapturedReadingProgress,
-    setNodeViewState
+    setNodeViewState,
+    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
   });
   useCloseBridgeRegistration(isWorkspaceHydrated, flushReadingProgressImmediately);
   useReadingProgressLifecycle({

@@ -149,27 +149,27 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
     previousListNodesByIdRef.current = nextProjection;
     return nextProjection;
   }, [props.nodesById]);
+  const node = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  const highlights = useMemo(
+    () =>
+      node
+        ? collectSubtreeHighlights(
+            node.id,
+            props.nodeOrder,
+            listNodesById,
+            props.nodesById,
+            props.trashedNodeIds
+          )
+        : [],
+    [listNodesById, node, props.nodeOrder, props.nodesById, props.trashedNodeIds]
+  );
 
   if (!props.activeNodeId) {
     return <EmptyHighlightsState description="Select a document to browse its highlights." />;
   }
-
-  const node = props.nodesById[props.activeNodeId];
   if (!node) {
     return null;
   }
-
-  const highlights = useMemo(
-    () =>
-      collectSubtreeHighlights(
-        node.id,
-        props.nodeOrder,
-        listNodesById,
-        props.nodesById,
-        props.trashedNodeIds
-      ),
-    [listNodesById, node.id, props.nodeOrder, props.nodesById, props.trashedNodeIds]
-  );
   if (highlights.length === 0) {
     return <EmptyHighlightsState description="This node and its child nodes have no highlight nodes yet." />;
   }

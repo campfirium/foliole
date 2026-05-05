@@ -106,15 +106,19 @@ export interface BuildControllerLayoutPropsArgs {
 }
 
 export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsArgs) {
+  const onSelectNode = createSelectNode(args);
   return buildLayoutProps({
-    ...createLayoutDataArgs(args),
-    ...createLayoutHandlerArgs(args)
+    ...createLayoutDataArgs(args, onSelectNode),
+    ...createLayoutHandlerArgs(args, onSelectNode)
   });
 }
 
-function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
+function createLayoutDataArgs(
+  args: BuildControllerLayoutPropsArgs,
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void
+) {
   const editorCtx = createLayoutEditorCtx(args);
-  const nav = createLayoutNav(args);
+  const nav = createLayoutNav(args, onSelectNode);
   return {
     activeNodeId: args.ws.activeNodeId,
     isWorkspaceHydrated: args.ws.isHydrated,
@@ -149,6 +153,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     rightSidebarWidth: args.ws.rightSidebarWidth,
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
+    nodeViewById: args.ws.nodeViewById,
     reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSession: args.ws.reviewSession,
@@ -195,7 +200,10 @@ function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
   };
 }
 
-function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
+function createLayoutHandlerArgs(
+  args: BuildControllerLayoutPropsArgs,
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void
+) {
   const openNotesView = createOpenNotesView(args);
   const pastedTextAnchors = createPastedTextAnchorsHandler(args);
   const persistPdfViewState = createPersistPdfViewState(args);
@@ -212,6 +220,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
       args.priorityQuickSet.enter();
     },
     onNodeContentChange: createNodeContentChangeHandler(args),
+    setNodeViewState: args.ws.setNodeViewState,
     onEditorReady: createEditorReadyHandler(args),
     onPastedTextAnchors: pastedTextAnchors,
     onRevealAnchorInDocument: revealAnchorInDocument,
@@ -237,7 +246,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onRunImportFile: args.runImportFile,
     onRunImportFolder: args.runImportDirectory,
     onStartClipboardImport: () => undefined,
-    onSelectNode: createSelectNode(args),
+    onSelectNode,
     onSelectTrashNode: createSelectTrashNodeHandler(args),
     onRightSidebarSplitterKeyDown: args.rightSidebarResize.handleRightSidebarSplitterKeyDown,
     onRightSidebarSplitterPointerDown: args.rightSidebarResize.handleRightSidebarSplitterPointerDown,

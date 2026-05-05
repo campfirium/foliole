@@ -7,6 +7,7 @@ import {
   handleSelectionRestore,
   resolveRestoreTarget
 } from './markdownEditorSelectionRestoreSupport';
+import { createPendingRestoreSelectionKey } from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
 
 function useSelectionRestoreRefs() {
@@ -32,16 +33,20 @@ function usePendingRestoreKey(args: {
   readingSelection: EditorViewState['selection'] | null | undefined;
 }) {
   useLayoutEffect(() => {
-    if (args.previousNodeIdRef.current === args.nodeId) {
-      return;
-    }
-    args.previousNodeIdRef.current = args.nodeId;
-    args.lastRestoredSelectionKeyRef.current = null;
-    args.pendingRestoreSelectionKeyRef.current = createPendingRestoreSelectionKey(
+    const nextPendingRestoreSelectionKey = createPendingRestoreSelectionKey(
       args.nodeId,
       args.readingSelection,
       args.nodeViewState
     );
+    const nodeChanged = args.previousNodeIdRef.current !== args.nodeId;
+    const readingRequestChanged =
+      Boolean(args.readingSelection) && args.pendingRestoreSelectionKeyRef.current !== nextPendingRestoreSelectionKey;
+    if (!nodeChanged && !readingRequestChanged) {
+      return;
+    }
+    args.previousNodeIdRef.current = args.nodeId;
+    args.lastRestoredSelectionKeyRef.current = null;
+    args.pendingRestoreSelectionKeyRef.current = nextPendingRestoreSelectionKey;
   }, [args]);
 }
 
@@ -224,16 +229,4 @@ function useRestoreCompletionCleanup(
       restoreCompletionTimeoutRef
     ]
   );
-}
-
-function createPendingRestoreSelectionKey(
-  nodeId: string | null,
-  readingSelection: EditorViewState['selection'] | null | undefined,
-  nodeViewState: EditorViewState | undefined
-) {
-  const selection = readingSelection ?? nodeViewState?.selection;
-  if (!nodeId || !selection) {
-    return null;
-  }
-  return `${nodeId}:${selection.from}:${selection.to}:${nodeViewState?.scrollTop ?? 0}`;
 }

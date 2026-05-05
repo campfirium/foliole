@@ -9,11 +9,13 @@ import { restartMainWindowApp } from '../../shared/platform/windowControls';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
+import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
 
 interface RestartWithReadingProgressArgs {
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection: () => EditorSelection | null;
+  isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
@@ -34,7 +36,11 @@ function captureReadingProgressForRestart(args: RestartWithReadingProgressArgs) 
     return null;
   }
   const existingViewState = args.nodeViewById[args.activeNodeId];
-  const selection = args.getReadingPositionSelection() ?? args.editorRef.current.getSelection();
+  const selection = resolvePersistedViewStateSelection({
+    editor: args.editorRef.current,
+    isImmersiveMode: args.isImmersiveMode,
+    sharedReadingSelection: args.getReadingPositionSelection()
+  });
   const viewState = normalizeViewState({
     scrollTop: args.editorRef.current.getScrollTop(),
     selection

@@ -1,11 +1,19 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { useReadingProgressSyncMock } = vi.hoisted(() => ({
   useReadingProgressSyncMock: vi.fn()
 }));
 
 const runtimeRefs = vi.hoisted(() => ({
+  editorRef: {
+    current: null as {
+      getPrimaryVisiblePosition?: () => number | null;
+      getScrollTop: () => number;
+      getSelection: () => { from: number; to: number };
+      isPositionNearViewportRatio?: () => boolean;
+    } | null
+  },
   readingPositionRef: {
     current: {
       nodeId: 'node-1',
@@ -24,6 +32,10 @@ const runtimeRefs = vi.hoisted(() => ({
   }
 }));
 
+const runtimeState = vi.hoisted(() => ({
+  isImmersiveMode: false
+}));
+
 const { useWorkspaceNavigationMock } = vi.hoisted(() => ({
   useWorkspaceNavigationMock: vi.fn(() => ({
     handleSelectNode: vi.fn()
@@ -33,7 +45,8 @@ const { useWorkspaceNavigationMock } = vi.hoisted(() => ({
 vi.mock('./useAppRuntime', () => ({
   useAppRuntime: () => ({
     bumpReadingPositionRequest: vi.fn(),
-    editorRef: { current: null },
+    editorRef: runtimeRefs.editorRef,
+    isImmersiveMode: runtimeState.isImmersiveMode,
     isViewingTrashNode: false,
     readingPositionRef: runtimeRefs.readingPositionRef,
     readingPositionSyncRef: runtimeRefs.readingPositionSyncRef,
@@ -84,6 +97,13 @@ vi.mock('./useWorkspaceNavigation', () => ({
 }));
 
 import { useWorkspaceControllerState } from './appControllerState';
+
+function getNavigationArgs() {
+  return useWorkspaceNavigationMock.mock.calls[0]?.[0] as {
+    beginAnchorNavigationRestore: (nodeId: string, selection: { from: number; to: number }) => void;
+    saveActiveNodeView: (nodeId: string) => void;
+  };
+}
 
 function Harness({ ws }: { ws: Parameters<typeof useWorkspaceControllerState>[0] }) {
   useWorkspaceControllerState(ws, true);
@@ -158,7 +178,135 @@ function createWorkspaceState() {
   };
 }
 
+function resetRuntimeRefs() {
+  runtimeState.isImmersiveMode = false;
+  runtimeRefs.editorRef.current = null;
+  runtimeRefs.readingPositionRef.current = {
+    nodeId: 'node-1',
+    selection: { from: 12, to: 12 }
+  };
+  runtimeRefs.readingPositionSyncRef.current = {
+    nodeId: 'node-1',
+    state: {
+      reason: 'editor-restore-selection',
+      startedAt: 123,
+      targetSelection: { from: 12, to: 12 }
+    }
+  };
+}
+
+function runSaveSharedReadingPositionTest() {
+  runtimeRefs.editorRef.current = {
+    getPrimaryVisiblePosition: () => 999,
+    getScrollTop: () => 4321,
+    getSelection: () => ({ from: 0, to: 0 }),
+    isPositionNearViewportRatio: () => false
+  };
+  const ws = createWorkspaceState() as never;
+
+  render(<Harness ws={ws} />);
+
+  const navigationArgs = getNavigationArgs();
+  navigationArgs.saveActiveNodeView('node-1');
+
+  expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 4321,
+    selection: { from: 999, to: 999 }
+  });
+}
+
+function runVisiblePositionFallbackTest() {
+  runtimeRefs.readingPositionRef.current = {
+    nodeId: 'node-2',
+    selection: { from: 300, to: 300 }
+  };
+  runtimeRefs.editorRef.current = {
+    getPrimaryVisiblePosition: () => 4567,
+    getScrollTop: () => 4321,
+    getSelection: () => ({ from: 0, to: 0 }),
+    isPositionNearViewportRatio: () => false
+  };
+  const ws = createWorkspaceState() as never;
+
+  render(<Harness ws={ws} />);
+
+  const navigationArgs = getNavigationArgs();
+  navigationArgs.saveActiveNodeView('node-1');
+
+  expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 4321,
+    selection: { from: 4567, to: 4567 }
+  });
+}
+
+function runCurrentSelectionPriorityTest() {
+  runtimeRefs.readingPositionRef.current = {
+    nodeId: 'node-1',
+    selection: { from: 12, to: 12 }
+  };
+  runtimeRefs.editorRef.current = {
+    getPrimaryVisiblePosition: () => 4567,
+    getScrollTop: () => 4321,
+    getSelection: () => ({ from: 3200, to: 3200 }),
+    isPositionNearViewportRatio: () => true
+  };
+  const ws = createWorkspaceState() as never;
+
+  render(<Harness ws={ws} />);
+
+  const navigationArgs = getNavigationArgs();
+  navigationArgs.saveActiveNodeView('node-1');
+
+  expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 4321,
+    selection: { from: 3200, to: 3200 }
+  });
+}
+
+function runImmersiveReadingSelectionPriorityTest() {
+  runtimeRefs.editorRef.current = {
+    getPrimaryVisiblePosition: () => 4567,
+    getScrollTop: () => 4321,
+    getSelection: () => ({ from: 3200, to: 3200 }),
+    isPositionNearViewportRatio: () => true
+  };
+  const ws = createWorkspaceState() as never;
+
+  render(<Harness ws={ws} />);
+
+  const navigationArgs = getNavigationArgs();
+  navigationArgs.saveActiveNodeView('node-1');
+
+  expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 4321,
+    selection: { from: 12, to: 12 }
+  });
+}
+
 describe('useWorkspaceControllerState reading progress wiring', () => {
+  beforeEach(() => {
+    useReadingProgressSyncMock.mockClear();
+    useWorkspaceNavigationMock.mockClear();
+    resetRuntimeRefs();
+  });
+
+  it('prefers the current visible position before leaving the current node', () => {
+    runSaveSharedReadingPositionTest();
+  });
+
+  it('falls back to the current visible position when the shared reading position is missing', () => {
+    runVisiblePositionFallbackTest();
+  });
+
+  it('prefers the current editor selection over a stale shared reading position in normal mode', () => {
+    runCurrentSelectionPriorityTest();
+  });
+
+  it('keeps immersive reading selection priority while immersive mode is active', () => {
+    runtimeState.isImmersiveMode = true;
+    runImmersiveReadingSelectionPriorityTest();
+  });
+
   it('passes restore sync state through to reading progress persistence', () => {
     const ws = createWorkspaceState() as never;
 
@@ -179,7 +327,7 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
 
     render(<Harness ws={ws} />);
 
-    const navigationArgs = useWorkspaceNavigationMock.mock.calls[0][0];
+    const navigationArgs = getNavigationArgs();
     navigationArgs.beginAnchorNavigationRestore('node-2', { from: 88, to: 88 });
 
     expect(runtimeRefs.readingPositionRef.current).toEqual({

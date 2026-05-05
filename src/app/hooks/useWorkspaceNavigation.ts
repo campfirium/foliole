@@ -62,8 +62,7 @@ export function useWorkspaceNavigation({
     activeNodeContent,
     activeNodeId,
     beginAnchorNavigationRestore,
-    completeAnchorNavigationRestore,
-    editorRef
+    completeAnchorNavigationRestore
   });
   const preparedHandlers = usePreparedNavigationHandlers({
     activeNodeContent,

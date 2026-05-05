@@ -8,7 +8,6 @@ const HIGHLIGHT_FILE_PATH = 'D:\\T\\test\\GTD 项目管理方法-highlight.md';
 const PROMPT_EDITOR_DEBUG_ID = 'prompt-editor';
 
 interface ImportedHighlightNode {
-  content: string;
   id: string;
   locator: {
     from: number;
@@ -21,6 +20,7 @@ interface ImportedHighlightNode {
 interface ImportedWorkspaceState {
   childNodes: ImportedHighlightNode[];
   parentId: string;
+  parentTitle: string;
 }
 
 async function installDialogSelections(desktopApp: ElectronApplication, selections: string[]) {
@@ -74,13 +74,16 @@ async function runRealImportAndMerge(desktopApp: ElectronApplication, desktopWin
   }
 }
 
-async function readImportedWorkspace(desktopWindow: Page, parentId: string): Promise<ImportedWorkspaceState> {
+async function reloadWorkspace(desktopWindow: Page) {
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+}
+
+async function importRealMergedHighlights(desktopApp: ElectronApplication, desktopWindow: Page): Promise<ImportedWorkspaceState> {
+  const parentId = await runRealImportAndMerge(desktopApp, desktopWindow);
+  await reloadWorkspace(desktopWindow);
   return desktopWindow.evaluate(async (resolvedParentId) => {
     const snapshot = await globalThis.window?.electronAPI?.invoke('load_workspace_snapshot', {});
-    if (!snapshot || typeof snapshot !== 'object' || typeof snapshot.activeNodeId === 'undefined') {
-      throw new Error('workspace snapshot missing after import');
-    }
-
     const nodesById =
       snapshot && typeof snapshot === 'object' && snapshot.nodesById && typeof snapshot.nodesById === 'object'
         ? (snapshot.nodesById as Record<string, Record<string, unknown>>)
@@ -89,7 +92,8 @@ async function readImportedWorkspace(desktopWindow: Page, parentId: string): Pro
       snapshot && typeof snapshot === 'object' && Array.isArray(snapshot.nodeOrder)
         ? (snapshot.nodeOrder as string[])
         : [];
-    if (!nodesById[resolvedParentId]) {
+    const parent = nodesById[resolvedParentId];
+    if (!parent || typeof parent.title !== 'string') {
       throw new Error('imported parent missing from workspace snapshot');
     }
 
@@ -101,15 +105,13 @@ async function readImportedWorkspace(desktopWindow: Page, parentId: string): Pro
           node.parentNodeId === resolvedParentId &&
           Boolean(node.anchorLink) &&
           typeof node.id === 'string' &&
-          typeof node.title === 'string' &&
-          typeof node.content === 'string'
+          typeof node.title === 'string'
       )
       .slice(0, 4)
       .map((node) => {
         const anchorLink = (node.anchorLink ?? null) as { locator?: Record<string, unknown> } | null;
         const locator = anchorLink?.locator;
         return {
-          content: String(node.content),
           id: String(node.id),
           locator:
             locator &&
@@ -128,20 +130,10 @@ async function readImportedWorkspace(desktopWindow: Page, parentId: string): Pro
 
     return {
       childNodes,
-      parentId: resolvedParentId
+      parentId: resolvedParentId,
+      parentTitle: String(parent.title)
     };
   }, parentId);
-}
-
-async function importRealMergedHighlights(desktopApp: ElectronApplication, desktopWindow: Page): Promise<ImportedWorkspaceState> {
-  const parentId = await runRealImportAndMerge(desktopApp, desktopWindow);
-  await reloadWorkspace(desktopWindow);
-  return readImportedWorkspace(desktopWindow, parentId);
-}
-
-async function reloadWorkspace(desktopWindow: Page) {
-  await desktopWindow.reload();
-  await expectWorkspaceShell(desktopWindow);
 }
 
 async function openNodeThroughDebugBridge(desktopWindow: Page, nodeId: string) {
@@ -150,22 +142,12 @@ async function openNodeThroughDebugBridge(desktopWindow: Page, nodeId: string) {
   }, nodeId);
 }
 
-async function setSavedParentSelection(
-  desktopWindow: Page,
-  args: { from: number; nodeId: string; scrollTop?: number; to: number }
-) {
-  await desktopWindow.evaluate((payload) => {
-    return globalThis.window?.__folioleWorkspaceDebug?.setNodeViewState?.(payload) ?? false;
-  }, args);
-}
-
 async function collectPromptEditorSelection(desktopWindow: Page) {
   return desktopWindow.evaluate((debugId) => {
     const debugApi = globalThis.window?.__folioleDebug;
     const content = debugApi?.getEditorContent?.(debugId) ?? '';
     const selection = debugApi?.getEditorSelection?.(debugId) ?? null;
     return {
-      content,
       selection,
       selectedText:
         selection && typeof selection.from === 'number' && typeof selection.to === 'number'
@@ -175,69 +157,76 @@ async function collectPromptEditorSelection(desktopWindow: Page) {
   }, PROMPT_EDITOR_DEBUG_ID);
 }
 
-test('merged highlight children jump back to their own parent ranges from source info', async ({ desktopApp, desktopWindow }, testInfo) => {
+async function collectPanelJumpDebug(desktopWindow: Page, args: { childId: string; parentId: string }) {
+  return desktopWindow.evaluate(({ childId, parentId, debugId }) => {
+    const workspace = globalThis.window?.__folioleWorkspaceDebug;
+    const debugApi = globalThis.window?.__folioleDebug;
+    return {
+      activeNodeId: workspace?.getActiveNodeId?.() ?? null,
+      childNode: workspace?.getNode?.(childId) ?? null,
+      parentViewState: workspace?.getNodeViewState?.(parentId) ?? null,
+      promptSelection: debugApi?.getEditorSelection?.(debugId) ?? null,
+      sidebarButtons: Array.from(document.querySelectorAll('[aria-label="Document highlights"] button'))
+        .map((node) => (node.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .filter(Boolean),
+      traces:
+        debugApi
+          ?.getTraces?.()
+          ?.filter((entry) => {
+            const event = typeof entry?.event === 'string' ? entry.event : '';
+            return event.includes('reading') || event.includes('restore-selection') || event.includes('reveal-anchor');
+          })
+          .slice(-40) ?? []
+    };
+  }, { ...args, debugId: PROMPT_EDITOR_DEBUG_ID });
+}
+
+test('merged highlights panel jumps to the imported highlight range inside the current parent document', async ({ desktopApp, desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
 
   const importedWorkspace = await importRealMergedHighlights(desktopApp, desktopWindow);
-  expect(importedWorkspace.childNodes).toHaveLength(4);
-
-  const jumpResults: Array<{
-    actualSelection: { from: number; to: number } | null;
-    childId: string;
-    expectedLocator: ImportedHighlightNode['locator'];
-    selectedText: string;
-    title: string;
-  }> = [];
-
-  for (const [index, childNode] of importedWorkspace.childNodes.entries()) {
-    const previousSelection = jumpResults[jumpResults.length - 1]?.actualSelection ?? null;
-    if (index > 0 && previousSelection) {
-      await setSavedParentSelection(desktopWindow, {
-        from: previousSelection.from,
-        nodeId: importedWorkspace.parentId,
-        scrollTop: Math.max(previousSelection.from - 200, 0),
-        to: previousSelection.to
-      });
-    }
-
-    await openNodeThroughDebugBridge(desktopWindow, childNode.id);
-    await expect(desktopWindow.getByRole('button', { name: childNode.title, exact: true })).toBeVisible();
-
-    await desktopWindow.getByRole('button', { name: 'Source info panel' }).click();
-    await expect(desktopWindow.getByRole('button', { name: 'Open parent note' })).toBeVisible();
-    await desktopWindow.getByRole('button', { name: 'Open parent note' }).click();
-
-    await expect.poll(async () => {
-      return desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
-    }).toBe(importedWorkspace.parentId);
-
-    await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
-      message: `waiting for merged child ${childNode.id} to reveal its parent range`
-    }).toMatchObject({
-        selection: childNode.locator
-          ? {
-              from: childNode.locator.from,
-              to: childNode.locator.to
-            }
-          : null
-      });
-
-    const currentSelection = await collectPromptEditorSelection(desktopWindow);
-    jumpResults.push({
-      actualSelection: currentSelection.selection,
-      childId: childNode.id,
-      expectedLocator: childNode.locator,
-      selectedText: currentSelection.selectedText,
-      title: childNode.title
-    });
+  expect(importedWorkspace.childNodes.length).toBeGreaterThan(0);
+  const targetChild = importedWorkspace.childNodes.find((node) => node.locator);
+  expect(targetChild?.locator).not.toBeNull();
+  if (!targetChild?.locator) {
+    throw new Error('missing imported text locator child');
   }
 
-  await testInfo.attach('merged-highlight-parent-jump-results', {
-    body: JSON.stringify(jumpResults, null, 2),
+  await openNodeThroughDebugBridge(desktopWindow, importedWorkspace.parentId);
+  await expect(desktopWindow.getByRole('button', { name: importedWorkspace.parentTitle, exact: true })).toBeVisible();
+  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+
+  const debugState = await collectPanelJumpDebug(desktopWindow, {
+    childId: targetChild.id,
+    parentId: importedWorkspace.parentId
+  });
+  const targetButtonLabel = debugState.sidebarButtons.find((label) => label.includes(targetChild.title)) ?? null;
+  console.log('merged-highlights-panel-jump-debug', JSON.stringify(debugState));
+  await testInfo.attach('merged-highlights-panel-jump-debug', {
+    body: JSON.stringify(debugState, null, 2),
     contentType: 'application/json'
   });
+  expect(targetButtonLabel).not.toBeNull();
+  if (!targetButtonLabel) {
+    throw new Error(`missing sidebar button for ${targetChild.title}`);
+  }
 
-  expect(new Set(jumpResults.map((entry) => `${entry.actualSelection?.from}:${entry.actualSelection?.to}`)).size).toBe(4);
-  expect(jumpResults.every((entry) => entry.actualSelection?.from === entry.expectedLocator?.from)).toBe(true);
-  expect(jumpResults.every((entry) => entry.actualSelection?.to === entry.expectedLocator?.to)).toBe(true);
+  await desktopWindow.evaluate((label) => {
+    const button = Array.from(document.querySelectorAll('[aria-label="Document highlights"] button')).find((node) => {
+      return (node.textContent ?? '').replace(/\s+/g, ' ').trim() === label;
+    }) as HTMLButtonElement | undefined;
+    if (!button) {
+      throw new Error(`missing sidebar button ${label}`);
+    }
+    button.click();
+  }, targetButtonLabel);
+
+  await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
+    message: 'waiting for imported highlights panel jump to land on the target text range'
+  }).toMatchObject({
+    selection: {
+      from: targetChild.locator.from,
+      to: targetChild.locator.to
+    }
+  });
 });

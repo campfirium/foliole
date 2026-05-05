@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -118,9 +118,7 @@ function renderSourcePanel() {
   render(
     <WorkspaceRightSidebarSourcePanel
       activeNodeId="node-1"
-      activeNodeParentId={BASE_NODE.parentNodeId}
       hasActiveNode={true}
-      onSelectParentNode={() => undefined}
     />
   );
 }
@@ -161,23 +159,18 @@ describe('WorkspaceRightSidebarSourcePanel', () => {
     });
   });
 
-  it('opens the parent note from inherited source info', async () => {
-    const onSelectParentNode = vi.fn();
+  it('shows inherited source info without a parent-jump button', async () => {
     loadRuntimeNodeSourceDetails.mockResolvedValue(createNodeSourceDetails({ inheritedFromParent: true }));
     render(
       <WorkspaceRightSidebarSourcePanel
         activeNodeId="node-1"
-        activeNodeParentId="parent-1"
         hasActiveNode={true}
-        onSelectParentNode={onSelectParentNode}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Open parent note' })).toBeInTheDocument();
+      expect(screen.getByText('This node is attached to an imported parent note, so the source details below come from that parent.')).toBeInTheDocument();
     });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open parent note' }));
-    expect(onSelectParentNode).toHaveBeenCalledWith('parent-1');
+    expect(screen.queryByRole('button', { name: 'Open parent note' })).not.toBeInTheDocument();
   });
 });

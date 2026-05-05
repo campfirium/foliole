@@ -69,16 +69,12 @@ function renderPanel(
 
 const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
   activeNodeId: string | null;
-  activeNodeParentId: string | null;
   hasActiveNode: boolean;
-  onSelectParentNode: (nodeId: string) => void;
 }) {
   return <WorkspaceRightSidebarSourcePanel {...props} />;
 }, (previousProps, nextProps) =>
   previousProps.activeNodeId === nextProps.activeNodeId &&
-  previousProps.activeNodeParentId === nextProps.activeNodeParentId &&
-  previousProps.hasActiveNode === nextProps.hasActiveNode &&
-  previousProps.onSelectParentNode === nextProps.onSelectParentNode
+  previousProps.hasActiveNode === nextProps.hasActiveNode
 );
 
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
@@ -129,15 +125,13 @@ function renderPerformancePanel(
 }
 
 function renderSourceInfoPanel(
-  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById' | 'onSelectBreadcrumbNode'>
+  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById'>
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   return (
     <SourceInfoSidebarPanel
       activeNodeId={props.activeNodeId}
-      activeNodeParentId={activeNode?.parentNodeId ?? null}
       hasActiveNode={Boolean(activeNode)}
-      onSelectParentNode={props.onSelectBreadcrumbNode}
     />
   );
 }

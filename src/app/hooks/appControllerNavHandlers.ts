@@ -1,12 +1,30 @@
+import { resolveAncestorAnchorLink } from '../../store/workspaceNavigation';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
-export function createLayoutNav(args: BuildControllerLayoutPropsArgs) {
+export function createLayoutNav(
+  args: BuildControllerLayoutPropsArgs,
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void
+) {
   return {
     onGoBack: args.nav.handleGoBack,
     onGoForward: args.nav.handleGoForward,
     onGoParent: args.nav.handleGoParent,
-    onSelectBreadcrumbNode: args.nav.handleSelectBreadcrumbNode,
-    onSelectNode: args.nav.handleSelectNode,
+    onSelectBreadcrumbNode: (nodeId: string) => {
+      const activeNodeId = args.ws.activeNodeId;
+      if (!activeNodeId || activeNodeId === nodeId) {
+        args.nav.handleSelectBreadcrumbNode(nodeId);
+        return;
+      }
+      const ancestorTarget = resolveAncestorAnchorLink(activeNodeId, nodeId, args.ws.nodesById);
+      if (!ancestorTarget.isAncestor || !ancestorTarget.focusAnchor) {
+        args.nav.handleSelectBreadcrumbNode(nodeId);
+        return;
+      }
+      onSelectNode(nodeId, ancestorTarget.focusAnchor);
+    },
+    onSelectNode,
     shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressSelectionRestore
   };
 }

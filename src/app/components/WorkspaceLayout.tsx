@@ -79,10 +79,12 @@ export interface WorkspaceLayoutProps {
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
+  nodeViewById: Record<string, NodeViewState | undefined>;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
   onRegisterEditorDraftFlush: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
+  setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onResetLayout: () => void;

@@ -151,6 +151,9 @@ export function useImmediateReadingProgressCapture(args: {
       ) {
         return;
       }
+      if (!captured) {
+        return;
+      }
       pushDebugTrace('reading-progress.capture-scroll', {
         nodeId: captured.nodeId,
         scrollTop: captured.viewState.scrollTop,

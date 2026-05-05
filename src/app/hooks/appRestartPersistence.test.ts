@@ -23,11 +23,20 @@ vi.mock('../../shared/platform/runtimeLogging', () => ({
   logRuntimeWarning: mocks.logRuntimeWarning
 }));
 
-function createEditorRef(scrollTop = 5400, selection = { from: 12, to: 18 }) {
+function createEditorRef(
+  scrollTop = 5400,
+  selection = { from: 12, to: 18 },
+  options?: {
+    isPositionNearViewportRatio?: () => boolean;
+    primaryVisiblePosition?: number | null;
+  }
+) {
   return {
     current: {
+      getPrimaryVisiblePosition: () => options?.primaryVisiblePosition ?? null,
       getScrollTop: () => scrollTop,
-      getSelection: () => selection
+      getSelection: () => selection,
+      isPositionNearViewportRatio: options?.isPositionNearViewportRatio
     }
   } as unknown as MutableRefObject<EditorAdapter | null>;
 }
@@ -47,6 +56,7 @@ it('flushes the current reading position before restarting', async () => {
     activeNodeId: 'node-2',
     editorRef: createEditorRef(),
     getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
+    isImmersiveMode: true,
     isViewingTrashNode: false,
     nodeViewById: {},
     setNodeViewState
@@ -79,6 +89,7 @@ it('still restarts when the flush fails', async () => {
     activeNodeId: 'node-2',
     editorRef: createEditorRef(),
     getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
+    isImmersiveMode: true,
     isViewingTrashNode: false,
     nodeViewById: {},
     setNodeViewState: vi.fn()
@@ -96,6 +107,7 @@ it('normalizes scroll and selection before flushing on restart', async () => {
     activeNodeId: 'node-2',
     editorRef: createEditorRef(465.5, { from: 542.9, to: 542.9 }),
     getReadingPositionSelection: () => ({ from: 542.9, to: 542.9 }),
+    isImmersiveMode: true,
     isViewingTrashNode: false,
     nodeViewById: {},
     setNodeViewState: vi.fn()
@@ -123,6 +135,7 @@ it('preserves previously saved node positions when restarting from another node'
     activeNodeId: 'node-2',
     editorRef: createEditorRef(5400, { from: 48000, to: 48000 }),
     getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
+    isImmersiveMode: true,
     isViewingTrashNode: false,
     nodeViewById: {
       'node-1': {
@@ -150,5 +163,33 @@ it('preserves previously saved node positions when restarting from another node'
       }
     ],
     updatedAt: expect.any(String)
+  });
+});
+
+it('prefers the current visible position over a stale shared reading position outside immersive mode', async () => {
+  const invoke = vi.fn(() => Promise.resolve(null));
+  mocks.getRuntimeInvoke.mockReturnValue(invoke);
+  const setNodeViewState = vi.fn();
+
+  await restartAppWithReadingProgress({
+    activeNodeId: 'node-2',
+    editorRef: createEditorRef(
+      5400,
+      { from: 0, to: 0 },
+      {
+        isPositionNearViewportRatio: () => false,
+        primaryVisiblePosition: 3200
+      }
+    ),
+    getReadingPositionSelection: () => ({ from: 12, to: 12 }),
+    isImmersiveMode: false,
+    isViewingTrashNode: false,
+    nodeViewById: {},
+    setNodeViewState
+  });
+
+  expect(setNodeViewState).toHaveBeenCalledWith('node-2', {
+    scrollTop: 5400,
+    selection: { from: 3200, to: 3200 }
   });
 });

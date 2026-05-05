@@ -106,7 +106,7 @@ describe('createRevealDocumentPosition', () => {
     const getScrollTop = vi.fn(() => 320);
     const setNodeViewState = vi.fn();
 
-    const args = createRevealDocumentPositionArgs({ getScrollTop, revealPosition, setNodeViewState }) as never;
+    const args = createRevealDocumentPositionArgs({ getScrollTop, revealPosition, setNodeViewState }) as any;
     const revealDocumentPosition = createRevealDocumentPosition(args);
 
     revealDocumentPosition(48000);
@@ -141,7 +141,7 @@ describe('createRevealDocumentPosition', () => {
         },
         setNodeViewState
       }
-    } as never);
+    } as any);
 
     revealDocumentSelection({ from: 3, to: 125 });
 
@@ -195,7 +195,7 @@ describe('createRevealAnchorInDocument', () => {
     const setNodeViewState = vi.fn();
     const content = 'AD';
     const anchorPosition = 1;
-    const args = createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as never;
+    const args = createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as any;
     const revealAnchorInDocument = createRevealAnchorInDocument(args);
 
     revealAnchorInDocument({
@@ -204,12 +204,17 @@ describe('createRevealAnchorInDocument', () => {
       locator: { from: anchorPosition, originalText: '', to: anchorPosition }
     });
 
+    expect(revealSelection).not.toHaveBeenCalled();
+    expect(setNodeViewState).not.toHaveBeenCalled();
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
     expect(args.runtime.readingPositionRef.current).toEqual({
       nodeId: 'node-1',
       selection: { from: anchorPosition, to: anchorPosition }
     });
-    expect(setNodeViewState).not.toHaveBeenCalled();
+    expect(args.runtime.readingPositionSyncRef.current.state).toMatchObject({
+      reason: 'reveal-anchor',
+      targetSelection: { from: anchorPosition, to: anchorPosition }
+    });
   });
 });
 

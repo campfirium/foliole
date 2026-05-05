@@ -1,7 +1,8 @@
-import { isPdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
-import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import { pushDebugTrace } from '../../shared/testing/debugBridge';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
+import { buildAnchorViewState } from './anchorViewState';
+import { requestReadingPositionApply } from './readingPositionRequests';
 
 export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
   return () => {
@@ -24,25 +25,44 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
 }
 
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string) => {
+  return (nodeId: string, focusAnchor = null) => {
+    console.log('select-node-called', {
+      activeNodeId: args.ws.activeNodeId,
+      focusAnchor,
+      nodeId
+    });
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
-    const selectedNode = args.ws.nodesById[nodeId];
-    if (
-      (selectedNode?.anchorLink?.kind === 'highlight' || selectedNode?.anchorLink?.kind === 'cloze') &&
-      selectedNode.parentNodeId
-    ) {
-      args.virtualView.closeVirtualView();
-      if (isPdfAnchorLocator(selectedNode.anchorLink.locator)) {
-        args.nav.handleSelectNode(selectedNode.parentNodeId);
-        requestPdfAnchorJump(selectedNode.parentNodeId, selectedNode.anchorLink.locator);
-        return;
+    const activeNode = args.ws.activeNodeId ? args.ws.nodesById[args.ws.activeNodeId] : null;
+    const inheritedParentAnchor =
+      !focusAnchor && activeNode?.parentNodeId === nodeId ? activeNode.anchorLink ?? null : null;
+    const effectiveFocusAnchor = focusAnchor ?? inheritedParentAnchor;
+    pushDebugTrace('select-node.requested', {
+      activeNodeAnchorLink: activeNode?.anchorLink ?? null,
+      activeNodeId: activeNode?.id ?? null,
+      effectiveFocusAnchor,
+      focusAnchor,
+      nodeId
+    });
+    const applyTextAnchorSelection = (targetNodeId: string, anchorLink: typeof effectiveFocusAnchor) => {
+      const nextViewState = buildAnchorViewState(anchorLink, args.ws.nodeViewById[targetNodeId]);
+      if (!nextViewState) {
+        return false;
       }
-      args.nav.handleSelectNode(selectedNode.parentNodeId, selectedNode.anchorLink);
-      return;
-    }
+      args.ws.setNodeViewState(targetNodeId, nextViewState);
+      requestReadingPositionApply({
+        nodeId: targetNodeId,
+        reason: 'anchor-navigation',
+        runtime: args.runtime,
+        selection: nextViewState.selection
+      });
+      return true;
+    };
     if (args.ws.nodesById[nodeId]?.specialKind !== 'virtual') {
       args.virtualView.closeVirtualView();
+    }
+    if (effectiveFocusAnchor) {
+      applyTextAnchorSelection(nodeId, effectiveFocusAnchor);
     }
     args.nav.handleSelectNode(nodeId);
   };

@@ -5,6 +5,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
 import { requestReadingPositionApply } from './readingPositionRequests';
 import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
@@ -103,22 +104,6 @@ function useWorkspaceReadingProgressPersistence(args: {
     nodeViewById: args.nodeViewById,
     setNodeViewState: args.setNodeViewState
   });
-}
-
-function useSaveActiveNodeView(
-  runtime: ReturnType<typeof useAppRuntime>,
-  ws: ReturnType<typeof useWorkspaceSelectors>
-) {
-  return useCallback((nodeIdOverride?: string | null) => {
-    const nodeId = nodeIdOverride ?? ws.activeNodeId;
-    if (runtime.isViewingTrashNode || !nodeId || !runtime.editorRef.current) {
-      return;
-    }
-    ws.setNodeViewState(nodeId, {
-      scrollTop: runtime.editorRef.current.getScrollTop(),
-      selection: runtime.editorRef.current.getSelection()
-    });
-  }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
 }
 
 function useAnchorNavigationReadingPosition(runtime: ReturnType<typeof useAppRuntime>) {

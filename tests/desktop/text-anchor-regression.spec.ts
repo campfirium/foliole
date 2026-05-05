@@ -74,6 +74,56 @@ async function seedParentOnlyWorkspace(desktopWindow: Page) {
   });
 }
 
+async function seedChildDocumentWorkspace(desktopWindow: Page) {
+  await desktopWindow.evaluate(async () => {
+    const api = globalThis.window?.__folioleWorkspaceDebug;
+    await api?.seedNodes?.([
+      {
+        content: 'Parent container',
+        id: 'playwright-child-parent',
+        kind: 'topic',
+        title: 'Playwright Child Parent'
+      },
+      {
+        content: 'Alpha Beta Gamma Delta',
+        id: 'playwright-child-document',
+        kind: 'topic',
+        parentNodeId: 'playwright-child-parent',
+        title: 'Playwright Child Document'
+      }
+    ]);
+    await api?.openNode?.('playwright-child-document');
+  });
+}
+
+async function seedLongChildDocumentWorkspace(desktopWindow: Page) {
+  await desktopWindow.evaluate(async () => {
+    const api = globalThis.window?.__folioleWorkspaceDebug;
+    const lines = Array.from(
+      { length: 240 },
+      (_, index) => `Line ${index + 1} keeps stretching the child document for highlight panel jump checks.`
+    );
+    const targetText = 'ChildDocumentJumpNeedle';
+    lines.splice(180, 0, `Focused paragraph carries ${targetText} deep in the child document.`);
+    await api?.seedNodes?.([
+      {
+        content: 'Parent container',
+        id: 'playwright-long-child-parent',
+        kind: 'topic',
+        title: 'Playwright Long Child Parent'
+      },
+      {
+        content: lines.join('\n'),
+        id: 'playwright-long-child-document',
+        kind: 'topic',
+        parentNodeId: 'playwright-long-child-parent',
+        title: 'Playwright Long Child Document'
+      }
+    ]);
+    await api?.openNode?.('playwright-long-child-document');
+  });
+}
+
 async function collectTextAnchorState(desktopWindow: Page) {
   return desktopWindow.evaluate(() => ({
     activeNodeId: globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null,
@@ -169,6 +219,18 @@ async function collectNodeListTitles(desktopWindow: Page) {
       .map((node) => (node.textContent ?? '').replace(/\s+/g, ' ').trim())
       .filter(Boolean);
   });
+}
+
+async function clickHighlightsPanelItem(desktopWindow: Page, titleFragment: string) {
+  return desktopWindow.evaluate((targetText) => {
+    const button = Array.from(document.querySelectorAll('[aria-label="Document highlights"] button')).find((node) =>
+      (node.textContent ?? '').includes(targetText)
+    ) as HTMLButtonElement | undefined;
+    if (!button) {
+      throw new Error(`missing highlights panel item ${targetText}`);
+    }
+    button.click();
+  }, titleFragment);
 }
 
 test('renders text highlights and multi-range clozes in the parent document and sidebar', async ({ desktopWindow }, testInfo) => {
@@ -330,6 +392,157 @@ test('keeps breadcrumb return correct after creating a normal text highlight fro
     body: JSON.stringify(promptSelection, null, 2),
     contentType: 'application/json'
   });
+});
+
+test('jumps to a context-menu-created highlight from the highlights panel while staying in the parent document', async ({ desktopWindow }, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedParentOnlyWorkspace(desktopWindow);
+
+  await desktopWindow.evaluate(() => {
+    return globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 6, 10) ?? false;
+  });
+
+  await desktopWindow.locator('.prompt-editor-host .cm-content').click({
+    button: 'right',
+    position: { x: 120, y: 20 }
+  });
+  await desktopWindow.getByRole('menuitem', { name: 'Highlight' }).click();
+
+  await expect.poll(async () => {
+    return desktopWindow.evaluate(() => {
+      const nodes = globalThis.window?.__folioleWorkspaceDebug?.listNodes?.() ?? [];
+      return nodes.filter((node) => node.title === 'Beta').length;
+    });
+  }).toBeGreaterThan(0);
+
+  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+  await clickHighlightsPanelItem(desktopWindow, 'Beta');
+
+  await expect.poll(async () => {
+    return desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
+  }).toBe('playwright-text-anchor-parent');
+
+  await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
+    message: 'waiting for context-menu-created highlight panel jump to reveal the text range'
+  }).toMatchObject({
+    selection: {
+      from: 6,
+      to: 10
+    },
+    selectedText: 'Beta'
+  });
+
+  await testInfo.attach('context-menu-highlight-panel-selection', {
+    body: JSON.stringify(await collectPromptEditorSelection(desktopWindow), null, 2),
+    contentType: 'application/json'
+  });
+});
+
+test('jumps to a context-menu-created highlight from the highlights panel while staying in a child document', async ({ desktopWindow }, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedChildDocumentWorkspace(desktopWindow);
+
+  await desktopWindow.evaluate(() => {
+    return globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 6, 10) ?? false;
+  });
+
+  await desktopWindow.locator('.prompt-editor-host .cm-content').click({
+    button: 'right',
+    position: { x: 120, y: 20 }
+  });
+  await desktopWindow.getByRole('menuitem', { name: 'Highlight' }).click();
+
+  await expect.poll(async () => {
+    return desktopWindow.evaluate(() => {
+      const nodes = globalThis.window?.__folioleWorkspaceDebug?.listNodes?.() ?? [];
+      return nodes.filter((node) => node.title === 'Beta').length;
+    });
+  }).toBeGreaterThan(0);
+
+  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+  await clickHighlightsPanelItem(desktopWindow, 'Beta');
+
+  await expect.poll(async () => {
+    return desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
+  }).toBe('playwright-child-document');
+
+  await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
+    message: 'waiting for child-document highlight panel jump to reveal the text range'
+  }).toMatchObject({
+    selection: {
+      from: 6,
+      to: 10
+    },
+    selectedText: 'Beta'
+  });
+
+  await testInfo.attach('child-document-highlight-panel-selection', {
+    body: JSON.stringify(await collectPromptEditorSelection(desktopWindow), null, 2),
+    contentType: 'application/json'
+  });
+});
+
+test('scrolls to a deep context-menu-created highlight from the highlights panel while staying in a child document', async ({ desktopWindow }, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedLongChildDocumentWorkspace(desktopWindow);
+
+  const needlePosition = await desktopWindow.evaluate(() => {
+    const content = globalThis.window?.__folioleDebug?.getEditorContent?.('prompt-editor') ?? '';
+    return content.indexOf('ChildDocumentJumpNeedle');
+  });
+  expect(needlePosition).toBeGreaterThan(0);
+
+  await desktopWindow.evaluate((from) => {
+    return globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', from, from + 'ChildDocumentJumpNeedle'.length) ?? false;
+  }, needlePosition);
+
+  await desktopWindow.locator('.prompt-editor-host .cm-content').click({
+    button: 'right',
+    position: { x: 120, y: 20 }
+  });
+  await desktopWindow.getByRole('menuitem', { name: 'Highlight' }).click();
+
+  await expect.poll(async () => {
+    return desktopWindow.evaluate(() => {
+      const nodes = globalThis.window?.__folioleWorkspaceDebug?.listNodes?.() ?? [];
+      return nodes.filter((node) => node.title === 'ChildDocumentJumpNeedle').length;
+    });
+  }).toBeGreaterThan(0);
+
+  await desktopWindow.evaluate(() => {
+    const scroller = document.querySelector('.prompt-editor-host .cm-scroller') as HTMLElement | null;
+    if (!scroller) {
+      return null;
+    }
+    scroller.scrollTop = 0;
+    scroller.dispatchEvent(new Event('scroll'));
+    return scroller.scrollTop;
+  });
+  await desktopWindow.waitForTimeout(200);
+
+  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+  await clickHighlightsPanelItem(desktopWindow, 'ChildDocumentJumpNeedle');
+
+  await expect.poll(async () => {
+    return desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
+  }).toBe('playwright-long-child-document');
+
+  await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
+    message: 'waiting for long child-document highlight panel jump to reveal the text range'
+  }).toMatchObject({
+    selectedText: 'ChildDocumentJumpNeedle',
+    selection: {
+      from: needlePosition,
+      to: needlePosition + 'ChildDocumentJumpNeedle'.length
+    }
+  });
+
+  const finalPromptState = await collectPromptEditorSelection(desktopWindow);
+  await testInfo.attach('long-child-document-highlight-panel-selection', {
+    body: JSON.stringify(finalPromptState, null, 2),
+    contentType: 'application/json'
+  });
+  expect(finalPromptState.scrollTop).toBeGreaterThan(0);
 });
 
 test('really scrolls to a deep text anchor when returning to the parent from breadcrumb', async ({ desktopWindow }, testInfo) => {

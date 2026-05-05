@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const { requestPdfAnchorJump } = vi.hoisted(() => ({
-  requestPdfAnchorJump: vi.fn()
+const { requestReadingPositionApply } = vi.hoisted(() => ({
+  requestReadingPositionApply: vi.fn()
 }));
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
-  requestPdfAnchorJump
+vi.mock('./readingPositionRequests', () => ({
+  requestReadingPositionApply
 }));
 
 import { createSelectNode } from './appControllerTrashViewHandlers';
@@ -20,23 +19,27 @@ function createSelectNodeHarness(args: {
 }) {
   const handleSelectNode = vi.fn();
   const closeVirtualView = vi.fn();
+  const flushPendingEditorDraft = vi.fn();
   const setIsViewingTrashNode = vi.fn();
+  const setNodeViewState = vi.fn();
 
   const selectNode = createSelectNode({
     nav: { handleSelectNode },
-    runtime: { setIsViewingTrashNode },
+    runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
     virtualView: { closeVirtualView },
     ws: {
+      nodeViewById: {},
       nodesById: {
         'highlight-node': {
           anchorLink: args.anchorLink,
           parentNodeId: args.parentNodeId
         }
-      }
+      },
+      setNodeViewState
     }
   } as never);
 
-  return { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode };
+  return { closeVirtualView, flushPendingEditorDraft, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState };
 }
 
 describe('createSelectNode', () => {
@@ -44,22 +47,8 @@ describe('createSelectNode', () => {
     vi.clearAllMocks();
   });
 
-  it('routes highlight node selection to parent pdf node and queues locator jump', () => {
-    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode } = createSelectNodeHarness({
-      anchorLink: { id: 'hl-1', kind: 'highlight', locator: { page: 3, x: 0.2, y: 0.7 } },
-      parentNodeId: 'pdf-parent'
-    });
-
-    selectNode('highlight-node');
-
-    expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
-    expect(closeVirtualView).toHaveBeenCalledTimes(1);
-    expect(handleSelectNode).toHaveBeenCalledWith('pdf-parent');
-    expect(requestPdfAnchorJump).toHaveBeenCalledWith('pdf-parent', { page: 3, x: 0.2, y: 0.7 });
-  });
-
-  it('routes text highlight node selection to parent node with anchor focus', () => {
-    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode } = createSelectNodeHarness({
+  it('opens a text highlight child node directly', () => {
+    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState } = createSelectNodeHarness({
       anchorLink: {
         id: 'hl-2',
         kind: 'highlight',
@@ -72,19 +61,13 @@ describe('createSelectNode', () => {
 
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
-    expect(handleSelectNode).toHaveBeenCalledWith(
-      'text-parent',
-      expect.objectContaining({
-        id: 'hl-2',
-        kind: 'highlight',
-        locator: { from: 6, originalText: 'Beta', to: 10 }
-      })
-    );
-    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+    expect(setNodeViewState).not.toHaveBeenCalled();
+    expect(requestReadingPositionApply).not.toHaveBeenCalled();
+    expect(handleSelectNode).toHaveBeenCalledWith('highlight-node');
   });
 
-  it('routes text cloze node selection to parent node with anchor focus', () => {
-    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode } = createSelectNodeHarness({
+  it('opens a text cloze child node directly', () => {
+    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState } = createSelectNodeHarness({
       anchorLink: {
         id: 'cloze-2',
         kind: 'cloze',
@@ -97,14 +80,108 @@ describe('createSelectNode', () => {
 
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
-    expect(handleSelectNode).toHaveBeenCalledWith(
-      'text-parent',
-      expect.objectContaining({
-        id: 'cloze-2',
-        kind: 'cloze',
-        locator: { from: 6, originalText: 'Beta', to: 10 }
-      })
-    );
-    expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+    expect(setNodeViewState).not.toHaveBeenCalled();
+    expect(requestReadingPositionApply).not.toHaveBeenCalled();
+    expect(handleSelectNode).toHaveBeenCalledWith('highlight-node');
+  });
+
+  it('forwards external focus anchor when opening a regular node', () => {
+    const handleSelectNode = vi.fn();
+    const closeVirtualView = vi.fn();
+    const flushPendingEditorDraft = vi.fn();
+    const setIsViewingTrashNode = vi.fn();
+    const setNodeViewState = vi.fn();
+    const focusAnchor = {
+      id: 'hl-3',
+      kind: 'highlight' as const,
+      locator: { from: 14, originalText: 'Gamma', to: 19 }
+    };
+
+    const selectNode = createSelectNode({
+      nav: { handleSelectNode },
+      runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      virtualView: { closeVirtualView },
+      ws: {
+        nodeViewById: {},
+        nodesById: {
+          'regular-node': {
+            id: 'regular-node',
+            anchorLink: null,
+            parentNodeId: null,
+            specialKind: null
+          }
+        },
+        setNodeViewState
+      }
+    } as any);
+
+    (selectNode as (nodeId: string, focusAnchor?: typeof focusAnchor | null) => void)('regular-node', focusAnchor);
+
+    expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeVirtualView).toHaveBeenCalledTimes(1);
+    expect(setNodeViewState).toHaveBeenCalledWith('regular-node', {
+      scrollTop: 0,
+      selection: { from: 14, to: 19 }
+    });
+    expect(requestReadingPositionApply).toHaveBeenCalledWith({
+      nodeId: 'regular-node',
+      reason: 'anchor-navigation',
+      runtime: expect.any(Object),
+      selection: { from: 14, to: 19 }
+    });
+    expect(handleSelectNode).toHaveBeenCalledWith('regular-node');
+  });
+
+  it('reuses the active child anchor when opening its parent without an explicit focus anchor', () => {
+    const handleSelectNode = vi.fn();
+    const closeVirtualView = vi.fn();
+    const flushPendingEditorDraft = vi.fn();
+    const setIsViewingTrashNode = vi.fn();
+    const setNodeViewState = vi.fn();
+
+    const selectNode = createSelectNode({
+      nav: { handleSelectNode },
+      runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      virtualView: { closeVirtualView },
+      ws: {
+        activeNodeId: 'child-node',
+        nodeViewById: {},
+        nodesById: {
+          'child-node': {
+            anchorLink: {
+              id: 'child-hl-1',
+              kind: 'highlight',
+              locator: { from: 42, originalText: 'Needle', to: 48 }
+            },
+            id: 'child-node',
+            parentNodeId: 'parent-node',
+            specialKind: null
+          },
+          'parent-node': {
+            anchorLink: null,
+            id: 'parent-node',
+            parentNodeId: null,
+            specialKind: null
+          }
+        },
+        setNodeViewState
+      }
+    } as any);
+
+    (selectNode as (nodeId: string, focusAnchor?: null) => void)('parent-node');
+
+    expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeVirtualView).toHaveBeenCalledTimes(1);
+    expect(setNodeViewState).toHaveBeenCalledWith('parent-node', {
+      scrollTop: 0,
+      selection: { from: 42, to: 48 }
+    });
+    expect(requestReadingPositionApply).toHaveBeenCalledWith({
+      nodeId: 'parent-node',
+      reason: 'anchor-navigation',
+      runtime: expect.any(Object),
+      selection: { from: 42, to: 48 }
+    });
+    expect(handleSelectNode).toHaveBeenCalledWith('parent-node');
   });
 });

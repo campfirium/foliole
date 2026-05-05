@@ -36,6 +36,7 @@ interface WorkspaceDebugApi {
   getActiveNodeId: () => string | null;
   getNode: (nodeId: string) => {
     anchorKind: 'highlight' | 'cloze' | null;
+    anchorLink: NodeAnchorLink | null;
     content: string;
     id: string;
     parentNodeId: string | null;
@@ -193,6 +194,7 @@ function createNodeReadDebugApi(): Pick<
       }
       return {
         anchorKind: node.anchorLink?.kind ?? null,
+        anchorLink: node.anchorLink ?? null,
         content: node.content,
         id: node.id,
         parentNodeId: node.parentNodeId,

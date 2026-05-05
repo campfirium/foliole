@@ -58,7 +58,7 @@ function createRevealTextAnchorArgs(content: string) {
       },
       setNodeViewState: vi.fn()
     }
-  } as never;
+  } as any;
 }
 
 beforeEach(() => {
@@ -81,6 +81,8 @@ describe('createRevealAnchorInDocument text locator', () => {
       }
     });
 
+    expect(args.runtime.editorRef.current.revealSelection).not.toHaveBeenCalled();
+    expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
     expect(args.runtime.readingPositionRef.current).toEqual({
       nodeId: 'node-1',
@@ -89,9 +91,12 @@ describe('createRevealAnchorInDocument text locator', () => {
         to: content.indexOf('Beta') + 'Beta'.length
       }
     });
-    expect(args.runtime.readingPositionSyncRef.current.state?.targetSelection).toEqual({
-      from: content.indexOf('Beta'),
-      to: content.indexOf('Beta') + 'Beta'.length
+    expect(args.runtime.readingPositionSyncRef.current.state).toMatchObject({
+      reason: 'reveal-anchor',
+      targetSelection: {
+        from: content.indexOf('Beta'),
+        to: content.indexOf('Beta') + 'Beta'.length
+      }
     });
     expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });
@@ -114,6 +119,8 @@ function runUnresolvedRevealCase() {
     }
   });
 
+  expect(args.runtime.editorRef.current.revealSelection).not.toHaveBeenCalled();
+  expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
   expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
   expect(args.runtime.readingPositionRef.current).toEqual({
     nodeId: 'node-1',
@@ -122,6 +129,12 @@ function runUnresolvedRevealCase() {
       to: 4
     }
   });
-  expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
+  expect(args.runtime.readingPositionSyncRef.current.state).toMatchObject({
+    reason: 'reveal-anchor',
+    targetSelection: {
+      from: 0,
+      to: 4
+    }
+  });
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();
 }

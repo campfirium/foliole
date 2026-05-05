@@ -37,22 +37,39 @@ export function useImmersiveScrollSync(
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
 ) {
+  const latestArgsRef = useRef({
+    getReadingSelection,
+    props,
+    setReadingSelection
+  });
+  latestArgsRef.current = {
+    getReadingSelection,
+    props,
+    setReadingSelection
+  };
+  const editor = props.editorAdapterRef.current;
+
   useEffect(() => {
     if (isImmersiveEditing) {
       shouldSkipNextScrollSyncRef.current = false;
       return;
     }
-    const editor = props.editorAdapterRef.current;
     if (!editor) {
       return;
     }
     const unsubscribe = editor.onScroll(() =>
-      handleScrollSyncEvent(editor, getReadingSelection, props, setReadingSelection, shouldSkipNextScrollSyncRef)
+      handleScrollSyncEvent(
+        editor,
+        latestArgsRef.current.getReadingSelection,
+        latestArgsRef.current.props,
+        latestArgsRef.current.setReadingSelection,
+        shouldSkipNextScrollSyncRef
+      )
     );
     return () => {
       unsubscribe();
     };
-  }, [getReadingSelection, isImmersiveEditing, props, setReadingSelection, shouldSkipNextScrollSyncRef]);
+  }, [editor, isImmersiveEditing, shouldSkipNextScrollSyncRef]);
 }
 
 export function useImmersiveEntrySelectionSync(

@@ -1,13 +1,11 @@
 import type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource, RuntimeTextImportResult } from '../../shared/platform/importBridge';
-import { AppButton, AppStatusBadge, InspectorSection } from '../../shared/ui';
+import { AppStatusBadge, InspectorSection } from '../../shared/ui';
 
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 
 interface WorkspaceRightSidebarSourcePanelProps {
   activeNodeId: string | null;
-  activeNodeParentId: string | null;
   hasActiveNode: boolean;
-  onSelectParentNode: (nodeId: string) => void;
 }
 
 function formatImportTime(timestamp: string) {
@@ -204,17 +202,6 @@ export function WorkspaceRightSidebarSourcePanel(props: WorkspaceRightSidebarSou
           <p className="text-sm leading-6 text-foreground/70">
             This node is attached to an imported parent note, so the source details below come from that parent.
           </p>
-          {props.activeNodeParentId ? (
-            <div className="mt-3">
-              <AppButton
-                className="w-full justify-center"
-                onClick={() => props.onSelectParentNode(props.activeNodeParentId as string)}
-                variant="primary"
-              >
-                Open parent note
-              </AppButton>
-            </div>
-          ) : null}
         </InspectorSection>
       ) : null}
       {importRuns.length > 0 ? <SourceSummarySection entries={importRuns} /> : null}

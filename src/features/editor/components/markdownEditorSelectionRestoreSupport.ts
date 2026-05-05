@@ -8,6 +8,7 @@ import {
   beginRestoreSelection,
   scheduleRestoreSelectionCompletion
 } from './markdownEditorSelectionRestoreCompletion';
+import { resolveRestoreScrollTop } from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function handleSelectionRestore(args: {
@@ -81,14 +82,17 @@ export function resolveRestoreTarget(args: {
   if (!args.nodeId || !selection || !args.adapter || !args.pendingRestoreSelectionKey) {
     return null;
   }
-  const restoreScrollTop = args.nodeViewState?.scrollTop ?? 0;
+  const restoreScrollTop = resolveRestoreScrollTop(args.readingSelection, args.nodeViewState);
   if (Math.max(selection.from, selection.to) > args.value.length) {
     return null;
   }
-  if (args.value.length === 0 && (Math.max(selection.from, selection.to) > 0 || restoreScrollTop > 0)) {
+  if (
+    args.value.length === 0 &&
+    (Math.max(selection.from, selection.to) > 0 || (typeof restoreScrollTop === 'number' && restoreScrollTop > 0))
+  ) {
     return null;
   }
-  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop}`;
+  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}`;
   if (args.pendingRestoreSelectionKey !== selectionKey) {
     return null;
   }
@@ -190,13 +194,14 @@ function restoreEditorSelection(args: {
 
 function canRetryScrollOnlyRestore(
   selection: EditorViewState['selection'],
-  restoreScrollTop: number,
+  restoreScrollTop: number | undefined,
   activeRestoreValueLength: number,
   valueLength: number
 ) {
   return (
     selection.from === 0 &&
     selection.to === 0 &&
+    typeof restoreScrollTop === 'number' &&
     restoreScrollTop > 0 &&
     valueLength > activeRestoreValueLength
   );
