@@ -1,15 +1,38 @@
 import type { Node } from './nodeTypes';
 import { isInboxNode } from './specialNodes';
 
-export function hasChildNodes(nodeId: string, nodeOrder: string[], nodesById: Record<string, Node | undefined>) {
-  return nodeOrder.some((candidateId) => nodesById[candidateId]?.parentNodeId === nodeId);
+function isVisibleNode(
+  nodeId: string,
+  nodesById: Record<string, Node | undefined>,
+  hiddenNodeIds?: ReadonlySet<string>
+) {
+  return Boolean(nodesById[nodeId] && !hiddenNodeIds?.has(nodeId));
+}
+
+export function hasChildNodes(
+  nodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node | undefined>,
+  hiddenNodeIds?: ReadonlySet<string>
+) {
+  return nodeOrder.some(
+    (candidateId) =>
+      isVisibleNode(candidateId, nodesById, hiddenNodeIds) && nodesById[candidateId]?.parentNodeId === nodeId
+  );
 }
 
 export function isNodeContentEmpty(node: Pick<Node, 'content'> | null | undefined) {
   return (node?.content ?? '').trim().length === 0;
 }
 
-export function canNodeAcceptMovedChildren(nodeId: string, nodeOrder: string[], nodesById: Record<string, Node | undefined>) {
+export function canNodeAcceptMovedChildren(
+  nodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node | undefined>,
+  hiddenNodeIds?: ReadonlySet<string>
+) {
+  void nodeOrder;
+  void hiddenNodeIds;
   const node = nodesById[nodeId];
   if (!node || node.anchorLink) {
     return false;
@@ -17,10 +40,15 @@ export function canNodeAcceptMovedChildren(nodeId: string, nodeOrder: string[], 
   return isInboxNode(node) || isNodeContentEmpty(node);
 }
 
-export function isNodeContentLocked(nodeId: string, nodeOrder: string[], nodesById: Record<string, Node | undefined>) {
+export function isNodeContentLocked(
+  nodeId: string,
+  nodeOrder: string[],
+  nodesById: Record<string, Node | undefined>,
+  hiddenNodeIds?: ReadonlySet<string>
+) {
   const node = nodesById[nodeId];
   if (!node || isInboxNode(node)) {
     return false;
   }
-  return hasChildNodes(nodeId, nodeOrder, nodesById);
+  return isNodeContentEmpty(node) && hasChildNodes(nodeId, nodeOrder, nodesById, hiddenNodeIds);
 }

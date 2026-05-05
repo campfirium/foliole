@@ -10,6 +10,25 @@ import {
   useCommandShortcutState
 } from './reviewHotkeysState';
 
+function canNodeBeMoveTarget(args: {
+  activeNodeId: string;
+  nodeId: string;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (args.nodeId === args.activeNodeId || args.ws.trashedNodeIds.includes(args.nodeId)) {
+    return false;
+  }
+  if (isNodeInSubtree(args.nodeId, args.activeNodeId, args.ws.nodesById as Record<string, import('../../features/nodes/model/nodeTypes').Node>)) {
+    return false;
+  }
+  return canNodeAcceptMovedChildren(
+    args.nodeId,
+    args.ws.nodeOrder,
+    args.ws.nodesById,
+    new Set(args.ws.trashedNodeIds)
+  );
+}
+
 export function useAppPaletteItems(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
@@ -30,15 +49,7 @@ export function useAppPaletteItems(args: {
     () => {
       const activeNodeId = args.activeNodeId;
       return activeNodeId
-        ? args.ws.nodeOrder.some((nodeId) => {
-            if (nodeId === activeNodeId || args.ws.trashedNodeIds.includes(nodeId)) {
-              return false;
-            }
-            if (isNodeInSubtree(nodeId, activeNodeId, args.ws.nodesById as Record<string, import('../../features/nodes/model/nodeTypes').Node>)) {
-              return false;
-            }
-            return canNodeAcceptMovedChildren(nodeId, args.ws.nodeOrder, args.ws.nodesById);
-          })
+        ? args.ws.nodeOrder.some((nodeId) => canNodeBeMoveTarget({ activeNodeId, nodeId, ws: args.ws }))
         : false;
     },
     [args.activeNodeId, args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds]

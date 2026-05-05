@@ -109,13 +109,32 @@ it('keeps manual title when content changes after rename', () => {
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Title');
 });
 
-it('blocks content edits after a node becomes a container for child nodes', () => {
+it('blocks content edits for empty container nodes after they gain child nodes', () => {
   const parentId = useWorkspaceStore.getState().createRootNode('');
   useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
 
   useWorkspaceStore.getState().updateNodeContent(parentId, 'Container text should stay blocked');
 
   expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('');
+});
+
+it('keeps article parents editable after they gain child nodes', () => {
+  const parentId = useWorkspaceStore.getState().createRootNode('Parent article');
+  useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
+
+  useWorkspaceStore.getState().updateNodeContent(parentId, 'Parent article updated');
+
+  expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Parent article updated');
+});
+
+it('restores content editing after an empty container loses all child nodes', () => {
+  const parentId = useWorkspaceStore.getState().createRootNode('');
+  const childId = useWorkspaceStore.getState().createChildNode(parentId, 'Child body');
+
+  useWorkspaceStore.getState().deleteNode(childId);
+  useWorkspaceStore.getState().updateNodeContent(parentId, 'Recovered content');
+
+  expect(useWorkspaceStore.getState().nodesById[parentId]?.content).toBe('Recovered content');
 });
 
 it('creates QA node from selected content', () => {

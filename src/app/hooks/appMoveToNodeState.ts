@@ -21,7 +21,12 @@ export function buildControllerMoveToNodeState(args: {
         if (isNodeInSubtree(nodeId, activeNodeId, args.ws.nodesById as Record<string, import('../../features/nodes/model/nodeTypes').Node>)) {
           return false;
         }
-        return canNodeAcceptMovedChildren(nodeId, args.ws.nodeOrder, args.ws.nodesById);
+        return canNodeAcceptMovedChildren(
+          nodeId,
+          args.ws.nodeOrder,
+          args.ws.nodesById,
+          new Set(args.ws.trashedNodeIds)
+        );
       })
     : [];
 
