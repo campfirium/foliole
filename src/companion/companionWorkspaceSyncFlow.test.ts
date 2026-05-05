@@ -97,7 +97,7 @@ async function testRecordsBacklogBytes() {
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 
-  await tryForegroundAutoSync({
+  const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
@@ -107,6 +107,7 @@ async function testRecordsBacklogBytes() {
     state: createSyncState()
   });
 
+  expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still caching.',
     status: 'skipped'
@@ -129,7 +130,7 @@ async function testRecordsStructureLagWithoutCompleting() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync pass finished; 4 structure change(s) still applying.',
     status: 'skipped'

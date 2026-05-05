@@ -18,7 +18,16 @@ import {
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
-export type ForegroundAutoSyncOutcome = 'completed' | 'failed' | 'skipped';
+export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
+
+function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+  const remainingStructure = result.remainingStructureChangeCount ?? 0;
+  return (
+    result.remainingContentBlobCount !== 0 ||
+    result.remainingAttachmentResourceCount !== 0 ||
+    remainingStructure > 0
+  );
+}
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   return loadCompanionReadableArticle(snapshot);
@@ -60,6 +69,9 @@ export async function runCompanionStreamSync(args: {
     args.setSyncProgress(remainingProgress);
   } else if (shouldClearCompanionSyncProgress(result)) {
     args.setSyncProgress(null);
+  }
+  if (passResult.outcome === 'skipped' && hasSyncBacklog(result)) {
+    return 'backlog';
   }
   return passResult.outcome;
 }
