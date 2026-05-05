@@ -31,4 +31,28 @@ describe('handleMarkdownCompatibleHtmlPaste', () => {
     expect(handleMarkdownCompatibleHtmlPaste({ getData: () => '' }, view)).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
   });
+
+  it('keeps degraded HTML structures visible during rich text paste', () => {
+    const dispatch = vi.fn();
+    const view = {
+      dispatch,
+      state: { selection: { main: { from: 0, to: 0 } } }
+    } as unknown as EditorView;
+    const clipboard = {
+      getData: (format: string) =>
+        format === 'text/html'
+          ? '<table><tr><th>Name</th><th>Value</th></tr><tr><td>Alpha</td><td>Beta</td></tr></table><iframe src="https://example.com/embed"></iframe>'
+          : ''
+    };
+
+    expect(handleMarkdownCompatibleHtmlPaste(clipboard, view)).toBe(true);
+    expect(dispatch).toHaveBeenCalledWith({
+      changes: {
+        from: 0,
+        insert: '[Table degraded]\nName | Value\nAlpha | Beta\n\n[Embedded iframe: https://example.com/embed]',
+        to: 0
+      },
+      selection: { anchor: 88 }
+    });
+  });
 });

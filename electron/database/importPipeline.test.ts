@@ -39,6 +39,7 @@ afterEach(async () => {
 function createImport(content: string, importedAt: string) {
   return createPreparedDesktopTextImport({
     content,
+    degradedReason: null,
     fileName: 'note.md',
     filePath: '/tmp/note.md',
     importedAt,
@@ -122,5 +123,43 @@ it('persists new, duplicate, updated and degraded import semantics with traceabi
     content: '# Imported\nUpdated body',
     parent_id: 'special-inbox',
     title: 'note.md'
+  });
+});
+
+it('persists explicit degraded reasons while still writing converted content', () => {
+  const degraded = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: '# Imported\n\n[Table degraded]\nName | Value',
+      degradedReason: 'HTML conversion degraded: table',
+      fileName: 'note.html',
+      filePath: '/tmp/note.html',
+      importedAt: '2026-03-22T10:20:00.000Z',
+      kind: 'html'
+    })
+  );
+
+  const { nodeRow, runRows, sourceRow } = readPersistedImportState(degraded.sourceFingerprint, degraded.nodeId);
+
+  expect(degraded.resultStatus).toBe('degraded');
+  expect(degraded.degradedReason).toBe('HTML conversion degraded: table');
+  expect(sourceRow).toEqual({
+    latest_node_id: degraded.nodeId,
+    provider: 'desktop_text_file',
+    source_kind: 'html',
+    source_locator: '/tmp/note.html',
+    source_name: 'note.html'
+  });
+  expect(runRows).toEqual([
+    {
+      degraded_reason: 'HTML conversion degraded: table',
+      duplicate_semantic: 'new',
+      node_id: degraded.nodeId,
+      result_status: 'degraded'
+    }
+  ]);
+  expect(nodeRow).toEqual({
+    content: '# Imported\n\n[Table degraded]\nName | Value',
+    parent_id: 'special-inbox',
+    title: 'note.html'
   });
 });

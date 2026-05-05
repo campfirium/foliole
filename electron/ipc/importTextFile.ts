@@ -5,7 +5,10 @@ import { dialog, type BrowserWindow } from 'electron';
 
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
-import { convertHtmlToMarkdownCompatible } from '../../lib/core/import/htmlToMarkdownCompatible.js';
+import {
+  convertHtmlToMarkdownCompatible,
+  formatHtmlConversionDegradedReason
+} from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import type { NativeImportedTextFile, NativeTextImportResult } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 
@@ -29,12 +32,16 @@ function stripUtf8Bom(content: string) {
   return content.startsWith('\uFEFF') ? content.slice(1) : content;
 }
 
-function toImportContent(content: string, kind: NativeImportedTextFile['kind']) {
+function toImportPayload(content: string, kind: NativeImportedTextFile['kind']) {
   const normalizedContent = stripUtf8Bom(content);
   if (kind !== 'html') {
-    return normalizedContent;
+    return { content: normalizedContent, degradedReason: null };
   }
-  return convertHtmlToMarkdownCompatible(normalizedContent).content;
+  const converted = convertHtmlToMarkdownCompatible(normalizedContent);
+  return {
+    content: converted.content,
+    degradedReason: formatHtmlConversionDegradedReason(converted.warnings)
+  };
 }
 
 function toNativeTextImportResult(record: PersistedImportRecord): NativeTextImportResult {
@@ -78,7 +85,7 @@ export async function selectImportTextFile(window?: BrowserWindow | null): Promi
     return null;
   }
   const kind = resolveImportKind(filePath);
-  const content = toImportContent(await fs.readFile(filePath, 'utf8'), kind);
+  const { content } = toImportPayload(await fs.readFile(filePath, 'utf8'), kind);
 
   return {
     content,
@@ -99,10 +106,10 @@ export async function runTextFileImport(window?: BrowserWindow | null): Promise<
   const kind = resolveImportKind(filePath);
 
   try {
-    const content = toImportContent(await fs.readFile(filePath, 'utf8'), kind);
+    const { content, degradedReason } = toImportPayload(await fs.readFile(filePath, 'utf8'), kind);
     return toNativeTextImportResult(
       runPreparedImport(
-        createPreparedDesktopTextImport({ content, fileName, filePath, importedAt, kind })
+        createPreparedDesktopTextImport({ content, degradedReason, fileName, filePath, importedAt, kind })
       )
     );
   } catch (error) {

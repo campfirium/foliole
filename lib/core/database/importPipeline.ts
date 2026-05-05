@@ -186,8 +186,8 @@ export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImpo
   return driver.transaction(() => {
     const existingSource = readExistingSource(driver, prepared.sourceFingerprint);
     const duplicateSemantic = resolveDuplicateSemantic(existingSource, prepared.contentFingerprint);
-    const baseRecord = buildImportRecord(prepared, 'imported', duplicateSemantic, {
-      degradedReason: null,
+    const baseRecord = buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
+      degradedReason: prepared.degradedReason,
       failureReason: null,
       nodeId: existingSource?.latest_node_id ?? null
     });
@@ -200,7 +200,7 @@ export function runPreparedImport(driver: DatabaseDriver, prepared: PreparedImpo
     if (prepared.content.trim().length === 0) {
       const degradedRecord: PersistedImportRecord = {
         ...baseRecord,
-        degradedReason: 'empty_content',
+        degradedReason: prepared.degradedReason ?? 'empty_content',
         resultStatus: 'degraded'
       };
       writeImportSource(driver, degradedRecord);

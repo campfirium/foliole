@@ -8,6 +8,7 @@ import {
 
 interface CreatePreparedDesktopTextImportInput {
   content: string;
+  degradedReason?: string | null;
   fileName: string;
   filePath: string;
   importedAt: string;
@@ -34,6 +35,7 @@ export function createPreparedDesktopTextImport(
       input.kind,
       normalizedContent
     ),
+    degradedReason: input.degradedReason ?? null,
     importedAt: input.importedAt,
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
     sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.filePath),

@@ -16,6 +16,7 @@ export interface PreparedImportRecord {
   sourceFingerprint: string;
   contentFingerprint: string;
   content: string;
+  degradedReason: string | null;
   importedAt: string;
 }
 

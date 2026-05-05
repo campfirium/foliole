@@ -24,9 +24,22 @@ type HtmlTextNode = DefaultTreeAdapterTypes.TextNode;
 
 export type HtmlConversionWarning = 'embedded_content_replaced' | 'table_degraded';
 
+const HTML_CONVERSION_WARNING_LABELS: Record<HtmlConversionWarning, string> = {
+  embedded_content_replaced: 'embedded content',
+  table_degraded: 'table'
+};
+
 export interface HtmlToMarkdownCompatibleResult {
   content: string;
   warnings: HtmlConversionWarning[];
+}
+
+export function formatHtmlConversionDegradedReason(warnings: HtmlConversionWarning[]) {
+  if (warnings.length === 0) {
+    return null;
+  }
+  const warningLabels = [...new Set(warnings)].map((warning) => HTML_CONVERSION_WARNING_LABELS[warning]);
+  return `HTML conversion degraded: ${warningLabels.join(', ')}`;
 }
 
 export function convertHtmlToMarkdownCompatible(html: string): HtmlToMarkdownCompatibleResult {
