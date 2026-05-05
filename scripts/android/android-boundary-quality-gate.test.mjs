@@ -1,0 +1,104 @@
+// @vitest-environment node
+/* global process */
+
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
+
+function runTargetGate(cwd, target) {
+  return new Promise((resolve) => {
+    const child = spawn('bash', [TARGET_SCRIPT, target], {
+      cwd,
+      env: { ...process.env }
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+async function writePackageJson(rootDir, scripts) {
+  await writeFile(
+    path.join(rootDir, 'package.json'),
+    `${JSON.stringify({ name: 'android-boundary-gate-fixture', private: true, scripts }, null, 2)}\n`,
+    'utf8'
+  );
+}
+
+async function writeFixtureScript(rootDir, relativePath, message) {
+  const filePath = path.join(rootDir, relativePath);
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, `console.log('${message}')\n`, 'utf8');
+}
+
+const ANDROID_GATE_SCRIPTS = {
+  'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+  'lint:android': 'node -e "console.log(\'android lint ok\')"',
+  'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
+  'test:android': 'node -e "console.log(\'android test ok\')"',
+  'android:sync': 'node -e "console.log(\'android sync ok\')"',
+  'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
+  'android:host:test': 'node -e "console.log(\'android host test ok\')"'
+};
+
+const SHARED_GATE_SCRIPTS = {
+  'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+  'lint:shared': 'node -e "console.log(\'shared lint ok\')"',
+  'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
+  'test:shared': 'node -e "console.log(\'shared test ok\')"',
+  build: 'node -e "console.log(\'shared build ok\')"',
+  'electron:compile': 'node -e "console.log(\'shared electron compile ok\')"',
+  'android:web:build': 'node -e "console.log(\'shared android build ok\')"'
+};
+
+describe('Android boundary quality gate routing', () => {
+  it('runs the Android boundary check in the Android gate', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
+    try {
+      await writePackageJson(tempRoot, ANDROID_GATE_SCRIPTS);
+      await writeFixtureScript(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'root boundary ok');
+
+      const result = await runTargetGate(tempRoot, 'android');
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('android boundary ok');
+      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('android lint ok'));
+      expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('runs the Android boundary check in the shared gate', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
+    try {
+      await writePackageJson(tempRoot, SHARED_GATE_SCRIPTS);
+      await writeFixtureScript(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'root boundary ok');
+      await writeFixtureScript(tempRoot, 'scripts/check-workspace-settings-boundary.mjs', 'workspace boundary ok');
+
+      const result = await runTargetGate(tempRoot, 'shared');
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('android boundary ok');
+      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('shared lint ok'));
+      expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+});

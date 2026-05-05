@@ -48,6 +48,16 @@ run_layer_dependency_boundary_check_if_present() {
   fi
 }
 
+package_script_exists() {
+  node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts[process.argv[1]] ? 0 : 1)" "$1"
+}
+
+run_android_boundary_check_if_present() {
+  if package_script_exists "check:android-boundary"; then
+    run_quality_gate_script "${prefix}" "${pm}" "check:android-boundary"
+  fi
+}
+
 run_gate_steps() {
   local step
   for step in "$@"; do
@@ -175,16 +185,19 @@ case "${target}" in
   android)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
+    run_android_boundary_check_if_present
     run_gate_steps lint:android typecheck:android test:android android:sync android:host:lint android:host:test
     ;;
   android-device)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
+    run_android_boundary_check_if_present
     run_gate_steps lint:android typecheck:android test:android android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
+    run_android_boundary_check_if_present
     run_gate_steps lint:shared typecheck:shared test:shared build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
