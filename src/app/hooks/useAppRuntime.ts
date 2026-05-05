@@ -1,25 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
-interface UseAppRuntimeWorkspace {
-  startReviewSession: () => boolean;
+interface CommandPaletteToggleShortcutEvent {
+  altKey: boolean;
+  ctrlKey: boolean;
+  key: string;
+  metaKey: boolean;
+  shiftKey: boolean;
 }
 
-export function useAppRuntime(ws: UseAppRuntimeWorkspace, startStudyMode: () => void, initialListWidth: number) {
+export function isCommandPaletteToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
+  return (
+    (event.metaKey || event.ctrlKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.key.toLowerCase() === 'p'
+  );
+}
+
+export function useAppRuntime(initialListWidth: number) {
   const editorRef = useRef<EditorAdapter | null>(null);
   const lastExpandedListWidthRef = useRef(initialListWidth);
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [recentCommandIds, setRecentCommandIds] = useState<string[]>([]);
+  const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
 
   useEffect(
     () =>
       onWindowKeydown((event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        if (isCommandPaletteToggleShortcut(event)) {
           event.preventDefault();
           setIsCommandPaletteOpen((open) => !open);
         }
@@ -27,13 +40,12 @@ export function useAppRuntime(ws: UseAppRuntimeWorkspace, startStudyMode: () => 
     []
   );
 
-  const runSimpleCommand = (id: string, closeTrashView: () => void, openTrashView: () => void) => {
-    setRecentCommandIds((prev) => [id, ...prev.filter((item) => item !== id)].slice(0, 20));
-    if (id === APP_COMMAND_IDS.openNotes) closeTrashView();
-    if (id === APP_COMMAND_IDS.openTrash) openTrashView();
-    if (id === APP_COMMAND_IDS.openSettings) setIsSettingsOpen((open) => !open);
-    if (id === APP_COMMAND_IDS.startStudyMode && ws.startReviewSession()) startStudyMode();
-    setIsCommandPaletteOpen(false);
+  const recordRecentCommand = (id: string) => {
+    setRecentCommandIdsState((current) => {
+      const next = pushRecentCommandId(current, id);
+      setRecentCommandIds(next);
+      return next;
+    });
   };
 
   return {
@@ -43,7 +55,7 @@ export function useAppRuntime(ws: UseAppRuntimeWorkspace, startStudyMode: () => 
     isViewingTrashNode,
     lastExpandedListWidthRef,
     recentCommandIds,
-    runSimpleCommand,
+    recordRecentCommand,
     setIsCommandPaletteOpen,
     setIsSettingsOpen,
     setIsViewingTrashNode

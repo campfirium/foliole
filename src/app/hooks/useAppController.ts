@@ -22,11 +22,11 @@ import {
   type MonospaceFontPreset
 } from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
-import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
+import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appCommands';
 import { buildLayoutProps, countDueReviewNodes } from './layoutPropsBuilder';
 import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
@@ -49,13 +49,19 @@ export interface AppControllerResult {
   paletteState: AppPaletteState;
 }
 
-function buildPaletteItems(): CommandPaletteItem[] {
-  return [
-    { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace', enabled: true },
-    { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace', enabled: true },
-    { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Workspace', enabled: true },
-    { id: APP_COMMAND_IDS.startStudyMode, title: 'Start Study Mode', section: 'Review', enabled: true }
-  ];
+const BLOCKED_HOTKEY_UPDATE = (): HotkeyUpdateResult => ({
+  status: 'blocked',
+  message: 'Hotkey customization is temporarily unavailable.'
+});
+
+function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[]): HotkeySettingItem[] {
+  return items.map((item) => ({
+    commandId: item.id,
+    title: item.title,
+    section: item.section,
+    shortcutLabel: '',
+    isCustomized: false
+  }));
 }
 
 function useWorkspaceSelectors() {
@@ -116,36 +122,133 @@ function useAppearanceState() {
   };
 }
 
+function useNowIso(tickMs = 15_000) {
+  const [nowIso, setNowIso] = useState(() => new Date().toISOString());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowIso(new Date().toISOString()), tickMs);
+    return () => window.clearInterval(timer);
+  }, [tickMs]);
+  return nowIso;
+}
+
+interface PaletteCommandRunnerArgs {
+  isReviewMode: boolean;
+  gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
+  exitReviewSession: () => void;
+  exitStudyMode: () => void;
+  onToggleEditorDisplayMode: () => void;
+  onToggleListVisibility: () => void;
+  openTrashView: () => void;
+  paletteItems: CommandPaletteItem[];
+  recordRecentCommand: (id: string) => void;
+  revealReviewAnswer: () => void;
+  setCommandPaletteOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
+  startReviewSession: () => boolean;
+  startStudyMode: () => void;
+  trashViewOpen: boolean;
+  closeTrashView: () => void;
+  goBack: () => void;
+  goForward: () => void;
+  goParent: () => void;
+}
+
+function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
+  const toggleReviewMode = () =>
+    runReviewModeToggle(args.isReviewMode, {
+      enterReviewMode: () => args.startReviewSession() && args.startStudyMode(),
+      exitReviewMode: () => {
+        args.exitReviewSession();
+        args.exitStudyMode();
+      }
+    });
+
+  return (id: string) => {
+    const canRun = args.paletteItems.some((item) => item.id === id && item.enabled);
+    if (!canRun) {
+      return;
+    }
+    const handled = runAppCommand(id, {
+      closeSettings: () => args.setSettingsOpen(false),
+      goBack: args.goBack,
+      goForward: args.goForward,
+      goParent: args.goParent,
+      openNotes: args.closeTrashView,
+      openSettings: () => args.setSettingsOpen(true),
+      openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
+      revealReviewAnswer: args.revealReviewAnswer,
+      toggleReviewMode,
+      toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
+      toggleList: args.onToggleListVisibility,
+      gradeReviewAgain: () => args.gradeReviewCard(1),
+      gradeReviewHard: () => args.gradeReviewCard(2),
+      gradeReviewGood: () => args.gradeReviewCard(3),
+      gradeReviewEasy: () => args.gradeReviewCard(4)
+    });
+    if (!handled) {
+      return;
+    }
+    args.recordRecentCommand(id);
+    args.setCommandPaletteOpen(false);
+  };
+}
+
 export function useAppController(): AppControllerResult {
   const ws = useWorkspaceSelectors(), appearance = useAppearanceState(), trash = useTrashView({ nodeOrder: ws.nodeOrder, trashedNodeIds: ws.trashedNodeIds });
-  const [nowIso, setNowIso] = useState(() => new Date().toISOString());
+  const nowIso = useNowIso();
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined, selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
-  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false }), runtime = useAppRuntime(ws, study.startStudyMode, ws.listWidth);
+  const study = useStudyMode({ activeNodeId: ws.activeNodeId, isViewingTrashNode: false }), runtime = useAppRuntime(ws.listWidth);
   const listResize = useListResizer(ws.listWidth, ws.setListWidth), documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
   const saveActiveNodeView = useCallback(() => { if (runtime.isViewingTrashNode || !ws.activeNodeId || !runtime.editorRef.current) return; ws.setNodeViewState(ws.activeNodeId, { scrollTop: runtime.editorRef.current.getScrollTop(), selection: runtime.editorRef.current.getSelection() }); }, [runtime.editorRef, runtime.isViewingTrashNode, ws]);
   const nav = useWorkspaceNavigation({ activeNodeContent: activeNode?.content ?? null, activeNodeId: ws.activeNodeId, activeNodeParentId: activeNode?.parentNodeId ?? null, backStackSize: ws.navigation.backStack.length, closeContextMenu: () => undefined, editorRef: runtime.editorRef, forwardStackSize: ws.navigation.forwardStack.length, goBack: ws.goBack, goForward: ws.goForward, goToParent: ws.goToParent, jumpToAncestorNode: ws.jumpToAncestorNode, openNode: ws.openNode, saveActiveNodeView });
   const editorCtx = useEditorContextCommands({ activeNode, activeNodeId: ws.activeNodeId, createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection, createQANodeFromSelection: ws.createQANodeFromSelection, editorRef: runtime.editorRef, isTrashViewOpen: runtime.isViewingTrashNode, updateNodeContent: ws.updateNodeContent });
-  const hotkeyItems: HotkeySettingItem[] = useMemo(() => buildPaletteItems().map((item) => ({ commandId: item.id, title: item.title, section: item.section, shortcutLabel: '', isCustomized: false })), []);
-  const onHotkeyUpdate = (): HotkeyUpdateResult => ({ status: 'blocked', message: 'Hotkey customization is temporarily unavailable.' });
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNowIso(new Date().toISOString());
-    }, 15_000);
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, []);
-  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso), [nowIso, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
   const { exitStudyMode, isStudyMode, startStudyMode } = study;
-  const layoutProps = buildLayoutProps({ activeNodeId: ws.activeNodeId, appearance, canGoBack: nav.canGoBack, canGoForward: nav.canGoForward, canGoParent: nav.canGoParent, canStartStudyMode: reviewDueCount > 0 && study.canStartStudyMode, contextMenu: editorCtx.contextMenu, documentMaxWidth: ws.documentMaxWidth, documentNode: runtime.isViewingTrashNode ? selectedTrashNode : activeNode, documentResize, editorNodeId: runtime.isViewingTrashNode ? null : ws.activeNodeId, editorNodeViewState: !runtime.isViewingTrashNode && ws.activeNodeId ? ws.nodeViewById[ws.activeNodeId] : undefined, hotkeyItems, isResizingList: listResize.isResizingList, isSettingsOpen: runtime.isSettingsOpen, isStudyMode, isTrashViewOpen: trash.isTrashViewOpen, isViewingTrashNode: runtime.isViewingTrashNode, listWidth: ws.listWidth, nodeOrder: ws.nodeOrder, nodesById: ws.nodesById, onAnswerChange: (answer) => ws.activeNodeId && !runtime.isViewingTrashNode && ws.updateNodeReveal(ws.activeNodeId, answer), onEditorChange: (content) => !runtime.isViewingTrashNode && (ws.activeNodeId ? ws.updateNodeContent(ws.activeNodeId, content) : ws.createRootNode(content)), onEditorReady: (adapter) => { runtime.editorRef.current = adapter; }, onHotkeyUpdate, onOpenNotesView: trash.closeTrashView, onOpenSettings: () => runtime.setIsSettingsOpen(true), onCloseSettings: () => runtime.setIsSettingsOpen(false), onOpenTrashView: () => (trash.isTrashViewOpen ? trash.closeTrashView() : trash.openTrashView()), onResetLayout: ws.resetLayout, onSelectTrashNode: (nodeId) => (runtime.setIsViewingTrashNode(true), trash.openTrashView(), trash.setSelectedTrashNodeId(nodeId)), onSplitterKeyDown: listResize.handleSplitterKeyDown, onSplitterPointerDown: listResize.handleSplitterPointerDown, onToggleListVisibility: () => (ws.listWidth <= 0 ? ws.setListWidth(Math.max(220, runtime.lastExpandedListWidthRef.current || 300)) : (runtime.lastExpandedListWidthRef.current = ws.listWidth, ws.setListWidth(0))), reviewDueCount, reviewSession: ws.reviewSession, showAnswerSection: !isStudyMode || ws.reviewSession.isAnswerRevealed, selectedTrashNodeId: trash.selectedTrashNodeId, startStudyMode, startReviewSession: ws.startReviewSession, exitReviewSession: ws.exitReviewSession, exitStudyMode, updateGrade: (grade) => void ws.gradeReviewCard(grade), revealReviewAnswer: ws.revealReviewAnswer, nav: { onGoBack: nav.handleGoBack, onGoForward: nav.handleGoForward, onGoParent: nav.handleGoParent, onSelectBreadcrumbNode: nav.handleSelectBreadcrumbNode, onSelectNode: nav.handleSelectNode }, editorCtx: { onCloseContextMenu: editorCtx.closeContextMenu, onCreateCloze: editorCtx.handleCreateCloze, onCreateHighlight: editorCtx.handleCreateHighlight, onEditorContextMenu: editorCtx.handleEditorContextMenu } });
+  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso), [nowIso, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
+  const hasReviewCard = Boolean(ws.reviewSession.currentNodeId);
+  const paletteItems = useMemo<CommandPaletteItem[]>(
+    () =>
+      buildAppPaletteItems({
+        canGoBack: nav.canGoBack,
+        canGoForward: nav.canGoForward,
+        canGoParent: nav.canGoParent,
+        canRevealAnswer: hasReviewCard && !ws.reviewSession.isAnswerRevealed,
+        canToggleReviewMode: isStudyMode || (reviewDueCount > 0 && study.canStartStudyMode),
+        canGradeReview: hasReviewCard && ws.reviewSession.isAnswerRevealed,
+        isReviewMode: isStudyMode
+      }),
+    [hasReviewCard, isStudyMode, nav.canGoBack, nav.canGoForward, nav.canGoParent, reviewDueCount, study.canStartStudyMode, ws.reviewSession.isAnswerRevealed]
+  );
+  const hotkeyItems: HotkeySettingItem[] = useMemo(() => mapPaletteItemsToHotkeyItems(paletteItems), [paletteItems]);
+  const layoutProps = buildLayoutProps({ activeNodeId: ws.activeNodeId, appearance, canGoBack: nav.canGoBack, canGoForward: nav.canGoForward, canGoParent: nav.canGoParent, canStartStudyMode: reviewDueCount > 0 && study.canStartStudyMode, contextMenu: editorCtx.contextMenu, documentMaxWidth: ws.documentMaxWidth, documentNode: runtime.isViewingTrashNode ? selectedTrashNode : activeNode, documentResize, editorNodeId: runtime.isViewingTrashNode ? null : ws.activeNodeId, editorNodeViewState: !runtime.isViewingTrashNode && ws.activeNodeId ? ws.nodeViewById[ws.activeNodeId] : undefined, hotkeyItems, isResizingList: listResize.isResizingList, isSettingsOpen: runtime.isSettingsOpen, isStudyMode, isTrashViewOpen: trash.isTrashViewOpen, isViewingTrashNode: runtime.isViewingTrashNode, listWidth: ws.listWidth, nodeOrder: ws.nodeOrder, nodesById: ws.nodesById, onAnswerChange: (answer) => ws.activeNodeId && !runtime.isViewingTrashNode && ws.updateNodeReveal(ws.activeNodeId, answer), onEditorChange: (content) => !runtime.isViewingTrashNode && (ws.activeNodeId ? ws.updateNodeContent(ws.activeNodeId, content) : ws.createRootNode(content)), onEditorReady: (adapter) => { runtime.editorRef.current = adapter; }, onHotkeyUpdate: BLOCKED_HOTKEY_UPDATE, onOpenNotesView: trash.closeTrashView, onOpenSettings: () => runtime.setIsSettingsOpen(true), onCloseSettings: () => runtime.setIsSettingsOpen(false), onOpenTrashView: () => (trash.isTrashViewOpen ? trash.closeTrashView() : trash.openTrashView()), onResetLayout: ws.resetLayout, onSelectTrashNode: (nodeId) => (runtime.setIsViewingTrashNode(true), trash.openTrashView(), trash.setSelectedTrashNodeId(nodeId)), onSplitterKeyDown: listResize.handleSplitterKeyDown, onSplitterPointerDown: listResize.handleSplitterPointerDown, onToggleListVisibility: () => (ws.listWidth <= 0 ? ws.setListWidth(Math.max(220, runtime.lastExpandedListWidthRef.current || 300)) : (runtime.lastExpandedListWidthRef.current = ws.listWidth, ws.setListWidth(0))), reviewDueCount, reviewSession: ws.reviewSession, showAnswerSection: !isStudyMode || ws.reviewSession.isAnswerRevealed, selectedTrashNodeId: trash.selectedTrashNodeId, startStudyMode, startReviewSession: ws.startReviewSession, exitReviewSession: ws.exitReviewSession, exitStudyMode, updateGrade: (grade) => void ws.gradeReviewCard(grade), revealReviewAnswer: ws.revealReviewAnswer, nav: { onGoBack: nav.handleGoBack, onGoForward: nav.handleGoForward, onGoParent: nav.handleGoParent, onSelectBreadcrumbNode: nav.handleSelectBreadcrumbNode, onSelectNode: nav.handleSelectNode }, editorCtx: { onCloseContextMenu: editorCtx.closeContextMenu, onCreateCloze: editorCtx.handleCreateCloze, onCreateHighlight: editorCtx.handleCreateHighlight, onEditorContextMenu: editorCtx.handleEditorContextMenu } });
+  const runPaletteCommand = createPaletteCommandRunner({
+    closeTrashView: trash.closeTrashView,
+    exitReviewSession: ws.exitReviewSession,
+    exitStudyMode,
+    goBack: nav.handleGoBack,
+    goForward: nav.handleGoForward,
+    goParent: nav.handleGoParent,
+    gradeReviewCard: ws.gradeReviewCard,
+    isReviewMode: isStudyMode,
+    onToggleEditorDisplayMode: layoutProps.onToggleEditorDisplayMode,
+    onToggleListVisibility: layoutProps.onToggleListVisibility,
+    openTrashView: trash.openTrashView,
+    paletteItems,
+    recordRecentCommand: runtime.recordRecentCommand,
+    revealReviewAnswer: ws.revealReviewAnswer,
+    setCommandPaletteOpen: runtime.setIsCommandPaletteOpen,
+    setSettingsOpen: runtime.setIsSettingsOpen,
+    startReviewSession: ws.startReviewSession,
+    startStudyMode: study.startStudyMode,
+    trashViewOpen: trash.isTrashViewOpen
+  });
   return {
     layoutProps,
     paletteState: {
       isOpen: runtime.isCommandPaletteOpen,
-      items: buildPaletteItems(),
+      items: paletteItems,
       recentCommandIds: runtime.recentCommandIds,
       onClose: () => runtime.setIsCommandPaletteOpen(false),
-      onRunCommand: (id) => runtime.runSimpleCommand(id, trash.closeTrashView, trash.openTrashView)
+      onRunCommand: runPaletteCommand
     }
   };
 }
