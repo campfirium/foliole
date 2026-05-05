@@ -43,7 +43,7 @@ function prepareChapter(chapter: RawChapter, index: number, importedAt: string) 
     degradedReason: prepared.degradedReason,
     hideTitleHeading: prepared.hideTitleHeading,
     key: chapter.key,
-    title: prepared.nodeTitle
+    title: chapter.title
   } satisfies PreparedChapter;
 }
 

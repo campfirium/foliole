@@ -52,7 +52,9 @@ export function convertHtmlToMarkdownCompatible(html: string): HtmlToMarkdownCom
 function selectRootNodes(html: string) {
   if (/<(?:!doctype|html|body)\b/i.test(html)) {
     const document = parse(html);
-    return findElement(document.childNodes, 'body')?.childNodes ?? document.childNodes;
+    const htmlElement = findElement(document.childNodes, 'html');
+    const bodyElement = htmlElement ? findElement(htmlElement.childNodes, 'body') : null;
+    return bodyElement?.childNodes ?? document.childNodes;
   }
   return parseFragment(html).childNodes;
 }

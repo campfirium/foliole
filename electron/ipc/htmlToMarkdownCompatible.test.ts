@@ -45,4 +45,13 @@ describe('convertHtmlToMarkdownCompatible', () => {
     expect(result.content).toContain('[Embedded iframe: https://example.com/embed]');
     expect(result.warnings).toEqual(['table_degraded', 'embedded_content_replaced']);
   });
+
+  it('uses body content when given a full html document', () => {
+    const result = convertHtmlToMarkdownCompatible(
+      '<html><head><title>Ignored Title</title></head><body><h1>Chapter One</h1><p>Hello world.</p></body></html>'
+    );
+
+    expect(result.content).toBe('# Chapter One\n\nHello world.');
+    expect(result.warnings).toEqual([]);
+  });
 });

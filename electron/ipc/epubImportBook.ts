@@ -8,8 +8,17 @@ import {
   convertHtmlToMarkdownCompatible,
   formatHtmlConversionDegradedReason
 } from '../../lib/core/import/htmlToMarkdownCompatible.js';
+import { extractUniqueLevelOneHeading } from '../../lib/core/import/importedNodeTitle.js';
 
 import { readEpubArchiveEntries } from './epubArchive.js';
+import {
+  extractFirstMeaningfulBodyLine,
+  extractFirstMarkdownHeadingText,
+  increaseMarkdownHeadingLevels,
+  isCoverLikeChapter,
+  isTocLikeChapter,
+  normalizePageTitle
+} from './epubImportChapterHeuristics.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
 type HtmlNode = DefaultTreeAdapterTypes.Node;
@@ -19,6 +28,7 @@ export interface RawChapter {
   content: string;
   degradedReason: string | null;
   key: string;
+  title: string;
 }
 
 export interface RawEpubBook {
@@ -56,13 +66,17 @@ function readPackagePath(containerXml: string) {
 }
 
 function parseManifest(opfXml: string, opfDirectory: string) {
-  const manifest = new Map<string, { href: string; mediaType: string | null }>();
+  const manifest = new Map<string, { href: string; mediaType: string | null; properties: string[] }>();
   for (const match of opfXml.matchAll(/<item\b([^>]*)\/?>/gi)) {
     const attributes = parseAttributes(match[1]);
     if (!attributes.id || !attributes.href) continue;
     manifest.set(attributes.id, {
       href: path.posix.normalize(path.posix.join(opfDirectory, attributes.href.replace(/\\/g, '/'))),
-      mediaType: attributes['media-type'] ?? null
+      mediaType: attributes['media-type'] ?? null,
+      properties: (attributes.properties ?? '')
+        .split(/\s+/)
+        .map((value) => value.trim())
+        .filter(Boolean)
     });
   }
   return manifest;
@@ -73,6 +87,15 @@ function parseSpine(opfXml: string) {
     .map((match) => parseAttributes(match[1]))
     .filter((attributes) => attributes.idref && attributes.linear !== 'no')
     .map((attributes) => attributes.idref as string);
+}
+
+function parseGuideCoverPaths(opfXml: string, opfDirectory: string) {
+  return new Set(
+    Array.from(opfXml.matchAll(/<reference\b([^>]*)\/?>/gi))
+      .map((match) => parseAttributes(match[1]))
+      .filter((attributes) => attributes.type?.toLowerCase() === 'cover' && attributes.href)
+      .map((attributes) => path.posix.normalize(path.posix.join(opfDirectory, attributes.href!.replace(/\\/g, '/'))))
+  );
 }
 
 function collectText(node: HtmlNode): string {
@@ -99,17 +122,40 @@ function findFirstText(node: HtmlNode, tagName: string): string | null {
   return null;
 }
 
+function findFirstHeadingText(node: HtmlNode): string | null {
+  if ('tagName' in node && /^h[1-6]$/.test((node as HtmlElement).tagName)) {
+    const element = node as HtmlElement;
+    if (element.attrs.some((attribute) => attribute.name === 'hidden' && attribute.value !== 'false')) {
+      return null;
+    }
+    return collectText(node) || null;
+  }
+  if (!('childNodes' in node)) {
+    return null;
+  }
+  for (const child of node.childNodes) {
+    const match = findFirstHeadingText(child);
+    if (match) return match;
+  }
+  return null;
+}
+
 function buildChapterMarkdown(html: string, fallbackTitle: string) {
   const document = parse(html);
-  const pageTitle = findFirstText(document, 'title');
-  const firstHeading = findFirstText(document, 'h1');
-  const title = pageTitle ?? firstHeading ?? fallbackTitle;
+  const pageTitle = normalizePageTitle(findFirstText(document, 'title'));
+  const firstHeading = findFirstHeadingText(document);
   const converted = convertHtmlToMarkdownCompatible(html);
   const body = converted.content.trim();
-  const needsTitleHeading = Boolean(pageTitle) || (Boolean(firstHeading) && !body.startsWith('# '));
+  const bodyTitle = extractFirstMarkdownHeadingText(body) ?? extractUniqueLevelOneHeading(body) ?? extractFirstMeaningfulBodyLine(body);
+  const resolvedTitle = pageTitle ?? firstHeading ?? bodyTitle ?? fallbackTitle;
+  const needsTitleHeading =
+    Boolean(body) &&
+    (!bodyTitle || bodyTitle !== resolvedTitle) &&
+    (Boolean(pageTitle) || Boolean(firstHeading) || resolvedTitle !== fallbackTitle);
   return {
-    content: needsTitleHeading && body ? `# ${title}\n\n${body}` : body || `# ${title}`,
-    degradedReason: formatHtmlConversionDegradedReason(converted.warnings)
+    content: needsTitleHeading && body ? `# ${resolvedTitle}\n\n${increaseMarkdownHeadingLevels(body)}` : body || `# ${resolvedTitle}`,
+    degradedReason: formatHtmlConversionDegradedReason(converted.warnings),
+    title: resolvedTitle
   };
 }
 
@@ -122,7 +168,9 @@ export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<R
   const containerXml = readArchiveText(entries, 'META-INF/container.xml', 'EPUB import failed: missing META-INF/container.xml');
   const packagePath = readPackagePath(containerXml);
   const opfXml = readArchiveText(entries, packagePath, `EPUB import failed: missing package document ${packagePath}`);
-  const manifest = parseManifest(opfXml, path.posix.dirname(packagePath));
+  const opfDirectory = path.posix.dirname(packagePath);
+  const manifest = parseManifest(opfXml, opfDirectory);
+  const guideCoverPaths = parseGuideCoverPaths(opfXml, opfDirectory);
   const spine = parseSpine(opfXml);
   if (spine.length === 0) {
     throw new Error('EPUB import failed: package document does not declare any spine chapters');
@@ -130,33 +178,45 @@ export async function readRawEpubBook(source: ImportSourceDescriptor): Promise<R
 
   const titleMatch = opfXml.match(/<(?:dc:title|title)\b[^>]*>([\s\S]*?)<\/(?:dc:title|title)>/i);
   const title = titleMatch?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(source.sourceName, '.epub');
-  const chapters = spine.map((idref, index) => {
+  const chapters = spine.flatMap((idref, index) => {
     const item = manifest.get(idref);
     const fallbackTitle = `Chapter ${index + 1}`;
     if (!item) {
-      return {
+      return [{
         content: buildRetainedDegradedImportContent({ reason: `EPUB chapter missing manifest entry: ${idref}`, sourceKind: 'epub', sourceName: fallbackTitle }),
         degradedReason: `EPUB chapter missing manifest entry: ${idref}`,
-        key: `${index}-${idref}`
-      } satisfies RawChapter;
+        key: `${index}-${idref}`,
+        title: fallbackTitle
+      } satisfies RawChapter];
+    }
+    if (item.properties.includes('nav')) {
+      return [];
     }
     if (item.mediaType && !['application/xhtml+xml', 'text/html'].includes(item.mediaType)) {
-      return {
+      return [{
         content: buildRetainedDegradedImportContent({ reason: `EPUB chapter unsupported media type: ${item.mediaType}`, sourceKind: 'epub', sourceName: fallbackTitle }),
         degradedReason: `EPUB chapter unsupported media type: ${item.mediaType}`,
-        key: `${index}-${item.href}`
-      } satisfies RawChapter;
+        key: `${index}-${item.href}`,
+        title: fallbackTitle
+      } satisfies RawChapter];
     }
     const htmlBytes = entries.get(item.href);
     if (!htmlBytes) {
-      return {
+      return [{
         content: buildRetainedDegradedImportContent({ reason: `EPUB chapter missing entry: ${item.href}`, sourceKind: 'epub', sourceName: fallbackTitle }),
         degradedReason: `EPUB chapter missing entry: ${item.href}`,
-        key: `${index}-${item.href}`
-      } satisfies RawChapter;
+        key: `${index}-${item.href}`,
+        title: fallbackTitle
+      } satisfies RawChapter];
     }
     const chapter = buildChapterMarkdown(decodeText(htmlBytes), fallbackTitle);
-    return { content: chapter.content, degradedReason: chapter.degradedReason, key: `${index}-${item.href}` } satisfies RawChapter;
+    if (isCoverLikeChapter({ content: chapter.content, title: chapter.title }, item.href, guideCoverPaths)) {
+      return [];
+    }
+    if (isTocLikeChapter({ content: chapter.content, title: chapter.title })) {
+      return [];
+    }
+    return [{ content: chapter.content, degradedReason: chapter.degradedReason, key: `${index}-${item.href}`, title: chapter.title } satisfies RawChapter];
   });
 
   return { chapters, title };

@@ -90,6 +90,106 @@ it('imports chapters in spine order and uses page title before first heading', a
   expect(children[1]?.content).toContain('Second spine body.');
 });
 
+it('skips nav documents and guide-marked cover pages during epub chapter import', async () => {
+  const filePath = await writeEpub('skip-nav-and-cover.epub', [
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content:
+        '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content:
+        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Sample Book</dc:title></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="nav"/><itemref idref="cover"/><itemref idref="chapter"/></spine><guide><reference type="cover" title="Cover" href="cover.xhtml"/></guide></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content: '<html><head><title>Contents</title></head><body><nav><ol><li><a href="text/chapter.xhtml">Chapter 1</a></li></ol></nav></body></html>',
+      name: 'OPS/nav.xhtml'
+    },
+    {
+      content: '<html><head><title>Cover</title></head><body><img src="images/cover.png" alt="Cover"/></body></html>',
+      name: 'OPS/cover.xhtml'
+    },
+    {
+      content: '<html><head><title>Real Chapter</title></head><body><h1>Real Chapter</h1><p>Hello world.</p></body></html>',
+      name: 'OPS/text/chapter.xhtml'
+    }
+  ]);
+
+  const imported = await runEpubImport(source(filePath), '2026-04-01T12:03:00.000Z');
+  const children = readImportedChildren(imported.nodeId as string);
+
+  expect(children).toHaveLength(1);
+  expect(children[0]).toEqual({
+    content: '## Real Chapter\n\nHello world.',
+    title: 'Real Chapter'
+  });
+});
+
+it('uses body headings when generic page titles would otherwise produce unknown chapter names', async () => {
+  const filePath = await writeEpub('generic-title.epub', [
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content:
+        '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content:
+        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Sample Book</dc:title></metadata><manifest><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content: '<html><head><title>未知</title></head><body><h2>Actual Heading</h2><p>Hello world.</p></body></html>',
+      name: 'OPS/text/chapter.xhtml'
+    }
+  ]);
+
+  const imported = await runEpubImport(source(filePath), '2026-04-01T12:04:00.000Z');
+  const children = readImportedChildren(imported.nodeId as string);
+
+  expect(children).toHaveLength(1);
+  expect(children[0]).toEqual({
+    content: '## Actual Heading\n\nHello world.',
+    title: 'Actual Heading'
+  });
+});
+
+it('skips toc-like chapters even when the epub does not mark them as nav documents', async () => {
+  const filePath = await writeEpub('toc-like.epub', [
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content:
+        '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content:
+        '<?xml version="1.0"?><package version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Sample Book</dc:title></metadata><manifest><item id="toc" href="text/toc.xhtml" media-type="application/xhtml+xml"/><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="toc"/><itemref idref="chapter"/></spine></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content:
+        '<html><head><title>Contents</title></head><body><h2>目录</h2><p><a href="chapter.xhtml#c1">One</a></p><p><a href="chapter.xhtml#c2">Two</a></p><p><a href="chapter.xhtml#c3">Three</a></p><p><a href="chapter.xhtml#c4">Four</a></p><p><a href="chapter.xhtml#c5">Five</a></p></body></html>',
+      name: 'OPS/text/toc.xhtml'
+    },
+    {
+      content: '<html><head><title>未知</title></head><body><h1>Real Chapter</h1><p>Hello world.</p></body></html>',
+      name: 'OPS/text/chapter.xhtml'
+    }
+  ]);
+
+  const imported = await runEpubImport(source(filePath), '2026-04-01T12:06:00.000Z');
+  const children = readImportedChildren(imported.nodeId as string);
+
+  expect(children).toHaveLength(1);
+  expect(children[0]).toEqual({
+    content: '## Real Chapter\n\nHello world.',
+    title: 'Real Chapter'
+  });
+});
+
 it('fails with a readable reason when the package entry is missing', async () => {
   const filePath = await writeEpub('missing-container.epub', [{ content: 'application/epub+zip', name: 'mimetype' }]);
   await expect(runEpubImport(source(filePath), '2026-04-01T12:05:00.000Z')).rejects.toThrow(
