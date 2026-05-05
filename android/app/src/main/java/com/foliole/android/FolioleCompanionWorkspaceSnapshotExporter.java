@@ -56,13 +56,12 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         }
 
         JSObject snapshot = new JSObject();
-        JSONObject outputKeys = snapshotObject(context, "outputKeys");
-        snapshot.put(outputKeys.getString("activeNodeId"), resolveActiveNodeId(context, database, nodesById, trashedNodeIds, firstActiveNodeId));
-        snapshot.put(outputKeys.getString("nodeOrder"), orderedNodeIds);
-        snapshot.put(outputKeys.getString("nodesById"), nodesById);
-        snapshot.put(outputKeys.getString("persistedNodeViewById"), FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
-        snapshot.put(outputKeys.getString("trashedNodeIds"), trashedNodeIds);
-        snapshot.put(outputKeys.getString("untitledSequenceByParent"), loadUntitledSequenceByParent(context, database));
+        snapshot.put(snapshotOutputKey(context, "activeNodeId"), resolveActiveNodeId(context, database, nodesById, trashedNodeIds, firstActiveNodeId));
+        snapshot.put(snapshotOutputKey(context, "nodeOrder"), orderedNodeIds);
+        snapshot.put(snapshotOutputKey(context, "nodesById"), nodesById);
+        snapshot.put(snapshotOutputKey(context, "persistedNodeViewById"), FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
+        snapshot.put(snapshotOutputKey(context, "trashedNodeIds"), trashedNodeIds);
+        snapshot.put(snapshotOutputKey(context, "untitledSequenceByParent"), loadUntitledSequenceByParent(context, database));
         return snapshot;
     }
 
@@ -163,6 +162,10 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private static String snapshotRule(Context context, String key) throws Exception {
         return FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key);
+    }
+
+    private static String snapshotOutputKey(Context context, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotOutputKey(context, key);
     }
 
     private static JSONObject snapshotObject(Context context, String key) throws Exception {

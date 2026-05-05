@@ -16,6 +16,10 @@ final class FolioleCompanionWorkspaceReadQueryRules {
         return group(context, "snapshot").getJSONObject(key);
     }
 
+    static String snapshotOutputKey(Context context, String key) throws Exception {
+        return snapshotObject(context, "outputKeys").getString(key);
+    }
+
     static String nestedPayloadOutputKey(Context context, String groupName) throws Exception {
         return snapshotObject(context, groupName).getString(nestedPayloadKey(context, "outputKey"));
     }

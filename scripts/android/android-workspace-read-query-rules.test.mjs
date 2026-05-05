@@ -81,7 +81,8 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.nodePayloadBodyStatusOutputKey(context, rules)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.nestedPayloadOutputKey(context, groupName)');
-    expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
+    expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotOutputKey(context, key)');
+    expect(rulesSource).toContain('snapshotObject(context, "outputKeys").getString(key)');
     expect(rulesSource).toContain('snapshotShape(context, "nodePayload")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
@@ -93,6 +94,7 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).not.toContain('field.getString("type")');
     expect(combinedSource).not.toContain('rules.getString("bodyStatusOutputKey")');
     expect(combinedSource).not.toContain('snapshotObject(context, groupName).getString(key)');
+    expect(combinedSource).not.toContain('outputKeys.getString("activeNodeId")');
     expect(combinedSource).not.toContain('"parentNodeId"');
     expect(combinedSource).not.toContain('"scrollTop"');
     expect(combinedSource).not.toContain('"selectionFrom"');
