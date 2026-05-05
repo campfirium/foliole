@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
-import { Button, EmptyState, Panel } from '../../../shared/ui';
+import { AppButton, AppPanel, EmptyState } from '../../../shared/ui';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTreeRows } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
@@ -197,13 +197,13 @@ export function NodeListTree({
 
   return (
     <>
-      <Panel
+      <AppPanel
         ariaLabel="Node list panel"
         actions={
           <div className="inline-flex gap-2">
-            <Button aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
+            <AppButton aria-label="New" onClick={handleCreateRootNode} size="sm" variant="subtle">
               New
-            </Button>
+            </AppButton>
           </div>
         }
         as="aside"
@@ -258,7 +258,7 @@ export function NodeListTree({
           rows={trashRows}
           selectedNodeIds={selectedNodeIds}
         />
-      </Panel>
+      </AppPanel>
       {menuPosition ? (
         <NodeListContextMenu
           isTrashMenu={contextMenuMode === 'trash'}

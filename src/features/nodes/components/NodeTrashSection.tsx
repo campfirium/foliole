@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import { Button, EmptyState } from '../../../shared/ui';
+import { AppButton, EmptyState } from '../../../shared/ui';
 import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
 import { NodeTreeRow } from './NodeTreeRow';
@@ -55,9 +55,9 @@ export function NodeTrashSection({
           Trash
         </button>
         {isOpen ? (
-          <Button aria-label="Empty" disabled={rows.length === 0} onClick={handleEmptyTrash} size="sm" variant="subtle">
+          <AppButton aria-label="Empty" disabled={rows.length === 0} onClick={handleEmptyTrash} size="sm" variant="subtle">
             Empty
-          </Button>
+          </AppButton>
         ) : null}
       </header>
       <div

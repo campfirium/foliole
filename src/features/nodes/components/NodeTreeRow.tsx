@@ -1,7 +1,7 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 
 import { cn } from '../../../lib/utils';
-import { Button } from '../../../shared/ui';
+import { AppButton } from '../../../shared/ui';
 
 interface NodeTreeRowProps {
   depth: number;
@@ -29,7 +29,7 @@ export function NodeTreeRow({
   } as CSSProperties;
 
   return (
-    <Button
+    <AppButton
       active={isSelected}
       aria-current={isActive ? 'page' : undefined}
       aria-pressed={isSelected}
@@ -41,6 +41,6 @@ export function NodeTreeRow({
     >
       <span aria-hidden="true" className={cn('h-px w-3 flex-none border-b border-dashed border-stone-300 opacity-0', showBranch && 'opacity-85')} />
       <span className="min-w-0 truncate">{label}</span>
-    </Button>
+    </AppButton>
   );
 }

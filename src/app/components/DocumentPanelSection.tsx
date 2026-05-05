@@ -5,7 +5,7 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { cn } from '../../lib/utils';
-import { Panel } from '../../shared/ui';
+import { AppPanel } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -69,7 +69,7 @@ export function DocumentPanelSection({
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col">
-      <Panel
+      <AppPanel
         ariaLabel="Document panel"
         center={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
         bodyClassName="flex min-h-0 flex-1 p-4 max-[1080px]:p-2"
@@ -119,7 +119,7 @@ export function DocumentPanelSection({
             side="right"
           />
         </div>
-      </Panel>
+      </AppPanel>
       {contextMenu ? (
         <EditorContextMenu
           canRunCommands={contextMenu.canRunCommands}

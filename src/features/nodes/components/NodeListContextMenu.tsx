@@ -1,4 +1,4 @@
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '@/shared/ui';
 
 interface NodeListContextMenuProps {
   isTrashMenu: boolean;
@@ -20,16 +20,16 @@ export function NodeListContextMenu({
   top
 }: NodeListContextMenuProps) {
   return (
-    <DropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
-      <DropdownMenuTrigger asChild>
+    <AppDropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
+      <AppDropdownMenuTrigger asChild>
         <button
           aria-hidden="true"
           className="pointer-events-none fixed h-0 w-0 opacity-0"
           style={{ left: `${left}px`, top: `${top}px` }}
           type="button"
         />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent
         align="start"
         onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
@@ -38,13 +38,13 @@ export function NodeListContextMenu({
       >
         {isTrashMenu ? (
           <>
-            <DropdownMenuItem onSelect={onRestoreNode}>Restore</DropdownMenuItem>
-            <DropdownMenuItem onSelect={onDeleteNodePermanently}>Delete Permanently</DropdownMenuItem>
+            <AppDropdownMenuItem onSelect={onRestoreNode}>Restore</AppDropdownMenuItem>
+            <AppDropdownMenuItem onSelect={onDeleteNodePermanently}>Delete Permanently</AppDropdownMenuItem>
           </>
         ) : (
-          <DropdownMenuItem onSelect={onDeleteNode}>Delete Node</DropdownMenuItem>
+          <AppDropdownMenuItem onSelect={onDeleteNode}>Delete Node</AppDropdownMenuItem>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
   );
 }
