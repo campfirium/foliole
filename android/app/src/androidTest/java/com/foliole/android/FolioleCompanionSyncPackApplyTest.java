@@ -210,6 +210,26 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void clearsDirtyExternalFolderAfterPackConfirmsAcceptedPushAck() throws Exception {
+        createIncomingStateOnlyPack("external_folder", "folder-1", 12, "external-folder-hash");
+        mainDatabase.execSQL("INSERT INTO sync_object_state (" +
+            "object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, base_content_hash) " +
+            "VALUES ('external_folder', 'folder-1', 9, 'external-folder-hash', " +
+            "'android-local', '2026-04-27T00:04:00.000Z', 1, 'base-hash')");
+        mainDatabase.execSQL("INSERT INTO sync_push_ack (" +
+            "client_op_id, object_type, object_id, state_seq, status, acked_at) VALUES (" +
+            "'external_folder:folder-1:9', 'external_folder', 'folder-1', 12, 'accepted', '2026-04-27T00:05:00.000Z')");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
+
+        assertEquals(1, result.getInt("applied_object_count"));
+        assertEquals(0, selectInt(
+            "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'folder-1'"
+        ));
+        assertEquals(0, countRows("sync_push_ack"));
+    }
+
+    @Test
     public void doesNotOverwriteDirtyNodeReviewWithoutConfirmedPushAck() throws Exception {
         createIncomingStateOnlyPack("node_review", "node-1", 7, "desktop-review-hash");
         mainDatabase.execSQL("INSERT INTO sync_object_state (" +
