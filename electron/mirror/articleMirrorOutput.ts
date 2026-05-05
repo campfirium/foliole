@@ -2,6 +2,11 @@ import path from 'node:path';
 
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import {
+  createRootReservedDirectoryNames,
+  resolveArticleDirectory
+} from './mirrorTargetDirectories.js';
+
 const INBOX_NODE_ID = 'special-inbox';
 const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 const INLINE_ANCHOR_PATTERN = /<(highlight|cloze)\s+id="([^"]+)">([\s\S]*?)<\/\1 id="\2">/g;
@@ -76,53 +81,6 @@ function createStableDirectoryName(title: string, nodeId: string, usedNames: Set
   const dedupedCandidate = `${baseName}--${suffix}`;
   usedNames.add(dedupedCandidate);
   return dedupedCandidate;
-}
-
-function resolveMirrorRootDirectory(node: ArticleNode, snapshot: WorkspaceSnapshot, mirrorRoot: string) {
-  if (snapshot.trashedNodeIds.includes(node.id)) {
-    return path.join(mirrorRoot, 'Trash');
-  }
-  if (node.parentNodeId === INBOX_NODE_ID) {
-    return path.join(mirrorRoot, 'Inbox');
-  }
-  return mirrorRoot;
-}
-
-function resolveFolderDirectory(
-  folderId: string,
-  snapshot: WorkspaceSnapshot,
-  mirrorRoot: string,
-  resolvedFolderDirectories: Map<string, string>,
-  usedDirectoryNamesByParent: Map<string, Set<string>>
-): string {
-  const cached = resolvedFolderDirectories.get(folderId);
-  if (cached) {
-    return cached;
-  }
-
-  const folder = snapshot.nodesById[folderId];
-  if (!folder || folder.kind !== 'folder') {
-    return mirrorRoot;
-  }
-
-  let parentDirectory = resolveMirrorRootDirectory(folder, snapshot, mirrorRoot);
-  const parentNode = folder.parentNodeId ? snapshot.nodesById[folder.parentNodeId] : null;
-  if (parentNode?.kind === 'folder') {
-    parentDirectory = resolveFolderDirectory(
-      parentNode.id,
-      snapshot,
-      mirrorRoot,
-      resolvedFolderDirectories,
-      usedDirectoryNamesByParent
-    );
-  }
-
-  const usedNames = usedDirectoryNamesByParent.get(parentDirectory) ?? new Set<string>();
-  usedDirectoryNamesByParent.set(parentDirectory, usedNames);
-  const directoryName = createStableDirectoryName(folder.title.trim() || 'Untitled', folder.id, usedNames);
-  const directoryPath = path.join(parentDirectory, directoryName);
-  resolvedFolderDirectories.set(folderId, directoryPath);
-  return directoryPath;
 }
 
 function createBaselineClozePrompt(articleContent: string, from: number, to: number) {
@@ -223,21 +181,18 @@ function resolveSourceUpdatedAt(article: ArticleNode, derivedChildren: ArticleNo
 export function collectArticleMirrorTargets(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorTarget[] {
   const articles = collectArticleNodes(snapshot);
   const usedFileNamesByDirectory = new Map<string, Set<string>>();
-  const usedDirectoryNamesByParent = new Map<string, Set<string>>([[mirrorRoot, new Set<string>(['Inbox', 'Trash'])]]);
+  const usedDirectoryNamesByParent = createRootReservedDirectoryNames(mirrorRoot);
   const resolvedFolderDirectories = new Map<string, string>();
 
   return articles.map((article) => {
-    const parentNode = article.parentNodeId ? snapshot.nodesById[article.parentNodeId] : null;
-    const targetDirectory =
-      parentNode?.kind === 'folder'
-        ? resolveFolderDirectory(
-            parentNode.id,
-            snapshot,
-            mirrorRoot,
-            resolvedFolderDirectories,
-            usedDirectoryNamesByParent
-          )
-        : resolveMirrorRootDirectory(article, snapshot, mirrorRoot);
+    const targetDirectory = resolveArticleDirectory(
+      article,
+      snapshot,
+      mirrorRoot,
+      resolvedFolderDirectories,
+      usedDirectoryNamesByParent,
+      createStableDirectoryName
+    );
     const usedNames = usedFileNamesByDirectory.get(targetDirectory) ?? new Set<string>();
     usedFileNamesByDirectory.set(targetDirectory, usedNames);
     const fileName = createStableFileName(article.title.trim() || 'Untitled', article.id, usedNames);

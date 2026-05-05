@@ -85,8 +85,9 @@ async function removeLegacyMirrorArtifacts(mirrorRoot: string, targetPaths: stri
 }
 
 async function resetMirrorRoot(mirrorRoot: string) {
-  await fs.rm(mirrorRoot, { recursive: true, force: true });
   await fs.mkdir(mirrorRoot, { recursive: true });
+  const entries = await fs.readdir(mirrorRoot);
+  await Promise.all(entries.map((entry) => fs.rm(path.join(mirrorRoot, entry), { recursive: true, force: true })));
 }
 
 async function prepareFullMirrorRebuild(mirrorRoot: string) {

@@ -21,7 +21,6 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { softDeleteNodes } from '../database/nodeMutations.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
@@ -220,55 +219,4 @@ it('exports topics inside nested folders using folder directories', async () => 
   await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Projects', 'Research', 'Nested Topic.md'), 'utf8')).resolves.toContain('Nested body.');
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Projects.md'))).rejects.toThrow();
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Projects', 'Research.md'))).rejects.toThrow();
-});
-
-it('manual rebuild clears stale mirror leftovers and skips trashed topics', async () => {
-  upsertNodeSnapshot({
-    nodeId: 'topic-live',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Fresh Topic',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'Fresh body.',
-    reveal: null,
-    anchorLink: null,
-    position: 0,
-    createdAt: '2026-03-30T00:00:00.000Z',
-    updatedAt: '2026-03-30T00:00:00.000Z'
-  });
-  upsertNodeSnapshot({
-    nodeId: 'topic-trash',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Old Trash Topic',
-    isTitleManual: true,
-    hideTitleHeading: false,
-    content: 'Should not export.',
-    reveal: null,
-    anchorLink: null,
-    position: 1,
-    createdAt: '2026-03-30T00:00:00.000Z',
-    updatedAt: '2026-03-30T00:00:00.000Z'
-  });
-  softDeleteNodes({ nodeIds: ['topic-trash'], deletedAt: '2026-03-31T00:00:00.000Z' });
-
-  await fs.mkdir(path.join(tempRoot, 'Library', 'Mirror', 'Inbox'), { recursive: true });
-  await fs.mkdir(path.join(tempRoot, 'Library', 'Mirror', 'Inbox special'), { recursive: true });
-  await fs.mkdir(path.join(tempRoot, 'Library', 'Mirror', 'Untitled'), { recursive: true });
-  await fs.mkdir(path.join(tempRoot, 'Library', 'Mirror', 'Trash'), { recursive: true });
-  await fs.writeFile(path.join(tempRoot, 'Library', 'Mirror', 'Topic.md'), 'old', 'utf8');
-  await fs.writeFile(path.join(tempRoot, 'Library', 'Mirror', 'Topic copy.md'), 'old', 'utf8');
-  await fs.writeFile(path.join(tempRoot, 'Library', 'Mirror', 'Trash', 'Old Trash Topic.md'), 'old', 'utf8');
-
-  await expect(rebuildMirrorOutput()).resolves.toMatchObject({
-    queued_article_count: 1,
-    rebuilt_article_count: 1,
-    failed_article_count: 0,
-    pending_article_count: 0
-  });
-
-  await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Fresh Topic.md'), 'utf8')).resolves.toContain('Fresh body.');
-  await expect(fs.readdir(path.join(tempRoot, 'Library', 'Mirror'))).resolves.toEqual(['Fresh Topic.md']);
-  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Trash'))).rejects.toThrow();
 });

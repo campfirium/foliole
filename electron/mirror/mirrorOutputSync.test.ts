@@ -142,6 +142,18 @@ it('manual rebuild fully refreshes all article mirrors', async () => {
   await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body.');
 });
 
+it('manual rebuild clears mirror contents without removing the mirror root directory itself', async () => {
+  seedArticles();
+  const rootPath = path.join(tempRoot, 'Library', 'Mirror');
+  const removeSpy = vi.spyOn(fs, 'rm');
+
+  await rebuildMirrorOutput();
+  saveNode('node-article', null, 'Manual rebuild root stays.', '2030-03-30T00:16:00.000Z', { title: 'Mirror Demo' });
+
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2, queued_article_count: 2 });
+  expect(removeSpy.mock.calls.some(([targetPath]) => targetPath === rootPath)).toBe(false);
+});
+
 it('moves article mirrors when the parent folder path changes', async () => {
   saveNode('folder-root', null, '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'Projects' });
   saveNode('folder-child', 'folder-root', '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'Research', position: 1 });
@@ -155,4 +167,22 @@ it('moves article mirrors when the parent folder path changes', async () => {
   await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
   await expect(fs.readFile(mirrorPath(path.join('Projects', 'Archive', 'Mirror Demo.md')), 'utf8')).resolves.toContain('Nested body.');
   await expect(fs.access(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')))).rejects.toThrow();
+});
+
+it('keeps child topics under the nearest folder ancestor instead of leaking them to mirror root', async () => {
+  saveNode('folder-root', null, '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'test' });
+  saveNode('node-parent-topic', 'folder-root', 'Parent body.', '2026-03-30T00:00:00.000Z', {
+    kind: 'topic',
+    title: 'Parent Topic',
+    position: 1
+  });
+  saveNode('node-child-topic', 'node-parent-topic', 'Child body.', '2026-03-30T00:00:00.000Z', {
+    kind: 'topic',
+    title: 'Untitled',
+    position: 2
+  });
+
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2, queued_article_count: 2 });
+  await expect(readMirror(path.join('test', 'Untitled.md'))).resolves.toContain('Child body.');
+  await expect(fs.access(mirrorPath('Untitled.md'))).rejects.toThrow();
 });
