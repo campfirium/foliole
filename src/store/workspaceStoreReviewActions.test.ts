@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import { syncReviewGradeToRuntimeWithRetry } from './workspaceRuntimeSync';
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -12,7 +12,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
   return {
     ...actual,
-    syncReviewGradeToRuntimeWithRetry: vi.fn()
+    syncReviewGradeToRuntime: vi.fn()
   };
 });
 
@@ -181,12 +181,13 @@ function createSchedulerCard(due: string) {
 }
 
 function expectReviewRuntimeSyncCalled() {
-  expect(syncReviewGradeToRuntimeWithRetry).toHaveBeenCalledTimes(1);
-  expect(syncReviewGradeToRuntimeWithRetry).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
 });
 
 it('advances to next review node after show-answer and grade', async () => {
@@ -243,7 +244,7 @@ it('ends session when grading the last review node', async () => {
   expect(harness.getState().activeNodeId).toBe('qa-1');
 });
 
-it('enqueues runtime sync and advances review state in one grading action', async () => {
+it('persists runtime sync and advances review state in one grading action', async () => {
   const due = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
@@ -259,4 +260,30 @@ it('enqueues runtime sync and advances review state in one grading action', asyn
   expect(grade).toHaveBeenCalledTimes(1);
   expectReviewRuntimeSyncCalled();
   expectNextQueueState(harness.getState());
+});
+
+it('keeps current review card when runtime sync fails', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
+  );
+  vi.mocked(syncReviewGradeToRuntime).mockRejectedValueOnce(new Error('sqlite write failed'));
+  const grade = createSchedulerGradeMock();
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
+
+  actions.startReviewSession(due);
+  actions.revealReviewAnswer();
+  const graded = await actions.gradeReviewCard(3, due);
+
+  expect(graded).toBe(false);
+  expect(grade).toHaveBeenCalledTimes(1);
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
+  expect(harness.getState().activeNodeId).toBe('qa-1');
+  expect(harness.getState().reviewSession.currentNodeId).toBe('qa-1');
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual(['qa-1', 'qa-2']);
+  expect(harness.getState().nodesById['qa-1']?.review).toMatchObject({
+    due: '2026-03-03T00:00:00.000Z',
+    state: 0,
+    lastReviewAt: null
+  });
 });

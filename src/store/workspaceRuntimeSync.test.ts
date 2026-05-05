@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { isDesktopRuntime } from '../shared/platform/runtime';
 
 import {
   syncDeleteNodesPermanentlyToRuntime,
@@ -11,12 +12,15 @@ import {
   syncReadingProgressToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime,
-  syncReviewGradeToRuntime,
-  syncReviewGradeToRuntimeWithRetry
+  syncReviewGradeToRuntime
 } from './workspaceRuntimeSync';
 
 vi.mock('../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn()
+}));
+
+vi.mock('../shared/platform/runtime', () => ({
+  isDesktopRuntime: vi.fn(() => false)
 }));
 
 function createNodeFixture(): Node {
@@ -132,42 +136,33 @@ describe('workspaceRuntimeSync review mutations', () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const synced = await syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
-
-    expect(synced).toBe(true);
+    await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).resolves.toBeUndefined();
     expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
     expectNoWorkspacePersist(invoke);
   });
 
-  it('returns false when runtime review mutation fails', async () => {
+  it('throws when runtime review mutation fails', async () => {
     const invoke = vi.fn().mockRejectedValue(new Error('failed'));
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const synced = await syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
-
-    expect(synced).toBe(false);
+    await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).rejects.toThrow('failed');
     expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
   });
 
-  it('retries review grade mutation in background queue until success', async () => {
-    vi.useFakeTimers();
-    try {
-      const invoke = vi.fn().mockRejectedValueOnce(new Error('failed')).mockResolvedValueOnce(null);
-      vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  it('throws when runtime bridge is unavailable', async () => {
+    vi.mocked(isDesktopRuntime).mockReturnValue(true);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
 
-      syncReviewGradeToRuntimeWithRetry(REVIEW_GRADE_PAYLOAD);
-      await vi.advanceTimersByTimeAsync(0);
+    await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).rejects.toThrow(
+      'runtime bridge unavailable for review grade sync'
+    );
+  });
 
-      expect(invoke).toHaveBeenCalledTimes(1);
-      expect(invoke).toHaveBeenNthCalledWith(1, 'apply_review_grade', REVIEW_GRADE_PAYLOAD);
+  it('skips runtime sync in non-desktop environment when bridge is unavailable', async () => {
+    vi.mocked(isDesktopRuntime).mockReturnValue(false);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
 
-      await vi.advanceTimersByTimeAsync(1500);
-
-      expect(invoke).toHaveBeenCalledTimes(2);
-      expect(invoke).toHaveBeenNthCalledWith(2, 'apply_review_grade', REVIEW_GRADE_PAYLOAD);
-    } finally {
-      vi.useRealTimers();
-    }
+    await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).resolves.toBeUndefined();
   });
 });
 

@@ -68,8 +68,7 @@ it('keeps grading retryable when grading write fails', async () => {
   await waitFor(() => {
     expect(onGrade).toHaveBeenCalledWith(3);
   });
-  expect(screen.queryByText('Save failed. Retry.')).not.toBeInTheDocument();
-  expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+  expect(screen.getByText('Failed to save grade. Please retry.')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   await waitFor(() => {
@@ -77,14 +76,18 @@ it('keeps grading retryable when grading write fails', async () => {
   });
 });
 
-it('submits Easy grading without showing feedback text', async () => {
-  const onGrade = vi.fn(async () => true);
+it('clears grading error after a successful retry', async () => {
+  const onGrade = vi.fn(async () => false).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
   render(<ReviewModeToolbar {...baseProps} onGrade={onGrade} reviewPreview={null} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Easy' }));
-
+  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   await waitFor(() => {
-    expect(onGrade).toHaveBeenCalledWith(4);
+    expect(screen.getByText('Failed to save grade. Please retry.')).toBeInTheDocument();
   });
-  expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Good' }));
+  await waitFor(() => {
+    expect(onGrade).toHaveBeenCalledTimes(2);
+  });
+  expect(screen.queryByText('Failed to save grade. Please retry.')).not.toBeInTheDocument();
 });

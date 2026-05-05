@@ -1,7 +1,7 @@
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSchedulerAdapter } from '../features/review/model/reviewTypes';
 
-import { syncReviewGradeToRuntimeWithRetry } from './workspaceRuntimeSync';
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -80,24 +80,20 @@ function createRevealReviewAnswerAction(set: WorkspaceSet): WorkspaceReviewActio
   };
 }
 
-function enqueueReviewGradeMutation(args: {
+async function persistReviewGradeMutation(args: {
   currentNodeId: string;
   grade: ReviewGrade;
   reviewedAt: string;
   cardBefore: ReturnType<typeof toSchedulerCard>;
   cardAfter: ReturnType<typeof toSchedulerCard>;
-}) {
-  try {
-    syncReviewGradeToRuntimeWithRetry({
-      nodeId: args.currentNodeId,
-      grade: args.grade,
-      reviewedAt: args.reviewedAt,
-      cardBefore: args.cardBefore,
-      cardAfter: args.cardAfter
-    });
-  } catch {
-    // Keep grading UX non-blocking even if runtime bridge fails unexpectedly.
-  }
+}): Promise<void> {
+  await syncReviewGradeToRuntime({
+    nodeId: args.currentNodeId,
+    grade: args.grade,
+    reviewedAt: args.reviewedAt,
+    cardBefore: args.cardBefore,
+    cardAfter: args.cardAfter
+  });
 }
 
 function applyGradedReviewState(args: {
@@ -156,13 +152,17 @@ function createGradeReviewCardAction(
 
     const cardBefore = toSchedulerCard(currentNode.review, now);
     const result = await scheduler.grade({ card: cardBefore, grade, now });
-    enqueueReviewGradeMutation({
-      currentNodeId,
-      grade,
-      reviewedAt: result.reviewed_at,
-      cardBefore,
-      cardAfter: result.card
-    });
+    try {
+      await persistReviewGradeMutation({
+        currentNodeId,
+        grade,
+        reviewedAt: result.reviewed_at,
+        cardBefore,
+        cardAfter: result.card
+      });
+    } catch {
+      return false;
+    }
     const nextQueue = snapshot.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== currentNodeId);
     const nextNodeId = nextQueue[0] ?? null;
     const nextReviewProfile = toNodeReviewProfile(result.card);

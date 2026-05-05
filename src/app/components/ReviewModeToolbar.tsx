@@ -86,9 +86,11 @@ function useGradeFeedback(
   isAnswerRevealed: boolean
 ) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   useEffect(() => {
     if (!reviewCurrentNodeId || !isAnswerRevealed) {
       setIsSubmitting(false);
+      setErrorMessage(null);
     }
   }, [isAnswerRevealed, reviewCurrentNodeId]);
 
@@ -99,53 +101,69 @@ function useGradeFeedback(
       }
       setIsSubmitting(true);
       try {
-        await onGrade(grade);
+        const graded = await onGrade(grade);
+        if (!graded) {
+          setErrorMessage('Failed to save grade. Please retry.');
+          setIsSubmitting(false);
+          return;
+        }
+        setErrorMessage(null);
         setIsSubmitting(false);
       } catch {
+        setErrorMessage('Failed to save grade. Please retry.');
         setIsSubmitting(false);
       }
     },
     [isSubmitting, onGrade]
   );
 
-  return { isSubmitting, submitGrade };
+  return { errorMessage, isSubmitting, submitGrade };
 }
 
 function ReviewGradeActions({
+  errorMessage,
   isSubmitting,
   reviewPreview,
   submitGrade
 }: {
+  errorMessage: string | null;
   isSubmitting: boolean;
   reviewPreview: SchedulerPreviewResult | null;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <GradeButton
-        ariaLabel="Again"
-        disabled={isSubmitting}
-        intervalLabel={formatPreviewInterval(reviewPreview?.Again)}
-        onClick={() => void submitGrade(1)}
-      />
-      <GradeButton
-        ariaLabel="Hard"
-        disabled={isSubmitting}
-        intervalLabel={formatPreviewInterval(reviewPreview?.Hard)}
-        onClick={() => void submitGrade(2)}
-      />
-      <GradeButton
-        ariaLabel="Good"
-        disabled={isSubmitting}
-        intervalLabel={formatPreviewInterval(reviewPreview?.Good)}
-        onClick={() => void submitGrade(3)}
-      />
-      <GradeButton
-        ariaLabel="Easy"
-        disabled={isSubmitting}
-        intervalLabel={formatPreviewInterval(reviewPreview?.Easy)}
-        onClick={() => void submitGrade(4)}
-      />
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-center gap-2">
+        <GradeButton
+          ariaLabel="Again"
+          disabled={isSubmitting}
+          intervalLabel={formatPreviewInterval(reviewPreview?.Again)}
+          onClick={() => void submitGrade(1)}
+        />
+        <GradeButton
+          ariaLabel="Hard"
+          disabled={isSubmitting}
+          intervalLabel={formatPreviewInterval(reviewPreview?.Hard)}
+          onClick={() => void submitGrade(2)}
+        />
+        <GradeButton
+          ariaLabel="Good"
+          disabled={isSubmitting}
+          intervalLabel={formatPreviewInterval(reviewPreview?.Good)}
+          onClick={() => void submitGrade(3)}
+        />
+        <GradeButton
+          ariaLabel="Easy"
+          disabled={isSubmitting}
+          intervalLabel={formatPreviewInterval(reviewPreview?.Easy)}
+          onClick={() => void submitGrade(4)}
+        />
+      </div>
+      {errorMessage ? (
+        <p aria-live="assertive" className="text-[11px] text-red-600">
+          {errorMessage}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -160,7 +178,7 @@ export function ReviewModeToolbar({
   onRevealAnswer,
   onExitReviewMode
 }: ReviewModeToolbarProps) {
-  const { isSubmitting, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
+  const { errorMessage, isSubmitting, submitGrade } = useGradeFeedback(onGrade, reviewCurrentNodeId, isAnswerRevealed);
 
   if (!isStudyMode) {
     return null;
@@ -173,7 +191,7 @@ export function ReviewModeToolbar({
   return (
     <div
       aria-label="Review mode toolbar"
-      className="flex h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4"
+      className="flex min-h-[56px] w-full flex-none items-center justify-center border-t border-border bg-bg-elevated px-4 py-1"
       data-mode={isStudyMode ? 'study' : 'edit'}
       data-review-input-mode={isReviewEditing ? 'editing' : 'hotkeys'}
     >
@@ -184,7 +202,12 @@ export function ReviewModeToolbar({
           </AppButton>
         </div>
       ) : (
-        <ReviewGradeActions isSubmitting={isSubmitting} reviewPreview={reviewPreview} submitGrade={submitGrade} />
+        <ReviewGradeActions
+          errorMessage={errorMessage}
+          isSubmitting={isSubmitting}
+          reviewPreview={reviewPreview}
+          submitGrade={submitGrade}
+        />
       )}
     </div>
   );

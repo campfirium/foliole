@@ -1,5 +1,6 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { isDesktopRuntime } from '../shared/platform/runtime';
 
 interface ReviewCardSnapshot {
   due: string;
@@ -48,11 +49,6 @@ interface ReadingProgressRuntimePayload {
   updatedAt: string;
 }
 
-const REVIEW_SYNC_RETRY_DELAY_MS = 1500;
-const reviewGradeSyncQueue: ReviewGradeRuntimePayload[] = [];
-let reviewGradeFlushTimer: ReturnType<typeof setTimeout> | null = null;
-let isReviewGradeFlushing = false;
-
 function toNodeSnapshotPayload(node: Node, position?: number) {
   return {
     nodeId: node.id,
@@ -92,52 +88,15 @@ export function syncNodeOrderToRuntime(nodeOrder: string[]) {
   void runtimeInvoke('replace_node_order', { nodeIds: nodeOrder }).catch(() => undefined);
 }
 
-export async function syncReviewGradeToRuntime(payload: ReviewGradeRuntimePayload): Promise<boolean> {
+export async function syncReviewGradeToRuntime(payload: ReviewGradeRuntimePayload): Promise<void> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
-    return true;
-  }
-  try {
-    await runtimeInvoke('apply_review_grade', payload as unknown as Record<string, unknown>);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function scheduleReviewGradeFlush(delayMs: number) {
-  if (reviewGradeFlushTimer !== null) {
-    return;
-  }
-  reviewGradeFlushTimer = setTimeout(() => {
-    reviewGradeFlushTimer = null;
-    void flushReviewGradeQueue();
-  }, delayMs);
-}
-
-async function flushReviewGradeQueue(): Promise<void> {
-  if (isReviewGradeFlushing) {
-    return;
-  }
-  isReviewGradeFlushing = true;
-  try {
-    while (reviewGradeSyncQueue.length > 0) {
-      const payload = reviewGradeSyncQueue[0];
-      const synced = await syncReviewGradeToRuntime(payload);
-      if (!synced) {
-        scheduleReviewGradeFlush(REVIEW_SYNC_RETRY_DELAY_MS);
-        return;
-      }
-      reviewGradeSyncQueue.shift();
+    if (!isDesktopRuntime()) {
+      return;
     }
-  } finally {
-    isReviewGradeFlushing = false;
+    throw new Error('runtime bridge unavailable for review grade sync');
   }
-}
-
-export function syncReviewGradeToRuntimeWithRetry(payload: ReviewGradeRuntimePayload): void {
-  reviewGradeSyncQueue.push(payload);
-  scheduleReviewGradeFlush(0);
+  await runtimeInvoke('apply_review_grade', payload as unknown as Record<string, unknown>);
 }
 
 export function syncSoftDeleteNodesToRuntime(payload: SoftDeleteNodesRuntimePayload) {
