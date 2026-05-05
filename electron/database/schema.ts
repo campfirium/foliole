@@ -4,6 +4,7 @@ export {
   importSources,
   keepImportItems,
   nodeOrder,
+  nodeAttachments,
   nodeReview,
   nodes,
   nodeViewState,

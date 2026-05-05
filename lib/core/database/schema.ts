@@ -1,4 +1,4 @@
-import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const nodes = sqliteTable('nodes', {
   id: text('id').primaryKey(),
@@ -84,6 +84,16 @@ export const attachments = sqliteTable('attachments', {
   sizeBytes: integer('size_bytes'),
   createdAt: text('created_at').notNull()
 });
+
+export const nodeAttachments = sqliteTable(
+  'node_attachments',
+  {
+    nodeId: text('node_id').notNull(),
+    attachmentId: text('attachment_id').notNull(),
+    role: text('role').notNull()
+  },
+  (table) => [primaryKey({ columns: [table.nodeId, table.attachmentId, table.role] })]
+);
 
 export const importSources = sqliteTable('import_sources', {
   sourceFingerprint: text('source_fingerprint').primaryKey(),

@@ -8,7 +8,7 @@ export interface DatabaseConnectionLike<TSqlite extends DatabaseMigrationTarget 
   sqlite: TSqlite;
 }
 
-export const DATABASE_SCHEMA_VERSION = 9;
+export const DATABASE_SCHEMA_VERSION = 10;
 
 const CREATE_TABLE_STATEMENTS_V1 = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -156,6 +156,16 @@ const CREATE_TABLE_STATEMENTS_V8 = ['ALTER TABLE nodes ADD COLUMN hide_title_hea
 
 const CREATE_TABLE_STATEMENTS_V9 = ['ALTER TABLE keep_import_items ADD COLUMN has_source_update INTEGER NOT NULL DEFAULT 0'];
 
+const CREATE_TABLE_STATEMENTS_V10 = [
+  `CREATE TABLE IF NOT EXISTS node_attachments (
+    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    attachment_id TEXT NOT NULL REFERENCES attachments(id),
+    role TEXT NOT NULL,
+    PRIMARY KEY (node_id, attachment_id, role)
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)'
+];
+
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : Number(value ?? 0);
@@ -174,7 +184,8 @@ const MIGRATION_STEPS = [
   { statements: CREATE_TABLE_STATEMENTS_V6, version: 6 },
   { statements: CREATE_TABLE_STATEMENTS_V7, version: 7 },
   { statements: CREATE_TABLE_STATEMENTS_V8, version: 8 },
-  { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 }
+  { statements: CREATE_TABLE_STATEMENTS_V9, version: 9 },
+  { statements: CREATE_TABLE_STATEMENTS_V10, version: 10 }
 ];
 
 function applyMigrationStep(sqlite: DatabaseMigrationTarget, currentVersion: number, step: (typeof MIGRATION_STEPS)[number]) {
