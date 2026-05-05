@@ -19,7 +19,7 @@ fn main() {
               "window_label": window.label(),
               "url": payload.url().to_string()
             });
-            let _ = foliole_tauri_core::boot::record_boot_stage("app_ready", Some(payload));
+            let _ = foliole_tauri_core::boot::record_boot_stage("tauri_page_load", Some(payload));
         });
     let builder = foliole_tauri_core::register_tauri_commands(builder);
 
