@@ -6,7 +6,15 @@ import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
 import { handleInvokeRequest } from './commands.js';
 
-const { defaultReviewSchedulerSettings, openExternal, readFile, showOpenDialog, syncAppMenuState } = vi.hoisted(() => ({
+const {
+  defaultReviewSchedulerSettings,
+  openExternal,
+  readFile,
+  recordPreparedImportFailure,
+  runPreparedImport,
+  showOpenDialog,
+  syncAppMenuState
+} = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
     algorithm: 'ts-fsrs@4.3.0',
     desiredRetention: 0.9,
@@ -24,6 +32,8 @@ const { defaultReviewSchedulerSettings, openExternal, readFile, showOpenDialog, 
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
+  recordPreparedImportFailure: vi.fn(),
+  runPreparedImport: vi.fn(),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] }),
   syncAppMenuState: vi.fn()
 }));
@@ -66,6 +76,10 @@ vi.mock('../database/nodeMutations.js', () => ({
   softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn()
 }));
+vi.mock('../database/importPipeline.js', () => ({
+  recordPreparedImportFailure,
+  runPreparedImport
+}));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
@@ -84,6 +98,36 @@ beforeEach(() => {
   mockWindow.isMaximized.mockReturnValue(false);
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] });
   readFile.mockResolvedValue('# Imported title\nBody');
+  runPreparedImport.mockReturnValue({
+    contentFingerprint: 'content-fingerprint',
+    degradedReason: null,
+    duplicateSemantic: 'new',
+    failureReason: null,
+    importId: 'import-1',
+    importedAt: '2026-03-22T10:00:00.000Z',
+    nodeId: 'node-import-1',
+    provider: 'desktop_text_file',
+    resultStatus: 'imported',
+    sourceFingerprint: 'source-fingerprint',
+    sourceKind: 'markdown',
+    sourceLocator: '/tmp/inbox.md',
+    sourceName: 'inbox.md'
+  });
+  recordPreparedImportFailure.mockReturnValue({
+    contentFingerprint: 'content-fingerprint',
+    degradedReason: null,
+    duplicateSemantic: 'new',
+    failureReason: 'disk failed',
+    importId: 'import-2',
+    importedAt: '2026-03-22T10:00:00.000Z',
+    nodeId: null,
+    provider: 'desktop_text_file',
+    resultStatus: 'failed',
+    sourceFingerprint: 'source-fingerprint',
+    sourceKind: 'markdown',
+    sourceLocator: '/tmp/inbox.md',
+    sourceName: 'inbox.md'
+  });
 });
 
 it('handles typed native utility commands', async () => {
@@ -122,6 +166,27 @@ it('selects a Markdown or TXT file through the native import command', async () 
 
   expect(showOpenDialog).toHaveBeenCalledTimes(1);
   expect(readFile).toHaveBeenCalledWith('/tmp/inbox.md', 'utf8');
+});
+
+it('runs the unified text import pipeline through the native import command', async () => {
+  await expect(handleInvokeRequest({ command: 'run_text_file_import' })).resolves.toEqual({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: null,
+    duplicate_semantic: 'new',
+    failure_reason: null,
+    import_id: 'import-1',
+    imported_at: '2026-03-22T10:00:00.000Z',
+    node_id: 'node-import-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint',
+    source_kind: 'markdown',
+    source_locator: '/tmp/inbox.md',
+    source_name: 'inbox.md'
+  });
+
+  expect(runPreparedImport).toHaveBeenCalledTimes(1);
+  expect(recordPreparedImportFailure).not.toHaveBeenCalled();
 });
 
 it('returns null when native import selection is cancelled', async () => {

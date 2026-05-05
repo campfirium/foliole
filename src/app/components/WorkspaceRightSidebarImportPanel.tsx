@@ -52,7 +52,7 @@ export function WorkspaceRightSidebarImportPanel() {
           />
           <EntryActionCard
             actionLabel={formalImport.isImporting ? 'Importing…' : 'Import Markdown / TXT file'}
-            description="Select a Markdown or TXT file through Electron and land it as a child node under Inbox. The imported node is persisted through the normal desktop sync path."
+            description="Select a Markdown or TXT file through Electron and land it as a child node under Inbox. The import now runs through the shared desktop import pipeline with fingerprinting and result retention."
             disabled={!formalImport.isAvailable || formalImport.isImporting}
             onAction={() => {
               void formalImport.startImport();

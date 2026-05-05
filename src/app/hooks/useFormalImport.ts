@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
 import { create } from 'zustand';
 
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
-import { selectRuntimeImportTextFile } from '../../shared/platform/importBridge';
+import { runRuntimeTextFileImport, type RuntimeTextImportResult } from '../../shared/platform/importBridge';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export interface FormalImportStatus {
@@ -32,6 +31,70 @@ function formatImportTimestamp(timestamp: string) {
   return timestamp.replace('T', ' ').slice(0, 16);
 }
 
+function buildSuccessStatus(result: RuntimeTextImportResult, timestamp: string): FormalImportStatus {
+  if (result.resultStatus === 'degraded') {
+    return {
+      failures: result.degradedReason ?? 'Import degraded',
+      inboxLanding: `Degraded import recorded for ${result.sourceName}`,
+      lastRun: `Import degraded ${result.sourceName} · ${timestamp}`
+    };
+  }
+  if (result.resultStatus === 'failed') {
+    return {
+      ...useFormalImportState.getState().status,
+      failures: result.failureReason ?? 'Unknown import failure',
+      lastRun: `Import failed ${result.sourceName} · ${timestamp}`
+    };
+  }
+  return {
+    failures: 'Nothing recorded',
+    inboxLanding:
+      result.duplicateSemantic === 'duplicate'
+        ? `Existing Inbox import reused for ${result.sourceName}`
+        : result.duplicateSemantic === 'updated'
+          ? `Inbox import updated from ${result.sourceName}`
+          : `Inbox child created from ${result.sourceName}`,
+    lastRun:
+      result.duplicateSemantic === 'duplicate'
+        ? `Reused ${result.sourceName} · ${timestamp}`
+        : result.duplicateSemantic === 'updated'
+          ? `Updated ${result.sourceName} · ${timestamp}`
+          : `Imported ${result.sourceName} · ${timestamp}`
+  };
+}
+
+function applyImportResultStatus(result: RuntimeTextImportResult) {
+  useFormalImportState.setState({
+    isImporting: false,
+    status: buildSuccessStatus(result, formatImportTimestamp(result.importedAt))
+  });
+}
+
+function applyCancelledImportStatus() {
+  useFormalImportState.setState((current) => ({
+    isImporting: false,
+    status: {
+      ...current.status,
+      lastRun: 'Import cancelled'
+    }
+  }));
+}
+
+function applyImportFailureStatus(message: string) {
+  useFormalImportState.setState({
+    isImporting: false,
+    status: {
+      ...useFormalImportState.getState().status,
+      failures: message,
+      lastRun: 'Import failed'
+    }
+  });
+}
+
+function shouldRehydrateWorkspace(result: RuntimeTextImportResult) {
+  return result.resultStatus === 'imported' && result.duplicateSemantic !== 'duplicate';
+}
+
 export function resetFormalImportState() {
   useFormalImportState.setState({
     isImporting: false,
@@ -40,7 +103,6 @@ export function resetFormalImportState() {
 }
 
 export function useFormalImport() {
-  const createChildNode = useWorkspaceStore((state) => state.createChildNode);
   const isImporting = useFormalImportState((state) => state.isImporting);
   const status = useFormalImportState((state) => state.status);
   const isAvailable = Boolean(getRuntimeInvoke());
@@ -52,41 +114,22 @@ export function useFormalImport() {
 
     useFormalImportState.setState({ isImporting: true });
     try {
-      const importedFile = await selectRuntimeImportTextFile();
-      if (!importedFile) {
-        useFormalImportState.setState((current) => ({
-          isImporting: false,
-          status: {
-            ...current.status,
-            lastRun: 'Import cancelled'
-          }
-        }));
+      const importResult = await runRuntimeTextFileImport();
+      if (!importResult) {
+        applyCancelledImportStatus();
         return false;
       }
 
-      createChildNode(INBOX_NODE_ID, importedFile.content);
-      useFormalImportState.setState({
-        isImporting: false,
-        status: {
-          failures: 'Nothing recorded',
-          inboxLanding: `Inbox child created from ${importedFile.fileName}`,
-          lastRun: `Imported ${importedFile.fileName} · ${formatImportTimestamp(new Date().toISOString())}`
-        }
-      });
+      if (shouldRehydrateWorkspace(importResult)) {
+        await useWorkspaceStore.persist.rehydrate();
+      }
+      applyImportResultStatus(importResult);
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown import failure';
-      useFormalImportState.setState({
-        isImporting: false,
-        status: {
-          ...useFormalImportState.getState().status,
-          failures: message,
-          lastRun: 'Import failed'
-        }
-      });
+      applyImportFailureStatus(error instanceof Error ? error.message : 'Unknown import failure');
       return false;
     }
-  }, [createChildNode]);
+  }, []);
 
   return {
     isAvailable,

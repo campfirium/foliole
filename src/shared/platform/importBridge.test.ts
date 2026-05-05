@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { selectRuntimeImportTextFile } from './importBridge';
+import { runRuntimeTextFileImport, selectRuntimeImportTextFile } from './importBridge';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
@@ -32,6 +32,42 @@ it('normalizes the native import file payload', async () => {
     kind: 'markdown'
   });
   expect(invoke).toHaveBeenCalledWith('select_import_text_file');
+});
+
+it('normalizes the unified import result payload', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    content_fingerprint: 'content-fingerprint',
+    degraded_reason: null,
+    duplicate_semantic: 'updated',
+    failure_reason: null,
+    import_id: 'import-1',
+    imported_at: '2026-03-22T10:00:00.000Z',
+    node_id: 'node-1',
+    provider: 'desktop_text_file',
+    result_status: 'imported',
+    source_fingerprint: 'source-fingerprint',
+    source_kind: 'markdown',
+    source_locator: '/tmp/note.md',
+    source_name: 'note.md'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(runRuntimeTextFileImport()).resolves.toEqual({
+    contentFingerprint: 'content-fingerprint',
+    degradedReason: null,
+    duplicateSemantic: 'updated',
+    failureReason: null,
+    importId: 'import-1',
+    importedAt: '2026-03-22T10:00:00.000Z',
+    nodeId: 'node-1',
+    provider: 'desktop_text_file',
+    resultStatus: 'imported',
+    sourceFingerprint: 'source-fingerprint',
+    sourceKind: 'markdown',
+    sourceLocator: '/tmp/note.md',
+    sourceName: 'note.md'
+  });
+  expect(invoke).toHaveBeenCalledWith('run_text_file_import');
 });
 
 it('returns null when the native import payload is malformed', async () => {

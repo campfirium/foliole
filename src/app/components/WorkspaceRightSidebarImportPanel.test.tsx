@@ -2,19 +2,50 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
-import { selectRuntimeImportTextFile } from '../../shared/platform/importBridge';
+import { runRuntimeTextFileImport } from '../../shared/platform/importBridge';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { resetFormalImportState } from '../hooks/useFormalImport';
 
 import { WorkspaceRightSidebarImportPanel } from './WorkspaceRightSidebarImportPanel';
 
 vi.mock('../../shared/platform/importBridge', () => ({
-  selectRuntimeImportTextFile: vi.fn()
+  runRuntimeTextFileImport: vi.fn()
 }));
 
 function mockDesktopBridge() {
+  const invoke = vi.fn(async (...args: unknown[]) => {
+    const [command] = args;
+    if (command === 'load_reading_progress') {
+      return null;
+    }
+    if (command === 'load_workspace_snapshot') {
+      const state = createInitialWorkspaceState(new Date('2026-03-22T08:00:00.000Z'));
+      return {
+        activeNodeId: 'node-import-1',
+        nodeOrder: [...state.nodeOrder, 'node-import-1'],
+        nodesById: {
+          ...state.nodesById,
+          'node-import-1': {
+            anchorLink: null,
+            content: '# Imported note\nBody',
+            createdAt: '2026-03-22T10:00:00.000Z',
+            id: 'node-import-1',
+            isTitleManual: true,
+            parentNodeId: INBOX_NODE_ID,
+            reading: null,
+            reveal: null,
+            review: null,
+            title: 'imported-note.md',
+            updatedAt: '2026-03-22T10:00:00.000Z'
+          }
+        },
+        trashedNodeIds: []
+      };
+    }
+    return null;
+  });
   window.electronAPI = {
-    invoke: vi.fn().mockResolvedValue(null),
+    invoke,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };
@@ -48,11 +79,20 @@ describe('WorkspaceRightSidebarImportPanel', () => {
   });
 
   it('imports the selected Markdown file into Inbox', async () => {
-    vi.mocked(selectRuntimeImportTextFile).mockResolvedValue({
-      content: '# Imported note\nBody',
-      fileName: 'imported-note.md',
-      filePath: '/tmp/imported-note.md',
-      kind: 'markdown'
+    vi.mocked(runRuntimeTextFileImport).mockResolvedValue({
+      contentFingerprint: 'content-fingerprint',
+      degradedReason: null,
+      duplicateSemantic: 'new',
+      failureReason: null,
+      importId: 'import-1',
+      importedAt: '2026-03-22T10:00:00.000Z',
+      nodeId: 'node-import-1',
+      provider: 'desktop_text_file',
+      resultStatus: 'imported',
+      sourceFingerprint: 'source-fingerprint',
+      sourceKind: 'markdown',
+      sourceLocator: '/tmp/imported-note.md',
+      sourceName: 'imported-note.md'
     });
 
     const initialInboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(

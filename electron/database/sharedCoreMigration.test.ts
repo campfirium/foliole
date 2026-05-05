@@ -42,12 +42,16 @@ it('initializes schema through the shared core entry', () => {
     .prepare(
       `SELECT name
        FROM sqlite_master
-       WHERE type = 'table' AND name IN ('node_reading', 'nodes', 'settings', 'workspace_meta', 'node_view_state')
+       WHERE type = 'table' AND name IN (
+         'import_runs', 'import_sources', 'node_reading', 'nodes', 'settings', 'workspace_meta', 'node_view_state'
+       )
        ORDER BY name ASC`
     )
     .all() as Array<{ name: string }>;
 
   expect(tables).toEqual([
+    { name: 'import_runs' },
+    { name: 'import_sources' },
     { name: 'node_reading' },
     { name: 'node_view_state' },
     { name: 'nodes' },

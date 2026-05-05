@@ -84,6 +84,34 @@ export const attachments = sqliteTable('attachments', {
   createdAt: text('created_at').notNull()
 });
 
+export const importSources = sqliteTable('import_sources', {
+  sourceFingerprint: text('source_fingerprint').primaryKey(),
+  provider: text('provider').notNull(),
+  sourceKind: text('source_kind').notNull(),
+  sourceName: text('source_name').notNull(),
+  sourceLocator: text('source_locator').notNull(),
+  firstImportedAt: text('first_imported_at').notNull(),
+  lastImportedAt: text('last_imported_at').notNull(),
+  lastContentFingerprint: text('last_content_fingerprint').notNull(),
+  latestNodeId: text('latest_node_id')
+});
+
+export const importRuns = sqliteTable('import_runs', {
+  id: text('id').primaryKey(),
+  sourceFingerprint: text('source_fingerprint').notNull(),
+  provider: text('provider').notNull(),
+  sourceKind: text('source_kind').notNull(),
+  sourceName: text('source_name').notNull(),
+  sourceLocator: text('source_locator').notNull(),
+  contentFingerprint: text('content_fingerprint').notNull(),
+  duplicateSemantic: text('duplicate_semantic').notNull(),
+  resultStatus: text('result_status').notNull(),
+  nodeId: text('node_id'),
+  importedAt: text('imported_at').notNull(),
+  degradedReason: text('degraded_reason'),
+  failureReason: text('failure_reason')
+});
+
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

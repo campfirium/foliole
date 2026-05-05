@@ -1,4 +1,5 @@
 export * from './driver.js';
+export * from './importPipeline.js';
 export * from './migrations.js';
 export * from './nodeMutations.js';
 export * from './reviewMutations.js';

@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
+import type { NativeImportedTextFile, NativeTextImportResult } from './nativeImportContract.js';
 import type {
   NativeApplyReviewGradeArgs,
   NativeRelearnNodeArgs,
@@ -17,6 +18,7 @@ export type {
   NativeSaveReadingProgressArgs,
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
+export type { NativeImportedTextFile, NativeTextImportResult } from './nativeImportContract.js';
 
 export interface NativeResolvedAppPaths {
   app_data_dir: string;
@@ -83,13 +85,6 @@ export interface NativeSqliteRestoreResult {
   remainingPages: number;
 }
 
-export interface NativeImportedTextFile {
-  file_name: string;
-  file_path: string;
-  content: string;
-  kind: 'markdown' | 'text';
-}
-
 export type NativeCommandMap = {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -111,6 +106,10 @@ export type NativeCommandMap = {
       url: string;
     };
     result: null;
+  };
+  [NATIVE_COMMANDS.runTextFileImport]: {
+    args: undefined;
+    result: NativeTextImportResult | null;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: undefined;
