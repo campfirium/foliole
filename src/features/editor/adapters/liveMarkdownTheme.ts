@@ -58,6 +58,7 @@ export const liveMarkdownTheme = EditorView.theme({
     textAlign: 'center'
   },
   '.cm-md-strong': { fontWeight: '600' },
+  '.cm-md-strikethrough': { textDecoration: 'line-through' },
   '.cm-md-inline-code': { backgroundColor: 'rgb(var(--color-foreground) / 0.08)', borderRadius: '0.25rem', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.15rem' },
   '.cm-md-footnote-widget': { display: 'inline-block', lineHeight: '1', marginInline: '0.05em', position: 'relative', verticalAlign: 'super' },
   '.cm-md-footnote-marker': {

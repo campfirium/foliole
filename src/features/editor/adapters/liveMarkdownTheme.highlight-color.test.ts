@@ -45,6 +45,8 @@ it('uses dedicated selection, highlight, and cloze color tokens', () => {
   expect(cssText).toContain('var(--app-accent-color)');
   expect(cssText).toContain('.cm-md-strong');
   expect(cssText).toContain('font-weight: 600;');
+  expect(cssText).toContain('.cm-md-strikethrough');
+  expect(cssText).toContain('text-decoration: line-through;');
   expect(cssText).toContain('.cm-cursor');
   expect(cssText).toContain('var(--content-panel-text-color, var(--color-text-primary))');
   expect(cssText).toContain('border-left-color: var(--color-text-primary);');

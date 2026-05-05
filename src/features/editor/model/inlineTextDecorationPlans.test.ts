@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   collectClozePlaceholderDecorationPlan,
   collectInlineCodeSyntaxDecorationPlan,
-  collectInlineTokenDecorationPlan
+  collectInlineTokenDecorationPlan,
+  collectStrikethroughTextDecorationPlan
 } from './inlineTextDecorationPlans';
 
 describe('inlineTextDecorationPlans', () => {
@@ -44,6 +45,13 @@ describe('inlineTextDecorationPlans', () => {
   it('maps cloze placeholders into mark ranges', () => {
     expect(collectClozePlaceholderDecorationPlan(5, 'A [...] B')).toEqual({
       markRanges: [{ className: 'cm-md-cloze-placeholder', from: 7, to: 12 }],
+      replaceRanges: []
+    });
+  });
+
+  it('marks strikethrough content ranges', () => {
+    expect(collectStrikethroughTextDecorationPlan(0, 'A ~~gone~~ item', false)).toEqual({
+      markRanges: [{ className: 'cm-md-strikethrough', from: 4, to: 8 }],
       replaceRanges: []
     });
   });

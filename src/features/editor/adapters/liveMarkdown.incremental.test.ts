@@ -47,6 +47,18 @@ afterEach(() => {
   spies.buildFrontmatterDecorationState.mockClear();
 });
 
+describe('liveMarkdown inline rendering', () => {
+  it('renders GFM strikethrough while hiding delimiters in preview mode', () => {
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: 'Keep ~~removed~~ text.' });
+
+    expect(host.querySelector('.cm-md-strikethrough')?.textContent).toBe('removed');
+    expect(host.querySelector('.cm-content')?.textContent).toBe('Keep removed text.');
+
+    adapter.destroy();
+  });
+});
+
 describe('liveMarkdown runtime behavior', () => {
   it('opens matching workspace nodes when a wiki link is clicked', () => {
     const host = createHost();

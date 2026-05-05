@@ -13,6 +13,27 @@ function getCellAnchorClasses(cell: MarkdownTableCellPlan, decorations: readonly
   };
 }
 
+function appendInlineText(container: HTMLElement, text: string) {
+  let cursor = 0;
+  const pattern = /~~(.+?)~~/g;
+  let match = pattern.exec(text);
+
+  while (match) {
+    const start = match.index;
+    if (start > cursor) container.append(document.createTextNode(text.slice(cursor, start)));
+
+    const strike = document.createElement('span');
+    strike.className = 'cm-md-strikethrough';
+    strike.textContent = match[1] ?? '';
+    container.append(strike);
+
+    cursor = start + match[0].length;
+    match = pattern.exec(text);
+  }
+
+  if (cursor < text.length) container.append(document.createTextNode(text.slice(cursor)));
+}
+
 function createCellElement(
   cell: MarkdownTableCellPlan,
   tagName: 'td' | 'th',
@@ -23,7 +44,7 @@ function createCellElement(
   const { hasCloze, hasHighlight } = getCellAnchorClasses(cell, decorations);
   if (hasHighlight) element.classList.add('cm-md-highlight');
   if (hasCloze) element.classList.add('cm-md-cloze');
-  element.textContent = cell.text.trim();
+  appendInlineText(element, cell.text.trim());
   return element;
 }
 

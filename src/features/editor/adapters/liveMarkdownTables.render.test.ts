@@ -60,4 +60,13 @@ describe('live markdown table rendering', () => {
 
     adapter.destroy();
   });
+
+  it('renders GFM strikethrough inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| ~~Gone~~ |');
+
+    expect(host.querySelector('td.cm-md-table-cell .cm-md-strikethrough')?.textContent).toBe('Gone');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Gone');
+
+    adapter.destroy();
+  });
 });

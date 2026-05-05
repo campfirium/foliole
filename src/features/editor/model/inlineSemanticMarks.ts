@@ -4,7 +4,12 @@ export interface SemanticRange {
 }
 
 export interface SemanticMarkRange extends SemanticRange {
-  className: 'cm-md-highlight' | 'cm-md-cloze' | 'cm-md-strong' | 'cm-md-cloze-placeholder';
+  className:
+    | 'cm-md-highlight'
+    | 'cm-md-cloze'
+    | 'cm-md-strong'
+    | 'cm-md-strikethrough'
+    | 'cm-md-cloze-placeholder';
 }
 
 export type SemanticReplaceRange = SemanticRange;
@@ -15,6 +20,7 @@ export interface SemanticMarkPlan {
 }
 
 const INLINE_STRONG_PATTERN = /(\*\*|__)(.+?)\1/g;
+const INLINE_STRIKETHROUGH_PATTERN = /~~(.+?)~~/g;
 const INLINE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
 const INLINE_CLOZE_PATTERN = /\{\{(.+?)\}\}/g;
 const INLINE_CLOZE_PLACEHOLDER_PATTERN = /\[\.\.\.\]/g;
@@ -46,6 +52,23 @@ export function collectStrongTextRanges(from: number, text: string, inCodeBlock:
     match = INLINE_STRONG_PATTERN.exec(text);
   }
   INLINE_STRONG_PATTERN.lastIndex = 0;
+  return ranges;
+}
+
+export function collectStrikethroughTextRanges(from: number, text: string, inCodeBlock: boolean): SemanticMarkRange[] {
+  if (inCodeBlock) {
+    return [];
+  }
+
+  const ranges: SemanticMarkRange[] = [];
+  let match = INLINE_STRIKETHROUGH_PATTERN.exec(text);
+  while (match) {
+    const contentFrom = from + match.index + 2;
+    const contentTo = from + match.index + match[0].length - 2;
+    ranges.push({ className: 'cm-md-strikethrough', from: contentFrom, to: contentTo });
+    match = INLINE_STRIKETHROUGH_PATTERN.exec(text);
+  }
+  INLINE_STRIKETHROUGH_PATTERN.lastIndex = 0;
   return ranges;
 }
 

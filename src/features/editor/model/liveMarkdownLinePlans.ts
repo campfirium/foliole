@@ -11,6 +11,7 @@ import {
   collectInlineTokenDecorationPlan,
   collectSemanticTextDecorationPlan,
   collectStrongTextDecorationPlan,
+  collectStrikethroughTextDecorationPlan,
   type InlineTextDecorationPlan
 } from './inlineTextDecorationPlans';
 import { collectImageMatches, type MarkdownImageMatch } from './markdownImageMatches';
@@ -81,6 +82,7 @@ export function collectPreviewLineDecorationPlan(args: {
         preservedRanges.concat(footnoteRanges)
       ),
       collectStrongTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
+      collectStrikethroughTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
       collectSemanticTextDecorationPlan(args.lineFrom, args.lineText, args.inCodeBlock),
       collectClozePlaceholderDecorationPlan(args.lineFrom, args.lineText)
     ]

@@ -2,6 +2,7 @@ import {
   collectClozePlaceholderRanges,
   collectSemanticMarkPlan,
   collectStrongTextRanges,
+  collectStrikethroughTextRanges,
   type SemanticRange
 } from './inlineSemanticMarks';
 
@@ -18,6 +19,7 @@ export interface InlineTextMarkRange extends SemanticRange {
     | 'cm-md-cloze-placeholder'
     | 'cm-md-highlight'
     | 'cm-md-strong'
+    | 'cm-md-strikethrough'
     | 'cm-md-syntax-visible';
 }
 
@@ -82,6 +84,17 @@ export function collectStrongTextDecorationPlan(
 ): InlineTextDecorationPlan {
   return {
     markRanges: collectStrongTextRanges(from, text, inCodeBlock),
+    replaceRanges: []
+  };
+}
+
+export function collectStrikethroughTextDecorationPlan(
+  from: number,
+  text: string,
+  inCodeBlock: boolean
+): InlineTextDecorationPlan {
+  return {
+    markRanges: collectStrikethroughTextRanges(from, text, inCodeBlock),
     replaceRanges: []
   };
 }
