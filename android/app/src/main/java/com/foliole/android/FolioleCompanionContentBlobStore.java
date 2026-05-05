@@ -1,6 +1,6 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -22,13 +22,13 @@ final class FolioleCompanionContentBlobStore {
         return FolioleCompanionContentBlobMissingStore.summarizeMissingBodies(database);
     }
 
-    static JSObject syncBlob(SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
+    static JSObject syncBlob(Context context, SQLiteDatabase database, String hash, String url, JSONObject headers) throws Exception {
         String normalizedHash = requireHash(hash);
         if (hasCachedBlobData(database, normalizedHash)) {
-            return markCached(database, normalizedHash);
+            return markCached(context, database, normalizedHash);
         }
         ContentBlobManifest manifest = loadManifest(database, normalizedHash);
-        markAvailability(database, normalizedHash, "fetching", false);
+        markFetching(context, database, normalizedHash);
         try {
             if (!"none".equals(manifest.compression)) {
                 throw new IllegalStateException("Unsupported content blob compression.");
@@ -38,27 +38,19 @@ final class FolioleCompanionContentBlobStore {
             if (!normalizedHash.equals(actualHash) || !manifest.matches(bytes.length, actualHash)) {
                 throw new IllegalStateException("Content blob hash mismatch.");
             }
-            return storeCachedBlob(database, normalizedHash, bytes);
+            return storeCachedBlob(context, database, normalizedHash, bytes);
         } catch (Exception error) {
-            markAvailability(database, normalizedHash, "failed", false);
+            markFailed(context, database, normalizedHash);
             throw error;
         }
     }
 
-    private static JSObject storeCachedBlob(SQLiteDatabase database, String hash, byte[] bytes) {
+    private static JSObject storeCachedBlob(Context context, SQLiteDatabase database, String hash, byte[] bytes) throws Exception {
         String now = Instant.now().toString();
         database.beginTransaction();
         try {
-            ContentValues data = new ContentValues();
-            data.put("hash", hash);
-            data.put("data", bytes);
-            database.insertWithOnConflict("content_blob_data", null, data, SQLiteDatabase.CONFLICT_REPLACE);
-
-            ContentValues updates = new ContentValues();
-            updates.put("availability", "cached");
-            updates.put("cached_at", now);
-            updates.put("last_verified_at", now);
-            int updated = database.update("content_blobs", updates, "hash = ?", new String[] { hash });
+            FolioleCompanionNamedMutationStore.execute(context, database, "contentBlobDataReplace", new Object[] { hash, bytes });
+            int updated = markCachedRow(context, database, hash, now);
             if (updated <= 0) {
                 throw new IllegalStateException("Content blob manifest is missing.");
             }
@@ -100,26 +92,45 @@ final class FolioleCompanionContentBlobStore {
         }
     }
 
-    private static JSObject markCached(SQLiteDatabase database, String hash) {
-        markAvailability(database, hash, "cached", true);
+    private static JSObject markCached(Context context, SQLiteDatabase database, String hash) throws Exception {
+        int updated = markCachedRow(context, database, hash, Instant.now().toString());
+        if (updated <= 0) {
+            throw new IllegalStateException("Content blob manifest is missing.");
+        }
         JSObject result = new JSObject();
         result.put("hash", hash);
         result.put("availability", "cached");
         return result;
     }
 
-    private static void markAvailability(SQLiteDatabase database, String hash, String availability, boolean verified) {
-        String now = Instant.now().toString();
-        ContentValues manifest = new ContentValues();
-        manifest.put("availability", availability);
-        if (verified) {
-            manifest.put("cached_at", now);
-            manifest.put("last_verified_at", now);
-        }
-        int updated = database.update("content_blobs", manifest, "hash = ?", new String[] { hash });
+    private static int markCachedRow(Context context, SQLiteDatabase database, String hash, String now) throws Exception {
+        return FolioleCompanionNamedMutationStore.executeChanged(
+            context,
+            database,
+            "contentBlobMarkCached",
+            new Object[] { now, now, hash }
+        );
+    }
+
+    private static void markFetching(Context context, SQLiteDatabase database, String hash) throws Exception {
+        int updated = FolioleCompanionNamedMutationStore.executeChanged(
+            context,
+            database,
+            "contentBlobMarkFetching",
+            new Object[] { hash }
+        );
         if (updated <= 0) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
+    }
+
+    private static void markFailed(Context context, SQLiteDatabase database, String hash) throws Exception {
+        FolioleCompanionNamedMutationStore.executeChanged(
+            context,
+            database,
+            "contentBlobMarkFailed",
+            new Object[] { hash }
+        );
     }
 
     private static String requireHash(String value) {

@@ -55,6 +55,11 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   attachmentResourceMarkCached:
     "UPDATE attachment_blobs SET storage_key = ?, availability = 'cached', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
   attachmentResourceMarkFailed: "UPDATE attachment_blobs SET availability = 'failed' WHERE attachment_id = ?",
+  contentBlobDataReplace: 'INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)',
+  contentBlobMarkCached:
+    "UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",
+  contentBlobMarkFetching: "UPDATE content_blobs SET availability = 'fetching' WHERE hash = ?",
+  contentBlobMarkFailed: "UPDATE content_blobs SET availability = 'failed' WHERE hash = ?",
   syncStateExisting:
     'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
   syncStateNextSeq: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',

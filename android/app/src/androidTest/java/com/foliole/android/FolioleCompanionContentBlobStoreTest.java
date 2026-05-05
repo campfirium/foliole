@@ -65,7 +65,7 @@ public class FolioleCompanionContentBlobStoreTest {
             .getJSONArray("blobs")
             .getJSONObject(0)
             .getLong("size_bytes"));
-        JSObject result = FolioleCompanionContentBlobStore.syncBlob(database, hash, server.url(), new JSONObject());
+        JSObject result = FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, server.url(), new JSONObject());
 
         assertEquals("cached", result.getString("availability"));
         assertEquals("cached", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
@@ -215,7 +215,7 @@ public class FolioleCompanionContentBlobStoreTest {
         server.start();
 
         try {
-            FolioleCompanionContentBlobStore.syncBlob(database, hash, server.url(), new JSONObject());
+            FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, server.url(), new JSONObject());
         } catch (IllegalStateException expected) {
             assertEquals("failed", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
             assertEquals(0, countRows("SELECT COUNT(*) FROM content_blob_data WHERE hash = '" + hash + "'"));
@@ -300,12 +300,7 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNodeRef("node-1", hash, "2026-04-27T00:00:00.000Z");
         database.execSQL("INSERT INTO content_blob_data (hash, data) VALUES ('" + hash + "', CAST('" + body + "' AS BLOB))");
 
-        JSObject result = FolioleCompanionContentBlobStore.syncBlob(
-            database,
-            hash,
-            "http://127.0.0.1:1/content-blob",
-            new JSONObject()
-        );
+        JSObject result = FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, "http://127.0.0.1:1/content-blob", new JSONObject());
 
         assertEquals("cached", result.getString("availability"));
         assertEquals("cached", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
@@ -348,7 +343,7 @@ public class FolioleCompanionContentBlobStoreTest {
 
     private void assertSyncBlobFails(String hash, String url, String expectedAvailability) throws Exception {
         try {
-            FolioleCompanionContentBlobStore.syncBlob(database, hash, url, new JSONObject());
+            FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, url, new JSONObject());
         } catch (IllegalStateException expected) {
             assertEquals(expectedAvailability, selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
             assertEquals(0, countRows("SELECT COUNT(*) FROM content_blob_data WHERE hash = '" + hash + "'"));

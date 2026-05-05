@@ -53,7 +53,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
 
         OneShotHttpServer server = new OneShotHttpServer(body);
         server.start();
-        FolioleCompanionContentBlobStore.syncBlob(database, hash, server.url(), new JSONObject());
+        FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, server.url(), new JSONObject());
 
         assertEquals("ready", loadReadableContentStatus());
         assertEquals(body, loadReadableContent());
@@ -78,7 +78,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
         OneShotHttpServer server = new OneShotHttpServer("wrong body");
         server.start();
         try {
-            FolioleCompanionContentBlobStore.syncBlob(database, hash, server.url(), new JSONObject());
+            FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, server.url(), new JSONObject());
         } catch (IllegalStateException expected) {
             assertEquals("failed", loadReadableContentStatus());
             assertEquals(1, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10).getJSONArray("hashes").length());
