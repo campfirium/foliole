@@ -56,6 +56,7 @@ describe('electron preload', () => {
       'electronAPI',
       expect.objectContaining({
         invoke: expect.any(Function),
+        logDiagnosticEvent: expect.any(Function),
         onManagedInboxUpdated: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
         onWindowResized: expect.any(Function)
@@ -75,6 +76,25 @@ describe('electron preload', () => {
     expect(ipcInvoke).toHaveBeenCalledWith('foliole:invoke', {
       command: 'boot:ping',
       args: { probe: true }
+    });
+  });
+
+  it('forwards diagnostic log events through the dedicated diagnostics channel', () => {
+    const { exposeInMainWorld, ipcInvoke } = executePreload();
+
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    electronApi.logDiagnosticEvent({
+      event: 'bridge_unavailable',
+      level: 'warn',
+      payload: { action: 'resolve_runtime_app_paths' },
+      source: 'renderer.bridge'
+    });
+
+    expect(ipcInvoke).toHaveBeenCalledWith('foliole:diagnostics:log-event', {
+      event: 'bridge_unavailable',
+      level: 'warn',
+      payload: { action: 'resolve_runtime_app_paths' },
+      source: 'renderer.bridge'
     });
   });
 

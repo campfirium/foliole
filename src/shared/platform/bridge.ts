@@ -5,7 +5,7 @@ import { toRuntimeAppPaths, toRuntimeSystemFontCatalog } from './bridgePayloads'
 import { getElectronAPI } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
-import { logRuntimeWarning } from './runtimeLogging';
+import { logRuntimeEvent, logRuntimeWarning } from './runtimeLogging';
 
 const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
 
@@ -104,6 +104,16 @@ export async function openLocalPath(targetPath: string) {
 export async function resolveRuntimeAppPaths(): Promise<RuntimeAppPaths | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
+    logRuntimeEvent({
+      event: 'bridge_unavailable',
+      level: 'warn',
+      payload: {
+        action: 'resolve_runtime_app_paths',
+        command: NATIVE_COMMANDS.resolveAppPaths,
+        fallback: 'return_null'
+      },
+      source: 'renderer.bridge'
+    });
     return null;
   }
   try {

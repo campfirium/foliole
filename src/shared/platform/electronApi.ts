@@ -1,5 +1,7 @@
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
+import type { DiagnosticLogPayload } from './runtimeLogging';
+
 export interface ElectronDebugMetadata {
   preloadPath: string | null;
   runtimeHead: string | null;
@@ -8,6 +10,7 @@ export interface ElectronDebugMetadata {
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
+  logDiagnosticEvent?: (input: DiagnosticLogPayload) => Promise<void>;
   onManagedInboxUpdated: (handler: (importId: string) => void) => () => void;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;
   onReadwiseBookEpubProgress?: (

@@ -54,6 +54,30 @@ it('resolves runtime app paths via native invoke', async () => {
   expect(invoke).toHaveBeenCalledWith('resolve_app_paths');
 });
 
+it('emits a structured bridge_unavailable diagnostic when the desktop bridge exists without invoke support', async () => {
+  const logDiagnosticEvent = vi.fn().mockResolvedValue(undefined);
+  window.electronAPI = {
+    ...(createMockElectronApi(vi.fn()) as ElectronAPI),
+    invoke: undefined as unknown as ElectronAPI['invoke'],
+    logDiagnosticEvent
+  };
+
+  await expect(resolveRuntimeAppPaths()).resolves.toBeNull();
+  await Promise.resolve();
+
+  expect(logDiagnosticEvent).toHaveBeenCalledWith({
+    event: 'bridge_unavailable',
+    level: 'warn',
+    occurredAt: expect.any(String),
+    payload: {
+      action: 'resolve_runtime_app_paths',
+      command: 'resolve_app_paths',
+      fallback: 'return_null'
+    },
+    source: 'renderer.bridge'
+  });
+});
+
 it('returns null app paths when payload is malformed', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const invoke = vi.fn().mockResolvedValue({ app_data_dir: '/data' });
@@ -112,7 +136,7 @@ it('logs and falls back when native external URL open fails', async () => {
   await openExternalUrl('https://example.com/docs');
 
   expect(warn).toHaveBeenCalledWith(
-    '[bridge] native external URL open failed',
+    '[bridge] native external url open failed',
     expect.objectContaining({
       area: 'bridge',
       action: 'open_external_url',

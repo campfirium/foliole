@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const preloadPath = typeof __filename === 'string' ? __filename : null;
 
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
+const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
@@ -53,6 +54,7 @@ function subscribe(channel, handler) {
 
 const electronApi = {
   invoke: (command, args) => ipcRenderer.invoke(IPC_INVOKE_CHANNEL, { command, args }),
+  logDiagnosticEvent: (input) => ipcRenderer.invoke(IPC_DIAGNOSTIC_LOG_CHANNEL, input),
   onManagedInboxUpdated: (handler) => subscribe(IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, handler),
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),

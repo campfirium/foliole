@@ -16,6 +16,7 @@ import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
+import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import {
   notifyExternalSearchSecondInstance,
   notifyExternalSearchUserActivity,
@@ -28,6 +29,7 @@ import { loadReadwiseBooksInventory } from './import/readwiseBooksInventory.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
+  IPC_DIAGNOSTIC_LOG_CHANNEL,
   IPC_INVOKE_CHANNEL,
   IPC_WINDOW_CLOSE_CHANNEL,
   IPC_WINDOW_IS_MAXIMIZED_CHANNEL,
@@ -150,6 +152,9 @@ async function createMainWindow() {
 }
 
 function installInvokeHandler() {
+  ipcMain.handle(IPC_DIAGNOSTIC_LOG_CHANNEL, async (_event, payload: unknown) => {
+    await appendDiagnosticLog(parseDiagnosticLogPayload(payload));
+  });
   ipcMain.handle(IPC_INVOKE_CHANNEL, async (event, request: InvokeRequest) =>
     handleInvokeRequest(request, { sender: event.sender })
   );
