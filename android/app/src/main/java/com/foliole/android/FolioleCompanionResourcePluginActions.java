@@ -47,7 +47,7 @@ final class FolioleCompanionResourcePluginActions {
         );
     }
 
-    static JSObject resolveAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject resolveAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.resolveAttachmentResource(call.getString("attachment_id"));
     }
 

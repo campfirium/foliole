@@ -492,6 +492,22 @@
         }
       ]
     },
+    "attachmentResourceResolve": {
+      "resultKey": "resources",
+      "sql": "SELECT b.storage_key, b.mime_type FROM attachment_blobs b WHERE b.attachment_id = ? LIMIT 1",
+      "columns": [
+        {
+          "key": "storage_key",
+          "source": "storage_key",
+          "type": "nullableString"
+        },
+        {
+          "key": "mime_type",
+          "source": "mime_type",
+          "type": "nullableString"
+        }
+      ]
+    },
     "externalDocumentById": {
       "resultKey": "documents",
       "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at FROM external_documents ed LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash WHERE document_id = ? AND is_present = 1 LIMIT 1",

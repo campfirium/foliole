@@ -55,5 +55,13 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'availability', source: 'availability', type: 'string' },
       { key: 'storage_key', source: 'storage_key', type: 'nullableString' }
     ]
+  },
+  attachmentResourceResolve: {
+    resultKey: 'resources',
+    sql: 'SELECT b.storage_key, b.mime_type FROM attachment_blobs b WHERE b.attachment_id = ? LIMIT 1',
+    columns: [
+      { key: 'storage_key', source: 'storage_key', type: 'nullableString' },
+      { key: 'mime_type', source: 'mime_type', type: 'nullableString' }
+    ]
   }
 };

@@ -1,12 +1,12 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -73,30 +73,29 @@ final class FolioleCompanionAttachmentResourceStore {
         );
     }
 
-    static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) {
+    static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
-        try (Cursor cursor = database.rawQuery(
-            "SELECT b.storage_key, b.mime_type FROM attachment_blobs b WHERE b.attachment_id = ? LIMIT 1",
-            new String[] { normalizedAttachmentId }
-        )) {
-            if (!cursor.moveToFirst()) {
-                return notFound();
-            }
-            String storageKey = cursor.getString(0);
-            String mimeType = cursor.isNull(1) ? null : cursor.getString(1);
-            if (storageKey == null || storageKey.trim().isEmpty()) {
-                return missingFile(mimeType);
-            }
-            File file = attachmentFile(context, storageKey.trim());
-            if (!file.exists() || !file.isFile()) {
-                return missingFile(mimeType);
-            }
-            JSObject result = new JSObject();
-            result.put("status", "ready");
-            result.put("mime_type", mimeType);
-            result.put("resource_url", Uri.fromFile(file).toString());
-            return result;
+        JSONArray rows = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "attachmentResourceResolve", new String[] { normalizedAttachmentId })
+            .getJSONArray("resources");
+        if (rows.length() <= 0) {
+            return notFound();
         }
+        JSONObject row = rows.getJSONObject(0);
+        String storageKey = nullableString(row, "storage_key");
+        String mimeType = nullableString(row, "mime_type");
+        if (storageKey == null || storageKey.trim().isEmpty()) {
+            return missingFile(mimeType);
+        }
+        File file = attachmentFile(context, storageKey.trim());
+        if (!file.exists() || !file.isFile()) {
+            return missingFile(mimeType);
+        }
+        JSObject result = new JSObject();
+        result.put("status", "ready");
+        result.put("mime_type", mimeType);
+        result.put("resource_url", Uri.fromFile(file).toString());
+        return result;
     }
 
     private static JSObject missingFile(String mimeType) {
@@ -116,6 +115,10 @@ final class FolioleCompanionAttachmentResourceStore {
 
     private static File attachmentFile(Context context, String storageKey) {
         return new File(new File(context.getFilesDir(), "attachments"), storageKey);
+    }
+
+    private static String nullableString(JSONObject row, String key) {
+        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static String requireText(String value, String field) {

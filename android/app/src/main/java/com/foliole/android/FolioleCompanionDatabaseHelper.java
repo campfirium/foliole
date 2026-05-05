@@ -124,7 +124,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionContentBlobBatchStore.syncBlobs(context, database, url, headers, body);
     }
 
-    JSObject resolveAttachmentResource(String attachmentId) {
+    JSObject resolveAttachmentResource(String attachmentId) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionAttachmentResourceStore.resolveResource(context, database, attachmentId);
     }
