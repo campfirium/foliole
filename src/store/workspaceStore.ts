@@ -8,7 +8,7 @@ export interface WorkspaceState {
   nodesById: Record<string, Node>;
   setActiveNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
-  createChildNodeFromSelection: (parentNodeId: string, selectionContent: string) => string | null;
+  createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string) => string | null;
 }
 
 export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {
@@ -82,9 +82,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       };
     });
   },
-  createChildNodeFromSelection: (parentNodeId, selectionContent) => {
-    const normalizedContent = selectionContent.trim();
-    if (!normalizedContent) {
+  createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
+    const normalizedPrompt = promptContent.trim();
+    const normalizedAnswer = answerContent.trim();
+    if (!normalizedPrompt || !normalizedAnswer) {
       return null;
     }
 
@@ -104,10 +105,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
           [childNodeId]: {
             id: childNodeId,
             parentNodeId,
-            title: `Node ${state.nodeOrder.length + 1}`,
-            content: normalizedContent,
-            reveal: null,
-            review: null,
+            title: `QA ${state.nodeOrder.length + 1}`,
+            content: normalizedPrompt,
+            reveal: normalizedAnswer,
+            review: createDefaultReviewProfile(timestamp),
             createdAt: timestamp,
             updatedAt: timestamp
           }

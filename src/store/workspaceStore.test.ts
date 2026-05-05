@@ -34,9 +34,10 @@ function createTestStore(now: Date) {
         };
       });
     },
-    createChildNodeFromSelection: (parentNodeId, selectionContent) => {
-      const normalizedContent = selectionContent.trim();
-      if (!normalizedContent) {
+    createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
+      const normalizedPrompt = promptContent.trim();
+      const normalizedAnswer = answerContent.trim();
+      if (!normalizedPrompt || !normalizedAnswer) {
         return null;
       }
 
@@ -56,10 +57,20 @@ function createTestStore(now: Date) {
             [childNodeId]: {
               id: childNodeId,
               parentNodeId,
-              title: 'Node 2',
-              content: normalizedContent,
-              reveal: null,
-              review: null,
+              title: 'QA 2',
+              content: normalizedPrompt,
+              reveal: normalizedAnswer,
+              review: {
+                due: timestamp,
+                lastReviewAt: null,
+                state: 0,
+                stability: 0,
+                difficulty: 0,
+                elapsedDays: 0,
+                scheduledDays: 0,
+                reps: 0,
+                lapses: 0
+              },
               createdAt: timestamp,
               updatedAt: timestamp
             }
@@ -94,14 +105,20 @@ describe('workspaceStore', () => {
     expect(node.content).toBe('updated markdown');
   });
 
-  it('creates child node from selected content', () => {
+  it('creates QA node from selected content', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
 
-    const childNodeId = store.getState().createChildNodeFromSelection('node-1', 'quoted text');
+    const childNodeId = store.getState().createQANodeFromSelection(
+      'node-1',
+      'What is [[...]]?',
+      'quoted text'
+    );
 
     expect(childNodeId).toBe('node-test-id');
     expect(store.getState().nodeOrder).toContain('node-test-id');
     expect(store.getState().nodesById['node-test-id']?.parentNodeId).toBe('node-1');
-    expect(store.getState().nodesById['node-test-id']?.content).toBe('quoted text');
+    expect(store.getState().nodesById['node-test-id']?.content).toBe('What is [[...]]?');
+    expect(store.getState().nodesById['node-test-id']?.reveal).toBe('quoted text');
+    expect(store.getState().nodesById['node-test-id']?.review).not.toBeNull();
   });
 });

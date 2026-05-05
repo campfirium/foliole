@@ -10,7 +10,7 @@ export function App() {
   const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
-  const createChildNodeFromSelection = useWorkspaceStore((state) => state.createChildNodeFromSelection);
+  const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
   const [reviewMessage, setReviewMessage] = useState('Review area placeholder');
 
@@ -24,7 +24,7 @@ export function App() {
     updateNodeContent(activeNode.id, content);
   };
 
-  const handleCreateChildNode = () => {
+  const handleCreateQANode = () => {
     if (!activeNode) {
       setReviewMessage('No active node selected.');
       return;
@@ -38,18 +38,24 @@ export function App() {
 
     const selection = adapter.getSelection();
     if (selection.from === selection.to) {
-      setReviewMessage('Select text in the editor before creating a child node.');
+      setReviewMessage('Select text in the editor before creating a QA node.');
       return;
     }
 
-    const selectedContent = editorContent.slice(selection.from, selection.to);
-    const childNodeId = createChildNodeFromSelection(activeNode.id, selectedContent);
-    if (!childNodeId) {
-      setReviewMessage('Failed to create child node from current selection.');
+    const editorSnapshot = adapter.getContent();
+    const selectedContent = editorSnapshot.slice(selection.from, selection.to).trim();
+    const promptContent = [
+      editorSnapshot.slice(0, selection.from),
+      '[[...]]',
+      editorSnapshot.slice(selection.to)
+    ].join('');
+    const qaNodeId = createQANodeFromSelection(activeNode.id, promptContent, selectedContent);
+    if (!qaNodeId) {
+      setReviewMessage('Failed to create QA node from current selection.');
       return;
     }
 
-    setReviewMessage(`Child node created: ${childNodeId}`);
+    setReviewMessage(`QA node created: ${qaNodeId}`);
   };
 
   return (
@@ -73,8 +79,8 @@ export function App() {
         <section className="panel panel-editor" aria-label="Editor panel">
           <header className="panel-header">
             <h2>Editor</h2>
-            <button onClick={handleCreateChildNode} type="button">
-              Create Child Node
+            <button onClick={handleCreateQANode} type="button">
+              Create QA Node
             </button>
           </header>
           <div className="panel-body">
