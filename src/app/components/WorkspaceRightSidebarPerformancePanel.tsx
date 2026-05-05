@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { readAttachmentResourceCacheStats } from '../../shared/platform/attachmentResources';
 import { readPerformanceDiagnosticsProbe } from '../../shared/platform/performanceDiagnosticsProbe';
-import { loadRuntimePerformanceMemorySnapshot } from '../../shared/platform/performanceMemoryBridge';
+import { loadRuntimePerformanceMemorySnapshot } from '../../shared/platform/performanceMemoryRuntimeRepository';
 import { InspectorSection } from '../../shared/ui';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
