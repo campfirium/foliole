@@ -14,11 +14,8 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 10% -10%, rgba(217, 119, 6, 0.18), transparent 35%),
-    radial-gradient(circle at 100% 0%, rgba(133, 77, 14, 0.12), transparent 28%),
-    #f4efe6;
-  color: #2f241a;
+  background: #f6f8fb;
+  color: #0f172a;
   font-family: 'Segoe UI', 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
   overflow: hidden;
 }

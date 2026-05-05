@@ -21,7 +21,7 @@ export function ReviewModeToolbar({
   return (
     <AppToolbar
       aria-label="Review mode toolbar"
-      className="flex min-h-[56px] flex-none items-center rounded-xl border border-amber-900/15 bg-gradient-to-r from-[#f8f2e8] to-[#f3e9d8] px-4 py-3 shadow-[0_8px_18px_-16px_rgba(120,79,35,0.6)]"
+      className="flex min-h-[56px] flex-none items-center rounded-xl border border-border bg-bg-subtle px-4 py-3 shadow-[0_8px_18px_-16px_rgba(15,23,42,0.35)]"
       data-mode={isStudyMode ? 'study' : 'edit'}
     >
       {!isStudyMode ? (

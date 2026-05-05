@@ -42,8 +42,8 @@ export function AppButton({
     <RadixButton
       className={cn(
         isList && 'w-full justify-start px-3 py-2 text-left text-[13px]',
-        variant === 'subtle' && 'text-stone-600 hover:text-stone-800',
-        active && isList && 'border border-border-strong bg-amber-100/70 text-foreground',
+        variant === 'subtle' && 'text-foreground/70 hover:text-foreground',
+        active && isList && 'border border-border-strong bg-accent/10 text-foreground',
         className
       )}
       data-active={active}

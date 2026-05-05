@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
+WINDOWS_CLIENT_ACTION="${WINDOWS_CLIENT_ACTION:-restart}"
+
+PS_SCRIPT_WIN_PATH="$(wslpath -w "${SCRIPT_DIR}/restart-tauri-dev.ps1")"
+
+cd "${REPO_ROOT}"
+echo "[windows-restart-client] action=${WINDOWS_CLIENT_ACTION}"
+echo "[windows-restart-client] workdir=${WINDOWS_WORKDIR}"
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${PS_SCRIPT_WIN_PATH}" -Action "${WINDOWS_CLIENT_ACTION}" -WindowsWorkDir "${WINDOWS_WORKDIR}"

@@ -34,7 +34,6 @@ export function NodeListContextMenu({
         onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
-        style={{ left: `${left}px`, position: 'fixed', top: `${top}px` }}
       >
         {isTrashMenu ? (
           <>

@@ -42,11 +42,11 @@ export function AppPanel<T extends PanelElement = 'section'>({
       className={cn('min-h-0', className)}
       {...rest}
     >
-      <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-bg-panel to-bg-subtle p-0 text-foreground shadow-[0_1px_0_rgba(255,255,255,0.8),0_18px_32px_-24px_rgba(88,63,33,0.45)]">
+      <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-bg-panel p-0 text-foreground shadow-[0_1px_0_rgba(255,255,255,0.9),0_18px_32px_-24px_rgba(15,23,42,0.28)]">
         <header
           className={cn(
             'flex min-h-[52px] items-center justify-start gap-3 border-b border-dashed border-border px-4 py-3',
-            onHeaderClick && 'cursor-pointer transition-colors hover:bg-amber-100/40'
+            onHeaderClick && 'cursor-pointer transition-colors hover:bg-accent/10'
           )}
           onClick={onHeaderClick}
         >

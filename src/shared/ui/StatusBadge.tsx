@@ -17,12 +17,12 @@ function toneClass(tone: StatusTone) {
     return 'border-emerald-300 bg-emerald-100/70 text-emerald-500';
   }
   if (tone === 'warning') {
-    return 'border-amber-300 bg-amber-100/70 text-amber-500';
+    return 'border-amber-300 bg-amber-100/70 text-amber-600';
   }
   if (tone === 'error') {
     return 'border-rose-300 bg-rose-100/70 text-rose-500';
   }
-  return 'border-slate-300 bg-slate-100/70 text-slate-500';
+  return 'border-border bg-secondary/60 text-foreground/70';
 }
 
 export function AppStatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {

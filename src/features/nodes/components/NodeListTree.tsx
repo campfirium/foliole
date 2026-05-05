@@ -216,7 +216,7 @@ export function NodeListTree({
             <button
               aria-label="Nodes"
               aria-pressed={!isTrashViewOpen}
-              className="min-h-7 w-full border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-[0.08em] text-stone-500 hover:text-foreground aria-[pressed=true]:text-foreground"
+              className="min-h-7 w-full border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-[0.08em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
               onClick={handleNotesHeaderClick}
               type="button"
             >

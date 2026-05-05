@@ -5,47 +5,47 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#f4efe6',
-        'bg-subtle': '#fbf7ef',
-        'bg-panel': '#fffdf8',
-        'bg-elevated': '#fffaf3',
+        canvas: '#f6f8fb',
+        'bg-subtle': '#f8fafc',
+        'bg-panel': '#ffffff',
+        'bg-elevated': '#ffffff',
         border: {
-          DEFAULT: 'rgba(120, 106, 80, 0.24)',
-          strong: 'rgba(180, 83, 9, 0.35)'
+          DEFAULT: 'rgba(15, 23, 42, 0.14)',
+          strong: 'rgba(79, 70, 229, 0.42)'
         },
         accent: {
-          DEFAULT: '#d97706',
-          strong: '#b45309',
-          foreground: '#fff7ed'
+          DEFAULT: '#4f46e5',
+          strong: '#4338ca',
+          foreground: '#eef2ff'
         },
-        background: '#f4efe6',
-        foreground: '#2f241a',
+        background: '#f6f8fb',
+        foreground: '#0f172a',
         primary: {
-          DEFAULT: '#d97706',
-          foreground: '#fff7ed'
+          DEFAULT: '#4f46e5',
+          foreground: '#eef2ff'
         },
         secondary: {
-          DEFAULT: '#f3e8d2',
-          foreground: '#5b4632'
+          DEFAULT: '#e2e8f0',
+          foreground: '#1e293b'
         },
         muted: {
-          DEFAULT: '#fffaf3',
-          foreground: '#7a6248'
+          DEFAULT: '#f8fafc',
+          foreground: '#475569'
         },
         card: {
-          DEFAULT: '#fffdf8',
-          foreground: '#2f241a'
+          DEFAULT: '#ffffff',
+          foreground: '#0f172a'
         },
         popover: {
-          DEFAULT: '#fffdf8',
-          foreground: '#2f241a'
+          DEFAULT: '#ffffff',
+          foreground: '#0f172a'
         },
         destructive: {
           DEFAULT: '#fb7185',
           foreground: '#ffffff'
         },
-        input: 'rgba(120, 106, 80, 0.24)',
-        ring: '#b45309'
+        input: 'rgba(15, 23, 42, 0.14)',
+        ring: '#4338ca'
       },
       fontFamily: {
         sans: ['Segoe UI', 'IBM Plex Sans', 'Helvetica Neue', 'sans-serif'],

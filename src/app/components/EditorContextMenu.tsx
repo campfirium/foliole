@@ -32,7 +32,6 @@ export function EditorContextMenu({
         onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
-        style={{ left: `${left}px`, position: 'fixed', top: `${top}px` }}
       >
         <AppDropdownMenuItem disabled={!canRunCommands} onSelect={onCreateHighlight}>
           Highlight
