@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderCompanionShellContent } from './CompanionShellContent';
 
 vi.mock('./CompanionArticleDocument', () => ({
-  CompanionArticleDocument: (props: { content: string }) => <article>{props.content}</article>
+  CompanionArticleDocument: (props: { content: string; onMissingAttachmentResource?: (attachmentId: string) => void }) => (
+    <article>
+      {props.content}
+      <button onClick={() => props.onMissingAttachmentResource?.('inline-att-1')}>Load inline attachment</button>
+    </article>
+  )
 }));
 
 vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
@@ -15,6 +20,12 @@ vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
     </div>
   )
 }));
+
+const attachmentSyncMock = vi.hoisted(() => ({
+  syncCompanionAttachmentResourceFromDesktop: vi.fn(async () => ({ attachmentId: 'inline-att-1', status: 'cached' }))
+}));
+
+vi.mock('@/shared/platform/companionDesktopAttachmentResources', () => attachmentSyncMock);
 
 function createPdfReadableSurface() {
   return {
@@ -104,6 +115,33 @@ describe('CompanionShellContent PDF articles', () => {
     expect(screen.getByText('PDF original viewer')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Text' }));
     expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
+  });
+
+  it('syncs a missing inline attachment from the current topic surface', () => {
+    render(renderCompanionShellContent({
+      hasSnapshot: true,
+      onBackToSettingsList: vi.fn(),
+      onOpenSyncSettingsPage: vi.fn(),
+      onOpenSyncSettings: vi.fn(),
+      onSelectReviewBreadcrumbItem: vi.fn(),
+      reviewBreadcrumbItems: [],
+      settingsPage: 'list',
+      surface: createPdfReadableSurface() as never,
+      workspaceError: null,
+      workspaceSync: {
+        state: {
+          endpoint_url: 'http://10.0.2.2:38641',
+          remembered_targets: []
+        }
+      } as never
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load inline attachment' }));
+
+    expect(attachmentSyncMock.syncCompanionAttachmentResourceFromDesktop).toHaveBeenCalledWith(
+      'http://10.0.2.2:38641',
+      'inline-att-1'
+    );
   });
 
   it('shows a syncing state when the topic body blob is not local yet', () => {
