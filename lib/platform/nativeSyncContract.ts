@@ -43,6 +43,7 @@ export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
 export interface NativeSyncPackApplyResult {
   applied_blob_count: number;
   applied_object_count: number;
+  to_state_seq: number;
 }
 
 export interface NativeSyncChangeCursor {

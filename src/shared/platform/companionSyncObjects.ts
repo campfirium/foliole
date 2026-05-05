@@ -66,7 +66,7 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
 
 export async function applyCompanionSyncPack(packPath: string) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return { applied_blob_count: 0, applied_object_count: 0 };
+    return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
   }
   return FolioleCompanionSync.applySyncPack({ pack_path: packPath });
 }

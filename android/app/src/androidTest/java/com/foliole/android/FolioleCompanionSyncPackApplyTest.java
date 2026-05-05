@@ -50,6 +50,7 @@ public class FolioleCompanionSyncPackApplyTest {
 
         assertEquals(1, result.getInt("applied_object_count"));
         assertEquals(1, result.getInt("applied_blob_count"));
+        assertEquals(1, result.getInt("to_state_seq"));
         assertEquals("", selectString("SELECT content FROM nodes WHERE id = 'node-1'"));
         assertEquals("blob-1", selectString("SELECT body_blob_hash FROM nodes WHERE id = 'node-1'"));
         assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = 'blob-1'"));
@@ -141,7 +142,8 @@ public class FolioleCompanionSyncPackApplyTest {
 
     private void insertIncomingRows(SQLiteDatabase packDatabase) {
         String now = "2026-04-27T00:00:00.000Z";
-        packDatabase.execSQL("INSERT INTO pack_manifest (key, value) VALUES ('manifest_json', '{}')");
+        packDatabase.execSQL("INSERT INTO pack_manifest (key, value) VALUES (" +
+            "'manifest_json', '{\"to_state_seq\":1}')");
         packDatabase.execSQL("INSERT INTO nodes (" +
             "id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, content, created_at, updated_at) " +
             "VALUES ('node-1', 'topic', 'Node 1', 1, 0, 'blob-1', '', '" + now + "', '" + now + "')");

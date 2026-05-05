@@ -141,6 +141,7 @@ const PACK_SCHEMA = [
     last_verified_at TEXT
   )`
 ];
+const PACK_OBJECT_TYPES = new Set(['external_document', 'node']);
 
 function normalizeSeq(value: number) {
   return Math.max(0, Math.trunc(value));
@@ -204,7 +205,9 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
     for (const statement of PACK_SCHEMA) {
       packDb.exec(statement);
     }
-    const stateRows = listChangedStateRows(fromStateSeq, toStateSeq);
+    const stateRows = listChangedStateRows(fromStateSeq, toStateSeq)
+      .filter((row) => PACK_OBJECT_TYPES.has(row.object_type));
+    const packToStateSeq = stateRows.at(-1)?.state_seq ?? fromStateSeq;
     const nodeIds = stateRows.filter((row) => row.object_type === 'node').map((row) => row.object_id);
     const externalDocumentIds = stateRows.filter((row) => row.object_type === 'external_document').map((row) => row.object_id);
     const nodes = queryRowsByIds<NodePackRow>(
@@ -231,7 +234,7 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
       packDb.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run('manifest_json', JSON.stringify({
         pack_id: input.packId,
         from_state_seq: fromStateSeq,
-        to_state_seq: toStateSeq,
+        to_state_seq: packToStateSeq,
         table_names: ['sync_object_state', 'nodes', 'external_documents', 'content_blobs']
       }));
       copyRows({
@@ -275,7 +278,7 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
       outputPath: input.outputPath,
       packId: input.packId,
       fromStateSeq,
-      toStateSeq,
+      toStateSeq: packToStateSeq,
       objectCount: stateRows.length,
       bodyBlobCount: contentBlobs.length
     };

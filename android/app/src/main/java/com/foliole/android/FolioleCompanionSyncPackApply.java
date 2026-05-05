@@ -5,6 +5,8 @@ import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONObject;
+
 import java.io.File;
 
 final class FolioleCompanionSyncPackApply {
@@ -19,10 +21,11 @@ final class FolioleCompanionSyncPackApply {
         attachIncoming(database, packFile);
         int appliedObjects = 0;
         int appliedBlobs = 0;
+        int toStateSeq = 0;
         try {
             database.beginTransaction();
             try {
-                requirePackManifest(database);
+                toStateSeq = readPackToStateSeq(database);
                 appliedBlobs = upsertContentBlobs(database);
                 upsertNodes(database);
                 upsertExternalDocuments(database);
@@ -37,6 +40,7 @@ final class FolioleCompanionSyncPackApply {
         JSObject result = new JSObject();
         result.put("applied_object_count", appliedObjects);
         result.put("applied_blob_count", appliedBlobs);
+        result.put("to_state_seq", toStateSeq);
         return result;
     }
 
@@ -48,7 +52,7 @@ final class FolioleCompanionSyncPackApply {
         database.execSQL("DETACH DATABASE " + INCOMING_ALIAS);
     }
 
-    private static void requirePackManifest(SQLiteDatabase database) {
+    private static int readPackToStateSeq(SQLiteDatabase database) throws Exception {
         try (Cursor cursor = database.rawQuery(
             "SELECT value FROM inc.pack_manifest WHERE key = 'manifest_json'",
             null
@@ -56,6 +60,8 @@ final class FolioleCompanionSyncPackApply {
             if (!cursor.moveToFirst() || cursor.getString(0).trim().isEmpty()) {
                 throw new IllegalArgumentException("Invalid sync pack manifest.");
             }
+            JSONObject manifest = new JSONObject(cursor.getString(0));
+            return Math.max(0, manifest.optInt("to_state_seq", 0));
         }
     }
 
@@ -99,7 +105,7 @@ final class FolioleCompanionSyncPackApply {
         int count = 0;
         try (Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
-                applyableStateRowsSql(null) + " ORDER BY state_seq ASC",
+                applyableStateRowsSql(null) + " WHERE object_type IN ('node', 'external_document') ORDER BY state_seq ASC",
             null
         )) {
             while (cursor.moveToNext()) {

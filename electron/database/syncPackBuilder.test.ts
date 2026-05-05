@@ -55,6 +55,11 @@ function insertNodeSyncState() {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('setting', 'setting-1', 2, 'setting-hash', 'desktop', '2026-04-27T00:01:00.000Z', 1)`
+  );
 }
 
 function readPackRows(packPath: string) {
