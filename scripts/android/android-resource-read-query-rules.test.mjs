@@ -135,6 +135,7 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobBatchResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobSyncResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentBatchResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentResolveResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key)');
@@ -167,6 +168,10 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('optString("attachment_id"');
     expect(combinedStoreSource).not.toContain('optString("content_hash"');
     expect(combinedStoreSource).not.toContain('row.getString(resourceRule(context, "hashKey"))');
+    expect(combinedStoreSource).not.toContain('blob.getString(resourceRule(context, "compressionKey"))');
+    expect(combinedStoreSource).not.toContain('blob.getLong(resourceRule(context, "originalSizeBytesKey"))');
+    expect(combinedStoreSource).not.toContain('row.getString(resourceRule(context, "attachmentIdKey"))');
+    expect(combinedStoreSource).not.toContain('row.getString(resourceRule(context, "contentHashKey"))');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');
     expect(combinedStoreSource).not.toContain('EXCERPT_RADIUS');
   });
@@ -189,9 +194,11 @@ describe('Android resource read query rules', () => {
 
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentArray(context, key)');
     expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentOutputKey(context, key)');
-    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowKey(context, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowInt(context, row, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowNullableString(context, row, key)');
+    expect(source).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowString(context, row, key)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
-    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
+    expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
     expect(source).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldType(context, key)');
     expect(source).not.toContain('result.put("document"');

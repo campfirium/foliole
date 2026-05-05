@@ -28,6 +28,19 @@ final class FolioleCompanionContentReadQueryRules {
         return externalDocumentObject(context, "rowKeys").getString(key);
     }
 
+    static int externalDocumentRowInt(Context context, JSONObject row, String key) throws Exception {
+        return row.getInt(externalDocumentRowKey(context, key));
+    }
+
+    static String externalDocumentRowNullableString(Context context, JSONObject row, String key) throws Exception {
+        String rowKey = externalDocumentRowKey(context, key);
+        return row.isNull(rowKey) ? null : row.optString(rowKey, null);
+    }
+
+    static String externalDocumentRowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(externalDocumentRowKey(context, key));
+    }
+
     static JSONArray externalDocumentArray(Context context, String key) throws Exception {
         return group(context, "externalDocuments").getJSONArray(key);
     }

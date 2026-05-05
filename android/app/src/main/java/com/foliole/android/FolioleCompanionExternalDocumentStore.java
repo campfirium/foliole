@@ -89,7 +89,7 @@ final class FolioleCompanionExternalDocumentStore {
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             JSObject entry = new JSObject();
-            String documentId = row.getString(rowKey(context, "documentId"));
+            String documentId = rowString(context, row, "documentId");
             putFields(context, entry, row, arrayRule(context, "directoryEntryFields"));
             entry.put(outputKey(context, "absolutePath"), documentId);
             entries.put(entry);
@@ -105,7 +105,7 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSObject toSearchResult(Context context, JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        int matchStart = Math.max(0, row.getInt(rowKey(context, "matchIndex")) - 1);
+        int matchStart = Math.max(0, rowInt(context, row, "matchIndex") - 1);
         putDocumentFields(context, result, row);
         result.put(outputKey(context, "matchStart"), matchStart);
         result.put(outputKey(context, "excerpt"), buildExcerpt(context, resolveContent(context, row), matchStart));
@@ -125,33 +125,28 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
         String type = fieldTypeKey(context, field);
-        String rowKey = fieldRowKey(context, field);
-        if (fieldType(context, "nullableString").equals(type)) return nullableString(row, rowKey);
+        if (fieldType(context, "nullableString").equals(type)) return fieldRowNullableString(context, row, field);
         if (fieldType(context, "resolvedContent").equals(type)) return resolveContent(context, row);
         if (fieldType(context, "contentStatus").equals(type)) return resolveContentStatus(context, row);
         throw new IllegalStateException("Unsupported external document field type: " + type);
     }
 
     private static String resolveContent(Context context, JSONObject row) throws Exception {
-        String bodyBlobData = nullableString(row, rowKey(context, "bodyBlobData"));
-        return bodyBlobData == null ? nullableString(row, rowKey(context, "content")) : bodyBlobData;
+        String bodyBlobData = rowNullableString(context, row, "bodyBlobData");
+        return bodyBlobData == null ? rowNullableString(context, row, "content") : bodyBlobData;
     }
 
     private static String resolveContentStatus(Context context, JSONObject row) throws Exception {
-        String bodyBlobHash = nullableString(row, rowKey(context, "bodyBlobHash"));
+        String bodyBlobHash = rowNullableString(context, row, "bodyBlobHash");
         boolean hasBodyBlobHash = bodyBlobHash != null && !bodyBlobHash.trim().isEmpty();
-        if (hasBodyBlobHash && nullableString(row, rowKey(context, "bodyBlobData")) == null) {
-            String availability = nullableString(row, rowKey(context, "availability"));
+        if (hasBodyBlobHash && rowNullableString(context, row, "bodyBlobData") == null) {
+            String availability = rowNullableString(context, row, "availability");
             if (FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses").contains(availability)) {
                 return availability;
             }
             return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing");
         }
         return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready");
-    }
-
-    private static String nullableString(JSONObject row, String key) {
-        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static String buildExcerpt(Context context, String text, int matchStart) throws Exception {
@@ -187,16 +182,24 @@ final class FolioleCompanionExternalDocumentStore {
         return FolioleCompanionContentReadQueryRules.externalDocumentOutputKey(context, key);
     }
 
-    private static String rowKey(Context context, String key) throws Exception {
-        return FolioleCompanionContentReadQueryRules.externalDocumentRowKey(context, key);
+    private static int rowInt(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentRowInt(context, row, key);
+    }
+
+    private static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentRowNullableString(context, row, key);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return FolioleCompanionContentReadQueryRules.externalDocumentRowString(context, row, key);
     }
 
     private static String fieldOutputKey(Context context, JSONObject field) throws Exception {
         return FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field);
     }
 
-    private static String fieldRowKey(Context context, JSONObject field) throws Exception {
-        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field);
+    private static String fieldRowNullableString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return FolioleCompanionQueryDefinitionShapeKeys.fieldRowNullableString(context, row, field);
     }
 
     private static String fieldTypeKey(Context context, JSONObject field) throws Exception {

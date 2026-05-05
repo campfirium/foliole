@@ -43,6 +43,9 @@ describe('Android content read query rules', () => {
     const rulesSource = await readFile(CONTENT_READ_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowInt(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowNullableString(context, row, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleRowNullableString(context, row, key)');
@@ -50,6 +53,8 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).not.toContain('"externalDocumentById"');
     expect(combinedStoreSource).not.toContain('"readableArticleFirstNode"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextPages"');
+    expect(combinedStoreSource).not.toContain('row.getString(rowKey(context, "documentId"))');
+    expect(combinedStoreSource).not.toContain('row.getInt(rowKey(context, "matchIndex"))');
     expect(combinedStoreSource).not.toContain('"Linked PDF source ready for the reader surface."');
     expect(combinedStoreSource).not.toContain('"readable_article"');
   });
