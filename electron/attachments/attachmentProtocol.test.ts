@@ -76,6 +76,26 @@ it('serves attachment files through Electron net fetch with the stored mime type
   await expect(response.arrayBuffer()).resolves.toMatchObject(Buffer.from('image-bytes').buffer);
 });
 
+it('normalizes file fetch status zero so attachment images can load through the protocol', async () => {
+  fetch.mockResolvedValue({
+    body: new Response(Buffer.from('image-bytes')).body,
+    status: 0
+  });
+  resolveAttachmentFile.mockReturnValue({
+    status: 'ready',
+    filePath: '/tmp/attachment-hash',
+    mimeType: 'image/png'
+  });
+
+  registerAttachmentProtocol();
+  const handler = handle.mock.calls[0]?.[1];
+  const response = await handler({ url: buildAttachmentAssetUrl('hash-1') });
+
+  expect(response.status).toBe(200);
+  expect(response.headers.get('content-type')).toBe('image/png');
+  await expect(response.arrayBuffer()).resolves.toMatchObject(Buffer.from('image-bytes').buffer);
+});
+
 it('returns not found when the attachment file cannot be resolved', async () => {
   resolveAttachmentFile.mockReturnValue({ status: 'missing_file', mimeType: 'image/png' });
 

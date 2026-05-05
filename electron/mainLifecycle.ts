@@ -85,7 +85,6 @@ async function initializeRuntimeServices() {
   flushAllDirtyNodeSyncVersions();
   await appendBootEvent('node_sync_flush_complete');
   await appendBootEvent('database_init_complete');
-  registerAttachmentProtocol();
   installAppMenu();
 }
 
@@ -200,6 +199,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     const mainWindow = await args.createMainWindow();
     startDevScreenshotServer({ getWindow: () => mainWindow });
     try {
+      registerAttachmentProtocol();
       await args.loadMainWindow(mainWindow);
       await appendBootEvent('main_window_shell_ready');
       await presentInitialRendererWindow(mainWindow);

@@ -38,7 +38,7 @@ export function registerAttachmentProtocol() {
         'content-type': resolved.mimeType ?? 'application/octet-stream',
         'cache-control': 'public, max-age=31536000, immutable'
       },
-      status: response.status
+      status: response.status >= 200 && response.status <= 599 ? response.status : 200
     });
   });
 }
