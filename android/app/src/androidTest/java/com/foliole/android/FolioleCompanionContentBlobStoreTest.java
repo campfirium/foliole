@@ -38,7 +38,7 @@ public class FolioleCompanionContentBlobStoreTest {
             "cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
-        database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, deleted_at TEXT)");
+        database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, parent_id TEXT, body_blob_hash TEXT, updated_at TEXT NOT NULL, deleted_at TEXT)");
         database.execSQL("CREATE TABLE node_reading (node_id TEXT PRIMARY KEY, last_handled_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT NOT NULL)");
         database.execSQL("CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, is_present INTEGER NOT NULL DEFAULT 1)");
@@ -164,6 +164,29 @@ public class FolioleCompanionContentBlobStoreTest {
     }
 
     @Test
+    public void ordersTopLevelTopicBodiesBeforeNestedAndExternalBodies() throws Exception {
+        String topLevelHash = sha256("top level body");
+        String nestedHash = sha256("nested body");
+        String externalHash = sha256("external body");
+        insertMissingBlob(topLevelHash);
+        insertMissingBlob(nestedHash);
+        insertMissingBlob(externalHash);
+        insertNodeRef("top-level-node", topLevelHash, "2026-04-25T00:00:00.000Z");
+        insertNestedNodeRef("nested-node", "top-level-node", nestedHash, "2026-04-30T00:00:00.000Z");
+        insertExternalDocumentRef("doc-1", externalHash, "2026-05-01T00:00:00.000Z");
+
+        assertEquals(topLevelHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(0));
+        assertEquals(nestedHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(1));
+        assertEquals(externalHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(2));
+    }
+
+    @Test
     public void rejectsBlobBytesThatDoNotMatchTheManifestHash() throws Exception {
         String hash = sha256("expected body");
         insertMissingBlob(hash);
@@ -239,8 +262,13 @@ public class FolioleCompanionContentBlobStoreTest {
     }
 
     private void insertNodeRef(String nodeId, String hash, String updatedAt) {
-        database.execSQL("INSERT INTO nodes (id, body_blob_hash, updated_at, deleted_at) VALUES (" +
-            "'" + nodeId + "', '" + hash + "', '" + updatedAt + "', NULL)");
+        database.execSQL("INSERT INTO nodes (id, parent_id, body_blob_hash, updated_at, deleted_at) VALUES (" +
+            "'" + nodeId + "', NULL, '" + hash + "', '" + updatedAt + "', NULL)");
+    }
+
+    private void insertNestedNodeRef(String nodeId, String parentId, String hash, String updatedAt) {
+        database.execSQL("INSERT INTO nodes (id, parent_id, body_blob_hash, updated_at, deleted_at) VALUES (" +
+            "'" + nodeId + "', '" + parentId + "', '" + hash + "', '" + updatedAt + "', NULL)");
     }
 
     private void insertExternalDocumentRef(String documentId, String hash, String updatedAt) {

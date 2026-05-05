@@ -24,14 +24,15 @@ final class FolioleCompanionContentBlobStore {
                     "CASE " +
                         "WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 " +
                         "WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 " +
-                        "ELSE 2 END AS priority, " +
+                        "WHEN n.parent_id IS NULL THEN 2 " +
+                        "ELSE 3 END AS priority, " +
                     "COALESCE(rd.last_handled_at, n.updated_at) AS updated_at " +
                 "FROM nodes n " +
                 "LEFT JOIN node_review nr ON nr.node_id = n.id " +
                 "LEFT JOIN node_reading rd ON rd.node_id = n.id " +
                 "WHERE n.body_blob_hash IS NOT NULL AND n.deleted_at IS NULL " +
                 "UNION ALL " +
-                "SELECT ed.body_blob_hash AS hash, 3 AS priority, ed.updated_at AS updated_at " +
+                "SELECT ed.body_blob_hash AS hash, 4 AS priority, ed.updated_at AS updated_at " +
                 "FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1" +
             "), ranked_refs AS (" +
                 "SELECT hash, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM body_refs GROUP BY hash" +
