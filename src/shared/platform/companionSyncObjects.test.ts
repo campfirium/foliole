@@ -22,6 +22,18 @@ const capacitorMock = vi.hoisted(() => ({
       attachment_id: 'att-1',
       pages: [{ page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }]
     })),
+    searchPdfPageText: vi.fn(async () => ({
+      query: 'pdf',
+      results: [{
+        attachment_id: 'att-1',
+        excerpt: 'indexed pdf text',
+        match_start: 8,
+        page: 1,
+        page_height: 200,
+        page_width: 100,
+        text: 'indexed pdf text'
+      }]
+    })),
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
@@ -129,6 +141,16 @@ async function testNativePluginBridge() {
     { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
   ]);
   expect(capacitorMock.plugin.loadPdfPageText).toHaveBeenCalledWith({ attachment_id: 'att-1' });
+  await expect(api.searchCompanionPdfPageText('pdf', 5)).resolves.toEqual([{
+    attachment_id: 'att-1',
+    excerpt: 'indexed pdf text',
+    match_start: 8,
+    page: 1,
+    page_height: 200,
+    page_width: 100,
+    text: 'indexed pdf text'
+  }]);
+  expect(capacitorMock.plugin.searchPdfPageText).toHaveBeenCalledWith({ limit: 5, query: 'pdf' });
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   await expectNativeCursorBridge(api);
   await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
@@ -181,6 +203,7 @@ async function testWebFallbackBridge() {
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([]);
+  await expect(api.searchCompanionPdfPageText('pdf')).resolves.toEqual([]);
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 0 });
   await expectWebCursorFallback(api);
   await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' })).resolves.toBeNull();

@@ -16,6 +16,19 @@ import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
+
+export interface CompanionPdfPageTextEntry {
+  page: number;
+  page_height: number | null;
+  page_width: number | null;
+  text: string;
+}
+
+export interface CompanionPdfPageTextSearchResult extends CompanionPdfPageTextEntry {
+  attachment_id: string;
+  excerpt: string;
+  match_start: number;
+}
 export {
   saveCompanionSyncActiveViewState,
   saveCompanionSyncNodeReadingRecord,
@@ -63,6 +76,20 @@ export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRe
     return [];
   }
   return (await FolioleCompanionSync.applySyncReviewLog({ reviews })).applied_op_ids;
+}
+
+export async function loadCompanionPdfPageText(attachmentId: string) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as CompanionPdfPageTextEntry[];
+  }
+  return (await FolioleCompanionSync.loadPdfPageText({ attachment_id: attachmentId })).pages;
+}
+
+export async function searchCompanionPdfPageText(query: string, limit?: number) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as CompanionPdfPageTextSearchResult[];
+  }
+  return (await FolioleCompanionSync.searchPdfPageText({ limit, query })).results;
 }
 
 const WEB_SYNC_STATE_CURSOR_KEY = 'foliole-companion-sync-state-cursor';

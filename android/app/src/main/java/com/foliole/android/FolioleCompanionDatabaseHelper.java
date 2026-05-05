@@ -226,6 +226,21 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionPdfPageTextStore.loadPageText(database, attachmentId);
     }
 
+    JSObject searchPdfPageText(String query, int limit) {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionPdfPageTextStore.searchPageText(database, query, limit);
+    }
+
+    JSObject loadExternalDocument(String documentId) {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionExternalDocumentStore.loadDocument(database, documentId);
+    }
+
+    JSObject searchExternalDocuments(String query, int limit) {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionExternalDocumentStore.searchDocuments(database, query, limit);
+    }
+
     JSObject applySyncNodeVersions(JSONArray nodes) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes);

@@ -91,6 +91,45 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
 
     @PluginMethod
+    public void searchPdfPageText(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.searchPdfPageText(call.getString("query"), call.getInt("limit", 20)));
+        } catch (Exception exception) {
+            call.reject("Failed to search companion PDF page text.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+
+    @PluginMethod
+    public void loadExternalDocument(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.loadExternalDocument(call.getString("document_id")));
+        } catch (Exception exception) {
+            call.reject("Failed to load companion external document.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+
+    @PluginMethod
+    public void searchExternalDocuments(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.searchExternalDocuments(call.getString("query"), call.getInt("limit", 20)));
+        } catch (Exception exception) {
+            call.reject("Failed to search companion external documents.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+
+    @PluginMethod
     public void loadDiscoveryCandidates(PluginCall call) {
         try {
             JSArray endpointUrls = new JSArray();

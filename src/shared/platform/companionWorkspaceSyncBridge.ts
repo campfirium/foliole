@@ -76,6 +76,55 @@ export interface CompanionWorkspaceSyncPlugin {
       text: string;
     }>;
   }>;
+  searchPdfPageText(args: {
+    limit?: number;
+    query: string;
+  }): Promise<{
+    query: string;
+    results: Array<{
+      attachment_id: string;
+      excerpt: string;
+      match_start: number;
+      page: number;
+      page_height: number | null;
+      page_width: number | null;
+      text: string;
+    }>;
+  }>;
+  loadExternalDocument(args: {
+    document_id: string;
+  }): Promise<{
+    document: {
+      content: string;
+      document_id: string;
+      extension: string;
+      file_name: string;
+      folder_id: string;
+      opening_text: string | null;
+      relative_path: string;
+      title: string;
+      updated_at: string;
+    } | null;
+  }>;
+  searchExternalDocuments(args: {
+    limit?: number;
+    query: string;
+  }): Promise<{
+    query: string;
+    results: Array<{
+      content: string;
+      document_id: string;
+      excerpt: string;
+      extension: string;
+      file_name: string;
+      folder_id: string;
+      match_start: number;
+      opening_text: string | null;
+      relative_path: string;
+      title: string;
+      updated_at: string;
+    }>;
+  }>;
   removeWorkspaceSyncRememberedTarget(args: { endpoint_url: string }): Promise<NativeCompanionWorkspaceSyncState>;
   recordWorkspaceSyncEvent(args: {
     endpoint_url: string | null;
