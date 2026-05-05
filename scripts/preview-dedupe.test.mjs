@@ -1,0 +1,114 @@
+// @vitest-environment node
+/* global process */
+
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview-dedupe.mjs');
+
+function git(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  if (result.status !== 0) {
+    throw new Error(result.stderr);
+  }
+  return result.stdout;
+}
+
+async function createRepo() {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'preview-dedupe-'));
+  git(root, ['init']);
+  git(root, ['config', 'user.email', 'test@example.com']);
+  git(root, ['config', 'user.name', 'Preview Test']);
+  await writeFile(path.join(root, 'tracked.txt'), 'base\n', 'utf8');
+  git(root, ['add', 'tracked.txt']);
+  git(root, ['commit', '-m', 'init']);
+  return root;
+}
+
+function runDedupe(repoRoot, target, command, env = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [DEDUPE_SCRIPT, target, '--', ...command], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        PREVIEW_DEDUPE_REPO_ROOT: repoRoot,
+        PREVIEW_DEDUPE_RUNTIME_DIR: '.lab/internal/runtime',
+        ...env
+      }
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+async function readHash(repoRoot, target) {
+  return readFile(path.join(repoRoot, '.lab', 'internal', 'runtime', `${target}-preview.hash`), 'utf8');
+}
+
+describe('preview-dedupe', () => {
+  it('claims a new tracked diff before running preview and skips the same hash later', async () => {
+    const repoRoot = await createRepo();
+    try {
+      const runLog = path.join(repoRoot, 'runs.log');
+      await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
+
+      const first = await runDedupe(repoRoot, 'windows', [
+        'bash',
+        '-c',
+        'cat .lab/internal/runtime/windows-preview.hash > before-run.hash && echo run >> runs.log && echo "[windows-preview] status: STARTED"'
+      ]);
+      const storedHash = await readHash(repoRoot, 'windows');
+      const hashSeenByPreview = await readFile(path.join(repoRoot, 'before-run.hash'), 'utf8');
+      expect(first.code).toBe(0);
+      expect(first.stdout).toContain('[windows-preview] dedupe: claimed hash=');
+      expect(first.stdout).toContain('[windows-preview] status: STARTED');
+      expect(hashSeenByPreview).toBe(storedHash);
+
+      const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo run >> runs.log']);
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain('[windows-preview] dedupe: covered hash=');
+      expect(second.stdout).toContain('[windows-preview] status: SYNCED');
+      expect(await readFile(runLog, 'utf8')).toBe('run\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('ignores untracked files when matching the preview hash', async () => {
+    const repoRoot = await createRepo();
+    try {
+      await mkdir(path.join(repoRoot, '.lab', 'internal', 'runtime'), { recursive: true });
+      const first = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo run > runs.log']);
+      const storedHash = await readHash(repoRoot, 'android');
+      await writeFile(path.join(repoRoot, 'untracked.txt'), 'ignored\n', 'utf8');
+
+      const second = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo second >> runs.log']);
+      expect(first.code).toBe(0);
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain('[android-preview] dedupe: covered hash=');
+      expect(await readHash(repoRoot, 'android')).toBe(storedHash);
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('run\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
+});
