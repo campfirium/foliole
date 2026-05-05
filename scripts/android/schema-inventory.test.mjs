@@ -121,7 +121,9 @@ describe('schema inventory drift gate', () => {
     const source = await readFile(COMPANION_APP_DATA_STORE, 'utf8');
 
     expect(source).toContain('FolioleCompanionGeneratedMutationRunner.appDataClearMutations(context)');
-    expect(source).toContain('FolioleCompanionMutationAssetKeys.shapeKey(context, "appDataClearMutation", key)');
+    expect(source).toContain('FolioleCompanionMutationAssetKeys.appDataClearTable(context, mutation)');
+    expect(source).toContain('FolioleCompanionMutationAssetKeys.appDataClearStatementName(context, mutation)');
+    expect(source).not.toContain('shapeKey(context, "appDataClearMutation", key)');
     expect(source).not.toContain('mutation.getString("table")');
     expect(source).not.toContain('mutation.getString("statementName")');
     expect(source).not.toContain('new ClearMutation("');

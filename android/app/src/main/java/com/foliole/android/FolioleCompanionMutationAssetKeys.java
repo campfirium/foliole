@@ -31,6 +31,14 @@ final class FolioleCompanionMutationAssetKeys {
         return section(context, "mutationShape").getJSONObject(groupName).getString(key);
     }
 
+    static String appDataClearStatementName(Context context, JSONObject mutation) throws Exception {
+        return mutation.getString(appDataClearMutationKey(context, "statementName"));
+    }
+
+    static String appDataClearTable(Context context, JSONObject mutation) throws Exception {
+        return mutation.getString(appDataClearMutationKey(context, "table"));
+    }
+
     static String key(Context context, String key) throws Exception {
         JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
         JSONObject assetKeys = payload.optJSONObject("assetKeys");
@@ -46,5 +54,9 @@ final class FolioleCompanionMutationAssetKeys {
             throw new IllegalStateException("Companion mutation definitions asset is missing rule group keys.");
         }
         return groupKeys.getString(groupName);
+    }
+
+    private static String appDataClearMutationKey(Context context, String key) throws Exception {
+        return shapeKey(context, "appDataClearMutation", key);
     }
 }
