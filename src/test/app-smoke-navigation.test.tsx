@@ -38,6 +38,36 @@ it('supports ctrl/cmd multi-select and shift range select in node list', () => {
   expect(node3Button).toHaveAttribute('aria-pressed', 'true');
 });
 
+it('renders a leaf icon before each node label in the node list', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-qa'],
+    nodesById: {
+      ...state.nodesById,
+      'node-qa': createNode({
+        id: 'node-qa',
+        title: 'QA Node',
+        content: '# QA Node',
+        reveal: 'Answer'
+      })
+    }
+  }));
+
+  render(<App />);
+
+  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  const regularNodeButton = within(listPanel).getByRole('treeitem', { name: 'Welcome to Foliole' });
+  const reviewNodeButton = within(listPanel).getByRole('treeitem', { name: 'QA Node' });
+
+  expect(regularNodeButton.querySelector('[data-node-icon="leaf"]')).not.toBeNull();
+  expect(
+    regularNodeButton.querySelector('[data-node-icon="leaf"]')?.getAttribute('data-node-icon-variant')
+  ).toBe('default');
+  expect(
+    reviewNodeButton.querySelector('[data-node-icon="leaf"]')?.getAttribute('data-node-icon-variant')
+  ).toBe('review');
+});
+
 it('supports tree keyboard navigation for node list', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',

@@ -36,6 +36,7 @@ RSYNC_ARGS=(
   --exclude ".tmp-vitest-*/"
   --exclude ".tmp-npm/"
   --exclude ".windows-native-boot-ready.json"
+  --exclude ".windows-native-bridge-ready.json"
   --exclude "ref/"
   --exclude "src-tauri/"
   --exclude "node_modules/"

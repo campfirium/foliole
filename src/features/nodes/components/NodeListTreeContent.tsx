@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { AppEmptyState } from '../../../shared/ui';
+import { isFsrsReviewItemNode } from '../../review/model/reviewItemKind';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { Node } from '../model/nodeTypes';
 
@@ -58,6 +59,7 @@ function NodeListRows(props: NodeListRowsProps) {
         }
         isCollapsed={props.collapsedNodeIds.has(row.node.id)}
         isDerived={isDerivedNode}
+        isReviewCard={isFsrsReviewItemNode(props.nodesById[row.node.id])}
         isDragDisabled={props.isTrashViewOpen || isDerivedNode}
         isDropTarget={props.drag.dropTargetNodeId === row.node.id}
         dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
@@ -176,8 +178,7 @@ interface NodeListTreeContentProps {
   deleteNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
   isTrashViewOpen: boolean;
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: 'before' | 'after' | 'child' | 'root') => boolean;
-  nodesById: Record<string, Node>;
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: 'before' | 'after' | 'child' | 'root') => boolean; nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   relearnNode: (nodeId: string, now?: string) => boolean;

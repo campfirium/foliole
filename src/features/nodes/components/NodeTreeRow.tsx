@@ -9,6 +9,7 @@ import { cn } from '../../../shared/lib/utils';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
+import { NodeTreeRowIcon } from './NodeTreeRowIcon';
 import { NodeRenameInput, useRenameState } from './NodeTreeRowRename';
 
 interface NodeTreeRowProps {
@@ -16,6 +17,7 @@ interface NodeTreeRowProps {
   isActive: boolean;
   isCollapsed: boolean;
   isDerived?: boolean;
+  isReviewCard?: boolean;
   isSelected: boolean;
   hasChildren: boolean;
   isDragDisabled?: boolean;
@@ -43,11 +45,29 @@ function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): Node
   };
 }
 
+function resolveNodeRowStyle(depth: number) {
+  return {
+    '--node-depth': depth
+  } as CSSProperties;
+}
+
+function resolveNodeRowFrameClassName(
+  isDropTarget: boolean,
+  dropIntent: NodeTreeRowProps['dropIntent']
+) {
+  return cn(
+    isDropTarget && dropIntent === 'child' && 'border border-border-strong bg-foreground/[0.06]',
+    isDropTarget && dropIntent === 'before' && 'border-t-2 border-border-strong',
+    isDropTarget && dropIntent === 'after' && 'border-b-2 border-border-strong'
+  );
+}
+
 export function NodeTreeRow({
   depth,
   isActive,
   isCollapsed,
   isDerived = false,
+  isReviewCard = false,
   isSelected,
   hasChildren,
   isDragDisabled = false,
@@ -66,17 +86,11 @@ export function NodeTreeRow({
   onSelect,
   onToggleCollapse
 }: NodeTreeRowProps) {
-  const style = {
-    '--node-depth': depth
-  } as CSSProperties;
+  const style = resolveNodeRowStyle(depth);
 
   return (
     <div
-      className={cn(
-        isDropTarget && dropIntent === 'child' && 'border border-border-strong bg-foreground/[0.06]',
-        isDropTarget && dropIntent === 'before' && 'border-t-2 border-border-strong',
-        isDropTarget && dropIntent === 'after' && 'border-b-2 border-border-strong'
-      )}
+      className={resolveNodeRowFrameClassName(isDropTarget, dropIntent)}
       draggable={!isDragDisabled}
       onDragEnd={onDragEnd}
       onDragEnter={onDragEnter ? (event) => onDragEnter(nodeId, event) : undefined}
@@ -91,6 +105,7 @@ export function NodeTreeRow({
         isActive={isActive}
         isCollapsed={isCollapsed}
         isDerived={isDerived}
+        isReviewCard={isReviewCard}
         isSelected={isSelected}
         label={label}
         nodeId={nodeId}
@@ -111,6 +126,7 @@ interface NodeTreeRowButtonProps {
   isActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
+  isReviewCard: boolean;
   isSelected: boolean;
   label: string;
   nodeId: string;
@@ -143,6 +159,7 @@ function NodeTreeRowButton({
   isActive,
   isCollapsed,
   isDerived,
+  isReviewCard,
   isSelected,
   label,
   nodeId,
@@ -154,6 +171,12 @@ function NodeTreeRowButton({
   style
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
+  const buttonClassName = cn(
+    'gap-0 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4',
+    !isDerived && 'text-[#111317] font-medium',
+    isDerived && 'text-foreground/70',
+    isSelected && 'bg-foreground/[0.05]'
+  );
   return (
     <AppButton
       active={false}
@@ -162,12 +185,7 @@ function NodeTreeRowButton({
       aria-level={depth + 1}
       aria-pressed={isSelected}
       aria-selected={isSelected}
-      className={cn(
-        'gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4',
-        !isDerived && 'text-[#111317] font-medium',
-        isDerived && 'text-foreground/70',
-        isSelected && 'bg-foreground/[0.05]'
-      )}
+      className={buttonClassName}
       data-node-derived={isDerived ? 'true' : 'false'}
       data-node-id={nodeId}
       id={`node-treeitem-${nodeId}`}
@@ -186,6 +204,7 @@ function NodeTreeRowButton({
         nodeId={nodeId}
         onToggleCollapse={onToggleCollapse}
       />
+      <NodeTreeRowIcon isDerived={isDerived} isReviewCard={isReviewCard} />
       {renderNodeLabel(label, rename)}
     </AppButton>
   );
