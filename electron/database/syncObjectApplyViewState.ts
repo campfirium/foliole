@@ -1,8 +1,7 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { asObject, integer, numberOrNull, text } from '../../lib/core/sync/syncObjectPayloadValues.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { normalizeNodeViewStateWriteSource } from '../../lib/platform/persistedNodeViewState.js';
-
-import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 
 export function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
   const payload = asObject(record);

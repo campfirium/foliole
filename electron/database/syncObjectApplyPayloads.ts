@@ -1,8 +1,8 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { asObject, integer, numberOrNull, text, type JsonObject } from '../../lib/core/sync/syncObjectPayloadValues.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { applyViewState } from './syncObjectApplyViewState.js';
-import { asObject, integer, numberOrNull, text, type JsonObject } from './syncObjectPayloadValues.js';
 
 function applySetting(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
   const payload = asObject(record);

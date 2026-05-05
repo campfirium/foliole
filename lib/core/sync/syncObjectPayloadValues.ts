@@ -1,8 +1,10 @@
-import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+export interface SyncObjectPayloadRecord {
+  payload_json: string | null;
+}
 
 export type JsonObject = Record<string, unknown>;
 
-export function asObject(record: NativeSyncObjectRecord): JsonObject {
+export function asObject(record: SyncObjectPayloadRecord): JsonObject {
   if (!record.payload_json) return {};
   const parsed = JSON.parse(record.payload_json) as unknown;
   return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as JsonObject : {};
