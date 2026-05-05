@@ -85,15 +85,19 @@ beforeEach(() => {
   mockWindow.isMaximized.mockReturnValue(false);
 });
 
-it('handles folder-topic-item creation commands with explicit kind payloads', async () => {
+it.each([
+  { command: 'create_folder', kind: 'folder', nodeId: 'node-create-folder', title: 'Created folder' },
+  { command: 'create_topic', kind: 'topic', nodeId: 'node-create-topic', title: 'Created topic' },
+  { command: 'create_item', kind: 'item', nodeId: 'node-create-item', title: 'Created item' }
+] as const)('handles $command with explicit $kind payloads', async ({ command, kind, nodeId, title }) => {
   await expect(
     handleInvokeRequest({
-      command: 'create_topic',
+      command,
       args: {
-        nodeId: 'node-create-topic',
+        nodeId,
         parentNodeId: null,
-        kind: 'topic',
-        title: 'Created topic',
+        kind,
+        title,
         isTitleManual: false,
         content: '',
         reveal: null,
@@ -106,13 +110,13 @@ it('handles folder-topic-item creation commands with explicit kind payloads', as
   ).resolves.toBeNull();
 
   expect(upsertNodeSnapshot).toHaveBeenCalledWith({
-    nodeId: 'node-create-topic',
+    nodeId,
     parentNodeId: null,
-    kind: 'topic',
+    kind,
     priority: null,
     desiredRetention: null,
     hideTitleHeading: false,
-    title: 'Created topic',
+    title,
     isTitleManual: false,
     content: '',
     reveal: null,

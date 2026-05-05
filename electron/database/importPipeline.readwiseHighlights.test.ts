@@ -22,6 +22,7 @@ import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerpri
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { runPreparedImport } from './importPipeline.js';
 import { initializeDatabase } from './migrate.js';
+import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
 
@@ -47,11 +48,11 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
     )
     .all(sourceFingerprint);
   const nodeRow = nodeId
-    ? connection.sqlite.prepare('SELECT parent_id, title, content FROM nodes WHERE id = ?').get(nodeId)
+    ? connection.sqlite.prepare('SELECT parent_id, kind, title, content FROM nodes WHERE id = ?').get(nodeId)
     : undefined;
   const childRows = nodeId
     ? connection.sqlite
-        .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+        .prepare('SELECT parent_id, kind, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
         .all(nodeId)
     : [];
 
@@ -72,19 +73,22 @@ function expectReadwiseImportedState(input: {
       '',
       'Another paragraph with <highlight id="2">Another matching excerpt</highlight id="2">. End.'
     ].join('\n'),
+    kind: 'topic',
     parent_id: 'special-inbox',
-    title: 'readwise.md'
+    title: 'readwise'
   });
   expect(input.childRows).toEqual([
     {
       anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
       content: 'This is the highlighted sentence',
+      kind: 'topic',
       parent_id: input.nodeId,
       title: 'This is the highlighted sentence'
     },
     {
       anchor_link: JSON.stringify({ id: '2', kind: 'highlight' }),
       content: 'Another matching excerpt',
+      kind: 'topic',
       parent_id: input.nodeId,
       title: 'Another matching excerpt'
     }
@@ -126,4 +130,23 @@ it('creates imported child nodes for matched sidecar highlights during the first
     ...readPersistedImportState(imported.sourceFingerprint, imported.nodeId),
     nodeId: imported.nodeId
   });
+
+  expect(imported.nodeId).not.toBeNull();
+  if (!imported.nodeId) {
+    throw new Error('expected imported node id');
+  }
+
+  const snapshot = loadWorkspaceSnapshot();
+  expect(snapshot).not.toBeNull();
+  if (!snapshot) {
+    throw new Error('expected workspace snapshot');
+  }
+  expect(snapshot.nodesById[imported.nodeId]?.kind).toBe('topic');
+  const importedChildren = snapshot.nodeOrder
+    .map((nodeId) => snapshot.nodesById[nodeId])
+    .filter((node) => node?.parentNodeId === imported.nodeId);
+  expect(importedChildren).toEqual([
+    expect.objectContaining({ kind: 'topic', anchorLink: { id: '1', kind: 'highlight' } }),
+    expect.objectContaining({ kind: 'topic', anchorLink: { id: '2', kind: 'highlight' } })
+  ]);
 });

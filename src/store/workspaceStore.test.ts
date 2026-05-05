@@ -149,6 +149,7 @@ it('creates QA node from selected content', () => {
 
   const createdNode = useWorkspaceStore.getState().nodesById[createdId];
   expect(createdNode?.parentNodeId).toBe('node-1');
+  expect(createdNode?.kind).toBe('item');
   expect(createdNode?.title).toBe('What is [...]?');
   expect(createdNode?.content).toBe('What is [...]?');
   expect(createdNode?.reveal).toBe('quoted text');
@@ -167,6 +168,7 @@ it('creates highlight node from selected content', () => {
 
   const createdNode = useWorkspaceStore.getState().nodesById[createdId];
   expect(createdNode?.parentNodeId).toBe('node-1');
+  expect(createdNode?.kind).toBe('topic');
   expect(createdNode?.title).toBe('selected text');
   expect(createdNode?.content).toBe('selected text');
   expect(createdNode?.reveal).toBeNull();
@@ -199,6 +201,22 @@ it('creates empty root node for explicit new note action', () => {
 
   expect(useWorkspaceStore.getState().nodesById[createdId]?.content).toBe('');
   expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled');
+});
+
+it('creates root nodes with explicit folder-topic-item kinds', () => {
+  useWorkspaceStore.setState({
+    activeNodeId: null,
+    nodeOrder: [],
+    nodesById: {}
+  });
+
+  const folderId = useWorkspaceStore.getState().createRootNode('', 'folder');
+  const topicId = useWorkspaceStore.getState().createRootNode('', 'topic');
+  const itemId = useWorkspaceStore.getState().createRootNode('', 'item');
+
+  expect(useWorkspaceStore.getState().nodesById[folderId]?.kind).toBe('folder');
+  expect(useWorkspaceStore.getState().nodesById[topicId]?.kind).toBe('topic');
+  expect(useWorkspaceStore.getState().nodesById[itemId]?.kind).toBe('item');
 });
 
 it('deletes node and switches active node', () => {
