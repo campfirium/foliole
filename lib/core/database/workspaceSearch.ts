@@ -2,7 +2,6 @@ import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
 interface WorkspaceSearchRow extends DatabaseRow {
   content: string;
-  deleted_at: string | null;
   id: string;
   title: string;
 }
@@ -10,6 +9,19 @@ interface WorkspaceSearchRow extends DatabaseRow {
 const EXCERPT_PADDING = 36;
 const EXCERPT_LENGTH = 96;
 const MAX_RESULTS = 40;
+const TITLE_MATCH_SQL = `SELECT id, title, content
+  FROM nodes
+  WHERE deleted_at IS NULL
+    AND instr(lower(trim(title)), ?) > 0
+  ORDER BY updated_at DESC
+  LIMIT ?`;
+const CONTENT_MATCH_SQL = `SELECT id, title, content
+  FROM nodes
+  WHERE deleted_at IS NULL
+    AND instr(lower(trim(title)), ?) = 0
+    AND instr(lower(content), ?) > 0
+  ORDER BY updated_at DESC
+  LIMIT ?`;
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
@@ -40,34 +52,24 @@ export function searchWorkspace(driver: DatabaseDriver, query: string) {
     return [];
   }
 
-  const rows = driver.queryAll<WorkspaceSearchRow>('SELECT id, title, content, deleted_at FROM nodes');
-  const titleMatches: Array<{ excerpt: string; id: string; title: string }> = [];
-  const contentMatches: Array<{ excerpt: string; id: string; title: string }> = [];
-
-  for (const row of rows) {
-    if (row.deleted_at) {
-      continue;
-    }
-    const normalizedTitle = row.title.trim().toLowerCase();
-    const contentMatch = row.content.toLowerCase().includes(normalizedQuery);
-    const titleMatch = normalizedTitle.includes(normalizedQuery);
-    if (!titleMatch && !contentMatch) {
-      continue;
-    }
-    const result = {
+  const titleMatches = driver.queryAll<WorkspaceSearchRow>(TITLE_MATCH_SQL, [normalizedQuery, MAX_RESULTS]).map((row) => ({
       excerpt: buildExcerpt(row.content, normalizedQuery),
       id: row.id,
       title: row.title.trim() || 'Untitled'
-    };
-    if (titleMatch) {
-      titleMatches.push(result);
-    } else {
-      contentMatches.push(result);
-    }
-    if (titleMatches.length + contentMatches.length >= MAX_RESULTS) {
-      break;
-    }
+    }));
+
+  const remainingResults = MAX_RESULTS - titleMatches.length;
+  if (remainingResults <= 0) {
+    return titleMatches;
   }
+
+  const contentMatches = driver
+    .queryAll<WorkspaceSearchRow>(CONTENT_MATCH_SQL, [normalizedQuery, normalizedQuery, remainingResults])
+    .map((row) => ({
+      excerpt: buildExcerpt(row.content, normalizedQuery),
+      id: row.id,
+      title: row.title.trim() || 'Untitled'
+    }));
 
   return [...titleMatches, ...contentMatches].slice(0, MAX_RESULTS);
 }
