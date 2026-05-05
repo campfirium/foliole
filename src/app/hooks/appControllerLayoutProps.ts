@@ -28,6 +28,7 @@ import {
   createToggleRightSidebarVisibility
 } from './appControllerRuntimeActions';
 import {
+  createOpenExternalSelection,
   createOpenNotesView,
   createSelectNode,
   createToggleTrashView,
@@ -38,6 +39,7 @@ import { createCloseSettingsHandler, createOpenSettingsHandler } from './setting
 import type { useAppRuntime } from './useAppRuntime';
 import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import type { useEditorContextCommands } from './useEditorContextCommands';
+import type { useExternalLibraryView } from './useExternalLibraryView';
 import type { useListResizer } from './useListResizer';
 import type { useRightSidebarResizer } from './useRightSidebarResizer';
 import type { useTrashView } from './useTrashView';
@@ -69,6 +71,7 @@ export interface BuildControllerLayoutPropsArgs {
   selectedTrashNode: Node | undefined;
   startStudyMode: () => void;
   trash: ReturnType<typeof useTrashView>;
+  externalView: ReturnType<typeof useExternalLibraryView>;
   virtualView: ReturnType<typeof useVirtualNodeView>;
   ws: {
     activeNodeId: string | null;
@@ -156,32 +159,48 @@ function createLayoutDataArgs(
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
     requestedSettingsCategory: args.runtime.requestedSettingsCategory,
     requestedSettingsDialog: args.runtime.requestedSettingsDialog,
-    isTrashViewOpen: args.trash.isTrashViewOpen,
-    isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
+    ...createLayoutViewState(args),
+    ...createLayoutReviewData(args),
+    nav,
+    editorCtx
+  };
+}
+
+function createLayoutViewState(args: BuildControllerLayoutPropsArgs) {
+  return {
     activeVirtualNodeId: args.virtualView.activeVirtualNodeId,
+    isExternalViewOpen: args.externalView.isExternalViewOpen,
+    isTrashViewOpen: args.trash.isTrashViewOpen,
     isViewingTrashNode: args.runtime.isViewingTrashNode,
+    isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
     listWidth: args.ws.listWidth,
-    nowIso: args.nowIso,
-    rightSidebarWidth: args.ws.rightSidebarWidth,
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
+    externalFolders: args.externalView.folders,
+    externalEntriesByFolderId: args.externalView.entriesByFolderId,
+    externalSelection: args.externalView.selection,
     nodeViewById: args.ws.nodeViewById,
+    rightSidebarWidth: args.ws.rightSidebarWidth,
+    selectedTrashNodeId: args.trash.selectedTrashNodeId,
+    trashedNodeIds: args.ws.trashedNodeIds
+  };
+}
+
+function createLayoutReviewData(args: BuildControllerLayoutPropsArgs) {
+  return {
+    completeReviewItem: args.ws.completeReviewItem,
+    deferReviewItem: args.ws.deferReviewItem,
+    dismissReviewItem: args.ws.dismissReviewItem,
+    exitReviewSession: args.ws.exitReviewSession,
+    exitStudyMode: args.exitStudyMode,
+    nowIso: args.nowIso,
+    revealReviewAnswer: args.ws.revealReviewAnswer,
     reviewDueCount: args.reviewDueCount,
     reviewPreview: args.reviewPreview,
     reviewSession: args.ws.reviewSession,
     showAnswerSection: !args.isStudyMode || args.ws.reviewSession.isAnswerRevealed,
-    selectedTrashNodeId: args.trash.selectedTrashNodeId,
-    trashedNodeIds: args.ws.trashedNodeIds,
-    startStudyMode: args.startStudyMode,
     startReviewSession: args.ws.startReviewSession,
-    exitReviewSession: args.ws.exitReviewSession,
-    exitStudyMode: args.exitStudyMode,
-    completeReviewItem: args.ws.completeReviewItem,
-    deferReviewItem: args.ws.deferReviewItem,
-    dismissReviewItem: args.ws.dismissReviewItem,
-    revealReviewAnswer: args.ws.revealReviewAnswer,
-    nav,
-    editorCtx
+    startStudyMode: args.startStudyMode
   };
 }
 
@@ -189,13 +208,7 @@ function createLayoutHandlerArgs(
   args: BuildControllerLayoutPropsArgs,
   onSelectNode: SelectNodeHandler
 ) {
-  const openNotesView = createOpenNotesView(args);
-  const pastedTextAnchors = createPastedTextAnchorsHandler(args);
-  const persistPdfViewState = createPersistPdfViewState(args);
-  const revealAnchorInDocument = createRevealAnchorInDocument(args);
-  const revealDocumentPosition = createRevealDocumentPosition(args);
-  const revealDocumentSelection = createRevealDocumentSelection(args);
-  const resolveDocumentPositionAtViewportY = createResolveDocumentPositionAtViewportY(args);
+  const documentHandlers = createLayoutDocumentHandlers(args);
 
   return {
     onAnswerChange: createAnswerChangeHandler(args),
@@ -205,16 +218,10 @@ function createLayoutHandlerArgs(
     onNodeContentChange: createNodeContentChangeHandler(args),
     setNodeViewState: args.ws.setNodeViewState,
     onEditorReady: createEditorReadyHandler(args),
-    onPastedTextAnchors: pastedTextAnchors,
-    onRevealAnchorInDocument: revealAnchorInDocument,
-    onPersistPdfViewState: persistPdfViewState,
-    onRevealDocumentPosition: revealDocumentPosition,
-    onRevealDocumentSelection: revealDocumentSelection,
-    onResolveDocumentPositionAtViewportY: resolveDocumentPositionAtViewportY,
+    ...documentHandlers,
     ...createReadingPositionHandlers(args),
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
-    onOpenNotesView: openNotesView,
     onOpenMoveToNode: () => args.runtime.setIsMoveToNodePaletteOpen(true),
     onOpenSettings: createOpenSettingsHandler(args.runtime),
     onCloseSettings: createCloseSettingsHandler(args.runtime),
@@ -225,6 +232,8 @@ function createLayoutHandlerArgs(
     onExitImmersiveMode: () => args.runtime.setIsImmersiveMode(false),
     onOpenTrashView: createToggleTrashView(args),
     onOpenVirtualView: createToggleVirtualView(args),
+    onOpenExternalSelection: createOpenExternalSelection(args),
+    onOpenExternalView: args.externalView.openExternalFolder,
     onResetLayout: args.ws.resetLayout,
     onRunImportFile: args.runImportFile,
     onRunImportFolder: args.runImportDirectory,
@@ -243,5 +252,17 @@ function createLayoutHandlerArgs(
     deferReviewItem: () => args.ws.deferReviewItem(),
     dismissReviewItem: () => args.ws.dismissReviewItem(),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
+  };
+}
+
+function createLayoutDocumentHandlers(args: BuildControllerLayoutPropsArgs) {
+  return {
+    onOpenNotesView: createOpenNotesView(args),
+    onPastedTextAnchors: createPastedTextAnchorsHandler(args),
+    onPersistPdfViewState: createPersistPdfViewState(args),
+    onRevealAnchorInDocument: createRevealAnchorInDocument(args),
+    onRevealDocumentPosition: createRevealDocumentPosition(args),
+    onRevealDocumentSelection: createRevealDocumentSelection(args),
+    onResolveDocumentPositionAtViewportY: createResolveDocumentPositionAtViewportY(args)
   };
 }

@@ -46,6 +46,10 @@ function renderVirtualContentColumn() {
     <WorkspaceDualListContent
       activeNodeId="virtual-a"
       activeVirtualNodeId="virtual-a"
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
       isTrashViewOpen={false}
       isVirtualViewOpen
       nodesById={{
@@ -66,6 +70,7 @@ function renderVirtualContentColumn() {
       nodeOrder={[INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'topic-a']}
       onOpenMoveToNode={vi.fn()}
       onOpenNotesView={vi.fn()}
+      onOpenExternalSelection={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
       onSelectNode={onSelectNode}
@@ -87,6 +92,10 @@ function renderVirtualRootAggregate() {
     <WorkspaceDualListContent
       activeNodeId={VIRTUAL_ROOT_NODE_ID}
       activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
       isTrashViewOpen={false}
       isVirtualViewOpen
       nodesById={{
@@ -114,6 +123,7 @@ function renderVirtualRootAggregate() {
       nodeOrder={[INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'virtual-b', 'topic-a', 'topic-b']}
       onOpenMoveToNode={vi.fn()}
       onOpenNotesView={vi.fn()}
+      onOpenExternalSelection={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
       onSelectNode={onSelectNode}
@@ -137,13 +147,12 @@ beforeEach(() => {
 it('routes an active virtual node into the right content column', () => {
   const { onSelectNodeInVirtualView } = renderVirtualContentColumn();
 
-  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(2);
+  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(1);
   expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.getAllByRole('treeitem', { selected: true })).toHaveLength(1);
   expect(screen.getByRole('treeitem', { name: 'Saved Search' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' })).toBeInTheDocument();
   expect(screen.getAllByText('Inbox').length).toBeGreaterThan(0);
-  expect(screen.getAllByRole('complementary', { name: 'Node list panel' })[1].querySelector('.app-scrollbar')).toHaveClass('pt-5', 'pb-2');
 
   fireEvent.click(screen.getByRole('treeitem', { name: 'Alpha Topic Inbox' }));
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('topic-a');
@@ -165,6 +174,10 @@ it('opens virtual view when selecting a virtual folder from the lower section wh
     <WorkspaceDualListContent
       activeNodeId="topic-a"
       activeVirtualNodeId={null}
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       nodesById={{
@@ -182,6 +195,7 @@ it('opens virtual view when selecting a virtual folder from the lower section wh
       nodeOrder={[INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'topic-a']}
       onOpenMoveToNode={vi.fn()}
       onOpenNotesView={vi.fn()}
+      onOpenExternalSelection={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={onOpenVirtualView}
       onSelectNode={vi.fn()}
@@ -196,4 +210,17 @@ it('opens virtual view when selecting a virtual folder from the lower section wh
 
   expect(onOpenVirtualView).toHaveBeenCalledWith('virtual-a');
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('virtual-a');
+});
+
+it('collapses virtual descendants without removing the virtual section itself', () => {
+  renderVirtualRootAggregate();
+
+  expect(screen.getByRole('treeitem', { name: 'Saved Search A' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Saved Search B' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Collapse Virtual' }));
+
+  expect(screen.queryByRole('treeitem', { name: 'Saved Search A' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'Saved Search B' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
 });

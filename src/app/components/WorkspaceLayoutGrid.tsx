@@ -168,6 +168,10 @@ function renderListColumns(args: {
       <WorkspaceListArea
         activeNodeId={args.props.activeNodeId}
         activeVirtualNodeId={args.props.activeVirtualNodeId ?? null}
+        externalEntriesByFolderId={args.props.externalEntriesByFolderId}
+        externalFolders={args.props.externalFolders}
+        externalSelection={args.props.externalSelection}
+        isExternalViewOpen={args.props.isExternalViewOpen}
         isTrashViewOpen={args.props.isTrashViewOpen}
         isVirtualViewOpen={args.props.isVirtualViewOpen}
         isWorkspaceHydrated={args.props.isWorkspaceHydrated}
@@ -176,6 +180,7 @@ function renderListColumns(args: {
         nodeOrder={args.props.nodeOrder}
         onOpenMoveToNode={args.props.onOpenMoveToNode}
         onOpenNotesView={args.props.onOpenNotesView}
+        onOpenExternalSelection={args.props.onOpenExternalSelection}
         onOpenTrashView={args.props.onOpenTrashView}
         onOpenVirtualView={args.props.onOpenVirtualView}
         onSelectNode={args.onSelectNode}

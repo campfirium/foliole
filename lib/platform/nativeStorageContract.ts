@@ -146,7 +146,12 @@ export interface NativeWorkspaceSearchResult {
   updatedAt: string;
 }
 
-export type { NativeExternalSearchAttachmentMode, NativeExternalSearchFolder, NativeExternalSearchPreview } from './nativeExternalSearchContract.js';
+export type {
+  NativeExternalSearchAttachmentMode,
+  NativeExternalSearchBrowseEntry,
+  NativeExternalSearchFolder,
+  NativeExternalSearchPreview
+} from './nativeExternalSearchContract.js';
 
 export interface NativeImportLocalImageAttachmentArgs {
   nodeId: string;

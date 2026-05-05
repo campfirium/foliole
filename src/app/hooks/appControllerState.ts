@@ -10,6 +10,7 @@ import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
 import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import { useEditorContextCommands } from './useEditorContextCommands';
+import { useExternalLibraryView } from './useExternalLibraryView';
 import { useListResizer } from './useListResizer';
 import { useReadingProgressSync } from './useReadingProgressSync';
 import { useRightSidebarResizer } from './useRightSidebarResizer';
@@ -179,6 +180,7 @@ export function useWorkspaceControllerState(
   useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { keepWarm: true });
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const virtualView = useVirtualNodeView();
+  const externalView = useExternalLibraryView();
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const study = useStudyMode({
@@ -219,6 +221,7 @@ export function useWorkspaceControllerState(
     selectedTrashNode,
     study,
     trash,
+    externalView,
     virtualView
   };
 }

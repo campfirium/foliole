@@ -1,5 +1,9 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
-import type { NativeExternalSearchFolder, NativeExternalSearchPreview } from './nativeExternalSearchContract.js';
+import type {
+  NativeExternalSearchBrowseEntry,
+  NativeExternalSearchFolder,
+  NativeExternalSearchPreview
+} from './nativeExternalSearchContract.js';
 import type { NativeTextImportResult } from './nativeImportContract.js';
 
 
@@ -19,6 +23,12 @@ export type NativeExternalSearchCommandMap = {
       folder_id?: string;
     } | undefined;
     result: NativeExternalSearchFolder[];
+  };
+  [NATIVE_COMMANDS.loadExternalSearchBrowseEntries]: {
+    args: {
+      folder_id: string;
+    };
+    result: NativeExternalSearchBrowseEntry[];
   };
   [NATIVE_COMMANDS.loadExternalSearchPreview]: {
     args: {

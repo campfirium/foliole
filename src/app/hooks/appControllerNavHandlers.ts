@@ -29,6 +29,7 @@ export function createLayoutNav(
       args.runtime.flushPendingEditorDraft();
       args.runtime.setIsViewingTrashNode(false);
       args.trash.closeTrashView();
+      args.externalView.closeExternalView();
       args.nav.handleSelectNode(nodeId, focusAnchor ?? null);
     },
     shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressSelectionRestore

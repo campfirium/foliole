@@ -45,6 +45,7 @@ export function useControllerAuxiliaryState(args: {
   const moveToNodeState = buildControllerMoveToNodeState({ runtime: args.controller.runtime, ws: args.ws });
   const searchState = buildControllerSearchState({
     nav: args.controller.nav,
+    externalView: args.controller.externalView,
     runtime: args.controller.runtime,
     trash: args.controller.trash,
     virtualView: args.controller.virtualView,

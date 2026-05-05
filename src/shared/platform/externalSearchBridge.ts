@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import type {
   NativeExternalSearchAttachmentMode,
+  NativeExternalSearchBrowseEntry,
   NativeExternalSearchFolder,
   NativeExternalSearchPreview
 } from '../../../lib/platform/nativeStorageContract';
@@ -32,6 +33,16 @@ export interface RuntimeExternalSearchPreview {
   relativePath: string;
 }
 
+export interface RuntimeExternalSearchBrowseEntry {
+  absolutePath: string;
+  extension: 'md' | 'txt';
+  fileName: string;
+  folderId: string;
+  folderPath: string;
+  modifiedAt: string;
+  relativePath: string;
+}
+
 function toFolder(value: NativeExternalSearchFolder): RuntimeExternalSearchFolder {
   return {
     attachmentMode: value.attachment_mode,
@@ -56,6 +67,18 @@ function toPreview(value: NativeExternalSearchPreview): RuntimeExternalSearchPre
     fileName: value.file_name,
     folderId: value.folder_id,
     folderPath: value.folder_path,
+    relativePath: value.relative_path
+  };
+}
+
+function toBrowseEntry(value: NativeExternalSearchBrowseEntry): RuntimeExternalSearchBrowseEntry {
+  return {
+    absolutePath: value.absolute_path,
+    extension: value.extension,
+    fileName: value.file_name,
+    folderId: value.folder_id,
+    folderPath: value.folder_path,
+    modifiedAt: value.modified_at,
     relativePath: value.relative_path
   };
 }
@@ -96,6 +119,15 @@ export async function rebuildRuntimeExternalSearchIndex(folderId?: string) {
     folderId ? { folder_id: folderId } : undefined
   );
   return Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
+}
+
+export async function loadRuntimeExternalSearchBrowseEntries(folderId: string) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  const result = await runtimeInvoke(NATIVE_COMMANDS.loadExternalSearchBrowseEntries, { folder_id: folderId });
+  return Array.isArray(result) ? (result as NativeExternalSearchBrowseEntry[]).map((item) => toBrowseEntry(item)) : [];
 }
 
 export async function loadRuntimeExternalSearchPreview(absolutePath: string) {

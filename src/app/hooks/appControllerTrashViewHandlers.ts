@@ -8,6 +8,7 @@ export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     args.trash.closeTrashView();
+    args.externalView.closeExternalView();
     args.virtualView.closeVirtualView();
   };
 }
@@ -16,6 +17,7 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs) {
   return () => {
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(true);
+    args.externalView.closeExternalView();
     args.virtualView.closeVirtualView();
     args.trash.openTrashView();
   };
@@ -40,6 +42,7 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
     if (specialKind !== 'virtual' && specialKind !== 'virtual-root') {
       args.virtualView.closeVirtualView();
     }
+    args.externalView.closeExternalView();
     args.nav.handleSelectNode(nodeId, effectiveFocusAnchor);
   };
 }
@@ -48,7 +51,18 @@ export function createToggleVirtualView(args: BuildControllerLayoutPropsArgs) {
   return (nodeId?: string) => {
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
+    args.externalView.closeExternalView();
     args.trash.closeTrashView();
     args.virtualView.openVirtualView(nodeId);
+  };
+}
+
+export function createOpenExternalSelection(args: BuildControllerLayoutPropsArgs) {
+  return (selection: Parameters<BuildControllerLayoutPropsArgs['externalView']['openExternalSelection']>[0]) => {
+    args.runtime.flushPendingEditorDraft();
+    args.runtime.setIsViewingTrashNode(false);
+    args.trash.closeTrashView();
+    args.virtualView.closeVirtualView();
+    args.externalView.openExternalSelection(selection);
   };
 }

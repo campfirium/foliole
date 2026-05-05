@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
-import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
-import { openImportedExternalResult } from './searchPaletteImportResult';
 import { SearchPaletteEmptyState, SearchPaletteList } from './SearchPaletteResults';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
@@ -177,12 +174,11 @@ function useOrderedSearchResults(results: WorkspaceSearchResult[], nodesById: Wo
 export function SearchPalette(props: SearchPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [externalPreviewPath, setExternalPreviewPath] = useState<string | null>(null);
   const rawResults = useSearchResults(props, query);
   const results = useOrderedSearchResults(rawResults, props.nodesById);
   const externalSectionStatus = useExternalSectionStatus(props.isOpen);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
-  useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setExternalPreviewPath, setQuery);
+  useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setQuery);
 
   if (!props.isOpen) {
     return null;
@@ -191,7 +187,7 @@ export function SearchPalette(props: SearchPaletteProps) {
   const openActiveNode = () => {
     const result = results[activeIndex];
     if (result) {
-      openSearchPaletteResult(result, props.onOpenResult, setExternalPreviewPath);
+      props.onOpenResult(result);
     }
   };
 
@@ -210,7 +206,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           <SearchPaletteList
             activeIndex={activeIndex}
             nodesById={props.nodesById}
-            onOpenResult={(result) => openSearchPaletteResult(result, props.onOpenResult, setExternalPreviewPath)}
+            onOpenResult={props.onOpenResult}
             query={query}
             externalSectionStatus={externalSectionStatus}
             results={results}
@@ -220,11 +216,6 @@ export function SearchPalette(props: SearchPaletteProps) {
           <SearchPaletteEmptyState query={query} />
         )}
       </div>
-      <ExternalSearchPreviewDialog
-        absolutePath={externalPreviewPath}
-        onImportComplete={(result) => handleImportedExternalResult(result, props.onOpenResult, setExternalPreviewPath)}
-        onOpenChange={(open) => !open && setExternalPreviewPath(null)}
-      />
     </div>
   );
 }
@@ -234,16 +225,14 @@ function useSearchPaletteLifecycle(
   activeIndex: number,
   resultCount: number,
   setActiveIndex: (value: number) => void,
-  setExternalPreviewPath: (value: string | null) => void,
   setQuery: (value: string) => void
 ) {
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
       setActiveIndex(0);
-      setExternalPreviewPath(null);
     }
-  }, [isOpen, setActiveIndex, setExternalPreviewPath, setQuery]);
+  }, [isOpen, setActiveIndex, setQuery]);
 
   useEffect(() => {
     if (!resultCount) {
@@ -252,24 +241,4 @@ function useSearchPaletteLifecycle(
     }
     if (activeIndex >= resultCount) setActiveIndex(resultCount - 1);
   }, [activeIndex, resultCount, setActiveIndex]);
-}
-
-function openSearchPaletteResult(
-  result: WorkspaceSearchResult,
-  onOpenResult: (result: WorkspaceSearchResult) => void,
-  setExternalPreviewPath: (value: string | null) => void
-) {
-  if (result.kind === 'external' && result.externalMatch) {
-    setExternalPreviewPath(result.externalMatch.absolutePath);
-    return;
-  }
-  onOpenResult(result);
-}
-
-function handleImportedExternalResult(
-  result: NativeTextImportResult,
-  onOpenResult: (result: WorkspaceSearchResult) => void,
-  setExternalPreviewPath: (value: string | null) => void
-) {
-  void openImportedExternalResult(result, onOpenResult, setExternalPreviewPath);
 }

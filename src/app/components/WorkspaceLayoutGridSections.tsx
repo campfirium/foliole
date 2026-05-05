@@ -3,10 +3,8 @@ import { memo } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
-import { DocumentPanelSection } from './DocumentPanelSection';
-import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
+import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
@@ -17,12 +15,14 @@ export interface WorkspaceListAreaProps {
   activeVirtualNodeId: string | null;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  isExternalViewOpen: boolean;
   isWorkspaceHydrated?: boolean;
   listNodesById: WorkspaceListNodesById;
   nodesById: Record<string, Node>;
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
+  onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
   onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
   onOpenVirtualView: WorkspaceLayoutProps['onOpenVirtualView'];
   onSelectNode: (nodeId: string) => void;
@@ -30,11 +30,15 @@ export interface WorkspaceListAreaProps {
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
+  externalEntriesByFolderId: WorkspaceLayoutProps['externalEntriesByFolderId'];
+  externalFolders: WorkspaceLayoutProps['externalFolders'];
+  externalSelection: WorkspaceLayoutProps['externalSelection'];
 }
 
 function shouldShowWorkspaceEmptyState(args: {
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  isExternalViewOpen: boolean;
   isWorkspaceHydrated?: boolean;
   nodeOrder: string[];
   trashedNodeIds: string[];
@@ -51,6 +55,7 @@ function shouldShowWorkspaceEmptyState(args: {
       args.isWorkspaceHydrated &&
       !args.isTrashViewOpen &&
       !args.isVirtualViewOpen &&
+      !args.isExternalViewOpen &&
       !hasVisibleWorkspaceNodes
     )
   );
@@ -61,27 +66,36 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   activeVirtualNodeId,
   isTrashViewOpen,
   isVirtualViewOpen,
+  isExternalViewOpen,
   isWorkspaceHydrated,
   listNodesById,
   nodesById,
   nodeOrder,
   onOpenMoveToNode,
   onOpenNotesView,
+  onOpenExternalSelection,
   onOpenTrashView,
   onOpenVirtualView,
   onSelectNode,
   onSelectNodeInVirtualView,
   onSelectTrashNode,
   selectedTrashNodeId,
-  trashedNodeIds
+  trashedNodeIds,
+  externalEntriesByFolderId,
+  externalFolders,
+  externalSelection
 }: WorkspaceListAreaProps) {
-  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({ isTrashViewOpen, isVirtualViewOpen, isWorkspaceHydrated, nodeOrder, trashedNodeIds });
+  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({ isTrashViewOpen, isVirtualViewOpen, isExternalViewOpen, isWorkspaceHydrated, nodeOrder, trashedNodeIds });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg-panel text-foreground">
       {renderWorkspaceListBody({
         activeNodeId,
         activeVirtualNodeId,
+        externalEntriesByFolderId,
+        externalFolders,
+        externalSelection,
+        isExternalViewOpen,
         isTrashViewOpen,
         isVirtualViewOpen,
         isWorkspaceHydrated,
@@ -90,6 +104,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
         nodeOrder,
         onOpenMoveToNode,
         onOpenNotesView,
+        onOpenExternalSelection,
         onOpenTrashView,
         onOpenVirtualView,
         onSelectNode,
@@ -108,6 +123,10 @@ function renderWorkspaceListBody(
     WorkspaceListAreaProps,
     | 'activeNodeId'
     | 'activeVirtualNodeId'
+    | 'externalEntriesByFolderId'
+    | 'externalFolders'
+    | 'externalSelection'
+    | 'isExternalViewOpen'
     | 'isTrashViewOpen'
     | 'isVirtualViewOpen'
     | 'isWorkspaceHydrated'
@@ -116,6 +135,7 @@ function renderWorkspaceListBody(
     | 'nodeOrder'
     | 'onOpenMoveToNode'
     | 'onOpenNotesView'
+    | 'onOpenExternalSelection'
     | 'onOpenTrashView'
     | 'onOpenVirtualView'
     | 'onSelectNode'
@@ -135,6 +155,10 @@ function renderWorkspaceListBody(
     <WorkspaceDualListContent
       activeNodeId={props.activeNodeId}
       activeVirtualNodeId={props.activeVirtualNodeId}
+      externalEntriesByFolderId={props.externalEntriesByFolderId}
+      externalFolders={props.externalFolders}
+      externalSelection={props.externalSelection}
+      isExternalViewOpen={props.isExternalViewOpen}
       isTrashViewOpen={props.isTrashViewOpen}
       isVirtualViewOpen={props.isVirtualViewOpen}
       listNodesById={props.listNodesById}
@@ -142,6 +166,7 @@ function renderWorkspaceListBody(
       nodeOrder={props.nodeOrder}
       onOpenMoveToNode={props.onOpenMoveToNode}
       onOpenNotesView={props.onOpenNotesView}
+      onOpenExternalSelection={props.onOpenExternalSelection}
       onOpenTrashView={props.onOpenTrashView}
       onOpenVirtualView={props.onOpenVirtualView}
       onSelectNode={props.onSelectNode}
@@ -178,28 +203,6 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
     </section>
   );
 });
-
-function WorkspaceDocumentSurface({
-  documentNodeId,
-  isImmersiveEditing,
-  onEnterImmersiveEdit,
-  onShouldSuppressSelectionRestore,
-  props
-}: {
-  documentNodeId: string | null;
-  isImmersiveEditing: boolean;
-  onEnterImmersiveEdit: () => void;
-  onShouldSuppressSelectionRestore: () => boolean;
-  props: WorkspaceLayoutProps;
-}) {
-  const { editorAppearanceKey } = useAppearanceSettings();
-  return (
-    <DocumentPanelSection
-      {...buildDocumentSectionProps(documentNodeId, editorAppearanceKey, isImmersiveEditing, onShouldSuppressSelectionRestore, props)}
-      onEnterImmersiveEdit={onEnterImmersiveEdit}
-    />
-  );
-}
 
 export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   isImportManagementOpen,

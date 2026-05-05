@@ -26,3 +26,13 @@ export interface NativeExternalSearchPreview {
   folder_path: string;
   relative_path: string;
 }
+
+export interface NativeExternalSearchBrowseEntry {
+  absolute_path: string;
+  extension: 'md' | 'txt';
+  file_name: string;
+  folder_id: string;
+  folder_path: string;
+  modified_at: string;
+  relative_path: string;
+}

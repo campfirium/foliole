@@ -88,6 +88,14 @@ export function saveVirtualSectionHeightPreference(value: number) {
   writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.virtualSectionHeight, value);
 }
 
+export function loadExternalSectionHeightPreference(fallback: number) {
+  return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.externalSectionHeight, fallback);
+}
+
+export function saveExternalSectionHeightPreference(value: number) {
+  writeNumberPreference(APP_SETTINGS_STORAGE_KEYS.externalSectionHeight, value);
+}
+
 export function loadDocumentWidthPreference(fallback: number) {
   return readNumberPreference(APP_SETTINGS_STORAGE_KEYS.documentWidth, fallback);
 }

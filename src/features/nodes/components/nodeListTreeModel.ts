@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 
 import { onWindowKeydown } from '../../../shared/platform/keyboard';
@@ -12,6 +13,7 @@ import { useNodeListState, useNodeSelectionHandler } from './NodeListTreeState';
 
 export interface NodeListTreeProps {
   activeNodeId: string | null;
+  bodyAppendContent?: ReactNode;
   isSelectionScopeActive?: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;

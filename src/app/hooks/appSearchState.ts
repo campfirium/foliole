@@ -6,6 +6,9 @@ import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
 import type { useWorkspaceSelectors } from './appControllerState';
 
 interface SearchStateArgs {
+  externalView?: {
+    openExternalDocument: (args: { absolutePath: string; folderId: string }) => void;
+  };
   nav: {
     handleSelectNode: (nodeId: string) => void;
   };
@@ -48,6 +51,14 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     (result) => {
       args.trash.closeTrashView();
       args.virtualView?.closeVirtualView();
+      if (result.kind === 'external' && result.externalMatch) {
+        args.externalView?.openExternalDocument({
+          absolutePath: result.externalMatch.absolutePath,
+          folderId: result.externalMatch.folderId
+        });
+        args.runtime.setIsSearchPaletteOpen(false);
+        return;
+      }
       if (result.kind === 'node' && result.nodeMatch) {
         const existingViewState = args.ws.nodeViewById[result.id];
         args.ws.setNodeViewState(result.id, {

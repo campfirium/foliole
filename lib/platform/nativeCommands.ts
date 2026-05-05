@@ -14,6 +14,7 @@ export const NATIVE_COMMANDS = {
   loadExternalSearchFolders: 'load_external_search_folders',
   saveExternalSearchFolders: 'save_external_search_folders',
   rebuildExternalSearchIndex: 'rebuild_external_search_index',
+  loadExternalSearchBrowseEntries: 'load_external_search_browse_entries',
   loadExternalSearchPreview: 'load_external_search_preview',
   importExternalSearchDocument: 'import_external_search_document',
   loadNodeSourceDetails: 'load_node_source_details',

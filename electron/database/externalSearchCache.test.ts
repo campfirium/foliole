@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
+  loadExternalSearchBrowseEntries,
   rebuildExternalSearchIndexes,
   refreshExternalSearchIndexes,
   searchExternalDocuments
@@ -136,4 +137,39 @@ it('keeps manual rebuild as a full rewrite path', async () => {
   await rebuildExternalSearchIndexes();
 
   expect(readDocumentRow(steadyPath)?.indexed_at).not.toBe(indexedBefore);
+});
+
+it('returns browse entries ordered by relative path for a configured folder', async () => {
+  const libraryRoot = path.join(tempRoot, 'library');
+  const topLevelPath = path.join(libraryRoot, 'alpha.md');
+  const nestedPath = path.join(libraryRoot, 'nested', 'beta.txt');
+
+  await writeTextFile(topLevelPath, '# Alpha', '2026-04-21T04:00:00.000Z');
+  await writeTextFile(nestedPath, 'beta body', '2026-04-21T04:01:00.000Z');
+  saveExternalSearchFolders([
+    {
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: libraryRoot,
+      id: 'folder-1'
+    }
+  ]);
+
+  await refreshExternalSearchIndexes();
+
+  expect(loadExternalSearchBrowseEntries('folder-1')).toEqual([
+    expect.objectContaining({
+      absolute_path: topLevelPath,
+      file_name: 'alpha.md',
+      folder_id: 'folder-1',
+      relative_path: 'alpha.md'
+    }),
+    expect.objectContaining({
+      absolute_path: nestedPath,
+      file_name: 'beta.txt',
+      folder_id: 'folder-1',
+      relative_path: 'nested/beta.txt'
+    })
+  ]);
 });

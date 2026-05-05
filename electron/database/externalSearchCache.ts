@@ -1,4 +1,4 @@
-import type { NativeExternalSearchPreview } from '../../lib/platform/nativeStorageContract.js';
+import type { NativeExternalSearchBrowseEntry, NativeExternalSearchPreview } from '../../lib/platform/nativeStorageContract.js';
 
 import { closeExternalSearchCacheDatabase, openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import {
@@ -173,6 +173,17 @@ export function searchExternalDocuments(query: string) {
           )
           .all(normalizedQuery) as ExternalSearchRow[];
   return rows.map((row) => toExternalResult(row, normalizedQuery));
+}
+
+export function loadExternalSearchBrowseEntries(folderId: string): NativeExternalSearchBrowseEntry[] {
+  return openExternalSearchCacheDatabase()
+    .prepare(
+      `SELECT absolute_path, extension, file_name, folder_id, folder_path, modified_at, relative_path
+       FROM external_search_documents
+       WHERE folder_id = ? AND is_present = 1
+       ORDER BY relative_path COLLATE NOCASE ASC`
+    )
+    .all(folderId) as NativeExternalSearchBrowseEntry[];
 }
 
 export function loadExternalSearchPreview(absolutePath: string): NativeExternalSearchPreview | null {

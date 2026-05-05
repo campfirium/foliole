@@ -9,11 +9,16 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+import type {
+  RuntimeExternalSearchBrowseEntry,
+  RuntimeExternalSearchFolder
+} from '../../shared/platform/externalSearchBridge';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import type { ReviewQueueVisibility } from './reviewQueueVisibility';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 
@@ -71,6 +76,7 @@ export interface WorkspaceLayoutProps {
   isResizingRightSidebar: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  isExternalViewOpen: boolean;
   activeVirtualNodeId?: string | null;
   isViewingTrashNode: boolean;
   isListCollapsed: boolean;
@@ -81,6 +87,9 @@ export interface WorkspaceLayoutProps {
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
+  externalFolders: RuntimeExternalSearchFolder[];
+  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
+  externalSelection: ExternalLibrarySelection;
   nodeViewById: Record<string, NodeViewState | undefined>;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
@@ -116,6 +125,8 @@ export interface WorkspaceLayoutProps {
   onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: (nodeId?: string) => void;
+  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
+  onOpenExternalView: (folderId?: string) => void;
   onEnterImmersiveEdit: () => void;
   onEnterImmersiveMode: () => void;
   onExitImmersiveMode: () => void;

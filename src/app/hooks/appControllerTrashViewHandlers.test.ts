@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSelectNode, createToggleTrashView, createToggleVirtualView } from './appControllerTrashViewHandlers';
+import {
+  createOpenExternalSelection,
+  createSelectNode,
+  createToggleTrashView,
+  createToggleVirtualView
+} from './appControllerTrashViewHandlers';
 
 function createSelectNodeHarness(args: {
   anchorLink: {
@@ -12,6 +17,7 @@ function createSelectNodeHarness(args: {
 }) {
   const handleSelectNode = vi.fn();
   const closeVirtualView = vi.fn();
+  const closeExternalView = vi.fn();
   const flushPendingEditorDraft = vi.fn();
   const setIsViewingTrashNode = vi.fn();
   const setNodeViewState = vi.fn();
@@ -19,6 +25,7 @@ function createSelectNodeHarness(args: {
   const selectNode = createSelectNode({
     nav: { handleSelectNode },
     runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+    externalView: { closeExternalView },
     virtualView: { closeVirtualView },
     ws: {
       nodeViewById: {},
@@ -32,7 +39,15 @@ function createSelectNodeHarness(args: {
     }
   } as never);
 
-  return { closeVirtualView, flushPendingEditorDraft, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState };
+  return {
+    closeExternalView,
+    closeVirtualView,
+    flushPendingEditorDraft,
+    handleSelectNode,
+    selectNode,
+    setIsViewingTrashNode,
+    setNodeViewState
+  };
 }
 
 function expectDirectChildOpen(kind: 'highlight' | 'cloze') {
@@ -56,12 +71,14 @@ function expectDirectChildOpen(kind: 'highlight' | 'cloze') {
 function createRegularNodeSelectHarness() {
   const handleSelectNode = vi.fn();
   const closeVirtualView = vi.fn();
+  const closeExternalView = vi.fn();
   const flushPendingEditorDraft = vi.fn();
   const setIsViewingTrashNode = vi.fn();
   const setNodeViewState = vi.fn();
   const selectNode = createSelectNode({
     nav: { handleSelectNode },
     runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+    externalView: { closeExternalView },
     virtualView: { closeVirtualView },
     ws: {
       nodeViewById: {},
@@ -76,18 +93,20 @@ function createRegularNodeSelectHarness() {
       setNodeViewState
     }
   } as never);
-  return { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState };
+  return { closeExternalView, closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState };
 }
 
 function createParentReuseHarness() {
   const handleSelectNode = vi.fn();
   const closeVirtualView = vi.fn();
+  const closeExternalView = vi.fn();
   const flushPendingEditorDraft = vi.fn();
   const setIsViewingTrashNode = vi.fn();
   const setNodeViewState = vi.fn();
   const selectNode = createSelectNode({
     nav: { handleSelectNode },
     runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+    externalView: { closeExternalView },
     virtualView: { closeVirtualView },
     ws: {
       activeNodeId: 'child-node',
@@ -113,7 +132,7 @@ function createParentReuseHarness() {
       setNodeViewState
     }
   } as never);
-  return { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState };
+  return { closeExternalView, closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState };
 }
 
 describe('createSelectNode', () => {
@@ -135,24 +154,26 @@ describe('createSelectNode', () => {
       kind: 'highlight' as const,
       locator: { from: 14, originalText: 'Gamma', to: 19 }
     };
-    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState } =
+    const { closeExternalView, closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState } =
       createRegularNodeSelectHarness();
 
     selectNode('regular-node', focusAnchor);
 
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeExternalView).toHaveBeenCalledTimes(1);
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
     expect(setNodeViewState).not.toHaveBeenCalled();
     expect(handleSelectNode).toHaveBeenCalledWith('regular-node', focusAnchor);
   });
 
   it('reuses the active child anchor when opening its parent without an explicit focus anchor', () => {
-    const { closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState } =
+    const { closeExternalView, closeVirtualView, handleSelectNode, selectNode, setIsViewingTrashNode, setNodeViewState } =
       createParentReuseHarness();
 
     selectNode('parent-node');
 
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeExternalView).toHaveBeenCalledTimes(1);
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
     expect(setNodeViewState).not.toHaveBeenCalled();
     expect(handleSelectNode).toHaveBeenCalledWith('parent-node', {
@@ -170,11 +191,13 @@ describe('createToggleTrashView', () => {
 
   it('enters the trash runtime mode when opening trash', () => {
     const closeVirtualView = vi.fn();
+    const closeExternalView = vi.fn();
     const flushPendingEditorDraft = vi.fn();
     const setIsViewingTrashNode = vi.fn();
     const openTrashView = vi.fn();
     const toggleTrashView = createToggleTrashView({
       runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      externalView: { closeExternalView },
       trash: { isTrashViewOpen: false, openTrashView },
       virtualView: { closeVirtualView },
       ws: {}
@@ -184,6 +207,7 @@ describe('createToggleTrashView', () => {
 
     expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(true);
+    expect(closeExternalView).toHaveBeenCalledTimes(1);
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
     expect(openTrashView).toHaveBeenCalledTimes(1);
   });
@@ -196,11 +220,13 @@ describe('createToggleVirtualView', () => {
 
   it('always switches into virtual view instead of toggling back out when selecting the current virtual folder', () => {
     const closeTrashView = vi.fn();
+    const closeExternalView = vi.fn();
     const flushPendingEditorDraft = vi.fn();
     const openVirtualView = vi.fn();
     const setIsViewingTrashNode = vi.fn();
     const openVirtual = createToggleVirtualView({
       runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      externalView: { closeExternalView },
       trash: { closeTrashView },
       virtualView: {
         activeVirtualNodeId: 'virtual-a',
@@ -214,7 +240,37 @@ describe('createToggleVirtualView', () => {
 
     expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeExternalView).toHaveBeenCalledTimes(1);
     expect(closeTrashView).toHaveBeenCalledTimes(1);
     expect(openVirtualView).toHaveBeenCalledWith('virtual-a');
+  });
+});
+
+describe('createOpenExternalSelection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('switches into external view and closes competing left-column views', () => {
+    const closeTrashView = vi.fn();
+    const closeVirtualView = vi.fn();
+    const flushPendingEditorDraft = vi.fn();
+    const openExternalSelection = vi.fn();
+    const setIsViewingTrashNode = vi.fn();
+    const openExternal = createOpenExternalSelection({
+      externalView: { openExternalSelection },
+      runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
+      trash: { closeTrashView },
+      virtualView: { closeVirtualView },
+      ws: {}
+    } as never);
+
+    openExternal({ folderId: 'folder-ext', kind: 'folder' });
+
+    expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
+    expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
+    expect(closeTrashView).toHaveBeenCalledTimes(1);
+    expect(closeVirtualView).toHaveBeenCalledTimes(1);
+    expect(openExternalSelection).toHaveBeenCalledWith({ folderId: 'folder-ext', kind: 'folder' });
   });
 });

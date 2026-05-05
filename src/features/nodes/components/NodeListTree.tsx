@@ -30,6 +30,7 @@ function useNodeListTreeView(args: {
 function buildNodeListTreeContentProps(args: {
   activeNodeId: string | null;
   activeRows: ReturnType<typeof useNodeListTreeView>['activeRows'];
+  bodyAppendContent?: NodeListTreeProps['bodyAppendContent'];
   collapsedNodeIds: ReturnType<typeof useNodeListTreeView>['collapsedNodeIds'];
   deleteFeedback: ReturnType<typeof useNodeBulkDeleteFeedback>;
   isTrashViewOpen: boolean;
@@ -48,6 +49,7 @@ function buildNodeListTreeContentProps(args: {
     activeCollapsedNodeIds: args.collapsedNodeIds,
     activeNodeId: args.activeNodeId,
     activeRows: args.activeRows,
+    bodyAppendContent: args.bodyAppendContent,
     collapse: args.model.collapse,
     contextMenu: args.model.contextMenu,
     createChildNode: args.model.createChildNode,
@@ -77,8 +79,26 @@ function buildNodeListTreeContentProps(args: {
   };
 }
 
+function useNodeListTreeSelectionDiagnostics(args: {
+  activeNodeId: string | null;
+  activeRowsLength: number;
+  model: ReturnType<typeof useNodeListTreeModel>;
+}) {
+  useNodeListTreeSelectionMetrics({
+    activeNodeId: args.activeNodeId,
+    activeRowsLength: args.activeRowsLength,
+    noteRowsAllLength: args.model.state.noteRowsAll.length,
+    noteTreeBuildDurationMs: args.model.noteTreeBuildDurationMs,
+    trashRowsAllLength: args.model.state.trashRowsAll.length,
+    trashTreeBuildDurationMs: args.model.trashTreeBuildDurationMs,
+    virtualRowsAllLength: args.model.state.virtualRowsAll.length,
+    virtualTreeBuildDurationMs: args.model.virtualTreeBuildDurationMs
+  });
+}
+
 function NodeListTreeImpl({
   activeNodeId,
+  bodyAppendContent,
   isSelectionScopeActive = true,
   isTrashViewOpen,
   isVirtualViewOpen,
@@ -108,20 +128,11 @@ function NodeListTreeImpl({
     isVirtualViewOpen,
     model
   });
-
-  useNodeListTreeSelectionMetrics({
-    activeNodeId,
-    activeRowsLength: activeRows.length,
-    noteRowsAllLength: model.state.noteRowsAll.length,
-    noteTreeBuildDurationMs: model.noteTreeBuildDurationMs,
-    trashRowsAllLength: model.state.trashRowsAll.length,
-    trashTreeBuildDurationMs: model.trashTreeBuildDurationMs,
-    virtualRowsAllLength: model.state.virtualRowsAll.length,
-    virtualTreeBuildDurationMs: model.virtualTreeBuildDurationMs
-  });
+  useNodeListTreeSelectionDiagnostics({ activeNodeId, activeRowsLength: activeRows.length, model });
   const contentProps = buildNodeListTreeContentProps({
     activeNodeId,
     activeRows,
+    bodyAppendContent,
     collapsedNodeIds,
     deleteFeedback,
     isTrashViewOpen,

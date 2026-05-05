@@ -14,6 +14,7 @@ import {
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
+import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
@@ -31,6 +32,10 @@ import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
   activeVirtualNodeId?: string | null;
+  externalEntriesByFolderId: WorkspaceLayoutProps['externalEntriesByFolderId'];
+  externalFolders: WorkspaceLayoutProps['externalFolders'];
+  externalSelection: WorkspaceLayoutProps['externalSelection'];
+  isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   listNodesById: WorkspaceListNodesById;
@@ -38,6 +43,7 @@ interface WorkspaceDualListContentProps {
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
   onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
+  onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
   onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
   onOpenVirtualView?: WorkspaceLayoutProps['onOpenVirtualView'];
   onSelectNode: (nodeId: string) => void;
@@ -187,12 +193,23 @@ function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
   );
 }
 
+function renderExternalContentColumn(props: WorkspaceDualListContentProps) {
+  return (
+    <ExternalLibraryListPanel
+      entriesByFolderId={props.externalEntriesByFolderId}
+      folders={props.externalFolders}
+      onOpenExternalSelection={props.onOpenExternalSelection}
+      selection={props.externalSelection}
+    />
+  );
+}
+
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const dualListState = useWorkspaceDualListState(props);
   const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
 
-  if (!topicRootId && !props.isVirtualViewOpen) {
+  if (!topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
     return renderSingleListFallback(props);
   }
 
@@ -205,6 +222,10 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         <WorkspaceFolderColumn
           activeFolderId={dualListState.activeFolderId}
           activeVirtualNodeId={props.activeVirtualNodeId}
+          externalEntriesByFolderId={props.externalEntriesByFolderId}
+          externalFolders={props.externalFolders}
+          externalSelection={props.externalSelection}
+          isExternalViewOpen={props.isExternalViewOpen}
           folderNodeOrder={dualListState.folderNodeOrder}
           folderNodesById={dualListState.folderNodesById}
           isTrashViewOpen={props.isTrashViewOpen}
@@ -213,6 +234,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
           nodesById={props.listNodesById}
           onOpenMoveToNode={props.onOpenMoveToNode}
           onOpenNotesView={props.onOpenNotesView}
+          onOpenExternalSelection={props.onOpenExternalSelection}
           onOpenTrashView={props.onOpenTrashView}
           onOpenVirtualView={props.onOpenVirtualView}
           onSelectNode={props.onSelectNode}
@@ -230,6 +252,8 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-canvas">
         {props.isVirtualViewOpen
           ? renderVirtualContentColumn(props)
+          : props.isExternalViewOpen
+            ? renderExternalContentColumn(props)
           : topicRootId
             ? renderStandardContentColumn(props, dualListState, topicRootId)
             : renderSingleListFallback(props)}

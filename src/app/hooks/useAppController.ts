@@ -180,6 +180,7 @@ function buildControllerLayoutState(args: {
     runImportFile: args.formalImport.startImportFile,
     selectedTrashNode: args.controller.selectedTrashNode,
     startStudyMode: args.startStudyMode,
+    externalView: args.controller.externalView,
     trash: args.controller.trash,
     virtualView: args.controller.virtualView,
     ws: args.ws
