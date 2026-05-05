@@ -1,7 +1,7 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteStatement;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -17,7 +17,7 @@ import java.util.Map;
 final class FolioleCompanionContentBlobBatchStore {
     private FolioleCompanionContentBlobBatchStore() {}
 
-    static JSObject syncBlobs(SQLiteDatabase database, String url, JSONObject headers, String body) throws Exception {
+    static JSObject syncBlobs(Context context, SQLiteDatabase database, String url, JSONObject headers, String body) throws Exception {
         long startedAt = System.nanoTime();
         long httpStartedAt = System.nanoTime();
         FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
@@ -39,7 +39,7 @@ final class FolioleCompanionContentBlobBatchStore {
         for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
             addBatchBlob(blob, manifests, cachedBlobs, syncedHashes);
         }
-        storeCachedBlobs(database, cachedBlobs);
+        storeCachedBlobs(context, database, cachedBlobs);
         long databaseElapsedMs = elapsedMs(databaseStartedAt);
         JSObject result = new JSObject();
         result.put("synced_hashes", syncedHashes);
@@ -71,21 +71,15 @@ final class FolioleCompanionContentBlobBatchStore {
         syncedHashes.put(hash);
     }
 
-    private static void storeCachedBlobs(SQLiteDatabase database, List<CachedBlob> blobs) {
+    private static void storeCachedBlobs(Context context, SQLiteDatabase database, List<CachedBlob> blobs) throws Exception {
         if (blobs.isEmpty()) {
             return;
         }
         String now = Instant.now().toString();
         database.beginTransaction();
         try {
-            SQLiteStatement insertData = database.compileStatement(
-                "INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)"
-            );
-            SQLiteStatement updateManifest = database.compileStatement(
-                "UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?"
-            );
             for (CachedBlob blob : blobs) {
-                storeCachedBlob(insertData, updateManifest, blob, now);
+                storeCachedBlob(context, database, blob, now);
             }
             database.setTransactionSuccessful();
         } finally {
@@ -94,21 +88,21 @@ final class FolioleCompanionContentBlobBatchStore {
     }
 
     private static void storeCachedBlob(
-        SQLiteStatement insertData,
-        SQLiteStatement updateManifest,
+        Context context,
+        SQLiteDatabase database,
         CachedBlob blob,
         String now
-    ) {
-        insertData.clearBindings();
-        insertData.bindString(1, blob.hash);
-        insertData.bindBlob(2, blob.bytes);
-        insertData.executeInsert();
-
-        updateManifest.clearBindings();
-        updateManifest.bindString(1, now);
-        updateManifest.bindString(2, now);
-        updateManifest.bindString(3, blob.hash);
-        int updated = updateManifest.executeUpdateDelete();
+    ) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "contentBlobDataReplace", new Object[] {
+            blob.hash,
+            blob.bytes
+        });
+        int updated = FolioleCompanionNamedMutationStore.executeChanged(
+            context,
+            database,
+            "contentBlobMarkCached",
+            new Object[] { now, now, blob.hash }
+        );
         if (updated <= 0) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
