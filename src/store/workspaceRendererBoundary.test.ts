@@ -35,15 +35,13 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('trims inactive node documents after opening another node', () => {
+it('trims inactive node documents from direct store patches', () => {
   useWorkspaceStore.setState({
-    activeNodeId: 'node-1',
+    activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
     nodesById: createLoadedNodes(),
     trashedNodeIds: []
   });
-
-  useWorkspaceStore.getState().openNode('node-2');
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
@@ -63,21 +61,70 @@ it('trims inactive node documents after opening another node', () => {
 
 it('keeps pending unsynced node documents while switching active nodes', async () => {
   useWorkspaceStore.setState({
-    activeNodeId: 'node-1',
+    activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
-    nodesById: createLoadedNodes(),
+    nodesById: {
+      ...createLoadedNodes(),
+      'node-1': {
+        ...createLoadedNodes()['node-1'],
+        content: '',
+        reveal: null,
+        hasReveal: true
+      }
+    },
     trashedNodeIds: []
   });
 
   useWorkspaceStore.getState().updateNodeContent('node-1', 'Locally edited body');
   await Promise.resolve();
-  useWorkspaceStore.getState().openNode('node-2');
+  useWorkspaceStore.getState().openNode('node-1');
 
   const state = useWorkspaceStore.getState();
-  expect(state.activeNodeId).toBe('node-2');
+  expect(state.activeNodeId).toBe('node-1');
   expect(state.nodesById['node-1']).toMatchObject({
     content: 'Locally edited body',
     hasContent: true
+  });
+  expect(state.nodesById['node-2']).toMatchObject({
+    content: '',
+    hasContent: true,
+    reveal: null,
+    hasReveal: true
+  });
+});
+
+it('trims direct nodesById patches to the active node document', () => {
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...useWorkspaceStore.getState().nodesById,
+      'node-1': {
+        ...createLoadedNodes()['node-1'],
+        content: '',
+        reveal: null,
+        hasReveal: true
+      },
+      'node-2': {
+        ...createLoadedNodes()['node-2'],
+        content: 'Second node body',
+        reveal: 'Second answer',
+        hasReveal: true
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.setState({
+    nodesById: createLoadedNodes()
+  });
+
+  const state = useWorkspaceStore.getState();
+  expect(state.nodesById['node-1']).toMatchObject({
+    content: '',
+    hasContent: true,
+    reveal: null,
+    hasReveal: true
   });
   expect(state.nodesById['node-2']).toMatchObject({
     content: 'Second node body',

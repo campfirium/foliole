@@ -181,7 +181,7 @@ function withRendererBoundary(
   };
 }
 
-export const useWorkspaceStore = create<WorkspaceState>()(
+const workspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => {
       const boundaryAwareSet: typeof set = (partial) => {
@@ -238,7 +238,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           untitledSequenceByParent:
             persisted.untitledSequenceByParent ?? currentState.untitledSequenceByParent
         };
-        return {
+        return withRendererBoundary({
           ...nextState,
           ...ensureInboxNodeInSnapshot({
             activeNodeId: nextState.activeNodeId,
@@ -246,8 +246,34 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             nodesById: nextState.nodesById,
             trashedNodeIds: nextState.trashedNodeIds
           })
-        };
+        }, currentState) as WorkspaceState;
       }
     }
   )
 );
+
+const rawWorkspaceSetState = workspaceStore.setState.bind(workspaceStore);
+
+workspaceStore.setState = ((partial, replace) =>
+  {
+    const nextPartial = (currentState: WorkspaceState) => {
+      const nextState = typeof partial === 'function' ? partial(currentState) : partial;
+      if (nextState === currentState) {
+        return currentState;
+      }
+      return withRendererBoundary(
+        'activeNodeId' in nextState || !('nodesById' in nextState)
+          ? nextState
+          : { ...nextState, activeNodeId: currentState.activeNodeId },
+        currentState
+      ) as WorkspaceState;
+    };
+
+    if (replace) {
+      return rawWorkspaceSetState(nextPartial as (state: WorkspaceState) => WorkspaceState, true);
+    }
+
+    return rawWorkspaceSetState(nextPartial, false);
+  }) as typeof workspaceStore.setState;
+
+export const useWorkspaceStore = workspaceStore;
