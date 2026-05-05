@@ -167,3 +167,39 @@ it('recreates a deleted readwise book node when re-import is triggered', async (
   expect(restoredNode?.deleted_at).toBeNull();
   expect(restoredNode?.content).toContain('Book import pending');
 });
+
+it('places re-imported book node at the top of inbox children', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  expect(nodeId).toBeTruthy();
+
+  const connection = openDatabaseConnection().sqlite;
+  connection
+    .prepare(
+      `INSERT INTO nodes (
+         id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
+         content, reveal, anchor_link, created_at, updated_at, deleted_at
+       ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, 0, '', NULL, NULL, ?, ?, NULL)`
+    )
+    .run('node-existing-inbox-top', 'special-inbox', 'Older inbox node', '2026-04-04T11:00:00.000Z', '2026-04-04T11:00:00.000Z');
+  connection.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)').run('node-existing-inbox-top', 5);
+
+  await resetReadwiseBookImport(nodeId!);
+
+  const orderedInboxChildren = connection
+    .prepare(
+      `SELECT n.id
+       FROM nodes n
+       JOIN node_order o ON o.node_id = n.id
+       WHERE n.parent_id = 'special-inbox' AND n.deleted_at IS NULL
+       ORDER BY o.position ASC`
+    )
+    .all() as Array<{ id: string }>;
+
+  expect(orderedInboxChildren[0]?.id).toBe(nodeId);
+});

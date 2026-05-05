@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -53,9 +53,17 @@ function seedWorkspaceTree() {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
   useWorkspaceStore.setState({
     activeNodeId: 'node-1',
-    nodeOrder: ['special-inbox', 'node-book-a', 'node-book-a-chapter-1'],
+    nodeOrder: ['special-inbox', 'node-inbox-older', 'node-book-a', 'node-book-a-chapter-1'],
     nodesById: {
       ...useWorkspaceStore.getState().nodesById,
+      'node-inbox-older': {
+        ...seedNode,
+        id: 'node-inbox-older',
+        parentNodeId: 'special-inbox',
+        title: 'Older Inbox Node',
+        content: 'Older content',
+        reveal: null
+      },
       'node-book-a': {
         ...seedNode,
         id: 'node-book-a',
@@ -78,12 +86,18 @@ function seedWorkspaceTree() {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
+  vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-04T00:00:00.000Z')));
   loadRuntimeReadwiseBooksInventory.mockReset();
   resetRuntimeReadwiseBookImport.mockReset();
   seedResetResult();
   seedBooksInventory();
   seedWorkspaceTree();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 it('starts on Inbox and marks the active navigation item', () => {
@@ -109,6 +123,22 @@ it('moves between readwise content pages from the left navigation', async () => 
   expect(screen.getByLabelText('Readwise Articles page')).toBeInTheDocument();
 });
 
+it('opens the selected book node from the title click and closes the panel', async () => {
+  const onOpenChange = vi.fn();
+  const onSelectNode = vi.fn();
+  render(<ImportSourceWorkspace onOpenChange={onOpenChange} onSelectNode={onSelectNode} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Readwise Books' }));
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Book A' })).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Book A' }));
+
+  expect(onSelectNode).toHaveBeenCalledWith('node-book-a');
+  expect(onOpenChange).toHaveBeenCalledWith(false);
+});
+
 it('resets the book import, closes the panel, and returns to the node when the button is clicked', async () => {
   const onOpenChange = vi.fn();
   render(<ImportSourceWorkspace onOpenChange={onOpenChange} open />);
@@ -118,16 +148,34 @@ it('resets the book import, closes the panel, and returns to the node when the b
     expect(screen.getByText('Book A')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Re-import' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
 
   await waitFor(() => {
     expect(resetRuntimeReadwiseBookImport).toHaveBeenCalledWith('node-book-a');
   });
+  expect(useWorkspaceStore.persist.rehydrate).toHaveBeenCalledTimes(1);
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-book-a');
   });
   expect(onOpenChange).toHaveBeenCalledWith(false);
   expect(useWorkspaceStore.getState().nodesById['node-book-a']?.reveal).toBeNull();
-  expect(useWorkspaceStore.getState().nodesById['node-book-a']?.content).toContain('EPUB missing');
   expect(useWorkspaceStore.getState().nodesById['node-book-a-chapter-1']).toBeUndefined();
+  const nodeOrder = useWorkspaceStore.getState().nodeOrder;
+  expect(nodeOrder.indexOf('node-book-a')).toBeLessThan(nodeOrder.indexOf('node-inbox-older'));
+});
+
+it('reloads readwise books when reopening the import panel', async () => {
+  const view = render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Readwise Books' }));
+  await waitFor(() => {
+    expect(screen.getByText('Book A')).toBeInTheDocument();
+  });
+  expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalledTimes(1);
+
+  view.rerender(<ImportSourceWorkspace onOpenChange={() => undefined} open={false} />);
+  view.rerender(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+  await waitFor(() => {
+    expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalledTimes(2);
+  });
 });

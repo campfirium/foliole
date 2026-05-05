@@ -12,12 +12,17 @@ import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPort
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ReadwiseBooksInventorySection } from './ImportOverviewSections';
+import {
+  applyResetReadwiseBookImportToWorkspace,
+  selectReadwiseBookNode
+} from './importSourceWorkspaceReadwiseBooks';
 
 type ImportManagementPageId = 'inbox' | 'readwise-books' | 'readwise-articles';
 
 type ImportSourceWorkspaceDetailsProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
 };
 
 const importManagementPages = [
@@ -100,79 +105,23 @@ function ImportSourceWorkspacePage({
   );
 }
 
-function applyResetBookImportToWorkspace(result: {
-  content: string;
-  node_id: string;
-  removed_node_ids: string[];
-  updated_at: string;
-}) {
-  useWorkspaceStore.getState().openNode(result.node_id);
-  useWorkspaceStore.setState((state) => {
-    const currentNode = state.nodesById[result.node_id];
-    if (!currentNode) {
-      return state;
-    }
-    const removedNodeIds = new Set(result.removed_node_ids);
-    const nextNodesById = { ...state.nodesById };
-    const nextNodeViewById = { ...state.nodeViewById };
-    removedNodeIds.forEach((nodeId) => {
-      delete nextNodesById[nodeId];
-      delete nextNodeViewById[nodeId];
-    });
-    nextNodesById[result.node_id] = {
-      ...currentNode,
-      content: result.content,
-      hasContent: true,
-      hasReveal: false,
-      reveal: null,
-      updatedAt: result.updated_at
-    };
-    nextNodeViewById[result.node_id] = { scrollTop: 0, selection: { from: 0, to: 0 } };
-    return {
-      activeNodeId: result.node_id,
-      nodeOrder: state.nodeOrder.filter((nodeId) => !removedNodeIds.has(nodeId)),
-      nodeViewById: nextNodeViewById,
-      nodesById: nextNodesById
-    };
-  });
-}
-
-function ReadwiseBooksPage({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+function useReadwiseBooksInventoryState(enabled: boolean) {
   const [booksInventory, setBooksInventory] = useState<RuntimeReadwiseBooksInventory | null>(null);
-  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState('');
-
   const refreshBooksInventory = useCallback(async () => {
     setBooksInventory(await loadRuntimeReadwiseBooksInventory());
   }, []);
 
-  const handleReimportBook = useCallback(
-    async (input: { nodeId: string; title: string }) => {
-      setResettingNodeId(input.nodeId);
-      const result = await resetRuntimeReadwiseBookImport(input.nodeId);
-      if (!result || result.status === 'book_not_found' || !result.node_id || !result.content || !result.updated_at) {
-        setActionMessage(`Could not find ${input.title}.`);
-      } else {
-        applyResetBookImportToWorkspace({
-          content: result.content,
-          node_id: result.node_id,
-          removed_node_ids: result.removed_node_ids,
-          updated_at: result.updated_at
-        });
-        setActionMessage('');
-        onOpenChange(false);
-      }
-      setResettingNodeId(null);
-      await refreshBooksInventory();
-    },
-    [onOpenChange, refreshBooksInventory]
-  );
-
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     void refreshBooksInventory();
-  }, [refreshBooksInventory]);
+  }, [enabled, refreshBooksInventory]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     const handleFocus = () => {
       void refreshBooksInventory();
     };
@@ -180,12 +129,70 @@ function ReadwiseBooksPage({ onOpenChange }: { onOpenChange: (open: boolean) => 
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [refreshBooksInventory]);
+  }, [enabled, refreshBooksInventory]);
+
+  return { booksInventory, refreshBooksInventory };
+}
+
+async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
+  const result = await resetRuntimeReadwiseBookImport(input.nodeId);
+  if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
+    throw new Error(`Could not import ${input.title}.`);
+  }
+
+  applyResetReadwiseBookImportToWorkspace({
+    content: result.content,
+    node_id: result.node_id,
+    removed_node_ids: result.removed_node_ids,
+    title: result.title ?? input.title,
+    updated_at: result.updated_at
+  });
+  await useWorkspaceStore.persist.rehydrate();
+  return result.node_id;
+}
+
+function ReadwiseBooksPage({
+  open,
+  onOpenChange,
+  onSelectNode
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
+}) {
+  const { booksInventory, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
+  const [resettingNodeId, setResettingNodeId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
+  const handleOpenBookNode = useCallback(
+    (nodeId: string) => {
+      selectReadwiseBookNode(nodeId, onSelectNode);
+      onOpenChange(false);
+    },
+    [onOpenChange, onSelectNode]
+  );
+
+  const handleReimportBook = useCallback(
+    async (input: { nodeId: string; title: string }) => {
+      setResettingNodeId(input.nodeId);
+      try {
+        const nodeId = await runReadwiseBookReset(input);
+        setActionMessage('');
+        handleOpenBookNode(nodeId);
+      } catch {
+        setActionMessage(`Could not import ${input.title}.`);
+      } finally {
+        setResettingNodeId(null);
+        await refreshBooksInventory();
+      }
+    },
+    [handleOpenBookNode, refreshBooksInventory]
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <ReadwiseBooksInventorySection
         inventory={booksInventory}
+        onOpenBookNode={handleOpenBookNode}
         onResetBookImport={handleReimportBook}
         resettingNodeId={resettingNodeId}
       />
@@ -197,16 +204,20 @@ function ReadwiseBooksPage({ onOpenChange }: { onOpenChange: (open: boolean) => 
 }
 
 function ImportSourceWorkspacePageContent({
+  open,
   onOpenChange,
+  onSelectNode,
   pageId
 }: {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSelectNode?: (nodeId: string) => void;
   pageId: ImportManagementPageId;
 }) {
   if (pageId === 'readwise-books') {
     return (
       <ImportSourceWorkspacePage pageId={pageId}>
-        <ReadwiseBooksPage onOpenChange={onOpenChange} />
+        <ReadwiseBooksPage onOpenChange={onOpenChange} onSelectNode={onSelectNode} open={open} />
       </ImportSourceWorkspacePage>
     );
   }
@@ -214,7 +225,7 @@ function ImportSourceWorkspacePageContent({
   return <ImportSourceWorkspacePage pageId={pageId} />;
 }
 
-export function ImportSourceWorkspaceDetails({ open, onOpenChange }: ImportSourceWorkspaceDetailsProps) {
+export function ImportSourceWorkspaceDetails({ open, onOpenChange, onSelectNode }: ImportSourceWorkspaceDetailsProps) {
   const [activePageId, setActivePageId] = useState<ImportManagementPageId>(() => {
     const persisted = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage);
     if (persisted === 'inbox' || persisted === 'readwise-books' || persisted === 'readwise-articles') {
@@ -239,7 +250,12 @@ export function ImportSourceWorkspaceDetails({ open, onOpenChange }: ImportSourc
             <ImportSourceWorkspaceHeader onClose={() => onOpenChange(false)} />
             <div className="flex min-h-0 flex-1 overflow-hidden">
               <ImportSourceWorkspaceNavigation activePageId={activePageId} onSelect={setActivePageId} />
-              <ImportSourceWorkspacePageContent onOpenChange={onOpenChange} pageId={activePageId} />
+              <ImportSourceWorkspacePageContent
+                onOpenChange={onOpenChange}
+                onSelectNode={onSelectNode}
+                open={open}
+                pageId={activePageId}
+              />
             </div>
           </section>
         </AppDialogContent>

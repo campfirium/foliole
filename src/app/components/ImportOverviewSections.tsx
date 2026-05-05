@@ -169,10 +169,12 @@ export function InboxImportedNodesSection({
 
 export function ReadwiseBooksInventorySection({
   inventory,
+  onOpenBookNode,
   onResetBookImport,
   resettingNodeId
 }: {
   inventory: RuntimeReadwiseBooksInventory | null;
+  onOpenBookNode?: (nodeId: string) => void;
   onResetBookImport?: (input: { nodeId: string; title: string }) => void;
   resettingNodeId?: string | null;
 }) {
@@ -186,42 +188,80 @@ export function ReadwiseBooksInventorySection({
       {books.length > 0 ? (
         <div className="flex flex-col gap-3">
           {books.map((book) => (
-            <div className="rounded-lg border border-border bg-bg-panel px-3 py-3" key={book.bookKey}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{book.title}</p>
-                  <p className="mt-1 break-all text-xs text-foreground/50">{book.bookKey}</p>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <AppStatusBadge
-                  label={formatReadwiseAnnotationStatus(book.annotationStatus)}
-                  tone={resolveReadwiseAnnotationTone(book.annotationStatus)}
-                />
-                <AppStatusBadge
-                  label={formatReadwiseImportStatus(book)}
-                  tone={resolveReadwiseImportTone(book)}
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-end">
-                <AppButton
-                  disabled={book.generatedNodeId === null || resettingNodeId === book.generatedNodeId}
-                  onClick={() => {
-                    if (book.generatedNodeId && onResetBookImport) {
-                      onResetBookImport({ nodeId: book.generatedNodeId, title: book.title });
-                    }
-                  }}
-                  variant="ghost"
-                >
-                  {resettingNodeId === book.generatedNodeId ? 'Resetting…' : 'Re-import'}
-                </AppButton>
-              </div>
-            </div>
+            <ReadwiseBookInventoryCard
+              book={book}
+              key={book.bookKey}
+              onOpenBookNode={onOpenBookNode}
+              onResetBookImport={onResetBookImport}
+              resettingNodeId={resettingNodeId}
+            />
           ))}
         </div>
       ) : (
         <p className="text-sm text-foreground/65">No books discovered yet.</p>
       )}
     </InspectorSection>
+  );
+}
+
+function ReadwiseBookInventoryCard({
+  book,
+  onOpenBookNode,
+  onResetBookImport,
+  resettingNodeId
+}: {
+  book: RuntimeReadwiseBooksInventory['books'][number];
+  onOpenBookNode?: (nodeId: string) => void;
+  onResetBookImport?: (input: { nodeId: string; title: string }) => void;
+  resettingNodeId?: string | null;
+}) {
+  const generatedNodeId = book.generatedNodeId;
+  const showOpenNode = Boolean(generatedNodeId && onOpenBookNode);
+  const isResetting = resettingNodeId === generatedNodeId;
+  const handleOpenBookNode = () => {
+    if (!generatedNodeId || !onOpenBookNode) {
+      return;
+    }
+    onOpenBookNode(generatedNodeId);
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-bg-panel px-3 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {showOpenNode ? (
+            <button
+              className="text-left text-sm font-semibold text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              onClick={handleOpenBookNode}
+              type="button"
+            >
+              {book.title}
+            </button>
+          ) : (
+            <p className="text-sm font-semibold text-foreground">{book.title}</p>
+          )}
+          <p className="mt-1 break-all text-xs text-foreground/50">{book.bookKey}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <AppStatusBadge
+          label={formatReadwiseAnnotationStatus(book.annotationStatus)}
+          tone={resolveReadwiseAnnotationTone(book.annotationStatus)}
+        />
+        <AppStatusBadge
+          label={formatReadwiseImportStatus(book)}
+          tone={resolveReadwiseImportTone(book)}
+        />
+      </div>
+      <div className="mt-3 flex items-center justify-end">
+        <AppButton
+          disabled={!generatedNodeId || isResetting}
+          onClick={() => generatedNodeId && onResetBookImport?.({ nodeId: generatedNodeId, title: book.title })}
+          variant="ghost"
+        >
+          {isResetting ? 'Importing…' : 'Import'}
+        </AppButton>
+      </div>
+    </div>
   );
 }

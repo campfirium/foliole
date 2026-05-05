@@ -10,6 +10,8 @@ import {
   savePersistedReadwiseBookMovedToTop
 } from './readwiseBooksInventoryState.js';
 
+const INBOX_NODE_ID = 'special-inbox';
+
 interface ActiveNodeRow {
   [column: string]: unknown;
   created_at: string;
@@ -87,6 +89,20 @@ function resolveNextNodePosition() {
   return (row?.position ?? -1) + 1;
 }
 
+function resolveInboxTopPosition(ignoredNodeId?: string) {
+  const ignoredClause = ignoredNodeId ? 'AND n.id <> ?' : '';
+  const row = openDatabaseConnection().driver.queryOne<{ position: number | null }>(
+    `SELECT MIN(o.position) AS position
+     FROM nodes n
+     JOIN node_order o ON o.node_id = n.id
+     WHERE n.parent_id = ?
+       AND n.deleted_at IS NULL
+       ${ignoredClause}`,
+    ignoredNodeId ? [INBOX_NODE_ID, ignoredNodeId] : [INBOX_NODE_ID]
+  );
+  return typeof row?.position === 'number' ? row.position - 1 : resolveNextNodePosition();
+}
+
 function buildResetBook(book: ReadwiseBookInventoryItem, nodeId: string) {
   return {
     ...book,
@@ -122,8 +138,8 @@ function rebuildPlaceholderNode(book: ReadwiseBookInventoryItem, nodeId: string)
     isTitleManual: true,
     kind: 'topic',
     nodeId,
-    parentNodeId: 'special-inbox',
-    position: resolveNextNodePosition(),
+    parentNodeId: INBOX_NODE_ID,
+    position: resolveInboxTopPosition(nodeId),
     reveal: null,
     title: resetBook.title,
     updatedAt
@@ -154,7 +170,7 @@ function resetImportedTree(activeNode: ActiveNodeRow, book: ReadwiseBookInventor
     content: placeholderContent,
     reveal: null,
     anchorLink: null,
-    position: activeNode.position,
+    position: activeNode.parent_id === INBOX_NODE_ID ? resolveInboxTopPosition(activeNode.id) : activeNode.position,
     createdAt: activeNode.created_at,
     updatedAt
   });

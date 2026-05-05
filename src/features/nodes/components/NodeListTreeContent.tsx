@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
@@ -6,6 +6,7 @@ import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { scrollActiveTreeItemIntoView } from './nodeListAutoScroll';
 import { NodeListHeader } from './NodeListHeader';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
 import { useNodeListDragController } from './NodeListTreeDrag';
@@ -113,6 +114,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
 }
 
 function NodeListPanel(props: NodeListPanelProps) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const drag = useNodeListDragController({
     disableRootDrop: props.isTrashViewOpen || props.isVirtualViewOpen,
     isTrashViewOpen: props.isTrashViewOpen,
@@ -121,6 +123,17 @@ function NodeListPanel(props: NodeListPanelProps) {
     noteRowIds: props.noteRowIds,
     selectedNodeIds: props.selectedNodeIds
   });
+
+  useEffect(() => {
+    if (!props.activeNodeId || props.isTrashViewOpen) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      scrollActiveTreeItemIntoView(scrollContainerRef.current, props.activeNodeId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [props.activeNodeId, props.isTrashViewOpen, props.isVirtualViewOpen]);
+
   return (
     <aside aria-label="Node list panel" className="flex min-h-0 flex-1 flex-col bg-bg-panel text-foreground">
       <NodeListHeader
@@ -154,7 +167,7 @@ function NodeListPanel(props: NodeListPanelProps) {
             </div>
           </div>
         ) : null}
-        <div className="app-scrollbar flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
+        <div className="app-scrollbar flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden px-4 py-2" ref={scrollContainerRef}>
           {renderNodeTreeSection(props, drag)}
         </div>
       </div>

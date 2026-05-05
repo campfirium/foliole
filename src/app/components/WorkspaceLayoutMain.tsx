@@ -66,6 +66,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? props.onOpenImportManagement() : props.onCloseImportManagement())}
+        onSelectNode={handleSelectNode}
         open={props.isImportManagementOpen}
       />
       <WorkspaceSettingsOverlay props={props} />

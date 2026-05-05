@@ -13,6 +13,7 @@ import {
   type RuntimeReadwiseBookInventoryItem
 } from '../../shared/platform/readwiseBooksBridge';
 import { AppButton } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 function resolveBook(activeNodeId: string, books: RuntimeReadwiseBookInventoryItem[]) {
   return books.find((book) => book.generatedNodeId === activeNodeId) ?? null;
@@ -144,7 +145,12 @@ function useReadwiseBookActions(activeNodeId: string | null) {
       const result = await loadRuntimeReadwiseBookEpub(activeNodeId);
       setStatusMessage(formatLoadMessage(result, book));
       if (result?.status === 'selected') {
-        setBook((current) => (current ? { ...current, epubStatus: 'received' } : current));
+        setBook((current) =>
+          current
+            ? { ...current, epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }
+            : current
+        );
+        await useWorkspaceStore.persist.rehydrate();
         setLoadProgress({ detail: 'Done.', progress: 1 });
       } else {
         setLoadProgress(createIdleProgress());
@@ -174,6 +180,9 @@ export function ReadwiseBookActionsPanel({ activeNodeId }: { activeNodeId: strin
     return null;
   }
   if (!book || !activeNodeId) {
+    return null;
+  }
+  if (book.importStatus !== 'pending') {
     return null;
   }
 
