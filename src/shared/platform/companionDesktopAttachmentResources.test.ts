@@ -51,20 +51,24 @@ function attachmentRecord(payload: unknown): NativeSyncObjectRecord {
   };
 }
 
-describe('companion desktop attachment resources', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    capacitorMock.getPlatform.mockReturnValue('android');
-    capacitorMock.isNativePlatform.mockReturnValue(true);
-    syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([
-      { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
-    ]);
-    syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue({
-      attachment_id: 'att-3',
-      content_hash: 'blob-hash-3',
-      size_bytes: 4096
-    });
+function resetAttachmentResourceMocks() {
+  vi.clearAllMocks();
+  capacitorMock.plugin.syncAttachmentResource.mockReset();
+  capacitorMock.plugin.syncAttachmentResource.mockResolvedValue({ attachment_id: 'att-1', availability: 'cached' });
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([
+    { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
+  ]);
+  syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue({
+    attachment_id: 'att-3',
+    content_hash: 'blob-hash-3',
+    size_bytes: 4096
   });
+}
+
+describe('companion desktop attachment resource manifests', () => {
+  beforeEach(resetAttachmentResourceMocks);
 
   it('extracts attachment resource requests from manifest payloads', () => {
     expect(toAttachmentResourceRequest(attachmentRecord({
@@ -100,6 +104,32 @@ describe('companion desktop attachment resources', () => {
       headers: { 'X-Signature': 'signed' },
       url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=blob-hash-2'
     });
+  });
+});
+
+describe('companion desktop attachment resource queue', () => {
+  beforeEach(resetAttachmentResourceMocks);
+
+  it('continues already enumerated attachment resources after one request fails', async () => {
+    capacitorMock.plugin.syncAttachmentResource
+      .mockRejectedValueOnce(new Error('Desktop returned 404.'))
+      .mockResolvedValueOnce({ attachment_id: 'att-3', availability: 'cached' });
+
+    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
+      { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
+      { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
+    ])).resolves.toEqual(['att-3']);
+
+    expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails already enumerated attachment resources when the whole batch fails', async () => {
+    capacitorMock.plugin.syncAttachmentResource.mockRejectedValue(new Error('Desktop returned 404.'));
+
+    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
+      { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
+      { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
+    ])).rejects.toThrow('Attachment batch could not cache any requested file.');
   });
 
   it('downloads a missing attachment resource by attachment id for active item priority', async () => {

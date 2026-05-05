@@ -1,9 +1,6 @@
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
-import {
-  loadCompanionMissingAttachmentResource,
-  loadCompanionMissingAttachmentResources
-} from './companionSyncObjects';
+import { loadCompanionMissingAttachmentResource } from './companionSyncObjects';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
@@ -79,15 +76,23 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   }
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedAttachmentIds: string[] = [];
+  let failedAttachmentCount = 0;
   for (const request of requests) {
     const pathWithQuery = buildAttachmentResourcePath(request);
-    await FolioleCompanionSync.syncAttachmentResource({
-      attachment_id: request.attachmentId,
-      content_hash: request.contentHash,
-      headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
-      url: `${endpoint}${pathWithQuery}`
-    });
-    syncedAttachmentIds.push(request.attachmentId);
+    try {
+      await FolioleCompanionSync.syncAttachmentResource({
+        attachment_id: request.attachmentId,
+        content_hash: request.contentHash,
+        headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+        url: `${endpoint}${pathWithQuery}`
+      });
+      syncedAttachmentIds.push(request.attachmentId);
+    } catch {
+      failedAttachmentCount += 1;
+    }
+  }
+  if (requests.length > 0 && failedAttachmentCount === requests.length) {
+    throw new Error('Attachment batch could not cache any requested file.');
   }
   return syncedAttachmentIds;
 }
