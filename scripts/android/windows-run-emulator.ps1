@@ -219,3 +219,4 @@ if ($null -eq $serial) {
 
 Write-Info "serial: $serial"
 Write-Info "status: READY"
+exit 0

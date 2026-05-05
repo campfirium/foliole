@@ -11,7 +11,11 @@ ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-a
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
 ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD-${FOLIOLE_ANDROID_AVD-${DEFAULT_ANDROID_AVD}}}"
+ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS:-600}"
+ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS:-600}"
+ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS="${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS:-240}"
 ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS:-600}"
+ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS="${ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS:-60}"
 ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR:-C:\dev\foliole}"
 ANDROID_WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR:-$(wslpath -u "${ANDROID_WINDOWS_WORKDIR}")}"
 PREVIEW_TOTAL_STEPS=3
@@ -51,12 +55,25 @@ run_with_timeout() {
   "$@"
 }
 
+run_timed_preview_step() {
+  local label="$1"
+  local timeout_seconds="$2"
+  shift 2
+
+  echo "[android-preview] ${label} timeout: ${timeout_seconds}s"
+  run_preview_step "${label}" run_with_timeout "${timeout_seconds}" "$@"
+}
+
 echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to android preview workspace"
 mkdir -p "${ANDROID_WINDOWS_MIRROR_DIR}"
-run_preview_step "windows-sync" env WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR}" bash "${WINDOWS_SYNC_SCRIPT}"
+if ! run_timed_preview_step "windows-sync" "${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS}" env WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR}" bash "${WINDOWS_SYNC_SCRIPT}"; then
+  echo "[android-preview] failed at: windows sync"
+  echo "[android-preview] status: FAILED"
+  exit 1
+fi
 
 echo "[android-preview] step 2/${PREVIEW_TOTAL_STEPS}: sync capacitor android host"
-if ! run_preview_step "android-cap-sync" env ANDROID_SKIP_WINDOWS_SYNC=1 ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SYNC_SCRIPT}"; then
+if ! run_timed_preview_step "android-cap-sync" "${ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS}" env ANDROID_SKIP_WINDOWS_SYNC=1 ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SYNC_SCRIPT}"; then
   echo "[android-preview] failed at: android host sync"
   echo "[android-preview] status: FAILED"
   exit 1
@@ -64,14 +81,13 @@ fi
 
 if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
   echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: start emulator"
-  if ! run_preview_step "android-emulator" bash "${ANDROID_EMULATOR_SCRIPT}" "${ANDROID_PREVIEW_AVD}"; then
+  if ! run_timed_preview_step "android-emulator" "${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS}" bash "${ANDROID_EMULATOR_SCRIPT}" "${ANDROID_PREVIEW_AVD}"; then
     echo "[android-preview] failed at: emulator startup"
     echo "[android-preview] status: FAILED"
     exit 1
   fi
   echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: deploy app"
-  echo "[android-preview] deploy timeout: ${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}s"
-  if ! run_preview_step "android-deploy" run_with_timeout "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
+  if ! run_timed_preview_step "android-deploy" "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
     echo "[android-preview] failed at: app deploy"
     echo "[android-preview] status: FAILED"
     exit 1
@@ -82,7 +98,7 @@ fi
 
 if [[ "${ANDROID_PREVIEW_OPEN_STUDIO}" != "0" ]]; then
   echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: open android studio"
-  if ! env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_OPEN_SCRIPT}"; then
+  if ! run_timed_preview_step "android-open-studio" "${ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_OPEN_SCRIPT}"; then
     echo "[android-preview] failed at: android studio launch"
     echo "[android-preview] status: FAILED"
     exit 1

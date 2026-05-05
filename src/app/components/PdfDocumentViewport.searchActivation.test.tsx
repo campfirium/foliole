@@ -86,6 +86,7 @@ function PdfDocumentViewportSearchActivationHarness() {
       onLoadSuccess={() => undefined}
       onNextPage={() => undefined}
       onPageChange={() => undefined}
+      onPdfReadingModeChange={() => undefined}
       onPreviousPage={() => undefined}
       onRotateClockwise={() => undefined}
       onSearchQueryChange={setSearchQuery}
@@ -102,6 +103,7 @@ function PdfDocumentViewportSearchActivationHarness() {
       pageJumpRequest={null}
       persistedPageCount={1}
       persistedPageDimensions={{ 1: { height: 1131, width: 800 } }}
+      pdfReadingMode="original"
       pdfSelectionLocator={undefined}
       pdfSource="/tmp/sample.pdf"
       rotation={0}

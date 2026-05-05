@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 import { CompanionSyncInlineStatus } from './CompanionSyncInlineStatus';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -23,7 +24,7 @@ const desktopSyncMock = vi.hoisted(() => ({
   }))
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
-  loadCompanionReadableArticle: vi.fn(async () => null),
+  loadCompanionReadableArticle: vi.fn<() => Promise<CompanionReadableArticle | null>>(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn()
 }));
@@ -126,15 +127,14 @@ beforeEach(() => {
   workspaceSyncMock.loadCompanionReadableArticle
     .mockResolvedValueOnce({ content: 'Old body', hideTitleHeading: false, nodeId: 'topic-1', textAnchorDecorations: [], title: 'Synced topic' })
     .mockResolvedValueOnce({ content: 'Updated body', hideTitleHeading: false, nodeId: 'topic-1', textAnchorDecorations: [], title: 'Synced topic' });
-  syncObjectsMock.loadCompanionPendingSyncSummary
-    .mockResolvedValueOnce({ pendingCount: 1 })
-    .mockResolvedValueOnce({ pendingCount: 0 });
+  syncObjectsMock.loadCompanionPendingSyncSummary.mockResolvedValue({ pendingCount: 1 });
 });
 
 it('clears pending sync status and refreshes readable content after a successful stream sync', async () => {
   render(<SyncHarness />);
 
   expect(await screen.findByText('1 change waiting to sync.')).toBeInTheDocument();
+  syncObjectsMock.loadCompanionPendingSyncSummary.mockResolvedValue({ pendingCount: 0 });
   await act(async () => {
     screen.getByRole('button', { name: 'Sync now' }).click();
   });

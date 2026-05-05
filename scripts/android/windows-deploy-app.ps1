@@ -200,3 +200,4 @@ if ($StopGradleDaemon) {
 }
 
 Write-Info "status: OPENED"
+exit 0

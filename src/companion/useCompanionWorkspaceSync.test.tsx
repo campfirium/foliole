@@ -2,12 +2,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 const syncObjectsMock = vi.hoisted(() => ({
   syncCompanionObjectsFromDesktop: vi.fn(async () => undefined)
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
-  loadCompanionReadableArticle: vi.fn(async () => null),
+  loadCompanionReadableArticle: vi.fn<() => Promise<CompanionReadableArticle | null>>(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn()
 }));

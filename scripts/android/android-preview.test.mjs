@@ -64,19 +64,53 @@ describe('android-preview.sh', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[android-preview] begin: windows-sync');
+      expect(result.stdout).toContain('[android-preview] windows-sync timeout: 600s');
       expect(result.stdout).toContain(`sync-target:${path.join(tempRoot, 'android-preview-mirror')}`);
       expect(result.stdout).toContain('preserve-android-generated:unset');
       expect(result.stdout).toContain('android-workdir:C:\\dev\\foliole-test');
       expect(result.stdout).toContain('deploy-workdir:C:\\dev\\foliole-test');
       expect(result.stdout).toContain('[android-preview] done: windows-sync');
+      expect(result.stdout).toContain('[android-preview] android-cap-sync timeout: 600s');
       expect(result.stdout).toContain('[android-preview] begin: android-cap-sync');
       expect(result.stdout).toContain('[android-preview] done: android-cap-sync');
+      expect(result.stdout).toContain('[android-preview] android-emulator timeout: 240s');
       expect(result.stdout).toContain('[android-preview] begin: android-emulator');
       expect(result.stdout).toContain('[android-preview] done: android-emulator');
-      expect(result.stdout).toContain('[android-preview] deploy timeout: 123s');
+      expect(result.stdout).toContain('[android-preview] android-deploy timeout: 123s');
       expect(result.stdout).toContain('[android-preview] begin: android-deploy');
       expect(result.stdout).toContain('[android-preview] done: android-deploy');
       expect(result.stdout).toContain('[android-preview] status: OPENED');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('fails with a clear emulator stage when startup hangs past the timeout', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-timeout-'));
+    try {
+      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-before-timeout\n');
+      const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-before-timeout\n');
+      const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\nsleep 2\n');
+      const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\necho should-not-run\nexit 64\n');
+
+      const result = await runAndroidPreview(tempRoot, {
+        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SYNC_SCRIPT: androidSync,
+        ANDROID_EMULATOR_SCRIPT: emulator,
+        ANDROID_DEPLOY_SCRIPT: failIfCalled,
+        ANDROID_PREVIEW_AVD: 'Slow_AVD',
+        ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS: '1',
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('sync-before-timeout');
+      expect(result.stdout).toContain('cap-sync-before-timeout');
+      expect(result.stdout).toContain('[android-preview] android-emulator timeout: 1s');
+      expect(result.stdout).toContain('[android-preview] failed at: emulator startup');
+      expect(result.stdout).toContain('[android-preview] status: FAILED');
+      expect(result.stdout).not.toContain('should-not-run');
+      expect(result.stdout).not.toContain('[android-preview] begin: android-deploy');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

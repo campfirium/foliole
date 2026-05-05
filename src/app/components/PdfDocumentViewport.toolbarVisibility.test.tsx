@@ -99,6 +99,7 @@ function buildToolbarHarnessProps(input: {
     onLoadSuccess: () => undefined,
     onNextPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => current + 1)),
     onPageChange: input.setPage,
+    onPdfReadingModeChange: () => undefined,
     onPreviousPage: createToolbarReplayAction(input.shouldReplayToolbarScrollRef, () => input.setPage((current) => Math.max(1, current - 1))),
     onRotateClockwise: () => undefined,
     onSearchQueryChange: input.setSearchQuery,
@@ -122,6 +123,7 @@ function buildToolbarHarnessProps(input: {
       2: { height: 1131, width: 800 },
       3: { height: 1131, width: 800 }
     },
+    pdfReadingMode: 'original' as const,
     pdfSelectionLocator: undefined,
     pdfSource: '/tmp/sample.pdf',
     rotation: 0,
