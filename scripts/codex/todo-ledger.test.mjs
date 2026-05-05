@@ -90,6 +90,13 @@ describe('todo-ledger helpers', () => {
     expect(validateTodoEntries(markdown, 'pending')).toEqual(['line 3: pending entry must start with [auto] or [gate]']);
   });
 
+  it('flags task entries that omit the unchecked checkbox marker', () => {
+    const markdown = ['# Pending TODO', '', '- [auto] first task'].join('\n');
+    expect(validateTodoEntries(markdown, 'pending')).toEqual([
+      'line 3: pending entry must use unchecked checkbox format "- [ ] [auto|gate] task"'
+    ]);
+  });
+
   it('flags extra bracket prefixes after the execution mode', () => {
     const markdown = ['# Pending TODO', '', '- [ ] [auto] [infra] first task'].join('\n');
     expect(validateTodoEntries(markdown)).toEqual([

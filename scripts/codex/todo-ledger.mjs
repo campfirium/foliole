@@ -48,6 +48,10 @@ export function validateTodoEntries(markdown, fileLabel = 'todo') {
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
+    if (/^- \[(?:auto|gate)\]\s+/i.test(trimmed)) {
+      issues.push(`line ${index + 1}: ${fileLabel} entry must use unchecked checkbox format "- [ ] [auto|gate] task"`);
+      return;
+    }
     if (!trimmed.startsWith('- [ ] ')) {
       return;
     }
