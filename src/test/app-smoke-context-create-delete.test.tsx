@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -138,30 +138,41 @@ it('deletes a node from node-list context menu', () => {
 });
 
 it('deletes all selected nodes from node-list context menu', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3'],
-    nodesById: {
-      ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
-      'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
-    }
-  }));
+  vi.useFakeTimers();
+  try {
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
+        'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
+      }
+    }));
 
-  render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  const node2Button = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
-  const node3Button = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    const node2Button = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
+    const node3Button = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
 
-  fireEvent.click(node2Button);
-  fireEvent.click(node3Button, { ctrlKey: true });
-  fireEvent.contextMenu(node3Button, { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    fireEvent.click(node2Button);
+    fireEvent.click(node3Button, { ctrlKey: true });
+    fireEvent.contextMenu(node3Button, { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
 
-  const workspace = useWorkspaceStore.getState();
-  expect(workspace.trashedNodeIds).toEqual(expect.arrayContaining(['node-2', 'node-3']));
-  expect(workspace.nodeOrder).toEqual(['node-1', 'node-2', 'node-3']);
-  expect(workspace.activeNodeId).toBe('node-1');
+    expect(screen.getByText('Deleting 2 nodes…')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersToNextTimer();
+    });
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.trashedNodeIds).toEqual(expect.arrayContaining(['node-2', 'node-3']));
+    expect(workspace.nodeOrder).toEqual(['node-1', 'node-2', 'node-3']);
+    expect(workspace.activeNodeId).toBe('node-1');
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it('marks in-progress import actions on ordinary node context menus', () => {

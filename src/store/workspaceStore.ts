@@ -55,8 +55,10 @@ export interface WorkspaceState {
   dismissReviewItem: (now?: string) => boolean;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;
+  deleteNodes: (nodeIds: string[]) => void;
   restoreNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
+  deleteNodesPermanently: (nodeIds: string[]) => void;
   createRootNode: (content?: string) => string;
   createChildNode: (parentNodeId: string, content?: string) => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string) => string | null;

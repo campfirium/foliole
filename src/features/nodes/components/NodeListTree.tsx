@@ -12,6 +12,7 @@ import {
   useNodeListState,
   useNodeSelectionHandler
 } from './NodeListTreeState';
+import { useNodeBulkDeleteFeedback } from './useNodeBulkDeleteFeedback';
 
 interface NodeListTreeProps {
   activeNodeId: string | null;
@@ -32,8 +33,8 @@ function useNodeWorkspaceActions() {
   return {
     createChildNode: useWorkspaceStore((state) => state.createChildNode),
     createRootNode: useWorkspaceStore((state) => state.createRootNode),
-    deleteNode: useWorkspaceStore((state) => state.deleteNode),
-    deleteNodePermanently: useWorkspaceStore((state) => state.deleteNodePermanently),
+    deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
+    deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
     moveNodes: useWorkspaceStore((state) => state.moveNodes),
     relearnNode: useWorkspaceStore((state) => state.relearnNode),
@@ -92,8 +93,8 @@ function useNodeListTreeModel({
     contextMenu,
     createChildNode: workspace.createChildNode,
     createRootNode: workspace.createRootNode,
-    deleteNode: workspace.deleteNode,
-    deleteNodePermanently: workspace.deleteNodePermanently,
+    deleteNodes: workspace.deleteNodes,
+    deleteNodesPermanently: workspace.deleteNodesPermanently,
     dismissNode: workspace.dismissNode,
     handleSelectNode,
     moveNodes: workspace.moveNodes,
@@ -125,6 +126,7 @@ export function NodeListTree({
   });
   const state = model.state;
   const runtimeState: NodeListTreeRuntimeState = { reviewSession: model.reviewSession };
+  const deleteFeedback = useNodeBulkDeleteFeedback(model.deleteNodes, model.deleteNodesPermanently);
   const rowSpacing = getNodeListRowSpacing();
   const collapsedNodeIds = isTrashViewOpen
     ? model.collapsedState.collapsedTrashNodeIds
@@ -140,8 +142,9 @@ export function NodeListTree({
       contextMenu={model.contextMenu}
       createChildNode={model.createChildNode}
       createRootNode={model.createRootNode}
-      deleteNode={model.deleteNode}
-      deleteNodePermanently={model.deleteNodePermanently}
+      deleteStatusLabel={deleteFeedback.deleteStatusLabel}
+      deleteNodes={deleteFeedback.runDeleteNodes}
+      deleteNodesPermanently={deleteFeedback.runDeleteNodesPermanently}
       dismissNode={model.dismissNode}
       isTrashViewOpen={isTrashViewOpen}
       moveNodes={model.moveNodes}

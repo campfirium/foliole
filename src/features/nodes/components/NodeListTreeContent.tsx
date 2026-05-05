@@ -5,6 +5,7 @@ import type { Node } from '../model/nodeTypes';
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { hasDismissTargets, hasReturnTargets } from './nodeListContextMenuReview';
 import { NodeListHeader } from './NodeListHeader';
+import { createDismissNodeAction, createReturnNodeAction } from './nodeListMenuActions';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
 import { useNodeListDragController } from './NodeListTreeDrag';
 import type {
@@ -22,7 +23,8 @@ interface NodeListPanelProps {
   collapse: NodeListCollapseController;
   contextMenu: NodeListContextMenuController;
   createRootNode: (content?: string) => string;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteNodesPermanently: (nodeIds: string[]) => void;
+  deleteStatusLabel: string | null;
   isTrashViewOpen: boolean;
   moveNodes: (
     nodeIds: string[],
@@ -105,16 +107,25 @@ function NodeListPanel(props: NodeListPanelProps) {
         isTrashViewOpen={props.isTrashViewOpen}
         onCollapseAll={props.collapse.collapseAllNotes}
         onCreateRootNode={(event) => (event.stopPropagation(), props.createRootNode(''))}
-        onEmptyTrash={() => (
-          props.trashRowIds.forEach((id) => props.deleteNodePermanently(id)),
-          props.contextMenu.closeContextMenu()
-        )}
+        onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
         onExpandAll={props.collapse.expandAllNotes}
         onOpenNotesView={props.onOpenNotesView}
         trashCount={props.trashRowsLength}
       />
-      <div className="app-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
-        {renderNodeTreeSection(props, drag)}
+      <div className="relative min-h-0 flex-1">
+        {props.deleteStatusLabel ? (
+          <div
+            aria-live="polite"
+            className="pointer-events-auto absolute inset-0 z-10 flex items-start bg-bg-panel/70 p-3 backdrop-blur-[1px]"
+          >
+            <div className="rounded-md border border-border bg-bg-panel px-3 py-2 text-sm font-medium text-foreground shadow-sm">
+              {props.deleteStatusLabel}
+            </div>
+          </div>
+        ) : null}
+        <div className="app-scrollbar flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden px-4 py-2">
+          {renderNodeTreeSection(props, drag)}
+        </div>
       </div>
     </aside>
   );
@@ -128,8 +139,9 @@ interface NodeListTreeContentProps {
   contextMenu: NodeListContextMenuController;
   createChildNode: (parentNodeId: string, content?: string) => string;
   createRootNode: (content?: string) => string;
-  deleteNode: (nodeId: string) => void;
-  deleteNodePermanently: (nodeId: string) => void;
+  deleteNodes: (nodeIds: string[]) => void;
+  deleteNodesPermanently: (nodeIds: string[]) => void;
+  deleteStatusLabel: string | null;
   dismissNode: (nodeId: string, now?: string) => boolean;
   isTrashViewOpen: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: 'before' | 'after' | 'child' | 'root') => boolean; nodesById: Record<string, Node>;
@@ -143,40 +155,6 @@ interface NodeListTreeContentProps {
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
   state: NodeListState;
-}
-
-function confirmReturnNodeReset(targetCount: number) {
-  return window.confirm(
-    targetCount > 1
-      ? 'Reset review state and requeue the selected nodes?'
-      : 'Reset review state and requeue this node?'
-  );
-}
-
-function createReturnNodeAction(
-  contextTargets: string[],
-  returnNode: (nodeId: string, now?: string) => boolean,
-  closeContextMenu: () => void
-) {
-  return () => {
-    if (!confirmReturnNodeReset(contextTargets.length)) {
-      closeContextMenu();
-      return;
-    }
-    contextTargets.forEach((id) => returnNode(id));
-    closeContextMenu();
-  };
-}
-
-function createDismissNodeAction(
-  contextTargets: string[],
-  dismissNode: (nodeId: string, now?: string) => boolean,
-  closeContextMenu: () => void
-) {
-  return () => {
-    contextTargets.forEach((id) => dismissNode(id));
-    closeContextMenu();
-  };
 }
 
 function NodeListTreeMenu(props: NodeListTreeContentProps) {
@@ -203,15 +181,10 @@ function NodeListTreeMenu(props: NodeListTreeContentProps) {
       )}
       onCreateNode={() => (props.createRootNode(''), props.contextMenu.closeContextMenu())}
       onDeleteNode={() => (
-        contextTargets
-          .sort((a, b) => props.state.noteRowIds.indexOf(a) - props.state.noteRowIds.indexOf(b))
-          .forEach((id) => props.deleteNode(id)),
+        props.deleteNodes(contextTargets.sort((a, b) => props.state.noteRowIds.indexOf(a) - props.state.noteRowIds.indexOf(b))),
         props.contextMenu.closeContextMenu()
       )}
-      onDeleteNodePermanently={() => (
-        contextTargets.forEach((id) => props.deleteNodePermanently(id)),
-        props.contextMenu.closeContextMenu()
-      )}
+      onDeleteNodePermanently={() => (props.deleteNodesPermanently(contextTargets), props.contextMenu.closeContextMenu())}
       onDismissNode={createDismissNodeAction(contextTargets, props.dismissNode, props.contextMenu.closeContextMenu)}
       onImportIntoNode={props.contextMenu.closeContextMenu}
       onPasteIntoNode={props.contextMenu.closeContextMenu}
@@ -239,7 +212,8 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         collapse={props.collapse}
         contextMenu={props.contextMenu}
         createRootNode={props.createRootNode}
-        deleteNodePermanently={props.deleteNodePermanently}
+        deleteNodesPermanently={props.deleteNodesPermanently}
+        deleteStatusLabel={props.deleteStatusLabel}
         isTrashViewOpen={props.isTrashViewOpen}
         moveNodes={props.moveNodes}
         nodesById={props.nodesById}

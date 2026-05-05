@@ -59,8 +59,10 @@ function createWorkspaceFixture(): WorkspaceState {
     dismissReviewItem: () => false,
     exitReviewSession: () => undefined,
     deleteNode: () => undefined,
+    deleteNodes: () => undefined,
     restoreNode: () => undefined,
     deleteNodePermanently: () => undefined,
+    deleteNodesPermanently: () => undefined,
     createRootNode: () => 'unused',
     createChildNode: () => 'unused',
     createHighlightNodeFromSelection: () => null,
@@ -82,7 +84,7 @@ function createSetStateHarness(initialState: WorkspaceState) {
   };
 }
 
-describe('createWorkspaceNodeActions trash sync', () => {
+describe('createWorkspaceNodeActions soft delete sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -113,6 +115,22 @@ describe('createWorkspaceNodeActions trash sync', () => {
     });
   });
 
+  it('syncs multi-select soft delete through one runtime bridge command', () => {
+    const harness = createSetStateHarness(createWorkspaceFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const firstNodeId = actions.createRootNode('root 2');
+    const secondNodeId = actions.createRootNode('root 3');
+
+    vi.clearAllMocks();
+    actions.deleteNodes([firstNodeId, secondNodeId]);
+
+    expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledWith({
+      nodeIds: expect.arrayContaining([firstNodeId, secondNodeId]),
+      deletedAt: expect.any(String)
+    });
+  });
+
   it('syncs restore command through runtime bridge', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
@@ -124,6 +142,12 @@ describe('createWorkspaceNodeActions trash sync', () => {
 
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [nodeId] });
+  });
+});
+
+describe('createWorkspaceNodeActions permanent delete sync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it('syncs permanent delete command with next node order through runtime bridge', () => {
@@ -137,6 +161,22 @@ describe('createWorkspaceNodeActions trash sync', () => {
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
       nodeIds: [nodeId],
+      nodeOrder: [INBOX_NODE_ID, 'node-1']
+    });
+  });
+
+  it('syncs multi-select permanent delete through one runtime bridge command', () => {
+    const harness = createSetStateHarness(createWorkspaceFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const firstNodeId = actions.createRootNode('root 2');
+    const secondNodeId = actions.createRootNode('root 3');
+
+    vi.clearAllMocks();
+    actions.deleteNodesPermanently([firstNodeId, secondNodeId]);
+
+    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
+      nodeIds: expect.arrayContaining([firstNodeId, secondNodeId]),
       nodeOrder: [INBOX_NODE_ID, 'node-1']
     });
   });
