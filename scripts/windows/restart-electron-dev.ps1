@@ -4,6 +4,7 @@ param(
   [string]$WindowsWorkDir = "C:\dev\foliole",
   [string]$PidFile = "$env:TEMP\foliole-electron-dev.pid",
   [string]$RuntimePidFile = "$env:TEMP\foliole-electron-runtime.pid",
+  [string]$RuntimeSessionFile = "$env:TEMP\foliole-electron-runtime-session.txt",
   [string]$RuntimeHeadFile = "$env:TEMP\foliole-electron-runtime-head.txt",
   [string]$RuntimeHead = ""
 )
@@ -87,6 +88,30 @@ function Save-TrackedRuntimePid {
 
 function Remove-TrackedRuntimePid {
   Remove-Item -Path $RuntimePidFile -Force -ErrorAction SilentlyContinue
+}
+
+function Get-TrackedRuntimeSession {
+  if (!(Test-Path -Path $RuntimeSessionFile)) {
+    return $null
+  }
+
+  $raw = (Get-Content -Path $RuntimeSessionFile -Raw).Trim()
+  if ([string]::IsNullOrWhiteSpace($raw)) {
+    return $null
+  }
+  return $raw
+}
+
+function Save-TrackedRuntimeSession {
+  param([string]$Session)
+  if ([string]::IsNullOrWhiteSpace($Session)) {
+    return
+  }
+  Set-Content -Path $RuntimeSessionFile -Value $Session -NoNewline
+}
+
+function Remove-TrackedRuntimeSession {
+  Remove-Item -Path $RuntimeSessionFile -Force -ErrorAction SilentlyContinue
 }
 
 function Get-RepoHead {
@@ -202,15 +227,94 @@ function Get-TrackedRuntimeProcess {
   $proc = Get-ProcessById -ProcessId $trackedPid
   if ($null -eq $proc) {
     Remove-TrackedRuntimePid
+    Remove-TrackedRuntimeSession
     Remove-TrackedRuntimeHead
     return $null
   }
   if (-not (Test-ProcessMatchesExpectedRuntime -Process $proc -ExpectedRuntimePath $expectedRuntimePath)) {
     Remove-TrackedRuntimePid
+    Remove-TrackedRuntimeSession
     Remove-TrackedRuntimeHead
     return $null
   }
   return $proc
+}
+
+function Get-AppReadyEvent {
+  param([string]$WorkDir)
+
+  $markerPath = Resolve-ReadyMarkerPath -WorkDir $WorkDir
+  if (!(Test-Path -Path $markerPath)) {
+    return $null
+  }
+
+  try {
+    $event = Get-Content -Path $markerPath -Raw | ConvertFrom-Json
+    if ($null -eq $event) {
+      return $null
+    }
+    if ("$($event.stage)".Trim() -ne "app_ready") {
+      return $null
+    }
+    return $event
+  } catch {
+    return $null
+  }
+}
+
+function Test-RuntimeAppReady {
+  param(
+    [string]$WorkDir,
+    [int]$RuntimePid,
+    [string]$ExpectedSession = ""
+  )
+
+  if ($RuntimePid -le 0) {
+    return @{ ok = $false; reason = "runtime-missing" }
+  }
+
+  $event = Get-AppReadyEvent -WorkDir $WorkDir
+  if ($null -eq $event) {
+    return @{ ok = $false; reason = "app-ready-missing" }
+  }
+
+  $markerPid = 0
+  try {
+    $markerPid = [int]$event.pid
+  } catch {
+    $markerPid = 0
+  }
+
+  $markerSession = ""
+  if ($null -ne $event.session) {
+    $markerSession = "$($event.session)".Trim()
+  }
+
+  if ($markerPid -ne $RuntimePid) {
+    return @{ ok = $false; reason = "app-ready-pid-mismatch"; markerPid = $markerPid; markerSession = $markerSession }
+  }
+  if (-not [string]::IsNullOrWhiteSpace($ExpectedSession) -and $markerSession -ne $ExpectedSession) {
+    return @{ ok = $false; reason = "app-ready-session-mismatch"; markerPid = $markerPid; markerSession = $markerSession }
+  }
+
+  return @{ ok = $true; markerPid = $markerPid; markerSession = $markerSession }
+}
+
+function Format-AppReadyDetails {
+  param($ReadyState)
+
+  if ($null -eq $ReadyState) {
+    return ""
+  }
+
+  $details = ""
+  if ($ReadyState.ContainsKey('markerPid') -and $ReadyState.markerPid -gt 0) {
+    $details += " marker_pid=$($ReadyState.markerPid)"
+  }
+  if ($ReadyState.ContainsKey('markerSession') -and -not [string]::IsNullOrWhiteSpace($ReadyState.markerSession)) {
+    $details += " marker_session=$($ReadyState.markerSession)"
+  }
+  return $details
 }
 
 function Get-ElectronRuntimeCandidates {
@@ -405,6 +509,8 @@ function Start-ElectronWithHealthCheck {
     throw "startup health check failed: $($ready.reason)"
   }
 
+  Save-TrackedRuntimeSession -Session $bootSession
+
   return @{ shellPid = $started.Id; runtimePid = $health.runtimePid }
 }
 
@@ -506,32 +612,12 @@ function Wait-AppReadyMarker {
       return @{ ok = $false; reason = "runtime-exited-before-app-ready" }
     }
     if (Test-Path -Path $markerPath) {
-      try {
-        $event = Get-Content -Path $markerPath -Raw | ConvertFrom-Json
-        if ($event.stage -ne "app_ready") {
-          Start-Sleep -Seconds 1
-          continue
-        }
-
-        $markerPid = 0
-        try {
-          $markerPid = [int]$event.pid
-        } catch {
-          $markerPid = 0
-        }
-        $markerSession = ""
-        if ($null -ne $event.session) {
-          $markerSession = "$($event.session)".Trim()
-        }
-
-        if ($markerPid -ne $RuntimePid) {
-          return @{ ok = $false; reason = "app-ready-pid-mismatch"; markerPid = $markerPid; markerSession = $markerSession }
-        }
-        if (-not [string]::IsNullOrWhiteSpace($ExpectedSession) -and $markerSession -ne $ExpectedSession) {
-          return @{ ok = $false; reason = "app-ready-session-mismatch"; markerPid = $markerPid; markerSession = $markerSession }
-        }
-        return @{ ok = $true; runtimePid = $RuntimePid; markerSession = $markerSession }
-      } catch {
+      $readyState = Test-RuntimeAppReady -WorkDir $WorkDir -RuntimePid $RuntimePid -ExpectedSession $ExpectedSession
+      if ($readyState.ok) {
+        return @{ ok = $true; runtimePid = $RuntimePid; markerSession = $readyState.markerSession }
+      }
+      if ($readyState.reason -ne "app-ready-missing") {
+        return $readyState
       }
     }
     Start-Sleep -Seconds 1
@@ -628,6 +714,7 @@ function Restart-ElectronRuntimeOnly {
     return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
+  Save-TrackedRuntimeSession -Session $bootSession
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
   return @{
     ok = $true
@@ -691,6 +778,7 @@ function Start-ElectronRuntimeOnly {
     return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
+  Save-TrackedRuntimeSession -Session $bootSession
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
   return @{
     ok = $true
@@ -722,6 +810,7 @@ function Stop-Electron {
 
   Remove-TrackedPid
   Remove-TrackedRuntimePid
+  Remove-TrackedRuntimeSession
   Remove-TrackedRuntimeHead
   Write-Info "status: STOPPED"
 }
@@ -729,11 +818,18 @@ function Stop-Electron {
 if ($Action -eq "status") {
   $tracked = Get-TrackedProcess
   $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $runtimeSession = Get-TrackedRuntimeSession
   $runtimeHead = Get-TrackedRuntimeHead
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+  $runtimeReady = $null
+  if ($null -ne $runtime) {
+    $runtimeReady = Test-RuntimeAppReady -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+  }
   if ($null -ne $tracked) {
     if ($staleRuntimes.Count -gt 0) {
       Write-Info "status: STOPPED reason=stale-runtime-detected shell_pid=$($tracked.Id) runtime_pid=$($staleRuntimes[0].Id)"
+    } elseif ($null -ne $runtime -and -not $runtimeReady.ok) {
+      Write-Info "status: STOPPED reason=$($runtimeReady.reason) shell_pid=$($tracked.Id) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
     } elseif ($null -ne $runtime) {
       $headInfo = ""
       if ($null -ne $runtimeHead) {
@@ -748,6 +844,11 @@ if ($Action -eq "status") {
 
   if ($staleRuntimes.Count -gt 0) {
     Write-Info "status: STOPPED reason=stale-runtime-detected runtime_pid=$($staleRuntimes[0].Id)"
+    exit 0
+  }
+
+  if ($null -ne $runtime -and -not $runtimeReady.ok) {
+    Write-Info "status: STOPPED reason=$($runtimeReady.reason) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
     exit 0
   }
 
@@ -773,36 +874,65 @@ if ($Action -eq "start") {
   $tracked = Get-TrackedProcess
   if ($null -ne $tracked) {
     $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+    $runtimeSession = Get-TrackedRuntimeSession
     $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+    $runtimeReady = $null
     if ($staleRuntimes.Count -gt 0) {
       foreach ($staleRuntime in $staleRuntimes) {
         Stop-ProcessTree -ProcessId $staleRuntime.Id
       }
     }
     if ($null -ne $runtime) {
-      Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
-    } else {
-      $startedOnly = Start-ElectronRuntimeOnly -WorkDir $WindowsWorkDir
-      if (-not $startedOnly.ok) {
-        Write-Info "status: START_FAILED mode=runtime-only reason=$($startedOnly.reason) shell_pid=$($tracked.Id) stdout_log=$($startedOnly.stdoutLog) stderr_log=$($startedOnly.stderrLog)"
-        exit 1
-      }
-      Write-Info "status: STARTED mode=runtime-start-only runtime_pid=$($startedOnly.runtimePid) renderer_url=$($startedOnly.rendererUrl) shell_pid=$($tracked.Id)"
+      $runtimeReady = Test-RuntimeAppReady -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
     }
+    if ($null -ne $runtime) {
+      if ($runtimeReady.ok) {
+        Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
+        exit 0
+      }
+      Stop-ProcessTree -ProcessId $runtime.Id
+      Remove-TrackedRuntimePid
+      Remove-TrackedRuntimeSession
+      Remove-TrackedRuntimeHead
+      Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeReady.reason)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
+    }
+    $startedOnly = Start-ElectronRuntimeOnly -WorkDir $WindowsWorkDir
+    if (-not $startedOnly.ok) {
+      Write-Info "status: START_FAILED mode=runtime-only reason=$($startedOnly.reason) shell_pid=$($tracked.Id) stdout_log=$($startedOnly.stdoutLog) stderr_log=$($startedOnly.stderrLog)"
+      exit 1
+    }
+    Write-Info "status: STARTED mode=runtime-start-only runtime_pid=$($startedOnly.runtimePid) renderer_url=$($startedOnly.rendererUrl) shell_pid=$($tracked.Id)"
     exit 0
   }
 
   $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $runtimeSession = Get-TrackedRuntimeSession
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+  $runtimeReady = $null
   if ($staleRuntimes.Count -gt 0) {
     Stop-StaleFolioleDevProcesses -WorkDir $WindowsWorkDir
   }
   if ($null -ne $runtime) {
-    Write-Info "status: RUNNING runtime_pid=$($runtime.Id)"
-    exit 0
+    $runtimeReady = Test-RuntimeAppReady -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+  }
+  if ($null -ne $runtime) {
+    if ($runtimeReady.ok) {
+      Write-Info "status: RUNNING runtime_pid=$($runtime.Id)"
+      exit 0
+    }
+    Stop-ProcessTree -ProcessId $runtime.Id
+    Remove-TrackedRuntimePid
+    Remove-TrackedRuntimeSession
+    Remove-TrackedRuntimeHead
+    Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeReady.reason)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
   }
 
-  $started = Start-ElectronWithHealthCheck -WorkDir $WindowsWorkDir
+  try {
+    $started = Start-ElectronWithHealthCheck -WorkDir $WindowsWorkDir
+  } catch {
+    Write-Info "status: START_FAILED reason=$($_.Exception.Message)"
+    exit 1
+  }
   Save-TrackedRuntimePid -ProcessId $started.runtimePid
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WindowsWorkDir)
   Write-Info "status: STARTED shell_pid=$($started.shellPid) runtime_pid=$($started.runtimePid)"
