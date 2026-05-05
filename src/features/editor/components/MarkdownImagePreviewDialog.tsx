@@ -59,7 +59,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={Boolean(props.image)}>
       <AppDialogPortal>
-        <AppDialogOverlay className="bg-foreground/60" />
+        <AppDialogOverlay className="bg-[var(--app-floating-overlay-bg)]" />
         <AppDialogContent
           aria-describedby={undefined}
           className="left-4 top-4 right-4 bottom-4 z-[90] max-w-none translate-x-0 translate-y-0 overflow-visible border-transparent bg-transparent p-0 shadow-none"

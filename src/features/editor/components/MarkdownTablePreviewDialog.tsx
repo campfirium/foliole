@@ -203,7 +203,7 @@ export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProp
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={Boolean(props.table)}>
       <AppDialogPortal>
-        <AppDialogOverlay className="bg-foreground/60" />
+        <AppDialogOverlay className="bg-[var(--app-floating-overlay-bg)]" />
         <AppDialogContent
           aria-describedby={undefined}
           className="left-1/2 top-1/2 z-[90] max-w-none -translate-x-1/2 -translate-y-1/2 overflow-visible border-transparent bg-transparent p-0 shadow-none"
