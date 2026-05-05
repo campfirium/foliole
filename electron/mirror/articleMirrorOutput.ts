@@ -177,6 +177,31 @@ function resolveSourceUpdatedAt(article: ArticleNode, derivedChildren: ArticleNo
   );
 }
 
+export interface MirrorRenderableNode {
+  id: string;
+  parentNodeId: string | null;
+  kind: string;
+  title: string;
+  hideTitleHeading: boolean;
+  content: string;
+  reveal: string | null;
+  anchorLink: { id: string; kind: 'highlight' | 'cloze' } | null;
+  updatedAt: string;
+}
+
+export function renderSingleArticleMirror(
+  article: MirrorRenderableNode,
+  derivedChildren: MirrorRenderableNode[],
+  manualTopics: MirrorRenderableNode[]
+): string {
+  const map = new Map<string, ArticleNode[]>();
+  for (const node of derivedChildren) {
+    const key = `${node.anchorLink?.kind}:${node.anchorLink?.id}`;
+    map.set(key, [...(map.get(key) ?? []), node as ArticleNode]);
+  }
+  return renderArticleMarkdown(article as ArticleNode, map, manualTopics as ArticleNode[]);
+}
+
 export function collectArticleMirrorTargets(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorTarget[] {
   const { articles, manualTopicsByArticleId } = collectArticleData(snapshot);
   const usedFileNamesByDirectory = new Map<string, Set<string>>();

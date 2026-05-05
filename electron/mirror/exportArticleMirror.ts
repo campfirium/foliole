@@ -1,0 +1,250 @@
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+
+import { openDatabaseConnection } from '../database/connection.js';
+import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
+
+import { renderSingleArticleMirror } from './articleMirrorOutput.js';
+
+const INBOX_NODE_ID = 'special-inbox';
+
+interface MirrorNodeRow {
+  id: string;
+  parent_id: string | null;
+  kind: string;
+  title: string;
+  is_title_manual: number;
+  hide_title_heading: number;
+  content: string;
+  reveal: string | null;
+  anchor_link: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+interface AncestorRow {
+  id: string;
+  parent_id: string | null;
+  kind: string;
+  title: string;
+  deleted_at: string | null;
+}
+
+function sanitizePathSegment(title: string) {
+  const cleaned = Array.from(title)
+    .map((character) => {
+      const code = character.charCodeAt(0);
+      if (code <= 31 || '<>:"/\\|?*'.includes(character)) {
+        return ' ';
+      }
+      return character;
+    })
+    .join('')
+    .replace(/[.\s]+$/g, '')
+    .trim();
+  return cleaned || 'Untitled';
+}
+
+function resolveArticlePath(mirrorRoot: string, ancestors: AncestorRow[], articleTitle: string) {
+  const folderSegments: string[] = [];
+  let inTrash = false;
+
+  for (const ancestor of ancestors) {
+    if (ancestor.deleted_at) {
+      inTrash = true;
+    }
+    if (ancestor.id === INBOX_NODE_ID) {
+      folderSegments.push('Inbox');
+    } else if (ancestor.kind === 'folder') {
+      folderSegments.push(sanitizePathSegment(ancestor.title.trim() || 'Untitled'));
+    }
+  }
+
+  if (inTrash) {
+    return {
+      targetPath: path.join(mirrorRoot, 'Trash', `${sanitizePathSegment(articleTitle)}.md`),
+      relativePath: `Trash/${sanitizePathSegment(articleTitle)}.md`
+    };
+  }
+
+  folderSegments.reverse();
+  const directory = folderSegments.length > 0
+    ? path.join(mirrorRoot, ...folderSegments)
+    : mirrorRoot;
+
+  const fileName = `${sanitizePathSegment(articleTitle)}.md`;
+  const targetPath = path.join(directory, fileName);
+  const relativePath = path.relative(mirrorRoot, targetPath).split(path.sep).join('/');
+
+  return { targetPath, relativePath };
+}
+
+function loadArticleNode(articleId: string): MirrorNodeRow | null {
+  const db = openDatabaseConnection().sqlite;
+  return db.prepare(
+    'SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, content, reveal, anchor_link, created_at, updated_at, deleted_at FROM nodes WHERE id = ?'
+  ).get(articleId) as MirrorNodeRow | null ?? null;
+}
+
+function loadArticleChildren(articleId: string): MirrorNodeRow[] {
+  const db = openDatabaseConnection().sqlite;
+  return db.prepare(
+    'SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, content, reveal, anchor_link, created_at, updated_at, deleted_at FROM nodes WHERE parent_id = ?'
+  ).all(articleId) as MirrorNodeRow[];
+}
+
+function loadAncestorChain(parentId: string): AncestorRow[] {
+  const db = openDatabaseConnection().sqlite;
+  return db.prepare(
+    `WITH RECURSIVE ancestors AS (
+       SELECT id, parent_id, kind, title, deleted_at FROM nodes WHERE id = ?
+       UNION ALL
+       SELECT n.id, n.parent_id, n.kind, n.title, n.deleted_at
+       FROM nodes n JOIN ancestors a ON n.id = a.parent_id
+     )
+     SELECT id, parent_id, kind, title, deleted_at FROM ancestors`
+  ).all(parentId) as AncestorRow[];
+}
+
+function parseAnchorLink(value: string | null): { id: string; kind: 'highlight' | 'cloze' } | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as { id?: unknown; kind?: unknown };
+    if (typeof parsed.id !== 'string') {
+      return null;
+    }
+    if (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') {
+      return null;
+    }
+    return { id: parsed.id, kind: parsed.kind };
+  } catch {
+    return null;
+  }
+}
+
+interface ArticleNodeView {
+  id: string;
+  parentNodeId: string | null;
+  kind: string;
+  title: string;
+  hideTitleHeading: boolean;
+  content: string;
+  reveal: string | null;
+  anchorLink: { id: string; kind: 'highlight' | 'cloze' } | null;
+  updatedAt: string;
+}
+
+function toNodeView(row: MirrorNodeRow): ArticleNodeView {
+  return {
+    id: row.id,
+    parentNodeId: row.parent_id,
+    kind: row.kind,
+    title: row.title,
+    hideTitleHeading: row.hide_title_heading === 1,
+    content: row.content,
+    reveal: row.reveal,
+    anchorLink: parseAnchorLink(row.anchor_link),
+    updatedAt: row.updated_at
+  };
+}
+
+function loadMirrorArticleRecord(articleId: string) {
+  const db = openDatabaseConnection().sqlite;
+  const row = db.prepare(
+    'SELECT article_id, relative_path, mirrored_at FROM mirror_articles WHERE article_id = ?'
+  ).get(articleId) as { article_id: string; relative_path: string; mirrored_at: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  return { articleId: row.article_id, relativePath: row.relative_path, mirroredAt: row.mirrored_at };
+}
+
+function saveMirrorArticleRecord(articleId: string, relativePath: string, mirroredAt: string) {
+  openDatabaseConnection().sqlite
+    .prepare(
+      `INSERT INTO mirror_articles (article_id, relative_path, mirrored_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(article_id) DO UPDATE SET
+         relative_path = excluded.relative_path,
+         mirrored_at = excluded.mirrored_at`
+    )
+    .run(articleId, relativePath, mirroredAt);
+}
+
+async function removeMirrorFile(filePath: string) {
+  await fs.rm(filePath, { force: true });
+  const legacyDir = path.join(path.dirname(filePath), path.basename(filePath, '.md'));
+  await fs.rm(legacyDir, { force: true, recursive: true });
+}
+
+export function resolveArticleIdFromNodeId(nodeId: string): string | null {
+  const db = openDatabaseConnection().sqlite;
+  const row = db.prepare(
+    'SELECT id, parent_id, kind, anchor_link, deleted_at FROM nodes WHERE id = ?'
+  ).get(nodeId) as { id: string; parent_id: string | null; kind: string; anchor_link: string | null; deleted_at: string | null } | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  if (row.kind === 'folder') {
+    return null;
+  }
+
+  if (row.kind === 'topic' && !row.anchor_link) {
+    return row.id;
+  }
+
+  return row.parent_id;
+}
+
+export async function exportArticleToMirror(articleId: string): Promise<boolean> {
+  const articleRow = loadArticleNode(articleId);
+  if (!articleRow) {
+    return false;
+  }
+
+  if (articleRow.deleted_at) {
+    const existingRecord = loadMirrorArticleRecord(articleId);
+    if (existingRecord) {
+      const paths = loadLibraryPathSettingsSync();
+      const absolutePath = path.join(paths.mirror, ...existingRecord.relativePath.split('/'));
+      await removeMirrorFile(absolutePath);
+      openDatabaseConnection().sqlite
+        .prepare('DELETE FROM mirror_articles WHERE article_id = ?')
+        .run(articleId);
+    }
+    return true;
+  }
+
+  const articleView = toNodeView(articleRow);
+  const children = loadArticleChildren(articleId);
+  const childViews = children.map(toNodeView);
+
+  const derivedChildren = childViews.filter((c) => c.anchorLink !== null);
+  const manualTopics = childViews.filter((c) => c.kind === 'topic' && c.anchorLink === null);
+
+  const markdown = renderSingleArticleMirror(articleView, derivedChildren, manualTopics);
+
+  const paths = loadLibraryPathSettingsSync();
+  const ancestors = articleRow.parent_id ? loadAncestorChain(articleRow.parent_id) : [];
+  const articleTitle = articleRow.title.trim() || 'Untitled';
+  const { targetPath, relativePath } = resolveArticlePath(paths.mirror, ancestors, articleTitle);
+
+  const existingRecord = loadMirrorArticleRecord(articleId);
+  if (existingRecord && existingRecord.relativePath !== relativePath) {
+    const oldAbsolutePath = path.join(paths.mirror, ...existingRecord.relativePath.split('/'));
+    await removeMirrorFile(oldAbsolutePath);
+  }
+
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(targetPath, markdown, 'utf8');
+
+  const mirroredAt = new Date().toISOString();
+  saveMirrorArticleRecord(articleId, relativePath, mirroredAt);
+
+  return true;
+}

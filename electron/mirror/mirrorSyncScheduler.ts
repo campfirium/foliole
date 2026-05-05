@@ -1,13 +1,12 @@
-import { syncIncrementalMirrorOutput } from './mirrorOutputSync.js';
+import { exportArticleToMirror, resolveArticleIdFromNodeId } from './exportArticleMirror.js';
 
-const DEBOUNCE_MS = 1000;
-const MAX_WAIT_MS = 30_000;
+const DEBOUNCE_MS = 10_000;
+const MAX_WAIT_MS = 60_000;
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingNodeIds = new Set<string>();
-let syncInFlight = false;
-let rerunRequested = false;
+let pendingArticleIds = new Set<string>();
+let flushInFlight: Promise<void> | null = null;
 
 function clearTimers() {
   if (debounceTimer !== null) {
@@ -20,41 +19,27 @@ function clearTimers() {
   }
 }
 
-async function runSync() {
-  if (syncInFlight) {
-    rerunRequested = true;
-    return;
-  }
-
-  const nodeIds = pendingNodeIds;
-  pendingNodeIds = new Set();
+async function drainQueue() {
+  const articleIds = pendingArticleIds;
+  pendingArticleIds = new Set();
   clearTimers();
-  syncInFlight = true;
 
-  try {
-    await syncIncrementalMirrorOutput(nodeIds.size > 0 ? nodeIds : null);
-  } catch (error) {
-    console.error('[mirror] scheduled sync failed', error);
-  } finally {
-    syncInFlight = false;
-    if (rerunRequested) {
-      rerunRequested = false;
-      void runSync();
+  for (const articleId of articleIds) {
+    try {
+      await exportArticleToMirror(articleId);
+    } catch (error) {
+      console.error('[mirror] export failed', { articleId, error });
     }
   }
 }
 
-export function scheduleMirrorSync(nodeIds: string[]) {
-  for (const id of nodeIds) {
-    pendingNodeIds.add(id);
-  }
-
+function scheduleFlush() {
   if (debounceTimer !== null) {
     clearTimeout(debounceTimer);
   }
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
-    void runSync();
+    void drainQueue();
   }, DEBOUNCE_MS);
 
   if (maxWaitTimer === null) {
@@ -64,27 +49,33 @@ export function scheduleMirrorSync(nodeIds: string[]) {
         clearTimeout(debounceTimer);
         debounceTimer = null;
       }
-      void runSync();
+      void drainQueue();
     }, MAX_WAIT_MS);
+  }
+}
+
+export function scheduleMirrorSync(nodeIds: string[]) {
+  for (const nodeId of nodeIds) {
+    const articleId = resolveArticleIdFromNodeId(nodeId);
+    if (articleId) {
+      pendingArticleIds.add(articleId);
+    }
+  }
+
+  if (pendingArticleIds.size > 0) {
+    scheduleFlush();
   }
 }
 
 export async function flushMirrorSync() {
   clearTimers();
-  if (pendingNodeIds.size > 0 || syncInFlight) {
-    if (syncInFlight) {
-      rerunRequested = true;
-      // Wait for the in-flight sync to complete and its rerun
-      await new Promise<void>((resolve) => {
-        const check = setInterval(() => {
-          if (!syncInFlight && !rerunRequested) {
-            clearInterval(check);
-            resolve();
-          }
-        }, 50);
-      });
-    } else {
-      await runSync();
+  if (pendingArticleIds.size === 0) {
+    if (flushInFlight) {
+      await flushInFlight;
     }
+    return;
   }
+  flushInFlight = drainQueue();
+  await flushInFlight;
+  flushInFlight = null;
 }
