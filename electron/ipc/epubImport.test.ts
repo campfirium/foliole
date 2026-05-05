@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -36,7 +37,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-async function writeEpub(fileName: string, entries: Array<{ content: string; name: string }>) {
+async function writeEpub(fileName: string, entries: Array<{ content: string | Uint8Array; name: string }>) {
   const filePath = path.join(tempRoot, fileName);
   await fs.writeFile(filePath, createTestZip(entries.map((entry) => ({ ...entry, compression: 'store' as const }))));
   return filePath;
@@ -224,4 +225,54 @@ it('keeps valid chapters and marks the run degraded when one chapter is missing'
   expect(children).toHaveLength(2);
   expect(children[0]?.title).toBe('Good Chapter');
   expect(children[1]?.content).toContain('EPUB chapter missing entry: OPS/text/missing.xhtml');
+});
+
+it('imports embedded chapter images and rewrites relative epub image paths to stored attachments', async () => {
+  const filePath = await writeEpub('embedded-images.epub', [
+    { content: 'application/epub+zip', name: 'mimetype' },
+    {
+      content:
+        '<?xml version="1.0"?><container version="1.0"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      name: 'META-INF/container.xml'
+    },
+    {
+      content:
+        '<?xml version="1.0"?><package version="3.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:title>Image Book</dc:title></metadata><manifest><item id="chapter" href="text/chapter.xhtml" media-type="application/xhtml+xml"/><item id="image" href="images/00006.jpeg" media-type="image/jpeg"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+      name: 'OPS/book.opf'
+    },
+    {
+      content:
+        '<html><head><title>Picture Chapter</title></head><body><p>Intro paragraph.</p><img src="../images/00006.jpeg" alt="Image"/><p>Outro paragraph.</p></body></html>',
+      name: 'OPS/text/chapter.xhtml'
+    },
+    {
+      content: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]) as unknown as string,
+      name: 'OPS/images/00006.jpeg'
+    }
+  ]);
+
+  const imported = await runEpubImport(source(filePath), '2026-04-01T12:12:00.000Z');
+  const database = openDatabaseConnection().sqlite;
+  const child = database
+    .prepare(
+      `SELECT n.id, n.content
+       FROM nodes n
+       JOIN node_order o ON o.node_id = n.id
+       WHERE n.parent_id = ?
+       ORDER BY o.position ASC
+       LIMIT 1`
+    )
+    .get(imported.nodeId) as { content: string; id: string };
+  const attachments = listNodeAttachments(child.id);
+
+  expect(imported.resultStatus).toBe('imported');
+  expect(imported.degradedReason).toBeNull();
+  expect(child.content).toContain('Intro paragraph.');
+  expect(child.content).toContain('Outro paragraph.');
+  expect(child.content).toContain('![Image](asset://');
+  expect(child.content).not.toContain('../images/00006.jpeg');
+  expect(child.content).not.toContain('[EPUB image not imported:');
+  expect(attachments).toHaveLength(1);
+  expect(attachments[0]?.attachment.mimeType).toBe('image/jpeg');
+  expect(attachments[0]?.attachment.originalName).toBe('00006.jpeg');
 });

@@ -38,7 +38,7 @@ function buildVisibleFallbackLabel(altText: string, destination: string) {
   return `[EPUB image not imported: ${label} (${destination})]`;
 }
 
-export function degradeUnmanagedEpubImages(content: string) {
+export function degradeUnmanagedEpubImages(content: string, managedDestinations: ReadonlySet<string> = new Set()) {
   const degradedTargets = new Set<string>();
   const rewrittenContent = content.replace(MARKDOWN_IMAGE_PATTERN, (fullMatch, altText: string, rawTarget: string) => {
     const parsedTarget = parseMarkdownImageTarget(rawTarget);
@@ -47,7 +47,8 @@ export function degradeUnmanagedEpubImages(content: string) {
     }
     if (
       parsedTarget.destination.startsWith(ASSET_MARKDOWN_SCHEME) ||
-      isRemoteImageDestination(parsedTarget.destination)
+      isRemoteImageDestination(parsedTarget.destination) ||
+      managedDestinations.has(parsedTarget.destination)
     ) {
       return fullMatch;
     }

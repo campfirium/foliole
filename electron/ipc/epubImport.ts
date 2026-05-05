@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
 
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
+import type { PersistedImportRecord, PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
+import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
+import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 
@@ -13,6 +16,7 @@ import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 interface PreparedBookNode {
   content: string;
   degradedReason: string | null;
+  embeddedImages: PreparedImportEmbeddedImage[];
   hideTitleHeading: boolean;
   key: string;
   parentKey: string | null;
@@ -37,12 +41,14 @@ function prepareBookNode(node: RawBookNode, index: number, importedAt: string) {
     filePath: `epub-chapter#${node.key}`,
     importedAt,
     kind: 'epub',
+    managedEpubImageDestinations: node.embeddedImages.map((image) => image.destination),
     sourceProfile: 'epub',
     titleStrategy: 'heading'
   });
   return {
     content: prepared.content,
     degradedReason: prepared.degradedReason,
+    embeddedImages: node.embeddedImages,
     hideTitleHeading: prepared.hideTitleHeading,
     key: node.key,
     parentKey: node.parentKey,
@@ -50,7 +56,66 @@ function prepareBookNode(node: RawBookNode, index: number, importedAt: string) {
   } satisfies PreparedBookNode;
 }
 
-function syncBookNodes(parentNodeId: string, sourceFingerprint: string, importedAt: string, nodes: PreparedBookNode[]) {
+async function importEmbeddedImagesForNode(nodeId: string, importedAt: string, node: PreparedBookNode) {
+  if (node.embeddedImages.length === 0) {
+    return node;
+  }
+
+  const imagesByDestination = new Map(node.embeddedImages.map((image) => [image.destination, image] as const));
+  const degradedMessages: string[] = [];
+  let rewrittenContent = '';
+  let previousEnd = 0;
+
+  for (const reference of collectMarkdownImageReferences(node.content)) {
+    rewrittenContent += node.content.slice(previousEnd, reference.start);
+    previousEnd = reference.end;
+
+    const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
+    const image = parsedTarget ? imagesByDestination.get(parsedTarget.destination) : null;
+    if (!parsedTarget || !image) {
+      rewrittenContent += reference.fullMatch;
+      continue;
+    }
+
+    const importedImage = await importImageAttachmentBytes({
+      bytes: image.bytes,
+      errorSource: image.destination,
+      mimeType: image.mimeType,
+      nodeId,
+      originalName: image.originalName
+    });
+    if (importedImage.status === 'error') {
+      degradedMessages.push(importedImage.message);
+      rewrittenContent += `[${importedImage.message}]`;
+      continue;
+    }
+
+    const suffix = parsedTarget.suffix ? ` ${parsedTarget.suffix}` : '';
+    rewrittenContent += `![${reference.altText}](${buildAssetMarkdownUrl(importedImage.attachment_id, importedImage.original_name)}${suffix})`;
+  }
+
+  rewrittenContent += node.content.slice(previousEnd);
+  if (rewrittenContent === node.content && degradedMessages.length === 0) {
+    return node;
+  }
+
+  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?', [
+    rewrittenContent,
+    importedAt,
+    nodeId
+  ]);
+
+  return {
+    ...node,
+    content: rewrittenContent,
+    degradedReason: degradedMessages.reduce<string | null>(
+      (reason, message) => appendReason(reason, message),
+      node.degradedReason
+    )
+  };
+}
+
+async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, importedAt: string, nodes: PreparedBookNode[]) {
   const connection = openDatabaseConnection();
   const firstPosition = (connection.driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order')?.position ?? -1) + 1;
   const nodeIdsByKey = new Map<string, string>();
@@ -75,6 +140,17 @@ function syncBookNodes(parentNodeId: string, sourceFingerprint: string, imported
       });
     });
   });
+
+  const finalizedNodes: PreparedBookNode[] = [];
+  for (const node of nodes) {
+    const nodeId = nodeIdsByKey.get(node.key);
+    if (!nodeId) {
+      finalizedNodes.push(node);
+      continue;
+    }
+    finalizedNodes.push(await importEmbeddedImagesForNode(nodeId, importedAt, node));
+  }
+  return finalizedNodes;
 }
 
 function applyAggregateDegrade(record: PersistedImportRecord, degradedReason: string | null) {
@@ -104,6 +180,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     filePath: source.filePath,
     importedAt,
     kind: 'epub',
+    sourceTrackingMode: 'untracked',
     sourceProfile: 'epub',
     titleStrategy: 'heading'
   });
@@ -112,7 +189,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     throw new Error('EPUB import failed: parent node was not created');
   }
 
-  syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
-  const aggregateReason = nodes.reduce<string | null>((reason, node) => appendReason(reason, node.degradedReason), imported.degradedReason);
+  const finalizedNodes = await syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes);
+  const aggregateReason = finalizedNodes.reduce<string | null>((reason, node) => appendReason(reason, node.degradedReason), imported.degradedReason);
   return applyAggregateDegrade(imported, aggregateReason);
 }

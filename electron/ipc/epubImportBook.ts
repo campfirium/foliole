@@ -1,30 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { parse, type DefaultTreeAdapterTypes } from 'parse5';
-
 import { buildRetainedDegradedImportContent } from '../../lib/core/import/controlledContext.js';
-import {
-  convertHtmlToMarkdownCompatible,
-  formatHtmlConversionDegradedReason
-} from '../../lib/core/import/htmlToMarkdownCompatible.js';
-import { extractUniqueLevelOneHeading } from '../../lib/core/import/importedNodeTitle.js';
 
 import { readEpubArchiveEntries } from './epubArchive.js';
-import {
-  extractFirstMeaningfulBodyLine,
-  extractFirstMarkdownHeadingText,
-  increaseMarkdownHeadingLevels,
-  isCoverLikeChapter,
-  isTocLikeChapter,
-  normalizePageTitle
-} from './epubImportChapterHeuristics.js';
+import { buildChapterMarkdown } from './epubChapterMarkdown.js';
+import { collectManagedEpubImages } from './epubEmbeddedImages.js';
+import { isCoverLikeChapter, isTocLikeChapter } from './epubImportChapterHeuristics.js';
 import { buildBookNodes, type RawBookNode } from './epubImportTree.js';
 import { readEpubToc } from './epubToc.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
-
-type HtmlNode = DefaultTreeAdapterTypes.Node;
-type HtmlElement = DefaultTreeAdapterTypes.Element;
 
 export interface RawEpubBook {
   nodes: RawBookNode[];
@@ -93,70 +78,26 @@ function parseGuideCoverPaths(opfXml: string, opfDirectory: string) {
   );
 }
 
-function collectText(node: HtmlNode): string {
-  if (node.nodeName === '#text') {
-    return ('value' in node ? node.value : '').replace(/\s+/g, ' ').trim();
-  }
-  if (!('childNodes' in node)) {
-    return '';
-  }
-  return node.childNodes.map((child) => collectText(child)).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-}
-
-function findFirstText(node: HtmlNode, tagName: string): string | null {
-  if ('tagName' in node && (node as HtmlElement).tagName === tagName) {
-    return collectText(node) || null;
-  }
-  if (!('childNodes' in node)) {
-    return null;
-  }
-  for (const child of node.childNodes) {
-    const match = findFirstText(child, tagName);
-    if (match) return match;
-  }
-  return null;
-}
-
-function findFirstHeadingText(node: HtmlNode): string | null {
-  if ('tagName' in node && /^h[1-6]$/.test((node as HtmlElement).tagName)) {
-    const element = node as HtmlElement;
-    if (element.attrs.some((attribute) => attribute.name === 'hidden' && attribute.value !== 'false')) {
-      return null;
-    }
-    return collectText(node) || null;
-  }
-  if (!('childNodes' in node)) {
-    return null;
-  }
-  for (const child of node.childNodes) {
-    const match = findFirstHeadingText(child);
-    if (match) return match;
-  }
-  return null;
-}
-
-function buildChapterMarkdown(html: string, fallbackTitle: string) {
-  const document = parse(html);
-  const pageTitle = normalizePageTitle(findFirstText(document, 'title'));
-  const firstHeading = findFirstHeadingText(document);
-  const converted = convertHtmlToMarkdownCompatible(html);
-  const body = converted.content.trim();
-  const bodyTitle = extractFirstMarkdownHeadingText(body) ?? extractUniqueLevelOneHeading(body) ?? extractFirstMeaningfulBodyLine(body);
-  const resolvedTitle = pageTitle ?? firstHeading ?? bodyTitle ?? fallbackTitle;
-  const needsTitleHeading =
-    Boolean(body) &&
-    (!bodyTitle || bodyTitle !== resolvedTitle) &&
-    (Boolean(pageTitle) || Boolean(firstHeading) || resolvedTitle !== fallbackTitle);
-  return {
-    content: needsTitleHeading && body ? `# ${resolvedTitle}\n\n${increaseMarkdownHeadingLevels(body)}` : body || `# ${resolvedTitle}`,
-    degradedReason: formatHtmlConversionDegradedReason(converted.warnings),
-    title: resolvedTitle
-  };
-}
-
 function readBookTitle(opfXml: string, sourceName: string) {
   const titleMatch = opfXml.match(/<(?:dc:title|title)\b[^>]*>([\s\S]*?)<\/(?:dc:title|title)>/i);
   return titleMatch?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(sourceName, '.epub');
+}
+
+function buildDegradedChapterNode(input: {
+  fallbackTitle: string;
+  href: string;
+  index: number;
+  reason: string;
+}) {
+  return {
+    content: buildRetainedDegradedImportContent({ reason: input.reason, sourceKind: 'epub', sourceName: input.fallbackTitle }),
+    degradedReason: input.reason,
+    embeddedImages: [],
+    href: input.href,
+    key: `${input.index}-${input.href}`,
+    parentKey: null,
+    title: input.fallbackTitle
+  };
 }
 
 function buildSpineChapterNode(input: {
@@ -172,35 +113,24 @@ function buildSpineChapterNode(input: {
     return null;
   }
   if (input.mediaType && !['application/xhtml+xml', 'text/html'].includes(input.mediaType)) {
-    return {
-      content: buildRetainedDegradedImportContent({
-        reason: `EPUB chapter unsupported media type: ${input.mediaType}`,
-        sourceKind: 'epub',
-        sourceName: input.fallbackTitle
-      }),
-      degradedReason: `EPUB chapter unsupported media type: ${input.mediaType}`,
+    return buildDegradedChapterNode({
+      fallbackTitle: input.fallbackTitle,
       href: input.href,
-      key: `${input.index}-${input.href}`,
-      parentKey: null,
-      title: input.fallbackTitle
-    };
+      index: input.index,
+      reason: `EPUB chapter unsupported media type: ${input.mediaType}`
+    });
   }
   const htmlBytes = input.entries.get(input.href);
   if (!htmlBytes) {
-    return {
-      content: buildRetainedDegradedImportContent({
-        reason: `EPUB chapter missing entry: ${input.href}`,
-        sourceKind: 'epub',
-        sourceName: input.fallbackTitle
-      }),
-      degradedReason: `EPUB chapter missing entry: ${input.href}`,
+    return buildDegradedChapterNode({
+      fallbackTitle: input.fallbackTitle,
       href: input.href,
-      key: `${input.index}-${input.href}`,
-      parentKey: null,
-      title: input.fallbackTitle
-    };
+      index: input.index,
+      reason: `EPUB chapter missing entry: ${input.href}`
+    });
   }
   const chapter = buildChapterMarkdown(decodeText(htmlBytes), input.fallbackTitle);
+  const embeddedImages = collectManagedEpubImages(chapter.content, input.href, input.entries);
   if (isCoverLikeChapter({ content: chapter.content, title: chapter.title }, input.href, input.guideCoverPaths)) {
     return null;
   }
@@ -210,6 +140,7 @@ function buildSpineChapterNode(input: {
   return {
     content: chapter.content,
     degradedReason: chapter.degradedReason,
+    embeddedImages,
     href: input.href,
     key: `${input.index}-${input.href}`,
     parentKey: null,
@@ -234,6 +165,7 @@ function buildSpineChapterNodes(input: {
           sourceName: fallbackTitle
         }),
         degradedReason: `EPUB chapter missing manifest entry: ${idref}`,
+        embeddedImages: [],
         href: `${idref}.xhtml`,
         key: `${index}-${idref}`,
         parentKey: null,

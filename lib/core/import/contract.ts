@@ -19,6 +19,13 @@ export interface PreparedImportHighlightRecord {
   label: string | null;
 }
 
+export interface PreparedImportEmbeddedImage {
+  bytes: Uint8Array;
+  destination: string;
+  mimeType: string;
+  originalName: string;
+}
+
 export interface PreparedImportRecord {
   provider: ImportProvider;
   sourceName: string;

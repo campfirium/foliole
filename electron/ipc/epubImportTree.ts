@@ -1,8 +1,11 @@
+import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
+
 import { type EpubTocEntry } from './epubToc.js';
 
 export interface RawBookNode {
   content: string;
   degradedReason: string | null;
+  embeddedImages: PreparedImportEmbeddedImage[];
   key: string;
   parentKey: string | null;
   title: string;
@@ -21,9 +24,10 @@ export function buildBookNodes(input: {
   toc: EpubTocEntry[];
 }) {
   if (input.toc.length === 0) {
-    return input.chapters.map(({ content, degradedReason, key, parentKey, title }) => ({
+    return input.chapters.map(({ content, degradedReason, embeddedImages, key, parentKey, title }) => ({
       content,
       degradedReason,
+      embeddedImages,
       key,
       parentKey,
       title
@@ -45,6 +49,7 @@ export function buildBookNodes(input: {
       nodes.push({
         content: matchedChapter?.content ?? '',
         degradedReason: matchedChapter?.degradedReason ?? null,
+        embeddedImages: matchedChapter?.embeddedImages ?? [],
         key,
         parentKey,
         title: entry.title || matchedChapter?.title || `Chapter ${nodes.length + 1}`
@@ -59,6 +64,7 @@ export function buildBookNodes(input: {
       nodes.push({
         content: chapter.content,
         degradedReason: chapter.degradedReason,
+        embeddedImages: chapter.embeddedImages,
         key: chapter.key,
         parentKey: null,
         title: chapter.title

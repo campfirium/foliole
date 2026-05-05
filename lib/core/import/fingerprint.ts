@@ -33,6 +33,7 @@ interface CreatePreparedDesktopTextImportInput {
   highlightPolicy?: ImportHighlightPolicy;
   importedAt: string;
   kind: ImportSourceKind;
+  managedEpubImageDestinations?: string[];
   sourceIdentity?: string;
   sourceLocator?: string;
   sourceProfile?: ImportSourceProfile;
@@ -98,7 +99,7 @@ export function createPreparedDesktopTextImport(
   const normalizedInputContent = normalizeImportedContent(input.content);
   const epubDegradedContent =
     input.kind === 'epub' || input.sourceProfile === 'epub'
-      ? degradeUnmanagedEpubImages(normalizedInputContent)
+      ? degradeUnmanagedEpubImages(normalizedInputContent, new Set(input.managedEpubImageDestinations ?? []))
       : { content: normalizedInputContent, degradedReason: null };
   const highlightedContent = applyImportHighlightPolicy(
     epubDegradedContent.content,
