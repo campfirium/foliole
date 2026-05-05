@@ -456,6 +456,8 @@ body {
 
 .cm-md-image-surface-block {
   margin: 0 auto;
+  max-width: var(--editor-image-block-width, 100%);
+  width: var(--editor-image-block-width, auto);
 }
 
 .markdown-editor-host .cm-md-image-surface-inline[data-md-image-highlighted='true'] {
@@ -473,6 +475,11 @@ body {
   position: relative;
   width: auto;
   z-index: 1;
+}
+
+.cm-md-image-element-block {
+  max-width: 100%;
+  width: 100%;
 }
 
 .cm-md-image-preview-trigger {

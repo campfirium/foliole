@@ -20,6 +20,7 @@ import {
 } from '../database/attachments.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './pdfIndexing.js';
 
@@ -62,15 +63,32 @@ function isAbsoluteLocalPath(destination: string) {
   return path.isAbsolute(destination) || path.posix.isAbsolute(destination) || path.win32.isAbsolute(destination);
 }
 
-function resolveLocalImageSourcePath(destination: string, sourceLocator: string) {
-  const decodedDestination = decodeMarkdownPath(destination);
-  if (isAbsoluteLocalPath(decodedDestination)) {
-    return decodedDestination;
-  }
-  if (!sourceLocator.trim()) {
+function resolveExternalAttachmentRoot(sourceLocator: string) {
+  const normalizedSourceLocator = sourceLocator.trim().toLowerCase();
+  if (!normalizedSourceLocator) {
     return null;
   }
-  return path.resolve(path.dirname(sourceLocator), decodedDestination);
+  const matchingFolder = loadExternalSearchFolders().find((folder) => {
+    const normalizedFolderPath = folder.folder_path.trim().toLowerCase();
+    return normalizedFolderPath && normalizedSourceLocator.startsWith(normalizedFolderPath);
+  });
+  return matchingFolder?.attachment_root_path?.trim() || null;
+}
+
+function resolveLocalImageSourcePaths(destination: string, sourceLocator: string) {
+  const decodedDestination = decodeMarkdownPath(destination);
+  if (isAbsoluteLocalPath(decodedDestination)) {
+    return [decodedDestination];
+  }
+  const candidates: string[] = [];
+  if (sourceLocator.trim()) {
+    candidates.push(path.resolve(path.dirname(sourceLocator), decodedDestination));
+  }
+  const attachmentRootPath = resolveExternalAttachmentRoot(sourceLocator);
+  if (attachmentRootPath) {
+    candidates.push(path.resolve(attachmentRootPath, decodedDestination));
+  }
+  return [...new Set(candidates)];
 }
 
 function resolveMimeType(sourcePath: string) {
@@ -195,7 +213,8 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
       return reference.fullMatch;
     }
 
-    const sourcePath = resolveLocalImageSourcePath(reference.destination, prepared.sourceLocator);
+    const candidatePaths = resolveLocalImageSourcePaths(reference.destination, prepared.sourceLocator);
+    const sourcePath = candidatePaths.find((candidate) => fs.existsSync(candidate)) ?? candidatePaths[0] ?? null;
     if (!sourcePath) {
       return reference.fullMatch;
     }

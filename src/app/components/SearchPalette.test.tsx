@@ -10,8 +10,10 @@ vi.mock('../../shared/platform/nodeSourceBridge', () => ({
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { SearchPalette } from './SearchPalette';
+import { openImportedExternalResult } from './searchPaletteImportResult';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 function createNodeResult() {
@@ -216,4 +218,45 @@ it('shows a watched source badge on the right for matching results', async () =>
   });
   expect(screen.getByText('Folder A')).toBeInTheDocument();
   expect(screen.getAllByText('测试').some((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
+});
+
+it('rehydrates the workspace before opening an imported external result', async () => {
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);
+  const onOpenResult = vi.fn();
+  const setExternalPreviewPath = vi.fn();
+
+  await openImportedExternalResult(
+    {
+      content_fingerprint: 'content-1',
+      degraded_reason: null,
+      duplicate_semantic: 'new',
+      failure_reason: null,
+      import_id: 'import-1',
+      imported_at: '2026-04-21T00:35:11.508Z',
+      node_id: 'node-imported',
+      provider: 'desktop_text_file',
+      result_status: 'imported',
+      source_fingerprint: 'source-1',
+      source_kind: 'markdown',
+      source_locator: '/tmp/topic.md',
+      source_name: 'topic.md'
+    },
+    onOpenResult,
+    setExternalPreviewPath
+  );
+
+  expect(setExternalPreviewPath).toHaveBeenCalledWith(null);
+  expect(rehydrate).toHaveBeenCalledTimes(1);
+  expect(onOpenResult).toHaveBeenCalledWith({
+    excerpt: '',
+    externalMatch: null,
+    id: 'node-imported',
+    kind: 'node',
+    nodeMatch: null,
+    pdfMatch: null,
+    title: 'topic.md',
+    updatedAt: '2026-04-21T00:35:11.508Z'
+  });
+
+  rehydrate.mockRestore();
 });

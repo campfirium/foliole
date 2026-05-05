@@ -9,6 +9,24 @@ import {
 } from '../../shared/platform/externalSearchBridge';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
+function ExternalSearchPreviewBody(args: { error: string | null; preview: RuntimeExternalSearchPreview | null }) {
+  if (!args.preview) {
+    return <div className="flex h-full items-center justify-center px-6 text-sm text-foreground/60">{args.error ?? 'Loading preview...'}</div>;
+  }
+
+  return (
+    <MarkdownEditor
+      blockImageMaxHeightOverride={520}
+      blockImageWidthOverride="min(100%, 40rem)"
+      className="h-full"
+      nodeId={args.preview.absolutePath}
+      onChange={() => undefined}
+      readOnly
+      value={args.preview.content}
+    />
+  );
+}
+
 export function ExternalSearchPreviewDialog(props: {
   absolutePath: string | null;
   onImportComplete: (result: NativeTextImportResult) => void;
@@ -55,11 +73,7 @@ export function ExternalSearchPreviewDialog(props: {
             </div>
           </div>
           <div className="min-h-0 flex-1">
-            {preview ? (
-              <MarkdownEditor className="h-full" fitBlockImagesToViewport nodeId={preview.absolutePath} onChange={() => undefined} readOnly value={preview.content} />
-            ) : (
-              <div className="flex h-full items-center justify-center px-6 text-sm text-foreground/60">{error ?? 'Loading preview...'}</div>
-            )}
+            <ExternalSearchPreviewBody error={error} preview={preview} />
           </div>
         </AppDialogContent>
       </AppDialogPortal>

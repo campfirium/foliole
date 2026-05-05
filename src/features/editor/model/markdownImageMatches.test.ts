@@ -15,4 +15,30 @@ describe('markdownImageMatches', () => {
       }
     ]);
   });
+
+  it('collects resolved local file image sources for preview rendering', () => {
+    expect(collectImageMatches(0, '![Local](file:///vault/images/cover.png)')).toEqual([
+      {
+        attachmentId: null,
+        alt: 'Local',
+        display: 'block',
+        from: 0,
+        source: 'file:///vault/images/cover.png',
+        to: 40
+      }
+    ]);
+  });
+
+  it('collects data url image sources for external preview rendering', () => {
+    expect(collectImageMatches(0, '![Inline](data:image/png;base64,abc123)')).toEqual([
+      {
+        attachmentId: null,
+        alt: 'Inline',
+        display: 'block',
+        from: 0,
+        source: 'data:image/png;base64,abc123',
+        to: 39
+      }
+    ]);
+  });
 });

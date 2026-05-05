@@ -21,6 +21,7 @@ export interface EditorViewState {
 export interface MarkdownEditorProps {
   ariaLabel?: string;
   blockImageMaxHeightOverride?: number;
+  blockImageWidthOverride?: string;
   className?: string;
   contentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;

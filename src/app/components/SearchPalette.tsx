@@ -8,6 +8,7 @@ import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
+import { openImportedExternalResult } from './searchPaletteImportResult';
 import { SearchPaletteEmptyState, SearchPaletteList } from './SearchPaletteResults';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
@@ -267,16 +268,5 @@ function handleImportedExternalResult(
   onOpenResult: (result: WorkspaceSearchResult) => void,
   setExternalPreviewPath: (value: string | null) => void
 ) {
-  setExternalPreviewPath(null);
-  if (!result.node_id) return;
-  onOpenResult({
-    excerpt: '',
-    externalMatch: null,
-    id: result.node_id,
-    kind: 'node',
-    nodeMatch: null,
-    pdfMatch: null,
-    title: result.source_name,
-    updatedAt: result.imported_at
-  });
+  void openImportedExternalResult(result, onOpenResult, setExternalPreviewPath);
 }

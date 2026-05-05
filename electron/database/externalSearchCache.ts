@@ -6,6 +6,7 @@ import type { NativeExternalSearchPreview } from '../../lib/platform/nativeStora
 import { resolveDatabasePath } from './connection.js';
 import { replaceFolderDocuments, scanFolder, type ExternalSearchRow, type ScannedDocument, toExternalResult } from './externalSearchCacheSupport.js';
 import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from './externalSearchFolders.js';
+import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -152,7 +153,15 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
     folder_path: string;
     relative_path: string;
   } | undefined;
-  return row ?? null;
+  if (!row) {
+    return null;
+  }
+  const folder = loadExternalSearchFolders().find((item) => item.id === row.folder_id) ?? null;
+  const previewContent = resolveExternalPreviewSourceContent(row.content, row.absolute_path);
+  return {
+    ...row,
+    content: row.extension === 'md' ? rewriteExternalPreviewContent(previewContent, row.absolute_path, folder) : previewContent
+  };
 }
 
 export function pruneExternalSearchCache(validFolderIds: string[]) {

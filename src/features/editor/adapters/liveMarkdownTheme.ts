@@ -112,7 +112,7 @@ export const liveMarkdownTheme = EditorView.theme({
     objectFit: 'contain',
     width: 'auto',
   },
-  '.cm-md-image-element-block': { height: 'auto' },
+  '.cm-md-image-element-block': { height: 'auto', maxWidth: '100%', width: '100%' },
   '.cm-md-image-element-inline': { height: '100%', margin: 0, maxHeight: '1lh', verticalAlign: 'bottom' },
   '.cm-md-image-status': {
     alignItems: 'center',

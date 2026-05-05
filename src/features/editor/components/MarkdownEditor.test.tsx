@@ -239,6 +239,14 @@ function registerRenderingSurfaceTests() {
     expect(container.querySelector('.markdown-editor-host')).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
   });
 
+  it('applies custom block image width when requested', () => {
+    const { container } = renderWithMouseGestureProvider(
+      <MarkdownEditor blockImageWidthOverride="min(100%, 40rem)" nodeId="node-1" onChange={vi.fn()} value="![Cover](https://example.com/cover.png)" />
+    );
+
+    expect(container.querySelector('.markdown-editor-host')).toHaveStyle('--editor-image-block-width: min(100%, 40rem)');
+  });
+
   it('marks the editor host when viewport-based image fitting is enabled', () => {
     const { container } = renderWithMouseGestureProvider(
       <MarkdownEditor fitBlockImagesToViewport nodeId="node-1" onChange={vi.fn()} value="![Cover](https://example.com/cover.png)" />

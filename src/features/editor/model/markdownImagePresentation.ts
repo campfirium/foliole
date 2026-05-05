@@ -8,10 +8,10 @@ export interface MarkdownImageRenderPlan {
   isRemote: boolean;
 }
 
-function isRemoteImageSource(value: string) {
+function isBrowserImageSource(value: string) {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return parsed.protocol === 'data:' || parsed.protocol === 'file:' || parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
   }
@@ -22,7 +22,7 @@ function buildAttachmentProtocolUrl(attachmentId: string) {
 }
 
 export function buildMarkdownImageRenderPlan(imageMatch: MarkdownImageMatch): MarkdownImageRenderPlan {
-  if (isRemoteImageSource(imageMatch.source)) {
+  if (isBrowserImageSource(imageMatch.source)) {
     return {
       attachmentProtocolSrc: null,
       display: imageMatch.display,

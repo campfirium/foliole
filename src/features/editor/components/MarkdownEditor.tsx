@@ -63,6 +63,7 @@ function useMarkdownEditorSurfaceModel(args: {
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>;
   bindings: ReturnType<typeof useMouseGestureSettings>['bindings'];
   blockImageMaxHeightOverride: number | undefined;
+  blockImageWidthOverride: string | undefined;
   contentPaddingBottom: string | undefined;
   fitBlockImagesToViewport: boolean;
   hostRef: MutableRefObject<HTMLDivElement | null>;
@@ -91,7 +92,8 @@ function useMarkdownEditorSurfaceModel(args: {
   const editorStyle = {
     '--editor-content-padding-bottom': args.contentPaddingBottom,
     '--editor-image-max-height':
-      typeof args.blockImageMaxHeightOverride === 'number' ? `${args.blockImageMaxHeightOverride}px` : imageMaxHeight
+      typeof args.blockImageMaxHeightOverride === 'number' ? `${args.blockImageMaxHeightOverride}px` : imageMaxHeight,
+    '--editor-image-block-width': args.blockImageWidthOverride
   } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 
@@ -135,6 +137,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     adapterRef,
     bindings,
     blockImageMaxHeightOverride: props.blockImageMaxHeightOverride,
+    blockImageWidthOverride: props.blockImageWidthOverride,
     contentPaddingBottom: props.contentPaddingBottom,
     fitBlockImagesToViewport: props.fitBlockImagesToViewport ?? false,
     hostRef,

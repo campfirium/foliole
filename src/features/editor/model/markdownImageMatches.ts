@@ -10,10 +10,10 @@ export interface MarkdownImageMatch {
   to: number;
 }
 
-function isRemoteImageSource(value: string) {
+function isBrowserImageSource(value: string) {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return parsed.protocol === 'data:' || parsed.protocol === 'file:' || parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
   }
@@ -35,7 +35,7 @@ export function collectImageMatches(from: number, text: string): MarkdownImageMa
   for (const match of collectMarkdownImageReferences(text)) {
     const target = parseMarkdownImageTarget(match.rawTarget);
     const source = target?.destination ?? null;
-    if (source && (isRemoteImageSource(source) || isInternalImageSource(source))) {
+    if (source && (isBrowserImageSource(source) || isInternalImageSource(source))) {
       const start = from + match.start;
       matches.push({
         attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,

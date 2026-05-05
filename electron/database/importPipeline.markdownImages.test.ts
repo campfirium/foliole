@@ -137,3 +137,49 @@ it('routes local markdown images into attachments, leaves remote links unchanged
     });
   }
 });
+
+it('resolves obsidian image embeds from the configured external attachment folder during import', async () => {
+  const vaultRoot = await fs.mkdtemp(path.join(tempRoot, 'external-vault-'));
+  const noteDir = path.join(vaultRoot, 'ir');
+  const attachmentDir = path.join(vaultRoot, 'assets');
+  const sourceMarkdownPath = path.join(noteDir, 'note.md');
+  await fs.mkdir(noteDir, { recursive: true });
+  await fs.mkdir(attachmentDir, { recursive: true });
+  await fs.writeFile(path.join(attachmentDir, 'Pasted image 20260421082325.png'), Buffer.from('external-attachment-image'));
+  await fs.writeFile(sourceMarkdownPath, '# Imported\n\n![[Pasted image 20260421082325.png]]');
+
+  openDatabaseConnection().sqlite.prepare(
+    `INSERT INTO external_search_folders (
+      id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    'folder-1',
+    vaultRoot,
+    'document_relative_first_then_fixed_root',
+    attachmentDir,
+    '[]',
+    'ready',
+    1,
+    null,
+    null,
+    '2026-04-21T00:00:00.000Z',
+    '2026-04-21T00:00:00.000Z'
+  );
+
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: await fs.readFile(sourceMarkdownPath, 'utf8'),
+      degradedReason: null,
+      fileName: 'note.md',
+      filePath: sourceMarkdownPath,
+      importedAt: '2026-04-21T00:35:11.508Z',
+      kind: 'markdown'
+    })
+  );
+
+  const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(imported.nodeId as string) as { content: string };
+  expect(imported.resultStatus).toBe('imported');
+  expect(nodeRow.content).toContain('![Pasted image 20260421082325](asset://');
+  expect(nodeRow.content).not.toContain('[Missing local image:');
+  expect(listNodeAttachments(imported.nodeId as string)).toHaveLength(1);
+});

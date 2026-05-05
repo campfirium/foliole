@@ -2,24 +2,36 @@ import { describe, expect, it } from 'vitest';
 
 import { buildMarkdownImageRenderPlan } from './markdownImagePresentation';
 
+function expectBrowserImagePlan(source: string) {
+  expect(
+    buildMarkdownImageRenderPlan({
+      attachmentId: null,
+      alt: 'Preview',
+      display: 'inline',
+      from: 0,
+      source,
+      to: 10
+    })
+  ).toEqual({
+    attachmentProtocolSrc: null,
+    display: 'inline',
+    fallbackStatus: null,
+    imageSrc: source,
+    isRemote: true
+  });
+}
+
 describe('markdownImagePresentation', () => {
   it('builds remote image render state', () => {
-    expect(
-      buildMarkdownImageRenderPlan({
-        attachmentId: null,
-        alt: 'Remote',
-        display: 'inline',
-        from: 0,
-        source: 'https://example.com/a.png',
-        to: 10
-      })
-    ).toEqual({
-      attachmentProtocolSrc: null,
-      display: 'inline',
-      fallbackStatus: null,
-      imageSrc: 'https://example.com/a.png',
-      isRemote: true
-    });
+    expectBrowserImagePlan('https://example.com/a.png');
+  });
+
+  it('builds file image render state for resolved local preview resources', () => {
+    expectBrowserImagePlan('file:///vault/images/cover.png');
+  });
+
+  it('builds data image render state for inline preview resources', () => {
+    expectBrowserImagePlan('data:image/png;base64,abc123');
   });
 
   it('builds internal attachment image render state', () => {
