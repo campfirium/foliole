@@ -12,7 +12,10 @@ import {
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../model/appearanceSettings';
+import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import { listAvailableSystemFonts } from '../model/systemFonts';
+
+import { HotkeySettingsSection } from './HotkeySettingsSection';
 
 type SettingsCategoryId = 'about' | 'editor' | 'appearance' | 'hotkeys';
 
@@ -27,6 +30,7 @@ interface SettingsPanelProps {
   interfaceFontSize: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
+  hotkeyItems: HotkeySettingItem[];
   onClose: () => void;
   onBaseColorModeChange: (value: BaseColorMode) => void;
   onAccentColorPresetChange: (value: AccentColorPreset) => void;
@@ -40,6 +44,9 @@ interface SettingsPanelProps {
   onInterfaceFontSizeReset: () => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
+  onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyReset: (commandId: string) => void;
+  onHotkeyResetAll: () => void;
 }
 
 const SETTINGS_CATEGORIES: Array<{ id: SettingsCategoryId; label: string }> = [
@@ -115,6 +122,7 @@ export function SettingsPanel({
   interfaceFontSize,
   markdownSyntaxVisibility,
   monospaceFontPreset,
+  hotkeyItems,
   onClose,
   onBaseColorModeChange,
   onAccentColorPresetChange,
@@ -127,7 +135,10 @@ export function SettingsPanel({
   onInterfaceFontSizeChange,
   onInterfaceFontSizeReset,
   onMarkdownSyntaxVisibilityChange,
-  onMonospaceFontPresetChange
+  onMonospaceFontPresetChange,
+  onHotkeyUpdate,
+  onHotkeyReset,
+  onHotkeyResetAll
 }: SettingsPanelProps) {
   const accentColorInputRef = useRef<HTMLInputElement | null>(null);
   const safeAccentColor = ensureAccentHex(accentColorPreset);
@@ -462,16 +473,7 @@ export function SettingsPanel({
           ) : null}
 
           {activeCategory === 'hotkeys' ? (
-            <section aria-label="Hotkeys settings section" className="settings-group">
-              <h3 className="settings-group-title">Hotkeys</h3>
-              <div className="settings-row settings-row-readonly">
-                <div className="settings-row-copy">
-                  <h4>Command shortcuts</h4>
-                  <p>Shortcut customization panel will be added in a follow-up task.</p>
-                </div>
-                <span className="settings-pill">Planned</span>
-              </div>
-            </section>
+            <HotkeySettingsSection items={hotkeyItems} onReset={onHotkeyReset} onResetAll={onHotkeyResetAll} onUpdate={onHotkeyUpdate} />
           ) : null}
         </div>
       </div>

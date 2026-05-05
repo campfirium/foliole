@@ -129,4 +129,23 @@ describe('command registry', () => {
     expect(registry.getPaletteItems()[0]?.enabled).toBe(true);
     expect(registry.getCommandStates()[0]).toMatchObject({ id: 'review.revealAnswer', enabled: true });
   });
+
+  it('supports externally resolved shortcut overrides', () => {
+    const execute = vi.fn();
+    const registry = createCommandRegistry([
+      {
+        id: 'workspace.openSettings',
+        title: 'Open Settings',
+        execute,
+        shortcut: { key: 'o', ctrlKey: true, shiftKey: true }
+      }
+    ]);
+
+    const defaultEvent = new KeyboardEvent('keydown', { key: 'o', ctrlKey: true });
+    const overrideEvent = new KeyboardEvent('keydown', { key: 'o', ctrlKey: true, shiftKey: true });
+
+    expect(registry.runByShortcut(defaultEvent)).toBe(false);
+    expect(registry.runByShortcut(overrideEvent)).toBe(true);
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
 });

@@ -11,7 +11,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
   customMonospaceFont: 'foliole-custom-monospace-font-family',
-  commandRecents: 'foliole-command-recents'
+  commandRecents: 'foliole-command-recents',
+  commandShortcutOverrides: 'foliole-command-shortcut-overrides'
 } as const;
 
 export const APP_SETTINGS_OPTIONS = {

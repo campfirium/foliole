@@ -24,6 +24,7 @@ export interface CommandRegistration {
   id: string;
   title: string;
   section?: string;
+  shortcutScope?: string;
   keywords?: string[];
   palette?: boolean;
   execute: (context: CommandContext) => boolean | void;

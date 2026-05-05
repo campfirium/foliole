@@ -13,6 +13,7 @@ import type {
   InterfaceFontPreset,
   MonospaceFontPreset
 } from '../../features/settings/model/appearanceSettings';
+import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -97,7 +98,11 @@ export interface WorkspaceLayoutProps {
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   editorDisplayMode: EditorDisplayMode;
   monospaceFontPreset: MonospaceFontPreset;
+  hotkeyItems: HotkeySettingItem[];
   selectedTrashNodeId: string | null;
+  onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyReset: (commandId: string) => void;
+  onHotkeyResetAll: () => void;
 }
 export function WorkspaceLayout({
   activeNodeId,
@@ -170,7 +175,11 @@ export function WorkspaceLayout({
   markdownSyntaxVisibility,
   editorDisplayMode,
   monospaceFontPreset,
-  selectedTrashNodeId
+  hotkeyItems,
+  selectedTrashNodeId,
+  onHotkeyUpdate,
+  onHotkeyReset,
+  onHotkeyResetAll
 }: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
     '--workspace-list-width': `${listWidth}px`
@@ -281,6 +290,7 @@ export function WorkspaceLayout({
           uiFontPreset={uiFontPreset}
           interfaceFontPreset={interfaceFontPreset}
           interfaceFontSize={interfaceFontSize}
+          hotkeyItems={hotkeyItems}
           markdownSyntaxVisibility={markdownSyntaxVisibility}
           monospaceFontPreset={monospaceFontPreset}
           onClose={onCloseSettings}
@@ -296,6 +306,9 @@ export function WorkspaceLayout({
           onInterfaceFontSizeReset={onInterfaceFontSizeReset}
           onMarkdownSyntaxVisibilityChange={onMarkdownSyntaxVisibilityChange}
           onMonospaceFontPresetChange={onMonospaceFontPresetChange}
+          onHotkeyUpdate={onHotkeyUpdate}
+          onHotkeyReset={onHotkeyReset}
+          onHotkeyResetAll={onHotkeyResetAll}
         />
       ) : null}
     </main>

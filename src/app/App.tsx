@@ -39,9 +39,20 @@ import {
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../features/settings/model/appearanceSettings';
+import type { HotkeySettingItem, HotkeyUpdateResult } from '../features/settings/model/hotkeySettings';
+import { buildCommandShortcutConflictMap } from '../shared/commands/conflicts';
+import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS, type AppCommandId } from '../shared/commands/ids';
+import {
+  buildShortcutOverrideLabel,
+  getCommandShortcutOverrides,
+  resolveCommandShortcutMap,
+  setCommandShortcutOverrides,
+  type CommandShortcutOverrides
+} from '../shared/commands/keymap';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../shared/commands/recentCommands';
 import { createCommandRegistry } from '../shared/commands/registry';
+import { formatShortcutLabel, parseShortcutLabel } from '../shared/commands/shortcuts';
 import type { CommandRegistration } from '../shared/commands/types';
 import { onNativeMenuCommand, syncNativeMenuState } from '../shared/platform/commandMenu';
 import { onWindowKeydown } from '../shared/platform/keyboard';
@@ -57,6 +68,28 @@ import { useTrashView } from './hooks/useTrashView';
 import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 
 const APP_COMMAND_ID_SET = new Set<string>(Object.values(APP_COMMAND_IDS));
+const DEFAULT_SHORTCUT_SCOPE = 'global';
+const COMMAND_SHORTCUT_SCOPE_BY_ID: Record<AppCommandId, string> = {
+  [APP_COMMAND_IDS.toggleCommandPaletteMac]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.toggleCommandPaletteWin]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.closeCommandPalette]: 'commandPalette',
+  [APP_COMMAND_IDS.closeSettings]: 'settings',
+  [APP_COMMAND_IDS.closeContextMenu]: 'contextMenu',
+  [APP_COMMAND_IDS.goBack]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.goForward]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.goParent]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.toggleEditorDisplayMode]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.startStudyMode]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.revealReviewAnswer]: 'review',
+  [APP_COMMAND_IDS.gradeReviewAgain]: 'review',
+  [APP_COMMAND_IDS.gradeReviewHard]: 'review',
+  [APP_COMMAND_IDS.gradeReviewGood]: 'review',
+  [APP_COMMAND_IDS.gradeReviewEasy]: 'review',
+  [APP_COMMAND_IDS.openNotes]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.openTrash]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.openSettings]: DEFAULT_SHORTCUT_SCOPE,
+  [APP_COMMAND_IDS.toggleList]: DEFAULT_SHORTCUT_SCOPE
+};
 
 function isAppCommandId(value: string): value is AppCommandId {
   return APP_COMMAND_ID_SET.has(value);
@@ -110,6 +143,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
+  const [commandShortcutOverrides, setCommandShortcutOverridesState] = useState<CommandShortcutOverrides>(() =>
+    getCommandShortcutOverrides()
+  );
   const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() =>
     getMarkdownSyntaxVisibility()
   );
@@ -421,14 +457,30 @@ export function App() {
     ]
   );
 
+  const resolvedCommandShortcutMap = useMemo(
+    () =>
+      resolveCommandShortcutMap({
+        commandIds: Object.values(APP_COMMAND_IDS),
+        defaults: DEFAULT_APP_COMMAND_SHORTCUTS,
+        overrides: commandShortcutOverrides
+      }),
+    [commandShortcutOverrides]
+  );
+
+  const updateShortcutOverrides = useCallback((nextOverrides: CommandShortcutOverrides) => {
+    setCommandShortcutOverridesState(nextOverrides);
+    setCommandShortcutOverrides(nextOverrides);
+  }, []);
+
   const appCommands = useMemo<CommandRegistration[]>(
     () => [
       {
         id: APP_COMMAND_IDS.toggleCommandPaletteMac,
         title: 'Toggle Command Palette',
         section: 'System',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.toggleCommandPaletteMac],
         keywords: ['commands', 'search'],
-        shortcut: { key: 'p', metaKey: true },
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.toggleCommandPaletteMac],
         execute: () => {
           setIsCommandPaletteOpen((open) => !open);
         }
@@ -437,9 +489,10 @@ export function App() {
         id: APP_COMMAND_IDS.toggleCommandPaletteWin,
         title: 'Toggle Command Palette',
         section: 'System',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.toggleCommandPaletteWin],
         keywords: ['commands', 'search'],
         palette: false,
-        shortcut: { key: 'p', ctrlKey: true },
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.toggleCommandPaletteWin],
         execute: () => {
           setIsCommandPaletteOpen((open) => !open);
         }
@@ -448,7 +501,8 @@ export function App() {
         id: APP_COMMAND_IDS.closeCommandPalette,
         title: 'Close Command Palette',
         section: 'System',
-        shortcut: { key: 'Escape' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.closeCommandPalette],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.closeCommandPalette],
         isEnabled: (context) => Boolean(context.isCommandPaletteOpen),
         execute: () => {
           setIsCommandPaletteOpen(false);
@@ -458,7 +512,8 @@ export function App() {
         id: APP_COMMAND_IDS.closeSettings,
         title: 'Close Settings',
         section: 'System',
-        shortcut: { key: 'Escape' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.closeSettings],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.closeSettings],
         isEnabled: (context) => Boolean(context.isSettingsOpen),
         execute: () => {
           setIsSettingsOpen(false);
@@ -468,7 +523,8 @@ export function App() {
         id: APP_COMMAND_IDS.closeContextMenu,
         title: 'Close Context Menu',
         section: 'System',
-        shortcut: { key: 'Escape' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.closeContextMenu],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.closeContextMenu],
         execute: () => {
           closeContextMenu();
         }
@@ -477,7 +533,8 @@ export function App() {
         id: APP_COMMAND_IDS.goBack,
         title: 'Go Back',
         section: 'Navigation',
-        shortcut: { key: 'ArrowLeft', altKey: true },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.goBack],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.goBack],
         isEnabled: (context) => Boolean(context.canGoBack),
         execute: handleGoBack
       },
@@ -485,7 +542,8 @@ export function App() {
         id: APP_COMMAND_IDS.goForward,
         title: 'Go Forward',
         section: 'Navigation',
-        shortcut: { key: 'ArrowRight', altKey: true },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.goForward],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.goForward],
         isEnabled: (context) => Boolean(context.canGoForward),
         execute: handleGoForward
       },
@@ -493,6 +551,8 @@ export function App() {
         id: APP_COMMAND_IDS.goParent,
         title: 'Go to Parent Node',
         section: 'Navigation',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.goParent],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.goParent],
         isEnabled: (context) => Boolean(context.canGoParent),
         execute: handleGoParent
       },
@@ -500,6 +560,8 @@ export function App() {
         id: APP_COMMAND_IDS.toggleEditorDisplayMode,
         title: editorDisplayMode === 'preview' ? 'Switch to Source Mode' : 'Switch to Live Preview',
         section: 'Editor',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.toggleEditorDisplayMode],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.toggleEditorDisplayMode],
         keywords: ['preview', 'source', 'markdown'],
         execute: handleToggleEditorDisplayMode
       },
@@ -507,6 +569,8 @@ export function App() {
         id: APP_COMMAND_IDS.startStudyMode,
         title: 'Start Study Mode',
         section: 'Review',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.startStudyMode],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.startStudyMode],
         isEnabled: (context) => Boolean(context.canStartStudyMode) && !context.isStudyMode,
         execute: handleStartStudyMode
       },
@@ -514,7 +578,8 @@ export function App() {
         id: APP_COMMAND_IDS.revealReviewAnswer,
         title: 'Show Answer',
         section: 'Review',
-        shortcut: { key: ' ', shiftKey: true },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.revealReviewAnswer],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.revealReviewAnswer],
         isEnabled: (context) => Boolean(context.isStudyMode) && !context.isAnswerRevealed,
         execute: handleRevealAnswer
       },
@@ -522,7 +587,8 @@ export function App() {
         id: APP_COMMAND_IDS.gradeReviewAgain,
         title: 'Grade: Again (1)',
         section: 'Review',
-        shortcut: { key: '1' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.gradeReviewAgain],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.gradeReviewAgain],
         isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
         execute: () => {
           void handleGradeReview(1);
@@ -532,7 +598,8 @@ export function App() {
         id: APP_COMMAND_IDS.gradeReviewHard,
         title: 'Grade: Hard (2)',
         section: 'Review',
-        shortcut: { key: '2' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.gradeReviewHard],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.gradeReviewHard],
         isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
         execute: () => {
           void handleGradeReview(2);
@@ -542,7 +609,8 @@ export function App() {
         id: APP_COMMAND_IDS.gradeReviewGood,
         title: 'Grade: Good (3)',
         section: 'Review',
-        shortcut: { key: '3' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.gradeReviewGood],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.gradeReviewGood],
         isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
         execute: () => {
           void handleGradeReview(3);
@@ -552,7 +620,8 @@ export function App() {
         id: APP_COMMAND_IDS.gradeReviewEasy,
         title: 'Grade: Easy (4)',
         section: 'Review',
-        shortcut: { key: '4' },
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.gradeReviewEasy],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.gradeReviewEasy],
         isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
         execute: () => {
           void handleGradeReview(4);
@@ -562,18 +631,24 @@ export function App() {
         id: APP_COMMAND_IDS.openNotes,
         title: 'Open Notes',
         section: 'Workspace',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.openNotes],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.openNotes],
         execute: handleOpenNotesView
       },
       {
         id: APP_COMMAND_IDS.openTrash,
         title: 'Open Trash',
         section: 'Workspace',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.openTrash],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.openTrash],
         execute: handleOpenTrashView
       },
       {
         id: APP_COMMAND_IDS.openSettings,
         title: 'Open Settings',
         section: 'Workspace',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.openSettings],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.openSettings],
         execute: () => {
           setIsCommandPaletteOpen(false);
           handleOpenSettings();
@@ -583,6 +658,8 @@ export function App() {
         id: APP_COMMAND_IDS.toggleList,
         title: 'Toggle Left Panel',
         section: 'Workspace',
+        shortcutScope: COMMAND_SHORTCUT_SCOPE_BY_ID[APP_COMMAND_IDS.toggleList],
+        shortcut: resolvedCommandShortcutMap[APP_COMMAND_IDS.toggleList],
         execute: handleToggleListVisibility
       }
     ],
@@ -604,7 +681,8 @@ export function App() {
       handleToggleListVisibility,
       canStartStudyMode,
       editorDisplayMode,
-      isStudyMode
+      isStudyMode,
+      resolvedCommandShortcutMap
     ]
   );
   const appCommandRegistry = useMemo(() => createCommandRegistry(appCommands, () => commandContext), [appCommands, commandContext]);
@@ -617,6 +695,106 @@ export function App() {
     [appCommandRegistry]
   );
   const commandPaletteItems = useMemo(() => appCommandRegistry.getPaletteItems(), [appCommandRegistry]);
+  const commandShortcutConflicts = useMemo(
+    () =>
+      buildCommandShortcutConflictMap(
+        appCommands.map((command) => ({
+          commandId: command.id,
+          title: command.title,
+          section: command.section,
+          scope: command.shortcutScope ?? DEFAULT_SHORTCUT_SCOPE,
+          shortcut: command.shortcut
+        }))
+      ),
+    [appCommands]
+  );
+  const hotkeyItems = useMemo<HotkeySettingItem[]>(
+    () =>
+      appCommands
+        .filter((command) => command.id !== APP_COMMAND_IDS.closeContextMenu)
+        .map((command) => {
+          const shortcut = command.shortcut;
+          const conflict = commandShortcutConflicts[command.id];
+          return {
+            commandId: command.id,
+            title: command.title,
+            section: command.section,
+            shortcutLabel: shortcut ? formatShortcutLabel(shortcut) : '',
+            isCustomized: Boolean(commandShortcutOverrides[command.id]),
+            conflictSeverity: conflict?.severity,
+            conflictMessage: conflict?.message
+          };
+        })
+        .sort((left, right) => {
+          const bySection = (left.section ?? 'Other').localeCompare(right.section ?? 'Other');
+          if (bySection !== 0) {
+            return bySection;
+          }
+          return left.title.localeCompare(right.title);
+        }),
+    [appCommands, commandShortcutConflicts, commandShortcutOverrides]
+  );
+
+  const handleHotkeyUpdate = useCallback(
+    (commandId: string, nextLabel: string): HotkeyUpdateResult => {
+      const normalizedInput = nextLabel.trim();
+      if (!normalizedInput) {
+        const nextOverrides = { ...commandShortcutOverrides };
+        delete nextOverrides[commandId];
+        updateShortcutOverrides(nextOverrides);
+        return { status: 'applied', normalizedShortcutLabel: '' };
+      }
+
+      const parsedShortcut = parseShortcutLabel(normalizedInput);
+      if (!parsedShortcut) {
+        return { status: 'invalid', message: 'Shortcut format is invalid. Example: Ctrl+Shift+K' };
+      }
+
+      const nextOverrides = {
+        ...commandShortcutOverrides,
+        [commandId]: buildShortcutOverrideLabel(parsedShortcut)
+      };
+      const candidateShortcutMap = resolveCommandShortcutMap({
+        commandIds: Object.values(APP_COMMAND_IDS),
+        defaults: DEFAULT_APP_COMMAND_SHORTCUTS,
+        overrides: nextOverrides
+      });
+      const candidateConflicts = buildCommandShortcutConflictMap(
+        appCommands.map((command) => ({
+          commandId: command.id,
+          title: command.title,
+          section: command.section,
+          scope: command.shortcutScope ?? DEFAULT_SHORTCUT_SCOPE,
+          shortcut: candidateShortcutMap[command.id]
+        }))
+      );
+      const conflict = candidateConflicts[commandId];
+      if (conflict?.severity === 'error') {
+        return { status: 'blocked', message: conflict.message };
+      }
+
+      updateShortcutOverrides(nextOverrides);
+      return {
+        status: 'applied',
+        normalizedShortcutLabel: formatShortcutLabel(parsedShortcut),
+        message: conflict?.message
+      };
+    },
+    [appCommands, commandShortcutOverrides, updateShortcutOverrides]
+  );
+
+  const handleHotkeyReset = useCallback(
+    (commandId: string) => {
+      const nextOverrides = { ...commandShortcutOverrides };
+      delete nextOverrides[commandId];
+      updateShortcutOverrides(nextOverrides);
+    },
+    [commandShortcutOverrides, updateShortcutOverrides]
+  );
+
+  const handleHotkeyResetAll = useCallback(() => {
+    updateShortcutOverrides({});
+  }, [updateShortcutOverrides]);
 
   const trackCommandUsage = useCallback((commandId: string) => {
     setRecentCommandIdsState((current) => {
@@ -784,11 +962,15 @@ export function App() {
         uiFontPreset={uiFontPreset}
         interfaceFontPreset={interfaceFontPreset}
         interfaceFontSize={interfaceFontSize}
+        hotkeyItems={hotkeyItems}
         markdownSyntaxVisibility={markdownSyntaxVisibility}
         editorDisplayMode={editorDisplayMode}
         monospaceFontPreset={monospaceFontPreset}
         selectedTrashNodeId={selectedTrashNodeId}
         showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}
+        onHotkeyUpdate={handleHotkeyUpdate}
+        onHotkeyReset={handleHotkeyReset}
+        onHotkeyResetAll={handleHotkeyResetAll}
       />
       <CommandPalette
         isOpen={isCommandPaletteOpen}

@@ -447,6 +447,110 @@ body.workspace-resizing {
   text-align: right;
 }
 
+.settings-hotkey-toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.settings-hotkey-reset-all {
+  background: transparent;
+  border: 1px solid #cdd2d8;
+  border-radius: 8px;
+  color: #2c323a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  padding: 5px 9px;
+}
+
+.settings-hotkey-search-wrap {
+  margin-bottom: 8px;
+}
+
+.settings-hotkey-search {
+  background: #fbfbfa;
+  border: 1px solid #d8dbe0;
+  border-radius: 8px;
+  color: #1f252c;
+  font: inherit;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.settings-hotkey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-hotkey-row {
+  align-items: center;
+  background: #f2f2ef;
+  border: 1px solid #e8e8e2;
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  min-height: 70px;
+  padding: 10px 12px;
+}
+
+.settings-hotkey-controls {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.settings-hotkey-input {
+  border: 1px solid #ccd0d6;
+  border-radius: 8px;
+  color: #1f2328;
+  font: inherit;
+  min-width: 0;
+  padding: 6px 8px;
+  width: 160px;
+}
+
+.settings-hotkey-chip {
+  background: #e6eaef;
+  border-radius: 999px;
+  color: #3e4652;
+  font-size: 0.76rem;
+  padding: 3px 7px;
+}
+
+.settings-hotkey-badge {
+  border-radius: 999px;
+  font-size: 0.76rem;
+  padding: 3px 7px;
+}
+
+.settings-hotkey-badge-warning {
+  background: #fff1d8;
+  color: #835e1f;
+}
+
+.settings-hotkey-badge-error {
+  background: #ffe1e1;
+  color: #9f2e2e;
+}
+
+.settings-hotkey-hint {
+  color: #7f6331;
+  font-size: 0.8rem;
+}
+
+.settings-hotkey-error {
+  color: #a43636;
+  font-size: 0.8rem;
+}
+
+.settings-hotkey-empty {
+  color: #5f666f;
+  margin: 8px 0 0;
+}
+
 @media (max-width: 1080px) {
   .settings-root {
     padding: 8px;
@@ -480,5 +584,18 @@ body.workspace-resizing {
   .settings-accent-controls {
     width: 100%;
     flex-basis: auto;
+  }
+
+  .settings-hotkey-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settings-hotkey-controls {
+    width: 100%;
+  }
+
+  .settings-hotkey-input {
+    width: 100%;
   }
 }
