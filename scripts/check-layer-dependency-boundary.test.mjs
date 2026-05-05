@@ -55,11 +55,15 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     );
   });
 
-  it('blocks settings production code from importing runtime command details', async () => {
+  it('blocks feature production code from importing runtime command details', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'src/features/settings/settingsRuntime.ts', `
       import { getRuntimeInvoke } from '../../shared/platform/bridge';
       import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+    `);
+    await mkdir(path.join(repoRoot, 'src', 'features', 'library'), { recursive: true });
+    await writeFixtureFile(repoRoot, 'src/features/library/libraryRuntime.ts', `
+      import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
     `);
 
     const result = inspectLayerDependencyBoundary({ repoRoot });
@@ -67,7 +71,8 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     expect(result.violations).toEqual(
       expect.arrayContaining([
         { file: 'src/features/settings/settingsRuntime.ts', line: 1, kind: 'runtime-command-import' },
-        { file: 'src/features/settings/settingsRuntime.ts', line: 2, kind: 'runtime-command-import' }
+        { file: 'src/features/settings/settingsRuntime.ts', line: 2, kind: 'runtime-command-import' },
+        { file: 'src/features/library/libraryRuntime.ts', line: 1, kind: 'runtime-command-import' }
       ])
     );
   });

@@ -10,7 +10,7 @@ const TEST_FILE_PATTERN = /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/;
 const BANNED_IMPORT_PATTERN =
   /\b(?:import(?:\s+type)?[\s\S]*?\s+from\s+|import\s*\(|require\s*\()\s*['"](?:better-sqlite3|child_process(?:\/[^'"]+)?|electron(?:\/[^'"]+)?|fs(?:\/[^'"]+)?|node:child_process(?:\/[^'"]+)?|node:fs(?:\/[^'"]+)?|node:path(?:\/[^'"]+)?|path(?:\/[^'"]+)?)['"]/;
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
-const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/store/', 'src/features/review/', 'src/features/settings/'];
+const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/store/', 'src/features/'];
 const RUNTIME_COMMAND_BOUNDARY_FILES = new Set([
   'src/app/components/SearchPalette.tsx',
   'src/app/components/importSourceWorkspaceSettings.ts',
