@@ -24,20 +24,8 @@ const ALLOWED_SQL_LITERALS = [
 ];
 const ALLOWED_DIRECT_LOAD_ARRAY = [
   {
-    file: 'FolioleCompanionDatabaseHelper.java',
-    text: 'FolioleCompanionSyncConflictQueryRules.nodeConflictsQueryName(context)'
-  },
-  {
-    file: 'FolioleCompanionDatabaseMigration.java',
-    text: '.loadArray(context, database, repairValue(context, "legacyRowsQueryName"))'
-  },
-  {
-    file: 'FolioleCompanionSyncObjectStore.java',
-    text: 'return FolioleCompanionNamedQueryStore.loadArray(context, database, FolioleCompanionSyncObjectQueryRules.syncIndexQueryName(context));'
-  },
-  {
-    file: 'FolioleCompanionSyncPayloadQueryStore.java',
-    text: 'JSObject result = FolioleCompanionNamedQueryStore.loadArray(context, database, queryName, replacements, args);'
+    file: 'FolioleCompanionGeneratedArrayQueryRunner.java',
+    text: 'return FolioleCompanionNamedQueryStore.loadArray(context, database, queryName'
   }
 ];
 

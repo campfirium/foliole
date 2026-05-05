@@ -19,7 +19,7 @@ final class FolioleCompanionPdfPageTextStore {
         if (attachmentId == null || attachmentId.trim().isEmpty()) {
             return result;
         }
-        JSObject loaded = FolioleCompanionNamedQueryStore.loadArray(
+        JSObject loaded = FolioleCompanionGeneratedArrayQueryRunner.load(
             context,
             database,
             stringRule(context, "pagesQueryName"),

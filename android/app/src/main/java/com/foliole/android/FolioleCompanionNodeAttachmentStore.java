@@ -48,7 +48,7 @@ final class FolioleCompanionNodeAttachmentStore {
     }
 
     static JSONArray loadNodeAttachments(Context context, SQLiteDatabase database, String nodeId) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadArray(
+        return FolioleCompanionGeneratedArrayQueryRunner.load(
             context,
             database,
             nodeAttachmentRule(context, "queryName"),

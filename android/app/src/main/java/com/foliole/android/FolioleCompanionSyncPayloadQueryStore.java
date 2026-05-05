@@ -145,7 +145,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
         Map<String, String> replacements,
         String[] args
     ) throws Exception {
-        JSObject result = FolioleCompanionNamedQueryStore.loadArray(context, database, queryName, replacements, args);
+        JSObject result = FolioleCompanionGeneratedArrayQueryRunner.load(context, database, queryName, replacements, args);
         JSONArray rows = result.getJSONArray(resultKey);
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);

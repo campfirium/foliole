@@ -14,7 +14,7 @@ final class FolioleCompanionSyncObjectStore {
     private FolioleCompanionSyncObjectStore() {}
 
     static JSObject loadSyncIndex(Context context, SQLiteDatabase database) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadArray(context, database, FolioleCompanionSyncObjectQueryRules.syncIndexQueryName(context));
+        return FolioleCompanionGeneratedArrayQueryRunner.load(context, database, FolioleCompanionSyncObjectQueryRules.syncIndexQueryName(context));
     }
 
     static JSObject loadSyncObjects(Context context, SQLiteDatabase database, JSONArray objectIds, JSONArray objectTypes) throws Exception {

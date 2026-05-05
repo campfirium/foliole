@@ -91,8 +91,8 @@ final class FolioleCompanionDatabaseMigration {
 
     private static void copyLegacySyncObjectStateRows(Context context, SQLiteDatabase database) {
         try {
-            JSONArray rows = FolioleCompanionNamedQueryStore
-                .loadArray(context, database, repairValue(context, "legacyRowsQueryName"))
+            JSONArray rows = FolioleCompanionGeneratedArrayQueryRunner
+                .load(context, database, repairValue(context, "legacyRowsQueryName"))
                 .getJSONArray(repairValue(context, "legacyRowsResultKey"));
             for (int index = 0; index < rows.length(); index += 1) {
                 insertLegacySyncObjectStateRow(context, database, rows.getJSONObject(index), index + 1);

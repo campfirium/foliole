@@ -13,7 +13,7 @@ final class FolioleCompanionSyncNodeVersionStore {
     private FolioleCompanionSyncNodeVersionStore() {}
 
     static JSObject loadNodeVersions(Context context, SQLiteDatabase database, JSONObject cursor, int limit, String deviceId) throws Exception {
-        JSObject result = FolioleCompanionNamedQueryStore.loadArray(
+        JSObject result = FolioleCompanionGeneratedArrayQueryRunner.load(
             context,
             database,
             FolioleCompanionSyncStreamQueryRules.nodeVersionsQueryName(context),
