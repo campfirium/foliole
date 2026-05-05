@@ -314,7 +314,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject loadMissingAttachmentResource(String attachmentId) {
         SQLiteDatabase database = getReadableDatabase();
-        return FolioleCompanionAttachmentResourceStore.loadMissingResource(database, attachmentId);
+        return FolioleCompanionAttachmentResourceStore.loadMissingResource(context, database, attachmentId);
     }
 
     JSObject loadMissingContentBlobHashes(int limit) {

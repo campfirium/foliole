@@ -55,16 +55,22 @@ final class FolioleCompanionAttachmentResourceStore {
         return result;
     }
 
-    static JSObject loadMissingResource(SQLiteDatabase database, String attachmentId) {
+    static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
         JSObject result = new JSObject();
         try (Cursor cursor = database.rawQuery(
-            "SELECT attachment_id, content_hash, COALESCE(size_bytes, 0) FROM attachment_blobs " +
+            "SELECT attachment_id, content_hash, COALESCE(size_bytes, 0), availability, storage_key FROM attachment_blobs " +
                 "WHERE attachment_id = ? AND content_hash IS NOT NULL AND TRIM(content_hash) != '' " +
-                "AND availability != 'cached' LIMIT 1",
+                "LIMIT 1",
             new String[] { normalizedAttachmentId }
         )) {
             if (!cursor.moveToFirst()) {
+                result.put("resource", null);
+                return result;
+            }
+            String availability = cursor.getString(3);
+            String storageKey = cursor.isNull(4) ? null : cursor.getString(4);
+            if ("cached".equals(availability) && hasAttachmentFile(context, storageKey)) {
                 result.put("resource", null);
                 return result;
             }
@@ -75,6 +81,14 @@ final class FolioleCompanionAttachmentResourceStore {
             result.put("resource", resource);
             return result;
         }
+    }
+
+    private static boolean hasAttachmentFile(Context context, String storageKey) {
+        if (storageKey == null || storageKey.trim().isEmpty()) {
+            return false;
+        }
+        File file = attachmentFile(context, storageKey.trim());
+        return file.exists() && file.isFile();
     }
 
     static JSObject syncResource(

@@ -51,6 +51,7 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     public void tearDown() {
         database.close();
         deleteAttachmentFile("hash-android-1");
+        deleteAttachmentFile("hash-cached");
     }
 
     @Test
@@ -94,7 +95,7 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         insertAttachmentManifest("queued-att", "hash-queued", "2026-04-25T00:00:00.000Z");
         insertAttachmentManifest("active-att", "hash-active", "2026-04-26T00:00:00.000Z");
 
-        JSONObject resource = FolioleCompanionAttachmentResourceStore.loadMissingResource(database, "active-att")
+        JSONObject resource = FolioleCompanionAttachmentResourceStore.loadMissingResource(context, database, "active-att")
             .getJSONObject("resource");
 
         assertEquals("active-att", resource.getString("attachment_id"));
@@ -106,8 +107,22 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     public void doesNotLoadCachedManifestResourceForActivePriority() throws Exception {
         insertAttachmentManifest("cached-att", "hash-cached", "2026-04-25T00:00:00.000Z");
         database.execSQL("UPDATE attachment_blobs SET availability = 'cached' WHERE attachment_id = 'cached-att'");
+        writeAttachmentFile("hash-cached", "cached-bytes");
 
-        assertTrue(FolioleCompanionAttachmentResourceStore.loadMissingResource(database, "cached-att").isNull("resource"));
+        assertTrue(FolioleCompanionAttachmentResourceStore.loadMissingResource(context, database, "cached-att").isNull("resource"));
+    }
+
+    @Test
+    public void loadsCachedManifestResourceWhenLocalFileIsMissing() throws Exception {
+        insertAttachmentManifest("cached-missing-file-att", "hash-missing-file", "2026-04-25T00:00:00.000Z");
+        database.execSQL("UPDATE attachment_blobs SET availability = 'cached', storage_key = 'hash-missing-file' " +
+            "WHERE attachment_id = 'cached-missing-file-att'");
+
+        JSONObject resource = FolioleCompanionAttachmentResourceStore.loadMissingResource(context, database, "cached-missing-file-att")
+            .getJSONObject("resource");
+
+        assertEquals("cached-missing-file-att", resource.getString("attachment_id"));
+        assertEquals("hash-missing-file", resource.getString("content_hash"));
     }
 
     @Test
@@ -217,6 +232,14 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);
         if (file.exists()) {
             file.delete();
+        }
+    }
+
+    private void writeAttachmentFile(String storageKey, String content) throws Exception {
+        File directory = new File(context.getFilesDir(), "attachments");
+        assertTrue(directory.exists() || directory.mkdirs());
+        try (OutputStream output = new java.io.FileOutputStream(new File(directory, storageKey))) {
+            output.write(content.getBytes(StandardCharsets.UTF_8));
         }
     }
 
