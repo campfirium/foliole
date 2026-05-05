@@ -3,6 +3,7 @@ export const CLASSIFICATIONS = {
     responsibility: 'Read packaged assets and parse primitive host payload helpers without owning domain rules.',
     files: [
       'FolioleCompanionAssetReader.java',
+      'FolioleCompanionContentBlobCasRules.java',
       'FolioleCompanionJsonValueParser.java',
       'FolioleCompanionSyncContentHash.java'
     ]

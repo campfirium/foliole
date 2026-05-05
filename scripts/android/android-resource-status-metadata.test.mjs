@@ -16,6 +16,15 @@ const SYNC_PROTOCOL_DEFINITIONS = path.join(
   'assets',
   'companion-sync-protocol-definitions.json'
 );
+const QUERY_DEFINITIONS = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'assets',
+  'companion-query-definitions.json'
+);
 
 const javaSource = (name) =>
   readFile(path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android', name), 'utf8');
@@ -37,6 +46,7 @@ describe('Android resource status metadata', () => {
   });
 
   it('keeps Android Java resource status consumers wired to generated metadata', async () => {
+    const queryDefinitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
     const sources = await Promise.all([
       javaSource('FolioleCompanionReadableArticleQuery.java'),
       javaSource('FolioleCompanionExternalDocumentStore.java'),
@@ -53,8 +63,11 @@ describe('Android resource status metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing")');
-    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, nodePayloadVisibleBodyStatusGroup(context, rules))');
+    expect(queryDefinitions.queries.readableArticleByNodeId.sql).toContain("IN ('fetching', 'failed')");
+    expect(queryDefinitions.queries.externalDocumentById.sql).toContain("ELSE 'missing' END");
+    expect(queryDefinitions.workspaceRead.snapshot.bodyStatusExpressionWithBodyBlobSql).toContain("IN ('fetching', 'failed')");
+    expect(combined).not.toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses")');
     expect(combined).not.toContain('"fetching".equals(availability)');
     expect(combined).not.toContain('"failed".equals(availability)');
     expect(combined).not.toContain('"cached".equals(availability)');
