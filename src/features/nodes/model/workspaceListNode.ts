@@ -66,6 +66,54 @@ export function toWorkspaceListNodesById(
   );
 }
 
+function isWorkspaceListProjectionReusable(
+  projectedNode: WorkspaceListNode | undefined,
+  sourceNode: Node | undefined
+) {
+  if (!projectedNode || !sourceNode) {
+    return projectedNode === undefined && sourceNode === undefined;
+  }
+
+  return (
+    projectedNode.anchorLink === (sourceNode.anchorLink ?? null) &&
+    projectedNode.createdAt === sourceNode.createdAt &&
+    projectedNode.desiredRetention === (sourceNode.desiredRetention ?? null) &&
+    projectedNode.hasContent === hasNodeContent(sourceNode) &&
+    projectedNode.hasReveal === hasNodeReveal(sourceNode) &&
+    projectedNode.id === sourceNode.id &&
+    projectedNode.kind === sourceNode.kind &&
+    projectedNode.parentNodeId === sourceNode.parentNodeId &&
+    projectedNode.priority === (sourceNode.priority ?? null) &&
+    projectedNode.reading === (sourceNode.reading ?? null) &&
+    projectedNode.review === sourceNode.review &&
+    projectedNode.specialKind === sourceNode.specialKind &&
+    projectedNode.title === sourceNode.title &&
+    projectedNode.updatedAt === sourceNode.updatedAt
+  );
+}
+
+export function projectWorkspaceListNodesById(
+  nodesById: Record<string, Node | undefined>,
+  previousProjection?: WorkspaceListNodesById
+): WorkspaceListNodesById {
+  const previous = previousProjection ?? {};
+  let changed = Object.keys(previous).length !== Object.keys(nodesById).length;
+  const nextProjection: WorkspaceListNodesById = {};
+
+  for (const [nodeId, node] of Object.entries(nodesById)) {
+    const previousNode = previous[nodeId];
+    if (isWorkspaceListProjectionReusable(previousNode, node)) {
+      nextProjection[nodeId] = previousNode;
+      continue;
+    }
+
+    nextProjection[nodeId] = node ? toWorkspaceListNode(node) : undefined;
+    changed = true;
+  }
+
+  return changed ? nextProjection : previous;
+}
+
 export type WorkspaceListReviewItemKind = 'none' | 'reading' | 'fsrs';
 
 function resolveFormalReviewItemKind(kind: NodeKind | null | undefined): WorkspaceListReviewItemKind | null {

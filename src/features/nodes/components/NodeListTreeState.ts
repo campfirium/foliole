@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { buildNodeTree, buildVisibleNodeTreeRows, type NodeTreeRow } from '../model/nodeTree';
@@ -193,7 +193,7 @@ export function useNodeSelectionHandler({
   state: NodeListState;
   trashedNodeIds: string[];
 }) {
-  return (nodeId: string, modifiers?: NodeSelectModifiers) => {
+  return useCallback((nodeId: string, modifiers?: NodeSelectModifiers) => {
     const isTrashNode = trashedNodeIds.includes(nodeId);
     const isVirtualListNode = isVirtualNode(nodesById[nodeId]);
     const scopeIds = isTrashNode ? state.trashRowIds : isVirtualListNode ? state.virtualRowIds : state.noteRowIds;
@@ -222,5 +222,5 @@ export function useNodeSelectionHandler({
     state.setSelectedNodeIds([nodeId]);
     state.setSelectionAnchorNodeId(nodeId);
     notify(nodeId);
-  };
+  }, [activeNodeId, nodesById, onSelectNode, onSelectTrashNode, selectedTrashNodeId, state, trashedNodeIds]);
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
+import { useCallback, useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
 
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -238,7 +238,7 @@ export function useNodeListDragController({
     dropTargetNodeId: state.dropTargetNodeId,
     dropIntent: state.dropIntent,
     isRootDropActive: state.isRootDropActive,
-    onDragEnd: () => setState(createInitialDragState()),
+    onDragEnd: useCallback(() => setState(createInitialDragState()), []),
     onDragEnterNode: onDragOverNode,
     onDragOverNode,
     onDragOverRoot,

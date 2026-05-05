@@ -4,6 +4,9 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent
 } from 'react';
+import { memo } from 'react';
+
+import { recordNodeListRowRender } from '../../../shared/platform/performanceDiagnosticsProbe';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import {
@@ -14,6 +17,7 @@ import { NodeTreeRowFrame } from './NodeTreeRowFrame';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 import { useRenameState } from './NodeTreeRowRename';
 import { resolveNodeRowButtonClassName } from './NodeTreeRowStyle';
+
 interface NodeTreeRowProps {
   descendantCount?: number;
   depth: number;
@@ -32,7 +36,7 @@ interface NodeTreeRowProps {
   label: string;
   nodeId: string;
   rowSpacing: number;
-  onDragEnd?: (event: ReactDragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragOver?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragStart?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -84,7 +88,8 @@ function renderNodeTreeRowButton(props: {
   return <NodeTreeRowButton {...props} />;
 }
 
-export function NodeTreeRow(props: NodeTreeRowProps) {
+function NodeTreeRowImpl(props: NodeTreeRowProps) {
+  recordNodeListRowRender(props.nodeId);
   const style = resolveNodeRowStyle(props.depth, props.rowSpacing);
   return (
     <NodeTreeRowFrame
@@ -123,6 +128,40 @@ export function NodeTreeRow(props: NodeTreeRowProps) {
     </NodeTreeRowFrame>
   );
 }
+
+function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowProps) {
+  return (
+    previous.descendantCount === next.descendantCount &&
+    previous.depth === next.depth &&
+    previous.dropIntent === next.dropIntent &&
+    previous.hasChildren === next.hasChildren &&
+    previous.isActive === next.isActive &&
+    previous.isCollapsed === next.isCollapsed &&
+    previous.isDerived === next.isDerived &&
+    previous.isDragDisabled === next.isDragDisabled &&
+    previous.isDropTarget === next.isDropTarget &&
+    previous.isMuted === next.isMuted &&
+    previous.isSelected === next.isSelected &&
+    previous.label === next.label &&
+    previous.mutedOpacity === next.mutedOpacity &&
+    previous.nodeIconKind === next.nodeIconKind &&
+    previous.nodeIconState === next.nodeIconState &&
+    previous.rowSpacing === next.rowSpacing &&
+    previous.onContextMenu === next.onContextMenu &&
+    previous.onDragEnd === next.onDragEnd &&
+    previous.onDragEnter === next.onDragEnter &&
+    previous.onDragOver === next.onDragOver &&
+    previous.onDragStart === next.onDragStart &&
+    previous.onDrop === next.onDrop &&
+    previous.onKeyDown === next.onKeyDown &&
+    previous.onRename === next.onRename &&
+    previous.onSelect === next.onSelect &&
+    previous.onToggleCollapse === next.onToggleCollapse
+  );
+}
+
+export const NodeTreeRow = memo(NodeTreeRowImpl, areNodeTreeRowPropsEqual);
+
 interface NodeTreeRowButtonProps {
   descendantCount: number;
   depth: number;

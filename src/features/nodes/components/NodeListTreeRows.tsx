@@ -1,4 +1,4 @@
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { AppEmptyState } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
@@ -78,7 +78,7 @@ function renderNodeListRow(
       nodeIconState={nodeIconState}
       rowSpacing={props.rowSpacing}
       onContextMenu={props.onContextMenu}
-      onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
+      onDragEnd={props.drag.onDragEnd}
       onDragEnter={props.drag.onDragEnterNode}
       onDragOver={props.drag.onDragOverNode}
       onDragStart={props.drag.onDragStartNode}
@@ -102,12 +102,16 @@ export function NodeListRows(props: NodeListRowsProps) {
     );
   }
 
-  const onRowKeyDown = createNodeListRowKeydownHandler({
-    collapsedNodeIds: props.collapsedNodeIds,
-    onSelect: (nodeId) => props.onSelect(nodeId),
-    onToggleCollapse: props.onToggleCollapse,
-    rows: props.rows
-  });
+  const onRowKeyDown = useMemo(
+    () =>
+      createNodeListRowKeydownHandler({
+        collapsedNodeIds: props.collapsedNodeIds,
+        onSelect: (nodeId) => props.onSelect(nodeId),
+        onToggleCollapse: props.onToggleCollapse,
+        rows: props.rows
+      }),
+    [props.collapsedNodeIds, props.onSelect, props.onToggleCollapse, props.rows]
+  );
 
   return props.rows.map((row) => renderNodeListRow(props, row, onRowKeyDown));
 }

@@ -9,7 +9,7 @@ interface NodeTreeRowFrameProps {
   isDragDisabled: boolean;
   isDropTarget: boolean;
   nodeId: string;
-  onDragEnd?: (event: ReactDragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragOver?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragStart?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -29,7 +29,7 @@ export function NodeTreeRowFrame(props: NodeTreeRowFrameProps) {
     <div
       className={resolveNodeRowFrameClassName(props.isDropTarget, props.dropIntent)}
       draggable={!props.isDragDisabled}
-      onDragEnd={props.onDragEnd}
+      onDragEnd={props.onDragEnd ? (event) => (event.preventDefault(), props.onDragEnd?.()) : undefined}
       onDragEnter={props.onDragEnter ? (event) => props.onDragEnter?.(props.nodeId, event) : undefined}
       onDragOver={props.onDragOver ? (event) => props.onDragOver?.(props.nodeId, event) : undefined}
       onDragStart={props.onDragStart ? (event) => props.onDragStart?.(props.nodeId, event) : undefined}

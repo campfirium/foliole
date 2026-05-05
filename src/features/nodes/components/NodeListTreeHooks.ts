@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
   type Dispatch,
@@ -34,34 +35,34 @@ export function useNodeListContextMenu(
   const [contextMenuMode, setContextMenuMode] = useState<MenuMode>(null);
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
-  const closeContextMenu = () => {
+  const closeContextMenu = useCallback(() => {
     setContextNodeId(null);
     setContextMenuMode(null);
     setMenuPosition(null);
-  };
+  }, []);
 
-  const openContextMenu = (nodeId: string, event: ReactMouseEvent<HTMLElement>) => {
+  const openContextMenu = useCallback((nodeId: string, event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();
     setContextNodeId(nodeId);
     setContextMenuMode(trashedNodeIds.includes(nodeId) ? 'trash' : 'notes');
     setMenuPosition(getMenuPosition(event));
-  };
+  }, [trashedNodeIds]);
 
-  const openRootContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+  const openRootContextMenu = useCallback((event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();
     setContextNodeId(null);
     setContextMenuMode('notes-root');
     setMenuPosition(getMenuPosition(event));
-  };
+  }, []);
 
-  const getContextTargets = () => {
+  const getContextTargets = useCallback(() => {
     if (!contextNodeId) return [];
     const inTrashMenu = contextMenuMode === 'trash';
     const scoped = selectedNodeIds.filter((id) =>
       inTrashMenu ? trashedNodeIds.includes(id) : !trashedNodeIds.includes(id)
     );
     return scoped.includes(contextNodeId) ? scoped : [contextNodeId];
-  };
+  }, [contextMenuMode, contextNodeId, selectedNodeIds, trashedNodeIds]);
 
   return { closeContextMenu, contextMenuMode, getContextTargets, menuPosition, openContextMenu, openRootContextMenu };
 }
@@ -96,7 +97,7 @@ export function useNodeCollapseControls({
     setCollapsedTrashNodeIdList((prev) => prev.filter((id) => trashIds.has(id)));
   }, [setCollapsedTrashNodeIdList, trashRowsAll]);
 
-  const toggleCollapse = (nodeId: string) => {
+  const toggleCollapse = useCallback((nodeId: string) => {
     if (!trashedNodeIds.includes(nodeId)) {
       toggleNoteCollapse(nodeId);
       return;
@@ -105,7 +106,7 @@ export function useNodeCollapseControls({
     setCollapsedTrashNodeIdList((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
     );
-  };
+  }, [setCollapsedTrashNodeIdList, toggleNoteCollapse, trashedNodeIds]);
 
   return { collapseAllNotes, expandAllNotes, toggleCollapse };
 }

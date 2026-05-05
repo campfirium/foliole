@@ -1,8 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
-import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import {
+  projectWorkspaceListNodesById,
+  type WorkspaceListNodesById
+} from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
@@ -27,7 +31,15 @@ function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
   return '[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-width,300px))_1px_minmax(0,1fr)_1px_minmax(0,var(--workspace-right-sidebar-width,320px))]';
 }
 function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: string) => void; props: WorkspaceLayoutProps }) {
-  const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
+  const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
+  const listNodesById = useMemo(() => {
+    const nextProjection = projectWorkspaceListNodesById(
+      props.nodesById,
+      previousListNodesByIdRef.current
+    );
+    previousListNodesByIdRef.current = nextProjection;
+    return nextProjection;
+  }, [props.nodesById]);
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden bg-bg-panel text-foreground">
@@ -174,6 +186,7 @@ export function WorkspaceLayoutGrid({
   onSelectNode: (nodeId: string) => void;
   props: WorkspaceLayoutProps;
 }) {
+  recordComponentRender('workspaceGrid');
   return (
     <div className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]" style={{ gridTemplateColumns: '40px minmax(0, 1fr)' }}>
       <WorkspaceLeftRail
