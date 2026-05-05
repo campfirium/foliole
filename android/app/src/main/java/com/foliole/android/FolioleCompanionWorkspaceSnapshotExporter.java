@@ -38,9 +38,14 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         JSONArray trashedNodeIds = new JSONArray();
         String firstActiveNodeId = null;
 
-        JSONArray nodes = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "workspaceSnapshotNodes", snapshotQueryReplacements(contentExpression, contentBlobJoin, bodyStatusExpression), new String[] { deviceId })
-            .getJSONArray("nodes");
+        JSONArray nodes = FolioleCompanionNamedQueryStore.loadRows(
+            context,
+            database,
+            "workspaceSnapshotNodes",
+            "nodes",
+            snapshotQueryReplacements(contentExpression, contentBlobJoin, bodyStatusExpression),
+            new String[] { deviceId }
+        );
         for (int index = 0; index < nodes.length(); index += 1) {
             JSONObject row = nodes.getJSONObject(index);
             String nodeId = row.getString("id");

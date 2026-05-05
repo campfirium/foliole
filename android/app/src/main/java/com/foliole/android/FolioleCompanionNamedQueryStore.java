@@ -130,7 +130,18 @@ final class FolioleCompanionNamedQueryStore {
     }
 
     static JSArray loadRows(Context context, SQLiteDatabase database, String queryName, String resultKey, String[] args) throws Exception {
-        JSONArray rows = loadArray(context, database, queryName, args).getJSONArray(resultKey);
+        return loadRows(context, database, queryName, resultKey, null, args);
+    }
+
+    static JSArray loadRows(
+        Context context,
+        SQLiteDatabase database,
+        String queryName,
+        String resultKey,
+        Map<String, String> replacements,
+        String[] args
+    ) throws Exception {
+        JSONArray rows = loadArray(context, database, queryName, replacements, args).getJSONArray(resultKey);
         JSArray result = new JSArray();
         for (int index = 0; index < rows.length(); index += 1) {
             result.put(rows.getJSONObject(index));
