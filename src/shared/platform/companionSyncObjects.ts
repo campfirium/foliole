@@ -102,13 +102,7 @@ export {
   loadCompanionMissingAttachmentResource,
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';
-
-export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [];
-  }
-  return (await FolioleCompanionSync.applySyncNodeVersions({ nodes })).applied_node_ids;
-}
+export { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
 
 export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRecord[]) {
   if (!isNativeAndroidCompanionRuntime()) {
