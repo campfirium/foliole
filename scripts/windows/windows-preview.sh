@@ -5,13 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_SYNC_SCRIPT="${WINDOWS_SYNC_SCRIPT:-scripts/windows/windows-sync.sh}"
 WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-client.sh}"
-WINDOWS_SMOKE_SCRIPT="${WINDOWS_SMOKE_SCRIPT:-scripts/windows/windows-smoke.sh}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
 WINDOWS_PREVIEW_TIMEOUT_START_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS:-180}"
 WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS:-180}"
-WINDOWS_PREVIEW_TIMEOUT_STOP_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STOP_SECONDS:-60}"
-WINDOWS_PREVIEW_ELECTRON_RESTART_MODE="${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE:-full}"
 
 cd "${REPO_ROOT}"
 
@@ -46,17 +43,6 @@ has_committed_electron_changes_since() {
 }
 
 CURRENT_HEAD="$(resolve_current_head)"
-STATUS_PROBE_RAN=0
-STATUS_PROBE_OUTPUT=""
-STATUS_PROBE_EXIT=0
-
-probe_windows_client_status() {
-  set +e
-  STATUS_PROBE_OUTPUT="$(run_windows_client_action status)"
-  STATUS_PROBE_EXIT=$?
-  set -e
-  STATUS_PROBE_RAN=1
-}
 
 run_windows_client_action() {
   local action="$1"
@@ -73,9 +59,6 @@ run_windows_client_action() {
   fi
   if [ "${action}" = "restart" ]; then
     timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}"
-  fi
-  if [ "${action}" = "stop" ]; then
-    timeout_seconds="${WINDOWS_PREVIEW_TIMEOUT_STOP_SECONDS}"
   fi
 
   output_file="$(mktemp)"
@@ -101,14 +84,6 @@ run_windows_client_action() {
       return 0
     fi
     if [ "${action}" = "status" ] && echo "${current_output}" | grep -qE 'status:\s*(RUNNING|STOPPED)'; then
-      kill "${action_pid}" 2>/dev/null || true
-      sleep 1
-      kill -9 "${action_pid}" 2>/dev/null || true
-      printf '%s' "${current_output}"
-      rm -f "${output_file}"
-      return 0
-    fi
-    if [ "${action}" = "stop" ] && echo "${current_output}" | grep -qE 'status:\s*STOPPED'; then
       kill "${action_pid}" 2>/dev/null || true
       sleep 1
       kill -9 "${action_pid}" 2>/dev/null || true
@@ -145,243 +120,134 @@ run_windows_client_action() {
   return "${exit_code}"
 }
 
-ensure_windows_client_running() {
+resolve_changed_files() {
+  if [ -n "${WINDOWS_PREVIEW_CHANGED_FILES:-}" ]; then
+    printf '%s' "${WINDOWS_PREVIEW_CHANGED_FILES}"
+    return 0
+  fi
+  {
+    git diff --name-only
+    git diff --name-only --cached
+    git ls-files --others --exclude-standard
+  } | sort -u
+}
+
+status_is_running() {
+  echo "$1" | grep -qE 'status:\s*RUNNING'
+}
+
+status_is_stopped() {
+  echo "$1" | grep -qE 'status:\s*STOPPED'
+}
+
+select_update_action() {
+  local changed_files="$1"
   local status_output=""
   local status_exit=0
-  local start_output=""
-  local start_exit=0
+  local runtime_head=""
 
-  if [ "${STATUS_PROBE_RAN}" -eq 1 ]; then
-    status_output="${STATUS_PROBE_OUTPUT}"
-    status_exit="${STATUS_PROBE_EXIT}"
-  else
-    probe_windows_client_status
-    status_output="${STATUS_PROBE_OUTPUT}"
-    status_exit="${STATUS_PROBE_EXIT}"
-  fi
+  set +e
+  status_output="$(run_windows_client_action status)"
+  status_exit=$?
+  set -e
 
-  if [ "${status_exit}" -eq 0 ] && echo "${status_output}" | grep -qE 'status:\s*RUNNING'; then
-    echo "[windows-preview] windows client: RUNNING"
+  if [ "${status_exit}" -eq 0 ] && status_is_running "${status_output}"; then
+    runtime_head="$(extract_runtime_head "${status_output}")"
+    if echo "${changed_files}" | grep -qE '^electron/'; then
+      SELECTED_ACTION="restart-intent"
+      SELECTED_REASON="Class B: working tree electron changes detected"
+      return 0
+    fi
+    if has_committed_electron_changes_since "${runtime_head}"; then
+      SELECTED_ACTION="restart-intent"
+      SELECTED_REASON="Class B: runtime behind committed electron changes"
+      return 0
+    fi
+    SELECTED_ACTION="sync-only"
+    SELECTED_REASON="Class A: renderer-only sync path"
     return 0
   fi
 
-  if [ "${status_exit}" -eq 0 ] && echo "${status_output}" | grep -qE 'status:\s*STOPPED'; then
-    echo "[windows-preview] windows client: STOPPED; starting"
-    set +e
-    start_output="$(run_windows_client_action start)"
-    start_exit=$?
-    set -e
-    if [ "${start_exit}" -eq 0 ] && echo "${start_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
-      echo "[windows-preview] windows client: RUNNING (after start)"
-      return 0
-    fi
-    echo "[windows-preview] windows client: failed to start"
-    if [ -n "${start_output}" ]; then
-      echo "${start_output}"
-    fi
-    return 1
+  if [ "${status_exit}" -eq 0 ] && status_is_stopped "${status_output}"; then
+    SELECTED_ACTION="fallback-start"
+    SELECTED_REASON="Class C: no trusted running client"
+    return 0
   fi
 
   if [ "${status_exit}" -eq 124 ]; then
-    echo "[windows-preview] windows client: status probe timed out (${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}s); aborting to avoid duplicate clients"
-  else
-    echo "[windows-preview] windows client: unknown status; aborting to avoid duplicate clients"
-    if [ -n "${status_output}" ]; then
-      echo "${status_output}"
-    fi
+    SELECTED_ACTION="fallback-start"
+    SELECTED_REASON="Class C: status probe timed out"
+    return 0
+  fi
+
+  SELECTED_ACTION="fallback-start"
+  SELECTED_REASON="Class C: client status unavailable"
+}
+
+run_sync_only() {
+  echo "[windows-preview] selected action: sync-only"
+  echo "[windows-preview] status: SYNCED"
+}
+
+run_restart_intent() {
+  local restart_output=""
+  local restart_exit=0
+  echo "[windows-preview] selected action: restart-intent"
+  set +e
+  restart_output="$(run_windows_client_action restart)"
+  restart_exit=$?
+  set -e
+  if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*RESTARTED'; then
+    echo "[windows-preview] status: RESTARTED"
+    return 0
+  fi
+  echo "[windows-preview] restart intent failed"
+  if [ -n "${restart_output}" ]; then
+    echo "${restart_output}"
   fi
   return 1
 }
 
-requires_windows_smoke() {
-  local changed_files="$1"
-  if [ -n "${WINDOWS_PREVIEW_FORCE_SMOKE:-}" ]; then
-    [ "${WINDOWS_PREVIEW_FORCE_SMOKE}" != "0" ]
-    return
-  fi
-  printf '%s\n' "${changed_files}" | grep -qE '^(electron/|src/shared/platform/|src/features/settings/|src/shared/commands/)'
-}
-
-reset_status_probe() {
-  STATUS_PROBE_RAN=0
-  STATUS_PROBE_OUTPUT=""
-  STATUS_PROBE_EXIT=0
-}
-
-prepare_windows_smoke() {
-  if [ "${STATUS_PROBE_RAN}" -eq 0 ]; then
-    probe_windows_client_status
-  fi
-
-  if [ "${STATUS_PROBE_EXIT}" -eq 0 ] && echo "${STATUS_PROBE_OUTPUT}" | grep -qE 'status:\s*RUNNING'; then
-    echo "[windows-preview] windows client: RUNNING; stopping before windows:smoke"
-    set +e
-    smoke_stop_output="$(run_windows_client_action stop)"
-    smoke_stop_exit=$?
-    set -e
-    if [ "${smoke_stop_exit}" -ne 0 ] || ! echo "${smoke_stop_output}" | grep -qE 'status:\s*STOPPED'; then
-      echo "[windows-preview] windows client: failed to stop before windows:smoke"
-      if [ -n "${smoke_stop_output}" ]; then
-        echo "${smoke_stop_output}"
-      fi
-      exit 1
-    fi
-    reset_status_probe
+run_fallback_start() {
+  local start_output=""
+  local start_exit=0
+  echo "[windows-preview] selected action: fallback-start"
+  set +e
+  start_output="$(run_windows_client_action start)"
+  start_exit=$?
+  set -e
+  if [ "${start_exit}" -eq 0 ] && echo "${start_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
+    echo "[windows-preview] status: STARTED"
     return 0
   fi
-
-  if [ "${STATUS_PROBE_EXIT}" -eq 0 ] && echo "${STATUS_PROBE_OUTPUT}" | grep -qE 'status:\s*STOPPED'; then
-    echo "[windows-preview] windows client: STOPPED; ready for windows:smoke"
-    reset_status_probe
-    return 0
+  echo "[windows-preview] fallback start failed"
+  if [ -n "${start_output}" ]; then
+    echo "${start_output}"
   fi
-
-  if [ "${STATUS_PROBE_EXIT}" -eq 124 ]; then
-    echo "[windows-preview] windows client: status probe timed out (${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}s); aborting before windows:smoke"
-  else
-    echo "[windows-preview] windows client: unknown status; aborting before windows:smoke"
-    if [ -n "${STATUS_PROBE_OUTPUT}" ]; then
-      echo "${STATUS_PROBE_OUTPUT}"
-    fi
-  fi
-  exit 1
-}
-
-run_windows_smoke() {
-  echo "[windows-preview] desktop-sensitive changes detected; running windows:smoke before manual acceptance"
-  WINDOWS_SMOKE_SKIP_SYNC=1 bash "${WINDOWS_SMOKE_SCRIPT}"
+  return 1
 }
 
 echo "[windows-preview] step 1/2: sync to windows mirror"
 bash "${WINDOWS_SYNC_SCRIPT}"
 
-changed_files="${WINDOWS_PREVIEW_CHANGED_FILES:-}"
-if [ -z "${changed_files}" ]; then
-  changed_files="$(
-    {
-      git diff --name-only
-      git diff --name-only --cached
-      git ls-files --others --exclude-standard
-    } | sort -u
-  )"
-fi
+changed_files="$(resolve_changed_files)"
+select_update_action "${changed_files}"
 
-restart_for_electron=0
-restart_reason=""
-restart_status_output=""
-restart_status_exit=0
+echo "[windows-preview] step 2/2: apply update action"
+echo "[windows-preview] reason: ${SELECTED_REASON}"
 
-if echo "${changed_files}" | grep -qE '^electron/'; then
-  restart_for_electron=1
-  restart_reason="working tree electron changes detected"
-else
-  probe_windows_client_status
-  restart_status_output="${STATUS_PROBE_OUTPUT}"
-  restart_status_exit="${STATUS_PROBE_EXIT}"
-  runtime_head="$(extract_runtime_head "${restart_status_output}")"
-  if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING' && has_committed_electron_changes_since "${runtime_head}"; then
-    restart_for_electron=1
-    restart_reason="runtime behind committed electron changes"
-  fi
-fi
-
-if requires_windows_smoke "${changed_files}"; then
-  prepare_windows_smoke
-  run_windows_smoke
-fi
-
-if [ "${restart_for_electron}" -eq 1 ]; then
-  echo "[windows-preview] step 2/2: electron changes detected; evaluating client state"
-  echo "[windows-preview] reason: ${restart_reason}"
-  if [ "${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE}" = "runtime-only" ]; then
-    echo "[windows-preview] restart mode: runtime-only"
-  else
-    echo "[windows-preview] restart mode: full"
-  fi
-  if [ "${STATUS_PROBE_RAN}" -eq 0 ]; then
-    probe_windows_client_status
-    restart_status_output="${STATUS_PROBE_OUTPUT}"
-    restart_status_exit="${STATUS_PROBE_EXIT}"
-  fi
-  if [ "${WINDOWS_PREVIEW_ELECTRON_RESTART_MODE}" != "runtime-only" ]; then
-    if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING'; then
-      echo "[windows-preview] windows client: RUNNING; full restarting (stop -> start)"
-      set +e
-      stop_output="$(run_windows_client_action stop)"
-      stop_exit=$?
-      set -e
-      if [ "${stop_exit}" -ne 0 ] || ! echo "${stop_output}" | grep -qE 'status:\s*STOPPED'; then
-        echo "[windows-preview] windows client: stop failed during full restart"
-        if [ -n "${stop_output}" ]; then
-          echo "${stop_output}"
-        fi
-        exit 1
-      fi
-    fi
-    if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*STOPPED'; then
-      echo "[windows-preview] windows client: STOPPED; starting"
-    fi
-    set +e
-    full_start_output="$(run_windows_client_action start)"
-    full_start_exit=$?
-    set -e
-    if [ "${full_start_exit}" -eq 0 ] && echo "${full_start_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
-      echo "[windows-preview] status: RESTARTED"
-      exit 0
-    fi
-    echo "[windows-preview] windows client: full restart start phase failed"
-    if [ -n "${full_start_output}" ]; then
-      echo "${full_start_output}"
-    fi
+case "${SELECTED_ACTION}" in
+  sync-only)
+    run_sync_only
+    ;;
+  restart-intent)
+    run_restart_intent
+    ;;
+  fallback-start)
+    run_fallback_start
+    ;;
+  *)
+    echo "[windows-preview] unknown selected action: ${SELECTED_ACTION}"
     exit 1
-  fi
-  if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*RUNNING'; then
-    echo "[windows-preview] windows client: RUNNING; restarting"
-    set +e
-    restart_output="$(run_windows_client_action restart)"
-    restart_exit=$?
-    set -e
-    if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*RESTARTED'; then
-      echo "[windows-preview] status: RESTARTED"
-      exit 0
-    fi
-    if [ "${restart_exit}" -eq 124 ]; then
-      echo "[windows-preview] windows client: restart timed out (${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}s); aborting to avoid duplicate clients"
-    else
-      echo "[windows-preview] windows client: restart failed; aborting to avoid duplicate clients"
-      if [ -n "${restart_output}" ]; then
-        echo "${restart_output}"
-      fi
-    fi
-    exit 1
-  fi
-  if [ "${restart_status_exit}" -eq 0 ] && echo "${restart_status_output}" | grep -qE 'status:\s*STOPPED'; then
-    echo "[windows-preview] windows client: STOPPED; starting"
-    set +e
-    restart_start_output="$(run_windows_client_action start)"
-    restart_start_exit=$?
-    set -e
-    if [ "${restart_start_exit}" -eq 0 ] && echo "${restart_start_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
-      echo "[windows-preview] status: RESTARTED"
-      exit 0
-    fi
-    echo "[windows-preview] windows client: failed to start from STOPPED state"
-    if [ -n "${restart_start_output}" ]; then
-      echo "${restart_start_output}"
-    fi
-    exit 1
-  fi
-  if [ "${restart_status_exit}" -eq 124 ]; then
-    echo "[windows-preview] windows client: status probe timed out (${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}s); aborting to avoid duplicate clients"
-  else
-    echo "[windows-preview] windows client: unknown status before restart; aborting to avoid duplicate clients"
-    if [ -n "${restart_status_output}" ]; then
-      echo "${restart_status_output}"
-    fi
-  fi
-  exit 1
-fi
-
-ensure_windows_client_running
-echo "[windows-preview] step 2/2: no electron changes; waiting for renderer HMR"
-echo "[windows-preview] status: SYNCED"
+    ;;
+esac
