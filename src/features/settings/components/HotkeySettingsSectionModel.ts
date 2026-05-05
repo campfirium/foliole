@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
-import { getElectronAPI, type NativeKeyboardInputPayload } from '../../../shared/platform/electronApi';
+import {
+  startRuntimeHotkeyRecording,
+  type RuntimeKeyboardInputPayload
+} from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
 export type HotkeySlot = 'primary' | 'secondary';
@@ -33,7 +36,7 @@ function formatShortcutKey(value: string) {
   return value.length === 1 ? value.toUpperCase() : value;
 }
 
-function nativeInputToShortcutLabel(input: NativeKeyboardInputPayload) {
+function nativeInputToShortcutLabel(input: RuntimeKeyboardInputPayload) {
   if (['Control', 'Shift', 'Alt', 'Meta'].includes(input.key)) {
     return '';
   }
@@ -105,13 +108,11 @@ function useHotkeyDraftState(items: HotkeySettingItem[], recording: RecordingHot
 
 function useNativeHotkeyRecordingCapture(args: NativeCaptureArgs) {
   useEffect(() => {
-    const electronAPI = getElectronAPI();
     const isActive = Boolean(args.recording || args.searchRecording);
-    if (!isActive || !electronAPI?.onNativeKeyboardInput || !electronAPI.setNativeHotkeyRecordingActive) {
+    if (!isActive) {
       return undefined;
     }
-    electronAPI.setNativeHotkeyRecordingActive(true);
-    const unsubscribe = electronAPI.onNativeKeyboardInput((input) => {
+    const stopRecording = startRuntimeHotkeyRecording((input) => {
       if (input.type !== 'keyDown') return;
       if (input.key === 'Escape') {
         args.cancelRecordingRef.current();
@@ -125,10 +126,7 @@ function useNativeHotkeyRecordingCapture(args: NativeCaptureArgs) {
         args.setQueryFromHotkeyRef.current(nextLabel);
       }
     });
-    return () => {
-      electronAPI.setNativeHotkeyRecordingActive?.(false);
-      unsubscribe();
-    };
+    return stopRecording ?? undefined;
   }, [args.recording?.commandId, args.recording?.slot, args.searchRecording]);
 }
 

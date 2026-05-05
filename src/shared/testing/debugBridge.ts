@@ -1,6 +1,6 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { appendReadingPositionTraceLog } from '../platform/readingPositionTraceRuntimeRepository';
-import { getElectronAPI } from '../platform/electronApi';
+import { hasRuntimeDebugBridge } from '../platform/runtimeDebugAvailability';
 
 interface FolioleDebugApi {
   clearEditor: (id: string) => void;
@@ -128,7 +128,7 @@ function isDebugApiAvailable() {
   if (debugApiAvailability !== 'unknown') {
     return debugApiAvailability === 'enabled';
   }
-  const enabled = import.meta.env.DEV || import.meta.env.MODE === 'test' || Boolean(getElectronAPI()?.debug);
+  const enabled = import.meta.env.DEV || import.meta.env.MODE === 'test' || hasRuntimeDebugBridge();
   debugApiAvailability = enabled ? 'enabled' : 'disabled';
   return enabled;
 }

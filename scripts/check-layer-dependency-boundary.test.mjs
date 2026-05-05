@@ -150,6 +150,7 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     await writeFixtureFile(repoRoot, 'src/shared/testing/debugRuntime.ts', `
       import { getRuntimeInvoke } from '../platform/bridge';
       import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+      import { getElectronAPI } from '../platform/electronApi';
     `);
 
     const result = inspectLayerDependencyBoundary({ repoRoot });
@@ -157,7 +158,8 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     expect(result.violations).toEqual(
       expect.arrayContaining([
         { file: 'src/shared/testing/debugRuntime.ts', line: 1, kind: 'runtime-command-import' },
-        { file: 'src/shared/testing/debugRuntime.ts', line: 2, kind: 'runtime-command-import' }
+        { file: 'src/shared/testing/debugRuntime.ts', line: 2, kind: 'runtime-command-import' },
+        { file: 'src/shared/testing/debugRuntime.ts', line: 3, kind: 'runtime-host-bridge-import' }
       ])
     );
   });
@@ -170,13 +172,17 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     await writeFixtureFile(repoRoot, 'src/app/SearchPalette.tsx', `
       import { getRuntimeInvoke } from '../shared/platform/bridge';
     `);
+    await writeFixtureFile(repoRoot, 'src/features/settings/settingsKeyboard.ts', `
+      import { getElectronAPI } from '../../shared/platform/electronApi';
+    `);
 
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
     expect(result.violations).toEqual(
       expect.arrayContaining([
         { file: 'src/app/hooks/useAppRuntime.ts', line: 1, kind: 'runtime-command-import' },
-        { file: 'src/app/SearchPalette.tsx', line: 1, kind: 'runtime-command-import' }
+        { file: 'src/app/SearchPalette.tsx', line: 1, kind: 'runtime-command-import' },
+        { file: 'src/features/settings/settingsKeyboard.ts', line: 1, kind: 'runtime-host-bridge-import' }
       ])
     );
   });

@@ -16,6 +16,7 @@ const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
 const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/(?:bridge|runtimeInvoke)$/;
 const RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/[^/]*Bridge$/;
+const RUNTIME_HOST_BRIDGE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/electronApi$/;
 const PLATFORM_COMPAT_IMPORT_SOURCE_PATTERN = /^\.\/[^/]*(?:Bridge|BridgePayloads)$/;
 const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
 
@@ -58,6 +59,11 @@ function isRuntimeBridgeBoundaryImport(source) {
   return RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN.test(normalizedSource);
 }
 
+function isRuntimeHostBridgeBoundaryImport(source) {
+  const normalizedSource = source.replace(/\\/g, '/').replace(/^(?:\.\.\/)+/, '');
+  return RUNTIME_HOST_BRIDGE_IMPORT_SOURCE_PATTERN.test(normalizedSource);
+}
+
 function isPlatformCompatibilityImport(source) {
   const normalizedSource = source.replace(/\\/g, '/');
   return PLATFORM_COMPAT_IMPORT_SOURCE_PATTERN.test(normalizedSource);
@@ -97,6 +103,9 @@ function inspectFile(filePath, repoRoot) {
       }
       if (isRuntimeBridgeBoundaryImport(match[2] ?? '')) {
         violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'runtime-bridge-import' });
+      }
+      if (isRuntimeHostBridgeBoundaryImport(match[2] ?? '')) {
+        violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'runtime-host-bridge-import' });
       }
     }
   }

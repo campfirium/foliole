@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import type { NativeKeyboardInputPayload } from '../../../shared/platform/electronApi';
+import type { RuntimeKeyboardInputPayload } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem } from '../model/hotkeySettings';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -44,7 +44,7 @@ function createHotkeyItems(): HotkeySettingItem[] {
 }
 
 function installNativeHotkeyApi() {
-  let nativeKeyboardHandler: ((payload: NativeKeyboardInputPayload) => void) | null = null;
+  let nativeKeyboardHandler: ((payload: RuntimeKeyboardInputPayload) => void) | null = null;
   const setNativeHotkeyRecordingActive = vi.fn();
   window.electronAPI = {
     invoke: vi.fn(),
@@ -59,7 +59,10 @@ function installNativeHotkeyApi() {
     onWindowResized: vi.fn(() => () => undefined),
     setNativeHotkeyRecordingActive
   };
-  return { setNativeHotkeyRecordingActive, sendNativeKey: (payload: NativeKeyboardInputPayload) => nativeKeyboardHandler?.(payload) };
+  return {
+    setNativeHotkeyRecordingActive,
+    sendNativeKey: (payload: RuntimeKeyboardInputPayload) => nativeKeyboardHandler?.(payload)
+  };
 }
 
 function renderHotkeyPanel(onHotkeyUpdate = vi.fn()) {
