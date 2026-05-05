@@ -164,6 +164,7 @@ function registerReadableArticleTest() {
       content: 'Readable from local snapshot',
       hideTitleHeading: false,
       nodeId: 'node-1',
+      pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Synced article'
     });

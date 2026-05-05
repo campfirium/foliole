@@ -13,20 +13,37 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionPairingStoreTest {
     private static final String PREFS_NAME = "foliole_companion_pairing";
 
     private Context context;
+    private Map<String, ?> originalPrefs;
 
     @Before
     public void setUp() {
         context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        originalPrefs = new HashMap<>(prefs().getAll());
         prefs().edit().clear().commit();
+    }
+
+    @After
+    public void tearDown() {
+        SharedPreferences.Editor editor = prefs().edit().clear();
+        for (Map.Entry<String, ?> entry : originalPrefs.entrySet()) {
+            restorePreference(editor, entry.getKey(), entry.getValue());
+        }
+        editor.commit();
     }
 
     @Test
@@ -76,5 +93,22 @@ public class FolioleCompanionPairingStoreTest {
 
     private SharedPreferences prefs() {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void restorePreference(SharedPreferences.Editor editor, String key, Object value) {
+        if (value instanceof String stringValue) {
+            editor.putString(key, stringValue);
+        } else if (value instanceof Boolean booleanValue) {
+            editor.putBoolean(key, booleanValue);
+        } else if (value instanceof Integer integerValue) {
+            editor.putInt(key, integerValue);
+        } else if (value instanceof Long longValue) {
+            editor.putLong(key, longValue);
+        } else if (value instanceof Float floatValue) {
+            editor.putFloat(key, floatValue);
+        } else if (value instanceof Set<?> setValue) {
+            editor.putStringSet(key, new HashSet<>((Set<String>) setValue));
+        }
     }
 }

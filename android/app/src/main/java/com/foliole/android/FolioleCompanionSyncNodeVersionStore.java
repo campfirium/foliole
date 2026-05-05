@@ -148,8 +148,9 @@ final class FolioleCompanionSyncNodeVersionStore {
     }
 
     private static void upsertNode(SQLiteDatabase database, JSONObject record, JSONObject snapshot) {
+        String nodeId = snapshot.optString("id", record.optString("object_id"));
         ContentValues values = new ContentValues();
-        values.put("id", snapshot.optString("id", record.optString("object_id")));
+        values.put("id", nodeId);
         putNullableString(values, "parent_id", snapshot.optString("parent_id", null));
         values.put("kind", snapshot.optString("kind", "topic"));
         putNullableInteger(values, "priority", snapshot.opt("priority"));
@@ -171,6 +172,7 @@ final class FolioleCompanionSyncNodeVersionStore {
         values.put("updated_at", snapshot.optString("updated_at", record.optString("updated_at")));
         putNullableString(values, "deleted_at", snapshot.optString("deleted_at", null));
         database.insertWithOnConflict("nodes", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        FolioleCompanionNodeAttachmentStore.replaceNodeAttachments(database, nodeId, snapshot.optJSONArray("attachments"));
     }
 
     private static void upsertVersion(SQLiteDatabase database, JSONObject record, JSONObject snapshot) {

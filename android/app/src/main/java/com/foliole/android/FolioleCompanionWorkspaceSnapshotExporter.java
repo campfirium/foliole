@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
@@ -50,7 +51,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
                 } else if (firstActiveNodeId == null) {
                     firstActiveNodeId = nodeId;
                 }
-                nodesById.put(nodeId, buildNode(cursor, deletedAt));
+                nodesById.put(nodeId, buildNode(database, cursor, deletedAt));
             }
         }
 
@@ -83,7 +84,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         return result;
     }
 
-    private static JSObject buildNode(Cursor cursor, String deletedAt) throws JSONException {
+    private static JSObject buildNode(SQLiteDatabase database, Cursor cursor, String deletedAt) throws JSONException {
         JSObject node = new JSObject();
         node.put("id", cursor.getString(0));
         node.put("parentNodeId", cursor.isNull(1) ? null : cursor.getString(1));
@@ -98,6 +99,10 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         node.put("isTitleManual", cursor.getInt(6) == 1);
         node.put("hideTitleHeading", cursor.getInt(7) == 1);
         node.put("content", cursor.getString(8));
+        JSArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(database, cursor.getString(0));
+        if (attachments.length() > 0) {
+            node.put("attachments", attachments);
+        }
         node.put("openingText", cursor.isNull(9) ? null : cursor.getString(9));
         node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(cursor.isNull(10) ? null : cursor.getString(10)));
         node.put("reveal", cursor.isNull(11) ? null : cursor.getString(11));

@@ -20,7 +20,7 @@ import java.util.UUID;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
-    private static final int DATABASE_VERSION = 7;
+    private static final int DATABASE_VERSION = 9;
     private static final String META_TABLE = "companion_meta";
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
@@ -93,6 +93,16 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
                 throw new IllegalStateException("Failed to upgrade companion review log schema.", exception);
             }
         }
+        if (oldVersion < 8) {
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion attachment link schema.", exception);
+            }
+        }
+        if (oldVersion < 9) {
+            FolioleCompanionNodeAttachmentStore.backfillNodeAttachmentsFromVersions(database);
+        }
     }
 
     FolioleCompanionBootstrapState loadBootstrapState(Context context) {
@@ -163,11 +173,13 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject replaceWorkspaceSnapshot(String endpointUrl, String lastSyncedAt, String workspaceSnapshotJson) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, workspaceSnapshotJson, lastSyncedAt);
-        saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
-        saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
-        saveMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, "completed", lastSyncedAt);
-        saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
+        boolean replaced = FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, workspaceSnapshotJson, lastSyncedAt);
+        if (replaced) {
+            saveMetaValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, endpointUrl.trim(), lastSyncedAt);
+            saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, lastSyncedAt.trim(), lastSyncedAt);
+            saveMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, "completed", lastSyncedAt);
+            saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
+        }
         return loadWorkspaceSyncState();
     }
 

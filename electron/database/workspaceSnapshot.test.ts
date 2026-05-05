@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from './workspaceSnapshot.js';
@@ -99,6 +99,26 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot?.activeNodeId).toBe('starter-welcome');
   expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
   expect(snapshot?.untitledSequenceByParent).toEqual({});
+});
+
+it('includes node attachment references in the workspace snapshot', () => {
+  seedNode('node-pdf', 0);
+  const database = openDatabaseConnection().sqlite;
+  database
+    .prepare(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)`)
+    .run('pdf-attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-04-27T08:00:00.000Z');
+  database
+    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
+    .run('node-pdf', 'pdf-attachment-1', 'reference');
+
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot?.nodesById['node-pdf']?.attachments).toEqual([{
+    attachmentId: 'pdf-attachment-1',
+    mimeType: 'application/pdf',
+    originalName: 'Paper.pdf',
+    role: 'reference'
+  }]);
 });
 
 it('loads lightweight workspace version metadata without building a snapshot', () => {

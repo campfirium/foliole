@@ -65,6 +65,36 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
     }
 
     @Test
+    public void loadsIndexedPdfPageTextAsReadableArticleContent() throws Exception {
+        insertNode("pdf-1", "Paper", "# Paper\n\nLinked PDF source ready for the reader surface.", "2026-04-25T09:00:00.000Z");
+        database.execSQL(
+            "INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at, storage_key, cached_at) " +
+                "VALUES ('attachment-pdf', 'paper.pdf', 'application/pdf', 1200, '2026-04-25T08:00:00.000Z', 'attachment-pdf', '2026-04-25T08:00:00.000Z')"
+        );
+        database.execSQL(
+            "INSERT INTO node_attachments (node_id, attachment_id, role, created_at) " +
+                "VALUES ('pdf-1', 'attachment-pdf', 'reference', '2026-04-25T08:00:00.000Z')"
+        );
+        database.execSQL(
+            "INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height) VALUES " +
+                "('attachment-pdf', 1, 'First extracted page.', 612, 792), " +
+                "('attachment-pdf', 2, 'Second extracted page.', 612, 792)"
+        );
+        FolioleCompanionSyncObjectApply.applyPayload(database, record(
+            "view_state",
+            "session_resume:android:phone:remote-device:active_node",
+            "{\"active_node_id\":\"pdf-1\"}"
+        ));
+
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+
+        JSONObject article = readable.getJSONObject("readable_article");
+        assertEquals("pdf-1", article.getString("node_id"));
+        assertEquals("attachment-pdf", article.getString("pdf_attachment_id"));
+        assertEquals("# Paper\n\nFirst extracted page.\n\nSecond extracted page.", article.getString("content"));
+    }
+
+    @Test
     public void exportsStateObjectPayloadsWithSnakeCaseWireFields() throws Exception {
         JSONArray records = new JSONArray()
             .put(record(
@@ -128,6 +158,16 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "priority REAL NOT NULL DEFAULT 0, reading_position INTEGER NOT NULL DEFAULT 0, " +
             "repetition_count INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL DEFAULT 'active')");
         database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        database.execSQL("CREATE TABLE attachments (" +
+            "id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL DEFAULT 0, " +
+            "created_at TEXT NOT NULL, storage_key TEXT, cached_at TEXT, pdf_index_status TEXT, " +
+            "pdf_indexed_at TEXT, pdf_index_error TEXT, pdf_index_version INTEGER, pdf_index_attempt INTEGER)");
+        database.execSQL("CREATE TABLE node_attachments (" +
+            "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL, " +
+            "PRIMARY KEY (node_id, attachment_id, role))");
+        database.execSQL("CREATE TABLE pdf_page_text (" +
+            "attachment_id TEXT NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL, page_width REAL, page_height REAL, " +
+            "PRIMARY KEY (attachment_id, page))");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_view_state (node_id TEXT PRIMARY KEY, scroll_top INTEGER NOT NULL DEFAULT 0, " +
             "selection_from INTEGER, selection_to INTEGER, updated_at TEXT NOT NULL)");

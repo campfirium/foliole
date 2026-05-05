@@ -116,6 +116,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
       content: '# First article\n\nBody',
       hideTitleHeading: false,
       nodeId: 'article-1',
+      pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'First article'
     },

@@ -29,6 +29,7 @@ interface WorkspaceReadingProfile {
 }
 
 export interface WorkspaceNodeSnapshot {
+  attachments?: WorkspaceNodeAttachmentSnapshot[];
   id: string;
   parentNodeId: string | null;
   kind: NodeKind;
@@ -47,6 +48,13 @@ export interface WorkspaceNodeSnapshot {
   review: WorkspaceReviewProfile | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkspaceNodeAttachmentSnapshot {
+  attachmentId: string;
+  mimeType: string | null;
+  originalName: string | null;
+  role: string;
 }
 
 export interface WorkspaceNodeRowShape {

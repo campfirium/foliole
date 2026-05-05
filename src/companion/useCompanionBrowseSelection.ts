@@ -15,7 +15,15 @@ export function useCompanionBrowseSelection(
 ) {
   const [selectedBrowseNodeId, setSelectedBrowseNodeId] = useState<string | null>(null);
   const resolvedReadableArticle = useMemo(
-    () => (selectedBrowseNodeId ? resolveReadableCompanionArticleByNodeId(snapshot, selectedBrowseNodeId) : readableArticle),
+    () => {
+      if (!selectedBrowseNodeId) {
+        return readableArticle;
+      }
+      if (readableArticle?.nodeId === selectedBrowseNodeId) {
+        return readableArticle;
+      }
+      return resolveReadableCompanionArticleByNodeId(snapshot, selectedBrowseNodeId);
+    },
     [readableArticle, selectedBrowseNodeId, snapshot]
   );
   const browsedFolder = useMemo(

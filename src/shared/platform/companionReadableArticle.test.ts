@@ -179,6 +179,7 @@ describe('companionReadableArticle title and reading helpers', () => {
       content: '# First\n\nBody',
       hideTitleHeading: false,
       nodeId: 'node-1',
+      pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'First'
     });

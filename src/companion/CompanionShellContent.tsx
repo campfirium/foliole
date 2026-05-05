@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
@@ -6,7 +8,8 @@ import { CompanionSyncContent } from './CompanionSyncContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-import { NodeBrowseList } from '@/shared/ui';
+import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
+import { AppButton, NodeBrowseList } from '@/shared/ui';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
@@ -54,13 +57,36 @@ function ReviewFallback(props: {
 function ReadableArticleDocument(props: {
   readableArticle: NonNullable<Surface['readableArticle']>;
 }) {
+  const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
+  const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
+
+  if (pdfAttachmentId && isViewingPdfOriginal) {
+    return (
+      <SimplePdfDocument
+        attachmentId={pdfAttachmentId}
+        onBackToText={() => setIsViewingPdfOriginal(false)}
+        title={props.readableArticle.title}
+      />
+    );
+  }
+
   return (
-    <CompanionArticleDocument
-      content={props.readableArticle.content}
-      hideTitleHeading={props.readableArticle.hideTitleHeading}
-      nodeId={props.readableArticle.nodeId}
-      textAnchorDecorations={props.readableArticle.textAnchorDecorations}
-    />
+    <>
+      {pdfAttachmentId ? (
+        <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
+          <span className="text-xs text-companion-text-secondary">Text version</span>
+          <AppButton onClick={() => setIsViewingPdfOriginal(true)} variant="ghost">
+            Open PDF
+          </AppButton>
+        </div>
+      ) : null}
+      <CompanionArticleDocument
+        content={props.readableArticle.content}
+        hideTitleHeading={props.readableArticle.hideTitleHeading}
+        nodeId={props.readableArticle.nodeId}
+        textAnchorDecorations={props.readableArticle.textAnchorDecorations}
+      />
+    </>
   );
 }
 

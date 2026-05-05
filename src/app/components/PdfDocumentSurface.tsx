@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import type { ComponentProps, MouseEvent as ReactMouseEvent } from 'react';
-import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import { configurePdfWorker } from '../../features/pdf/model/pdfWorker';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -19,17 +19,6 @@ import type { PdfPageDimensions } from './pdfPageDimensions';
 import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
 import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
 import { usePdfSearchControls } from './pdfSurfaceSearchControls';
-
-function configurePdfWorker() {
-  const workerUrl = new URL('react-pdf/dist/pdf.worker.entry.js', import.meta.url).toString();
-
-  // Ensure a stale fake-worker instance from previous hot reloads cannot win over the current runtime.
-  if ('pdfjsWorker' in globalThis) {
-    Reflect.deleteProperty(globalThis as Record<string, unknown>, 'pdfjsWorker');
-  }
-
-  pdfjs.GlobalWorkerOptions.workerSrc = `${workerUrl}?v=${encodeURIComponent(pdfjs.version)}`;
-}
 
 configurePdfWorker();
 

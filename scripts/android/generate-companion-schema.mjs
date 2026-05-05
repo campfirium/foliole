@@ -113,6 +113,13 @@ const statements = [
     size_bytes INTEGER,
     created_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS node_attachments (
+    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    attachment_id TEXT NOT NULL REFERENCES attachments(id),
+    role TEXT NOT NULL,
+    PRIMARY KEY (node_id, attachment_id, role)
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)',
   `CREATE TABLE IF NOT EXISTS attachment_blobs (
     attachment_id TEXT PRIMARY KEY,
     content_hash TEXT,

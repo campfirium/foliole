@@ -3,6 +3,7 @@ import {
   buildOrderedNodeIds,
   buildWorkspaceSnapshotNode,
   resolveSnapshotActiveNodeId,
+  type WorkspaceNodeAttachmentSnapshot,
   type WorkspaceNodeSnapshot
 } from './workspaceSnapshotHelpers.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
@@ -56,6 +57,14 @@ interface NodeOrderRow extends DatabaseRow {
   node_id: string;
 }
 
+interface NodeAttachmentSnapshotRow extends DatabaseRow {
+  attachment_id: string;
+  mime_type: string | null;
+  node_id: string;
+  original_name: string | null;
+  role: string;
+}
+
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
@@ -105,6 +114,39 @@ function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
   return driver.queryAll<NodeOrderRow>('SELECT node_id FROM node_order ORDER BY position ASC');
 }
 
+function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshotRow[] {
+  return driver.queryAll<NodeAttachmentSnapshotRow>(
+    `SELECT
+       node_attachments.node_id,
+       node_attachments.attachment_id,
+       node_attachments.role,
+       attachments.mime_type,
+       attachments.original_name
+     FROM node_attachments
+     LEFT JOIN attachments ON attachments.id = node_attachments.attachment_id
+     ORDER BY node_attachments.node_id ASC, node_attachments.role ASC, node_attachments.attachment_id ASC`
+  );
+}
+
+function attachNodeAttachments(
+  nodesById: Record<string, WorkspaceNodeSnapshot>,
+  attachmentRows: NodeAttachmentSnapshotRow[]
+) {
+  for (const row of attachmentRows) {
+    const node = nodesById[row.node_id];
+    if (!node) {
+      continue;
+    }
+    const attachment: WorkspaceNodeAttachmentSnapshot = {
+      attachmentId: row.attachment_id,
+      mimeType: row.mime_type,
+      originalName: row.original_name,
+      role: row.role
+    };
+    node.attachments = [...(node.attachments ?? []), attachment];
+  }
+}
+
 function buildSnapshotRows(
   driver: DatabaseDriver,
   rows: WorkspaceNodeRow[],
@@ -119,6 +161,7 @@ function buildSnapshotRows(
       trashedNodeIds.push(row.id);
     }
   }
+  attachNodeAttachments(nodesById, queryNodeAttachmentRows(driver));
   const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
 
   return {

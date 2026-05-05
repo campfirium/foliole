@@ -43,6 +43,12 @@ public class FolioleCompanionSnapshotImporterTest {
             "priority REAL NOT NULL DEFAULT 0, reading_position INTEGER NOT NULL DEFAULT 0, " +
             "repetition_count INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL DEFAULT 'active')");
         database.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        database.execSQL("CREATE TABLE attachments (" +
+            "id TEXT PRIMARY KEY, original_name TEXT, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL DEFAULT 0, " +
+            "created_at TEXT NOT NULL, storage_key TEXT, cached_at TEXT)");
+        database.execSQL("CREATE TABLE node_attachments (" +
+            "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL, " +
+            "PRIMARY KEY (node_id, attachment_id, role))");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
     }
 
@@ -82,16 +88,20 @@ public class FolioleCompanionSnapshotImporterTest {
     }
 
     @Test
-    public void exportsNullWhenSnapshotClearsFormalTables() throws Exception {
+    public void ignoresNullSnapshotWithoutClearingFormalTables() throws Exception {
         FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(
             database,
             createWorkspaceSnapshotJson(),
             "2026-04-23T12:00:00.000Z"
         );
 
-        FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, "null", "2026-04-23T13:00:00.000Z");
+        boolean replaced = FolioleCompanionSnapshotImporter.replaceWorkspaceSnapshot(database, "null", "2026-04-23T13:00:00.000Z");
 
-        assertNull(FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database));
+        assertEquals(false, replaced);
+        JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(database);
+        assertNotNull(snapshot);
+        assertEquals("article-1", snapshot.getString("activeNodeId"));
+        assertEquals("Article body", snapshot.getJSONObject("nodesById").getJSONObject("article-1").getString("content"));
     }
 
     @Test

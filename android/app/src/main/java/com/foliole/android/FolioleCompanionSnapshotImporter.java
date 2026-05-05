@@ -17,19 +17,20 @@ final class FolioleCompanionSnapshotImporter {
 
     private FolioleCompanionSnapshotImporter() {}
 
-    static void replaceWorkspaceSnapshot(SQLiteDatabase database, String workspaceSnapshotJson, String syncedAt) throws Exception {
+    static boolean replaceWorkspaceSnapshot(SQLiteDatabase database, String workspaceSnapshotJson, String syncedAt) throws Exception {
+        JSONObject snapshot = parseSnapshot(workspaceSnapshotJson);
+        if (snapshot == null) {
+            return false;
+        }
         database.beginTransaction();
         try {
             clearWorkspaceTables(database);
-
-            JSONObject snapshot = parseSnapshot(workspaceSnapshotJson);
-            if (snapshot != null) {
-                importNodes(database, snapshot, syncedAt);
-                importNodeOrder(database, snapshot);
-                importActiveNode(database, snapshot, syncedAt);
-            }
+            importNodes(database, snapshot, syncedAt);
+            importNodeOrder(database, snapshot);
+            importActiveNode(database, snapshot, syncedAt);
 
             database.setTransactionSuccessful();
+            return true;
         } finally {
             database.endTransaction();
         }

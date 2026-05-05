@@ -94,6 +94,7 @@ describe('useCompanionWorkspaceSync', () => {
       content: '# Synced topic\n\nBody',
       hideTitleHeading: false,
       nodeId: 'topic-1',
+      pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Synced topic'
     });

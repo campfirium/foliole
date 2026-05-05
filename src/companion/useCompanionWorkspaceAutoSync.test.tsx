@@ -1,48 +1,43 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+function createSyncState(endpointUrl: string | null) {
+  return {
+    endpoint_url: endpointUrl,
+    last_synced_at: endpointUrl ? '2026-04-22T12:00:00.000Z' : null,
+    remembered_targets: endpointUrl ? [endpointUrl] : [],
+    sync_events: [],
+    sync_onboarding_status: 'completed' as const,
+    workspace_snapshot: null
+  };
+}
+
+async function renderAutoSyncHook(isNativeRuntime: boolean, endpointUrl = 'http://10.0.2.2:38641') {
+  vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
+    isNativeAndroidCompanionRuntime: () => isNativeRuntime
+  }));
+  const foregroundHandlers: Array<() => void> = [];
+  const subscribeNativeAppForeground = vi.fn(async (handler: () => void) => {
+    foregroundHandlers.push(handler);
+    return vi.fn();
+  });
+  vi.doMock('../shared/platform/appLifecycle', () => ({
+    subscribeNativeAppForeground
+  }));
+  const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
+  const tryForegroundAutoSync = vi.fn(async () => undefined);
+  const hook = renderHook(({ syncState }) =>
+    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), syncState, tryForegroundAutoSync),
+    { initialProps: { syncState: createSyncState(endpointUrl) } }
+  );
+  return { foregroundHandlers, hook, subscribeNativeAppForeground, tryForegroundAutoSync };
+}
+
 describe('useForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.useRealTimers();
   });
-
-  async function renderAutoSyncHook(isNativeRuntime: boolean) {
-    vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
-      isNativeAndroidCompanionRuntime: () => isNativeRuntime
-    }));
-    const foregroundHandlers: Array<() => void> = [];
-    const subscribeNativeAppForeground = vi.fn(async (handler: () => void) => {
-      foregroundHandlers.push(handler);
-      return vi.fn();
-    });
-    vi.doMock('../shared/platform/appLifecycle', () => ({
-      subscribeNativeAppForeground
-    }));
-    const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
-    const tryForegroundAutoSync = vi.fn(async () => undefined);
-
-    const state = {
-      endpoint_url: 'http://10.0.2.2:38641',
-      last_synced_at: '2026-04-22T12:00:00.000Z',
-      remembered_targets: ['http://10.0.2.2:38641'],
-      sync_events: [],
-      sync_onboarding_status: 'completed' as const,
-      workspace_snapshot: null
-    };
-
-    renderHook(() =>
-      useForegroundAutoSync(
-        vi.fn(),
-        vi.fn(),
-        vi.fn(),
-        vi.fn(),
-        state,
-        tryForegroundAutoSync
-      )
-    );
-    return { foregroundHandlers, subscribeNativeAppForeground, tryForegroundAutoSync };
-  }
 
   it('stays quiet outside the native companion runtime', async () => {
     const { tryForegroundAutoSync } = await renderAutoSyncHook(false);
@@ -69,5 +64,16 @@ describe('useForegroundAutoSync', () => {
     });
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('runs after the native sync endpoint loads during bootstrap', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { hook, tryForegroundAutoSync } = await renderAutoSyncHook(true, null);
+
+    expect(tryForegroundAutoSync).not.toHaveBeenCalled();
+
+    hook.rerender({ syncState: createSyncState('http://10.0.2.2:38641') });
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
   });
 });

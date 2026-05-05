@@ -16,6 +16,7 @@ export function normalizeReadableArticlePayload(value: unknown): CompanionReadab
     content: raw.content,
     hideTitleHeading: raw.hide_title_heading === true,
     nodeId: raw.node_id,
+    pdfAttachmentId: typeof raw.pdf_attachment_id === 'string' && raw.pdf_attachment_id.trim() ? raw.pdf_attachment_id : null,
     textAnchorDecorations: [],
     title: raw.title
   };

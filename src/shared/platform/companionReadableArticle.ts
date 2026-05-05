@@ -8,6 +8,7 @@ export interface CompanionReadableArticle {
   content: string;
   hideTitleHeading: boolean;
   nodeId: string;
+  pdfAttachmentId: string | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   title: string;
 }
@@ -60,9 +61,14 @@ function buildReadableArticle(node: CompanionReadableNode) {
     content: node.content,
     hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,
+    pdfAttachmentId: resolveReferencePdfAttachmentId(node),
     textAnchorDecorations: [],
     title: resolveCompanionArticleTitle(node)
   };
+}
+
+function resolveReferencePdfAttachmentId(node: CompanionReadableNode) {
+  return node.attachments?.find((attachment) => attachment.role === 'reference' && attachment.mimeType === 'application/pdf')?.attachmentId ?? null;
 }
 
 function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode) {

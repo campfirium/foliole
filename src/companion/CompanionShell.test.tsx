@@ -30,6 +30,10 @@ vi.mock('./CompanionReviewCard', () => ({
   )
 }));
 
+vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
+  SimplePdfDocument: () => <div>PDF original viewer</div>
+}));
+
 type MockSurface = Record<string, unknown>;
 
 function createSnapshot(): WorkspaceSnapshot {
@@ -256,4 +260,5 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page');
   });
+
 });
