@@ -1,8 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke, listRuntimeSystemFonts, resolveRuntimeAppPaths } from './bridge';
+import { getRuntimeInvoke, listRuntimeSystemFonts, openExternalUrl, resolveRuntimeAppPaths } from './bridge';
+import type { ElectronAPI } from './electronApi';
 
-function createMockElectronApi(invoke: ReturnType<typeof vi.fn>) {
+function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,
     on: () => () => undefined,
@@ -61,4 +62,13 @@ it('normalizes runtime system font payload', async () => {
     monospaceFonts: ['JetBrains Mono']
   });
   expect(invoke).toHaveBeenCalledWith('list_system_fonts');
+});
+
+it('opens external urls through typed native invoke when available', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke as ElectronAPI['invoke']);
+
+  await openExternalUrl('https://example.com/docs');
+
+  expect(invoke).toHaveBeenCalledWith('open_external_url', { url: 'https://example.com/docs' });
 });

@@ -61,14 +61,19 @@
 
 ## Windows Native 客户端同步规则（强制）
 1. Windows 端 Tauri 启动由用户手动负责（例如在 `C:\dev\foliole` 执行 `npm run tauri:dev`）。
-2. Agent 每次代码改动后默认执行 `npm run windows:preview`：先同步到 Windows 镜像目录，并仅在 `electron/**` 改动时自动重启客户端；否则依赖 Vite HMR。
-3. 仅在用户明确要求“只同步（不自检/不重启）”时，才执行 `npm run windows:sync`。
-4. 对用户宣称“可在 Windows 客户端看到效果/可验收”前，必须回报本次执行的实际命令与最终状态字段（`status: SYNCED` / `status: RESTARTED` / `status: DELIVERED`）。
-5. 若质量闸或同步失败，必须先修复失败项再继续功能结论输出；禁止以“代码已改完”替代客户端可见结果。
+2. Windows 预览是否默认执行，仅由 `.lab/agent/windows-preview.flag` 控制；该文件是唯一真相来源，只允许写入 `ON` 或 `OFF`。
+3. 当 `windows-preview.flag` 为 `ON` 时，每个任务在完成本地质量闸后，默认继续执行 `npm run windows:preview` 再结束验证。
+4. 当 `windows-preview.flag` 为 `OFF` 时，默认不执行任何 Windows 客户端联调或同步命令；任务验证只要求本地 `lint` / `typecheck` / `test` 或相关最小子集。
+5. 用户说“打开 Windows 预览开关”时，将 `.lab/agent/windows-preview.flag` 改为 `ON`；用户说“关闭 Windows 预览开关”时，将其改为 `OFF`。开关状态跨会话持续生效，直到用户再次修改。
+6. 若用户在开关为 `OFF` 时明确要求执行 Windows 验收，仍可按用户指令临时执行一次，但不自动改变开关状态。
+7. 对用户宣称“可在 Windows 客户端看到效果/可验收”前，必须回报本次执行的实际命令与最终状态字段（`status: SYNCED` / `status: RESTARTED` / `status: DELIVERED`）。
+8. 若质量闸或同步失败，必须先修复失败项再继续功能结论输出；禁止以“代码已改完”替代客户端可见结果。
 
 ## Windows Preview Workflow (Effective Immediately)
-- Goal: fast loop for renderer changes with Vite HMR on Windows; restart only when needed.
-- Default loop command: `npm run windows:preview`
+- Goal: use a persistent hard switch to control whether Windows preview is part of the default validation loop.
+- Switch file: `.lab/agent/windows-preview.flag`
+- `ON`: local quality checks first, then run `npm run windows:preview`
+- `OFF`: local quality checks only
 - `windows:preview` does:
   - `windows:sync` (rsync source to `C:\\dev\\foliole`)
   - Ensure Windows `electron:dev` is running (auto-start if stopped)
@@ -156,6 +161,7 @@
 1. 默认入口仅 `AGENTS.md`；其他文档按需读取，不做会话启动必读。
 - `current-phase.md`（现作为当前执行轨道文件）不再是默认启动入口，仅在用户明确要求查看当前轨道时读取。
 - `handoffs/LATEST.md` 仅在用户明确说“继续”时读取。
+ - `.lab/agent/windows-preview.flag` 是执行开关，不是任务文档；当任务涉及验证策略判断时读取。
  - `.lab/agent/TODO.md` 是执行台账，不是默认会话启动入口；仅在用户提供新任务/新反馈，或新会话首条有效指令为“继续”时读取并更新。
 2. 保留两份核心文档用于按需场景：
 - `AGENTS.md`（执行规则）

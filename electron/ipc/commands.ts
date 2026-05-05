@@ -1,5 +1,10 @@
 import { BrowserWindow, app, shell, type WebContents } from 'electron';
 
+import {
+  isTypedNativeRequest,
+  type NativeInvokeRequest
+} from '../../lib/platform/nativeContract.js';
+
 import { bootReport } from './boot.js';
 import { asString, asStringArray } from './commandParsers.js';
 import type { InvokeRequest } from './contracts.js';
@@ -23,13 +28,20 @@ function resolveTargetWindow(context?: InvokeContext) {
   return BrowserWindow.getFocusedWindow();
 }
 
-async function handleWindowCommand(command: string, context?: InvokeContext): Promise<unknown> {
+function isTypedRequest<T extends NativeInvokeRequest['command']>(
+  request: InvokeRequest,
+  command: T
+): request is NativeInvokeRequest<T> {
+  return isTypedNativeRequest(request, command);
+}
+
+async function handleWindowCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const window = resolveTargetWindow(context);
-  if (command === 'window_minimize') {
+  if (isTypedRequest(request, 'window_minimize')) {
     window?.minimize();
     return null;
   }
-  if (command === 'window_toggle_maximize') {
+  if (isTypedRequest(request, 'window_toggle_maximize')) {
     if (!window) {
       return null;
     }
@@ -40,11 +52,11 @@ async function handleWindowCommand(command: string, context?: InvokeContext): Pr
     }
     return null;
   }
-  if (command === 'window_close') {
+  if (isTypedRequest(request, 'window_close')) {
     window?.close();
     return null;
   }
-  if (command === 'window_is_maximized') {
+  if (isTypedRequest(request, 'window_is_maximized')) {
     return Boolean(window?.isMaximized());
   }
   return undefined;
@@ -54,8 +66,8 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   const command = request.command;
   const args = request.args ?? {};
 
-  if (command === 'open_external_url') {
-    const url = asString(args.url, 'url').trim();
+  if (isTypedRequest(request, 'open_external_url')) {
+    const url = asString(request.args.url, 'url').trim();
     if (!url) {
       return null;
     }
@@ -63,14 +75,14 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     return null;
   }
 
-  if (command === 'resolve_app_paths') {
+  if (isTypedRequest(request, 'resolve_app_paths')) {
     return resolveAppPaths();
   }
-  if (command === 'list_system_fonts') {
+  if (isTypedRequest(request, 'list_system_fonts')) {
     return listSystemFonts();
   }
-  if (command === 'sync_app_menu_state') {
-    syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'));
+  if (isTypedRequest(request, 'sync_app_menu_state')) {
+    syncAppMenuState(asStringArray(request.args.enabledCommandIds, 'enabledCommandIds'));
     return null;
   }
 
@@ -79,12 +91,12 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
     return storageResult;
   }
 
-  const windowResult = await handleWindowCommand(command, context);
+  const windowResult = await handleWindowCommand(request, context);
   if (windowResult !== undefined) {
     return windowResult;
   }
-  if (command === 'boot_report') {
-    await bootReport(asString(args.stage, 'stage'), args.payload ?? null);
+  if (isTypedRequest(request, 'boot_report')) {
+    await bootReport(asString(request.args.stage, 'stage'), request.args.payload ?? null);
     return null;
   }
   if (command === 'review_grade') {
@@ -93,7 +105,7 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   if (command === 'review_preview') {
     return reviewPreview(args as unknown as ReviewPreviewRequest);
   }
-  if (command === 'app_get_version') {
+  if (isTypedRequest(request, 'app_get_version')) {
     return app.getVersion();
   }
   throw new Error(`unsupported native command: ${command}`);

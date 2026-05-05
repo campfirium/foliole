@@ -1,8 +1,10 @@
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+
 import { getElectronAPI } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 
 const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
-export type RuntimeInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+export type RuntimeInvoke = NativeInvoke;
 
 export interface RuntimeAppPaths {
   appDataDir: string;

@@ -1,3 +1,5 @@
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+
 export interface ElectronWindowControls {
   close: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
@@ -7,7 +9,7 @@ export interface ElectronWindowControls {
 }
 
 export interface ElectronAPI {
-  invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+  invoke: NativeInvoke;
   on: (channel: string, handler: (...args: unknown[]) => void) => () => void;
   windowControls: ElectronWindowControls;
 }

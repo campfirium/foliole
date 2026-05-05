@@ -2,6 +2,7 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 import {
   deleteNodesPermanently,
   replaceNodeOrder,
@@ -11,6 +12,11 @@ import {
 } from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
+
+const { openExternal, syncAppMenuState } = vi.hoisted(() => ({
+  openExternal: vi.fn().mockResolvedValue(undefined),
+  syncAppMenuState: vi.fn()
+}));
 
 const mockWindow = {
   close: vi.fn(),
@@ -26,10 +32,10 @@ vi.mock('electron', () => ({
     getFocusedWindow: vi.fn(() => mockWindow)
   },
   app: { getVersion: () => '1.0.0' },
-  shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
+  shell: { openExternal }
 }));
 
-vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
+vi.mock('./menu.js', () => ({ syncAppMenuState }));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
     app_data_dir: '/data',
@@ -205,7 +211,9 @@ it('handles permanent delete node command', async () => {
 });
 
 it('handles app path and fsrs commands', async () => {
-  await expect(handleInvokeRequest({ command: 'resolve_app_paths' })).resolves.toEqual({
+  const resolveAppPathsRequest = { command: 'resolve_app_paths' } satisfies NativeInvokeRequest<'resolve_app_paths'>;
+
+  await expect(handleInvokeRequest(resolveAppPathsRequest)).resolves.toEqual({
     app_data_dir: '/data',
     app_config_dir: '/config',
     app_cache_dir: '/cache',
@@ -234,6 +242,26 @@ it('handles app path and fsrs commands', async () => {
       }
     })
   ).resolves.toEqual({ reviewed_at: '2026-03-04T00:00:00.000Z', card: {} });
+});
+
+it('handles typed native utility commands', async () => {
+  const openExternalUrlRequest = {
+    command: 'open_external_url',
+    args: { url: 'https://example.com' }
+  } satisfies NativeInvokeRequest<'open_external_url'>;
+  const syncAppMenuStateRequest = {
+    command: 'sync_app_menu_state',
+    args: { enabledCommandIds: ['node.create', 'node.delete'] }
+  } satisfies NativeInvokeRequest<'sync_app_menu_state'>;
+
+  await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
+  await expect(handleInvokeRequest(syncAppMenuStateRequest)).resolves.toBeNull();
+  await expect(
+    handleInvokeRequest({ command: 'app_get_version' } satisfies NativeInvokeRequest<'app_get_version'>)
+  ).resolves.toBe('1.0.0');
+
+  expect(openExternal).toHaveBeenCalledWith('https://example.com');
+  expect(syncAppMenuState).toHaveBeenCalledWith(['node.create', 'node.delete']);
 });
 
 it('throws on unsupported command', async () => {
