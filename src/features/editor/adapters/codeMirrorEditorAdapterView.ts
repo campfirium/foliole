@@ -7,14 +7,10 @@ import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 import { createEmptyDecorationsEffect } from './codeMirrorEditorAdapterSupport';
 
 export function alignSelectionInViewport(view: EditorView, position: number, targetRatio?: number) {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      scheduleSelectionAlignment(view, position, targetRatio, 8);
-    });
-  });
+  scheduleSelectionAlignment(view, position, targetRatio, 8);
 }
 
-function resolvePositionViewportTop(view: EditorView, position: number) {
+export function resolvePositionViewportTop(view: EditorView, position: number) {
   const cursorRect = view.coordsAtPos(position) ?? view.coordsAtPos(position, -1);
   if (cursorRect) {
     return {

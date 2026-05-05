@@ -119,7 +119,7 @@ async function runEditorIndependenceCase() {
       vi.advanceTimersByTime(20);
     });
 
-    expect(beginAnchorNavigationRestore).toHaveBeenCalledTimes(2);
+    expect(beginAnchorNavigationRestore).toHaveBeenCalledTimes(1);
   } finally {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;

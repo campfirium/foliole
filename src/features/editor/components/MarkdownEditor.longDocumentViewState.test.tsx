@@ -12,6 +12,7 @@ const mockSetSearchDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();
+const mockRevealSelectionAtViewportRatio = vi.fn();
 const mockRestoreSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
@@ -58,6 +59,9 @@ function createMockCodeMirrorEditorAdapterClass() {
     }
     revealSelection(selection: { from: number; to: number }) {
       mockRevealSelection(selection);
+    }
+    revealSelectionAtViewportRatio(selection: { from: number; to: number }, ratio: number) {
+      mockRevealSelectionAtViewportRatio(selection, ratio);
     }
     getScrollTop() {
       return currentScrollTop;
@@ -125,6 +129,7 @@ beforeEach(() => {
   mockSetHideTitleHeading.mockClear();
   mockSetSelection.mockClear();
   mockRevealSelection.mockClear();
+  mockRevealSelectionAtViewportRatio.mockClear();
   mockRestoreSelection.mockClear();
   mockSetScrollTop.mockClear();
   mockOnScroll.mockClear();

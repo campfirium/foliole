@@ -75,6 +75,13 @@ export function createReadingPositionHandlers(args: BuildControllerLayoutPropsAr
       }
       return current.state;
     },
+    getReadingPositionTargetViewportRatio: () => {
+      const current = args.runtime.readingPositionSyncRef.current;
+      if (current.nodeId !== args.ws.activeNodeId) {
+        return null;
+      }
+      return current.state?.targetViewportRatio ?? null;
+    },
     setReadingPositionSelection: (selection: EditorSelection) => {
       args.runtime.readingPositionRef.current = {
         nodeId: args.ws.activeNodeId,

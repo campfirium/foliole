@@ -23,6 +23,7 @@ export function requestReadingPositionApply(args: {
   reason: string;
   runtime: ReadingPositionRuntimeLike;
   selection: EditorSelection;
+  targetViewportRatio?: number;
 }) {
   args.runtime.readingPositionRef.current = {
     nodeId: args.nodeId,
@@ -33,7 +34,8 @@ export function requestReadingPositionApply(args: {
     state: {
       reason: args.reason,
       startedAt: Date.now(),
-      targetSelection: args.selection
+      targetSelection: args.selection,
+      targetViewportRatio: args.targetViewportRatio
     }
   };
   args.runtime.bumpReadingPositionRequest();

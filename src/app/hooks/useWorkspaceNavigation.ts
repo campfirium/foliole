@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 import { usePreparedNavigationHandlers } from './useWorkspaceNavigationPrefetch';
@@ -11,10 +11,11 @@ interface WorkspaceNavigationDependencies {
   activeNodeContent: string | null;
   activeNodeId: string | null;
   activeNodeParentId: string | null;
+  applyNavigationReadingPosition?: (result: NodeNavigationResult | null) => boolean;
   backStackSize: number;
-  beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => void;
+  beginAnchorNavigationRestore?: (nodeId: string, selection: EditorSelection) => void;
   closeContextMenu: () => void;
-  completeAnchorNavigationRestore: (nodeId: string, reason: string) => void;
+  completeAnchorNavigationRestore?: (nodeId: string, reason: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   flushPendingEditorDraft: () => void;
   forwardStackSize: number;
@@ -23,6 +24,7 @@ interface WorkspaceNavigationDependencies {
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
   nodesById: Record<string, Node>;
+  nodeViewById?: Record<string, { scrollTop: number; selection: { from: number; to: number } } | undefined>;
   openNode: (nodeId: string) => NodeNavigationResult | null;
   saveActiveNodeView: (nodeIdOverride?: string | null) => void;
 }
@@ -39,10 +41,36 @@ interface WorkspaceNavigationHandlers {
   shouldSuppressSelectionRestore: () => boolean;
 }
 
+function createNavigationReadingPositionCompat(args: {
+  applyNavigationReadingPosition?: (result: NodeNavigationResult | null) => boolean;
+  beginAnchorNavigationRestore?: (nodeId: string, selection: EditorSelection) => void;
+  completeAnchorNavigationRestore?: (nodeId: string, reason: string) => void;
+}) {
+  return (result: NodeNavigationResult | null) => {
+    if (args.applyNavigationReadingPosition) {
+      return args.applyNavigationReadingPosition(result);
+    }
+    if (!result?.focusAnchor || isPdfAnchorLocator(result.focusAnchor.locator)) {
+      return false;
+    }
+    const firstLocator = getTextAnchorLocators(result.focusAnchor.locator)[0];
+    if (!firstLocator) {
+      return false;
+    }
+    args.beginAnchorNavigationRestore?.(result.nodeId, {
+      from: Math.max(0, firstLocator.from),
+      to: Math.max(0, firstLocator.from)
+    });
+    void args.completeAnchorNavigationRestore;
+    return true;
+  };
+}
+
 export function useWorkspaceNavigation({
   activeNodeContent,
   activeNodeId,
   activeNodeParentId,
+  applyNavigationReadingPosition,
   backStackSize,
   beginAnchorNavigationRestore,
   closeContextMenu,
@@ -55,14 +83,20 @@ export function useWorkspaceNavigation({
   goToParent,
   jumpToAncestorNode,
   nodesById,
+  nodeViewById,
   openNode,
   saveActiveNodeView
 }: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
+  const applyNavigationReadingPositionCompat = createNavigationReadingPositionCompat({
+    applyNavigationReadingPosition,
+    beginAnchorNavigationRestore,
+    completeAnchorNavigationRestore
+  });
   const pendingAnchorNavigation = usePendingAnchorNavigation({
     activeNodeContent,
     activeNodeId,
-    beginAnchorNavigationRestore,
-    completeAnchorNavigationRestore
+    applyNavigationReadingPosition: applyNavigationReadingPositionCompat,
+    nodeViewById: nodeViewById ?? {}
   });
   const preparedHandlers = usePreparedNavigationHandlers({
     activeNodeContent,

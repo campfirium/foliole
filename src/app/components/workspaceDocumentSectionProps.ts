@@ -4,6 +4,7 @@ import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 function buildReadingPositionProps(props: WorkspaceLayoutProps) {
   return {
     editorReadingSelection: props.getReadingPositionSelection(),
+    editorReadingTargetViewportRatio: props.getReadingPositionTargetViewportRatio(),
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.beginApplyingReadingPosition,
     onCompleteApplyingReadingPosition: props.completeApplyingReadingPosition,

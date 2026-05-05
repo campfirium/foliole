@@ -155,6 +155,22 @@ async function collectPromptEditorSelection(desktopWindow: Page) {
   });
 }
 
+async function collectPromptEditorAnchorViewport(desktopWindow: Page, position: number) {
+  return desktopWindow.evaluate((from) => {
+    const debugApi = globalThis.window?.__folioleDebug;
+    const viewport = debugApi?.getEditorViewportRect?.('prompt-editor') ?? null;
+    const top = debugApi?.getEditorPositionViewportTop?.('prompt-editor', from) ?? null;
+    if (!viewport || typeof top !== 'number' || viewport.height <= 0) {
+      return null;
+    }
+    return {
+      ratio: (top - viewport.top) / viewport.height,
+      top,
+      viewport
+    };
+  }, position);
+}
+
 async function collectNodeViewSelection(desktopWindow: Page, nodeTitle: string) {
   return desktopWindow.evaluate((title) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
@@ -427,9 +443,9 @@ test('jumps to a context-menu-created highlight from the highlights panel while 
   }).toMatchObject({
     selection: {
       from: 6,
-      to: 10
+      to: 6
     },
-    selectedText: 'Beta'
+    selectedText: ''
   });
 
   await testInfo.attach('context-menu-highlight-panel-selection', {
@@ -471,9 +487,9 @@ test('jumps to a context-menu-created highlight from the highlights panel while 
   }).toMatchObject({
     selection: {
       from: 6,
-      to: 10
+      to: 6
     },
-    selectedText: 'Beta'
+    selectedText: ''
   });
 
   await testInfo.attach('child-document-highlight-panel-selection', {
@@ -530,10 +546,10 @@ test('scrolls to a deep context-menu-created highlight from the highlights panel
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
     message: 'waiting for long child-document highlight panel jump to reveal the text range'
   }).toMatchObject({
-    selectedText: 'ChildDocumentJumpNeedle',
+    selectedText: '',
     selection: {
       from: needlePosition,
-      to: needlePosition + 'ChildDocumentJumpNeedle'.length
+      to: needlePosition
     }
   });
 
@@ -579,6 +595,12 @@ test('really scrolls to a deep text anchor when returning to the parent from bre
   expect(promptSelection.selection).toEqual({
     from: promptSelection.selection?.from,
     to: promptSelection.selection?.from
+  });
+
+  const viewportPosition = await collectPromptEditorAnchorViewport(desktopWindow, promptSelection.selection?.from ?? 0);
+  await testInfo.attach('deep-breadcrumb-viewport-position', {
+    body: JSON.stringify(viewportPosition, null, 2),
+    contentType: 'application/json'
   });
 });
 

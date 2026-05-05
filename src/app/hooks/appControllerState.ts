@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useNavigationReadingPosition } from './appControllerNavigationReadingPosition';
 import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
-import { requestReadingPositionApply } from './readingPositionRequests';
 import { useAppRuntime } from './useAppRuntime';
 import { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import { useEditorContextCommands } from './useEditorContextCommands';
@@ -107,55 +107,20 @@ function useWorkspaceReadingProgressPersistence(args: {
   });
 }
 
-function useAnchorNavigationReadingPosition(runtime: ReturnType<typeof useAppRuntime>) {
-  const beginAnchorNavigationRestore = useCallback(
-    (nodeId: string, selection: { from: number; to: number }) => {
-      requestReadingPositionApply({
-        nodeId,
-        reason: 'anchor-navigation',
-        runtime,
-        selection
-      });
-    },
-    [runtime]
-  );
-
-  const completeAnchorNavigationRestore = useCallback(
-    (nodeId: string, reason: string) => {
-      void reason;
-      const current = runtime.readingPositionSyncRef.current;
-      if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
-        return;
-      }
-      runtime.readingPositionSyncRef.current = {
-        nodeId,
-        state: null
-      };
-    },
-    [runtime.readingPositionSyncRef]
-  );
-
-  return {
-    beginAnchorNavigationRestore,
-    completeAnchorNavigationRestore
-  };
-}
-
 function useWorkspaceEditorController(
   ws: ReturnType<typeof useWorkspaceSelectors>,
   runtime: ReturnType<typeof useAppRuntime>,
   activeNode: Node | undefined,
   saveActiveNodeView: ReturnType<typeof useSaveActiveNodeView>,
-  anchorNavigationReadingPosition: ReturnType<typeof useAnchorNavigationReadingPosition>
+  navigationReadingPosition: ReturnType<typeof useNavigationReadingPosition>
 ) {
   const nav = useWorkspaceNavigation({
     activeNodeContent: activeNode?.content ?? null,
     activeNodeId: ws.activeNodeId,
     activeNodeParentId: activeNode?.parentNodeId ?? null,
+    applyNavigationReadingPosition: navigationReadingPosition.applyNavigationReadingPosition,
     backStackSize: ws.navigation.backStack.length,
-    beginAnchorNavigationRestore: anchorNavigationReadingPosition.beginAnchorNavigationRestore,
     closeContextMenu: () => undefined,
-    completeAnchorNavigationRestore: anchorNavigationReadingPosition.completeAnchorNavigationRestore,
     editorRef: runtime.editorRef,
     flushPendingEditorDraft: runtime.flushPendingEditorDraft,
     forwardStackSize: ws.navigation.forwardStack.length,
@@ -164,6 +129,7 @@ function useWorkspaceEditorController(
     goToParent: ws.goToParent,
     jumpToAncestorNode: ws.jumpToAncestorNode,
     nodesById: ws.nodesById,
+    nodeViewById: ws.nodeViewById,
     openNode: ws.openNode,
     saveActiveNodeView
   });
@@ -221,14 +187,14 @@ export function useWorkspaceControllerState(
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
-  const anchorNavigationReadingPosition = useAnchorNavigationReadingPosition(runtime);
+  const navigationReadingPosition = useNavigationReadingPosition(runtime, ws.nodeViewById, ws.setNodeViewState);
   const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
   const { editorCtx, nav } = useWorkspaceEditorController(
     ws,
     runtime,
     activeNode,
     saveActiveNodeView,
-    anchorNavigationReadingPosition
+    navigationReadingPosition
   );
   useEditorDraftCloseBridge(isWorkspaceHydrated, runtime.flushPendingEditorDraftImmediately);
   useWorkspaceReadingProgressPersistence({

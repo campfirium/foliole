@@ -100,6 +100,7 @@ export interface WorkspaceLayoutProps {
   completeApplyingReadingPosition: (reason: string) => void;
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+  getReadingPositionTargetViewportRatio: () => number | null;
   setReadingPositionSelection: (selection: EditorSelection) => void;
   onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;

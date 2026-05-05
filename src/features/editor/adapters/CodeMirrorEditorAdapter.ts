@@ -13,6 +13,7 @@ import {
 } from './codeMirrorEditorAdapterSupport';
 import {
   isPositionNearViewportRatio,
+  resolvePositionViewportTop,
   readEditorScrollMetrics,
   revealEditorPosition,
   resolveDocumentPositionAtViewportY,
@@ -101,6 +102,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   getContent() { return this.view.state.doc.toString(); }
   getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
   getPrimaryVisiblePosition() { return resolvePrimaryVisiblePosition(this.view); }
+  getPositionViewportTop(position: number) {
+    return resolvePositionViewportTop(this.view, this.clampPosition(position))?.viewportTop ?? null;
+  }
   isPositionNearViewportRatio(position: number, ratio: number, toleranceRatio?: number) {
     return isPositionNearViewportRatio(this.view, this.clampPosition(position), ratio, toleranceRatio);
   }

@@ -1,8 +1,7 @@
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
-import { buildAnchorViewState } from './anchorViewState';
-import { requestReadingPositionApply } from './readingPositionRequests';
 
 export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
   return () => {
@@ -25,7 +24,7 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
 }
 
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string, focusAnchor = null) => {
+  return (nodeId: string, focusAnchor: NodeAnchorLink | null = null) => {
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     const activeNode = args.ws.activeNodeId ? args.ws.nodesById[args.ws.activeNodeId] : null;
@@ -39,27 +38,10 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
       focusAnchor,
       nodeId
     });
-    const applyTextAnchorSelection = (targetNodeId: string, anchorLink: typeof effectiveFocusAnchor) => {
-      const nextViewState = buildAnchorViewState(anchorLink, args.ws.nodeViewById[targetNodeId], undefined, true);
-      if (!nextViewState) {
-        return false;
-      }
-      args.ws.setNodeViewState(targetNodeId, nextViewState);
-      requestReadingPositionApply({
-        nodeId: targetNodeId,
-        reason: 'anchor-navigation',
-        runtime: args.runtime,
-        selection: nextViewState.selection
-      });
-      return true;
-    };
     if (args.ws.nodesById[nodeId]?.specialKind !== 'virtual') {
       args.virtualView.closeVirtualView();
     }
-    if (effectiveFocusAnchor) {
-      applyTextAnchorSelection(nodeId, effectiveFocusAnchor);
-    }
-    args.nav.handleSelectNode(nodeId);
+    args.nav.handleSelectNode(nodeId, effectiveFocusAnchor);
   };
 }
 

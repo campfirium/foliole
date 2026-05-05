@@ -22,6 +22,7 @@ export function handleSelectionRestore(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
@@ -38,8 +39,10 @@ export function handleSelectionRestore(args: {
     return;
   }
   if (args.shouldSuppressSelectionRestore?.()) {
-    args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
-    args.pendingRestoreSelectionKeyRef.current = null;
+    if (typeof args.restoreTarget.targetViewportRatio !== 'number') {
+      args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
+      args.pendingRestoreSelectionKeyRef.current = null;
+    }
     pushDebugTrace('editor.restore-selection.suppressed', {
       nodeId: args.restoreTarget.nodeId,
       selection: args.restoreTarget.selection
@@ -59,9 +62,11 @@ export function handleSelectionRestore(args: {
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
-    restoreScrollTop: args.nodeViewState?.scrollTop,
+    restoreScrollTop:
+      typeof args.restoreTarget.targetViewportRatio === 'number' ? undefined : args.nodeViewState?.scrollTop,
     selectionKey: args.restoreTarget.selectionKey,
     selection: args.restoreTarget.selection,
+    targetViewportRatio: args.restoreTarget.targetViewportRatio,
     setReadingPositionSelection: args.setReadingPositionSelection,
     valueLength: args.valueLength
   });
@@ -76,6 +81,7 @@ export function resolveRestoreTarget(args: {
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKey: string | null;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingTargetViewportRatio: number | null | undefined;
   value: string;
 }) {
   const selectionSource = args.readingSelection ?? args.nodeViewState?.selection;
@@ -93,7 +99,7 @@ export function resolveRestoreTarget(args: {
   ) {
     return null;
   }
-  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}`;
+  const selectionKey = `${args.nodeId}:${selection.from}:${selection.to}:${restoreScrollTop ?? 'auto'}:${args.readingTargetViewportRatio ?? 'default'}`;
   if (args.pendingRestoreSelectionKey !== selectionKey) {
     return null;
   }
@@ -110,7 +116,8 @@ export function resolveRestoreTarget(args: {
     adapter: args.adapter,
     nodeId: args.nodeId,
     selection,
-    selectionKey
+    selectionKey,
+    targetViewportRatio: args.readingTargetViewportRatio
   };
 }
 
@@ -161,6 +168,7 @@ function restoreEditorSelection(args: {
   restoreScrollTop: number | undefined;
   selectionKey: string;
   selection: EditorViewState['selection'];
+  targetViewportRatio: number | null | undefined;
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
   valueLength: number;
 }) {
@@ -188,6 +196,7 @@ function restoreEditorSelection(args: {
     selection: args.selection,
     selectionKey: args.selectionKey,
     setReadingPositionSelection: args.setReadingPositionSelection,
+    targetViewportRatio: args.targetViewportRatio,
     valueLength: args.valueLength
   });
   scheduleRestoreSelectionCompletion(args);

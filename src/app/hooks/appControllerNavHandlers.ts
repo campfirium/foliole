@@ -1,5 +1,5 @@
-import { resolveAncestorAnchorLink } from '../../store/workspaceNavigation';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { resolveAncestorAnchorLink } from '../../store/workspaceNavigation';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
@@ -24,7 +24,7 @@ export function createLayoutNav(
       }
       onSelectNode(nodeId, ancestorTarget.focusAnchor);
     },
-    onSelectNode,
+    onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => onSelectNode(nodeId, focusAnchor),
     shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressSelectionRestore
   };
 }

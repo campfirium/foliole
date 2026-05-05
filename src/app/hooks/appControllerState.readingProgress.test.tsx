@@ -1,6 +1,9 @@
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useWorkspaceControllerState } from './appControllerState';
+import { createWorkspaceState } from './appControllerState.readingProgress.testSupport';
+
 const { useReadingProgressSyncMock } = vi.hoisted(() => ({
   useReadingProgressSyncMock: vi.fn()
 }));
@@ -96,11 +99,13 @@ vi.mock('./useWorkspaceNavigation', () => ({
   useWorkspaceNavigation: useWorkspaceNavigationMock
 }));
 
-import { useWorkspaceControllerState } from './appControllerState';
-
 function getNavigationArgs() {
-  return useWorkspaceNavigationMock.mock.calls[0]?.[0] as {
-    beginAnchorNavigationRestore: (nodeId: string, selection: { from: number; to: number }) => void;
+  const firstCall = useWorkspaceNavigationMock.mock.calls as unknown as Array<[unknown]>;
+  return (firstCall[0]?.[0] ?? null) as unknown as {
+    applyNavigationReadingPosition: (result: {
+      focusAnchor: { id: string; kind: 'highlight'; locator: { from: number; originalText: string; to: number } } | null;
+      nodeId: string;
+    }) => boolean;
     saveActiveNodeView: (nodeId: string) => void;
   };
 }
@@ -108,74 +113,6 @@ function getNavigationArgs() {
 function Harness({ ws }: { ws: Parameters<typeof useWorkspaceControllerState>[0] }) {
   useWorkspaceControllerState(ws, true);
   return null;
-}
-
-function createWorkspaceNode() {
-  return {
-    id: 'node-1',
-    parentNodeId: null,
-    kind: 'topic',
-    title: 'Node 1',
-    content: 'Hello',
-    reveal: null,
-    review: null,
-    createdAt: '2026-04-13T00:00:00.000Z',
-    updatedAt: '2026-04-13T00:00:00.000Z'
-  };
-}
-
-function createWorkspaceState() {
-  return {
-    activeNodeId: 'node-1',
-    createChildNode: vi.fn(),
-    createHighlightNodeFromSelection: vi.fn(),
-    createImageClozeNodes: vi.fn(),
-    createQANodeFromSelection: vi.fn(),
-    createRootNode: vi.fn(),
-    createVirtualNode: vi.fn(),
-    deleteImageClozeRegion: vi.fn(),
-    deleteNode: vi.fn(),
-    dismissReviewItem: vi.fn(),
-    documentMaxWidth: 720,
-    exitReviewSession: vi.fn(),
-    goBack: vi.fn(),
-    goForward: vi.fn(),
-    goToParent: vi.fn(),
-    gradeReviewCard: vi.fn(),
-    isHydrated: true,
-    isListCollapsed: false,
-    isRightSidebarCollapsed: false,
-    jumpToAncestorNode: vi.fn(),
-    listWidth: 280,
-    moveNode: vi.fn(),
-    navigation: {
-      backStack: [],
-      forwardStack: []
-    },
-    nodeOrder: ['node-1'],
-    nodeViewById: {},
-    nodesById: {
-      'node-1': createWorkspaceNode()
-    },
-    openNode: vi.fn(),
-    resetLayout: vi.fn(),
-    revealReviewAnswer: vi.fn(),
-    reviewSession: null,
-    rightSidebarWidth: 320,
-    setDocumentMaxWidth: vi.fn(),
-    setListCollapsed: vi.fn(),
-    setListWidth: vi.fn(),
-    setNodeViewState: vi.fn(),
-    setRightSidebarCollapsed: vi.fn(),
-    setRightSidebarWidth: vi.fn(),
-    startReviewSession: vi.fn(),
-    trashedNodeIds: [],
-    updateNodeContent: vi.fn(),
-    updateNodeDesiredRetention: vi.fn(),
-    updateNodePriority: vi.fn(),
-    updateNodeReveal: vi.fn(),
-    updateVirtualNodeFilter: vi.fn()
-  };
 }
 
 function resetRuntimeRefs() {
@@ -202,7 +139,7 @@ function runSaveSharedReadingPositionTest() {
     getSelection: () => ({ from: 0, to: 0 }),
     isPositionNearViewportRatio: () => false
   };
-  const ws = createWorkspaceState() as never;
+  const ws = createWorkspaceState();
 
   render(<Harness ws={ws} />);
 
@@ -226,7 +163,7 @@ function runVisiblePositionFallbackTest() {
     getSelection: () => ({ from: 0, to: 0 }),
     isPositionNearViewportRatio: () => false
   };
-  const ws = createWorkspaceState() as never;
+  const ws = createWorkspaceState();
 
   render(<Harness ws={ws} />);
 
@@ -250,7 +187,7 @@ function runCurrentSelectionPriorityTest() {
     getSelection: () => ({ from: 3200, to: 3200 }),
     isPositionNearViewportRatio: () => true
   };
-  const ws = createWorkspaceState() as never;
+  const ws = createWorkspaceState();
 
   render(<Harness ws={ws} />);
 
@@ -270,7 +207,7 @@ function runImmersiveReadingSelectionPriorityTest() {
     getSelection: () => ({ from: 3200, to: 3200 }),
     isPositionNearViewportRatio: () => true
   };
-  const ws = createWorkspaceState() as never;
+  const ws = createWorkspaceState();
 
   render(<Harness ws={ws} />);
 
@@ -308,7 +245,7 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
   });
 
   it('passes restore sync state through to reading progress persistence', () => {
-    const ws = createWorkspaceState() as never;
+    const ws = createWorkspaceState();
 
     render(<Harness ws={ws} />);
 
@@ -322,13 +259,20 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
     });
   });
 
-  it('updates the shared reading position value when anchor navigation begins', () => {
-    const ws = createWorkspaceState() as never;
+  it('updates the shared reading position value when navigation applies an anchor target', () => {
+    const ws = createWorkspaceState();
 
     render(<Harness ws={ws} />);
 
     const navigationArgs = getNavigationArgs();
-    navigationArgs.beginAnchorNavigationRestore('node-2', { from: 88, to: 88 });
+    navigationArgs.applyNavigationReadingPosition({
+      nodeId: 'node-2',
+      focusAnchor: {
+        id: 'hl-1',
+        kind: 'highlight',
+        locator: { from: 88, originalText: 'needle', to: 94 }
+      }
+    });
 
     expect(runtimeRefs.readingPositionRef.current).toEqual({
       nodeId: 'node-2',
@@ -339,7 +283,8 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
       state: {
         reason: 'anchor-navigation',
         startedAt: expect.any(Number),
-        targetSelection: { from: 88, to: 88 }
+        targetSelection: { from: 88, to: 88 },
+        targetViewportRatio: 0.24
       }
     });
   });

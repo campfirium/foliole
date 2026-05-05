@@ -30,6 +30,7 @@ export interface EditorAdapter {
   getContent(): string;
   getDocumentPositionAtViewportY(clientY: number): number | null;
   getPrimaryVisiblePosition?(): number | null;
+  getPositionViewportTop?(position: number): number | null;
   isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;

@@ -20,6 +20,7 @@ export interface ReadingPositionSyncState {
   reason: string;
   startedAt: number;
   targetSelection: EditorSelection;
+  targetViewportRatio?: number;
 }
 
 export function isDevToolsToggleShortcut(event: CommandPaletteToggleShortcutEvent) {

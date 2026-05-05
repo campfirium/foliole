@@ -24,6 +24,7 @@ function createRuntimeState() {
 
 function createRevealTextAnchorArgs(content: string) {
   const revealPosition = vi.fn();
+  const revealSelectionAtViewportRatio = vi.fn();
   const setSelection = vi.fn();
   return {
     runtime: {
@@ -31,6 +32,7 @@ function createRevealTextAnchorArgs(content: string) {
         current: {
           getScrollTop: vi.fn(() => 64),
           revealPosition,
+          revealSelectionAtViewportRatio,
           revealSelection: vi.fn(),
           setSelection
         }
@@ -64,6 +66,7 @@ function createRevealTextAnchorArgs(content: string) {
     },
     testHarness: {
       revealPosition,
+      revealSelectionAtViewportRatio,
       setSelection
     }
   } as any;
@@ -101,7 +104,11 @@ describe('createRevealAnchorInDocument text locator', () => {
       from: content.indexOf('Beta'),
       to: content.indexOf('Beta')
     });
-    expect(args.testHarness.revealPosition).toHaveBeenCalledWith(content.indexOf('Beta'));
+    expect(args.testHarness.revealPosition).not.toHaveBeenCalled();
+    expect(args.testHarness.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
+      { from: content.indexOf('Beta'), to: content.indexOf('Beta') },
+      0.24
+    );
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
     expect(args.runtime.readingPositionRef.current).toEqual({
       nodeId: 'node-1',
@@ -150,7 +157,8 @@ function runUnresolvedRevealCase() {
     from: 0,
     to: 0
   });
-  expect(args.testHarness.revealPosition).toHaveBeenCalledWith(0);
+  expect(args.testHarness.revealPosition).not.toHaveBeenCalled();
+  expect(args.testHarness.revealSelectionAtViewportRatio).toHaveBeenCalledWith({ from: 0, to: 0 }, 0.24);
   expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
   expect(args.runtime.readingPositionRef.current).toEqual({
     nodeId: 'node-1',

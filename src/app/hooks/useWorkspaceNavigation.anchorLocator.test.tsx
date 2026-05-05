@@ -100,7 +100,7 @@ async function runRestoreSuppressionCase() {
     });
 
     expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
-    expect(result.current.shouldSuppressSelectionRestore()).toBe(true);
+    expect(result.current.shouldSuppressSelectionRestore()).toBe(false);
 
     await act(async () => {
       vi.advanceTimersByTime(40);
@@ -182,12 +182,14 @@ describe('useWorkspaceNavigation text locator pending flow', () => {
       rerender({ activeNodeContent: null, activeNodeId: 'node-1' });
     });
 
+    expect(beginAnchorNavigationRestore).toHaveBeenCalledTimes(1);
     expect(beginAnchorNavigationRestore).toHaveBeenCalledWith('node-1', { from: 6, to: 6 });
 
     await act(async () => {
       rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
     });
 
+    expect(beginAnchorNavigationRestore).toHaveBeenCalledTimes(1);
     expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
     expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });

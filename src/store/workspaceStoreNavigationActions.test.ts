@@ -101,7 +101,7 @@ it('keeps the previous document warm when opening another node through navigatio
   expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
 });
 
-it('keeps stored from/to when navigating to a parent whose document is not loaded yet', () => {
+it('leaves parent view state unchanged when navigating to a parent whose document is not loaded yet', () => {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
 
   useWorkspaceStore.setState({
@@ -157,16 +157,11 @@ it('keeps stored from/to when navigating to a parent whose document is not loade
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
-  expect(state.nodeViewById['node-2']).toEqual({
-    scrollTop: 0,
-    selection: { from: 9, to: 9 },
-    updatedAt: null
-  });
+  expect(state.nodeViewById['node-2']).toBeUndefined();
 });
 
-it('drops the parent stored scroll position when returning with a highlight anchor', () => {
+function seedParentHighlightReturnState() {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
-
   useWorkspaceStore.setState({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],
@@ -222,13 +217,20 @@ it('drops the parent stored scroll position when returning with a highlight anch
     },
     trashedNodeIds: []
   });
+}
 
+function runParentHighlightReturnStateTest() {
+  seedParentHighlightReturnState();
   useWorkspaceStore.getState().goToParent();
 
   const state = useWorkspaceStore.getState();
   expect(state.nodeViewById['node-2']).toEqual({
-    scrollTop: 0,
-    selection: { from: 9, to: 9 },
+    scrollTop: 3210,
+    selection: { from: 1, to: 1 },
     updatedAt: '2026-02-25T00:00:00.000Z'
   });
+}
+
+it('keeps the stored parent view state when returning with a highlight anchor', () => {
+  runParentHighlightReturnStateTest();
 });

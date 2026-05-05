@@ -34,6 +34,7 @@ export interface DocumentPanelBodyLayoutProps {
   immersiveEditing?: boolean;
   editorNodeId: string | null;
   editorReadingSelection?: EditorSelection | null;
+  editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string) => void;
@@ -140,6 +141,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
         readingSelection={props.editorReadingSelection}
+        readingTargetViewportRatio={props.editorReadingTargetViewportRatio}
         nodeViewState={props.editorNodeViewState}
         onBeginApplyingReadingPosition={props.onBeginApplyingReadingPosition}
         onChange={props.onEditorChange}

@@ -30,6 +30,7 @@ export interface MarkdownEditorProps {
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
   readingSelection?: EditorSelection | null;
+  readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
   onChange: (value: string) => void;

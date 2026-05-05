@@ -20,7 +20,7 @@ export function revealEditorSelection(
   });
   view.dispatch({
     selection: { anchor, head },
-    scrollIntoView: true
+    scrollIntoView: targetRatio == null
   });
   view.focus();
   alignSelectionInViewport(view, anchor, targetRatio);

@@ -30,6 +30,7 @@ function createRuntimeState() {
 function createRevealDocumentPositionArgs(args: {
   getScrollTop?: () => number;
   revealPosition?: (position: number) => void;
+  revealSelectionAtViewportRatio?: ReturnType<typeof vi.fn>;
   revealSelection?: ReturnType<typeof vi.fn>;
   setSelection?: ReturnType<typeof vi.fn>;
   setNodeViewState: ReturnType<typeof vi.fn>;
@@ -40,6 +41,7 @@ function createRevealDocumentPositionArgs(args: {
         current: {
           getScrollTop: args.getScrollTop ?? (() => 0),
           revealPosition: args.revealPosition ?? (() => undefined),
+          revealSelectionAtViewportRatio: args.revealSelectionAtViewportRatio,
           revealSelection: args.revealSelection ?? vi.fn(),
           setSelection: args.setSelection ?? vi.fn()
         }
@@ -64,6 +66,7 @@ function createZeroWidthAnchorRevealArgs(args: {
   content: string;
   getScrollTop: () => number;
   revealPosition?: ReturnType<typeof vi.fn>;
+  revealSelectionAtViewportRatio?: ReturnType<typeof vi.fn>;
   revealSelection: ReturnType<typeof vi.fn>;
   setSelection?: ReturnType<typeof vi.fn>;
   setNodeViewState: ReturnType<typeof vi.fn>;
@@ -74,6 +77,7 @@ function createZeroWidthAnchorRevealArgs(args: {
         current: {
           getScrollTop: args.getScrollTop,
           revealPosition: args.revealPosition ?? vi.fn(),
+          revealSelectionAtViewportRatio: args.revealSelectionAtViewportRatio,
           revealSelection: args.revealSelection,
           setSelection: args.setSelection ?? vi.fn()
         }
@@ -211,6 +215,7 @@ describe('createRevealAnchorInDocument', () => {
   it('reveals zero-width text anchors instead of dropping the jump', () => {
     const revealSelection = vi.fn();
     const revealPosition = vi.fn();
+    const revealSelectionAtViewportRatio = vi.fn();
     const setSelection = vi.fn();
     const getScrollTop = vi.fn(() => 88);
     const setNodeViewState = vi.fn();
@@ -220,6 +225,7 @@ describe('createRevealAnchorInDocument', () => {
       content,
       getScrollTop,
       revealPosition,
+      revealSelectionAtViewportRatio,
       revealSelection,
       setNodeViewState,
       setSelection
@@ -233,12 +239,13 @@ describe('createRevealAnchorInDocument', () => {
     });
 
     expect(revealSelection).not.toHaveBeenCalled();
+    expect(revealPosition).not.toHaveBeenCalled();
+    expect(revealSelectionAtViewportRatio).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition }, 0.24);
     expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
       scrollTop: 88,
       selection: { from: anchorPosition, to: anchorPosition }
     });
     expect(setSelection).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition });
-    expect(revealPosition).toHaveBeenCalledWith(anchorPosition);
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
     expect(args.runtime.readingPositionRef.current).toEqual({
       nodeId: 'node-1',

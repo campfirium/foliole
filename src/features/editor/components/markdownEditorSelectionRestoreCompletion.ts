@@ -65,6 +65,7 @@ export function beginRestoreSelection(args: {
   selection: EditorViewState['selection'];
   selectionKey: string;
   setReadingPositionSelection: ((selection: EditorViewState['selection']) => void) | undefined;
+  targetViewportRatio: number | null | undefined;
   valueLength: number;
 }) {
   args.clearRestoreCompletionTimers();
@@ -73,6 +74,11 @@ export function beginRestoreSelection(args: {
   args.activeRestoreSelectionKeyRef.current = args.selectionKey;
   args.activeRestoreValueLengthRef.current = args.valueLength;
   args.setReadingPositionSelection?.(args.selection);
+  if (typeof args.targetViewportRatio === 'number' && args.adapter.revealSelectionAtViewportRatio) {
+    args.adapter.setSelection(args.selection);
+    args.adapter.revealSelectionAtViewportRatio(args.selection, args.targetViewportRatio);
+    return;
+  }
   args.adapter.restoreSelection(args.selection);
   applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
 }

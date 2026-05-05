@@ -51,6 +51,7 @@ export interface DocumentPanelSectionProps {
   isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
   editorReadingSelection?: EditorSelection | null;
+  editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string) => void;

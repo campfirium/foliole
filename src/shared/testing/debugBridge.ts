@@ -6,8 +6,10 @@ interface FolioleDebugApi {
   clearEditor: (id: string) => void;
   clearTraces: () => void;
   getEditorContent: (id: string) => string | null;
+  getEditorPositionViewportTop: (id: string, position: number) => number | null;
   getEditorScrollTop: (id: string) => number | null;
   getEditorSelection: (id: string) => { from: number; to: number } | null;
+  getEditorViewportRect: (id: string) => { height: number; top: number } | null;
   getTraces: () => DebugTraceEntry[];
   pushTrace: (event: string, payload: unknown) => void;
   registerEditor: (id: string, adapter: EditorAdapter) => void;
@@ -71,6 +73,10 @@ function ensureDebugApi() {
       const adapter = editorMap.get(id);
       return adapter ? adapter.getContent() : null;
     },
+    getEditorPositionViewportTop: (id, position) => {
+      const adapter = editorMap.get(id);
+      return adapter?.getPositionViewportTop ? adapter.getPositionViewportTop(position) : null;
+    },
     getEditorScrollTop: (id) => {
       const adapter = editorMap.get(id);
       return adapter ? adapter.getScrollTop() : null;
@@ -78,6 +84,11 @@ function ensureDebugApi() {
     getEditorSelection: (id) => {
       const adapter = editorMap.get(id);
       return adapter ? adapter.getSelection() : null;
+    },
+    getEditorViewportRect: (id) => {
+      const adapter = editorMap.get(id);
+      const rect = adapter?.getViewportRect?.();
+      return rect ? { height: rect.height, top: rect.top } : null;
     },
     getTraces: () => [...debugTraceLog],
     pushTrace: (event, payload) => {

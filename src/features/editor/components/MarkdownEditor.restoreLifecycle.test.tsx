@@ -5,6 +5,8 @@ import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestur
 
 const mockRestoreSelection = vi.fn();
 const mockRevealSelection = vi.fn();
+const mockRevealSelectionAtViewportRatio = vi.fn();
+const mockSetSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 let currentContent = '';
 let currentScrollTop = 0;
@@ -27,9 +29,12 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setHideTitleHeading() {}
     getSelection() { return { from: 0, to: 0 }; }
     setParagraphMarker() {}
-    setSelection() {}
+    setSelection(selection: { from: number; to: number }) { mockSetSelection(selection); }
     restoreSelection(selection: { from: number; to: number }) { mockRestoreSelection(selection); }
     revealSelection() { mockRevealSelection(); }
+    revealSelectionAtViewportRatio(selection: { from: number; to: number }, ratio: number) {
+      mockRevealSelectionAtViewportRatio(selection, ratio);
+    }
     getScrollTop() { return currentScrollTop; }
     setScrollTop(scrollTop: number) { currentScrollTop = scrollTop + scrollTopOffset; mockSetScrollTop(scrollTop); }
     getScrollMetrics() { return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 }; }
@@ -55,6 +60,8 @@ function createLongDocument() {
 beforeEach(() => {
   mockRestoreSelection.mockClear();
   mockRevealSelection.mockClear();
+  mockRevealSelectionAtViewportRatio.mockClear();
+  mockSetSelection.mockClear();
   mockSetScrollTop.mockClear();
   currentContent = '';
   currentScrollTop = 0;
@@ -190,4 +197,56 @@ it('accepts a near-matching restored scroll position as settled without waiting 
     cancelAnimationFrameSpy.mockRestore();
     vi.useRealTimers();
   }
+});
+
+it('prefers the provided viewport ratio over the saved scroll position during restore', async () => {
+  renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      readingSelection={{ from: 48_000, to: 48_024 }}
+      readingTargetViewportRatio={0.24}
+      value={createLongDocument()}
+    />
+  );
+
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
+  expect(mockSetSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_000 });
+  expect(mockRevealSelectionAtViewportRatio).toHaveBeenCalledWith({ from: 48_000, to: 48_000 }, 0.24);
+  expect(mockSetScrollTop).not.toHaveBeenCalled();
+});
+
+it('does not replay the same settled reading restore on a rerender', async () => {
+  const view = renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      readingSelection={{ from: 48_000, to: 48_024 }}
+      readingTargetViewportRatio={0.24}
+      value={createLongDocument()}
+    />
+  );
+
+  await waitFor(() => {
+    expect(mockSetSelection.mock.calls.length).toBeGreaterThan(0);
+  });
+  const settledSelectionCallCount = mockSetSelection.mock.calls.length;
+  const settledRevealCallCount = mockRevealSelectionAtViewportRatio.mock.calls.length;
+
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      readingSelection={{ from: 48_000, to: 48_024 }}
+      readingTargetViewportRatio={0.24}
+      value={createLongDocument()}
+    />
+  );
+
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
+  expect(mockSetSelection).toHaveBeenCalledTimes(settledSelectionCallCount);
+  expect(mockRevealSelectionAtViewportRatio).toHaveBeenCalledTimes(settledRevealCallCount);
 });
