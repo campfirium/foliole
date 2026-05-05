@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const { requestPdfAnchorJump, requestPdfSearch } = vi.hoisted(() => ({
+  requestPdfAnchorJump: vi.fn(),
+  requestPdfSearch: vi.fn()
+}));
+
+vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+  requestPdfAnchorJump,
+  requestPdfSearch
+}));
+
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { buildControllerGoToNodeState } from './appGoToNodeState';
@@ -76,5 +86,31 @@ describe('node switch view-state persistence entrypoints', () => {
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
     expect(args.ws.openNode).not.toHaveBeenCalled();
     expect(args.runtime.setIsGoToNodePaletteOpen).toHaveBeenCalledWith(false);
+  });
+
+  it('routes pdf search result through node open + locator jump + match targeting', () => {
+    const args = createArgs();
+
+    buildControllerSearchState(args).onOpenResult({
+      excerpt: '...keyword bridge...',
+      id: 'node-2',
+      kind: 'pdf',
+      pdfMatch: {
+        attachmentId: 'att-1',
+        matchStart: 12,
+        page: 3,
+        pageTextLength: 30,
+        query: 'keyword'
+      },
+      title: 'Beta PDF',
+      updatedAt: '2026-03-06T10:00:00.000Z'
+    });
+
+    expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(requestPdfAnchorJump).toHaveBeenCalledWith('node-2', { page: 3, x: 0.5, y: 0.1 });
+    expect(requestPdfSearch).toHaveBeenCalledWith('node-2', { matchStart: 12, page: 3, query: 'keyword' });
+    expect(args.ws.openNode).not.toHaveBeenCalled();
+    expect(args.runtime.setIsSearchPaletteOpen).toHaveBeenCalledWith(false);
   });
 });
