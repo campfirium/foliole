@@ -19,11 +19,11 @@ final class FolioleCompanionResourcePluginActions {
         return databaseHelper.syncAttachmentResources(call.getData().optJSONArray("resources"));
     }
 
-    static JSObject loadMissingAttachmentResources(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject loadMissingAttachmentResources(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadMissingAttachmentResources(call.getInt("limit", 50));
     }
 
-    static JSObject loadMissingAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject loadMissingAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadMissingAttachmentResource(call.getString("attachment_id"));
     }
 

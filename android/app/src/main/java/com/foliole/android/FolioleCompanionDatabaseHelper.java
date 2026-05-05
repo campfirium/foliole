@@ -99,12 +99,12 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionAttachmentResourceBatchStore.syncResources(context, database, resources);
     }
 
-    JSObject loadMissingAttachmentResources(int limit) {
+    JSObject loadMissingAttachmentResources(int limit) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, limit);
     }
 
-    JSObject loadMissingAttachmentResource(String attachmentId) {
+    JSObject loadMissingAttachmentResource(String attachmentId) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionAttachmentResourceStore.loadMissingResource(context, database, attachmentId);
     }

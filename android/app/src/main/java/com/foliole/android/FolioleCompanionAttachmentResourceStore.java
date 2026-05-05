@@ -15,15 +15,15 @@ import java.time.Instant;
 final class FolioleCompanionAttachmentResourceStore {
     private FolioleCompanionAttachmentResourceStore() {}
 
-    static JSObject loadMissingResources(Context context, SQLiteDatabase database, int limit) {
+    static JSObject loadMissingResources(Context context, SQLiteDatabase database, int limit) throws Exception {
         return FolioleCompanionAttachmentResourceMissingStore.loadMissingResources(context, database, limit);
     }
 
-    static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) {
+    static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) throws Exception {
         return FolioleCompanionAttachmentResourceMissingStore.summarizeMissingResources(context, database);
     }
 
-    static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) {
+    static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         return FolioleCompanionAttachmentResourceMissingStore.loadMissingResource(context, database, attachmentId);
     }
 
