@@ -8,7 +8,10 @@ import { describe, expect, it } from 'vitest';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
-import { ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
+import {
+  ANDROID_COMPANION_MIGRATION_PLAN,
+  ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS
+} from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
 import {
   ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
   ANDROID_COMPANION_MUTATION_DEFINITIONS
@@ -91,6 +94,7 @@ describe('schema inventory drift gate', () => {
     const migrationSource = await readFile(COMPANION_DATABASE_MIGRATION, 'utf8');
 
     expect(schema.statementsByName).toEqual(ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS);
+    expect(schema.plan).toEqual(ANDROID_COMPANION_MIGRATION_PLAN);
     expect(migrationSource).not.toMatch(/"CREATE (TABLE|INDEX)/);
     expect(migrationSource).not.toContain('"ALTER TABLE');
     expect(migrationSource).not.toContain('"DROP TABLE');

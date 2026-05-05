@@ -28,7 +28,7 @@ final class FolioleCompanionSchemaInstaller {
     }
 
     static void installMigrationStatement(Context context, SQLiteDatabase database, String statementName) throws Exception {
-        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MIGRATION_SCHEMA_ASSET_PATH));
+        JSONObject payload = migrationSchema(context);
         JSONObject statements = payload.optJSONObject("statementsByName");
         if (statements == null) {
             throw new IllegalStateException("Companion migration schema asset is missing statementsByName.");
@@ -38,5 +38,17 @@ final class FolioleCompanionSchemaInstaller {
             throw new IllegalStateException("Companion migration schema asset is missing statement: " + statementName);
         }
         database.execSQL(statement);
+    }
+
+    static JSONArray migrationPlan(Context context) throws Exception {
+        JSONArray plan = migrationSchema(context).optJSONArray("plan");
+        if (plan == null) {
+            throw new IllegalStateException("Companion migration schema asset is missing plan.");
+        }
+        return plan;
+    }
+
+    private static JSONObject migrationSchema(Context context) throws Exception {
+        return new JSONObject(FolioleCompanionAssetReader.read(context, MIGRATION_SCHEMA_ASSET_PATH));
     }
 }

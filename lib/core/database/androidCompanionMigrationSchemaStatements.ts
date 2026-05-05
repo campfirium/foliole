@@ -21,3 +21,59 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
   syncObjectStateTypeSeqIndex:
     'CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq ON sync_object_state (object_type, state_seq)'
 };
+
+export const ANDROID_COMPANION_MIGRATION_PLAN = [
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion schema.', type: 'installSchema' }],
+    beforeVersion: 4
+  },
+  {
+    actions: [
+      { type: 'migrateSyncObjectStateSequence' },
+      { errorMessage: 'Failed to upgrade companion sync schema.', type: 'installSchema' }
+    ],
+    beforeVersion: 5
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion node version schema.', type: 'installSchema' }],
+    beforeVersion: 6
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion review log schema.', type: 'installSchema' }],
+    beforeVersion: 7
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion attachment link schema.', type: 'installSchema' }],
+    beforeVersion: 8
+  },
+  {
+    actions: [{ type: 'backfillNodeAttachmentsFromVersions' }],
+    beforeVersion: 9
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion content blob schema.', type: 'installSchema' }],
+    beforeVersion: 10
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion content blob data schema.', type: 'installSchema' }],
+    beforeVersion: 11
+  },
+  {
+    actions: [
+      { errorMessage: 'Failed to upgrade companion view state source schema.', type: 'installSchema' },
+      { type: 'addNodeViewStateSourceIfMissing' }
+    ],
+    beforeVersion: 12
+  },
+  {
+    actions: [
+      { errorMessage: 'Failed to upgrade companion push base reference schema.', type: 'installSchema' },
+      { type: 'addSyncBaseContentHashIfMissing' }
+    ],
+    beforeVersion: 13
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion push ack schema.', type: 'installSchema' }],
+    beforeVersion: 14
+  }
+] as const;

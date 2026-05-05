@@ -17,42 +17,48 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     static void upgrade(Context context, SQLiteDatabase database, int oldVersion) {
-        if (oldVersion < 4) {
-            installSchema(context, database, "Failed to upgrade companion schema.");
+        try {
+            JSONArray plan = FolioleCompanionSchemaInstaller.migrationPlan(context);
+            for (int index = 0; index < plan.length(); index += 1) {
+                JSONObject step = plan.getJSONObject(index);
+                if (oldVersion < step.getInt("beforeVersion")) {
+                    runActions(context, database, step.getJSONArray("actions"));
+                }
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to run companion migration plan.", exception);
         }
-        if (oldVersion < 5) {
+    }
+
+    private static void runActions(Context context, SQLiteDatabase database, JSONArray actions) throws Exception {
+        for (int index = 0; index < actions.length(); index += 1) {
+            runAction(context, database, actions.getJSONObject(index));
+        }
+    }
+
+    private static void runAction(Context context, SQLiteDatabase database, JSONObject action) {
+        String type = action.optString("type", "");
+        if ("installSchema".equals(type)) {
+            installSchema(context, database, action.optString("errorMessage", "Failed to install companion schema."));
+            return;
+        }
+        if ("migrateSyncObjectStateSequence".equals(type)) {
             migrateSyncObjectStateSequence(context, database);
-            installSchema(context, database, "Failed to upgrade companion sync schema.");
+            return;
         }
-        if (oldVersion < 6) {
-            installSchema(context, database, "Failed to upgrade companion node version schema.");
-        }
-        if (oldVersion < 7) {
-            installSchema(context, database, "Failed to upgrade companion review log schema.");
-        }
-        if (oldVersion < 8) {
-            installSchema(context, database, "Failed to upgrade companion attachment link schema.");
-        }
-        if (oldVersion < 9) {
+        if ("backfillNodeAttachmentsFromVersions".equals(type)) {
             FolioleCompanionNodeAttachmentStore.backfillNodeAttachmentsFromVersions(context, database);
+            return;
         }
-        if (oldVersion < 10) {
-            installSchema(context, database, "Failed to upgrade companion content blob schema.");
-        }
-        if (oldVersion < 11) {
-            installSchema(context, database, "Failed to upgrade companion content blob data schema.");
-        }
-        if (oldVersion < 12) {
-            installSchema(context, database, "Failed to upgrade companion view state source schema.");
+        if ("addNodeViewStateSourceIfMissing".equals(type)) {
             addNodeViewStateSourceIfMissing(context, database);
+            return;
         }
-        if (oldVersion < 13) {
-            installSchema(context, database, "Failed to upgrade companion push base reference schema.");
+        if ("addSyncBaseContentHashIfMissing".equals(type)) {
             addSyncBaseContentHashIfMissing(context, database);
+            return;
         }
-        if (oldVersion < 14) {
-            installSchema(context, database, "Failed to upgrade companion push ack schema.");
-        }
+        throw new IllegalStateException("Companion migration plan has unknown action: " + type);
     }
 
     private static void installSchema(Context context, SQLiteDatabase database, String errorMessage) {
