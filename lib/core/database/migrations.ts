@@ -1,5 +1,7 @@
+import { readUserVersion, setUserVersion } from './databaseUserVersion.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
+import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
@@ -210,15 +212,6 @@ const CREATE_SCHEMA_STATEMENTS = [
 const LEGACY_REBUILD_REQUIRED_MESSAGE =
   'existing database schema is no longer supported; reset foliole.db and initialize fresh schema';
 
-function readUserVersion(sqlite: DatabaseMigrationTarget): number {
-  const value = sqlite.pragma('user_version', { simple: true });
-  return typeof value === 'number' ? value : Number(value ?? 0);
-}
-
-function setUserVersion(sqlite: DatabaseMigrationTarget, version: number) {
-  sqlite.pragma(`user_version = ${version}`);
-}
-
 function createFreshSchema(sqlite: DatabaseMigrationTarget) {
   for (const statement of CREATE_SCHEMA_STATEMENTS) {
     sqlite.exec(statement);
@@ -240,7 +233,13 @@ export function initializeDatabaseSchema(sqlite: DatabaseMigrationTarget) {
     if (currentVersion > DATABASE_SCHEMA_VERSION) {
       throw new Error(`database schema version ${currentVersion} is newer than supported`);
     }
-    throw new Error(LEGACY_REBUILD_REQUIRED_MESSAGE);
+    applyNumberedSchemaMigrations({
+      currentVersion,
+      legacyMessage: LEGACY_REBUILD_REQUIRED_MESSAGE,
+      setUserVersion: (version) => setUserVersion(sqlite, version),
+      sqlite,
+      targetVersion: DATABASE_SCHEMA_VERSION
+    });
   });
   applyInTransaction();
 }
