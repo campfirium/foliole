@@ -68,7 +68,7 @@ resolve_quality_gate_level() {
     return 0
   fi
 
-  if printf '%s\n' "${changed}" | grep -E -q '^(electron/|src/store/|src/shared/platform/|scripts/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
+  if printf '%s\n' "${changed}" | grep -E -q '^(electron/|lib/|src/store/|src/shared/platform/|scripts/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
     printf 'full'
     return 0
   fi
