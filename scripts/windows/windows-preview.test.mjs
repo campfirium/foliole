@@ -247,4 +247,29 @@ describe('windows-preview script', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('does not use fallback-start when client status is unavailable', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, actionLog } = await createMockScripts(
+        tempRoot,
+        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  exit 1', 'fi', 'exit 1'].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('reason: Class C: client status unavailable');
+      expect(result.stdout).toContain('selected action: status-probe-failed');
+      expect(result.stdout).toContain('status probe failed');
+      expect(await readActions(actionLog)).toEqual(['status']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

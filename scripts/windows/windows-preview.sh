@@ -178,12 +178,12 @@ select_update_action() {
   fi
 
   if [ "${status_exit}" -eq 124 ]; then
-    SELECTED_ACTION="fallback-start"
+    SELECTED_ACTION="status-probe-failed"
     SELECTED_REASON="Class C: status probe timed out"
     return 0
   fi
 
-  SELECTED_ACTION="fallback-start"
+  SELECTED_ACTION="status-probe-failed"
   SELECTED_REASON="Class C: client status unavailable"
 }
 
@@ -251,6 +251,12 @@ run_fallback_start() {
   return 1
 }
 
+run_status_probe_failed() {
+  echo "[windows-preview] selected action: status-probe-failed"
+  echo "[windows-preview] status probe failed"
+  return 1
+}
+
 echo "[windows-preview] step 1/2: sync to windows mirror"
 bash "${WINDOWS_SYNC_SCRIPT}"
 
@@ -269,6 +275,9 @@ case "${SELECTED_ACTION}" in
     ;;
   fallback-start)
     run_fallback_start
+    ;;
+  status-probe-failed)
+    run_status_probe_failed
     ;;
   *)
     echo "[windows-preview] unknown selected action: ${SELECTED_ACTION}"
