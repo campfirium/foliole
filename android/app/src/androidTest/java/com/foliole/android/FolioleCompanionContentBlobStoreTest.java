@@ -37,8 +37,9 @@ public class FolioleCompanionContentBlobStoreTest {
             "availability TEXT NOT NULL DEFAULT 'missing', source_device_id TEXT, created_at TEXT NOT NULL, " +
             "cached_at TEXT, last_verified_at TEXT)");
         database.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)");
-        database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT)");
-        database.execSQL("CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT)");
+        database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, deleted_at TEXT)");
+        database.execSQL("CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, is_present INTEGER NOT NULL DEFAULT 1)");
     }
 
     @After
@@ -51,7 +52,7 @@ public class FolioleCompanionContentBlobStoreTest {
         String body = "Blob article body";
         String hash = sha256(body);
         insertMissingBlob(hash);
-        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + hash + "')");
+        insertNodeRef("node-1", hash, "2026-04-27T00:00:00.000Z");
         OneShotHttpServer server = new OneShotHttpServer(body);
         server.start();
 
@@ -75,13 +76,43 @@ public class FolioleCompanionContentBlobStoreTest {
         insertMissingBlob(referencedNodeHash);
         insertMissingBlob(referencedDocumentHash);
         insertMissingBlob(unreferencedHash);
-        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + referencedNodeHash + "')");
-        database.execSQL("INSERT INTO external_documents (document_id, body_blob_hash) VALUES " +
-            "('doc-1', '" + referencedDocumentHash + "')");
+        insertNodeRef("node-1", referencedNodeHash, "2026-04-27T00:00:00.000Z");
+        insertExternalDocumentRef("doc-1", referencedDocumentHash, "2026-04-27T00:00:00.000Z");
 
         assertEquals(2, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
             .getJSONArray("hashes")
             .length());
+    }
+
+    @Test
+    public void ordersMissingBodyHashesByActiveTopicThenRecentStructure() throws Exception {
+        String oldNodeHash = sha256("old node body");
+        String activeNodeHash = sha256("active node body");
+        String recentNodeHash = sha256("recent node body");
+        String documentHash = sha256("document body");
+        insertMissingBlob(oldNodeHash);
+        insertMissingBlob(activeNodeHash);
+        insertMissingBlob(recentNodeHash);
+        insertMissingBlob(documentHash);
+        insertNodeRef("old-node", oldNodeHash, "2026-04-27T00:00:00.000Z");
+        insertNodeRef("active-node", activeNodeHash, "2026-04-26T00:00:00.000Z");
+        insertNodeRef("recent-node", recentNodeHash, "2026-04-28T00:00:00.000Z");
+        insertExternalDocumentRef("doc-1", documentHash, "2026-04-29T00:00:00.000Z");
+        database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
+            "('active_node_id', 'active-node', '2026-04-29T00:00:00.000Z')");
+
+        assertEquals(activeNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(0));
+        assertEquals(recentNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(1));
+        assertEquals(oldNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(2));
+        assertEquals(documentHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+            .getJSONArray("hashes")
+            .getString(3));
     }
 
     @Test
@@ -121,7 +152,7 @@ public class FolioleCompanionContentBlobStoreTest {
         String hash = sha256("retry body");
         insertMissingBlob(hash);
         database.execSQL("UPDATE content_blobs SET availability = 'failed' WHERE hash = '" + hash + "'");
-        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + hash + "')");
+        insertNodeRef("node-1", hash, "2026-04-27T00:00:00.000Z");
 
         assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
             .getJSONArray("hashes")
@@ -133,7 +164,7 @@ public class FolioleCompanionContentBlobStoreTest {
         String body = "cached body";
         String hash = sha256(body);
         insertMissingBlob(hash);
-        database.execSQL("INSERT INTO nodes (id, body_blob_hash) VALUES ('node-1', '" + hash + "')");
+        insertNodeRef("node-1", hash, "2026-04-27T00:00:00.000Z");
         database.execSQL("INSERT INTO content_blob_data (hash, data) VALUES ('" + hash + "', CAST('" + body + "' AS BLOB))");
 
         JSObject result = FolioleCompanionContentBlobStore.syncBlob(
@@ -157,6 +188,16 @@ public class FolioleCompanionContentBlobStoreTest {
             "original_sha256, stored_sha256, availability, source_device_id, created_at) VALUES (" +
             "'" + hash + "', 'text/" + hash + "', 'text_body', 'text/plain', 'none', " + sizeBytes + ", " + sizeBytes + ", " +
             "'" + hash + "', '" + hash + "', 'missing', 'desktop', '2026-04-27T00:00:00.000Z')");
+    }
+
+    private void insertNodeRef(String nodeId, String hash, String updatedAt) {
+        database.execSQL("INSERT INTO nodes (id, body_blob_hash, updated_at, deleted_at) VALUES (" +
+            "'" + nodeId + "', '" + hash + "', '" + updatedAt + "', NULL)");
+    }
+
+    private void insertExternalDocumentRef(String documentId, String hash, String updatedAt) {
+        database.execSQL("INSERT INTO external_documents (document_id, body_blob_hash, updated_at, is_present) VALUES (" +
+            "'" + documentId + "', '" + hash + "', '" + updatedAt + "', 1)");
     }
 
     private void assertSyncBlobFails(String hash, String url, String expectedAvailability) throws Exception {

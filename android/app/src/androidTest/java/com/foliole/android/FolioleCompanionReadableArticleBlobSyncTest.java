@@ -90,7 +90,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
     private void createTables() {
         database.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', " +
-            "body_blob_hash TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+            "body_blob_hash TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
         database.execSQL("CREATE TABLE content_blobs (" +
             "hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT, " +
             "compression TEXT NOT NULL DEFAULT 'none', original_size_bytes INTEGER NOT NULL, " +
@@ -103,7 +103,8 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
         database.execSQL("CREATE TABLE attachments (id TEXT PRIMARY KEY, mime_type TEXT NOT NULL)");
         database.execSQL("CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT, role TEXT)");
         database.execSQL("CREATE TABLE pdf_page_text (attachment_id TEXT, page INTEGER, text TEXT)");
-        database.execSQL("CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT)");
+        database.execSQL("CREATE TABLE external_documents (" +
+            "document_id TEXT PRIMARY KEY, body_blob_hash TEXT, updated_at TEXT NOT NULL, is_present INTEGER NOT NULL DEFAULT 1)");
     }
 
     private void insertMissingBodyManifest(String hash, int sizeBytes) {
