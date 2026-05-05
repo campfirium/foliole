@@ -25,7 +25,7 @@ import type {
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
-import { applySyncReviewLog, loadSyncReviewLogSince } from './syncReviewLog.js';
+import { applySyncReviewLogAsync, loadSyncReviewLogSince } from './syncReviewLog.js';
 
 let tempRoot = '';
 
@@ -162,7 +162,7 @@ it('applies mobile review state and review log without duplicating op ids', asyn
     stability_before: 2.1
   };
 
-  expect(applySyncReviewLog([mobileReview, mobileReview])).toEqual(['mobile-op-1']);
+  await expect(applySyncReviewLogAsync([mobileReview, mobileReview])).resolves.toEqual(['mobile-op-1']);
   expect(openDatabaseConnection().driver.queryOne<{ last_review_at: string }>(
     'SELECT last_review_at FROM node_review WHERE node_id = ?',
     ['node-1']
@@ -173,18 +173,18 @@ it('applies mobile review state and review log without duplicating op ids', asyn
   )).toEqual({ count: 1 });
 });
 
-it('can acknowledge already applied review log ops for push cursor delivery', () => {
+it('can acknowledge already applied review log ops for push cursor delivery', async () => {
   insertReviewLog('mobile-op-1', '2026-04-25T00:10:00.000Z');
 
-  expect(applySyncReviewLog([createMobileReviewLog('mobile-op-1')], { includeAlreadyApplied: true }))
-    .toEqual(['mobile-op-1']);
+  await expect(applySyncReviewLogAsync([createMobileReviewLog('mobile-op-1')], { includeAlreadyApplied: true }))
+    .resolves.toEqual(['mobile-op-1']);
 });
 
 it('applies mobile learning state and review event as clean desktop facts', async () => {
   insertReviewLog('seed-op', '2026-04-24T00:00:00.000Z');
 
   await expect(applySyncObjectsAsync(createMobileLearningStateRecords())).resolves.toEqual(['node_reading:node-1', 'node_review:node-1']);
-  expect(applySyncReviewLog([createMobileReviewLog('mobile-op-2')])).toEqual(['mobile-op-2']);
+  await expect(applySyncReviewLogAsync([createMobileReviewLog('mobile-op-2')])).resolves.toEqual(['mobile-op-2']);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ reading_position: number }>(

@@ -4,7 +4,12 @@ export interface SyncPackReviewLogOptions {
   incomingAlias?: string;
 }
 
-export interface SyncPackReviewLogRecord extends DbRow {
+export interface ApplyReviewLogRecordsOptions {
+  includeAlreadyApplied?: boolean;
+  requireExistingNode?: boolean;
+}
+
+export interface ReviewLogRecordInput {
   difficulty_after: number;
   difficulty_before: number;
   due_after: string;
@@ -20,23 +25,15 @@ export interface SyncPackReviewLogRecord extends DbRow {
   device_id: string;
 }
 
+export interface SyncPackReviewLogRecord extends DbRow, ReviewLogRecordInput {}
+
 export async function applySyncPackReviewLogWithDbPort(
   port: DbPort,
   options: SyncPackReviewLogOptions = {}
 ) {
   if (!await incomingReviewLogTableExists(port, options)) return [];
   const records = await loadIncomingReviewLog(port, options);
-  return await port.transaction(async (tx) => {
-    const appliedOpIds: string[] = [];
-    for (const record of records) {
-      if (!record.op_id.trim() || !await nodeExists(tx, record.node_id)) continue;
-      const result = await insertReviewLog(tx, record);
-      if (result.changes > 0 || await reviewLogExists(tx, record.op_id)) {
-        appliedOpIds.push(record.op_id);
-      }
-    }
-    return appliedOpIds;
-  });
+  return applyReviewLogRecordsWithDbPort(port, records, { includeAlreadyApplied: true, requireExistingNode: true });
 }
 
 async function incomingReviewLogTableExists(port: DbPort, options: SyncPackReviewLogOptions) {
@@ -59,12 +56,7 @@ async function nodeExists(port: DbPort, nodeId: string) {
   return rows.length > 0;
 }
 
-async function reviewLogExists(port: DbPort, opId: string) {
-  const rows = await port.query('SELECT 1 FROM review_log WHERE op_id = ? LIMIT 1', [opId]);
-  return rows.length > 0;
-}
-
-function insertReviewLog(port: DbPort, record: SyncPackReviewLogRecord) {
+function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
   return port.run(
     `INSERT INTO review_log (` +
     `id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, ` +
@@ -87,4 +79,23 @@ function insertReviewLog(port: DbPort, record: SyncPackReviewLogRecord) {
       record.difficulty_after
     ]
   );
+}
+
+export async function applyReviewLogRecordsWithDbPort(
+  port: DbPort,
+  records: ReviewLogRecordInput[],
+  options: ApplyReviewLogRecordsOptions = {}
+) {
+  return await port.transaction(async (tx) => {
+    const appliedOpIds: string[] = [];
+    for (const record of records) {
+      if (!record.op_id.trim()) continue;
+      if (options.requireExistingNode && !await nodeExists(tx, record.node_id)) continue;
+      const result = await insertReviewLog(tx, record);
+      if (result.changes > 0 || options.includeAlreadyApplied) {
+        appliedOpIds.push(record.op_id);
+      }
+    }
+    return appliedOpIds;
+  });
 }
