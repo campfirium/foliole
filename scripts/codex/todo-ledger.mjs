@@ -16,6 +16,7 @@ const DEFAULT_PAUSE_PATTERNS = [
 ];
 const TASK_MODE_PREFIX = /^\[(auto|gate)\]\s*/i;
 const CANONICAL_TASK_PATTERN = /^- \[ \] (.+)$/;
+const COMPLETED_TASK_PATTERN = /^- \[[xX]\] (.+)$/;
 const LEGACY_TASK_PATTERN = /^- \[(auto|gate)\]\s+(.+)$/i;
 const UNMODED_CHECKBOX_PATTERN = /^- \[ \]\s+(.+)$/;
 const SIMPLE_BULLET_PATTERN = /^-\s+(.+)$/;
@@ -89,15 +90,57 @@ function parsePendingTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
   };
 }
 
+function isContinuationLine(line) {
+  return /^[ \t]{2,}\S/.test(line);
+}
+
+function parseCompletedTask(line, patterns = DEFAULT_PAUSE_PATTERNS) {
+  const match = line.match(COMPLETED_TASK_PATTERN);
+  if (!match) {
+    return null;
+  }
+  const body = match[1].trim();
+  const modeMatch = body.match(TASK_MODE_PREFIX);
+  if (modeMatch) {
+    return {
+      raw: body,
+      task: body.slice(modeMatch[0].length).trim(),
+      mode: modeMatch[1].toLowerCase()
+    };
+  }
+  return {
+    raw: body,
+    task: body,
+    mode: inferTaskMode(body, patterns)
+  };
+}
+
 export function validateTodoEntries(markdown, fileLabel = 'todo') {
   const lines = normalizeTodoMarkdown(markdown).split('\n');
   const issues = [];
+  let allowsContinuation = false;
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (!trimmed.startsWith('- [ ] ')) {
+    if (trimmed.length === 0) {
+      allowsContinuation = false;
       return;
     }
+    if (trimmed.startsWith('- [x] ')) {
+      allowsContinuation = true;
+      return;
+    }
+    if (!trimmed.startsWith('- [ ] ')) {
+      if (isContinuationLine(line)) {
+        if (!allowsContinuation) {
+          issues.push(`line ${index + 1}: ${fileLabel} continuation line is detached from any task`);
+        }
+        return;
+      }
+      allowsContinuation = false;
+      return;
+    }
+    allowsContinuation = true;
     const match = trimmed.match(CANONICAL_TASK_PATTERN);
     if (!match) {
       return;
@@ -130,6 +173,82 @@ async function readNormalizedLedger(filePath, fileLabel) {
     await writeFile(filePath, normalizedMarkdown, 'utf8');
   }
   return normalizedMarkdown;
+}
+
+function hasDoneTaskRecord(doneContent, task) {
+  return doneContent.includes(task);
+}
+
+function reconcileCompletedTasks(markdown, doneContent, note, sectionName, patterns = DEFAULT_PAUSE_PATTERNS) {
+  const lines = markdown.split('\n');
+  const remainingLines = [];
+  const completedEntries = [];
+  let skippingCompletedBlock = false;
+
+  for (const line of lines) {
+    if (skippingCompletedBlock && isContinuationLine(line)) {
+      continue;
+    }
+    skippingCompletedBlock = false;
+
+    const parsed = parseCompletedTask(line.trim(), patterns);
+    if (!parsed) {
+      remainingLines.push(line);
+      continue;
+    }
+    completedEntries.push({ ...parsed, section: sectionName });
+    skippingCompletedBlock = true;
+  }
+
+  if (completedEntries.length === 0) {
+    return {
+      updatedContent: markdown,
+      updatedDoneContent: doneContent,
+      reconciledEntries: []
+    };
+  }
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  let updatedDoneContent = doneContent;
+  for (const entry of completedEntries) {
+    if (!hasDoneTaskRecord(updatedDoneContent, entry.task)) {
+      updatedDoneContent = appendDoneEntry(updatedDoneContent, `- [x] ${stamp}: ${entry.task}; ${note}.`);
+    }
+  }
+
+  return {
+    updatedContent: remainingLines.join('\n'),
+    updatedDoneContent,
+    reconciledEntries: completedEntries
+  };
+}
+
+async function reconcileLedgerFiles(note = 'checked off in ledger and reconciled automatically') {
+  const [pendingContent, optionalContent, doneContent] = await Promise.all([
+    readFile(TODO_PATH, 'utf8'),
+    readFile(OPTIONAL_PATH, 'utf8'),
+    readFile(DONE_PATH, 'utf8')
+  ]);
+
+  assertValidTodoEntries(pendingContent);
+  assertValidTodoEntries(optionalContent);
+
+  const pendingResult = reconcileCompletedTasks(pendingContent, doneContent, note, '待办');
+  const optionalResult = reconcileCompletedTasks(optionalContent, pendingResult.updatedDoneContent, note, '可选');
+  const changed =
+    pendingResult.updatedContent !== pendingContent ||
+    optionalResult.updatedContent !== optionalContent ||
+    optionalResult.updatedDoneContent !== doneContent;
+
+  if (!changed) {
+    return;
+  }
+
+  await Promise.all([
+    writeFile(TODO_PATH, pendingResult.updatedContent, 'utf8'),
+    writeFile(OPTIONAL_PATH, optionalResult.updatedContent, 'utf8'),
+    writeFile(DONE_PATH, optionalResult.updatedDoneContent, 'utf8')
+  ]);
 }
 
 export function parseTodoEntries(markdown, sectionName = '待办', patterns = DEFAULT_PAUSE_PATTERNS) {
@@ -175,6 +294,7 @@ export function isGateEntry(entry) {
 }
 
 export async function readTodoEntry() {
+  await reconcileLedgerFiles();
   const [pendingContent, optionalContent] = await Promise.all([
     readNormalizedLedger(TODO_PATH, 'todo'),
     readNormalizedLedger(OPTIONAL_PATH, 'optional')
@@ -183,6 +303,7 @@ export async function readTodoEntry() {
 }
 
 export async function readPrimaryTodoEntry() {
+  await reconcileLedgerFiles();
   const content = await readNormalizedLedger(TODO_PATH, 'todo');
   return selectNextTodoTask(content);
 }
@@ -194,7 +315,13 @@ export async function readTodoTask() {
 function removeFirstPendingTask(markdown, task) {
   const lines = markdown.split('\n');
   let removed = false;
+  let skippingPendingBlock = false;
   const updatedLines = lines.filter((line) => {
+    if (skippingPendingBlock && isContinuationLine(line)) {
+      return false;
+    }
+    skippingPendingBlock = false;
+
     const trimmed = line.trim();
     if (removed) {
       return true;
@@ -202,6 +329,7 @@ function removeFirstPendingTask(markdown, task) {
     const entry = parsePendingTask(trimmed);
     if (entry?.task === task) {
       removed = true;
+      skippingPendingBlock = true;
       return false;
     }
     return true;
@@ -219,6 +347,38 @@ function appendDoneEntry(markdown, entry) {
 
 function hasTask(markdown, sectionName, task, mode) {
   return parseTodoEntries(markdown, sectionName).some((entry) => entry.task === task && entry.mode === mode);
+}
+
+function hasCompletedTask(markdown, task, patterns = DEFAULT_PAUSE_PATTERNS) {
+  return markdown
+    .split('\n')
+    .map((line) => parseCompletedTask(line.trim(), patterns))
+    .filter(Boolean)
+    .some((entry) => entry.task === task);
+}
+
+function isTaskPresentInSection(markdown, sectionName, task) {
+  return hasTask(markdown, sectionName, task, 'auto') || hasTask(markdown, sectionName, task, 'gate') || hasCompletedTask(markdown, task);
+}
+
+function assertTaskArchived(updatedSource, task, sectionName) {
+  const issues = validateTodoEntries(updatedSource, sectionName);
+  if (issues.length > 0) {
+    throw new Error(`invalid ${sectionName} entries after completion:\n${issues.join('\n')}`);
+  }
+  if (hasTask(updatedSource, sectionName, task, 'auto') || hasTask(updatedSource, sectionName, task, 'gate') || hasCompletedTask(updatedSource, task)) {
+    throw new Error(`completed task still present in ${sectionName}: ${task}`);
+  }
+}
+
+async function reconcileTaskArchival(entry, note = 'checked off in ledger and reconciled automatically') {
+  await reconcileLedgerFiles(note);
+  const [pendingContent, optionalContent] = await Promise.all([
+    readFile(TODO_PATH, 'utf8'),
+    readFile(OPTIONAL_PATH, 'utf8')
+  ]);
+  const sourceContent = entry.section === '可选' ? optionalContent : pendingContent;
+  return !isTaskPresentInSection(sourceContent, entry.section, entry.task);
 }
 
 export function completeTaskInLedger({
@@ -266,6 +426,7 @@ export function completeTaskInLedger({
   }
 
   const updatedSource = removeFirstPendingTask(sourceContent, entry.task);
+  assertTaskArchived(updatedSource, entry.task, entry.section);
   const stamp = new Date().toISOString().slice(0, 10);
   return {
     updatedPendingContent: isOptionalEntry ? pendingContent : updatedSource,
@@ -293,6 +454,7 @@ export async function completePauseTask(task, note = 'manual acceptance complete
   }
 
   const updatedTodo = removeFirstPendingTask(todoContent, task);
+  assertTaskArchived(updatedTodo, task, '待办');
   const stamp = new Date().toISOString().slice(0, 10);
   const updatedDone = appendDoneEntry(doneContent, `- [x] ${stamp}: ${task}; ${note}.`);
 
@@ -321,7 +483,7 @@ export async function completeAutoTask(entry, note = 'automated loop completed')
   });
 
   if (!result.completed) {
-    return false;
+    return reconcileTaskArchival(entry, note);
   }
 
   await Promise.all([
@@ -330,7 +492,7 @@ export async function completeAutoTask(entry, note = 'automated loop completed')
     writeFile(DONE_PATH, result.updatedDoneContent, 'utf8')
   ]);
 
-  return true;
+  return reconcileTaskArchival(entry, note);
 }
 
-export { DEFAULT_PAUSE_PATTERNS, DONE_PATH, NOTES_PATH, OPTIONAL_PATH, REPO_ROOT, TODO_PATH, VERIFY_PATH };
+export { DEFAULT_PAUSE_PATTERNS, DONE_PATH, NOTES_PATH, OPTIONAL_PATH, REPO_ROOT, TODO_PATH, VERIFY_PATH, reconcileCompletedTasks };

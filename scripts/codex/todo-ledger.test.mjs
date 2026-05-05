@@ -7,6 +7,7 @@ import {
   normalizeTodoMarkdown,
   parseFirstTodoTask,
   parseTodoEntries,
+  reconcileCompletedTasks,
   selectNextExecutableTodoTask,
   selectNextTodoTask,
   validateTodoEntries
@@ -93,6 +94,13 @@ describe('todo-ledger helpers', () => {
     expect(parseFirstTodoTask(markdown)).toBe('first task');
   });
 
+  it('flags detached continuation lines as invalid ledger structure', () => {
+    const markdown = ['# Pending TODO', '', '  Background: detached details', '- [ ] [auto] first task'].join('\n');
+    expect(validateTodoEntries(markdown, 'pending')).toEqual([
+      'line 3: pending continuation line is detached from any task'
+    ]);
+  });
+
   it('flags task entries that omit the unchecked checkbox marker', () => {
     const markdown = ['# Pending TODO', '', '- [auto] first task'].join('\n');
     expect(validateTodoEntries(markdown, 'pending')).toEqual([]);
@@ -113,7 +121,7 @@ describe('todo-ledger helpers', () => {
 
   it('completes the first pending auto task from the main todo list', () => {
     const result = completeTaskInLedger({
-      pendingContent: ['# TODO', '', '- [ ] [auto] first task', '- [ ] [auto] second task'].join('\n'),
+      pendingContent: ['# TODO', '', '- [ ] [auto] first task', '  Background: first details', '- [ ] [auto] second task'].join('\n'),
       optionalContent: ['# Optional', '', '- [ ] [auto] optional task'].join('\n'),
       doneContent: '# DONE\n',
       entry: { raw: '[auto] first task', task: 'first task', mode: 'auto', section: '待办' },
@@ -124,7 +132,20 @@ describe('todo-ledger helpers', () => {
     expect(parseTodoEntries(result.updatedPendingContent)).toEqual([
       { raw: '[auto] second task', task: 'second task', mode: 'auto', section: '待办' }
     ]);
+    expect(result.updatedPendingContent).not.toContain('Background: first details');
     expect(result.updatedDoneContent).toContain('first task; automated loop completed.');
+  });
+
+  it('throws when a completed task leaves detached details behind', () => {
+    expect(() =>
+      completeTaskInLedger({
+        pendingContent: ['# TODO', '', '- [ ] [auto] first task', '  Background: detached details', '', '  Goal: still detached'].join('\n'),
+        optionalContent: '# Optional\n',
+        doneContent: '# DONE\n',
+        entry: { raw: '[auto] first task', task: 'first task', mode: 'auto', section: '待办' },
+        note: 'automated loop completed'
+      })
+    ).toThrow('invalid 待办 entries after completion');
   });
 
   it('completes the first optional auto task without changing the mainline todo list', () => {
@@ -147,5 +168,35 @@ describe('todo-ledger helpers', () => {
       { raw: '[gate] manual follow-up', task: 'manual follow-up', mode: 'gate', section: '可选' },
       { raw: '[auto] later optional', task: 'later optional', mode: 'auto', section: '可选' }
     ]);
+  });
+
+  it('reconciles checked tasks out of todo without duplicating existing done records', () => {
+    const result = reconcileCompletedTasks(
+      ['# TODO', '', '- [x] [auto] first task', '  Background: first details', '- [ ] [auto] second task'].join('\n'),
+      ['# DONE', '', '- [x] 2026-04-03: first task; automated loop completed.'].join('\n'),
+      'checked off in ledger and reconciled automatically',
+      '待办'
+    );
+
+    expect(parseTodoEntries(result.updatedContent)).toEqual([
+      { raw: '[auto] second task', task: 'second task', mode: 'auto', section: '待办' }
+    ]);
+    expect(result.updatedContent).not.toContain('Background: first details');
+    expect(result.updatedDoneContent.match(/first task/g)).toHaveLength(1);
+  });
+
+  it('reconciles checked tasks into done when no record exists yet', () => {
+    const result = reconcileCompletedTasks(
+      ['# TODO', '', '- [x] [auto] first task', '  Background: first details', '- [ ] [auto] second task'].join('\n'),
+      '# DONE\n',
+      'checked off in ledger and reconciled automatically',
+      '待办'
+    );
+
+    expect(parseTodoEntries(result.updatedContent)).toEqual([
+      { raw: '[auto] second task', task: 'second task', mode: 'auto', section: '待办' }
+    ]);
+    expect(result.updatedContent).not.toContain('Background: first details');
+    expect(result.updatedDoneContent).toContain('first task; checked off in ledger and reconciled automatically.');
   });
 });

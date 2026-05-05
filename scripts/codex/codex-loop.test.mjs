@@ -169,6 +169,30 @@ describe('codex-loop helpers', () => {
     expect(writes.join('')).toContain('iteration 1, round 1/3: fix loop failure semantics');
   });
 
+  it('keeps the loop moving when archival is recovered on the next ledger read', async () => {
+    const writes = [];
+    const nextEntry = { raw: '[auto] second task', task: 'second task', mode: 'auto', section: '待办' };
+
+    const exitCode = await runLoop(
+      { completeGate: false, dryRun: false, maxIterations: 3, model: '' },
+      {
+        buildCommitMessageFn: vi.fn().mockResolvedValue('000141 fix loop failure\n\ncontext: x.\nchange: y.\nintent: z.'),
+        commitTrackedChangesFn: vi.fn().mockResolvedValue(true),
+        completeAutoTaskFn: vi.fn().mockResolvedValue(false),
+        readPrimaryTodoEntryFn: createReadMock(loopTaskEntry),
+        readGitStatusFn: vi.fn().mockResolvedValue(''),
+        readTodoEntryFn: createReadMock(loopTaskEntry, nextEntry, null),
+        isGateEntryFn: (entry) => entry?.mode === 'gate',
+        runCodexTaskFn: vi.fn().mockResolvedValue(undefined),
+        runQualityGateFn: vi.fn().mockResolvedValue(undefined),
+        stdout: { write: (value) => writes.push(value) }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(writes.join('')).toContain('iteration 1, round 1/3: second task');
+  });
+
   it('reopens the same task in a fresh round after repair budget exhaustion', async () => {
     const writes = [];
     const appendLoopFailureRecordFn = vi.fn().mockResolvedValue(undefined);
