@@ -37,6 +37,16 @@ describe('markdownOblikeExtension', () => {
     expect(names).toContain('WikiLinkMark');
   });
 
+  it('recognizes OB-like embed nodes separately from wiki links', () => {
+    const names = collectNodeNames('Open ![[Page|Alias]]');
+
+    expect(names).toContain('Embed');
+    expect(names).toContain('EmbedTarget');
+    expect(names).toContain('EmbedAlias');
+    expect(names).toContain('EmbedMark');
+    expect(names).not.toContain('WikiLink');
+  });
+
   it('does not parse wiki links inside inline code', () => {
     const names = collectNodeNames('`[[Page]]`');
 

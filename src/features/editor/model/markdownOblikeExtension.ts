@@ -67,6 +67,26 @@ function parseFootnote(cx: InlineContext, pos: number) {
   return cx.addElement(cx.elt('Footnote', pos, to, children));
 }
 
+function parseEmbed(cx: InlineContext, pos: number) {
+  if (cx.char(pos + 1) !== 91 || cx.char(pos + 2) !== 91) return -1;
+  const closeFrom = findWikiLinkClose(cx, pos + 1);
+  if (closeFrom < 0) return -1;
+  const innerFrom = pos + 3;
+  const separator = findAliasSeparator(cx, innerFrom, closeFrom);
+  const targetBounds = trimBounds(cx, innerFrom, separator < 0 ? closeFrom : separator);
+  if (targetBounds.from === targetBounds.to) return -1;
+  const children = [
+    cx.elt('EmbedMark', pos, innerFrom),
+    cx.elt('EmbedTarget', targetBounds.from, targetBounds.to)
+  ];
+  if (separator >= 0) {
+    const aliasBounds = trimBounds(cx, separator + 1, closeFrom);
+    if (aliasBounds.from < aliasBounds.to) children.push(cx.elt('EmbedAlias', aliasBounds.from, aliasBounds.to));
+  }
+  children.push(cx.elt('EmbedMark', closeFrom, closeFrom + WIKI_LINK_CLOSE.length));
+  return cx.addElement(cx.elt('Embed', pos, closeFrom + WIKI_LINK_CLOSE.length, children));
+}
+
 function findClosingChar(cx: InlineContext, from: number, closeCode: number) {
   for (let cursor = from; cursor < cx.end; cursor += 1) {
     const char = cx.char(cursor);
@@ -101,6 +121,10 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
       'CalloutKind',
       'CalloutMark',
       'CalloutMarker',
+      'Embed',
+      'EmbedAlias',
+      'EmbedMark',
+      'EmbedTarget',
       'Footnote',
       'FootnoteLabel',
       'FootnoteMark',
@@ -113,6 +137,13 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
       'WikiLinkTarget'
     ],
     parseInline: [
+      {
+        name: 'Embed',
+        parse(cx, next, pos) {
+          return next === 33 ? parseEmbed(cx, pos) : -1;
+        },
+        before: 'Image'
+      },
       {
         name: 'Footnote',
         parse(cx, next, pos) {

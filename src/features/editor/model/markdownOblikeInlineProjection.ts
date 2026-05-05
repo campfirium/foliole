@@ -19,6 +19,15 @@ export interface MarkdownFootnoteRange {
   to: number;
 }
 
+export interface MarkdownEmbedRange {
+  from: number;
+  hiddenRanges: Array<{ from: number; to: number }>;
+  labelFrom: number;
+  labelTo: number;
+  target: string;
+  to: number;
+}
+
 function collectChildNode(node: MarkdownSyntaxNode, name: string) {
   for (let child = node.firstChild; child; child = child.nextSibling) {
     if (child.name === name) return child;
@@ -63,10 +72,29 @@ function createWikiLinkRange(node: MarkdownSyntaxNode, source: string, offset: n
   if (!title || labelFrom === labelTo) return null;
   return {
     from: offset + node.from,
-    hiddenRanges: collectWikiHiddenRanges(node, labelFrom - offset, labelTo - offset, offset),
+    hiddenRanges: collectHiddenRanges(node, 'WikiLinkMark', labelFrom - offset, labelTo - offset, offset),
     labelFrom,
     labelTo,
     title,
+    to: offset + node.to
+  };
+}
+
+function createEmbedRange(node: MarkdownSyntaxNode, source: string, offset: number): MarkdownEmbedRange | null {
+  const target = collectChildNode(node, 'EmbedTarget');
+  if (!target) return null;
+  const alias = collectChildNode(node, 'EmbedAlias');
+  const labelBounds = resolveEmbedLabelBounds(node, alias);
+  const labelFrom = offset + labelBounds.from;
+  const labelTo = offset + labelBounds.to;
+  const rawTarget = source.slice(target.from, target.to).trim();
+  if (!rawTarget || labelFrom === labelTo) return null;
+  return {
+    from: offset + node.from,
+    hiddenRanges: collectHiddenRanges(node, 'EmbedMark', labelFrom - offset, labelTo - offset, offset),
+    labelFrom,
+    labelTo,
+    target: rawTarget,
     to: offset + node.to
   };
 }
@@ -80,8 +108,23 @@ function resolveLabelBounds(node: MarkdownSyntaxNode, alias: MarkdownSyntaxNode 
   };
 }
 
-function collectWikiHiddenRanges(node: MarkdownSyntaxNode, labelFrom: number, labelTo: number, offset: number) {
-  const ranges = collectChildRanges(node, 'WikiLinkMark');
+function resolveEmbedLabelBounds(node: MarkdownSyntaxNode, alias: MarkdownSyntaxNode | null) {
+  if (alias) return { from: alias.from, to: alias.to };
+  const marks = collectChildRanges(node, 'EmbedMark');
+  return {
+    from: marks[0]?.to ?? node.from,
+    to: marks[marks.length - 1]?.from ?? node.to
+  };
+}
+
+function collectHiddenRanges(
+  node: MarkdownSyntaxNode,
+  markName: string,
+  labelFrom: number,
+  labelTo: number,
+  offset: number
+) {
+  const ranges = collectChildRanges(node, markName);
   if (labelFrom > node.from) ranges.push({ from: node.from, to: labelFrom });
   if (labelTo < node.to) ranges.push({ from: labelTo, to: node.to });
   return mergeRanges(ranges).map((range) => ({ from: offset + range.from, to: offset + range.to }));
@@ -129,11 +172,34 @@ function visitWikiLinks(args: {
   }
 }
 
+function visitEmbeds(args: {
+  embeds: MarkdownEmbedRange[];
+  node: MarkdownSyntaxNode;
+  offset: number;
+  source: string;
+}) {
+  if (args.node.name === 'Embed') {
+    const range = createEmbedRange(args.node, args.source, args.offset);
+    if (range) args.embeds.push(range);
+    return;
+  }
+  for (let child = args.node.firstChild; child; child = child.nextSibling) {
+    visitEmbeds({ embeds: args.embeds, node: child, offset: args.offset, source: args.source });
+  }
+}
+
 export function collectMarkdownWikiLinkRanges(text: string, offset = 0): MarkdownWikiLinkRange[] {
   const tree = folioleMarkdownParser.parse(text);
   const links: MarkdownWikiLinkRange[] = [];
   visitWikiLinks({ links, node: tree.topNode, offset, source: text });
   return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+}
+
+export function collectMarkdownEmbedRanges(text: string, offset = 0): MarkdownEmbedRange[] {
+  const tree = folioleMarkdownParser.parse(text);
+  const embeds: MarkdownEmbedRange[] = [];
+  visitEmbeds({ embeds, node: tree.topNode, offset, source: text });
+  return embeds.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
 export function collectMarkdownFootnoteRanges(text: string, offset = 0): MarkdownFootnoteRange[] {
