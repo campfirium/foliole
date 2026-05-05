@@ -79,7 +79,8 @@ describe('Android sync diagnostics metadata', () => {
       javaSource('FolioleCompanionSyncDiagnosticContent.java'),
       javaSource('FolioleCompanionSyncDiagnosticState.java'),
       javaSource('FolioleCompanionSyncDiagnosticVerdicts.java'),
-      javaSource('FolioleCompanionSyncDiagnosticQueryRules.java')
+      javaSource('FolioleCompanionSyncDiagnosticQueryRules.java'),
+      javaSource('FolioleCompanionNamedQueryStore.java')
     ]);
     const combined = sources.join('\n');
 
@@ -91,6 +92,7 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.syncDiagnosticVerdict(context, key)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
+    expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "metricRows")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys")');
     expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
     expect(combined).toContain('optJSONObject("diagnosticRead")');
@@ -110,6 +112,9 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).not.toContain('"android_endpoint_missing"');
     expect(combined).not.toContain('"Android sync state is readable."');
     expect(combined).not.toContain('"Sync fully completed."');
+    expect(combined).not.toContain('getJSONArray("metrics"');
+    expect(combined).not.toContain('getString("metric"');
+    expect(combined).not.toContain('getLong("value"');
   });
 
   it('generates Android diagnostic query routing metadata', async () => {
@@ -126,6 +131,7 @@ describe('Android sync diagnostics metadata', () => {
       },
       dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
       metaValue: { queryName: 'companionMetaValue' },
+      metricRows: { resultKey: 'metrics', metricKey: 'metric', valueKey: 'value' },
       stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },
       storageMetrics: { queryName: 'diagnosticStorageMetrics' },
       verdictMetricKeys: {

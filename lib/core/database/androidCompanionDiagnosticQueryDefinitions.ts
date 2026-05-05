@@ -206,6 +206,7 @@ export const ANDROID_COMPANION_DIAGNOSTIC_READ_RULES = {
   contentBodyMetrics: { queryName: 'diagnosticContentBodyMetrics' },
   dirtyObjects: { queryName: 'diagnosticDirtyObjects', resultKey: 'objects' },
   metaValue: { queryName: 'companionMetaValue' },
+  metricRows: { resultKey: 'metrics', metricKey: 'metric', valueKey: 'value' },
   pendingAcks: { queryName: 'diagnosticPendingAcks', resultKey: 'acks' },
   pushIssues: { queryName: 'diagnosticPushIssues', resultKey: 'acks' },
   recentTopics: { queryName: 'diagnosticRecentTopics', resultKey: 'topics' },

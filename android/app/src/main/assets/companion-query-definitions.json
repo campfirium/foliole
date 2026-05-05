@@ -1869,6 +1869,11 @@
     "metaValue": {
       "queryName": "companionMetaValue"
     },
+    "metricRows": {
+      "resultKey": "metrics",
+      "metricKey": "metric",
+      "valueKey": "value"
+    },
     "pendingAcks": {
       "queryName": "diagnosticPendingAcks",
       "resultKey": "acks"
