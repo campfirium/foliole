@@ -3,7 +3,7 @@ import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/na
 import {
   FolioleCompanionAppData,
   isNativeAndroidCompanionRuntime
-} from './companionAppDataBridge';
+} from './companionAppDataRuntimeRepository';
 import {
   normalizeWorkspaceSyncState,
   readWebSyncState,
