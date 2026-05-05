@@ -11,6 +11,7 @@ import type {
 
 export interface AppearanceSettingsContextValue {
   accentColorPreset: AccentColorPreset;
+  autoLocalizeRemoteImages: boolean;
   baseColorMode: BaseColorMode;
   customInterfaceFont: string;
   customMonospaceFont: string;
@@ -25,6 +26,7 @@ export interface AppearanceSettingsContextValue {
   resetAccentColorPreset: () => void;
   resetInterfaceFontSize: () => void;
   setAccentColorPreset: (value: AccentColorPreset) => void;
+  setAutoLocalizeRemoteImages: (value: boolean) => void;
   setBaseColorMode: (value: BaseColorMode) => void;
   setCustomInterfaceFont: (value: string) => void;
   setCustomMonospaceFont: (value: string) => void;

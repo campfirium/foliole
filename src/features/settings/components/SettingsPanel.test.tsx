@@ -160,6 +160,8 @@ it('updates mouse gesture settings from the dedicated section and persists them'
 it('updates appearance settings from the dedicated sections and persists them', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
+  fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
+  fireEvent.click(screen.getByLabelText('Auto-localize remote images'));
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.change(screen.getByLabelText('Accent color picker'), {
     target: { value: '#ff5500' }
@@ -170,6 +172,7 @@ it('updates appearance settings from the dedicated sections and persists them', 
   fireEvent.click(screen.getByLabelText('Reset accent color'));
 
   await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('false');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.accentColor)).toBe('#3f8f68');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('22');
   });

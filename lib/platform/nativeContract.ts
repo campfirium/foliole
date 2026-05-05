@@ -6,6 +6,7 @@ import type {
 import type { NativeReadwiseDetectionResult } from './nativeReadwiseContract.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
+  NativeImportRemoteImageAttachmentArgs,
   NativeImportLocalImageAttachmentResult,
   NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
@@ -21,10 +22,8 @@ import type {
   NativeReviewPreviewArgs, NativeReviewPreviewResult,
   NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog
 } from './nativeUtilityContract.js';
-export type * from './nativeStorageContract.js';
-export type * from './nativeImportContract.js';
-export type * from './nativeReadwiseContract.js';
-export type * from './nativeUtilityContract.js';
+export type * from './nativeStorageContract.js'; export type * from './nativeImportContract.js';
+export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 export type NativeCommandMap = NativeUtilityCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -104,6 +103,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & {
   };
   [NATIVE_COMMANDS.importLocalImageAttachment]: {
     args: NativeImportLocalImageAttachmentArgs;
+    result: NativeImportLocalImageAttachmentResult;
+  };
+  [NATIVE_COMMANDS.importRemoteImageAttachment]: {
+    args: NativeImportRemoteImageAttachmentArgs;
     result: NativeImportLocalImageAttachmentResult;
   };
   [NATIVE_COMMANDS.resolveAttachmentResource]: {

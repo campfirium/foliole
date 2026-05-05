@@ -8,6 +8,7 @@ export interface MarkdownImageMatch {
   from: number;
   to: number;
   alt: string;
+  display: 'block' | 'inline';
   source: string;
 }
 
@@ -73,11 +74,18 @@ async function renderInternalImage(wrapper: HTMLElement, alt: string, source: st
   wrapper.replaceChildren(createImageStatusElement('unavailable'));
 }
 
+function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
+  const before = text.slice(0, matchIndex).trim();
+  const after = text.slice(matchIndex + raw.length).trim();
+  return before.length === 0 && after.length === 0 ? 'block' : 'inline';
+}
+
 export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch) {
   const wrapper = document.createElement('span');
-  wrapper.className = 'cm-md-image-widget';
+  wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
   wrapper.dataset.mdImageAlt = imageMatch.alt;
   wrapper.dataset.mdImageAttachmentId = imageMatch.attachmentId ?? '';
+  wrapper.dataset.mdImageDisplay = imageMatch.display;
   wrapper.dataset.mdImageFrom = parseImageRange(imageMatch.from);
   wrapper.dataset.mdImageSource = imageMatch.source;
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
@@ -101,6 +109,7 @@ export function collectImageMatches(from: number, text: string): MarkdownImageMa
       const start = from + match.index;
       matches.push({
         attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,
+        display: resolveImageDisplay(text, match.index, match[0] ?? ''),
         from: start,
         to: start + match[0].length,
         alt: match[1] ?? '',

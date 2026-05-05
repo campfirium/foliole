@@ -9,6 +9,10 @@ import {
   setMarkdownSyntaxVisibility
 } from '../../editor/model/markdownSyntaxSetting';
 import {
+  setAutoLocalizeRemoteImages,
+  shouldAutoLocalizeRemoteImages as getAutoLocalizeRemoteImages
+} from '../../editor/model/remoteImageLocalizationSetting';
+import {
   applyAppearanceSettings,
   DEFAULT_ACCENT_COLOR_PRESET,
   getAccentColorPreset,
@@ -38,6 +42,7 @@ import {
 } from './appearanceSettingsContext';
 
 function useAppearanceStateValues() {
+  const [autoLocalizeRemoteImagesState, setAutoLocalizeRemoteImagesState] = useState(() => getAutoLocalizeRemoteImages());
   const [markdownSyntaxVisibilityState, setMarkdownSyntaxVisibilityState] = useState(() => getMarkdownSyntaxVisibility());
   const [editorDisplayModeState, setEditorDisplayModeState] = useState(() => getEditorDisplayMode());
   const [baseColorModeState, setBaseColorModeState] = useState(() => getBaseColorMode());
@@ -52,6 +57,7 @@ function useAppearanceStateValues() {
 
   return {
     accentColorPresetState,
+    autoLocalizeRemoteImagesState,
     baseColorModeState,
     customInterfaceFontState,
     customMonospaceFontState,
@@ -62,6 +68,7 @@ function useAppearanceStateValues() {
     markdownSyntaxVisibilityState,
     monospaceFontPresetState,
     setAccentColorPresetState,
+    setAutoLocalizeRemoteImagesState,
     setBaseColorModeState,
     setCustomInterfaceFontState,
     setCustomMonospaceFontState,
@@ -113,6 +120,7 @@ function createAppearanceActions(state: ReturnType<typeof useAppearanceStateValu
       state.setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT);
     },
     setAccentColorPreset: (value: typeof state.accentColorPresetState) => (setAccentColorPreset(value), state.setAccentColorPresetState(value)),
+    setAutoLocalizeRemoteImages: (value: boolean) => (setAutoLocalizeRemoteImages(value), state.setAutoLocalizeRemoteImagesState(value)),
     setBaseColorMode: (value: typeof state.baseColorModeState) => (setBaseColorMode(value), state.setBaseColorModeState(value)),
     setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
     setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
@@ -137,6 +145,7 @@ function useAppearanceSettingsState() {
   return useMemo(
     () => ({
       accentColorPreset: state.accentColorPresetState,
+      autoLocalizeRemoteImages: state.autoLocalizeRemoteImagesState,
       baseColorMode: state.baseColorModeState,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
@@ -152,6 +161,7 @@ function useAppearanceSettingsState() {
     }),
     [
       state.accentColorPresetState,
+      state.autoLocalizeRemoteImagesState,
       state.baseColorModeState,
       state.customInterfaceFontState,
       state.customMonospaceFontState,

@@ -2,10 +2,32 @@ import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../s
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 
 export function SettingsEditorSection() {
-  const { markdownSyntaxVisibility, setMarkdownSyntaxVisibility } = useAppearanceSettings();
+  const {
+    autoLocalizeRemoteImages,
+    markdownSyntaxVisibility,
+    setAutoLocalizeRemoteImages,
+    setMarkdownSyntaxVisibility
+  } = useAppearanceSettings();
 
   return (
     <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
+      <SettingsRow
+        description="Download remote markdown images into the app and rewrite them to local links when possible."
+        title="Auto-localize remote images"
+      >
+        <SettingsControlSlot>
+          <label className="inline-flex items-center gap-2 text-sm text-foreground">
+            <input
+              aria-label="Auto-localize remote images"
+              checked={autoLocalizeRemoteImages}
+              className="h-4 w-4 rounded border border-border"
+              onChange={(event) => setAutoLocalizeRemoteImages(event.target.checked)}
+              type="checkbox"
+            />
+            <span>{autoLocalizeRemoteImages ? 'On' : 'Off'}</span>
+          </label>
+        </SettingsControlSlot>
+      </SettingsRow>
       <SettingsRow
         description="Show markdown markers on active line, or keep them hidden."
         title="Markdown syntax visibility"

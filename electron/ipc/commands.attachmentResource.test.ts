@@ -18,6 +18,10 @@ const { importClipboardImageAttachment } = vi.hoisted(() => ({
   importClipboardImageAttachment: vi.fn()
 }));
 
+const { importRemoteImageAttachment } = vi.hoisted(() => ({
+  importRemoteImageAttachment: vi.fn()
+}));
+
 const { copyAttachmentImageToClipboard, exportAttachmentImage } = vi.hoisted(() => ({
   copyAttachmentImageToClipboard: vi.fn(),
   exportAttachmentImage: vi.fn()
@@ -84,6 +88,7 @@ vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource
 vi.mock('../attachments/attachmentImageActions.js', () => ({ copyAttachmentImageToClipboard, exportAttachmentImage }));
 vi.mock('../attachments/importLocalImageAttachment.js', () => ({ importLocalImageAttachment }));
 vi.mock('../attachments/importClipboardImageAttachment.js', () => ({ importClipboardImageAttachment }));
+vi.mock('../attachments/importRemoteImageAttachment.js', () => ({ importRemoteImageAttachment }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -180,6 +185,44 @@ it('routes clipboard image attachment imports through the unified runtime entry'
     mimeType: 'image/png',
     nodeId: 'node-1',
     originalName: ''
+  });
+});
+
+it('routes remote image attachment imports through the unified runtime entry', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'hash-3',
+    attachment_record: 'created',
+    created_at: '2026-03-30T00:00:00.000Z',
+    hash: 'hash-3',
+    mime_type: 'image/png',
+    original_name: 'cover.png',
+    size_bytes: 24,
+    stored_file: 'created'
+  });
+
+  await expect(
+    handleInvokeRequest({
+      command: NATIVE_COMMANDS.importRemoteImageAttachment,
+      args: {
+        nodeId: 'node-1',
+        sourceUrl: 'https://example.com/cover.png'
+      }
+    })
+  ).resolves.toEqual({
+    status: 'imported',
+    attachment_id: 'hash-3',
+    attachment_record: 'created',
+    created_at: '2026-03-30T00:00:00.000Z',
+    hash: 'hash-3',
+    mime_type: 'image/png',
+    original_name: 'cover.png',
+    size_bytes: 24,
+    stored_file: 'created'
+  });
+  expect(importRemoteImageAttachment).toHaveBeenCalledWith({
+    nodeId: 'node-1',
+    sourceUrl: 'https://example.com/cover.png'
   });
 });
 

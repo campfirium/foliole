@@ -81,8 +81,14 @@ export interface NativeImportClipboardImageAttachmentArgs {
   originalName?: string;
 }
 
+export interface NativeImportRemoteImageAttachmentArgs {
+  nodeId: string;
+  sourceUrl: string;
+}
+
 export type NativeImportLocalImageAttachmentErrorCode =
   | 'node_not_found'
+  | 'download_failed'
   | 'source_not_found'
   | 'source_read_failed'
   | 'storage_write_failed'

@@ -5,6 +5,7 @@ import { saveRuntimeAppSettingsState } from './appSettingsState';
 const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.editorDisplayMode,
   APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility,
+  APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages,
   APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory,
   APP_SETTINGS_STORAGE_KEYS.uiFont,
   APP_SETTINGS_STORAGE_KEYS.customUiFont,

@@ -2,6 +2,7 @@ import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbo
 
 export const APP_SETTINGS_STORAGE_KEYS = {
   markdownSyntaxVisibility: 'foliole-markdown-syntax-visibility',
+  autoLocalizeRemoteImages: 'foliole-auto-localize-remote-images',
   editorDisplayMode: 'foliole-editor-display-mode',
   settingsActiveCategory: 'foliole-settings-active-category',
   uiFont: 'foliole-ui-font-preset',
@@ -61,11 +62,13 @@ export type MarkdownSyntaxVisibility = (typeof APP_SETTINGS_OPTIONS.markdownSynt
 export type EditorDisplayMode = (typeof APP_SETTINGS_OPTIONS.editorDisplayMode)[number];
 
 export interface PersistedAppSettings {
+  autoLocalizeRemoteImages: boolean;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   editorDisplayMode: EditorDisplayMode;
 }
 
 export const DEFAULT_PERSISTED_APP_SETTINGS: PersistedAppSettings = {
+  autoLocalizeRemoteImages: true,
   markdownSyntaxVisibility: 'hidden',
   editorDisplayMode: 'preview'
 };

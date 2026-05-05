@@ -3,12 +3,14 @@ import { markdown } from '@codemirror/lang-markdown';
 import { Compartment, EditorState } from '@codemirror/state';
 import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
+import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 import { buildEditorDiffDecorations } from './lineDiffDecorations';
 import { createLiveMarkdown } from './liveMarkdown';
+import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 import { markdownInputAssist } from './markdownInputAssist';
 
 interface CodeMirrorEditorAdapterOptions {
@@ -21,6 +23,8 @@ interface CodeMirrorEditorAdapterOptions {
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
+  private localizationRunId = 0;
+  private localizationTimer: ReturnType<typeof setTimeout> | null = null;
   private liveMarkdownCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
@@ -53,6 +57,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
               return;
             }
             this.onChange(update.state.doc.toString());
+            this.scheduleRemoteImageLocalization();
           })
         ]
       })
@@ -60,6 +65,10 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   destroy() {
+    if (this.localizationTimer) {
+      clearTimeout(this.localizationTimer);
+      this.localizationTimer = null;
+    }
     this.view.destroy();
   }
 
@@ -115,6 +124,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.view.dispatch({
       effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(this.hideTitleHeading, this.nodeId))
     });
+    this.scheduleRemoteImageLocalization();
   }
 
   getSelection(): EditorSelection {
@@ -241,5 +251,42 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return () => {
       scroller.removeEventListener('scroll', handleScroll);
     };
+  }
+
+  private scheduleRemoteImageLocalization() {
+    if (this.localizationTimer) {
+      clearTimeout(this.localizationTimer);
+      this.localizationTimer = null;
+    }
+    if (!this.nodeId || !shouldAutoLocalizeRemoteImages()) {
+      return;
+    }
+
+    const currentContent = this.getContent();
+    if (!/!\[[^\]]*\]\((?:<)?https?:\/\//i.test(currentContent)) {
+      return;
+    }
+
+    const runId = ++this.localizationRunId;
+    this.localizationTimer = setTimeout(() => {
+      this.localizationTimer = null;
+      void this.runRemoteImageLocalization(runId, currentContent);
+    }, 180);
+  }
+
+  private async runRemoteImageLocalization(runId: number, contentSnapshot: string) {
+    if (!this.nodeId || !shouldAutoLocalizeRemoteImages()) {
+      return;
+    }
+    const localized = await localizeRemoteMarkdownImages(this.nodeId, contentSnapshot);
+    if (
+      runId !== this.localizationRunId ||
+      localized === contentSnapshot ||
+      this.getContent() !== contentSnapshot
+    ) {
+      return;
+    }
+    this.setContent(localized);
+    this.onChange?.(localized);
   }
 }
