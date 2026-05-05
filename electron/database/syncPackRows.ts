@@ -35,6 +35,7 @@ export interface NodePackRow extends DatabaseRow {
   id: string;
   is_title_manual: number;
   kind: string;
+  opening_text: string | null;
   parent_id: string | null;
   title: string;
   updated_at: string;
@@ -136,7 +137,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
   const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
   const nodes = queryRowsByIds<NodePackRow>(
     `SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash,
-       content, created_at, updated_at, deleted_at
+       opening_text, content, created_at, updated_at, deleted_at
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );

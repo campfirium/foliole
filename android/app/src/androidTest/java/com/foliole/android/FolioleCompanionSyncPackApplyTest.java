@@ -52,6 +52,7 @@ public class FolioleCompanionSyncPackApplyTest {
         assertEquals(1, result.getInt("applied_blob_count"));
         assertEquals(1, result.getInt("to_state_seq"));
         assertEquals("", selectString("SELECT content FROM nodes WHERE id = 'node-1'"));
+        assertEquals("Node opening preview", selectString("SELECT opening_text FROM nodes WHERE id = 'node-1'"));
         assertEquals("blob-1", selectString("SELECT body_blob_hash FROM nodes WHERE id = 'node-1'"));
         assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = 'blob-1'"));
         assertEquals("android-test", selectString(
@@ -188,7 +189,7 @@ public class FolioleCompanionSyncPackApplyTest {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
             "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, created_at TEXT NOT NULL, " +
+            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, created_at TEXT NOT NULL, " +
             "updated_at TEXT NOT NULL, deleted_at TEXT)");
         mainDatabase.execSQL("CREATE TABLE external_documents (" +
             "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
@@ -245,7 +246,7 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("CREATE TABLE nodes (" +
                 "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL, title TEXT NOT NULL, " +
                 "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-                "body_blob_hash TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
+                "body_blob_hash TEXT, opening_text TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
                 "updated_at TEXT NOT NULL, deleted_at TEXT)");
             packDatabase.execSQL("CREATE TABLE external_documents (" +
                 "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
@@ -279,8 +280,8 @@ public class FolioleCompanionSyncPackApplyTest {
         packDatabase.execSQL("INSERT INTO pack_manifest (key, value) VALUES (" +
             "'manifest_json', '{\"to_state_seq\":1}')");
         packDatabase.execSQL("INSERT INTO nodes (" +
-            "id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, content, created_at, updated_at) " +
-            "VALUES ('node-1', 'topic', 'Node 1', 1, 0, 'blob-1', '', '" + now + "', '" + now + "')");
+            "id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, content, created_at, updated_at) " +
+            "VALUES ('node-1', 'topic', 'Node 1', 1, 0, 'blob-1', 'Node opening preview', '', '" + now + "', '" + now + "')");
         packDatabase.execSQL("INSERT INTO content_blobs (" +
             "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
             "original_sha256, stored_sha256, availability, source_device_id, created_at) VALUES (" +
@@ -404,7 +405,7 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("CREATE TABLE nodes (" +
                 "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL, title TEXT NOT NULL, " +
                 "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-                "body_blob_hash TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
+                "body_blob_hash TEXT, opening_text TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
                 "updated_at TEXT NOT NULL, deleted_at TEXT)");
             packDatabase.execSQL("CREATE TABLE external_documents (" +
                 "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +

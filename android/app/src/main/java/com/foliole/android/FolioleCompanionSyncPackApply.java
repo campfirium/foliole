@@ -114,9 +114,9 @@ final class FolioleCompanionSyncPackApply {
         database.execSQL(
             "INSERT OR REPLACE INTO main.nodes (" +
                 "id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "content, created_at, updated_at, deleted_at) " +
+                "opening_text, content, created_at, updated_at, deleted_at) " +
                 "SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "content, created_at, updated_at, deleted_at FROM inc.nodes " +
+                "opening_text, content, created_at, updated_at, deleted_at FROM inc.nodes " +
                 "WHERE id IN (SELECT object_id FROM " + applyableStateRowsSql("node") + ")"
         );
     }

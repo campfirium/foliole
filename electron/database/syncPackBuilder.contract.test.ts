@@ -49,9 +49,9 @@ function insertNodeSyncState() {
   const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, is_title_manual, hide_title_heading, content, body_blob_hash, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?)`,
-    ['node-1', 'Node 1', 'node body must stay out of pack', bodyHash,
+       id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash, created_at, updated_at
+     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?)`,
+    ['node-1', 'Node 1', 'Node opening preview', 'node body must stay out of pack', bodyHash,
       '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   driver.execute(
@@ -122,7 +122,7 @@ function readPackRows(packPath: string) {
     return {
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash FROM external_documents').all(),
       manifest,
-      nodes: db.prepare('SELECT id, content, body_blob_hash FROM nodes').all()
+      nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all()
     };
   } finally {
     db.close();
@@ -170,6 +170,6 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
         { name: 'content_blobs', row_count: 2 }
       ]
     }),
-    nodes: [expect.objectContaining({ content: '', id: 'node-1' })]
+    nodes: [expect.objectContaining({ content: '', id: 'node-1', opening_text: 'Node opening preview' })]
   });
 });

@@ -48,9 +48,9 @@ function insertNodeSyncState() {
   const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, is_title_manual, hide_title_heading, content, body_blob_hash, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?)`,
-    ['node-1', 'Node 1', 'node body must stay out of pack', bodyHash,
+       id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash, created_at, updated_at
+     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?)`,
+    ['node-1', 'Node 1', 'Node opening preview', 'node body must stay out of pack', bodyHash,
       '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   driver.execute(
@@ -145,7 +145,7 @@ function readPackRows(packPath: string) {
       blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
       manifest,
-      nodes: db.prepare('SELECT id, content, body_blob_hash FROM nodes').all(),
+      nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
       syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
     };
@@ -216,7 +216,8 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
     nodes: [expect.objectContaining({
       body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       content: '',
-      id: 'node-1'
+      id: 'node-1',
+      opening_text: 'Node opening preview'
     })],
     stateRows: [
       { object_id: 'node-1', object_type: 'node', state_seq: 1 },

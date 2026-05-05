@@ -90,10 +90,10 @@ function writePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPa
     db,
     table: 'nodes',
     columns: ['id', 'parent_id', 'kind', 'title', 'is_title_manual', 'hide_title_heading',
-      'body_blob_hash', 'content', 'created_at', 'updated_at', 'deleted_at'],
+      'body_blob_hash', 'opening_text', 'content', 'created_at', 'updated_at', 'deleted_at'],
     rows: rows.nodes,
     values: (row) => [row.id, row.parent_id, row.kind, row.title, row.is_title_manual,
-      row.hide_title_heading, row.body_blob_hash, '', row.created_at, row.updated_at, row.deleted_at]
+      row.hide_title_heading, row.body_blob_hash, row.opening_text, '', row.created_at, row.updated_at, row.deleted_at]
   });
   copyRows({
     db,

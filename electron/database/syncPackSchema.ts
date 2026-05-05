@@ -29,6 +29,7 @@ export const PACK_SCHEMA = [
     is_title_manual INTEGER NOT NULL DEFAULT 0,
     hide_title_heading INTEGER NOT NULL DEFAULT 0,
     body_blob_hash TEXT,
+    opening_text TEXT,
     content TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
