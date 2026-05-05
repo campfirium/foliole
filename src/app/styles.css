@@ -31,6 +31,7 @@
   --color-text-primary: rgb(var(--color-foreground));
   --color-text-secondary: rgb(var(--color-muted-foreground));
   --color-bg-muted: rgb(var(--color-muted));
+  --content-panel-text-color: var(--color-text-primary);
   --workspace-divider-mix-target: black;
   --workspace-divider-subtle-surface-weight: 92%;
   --workspace-divider-strong-surface-weight: 86%;
@@ -186,6 +187,7 @@
   --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.42);
   --app-highlight-surface-color: rgb(var(--app-highlight-color-rgb) / 0.28);
   --app-cloze-surface-color: rgb(var(--app-cloze-color-rgb) / 0.24);
+  --content-panel-text-color: #d8d8d8;
   --app-diff-added-surface-color: rgb(var(--app-accent-color-rgb) / 0.18);
   --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.14);
   --app-diff-removed-surface-color: rgb(var(--color-error) / 0.18);
