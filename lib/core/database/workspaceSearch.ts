@@ -115,6 +115,11 @@ export interface WorkspaceSearchResult {
   excerpt: string;
   id: string;
   kind: 'node' | 'pdf';
+  nodeMatch: {
+    from: number;
+    query: string;
+    to: number;
+  } | null;
   pdfMatch: {
     attachmentId: string;
     matchStart: number;
@@ -172,11 +177,24 @@ function sortAndLimitResults(results: WorkspaceSearchResult[]) {
     .slice(0, MAX_RESULTS);
 }
 
+function resolveNodeContentMatch(content: string, query: string) {
+  const matchStart = content.toLowerCase().indexOf(query);
+  if (matchStart < 0) {
+    return null;
+  }
+  return {
+    from: matchStart,
+    query,
+    to: matchStart + query.length
+  };
+}
+
 function buildNodeSearchResult(row: WorkspaceSearchRow, query: string): WorkspaceSearchResult {
   return {
     excerpt: buildExcerpt(row.content, query),
     id: row.id,
     kind: 'node',
+    nodeMatch: resolveNodeContentMatch(row.content, query),
     pdfMatch: null,
     title: row.title.trim() || 'Untitled',
     updatedAt: row.updated_at
@@ -188,6 +206,7 @@ function buildPdfSearchResult(row: WorkspacePdfSearchRow, query: string): Worksp
     excerpt: buildPdfExcerpt(row.text, row.match_start, query, row.page),
     id: row.id,
     kind: 'pdf',
+    nodeMatch: null,
     pdfMatch: {
       attachmentId: row.attachment_id,
       matchStart: Math.max(0, row.match_start),
@@ -205,6 +224,7 @@ function buildCrossPagePdfSearchResult(row: WorkspacePdfCrossPageSearchRow, quer
     excerpt: buildCrossPagePdfExcerpt(row.text, row.next_text, row.match_start, query, row.page, row.end_page),
     id: row.id,
     kind: 'pdf',
+    nodeMatch: null,
     pdfMatch: {
       attachmentId: row.attachment_id,
       matchStart: Math.max(0, row.match_start),

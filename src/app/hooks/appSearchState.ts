@@ -17,8 +17,10 @@ interface SearchStateArgs {
     closeTrashView: () => void;
   };
   ws: {
+    nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
     nodeOrder: string[];
     nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
+    setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'];
     trashedNodeIds: string[];
   };
 }
@@ -41,6 +43,16 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     () => args.runtime.setIsSearchPaletteOpen(false),
     (result) => {
       args.trash.closeTrashView();
+      if (result.kind === 'node' && result.nodeMatch) {
+        const existingViewState = args.ws.nodeViewById[result.id];
+        args.ws.setNodeViewState(result.id, {
+          scrollTop: existingViewState?.scrollTop ?? 0,
+          selection: {
+            from: result.nodeMatch.from,
+            to: result.nodeMatch.to
+          }
+        });
+      }
       args.nav.handleSelectNode(result.id);
       if (result.kind === 'pdf' && result.pdfMatch) {
         requestPdfSearch(result.id, {

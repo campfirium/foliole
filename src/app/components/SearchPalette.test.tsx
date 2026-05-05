@@ -18,6 +18,11 @@ it('loads search results from runtime without renderer content mirrors', async (
           title: 'Atlas note',
           excerpt: '...launch checklist...',
           kind: 'node',
+          nodeMatch: {
+            from: 12,
+            query: 'launch',
+            to: 18
+          },
           pdfMatch: null,
           updatedAt: '2026-03-30T00:00:00.000Z'
         }

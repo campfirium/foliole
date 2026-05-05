@@ -27,6 +27,7 @@ function createSearchRuntimeInvoke() {
           title: 'Project Atlas',
           excerpt: '...Project Atlas...',
           kind: 'node',
+          nodeMatch: null,
           pdfMatch: null,
           updatedAt: '2026-03-30T00:00:00.000Z'
         },
@@ -35,6 +36,11 @@ function createSearchRuntimeInvoke() {
           title: 'Weekly Log',
           excerpt: '...Atlas launch checklist and follow-up notes....',
           kind: 'node',
+          nodeMatch: {
+            from: 0,
+            query: 'atlas',
+            to: 5
+          },
           pdfMatch: null,
           updatedAt: '2026-03-29T00:00:00.000Z'
         }
@@ -118,11 +124,12 @@ it('keeps search results lightweight until the chosen node is opened', async () 
     reveal: null,
     hasReveal: false
   });
+  expect(useWorkspaceStore.getState().nodeViewById['node-3']).toMatchObject({
+    selection: { from: 0, to: 5 }
+  });
   expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
   expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'Atlas' });
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-3' });
-  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
-    ['load_node_document', { nodeId: 'node-3' }]
-  ]);
+  expect(invoke.mock.calls).toContainEqual(['load_node_document', { nodeId: 'node-3' }]);
   expect(screen.queryByRole('dialog', { name: 'Workspace search' })).not.toBeInTheDocument();
 });

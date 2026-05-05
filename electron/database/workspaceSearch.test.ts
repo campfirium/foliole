@@ -81,6 +81,7 @@ it('searches titles and content from sqlite without needing renderer-side conten
     title: 'Project Atlas',
     excerpt: 'Planning notes stay in sqlite until the node is opened.',
     kind: 'node',
+    nodeMatch: null,
     pdfMatch: null,
     updatedAt: '2026-03-03T00:00:00.000Z'
   });
@@ -88,6 +89,11 @@ it('searches titles and content from sqlite without needing renderer-side conten
     id: 'node-content',
     title: 'Weekly Log',
     kind: 'node',
+    nodeMatch: {
+      from: 0,
+      query: 'atlas',
+      to: 5
+    },
     pdfMatch: null,
     updatedAt: '2026-03-02T00:00:00.000Z'
   });
@@ -115,6 +121,7 @@ it('includes indexed pdf page hits in workspace search results', () => {
   expect(results[0]).toMatchObject({
     id: 'node-pdf',
     kind: 'pdf',
+    nodeMatch: null,
     title: 'Research.pdf',
     updatedAt: '2026-03-05T00:00:00.000Z'
   });
@@ -148,6 +155,7 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
   expect(results[0]).toMatchObject({
     id: 'node-pdf-cross',
     kind: 'pdf',
+    nodeMatch: null,
     title: 'Boundary.pdf',
     updatedAt: '2026-03-06T00:00:00.000Z'
   });

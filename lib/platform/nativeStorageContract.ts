@@ -103,6 +103,11 @@ export interface NativeWorkspaceSearchResult {
   excerpt: string;
   id: string;
   kind: 'node' | 'pdf';
+  nodeMatch: {
+    from: number;
+    query: string;
+    to: number;
+  } | null;
   pdfMatch: {
     attachmentId: string;
     matchStart: number;
