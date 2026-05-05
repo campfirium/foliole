@@ -11,9 +11,11 @@ const {
   clipboardImage,
   runImportForFilePath,
   runPreparedImport,
+  databaseDriver,
   importImageAttachmentBytes,
   notifyManagedInboxUpdated
 } = vi.hoisted(() => {
+  const driver = { execute: vi.fn(), query: vi.fn(), queryOne: vi.fn() };
   const image = {
     isEmpty: vi.fn(() => true),
     toPNG: vi.fn(() => Buffer.from('png-bytes'))
@@ -33,6 +35,7 @@ const {
       readImage: vi.fn(() => image),
       readText: vi.fn(() => '')
     },
+    databaseDriver: driver,
     clipboardImage: image,
     importImageAttachmentBytes: vi.fn(),
     notifyManagedInboxUpdated: vi.fn(),
@@ -48,7 +51,7 @@ vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   normalizeImageFileName: vi.fn((originalName: string | null | undefined) => originalName || 'pasted-image.png')
 }));
 vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: vi.fn(() => ({ driver: { execute: vi.fn(), query: vi.fn(), queryOne: vi.fn() } }))
+  openDatabaseConnection: vi.fn(() => ({ driver: databaseDriver }))
 }));
 vi.mock('../../lib/core/database/workspaceSearchIndex.js', () => ({ syncWorkspaceSearchIndexForNodeIds: vi.fn() }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
@@ -234,4 +237,24 @@ it('imports clipboard image bytes as a topic with an attachment markdown link', 
       originalName: 'pasted-image.png'
     })
   );
+});
+
+it('writes a body blob when clipboard image attachment import falls back to an error body', async () => {
+  clipboardImage.isEmpty.mockReturnValue(false);
+  runPreparedImport.mockReturnValue(createImportRecord({ sourceKind: 'markdown', sourceName: 'pasted-image.png' }));
+  importImageAttachmentBytes.mockResolvedValue({ message: 'Image import failed', status: 'error' });
+
+  await runClipboardImport();
+
+  const updateCall = databaseDriver.execute.mock.calls.find(([sql]) =>
+    String(sql).includes('UPDATE nodes SET content = ?, body_blob_hash = ?')
+  );
+  expect(updateCall).toBeTruthy();
+  expect(updateCall?.[1]).toEqual([
+    '[Image import failed]',
+    expect.stringMatching(/^[a-f0-9]{64}$/),
+    '[Image import failed]',
+    expect.stringMatching(/^20\d\d-\d\d-\d\dT/),
+    'node-1'
+  ]);
 });

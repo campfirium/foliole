@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { clipboard } from 'electron';
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
@@ -94,8 +95,10 @@ async function runClipboardFileImport(filePaths: string[], args?: NativeTextImpo
 
 function updateImportedNodeContent(nodeId: string, content: string, nodeTitle: string, importedAt: string) {
   const connection = openDatabaseConnection();
-  connection.driver.execute('UPDATE nodes SET content = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, content, importedAt);
+  connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
     content,
+    bodyBlobHash,
     resolveNodeOpeningText(content, nodeTitle),
     importedAt,
     nodeId
