@@ -11,7 +11,9 @@ import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
 import { RailActionGroup, WorkspaceRailContextMenu } from './WorkspaceRailActions';
+import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import { getWorkspaceSurfaceDividerColor } from './WorkspaceSurfaceRowOverlay';
+import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
 
 interface WorkspaceSideToolbarProps {
   canStartStudyMode: boolean;
@@ -36,7 +38,7 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
       fullWidth
       orientation="vertical"
     >
-      <AppIconButton
+      <WorkspaceRailTooltipButton
         className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
         data-active={isSettingsOpen}
         icon={<Settings aria-hidden="true" size={16} strokeWidth={1.75} />}
@@ -197,6 +199,7 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           items={state.bottomItems}
           onRun={state.runRailCommand}
         />
+        <WorkspaceThemeModeAction onRunRailAction={props.onRunRailAction} />
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>
       {renderStudyDock({

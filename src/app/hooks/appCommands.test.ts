@@ -128,8 +128,8 @@ describe('buildAppPaletteItems', () => {
     });
     const lightItems = buildAppPaletteItems(createPaletteOptions(false));
 
-    expect(darkItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Switch to Light Mode');
-    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Switch to Dark Mode');
+    expect(darkItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Toggle Light/Dark Mode');
+    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Toggle Light/Dark Mode');
   });
 });
 

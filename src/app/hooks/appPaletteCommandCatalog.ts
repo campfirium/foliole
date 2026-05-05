@@ -116,7 +116,7 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
     return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
   }
   if (id === APP_COMMAND_IDS.toggleBaseColorMode) {
-    return options.resolvedBaseColorMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    return title;
   }
   return resolveCommandTitle(id, options.isReviewMode, title);
 }

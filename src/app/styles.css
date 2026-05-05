@@ -60,6 +60,15 @@
   --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 34%, var(--workspace-region-main-document-bg) 66%);
   --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 48%, var(--workspace-region-main-document-bg) 52%);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 86%, var(--workspace-region-main-topic-scrollbar-thumb-color) 14%);
+  --app-tooltip-bg: rgb(var(--color-foreground) / 0.92);
+  --app-tooltip-fg: rgb(var(--color-background) / 0.98);
+  --app-tooltip-border-color: transparent;
+  --app-tooltip-radius: var(--radius-sm);
+  --app-tooltip-padding-x: 0.5rem;
+  --app-tooltip-padding-y: 0.25rem;
+  --app-tooltip-font-size: 11px;
+  --app-tooltip-line-height: 1rem;
+  --app-tooltip-shadow: none;
   --app-diff-added-surface-color: rgb(var(--app-accent-color-rgb) / 0.16);
   --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.12);
   --app-diff-removed-surface-color: rgb(var(--color-error) / 0.14);
@@ -254,6 +263,9 @@
   --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 40%, var(--workspace-region-main-document-bg) 60%);
   --app-floating-item-active-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 52%, var(--workspace-region-main-document-bg) 48%);
   --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 78%, var(--workspace-region-main-topic-scrollbar-thumb-color) 22%);
+  --app-tooltip-bg: color-mix(in srgb, rgb(var(--color-bg-elevated)) 86%, rgb(var(--color-foreground)) 14%);
+  --app-tooltip-fg: rgb(var(--color-foreground));
+  --app-tooltip-border-color: rgb(var(--color-foreground) / 0.12);
   --app-settings-shell-bg: var(--workspace-region-main-document-bg);
   --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
   --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 36%, var(--workspace-region-main-document-bg) 64%);

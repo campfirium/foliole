@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 
 import { AppTooltip, AppTooltipContent, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
 
-it('renders tooltip content with shared floating surface baseline', () => {
+it('renders tooltip content with shared tooltip tokens', () => {
   render(
     <AppTooltipProvider delayDuration={0}>
       <AppTooltip defaultOpen>
@@ -21,8 +21,8 @@ it('renders tooltip content with shared floating surface baseline', () => {
   if (!tooltip) {
     throw new Error('Tooltip content wrapper missing');
   }
-  expect(tooltip.className).toContain('rounded-lg');
-  expect(tooltip.className).toContain('shadow-none');
-  expect(tooltip.className).toContain('border-[var(--app-floating-border-color)]');
-  expect(tooltip.className).toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(tooltip.className).toContain('rounded-[var(--app-tooltip-radius)]');
+  expect(tooltip.className).toContain('bg-[var(--app-tooltip-bg)]');
+  expect(tooltip.className).toContain('border-[var(--app-tooltip-border-color)]');
+  expect(tooltip.className).toContain('text-[var(--app-tooltip-fg)]');
 });

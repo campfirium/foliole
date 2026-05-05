@@ -6,11 +6,12 @@ import {
 } from '../../features/settings/model/workspaceRailSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import {
-  AppIconButton,
   AppSelectionDropdownMenu,
   AppSelectionDropdownMenuItem,
   ToolbarActionGroup
 } from '../../shared/ui';
+
+import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 
 const RAIL_BUTTON_CLASS_NAME =
   'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground';
@@ -51,7 +52,7 @@ function RailCommandButton({
 }) {
   return (
     <div className="flex h-[var(--workspace-top-toolbar-height)] items-center justify-center">
-      <AppIconButton
+      <WorkspaceRailTooltipButton
         className={RAIL_BUTTON_CLASS_NAME}
         data-active={isActive}
         icon={<RailItemIcon iconId={item.iconId} />}
