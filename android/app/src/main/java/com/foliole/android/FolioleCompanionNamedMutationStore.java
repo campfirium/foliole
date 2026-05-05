@@ -71,10 +71,11 @@ final class FolioleCompanionNamedMutationStore {
             new String[] { objectType, objectId }
         );
         if (row == null) return null;
-        String contentHashKey = runtimeRule(context, "existingState", "contentHashKey");
-        String baseContentHashKey = runtimeRule(context, "existingState", "baseContentHashKey");
-        String syncDirtyKey = runtimeRule(context, "existingState", "syncDirtyKey");
-        return new ExistingState(row.getString(contentHashKey), row.isNull(baseContentHashKey) ? null : row.getString(baseContentHashKey), row.getInt(syncDirtyKey));
+        return new ExistingState(
+            runtimeRowString(context, "existingState", row, "contentHashKey"),
+            runtimeRowNullableString(context, "existingState", row, "baseContentHashKey"),
+            runtimeRowInt(context, "existingState", row, "syncDirtyKey")
+        );
     }
 
     private static long nextStateSeq(Context context, SQLiteDatabase database) throws Exception {
@@ -85,7 +86,7 @@ final class FolioleCompanionNamedMutationStore {
             runtimeRule(context, "nextStateSeq", "resultKey"),
             null
         );
-        return row == null ? 1L : row.getLong(runtimeRule(context, "nextStateSeq", "nextStateSeqKey"));
+        return row == null ? 1L : runtimeRowLong(context, "nextStateSeq", row, "nextStateSeqKey");
     }
 
     private static String statement(Context context, String name) throws Exception {
@@ -107,6 +108,22 @@ final class FolioleCompanionNamedMutationStore {
 
     private static String runtimeRule(Context context, String groupName, String key) throws Exception {
         return FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key);
+    }
+
+    private static int runtimeRowInt(Context context, String groupName, JSONObject row, String key) throws Exception {
+        return FolioleCompanionRuntimeQueryRules.rowInt(context, groupName, row, key);
+    }
+
+    private static long runtimeRowLong(Context context, String groupName, JSONObject row, String key) throws Exception {
+        return FolioleCompanionRuntimeQueryRules.rowLong(context, groupName, row, key);
+    }
+
+    private static String runtimeRowNullableString(Context context, String groupName, JSONObject row, String key) throws Exception {
+        return FolioleCompanionRuntimeQueryRules.rowNullableString(context, groupName, row, key);
+    }
+
+    private static String runtimeRowString(Context context, String groupName, JSONObject row, String key) throws Exception {
+        return FolioleCompanionRuntimeQueryRules.rowString(context, groupName, row, key);
     }
 
     private static String syncPushAckMutationRule(Context context, String key) throws Exception {

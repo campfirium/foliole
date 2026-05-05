@@ -35,10 +35,16 @@ describe('Android runtime query rules', () => {
     const rulesSource = await readFile(RUNTIME_RULES, 'utf8');
 
     expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key)');
+    expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.rowString(context, groupName, row, key)');
+    expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.rowNullableString(context, groupName, row, key)');
+    expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.rowInt(context, groupName, row, key)');
+    expect(combinedSource).toContain('FolioleCompanionRuntimeQueryRules.rowLong(context, groupName, row, key)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "runtimeQueries", groupName)');
     expect(rulesSource).not.toContain('optJSONObject(groupName)');
     expect(combinedSource).not.toContain('"companionMetaValue"');
     expect(combinedSource).not.toContain('"syncStateNextSeqForMutation"');
     expect(combinedSource).not.toContain('"next_state_seq"');
+    expect(combinedSource).not.toContain('row.getString(contentHashKey)');
+    expect(combinedSource).not.toContain('row.getLong(runtimeRule(context, "nextStateSeq", "nextStateSeqKey"))');
   });
 });
