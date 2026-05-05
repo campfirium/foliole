@@ -10,6 +10,7 @@ import {
   type BrowserWindowConstructorOptions
 } from 'electron';
 
+import { initializeDatabase } from './database/migrate.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
   IPC_INVOKE_CHANNEL,
@@ -195,6 +196,7 @@ app.on('second-instance', () => {
 
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
+  initializeDatabase();
   installInvokeHandler();
   installAppMenu();
   await migrateLegacyWorkspaceState('foliole-workspace-v1');
