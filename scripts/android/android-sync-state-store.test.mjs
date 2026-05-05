@@ -81,6 +81,18 @@ const SYNC_META_STORE = path.join(
   'android',
   'FolioleCompanionSyncMetaStore.java'
 );
+const WORKSPACE_SNAPSHOT_EXPORTER = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionWorkspaceSnapshotExporter.java'
+);
 
 describe('FolioleCompanionSyncObjectStore', () => {
   it('loads only dirty state rows for Android push', async () => {
@@ -116,7 +128,8 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(queryDefinitions.queries.syncPayloadViewActiveNode.syncPayload).toEqual({
       argMode: 'none',
       objectIdKey: 'active_node',
-      objectType: 'view_state'
+      objectType: 'view_state',
+      workspaceMetaKey: 'active_node_id'
     });
     expect(queryDefinitions.queries.syncPayloadViewNodeState.syncPayload).toEqual({
       argMode: 'view_state_node',
@@ -196,6 +209,13 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(source).not.toContain('key.equals("active_node")');
     expect(source).not.toContain('key.startsWith("node:")');
     expect(source).not.toContain('key.substring(5)');
+  });
+
+  it('loads Android active node workspace meta key from generated payload metadata', async () => {
+    const source = await readFile(WORKSPACE_SNAPSHOT_EXPORTER, 'utf8');
+
+    expect(source).toContain('FolioleCompanionSyncPayloadQueryStore.viewActiveNodeWorkspaceMetaKey(context)');
+    expect(source).not.toContain('ACTIVE_NODE_META_KEY = "active_node_id"');
   });
 
   it('exports Android node version ancestors for desktop fast-forward checks', async () => {

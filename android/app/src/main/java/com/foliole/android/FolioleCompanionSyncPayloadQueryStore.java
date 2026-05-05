@@ -28,6 +28,10 @@ final class FolioleCompanionSyncPayloadQueryStore {
         return metadata(context, "syncPayloadViewActiveNode", "objectIdKey");
     }
 
+    static String viewActiveNodeWorkspaceMetaKey(Context context) throws Exception {
+        return metadata(context, "syncPayloadViewActiveNode", "workspaceMetaKey");
+    }
+
     static String viewNodeKeyPrefix(Context context) throws Exception {
         return metadata(context, "syncPayloadViewNodeState", "objectIdPrefix");
     }

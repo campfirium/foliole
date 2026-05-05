@@ -13,7 +13,6 @@ import java.util.Map;
 
 final class FolioleCompanionWorkspaceSnapshotExporter {
 
-    private static final String ACTIVE_NODE_META_KEY = "active_node_id";
     private static final String UNTITLED_SEQUENCE_META_KEY = "untitled_sequence_by_parent";
 
     private FolioleCompanionWorkspaceSnapshotExporter() {}
@@ -100,7 +99,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         JSONArray trashedNodeIds,
         String fallbackActiveNodeId
     ) throws Exception {
-        String persistedActiveNodeId = loadWorkspaceMetaValue(context, database, ACTIVE_NODE_META_KEY);
+        String persistedActiveNodeId = loadWorkspaceMetaValue(context, database, FolioleCompanionSyncPayloadQueryStore.viewActiveNodeWorkspaceMetaKey(context));
         if (persistedActiveNodeId != null && nodesById.has(persistedActiveNodeId) && !contains(trashedNodeIds, persistedActiveNodeId)) {
             return persistedActiveNodeId;
         }

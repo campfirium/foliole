@@ -66,7 +66,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ? LIMIT 1"
   },
   syncPayloadViewActiveNode: {
-    syncPayload: { argMode: 'none', objectIdKey: 'active_node', objectType: 'view_state' },
+    syncPayload: { argMode: 'none', objectIdKey: 'active_node', objectType: 'view_state', workspaceMetaKey: 'active_node_id' },
     sql:
       "SELECT json_object('active_node_id', NULLIF(value, '')) AS payload_json " +
       "FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1"
