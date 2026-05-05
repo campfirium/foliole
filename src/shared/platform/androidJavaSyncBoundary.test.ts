@@ -20,7 +20,10 @@ const FORBIDDEN_MAIN_PATTERNS = [
   /\bapplySyncNodeVersions\s*\(/,
   /\bapplyReviewLog\s*\(/,
   /\bpublic\s+void\s+applySyncObjects\s*\(/,
-  /\bpublic\s+void\s+applySyncReviewLog\s*\(/
+  /\bpublic\s+void\s+applySyncReviewLog\s*\(/,
+  /\bsyncPayload(?:Attachment|ExternalDocument|ExternalFolder|ImportSource|NodeReading|NodeReview|PdfPageText|Setting|ViewActiveNode|ViewNodeState)\b/,
+  /\bobjectType\.equals\("view_state"\)/,
+  /objectTypeFilter/
 ];
 
 function listJavaFiles(dir: string): string[] {
