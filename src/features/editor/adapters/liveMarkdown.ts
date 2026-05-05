@@ -208,7 +208,7 @@ const liveMarkdownTheme = EditorView.theme({
     opacity: '0.58'
   },
   '.cm-activeLine': {
-    backgroundColor: 'rgba(125, 211, 252, 0.1)'
+    backgroundColor: 'transparent'
   },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
     backgroundColor: 'rgba(56, 189, 248, 0.26)'

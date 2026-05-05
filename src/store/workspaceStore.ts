@@ -5,8 +5,12 @@ import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes'
 
 export interface WorkspaceState {
   activeNodeId: string | null;
+  layout: WorkspaceLayoutState;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  resetLayout: () => void;
+  setDocumentMaxWidth: (width: number) => void;
+  setListWidth: (width: number) => void;
   setActiveNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
   createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string) => string | null;
@@ -14,11 +18,28 @@ export interface WorkspaceState {
 
 interface WorkspacePersistedState {
   activeNodeId: string | null;
+  layout: WorkspaceLayoutState;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
 }
 
+export interface WorkspaceLayoutState {
+  documentMaxWidth: number;
+  listWidth: number;
+}
+
 export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';
+export const LIST_WIDTH_DEFAULT = 300;
+export const DOCUMENT_WIDTH_DEFAULT = 860;
+
+const defaultLayoutState: WorkspaceLayoutState = {
+  documentMaxWidth: DOCUMENT_WIDTH_DEFAULT,
+  listWidth: LIST_WIDTH_DEFAULT
+};
+
+function normalizeWidth(value: number) {
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+}
 
 export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {
   return {
@@ -49,12 +70,13 @@ export function createSeedNode(timestamp: string): Node {
 
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
-  'activeNodeId' | 'nodeOrder' | 'nodesById'
+  'activeNodeId' | 'layout' | 'nodeOrder' | 'nodesById'
 > {
   const timestamp = now.toISOString();
   const seedNode = createSeedNode(timestamp);
   return {
     activeNodeId: seedNode.id,
+    layout: { ...defaultLayoutState },
     nodeOrder: [seedNode.id],
     nodesById: { [seedNode.id]: seedNode }
   };
@@ -66,6 +88,33 @@ export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set) => ({
       ...initialState,
+      resetLayout: () => {
+        set({ layout: { ...defaultLayoutState } });
+      },
+      setDocumentMaxWidth: (width) => {
+        const normalizedWidth = normalizeWidth(width);
+        if (!normalizedWidth) {
+          return;
+        }
+        set((state) => ({
+          layout: {
+            ...state.layout,
+            documentMaxWidth: normalizedWidth
+          }
+        }));
+      },
+      setListWidth: (width) => {
+        const normalizedWidth = normalizeWidth(width);
+        if (!normalizedWidth) {
+          return;
+        }
+        set((state) => ({
+          layout: {
+            ...state.layout,
+            listWidth: normalizedWidth
+          }
+        }));
+      },
       setActiveNode: (nodeId) => {
         set((state) => {
           if (!state.nodesById[nodeId]) {
@@ -135,6 +184,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state): WorkspacePersistedState => ({
         activeNodeId: state.activeNodeId,
+        layout: state.layout,
         nodeOrder: state.nodeOrder,
         nodesById: state.nodesById
       })

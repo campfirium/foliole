@@ -41,6 +41,7 @@
 
   --layout-shell-padding: var(--space-12);
   --layout-column-gap: var(--space-12);
+  --layout-left-min-width: 240px;
   --layout-left-width: 300px;
   --layout-editor-min-height: 260px;
   --layout-review-min-height: 180px;

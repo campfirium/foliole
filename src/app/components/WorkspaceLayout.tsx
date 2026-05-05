@@ -1,0 +1,238 @@
+import type {
+  CSSProperties,
+  KeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent
+} from 'react';
+
+import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import type { Node } from '../../features/nodes/model/nodeTypes';
+import { Button, EmptyState, Panel } from '../../shared/ui';
+import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
+
+export interface WorkspaceLayoutProps {
+  activeNodeId: string | null;
+  documentMaxWidth: number;
+  editorContent: string;
+  isDocumentResizing: boolean;
+  isResizingList: boolean;
+  listWidth: number;
+  nodeOrder: string[];
+  nodesById: Record<string, Node>;
+  onEditorChange: (content: string) => void;
+  onResetLayout: () => void;
+  onSelectNode: (nodeId: string) => void;
+  onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onStartDocumentResize: (
+    side: ResizeSide,
+    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
+  ) => void;
+}
+
+export function WorkspaceLayout({
+  activeNodeId,
+  documentMaxWidth,
+  editorContent,
+  isDocumentResizing,
+  isResizingList,
+  listWidth,
+  nodeOrder,
+  nodesById,
+  onEditorChange,
+  onResetLayout,
+  onSelectNode,
+  onSplitterKeyDown,
+  onSplitterPointerDown,
+  onStartDocumentResize
+}: WorkspaceLayoutProps) {
+  const workspaceGridStyle = {
+    '--workspace-list-width': `${listWidth}px`
+  } as CSSProperties;
+
+  return (
+    <main aria-label="Foliole workspace" className="workspace-shell">
+      <div className="workspace-grid" data-resizing={isResizingList} style={workspaceGridStyle}>
+        <NodeListPanel
+          activeNodeId={activeNodeId}
+          nodeOrder={nodeOrder}
+          nodesById={nodesById}
+          onSelectNode={onSelectNode}
+        />
+        <ListSplitter
+          listWidth={listWidth}
+          onResetLayout={onResetLayout}
+          onSplitterKeyDown={onSplitterKeyDown}
+          onSplitterPointerDown={onSplitterPointerDown}
+        />
+        <DocumentPanelSection
+          documentMaxWidth={documentMaxWidth}
+          editorContent={editorContent}
+          isDocumentResizing={isDocumentResizing}
+          onEditorChange={onEditorChange}
+          onResetLayout={onResetLayout}
+          onStartDocumentResize={onStartDocumentResize}
+        />
+      </div>
+    </main>
+  );
+}
+
+interface NodeListPanelProps {
+  activeNodeId: string | null;
+  nodeOrder: string[];
+  nodesById: Record<string, Node>;
+  onSelectNode: (nodeId: string) => void;
+}
+
+function NodeListPanel({ activeNodeId, nodeOrder, nodesById, onSelectNode }: NodeListPanelProps) {
+  return (
+    <Panel
+      ariaLabel="Node list panel"
+      as="aside"
+      bodyClassName="node-list"
+      className="panel-list"
+      scrollBody
+      title="Nodes"
+    >
+      {nodeOrder.length === 0 ? (
+        <EmptyState description="Create or import a node to start editing." title="No nodes" />
+      ) : (
+        nodeOrder.map((nodeId) => (
+          <NodeRow
+            isActive={activeNodeId === nodeId}
+            key={nodeId}
+            node={nodesById[nodeId]}
+            onSelect={onSelectNode}
+          />
+        ))
+      )}
+    </Panel>
+  );
+}
+
+interface ListSplitterProps {
+  listWidth: number;
+  onResetLayout: () => void;
+  onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+}
+
+function ListSplitter({ listWidth, onResetLayout, onSplitterKeyDown, onSplitterPointerDown }: ListSplitterProps) {
+  return (
+    <div
+      aria-label="Resize node list"
+      aria-orientation="vertical"
+      aria-valuenow={Math.round(listWidth)}
+      className="workspace-splitter"
+      onDoubleClick={onResetLayout}
+      onKeyDown={onSplitterKeyDown}
+      onPointerDown={onSplitterPointerDown}
+      role="separator"
+      tabIndex={0}
+    />
+  );
+}
+
+interface DocumentPanelSectionProps {
+  documentMaxWidth: number;
+  editorContent: string;
+  isDocumentResizing: boolean;
+  onEditorChange: (content: string) => void;
+  onResetLayout: () => void;
+  onStartDocumentResize: (
+    side: ResizeSide,
+    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
+  ) => void;
+}
+
+function DocumentPanelSection({
+  documentMaxWidth,
+  editorContent,
+  isDocumentResizing,
+  onEditorChange,
+  onResetLayout,
+  onStartDocumentResize
+}: DocumentPanelSectionProps) {
+  const documentLayoutStyle = {
+    '--document-max-width': `${documentMaxWidth}px`
+  } as CSSProperties;
+
+  return (
+    <section aria-label="Document area" className="panel-document-shell">
+      <Panel
+        ariaLabel="Document panel"
+        bodyClassName="editor-body"
+        className="panel-editor"
+        style={documentLayoutStyle}
+        title="Document"
+      >
+        <div className="document-width-shell" data-resizing={isDocumentResizing}>
+          <DocumentWidthHandle
+            ariaLabel="Resize document width from left"
+            onPointerDown={(event) => onStartDocumentResize('left', event)}
+            onResetLayout={onResetLayout}
+            side="left"
+          />
+          <div className="document-width-frame">
+            <MarkdownEditor onChange={onEditorChange} value={editorContent} />
+          </div>
+          <DocumentWidthHandle
+            ariaLabel="Resize document width from right"
+            onPointerDown={(event) => onStartDocumentResize('right', event)}
+            onResetLayout={onResetLayout}
+            side="right"
+          />
+        </div>
+      </Panel>
+    </section>
+  );
+}
+
+interface DocumentWidthHandleProps {
+  ariaLabel: string;
+  onPointerDown: (event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>) => void;
+  onResetLayout: () => void;
+  side: ResizeSide;
+}
+
+function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: DocumentWidthHandleProps) {
+  return (
+    <div className="document-width-handle" data-side={side}>
+      <div
+        aria-label={ariaLabel}
+        aria-orientation="vertical"
+        className="document-width-grip"
+        onDoubleClick={onResetLayout}
+        onMouseDown={onPointerDown}
+        onPointerDown={onPointerDown}
+        role="separator"
+        tabIndex={0}
+      />
+    </div>
+  );
+}
+
+interface NodeRowProps {
+  isActive: boolean;
+  node: Node | undefined;
+  onSelect: (nodeId: string) => void;
+}
+
+function NodeRow({ isActive, node, onSelect }: NodeRowProps) {
+  if (!node) {
+    return null;
+  }
+
+  return (
+    <Button
+      active={isActive}
+      aria-pressed={isActive}
+      className="node-row"
+      onClick={() => onSelect(node.id)}
+      variant="list"
+    >
+      {node.title}
+    </Button>
+  );
+}

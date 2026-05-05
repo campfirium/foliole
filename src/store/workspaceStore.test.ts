@@ -1,12 +1,47 @@
 import { createStore } from 'zustand/vanilla';
 
-import { createInitialWorkspaceState, type WorkspaceState } from './workspaceStore';
+import {
+  createInitialWorkspaceState,
+  DOCUMENT_WIDTH_DEFAULT,
+  LIST_WIDTH_DEFAULT,
+  type WorkspaceState
+} from './workspaceStore';
 
 function createTestStore(now: Date) {
   const initial = createInitialWorkspaceState(now);
 
   return createStore<WorkspaceState>((set) => ({
     ...initial,
+    resetLayout: () => {
+      set(() => ({
+        layout: {
+          documentMaxWidth: DOCUMENT_WIDTH_DEFAULT,
+          listWidth: LIST_WIDTH_DEFAULT
+        }
+      }));
+    },
+    setDocumentMaxWidth: (width) => {
+      if (!Number.isFinite(width) || width <= 0) {
+        return;
+      }
+      set((state) => ({
+        layout: {
+          ...state.layout,
+          documentMaxWidth: Math.round(width)
+        }
+      }));
+    },
+    setListWidth: (width) => {
+      if (!Number.isFinite(width) || width <= 0) {
+        return;
+      }
+      set((state) => ({
+        layout: {
+          ...state.layout,
+          listWidth: Math.round(width)
+        }
+      }));
+    },
     setActiveNode: (nodeId) => {
       set((state) => {
         if (!state.nodesById[nodeId]) {
@@ -91,6 +126,8 @@ describe('workspaceStore', () => {
     expect(initial.nodeOrder).toEqual(['node-1']);
     expect(initial.nodesById['node-1']?.parentNodeId).toBeNull();
     expect(initial.nodesById['node-1']?.review).toBeNull();
+    expect(initial.layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
+    expect(initial.layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
   });
 
   it('updates node content', () => {
@@ -120,5 +157,18 @@ describe('workspaceStore', () => {
     expect(store.getState().nodesById['node-test-id']?.content).toBe('What is [[...]]?');
     expect(store.getState().nodesById['node-test-id']?.reveal).toBe('quoted text');
     expect(store.getState().nodesById['node-test-id']?.review).not.toBeNull();
+  });
+
+  it('updates layout widths without artificial range clamp and resets to defaults', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().setListWidth(1200);
+    store.getState().setDocumentMaxWidth(2400);
+
+    expect(store.getState().layout.listWidth).toBe(1200);
+    expect(store.getState().layout.documentMaxWidth).toBe(2400);
+
+    store.getState().resetLayout();
+    expect(store.getState().layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
+    expect(store.getState().layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
   });
 });
