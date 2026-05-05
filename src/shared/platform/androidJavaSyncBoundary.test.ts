@@ -8,6 +8,12 @@ const ANDROID_MAIN_JAVA = 'android/app/src/main/java/com/foliole/android';
 const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncPackApply\b/,
   /\bclass\s+FolioleCompanionSyncObjectApply\b/,
+  /\bclass\s+FolioleCompanionSyncConflictCopyIdentity\b/,
+  /\bclass\s+FolioleCompanionSyncConflictCopyMappings\b/,
+  /\bclass\s+FolioleCompanionSyncConflictCopyProjection\b/,
+  /\bclass\s+FolioleCompanionSyncConflictCopies\b/,
+  /\bclass\s+FolioleCompanionSyncLocalNodeState\b/,
+  /\bclass\s+FolioleCompanionSyncNodeVersionApplySupport\b/,
   /\bapplyDesktopSyncPack\s*\(/,
   /\bapplySyncPack\s*\(/,
   /\bapplyNodeVersions\s*\(/,
