@@ -1,7 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import {
+  getMarkdownSyntaxVisibility,
+  setMarkdownSyntaxVisibility,
+  type MarkdownSyntaxVisibility
+} from '../features/editor/model/markdownSyntaxSetting';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
+import {
+  INTERFACE_FONT_SIZE_DEFAULT,
+  applyAppearanceSettings,
+  getInterfaceFontPreset,
+  getInterfaceFontSize,
+  getMonospaceFontPreset,
+  setInterfaceFontPreset,
+  setInterfaceFontSize,
+  setMonospaceFontPreset,
+  type InterfaceFontPreset,
+  type MonospaceFontPreset
+} from '../features/settings/model/appearanceSettings';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { WorkspaceLayout } from './components/WorkspaceLayout';
@@ -57,6 +74,13 @@ export function App() {
     trashedNodeIds
   });
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() =>
+    getMarkdownSyntaxVisibility()
+  );
+  const [interfaceFontPreset, setInterfaceFontPresetState] = useState<InterfaceFontPreset>(() => getInterfaceFontPreset());
+  const [monospaceFontPreset, setMonospaceFontPresetState] = useState<MonospaceFontPreset>(() => getMonospaceFontPreset());
+  const [interfaceFontSize, setInterfaceFontSizeState] = useState(() => getInterfaceFontSize());
   const { canStartStudyMode, isStudyMode, resetStudyMode, startStudyMode } = useStudyMode({
     activeNodeId,
     isViewingTrashNode
@@ -137,6 +161,7 @@ export function App() {
   };
 
   const handleOpenTrashView = () => {
+    setIsSettingsOpen(false);
     resetStudyMode();
     exitReviewSession();
     setIsViewingTrashNode(false);
@@ -149,6 +174,7 @@ export function App() {
   };
 
   const handleOpenNotesView = () => {
+    setIsSettingsOpen(false);
     resetStudyMode();
     exitReviewSession();
     setIsViewingTrashNode(false);
@@ -166,6 +192,7 @@ export function App() {
   };
 
   const handleSelectNode = (nodeId: string) => {
+    setIsSettingsOpen(false);
     resetStudyMode();
     exitReviewSession();
     setIsViewingTrashNode(false);
@@ -173,6 +200,7 @@ export function App() {
   };
 
   const handleSelectTrashNode = (nodeId: string) => {
+    setIsSettingsOpen(false);
     resetStudyMode();
     exitReviewSession();
     setIsViewingTrashNode(true);
@@ -181,6 +209,7 @@ export function App() {
   };
 
   const handleSelectBreadcrumbNode = (nodeId: string) => {
+    setIsSettingsOpen(false);
     resetStudyMode();
     exitReviewSession();
     setIsViewingTrashNode(false);
@@ -188,6 +217,7 @@ export function App() {
   };
 
   const handleStartStudyMode = () => {
+    setIsSettingsOpen(false);
     const started = startReviewSession();
     if (!started) {
       return;
@@ -207,6 +237,48 @@ export function App() {
     if (!useWorkspaceStore.getState().reviewSession.currentNodeId) {
       resetStudyMode();
     }
+  };
+
+  const handleOpenSettings = () => {
+    if (isSettingsOpen) {
+      setIsSettingsOpen(false);
+      return;
+    }
+    resetStudyMode();
+    exitReviewSession();
+    setIsViewingTrashNode(false);
+    closeTrashView();
+    closeContextMenu();
+    setIsSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+  };
+
+  const handleMarkdownSyntaxVisibilityChange = (value: MarkdownSyntaxVisibility) => {
+    setMarkdownSyntaxVisibility(value);
+    setMarkdownSyntaxVisibilityState(value);
+  };
+
+  const handleInterfaceFontPresetChange = (value: InterfaceFontPreset) => {
+    setInterfaceFontPreset(value);
+    setInterfaceFontPresetState(value);
+  };
+
+  const handleMonospaceFontPresetChange = (value: MonospaceFontPreset) => {
+    setMonospaceFontPreset(value);
+    setMonospaceFontPresetState(value);
+  };
+
+  const handleInterfaceFontSizeChange = (value: number) => {
+    setInterfaceFontSize(value);
+    setInterfaceFontSizeState(value);
+  };
+
+  const handleInterfaceFontSizeReset = () => {
+    setInterfaceFontSize(INTERFACE_FONT_SIZE_DEFAULT);
+    setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT);
   };
 
   useEffect(() => {
@@ -250,6 +322,10 @@ export function App() {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+          return;
+        }
         closeContextMenu();
       }
     };
@@ -258,7 +334,15 @@ export function App() {
     return () => {
       window.removeEventListener('keydown', handleEscape);
     };
-  }, []);
+  }, [closeContextMenu, isSettingsOpen]);
+
+  useEffect(() => {
+    applyAppearanceSettings({
+      interfaceFont: interfaceFontPreset,
+      interfaceFontSize,
+      monospaceFont: monospaceFontPreset
+    });
+  }, [interfaceFontPreset, interfaceFontSize, monospaceFontPreset]);
 
   return (
     <WorkspaceLayout
@@ -273,6 +357,7 @@ export function App() {
       editorNodeId={editorNodeId}
       editorNodeViewState={activeNodeViewState}
       isStudyMode={isStudyMode}
+      isSettingsOpen={isSettingsOpen}
       isDocumentResizing={documentResize.isResizingDocument}
       isResizingList={listResize.isResizingList}
       isTrashViewOpen={isTrashViewOpen}
@@ -301,9 +386,20 @@ export function App() {
       onSplitterPointerDown={listResize.handleSplitterPointerDown}
       onStartDocumentResize={documentResize.startResize}
       onStartStudyMode={handleStartStudyMode}
+      onOpenSettings={handleOpenSettings}
+      onCloseSettings={handleCloseSettings}
+      onInterfaceFontPresetChange={handleInterfaceFontPresetChange}
+      onMonospaceFontPresetChange={handleMonospaceFontPresetChange}
+      onInterfaceFontSizeChange={handleInterfaceFontSizeChange}
+      onInterfaceFontSizeReset={handleInterfaceFontSizeReset}
+      onMarkdownSyntaxVisibilityChange={handleMarkdownSyntaxVisibilityChange}
       onOpenNotesView={handleOpenNotesView}
       onOpenTrashView={handleOpenTrashView}
       onToggleListVisibility={handleToggleListVisibility}
+      interfaceFontPreset={interfaceFontPreset}
+      interfaceFontSize={interfaceFontSize}
+      markdownSyntaxVisibility={markdownSyntaxVisibility}
+      monospaceFontPreset={monospaceFontPreset}
       selectedTrashNodeId={selectedTrashNodeId}
       showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}
     />

@@ -379,8 +379,8 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-content': {
     boxSizing: 'border-box',
-    fontFamily: 'var(--font-family-sans)',
-    fontSize: '1.0625rem',
+    fontFamily: 'var(--content-panel-font-family, var(--font-family-sans))',
+    fontSize: 'var(--content-panel-font-size, 1.0625rem)',
     margin: '0 auto',
     maxWidth: 'min(100%, var(--document-max-width, 860px))',
     padding: '0.72rem 1.5rem 0.6rem',
@@ -433,7 +433,7 @@ const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': {
     backgroundColor: 'rgba(15, 23, 42, 0.06)',
     borderRadius: '0.35rem',
-    fontFamily: 'var(--font-family-mono)',
+    fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
     fontSize: '0.86rem',
     padding: '0.04rem 0.5rem'
   },

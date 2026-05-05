@@ -20,6 +20,7 @@ interface DocumentPanelSectionProps {
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
+  editorAppearanceKey: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
@@ -51,6 +52,7 @@ export function DocumentPanelSection({
   contextMenu,
   documentMaxWidth,
   editorContent,
+  editorAppearanceKey,
   editorNodeId,
   editorNodeViewState,
   isDocumentResizing,
@@ -118,6 +120,7 @@ export function DocumentPanelSection({
                   ariaLabel="Prompt editor"
                   className="prompt-editor-host"
                   debugId="prompt-editor"
+                  key={`prompt-${editorAppearanceKey}`}
                   nodeId={editorNodeId}
                   nodeViewState={editorNodeViewState}
                   onChange={onEditorChange}
@@ -134,6 +137,7 @@ export function DocumentPanelSection({
                     ariaLabel="Answer editor"
                     className="answer-editor-host min-h-0"
                     debugId="answer-editor"
+                    key={`answer-${editorAppearanceKey}`}
                     nodeId={editorNodeId}
                     onChange={onAnswerChange}
                     value={reveal}

@@ -1,24 +1,25 @@
 import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
-import { cn } from '../../lib/utils';
+import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
+import type { InterfaceFontPreset, MonospaceFontPreset } from '../../features/settings/model/appearanceSettings';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { WindowTitleBar } from './WindowTitleBar';
+import { WorkspaceListSplitter } from './WorkspaceListSplitter';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
-
 export interface WorkspaceEditorContextMenu {
   canRunCommands: boolean;
   left: number;
   top: number;
 }
-
 export interface WorkspaceLayoutProps {
   activeNodeId: string | null;
   canGoBack: boolean;
@@ -31,6 +32,7 @@ export interface WorkspaceLayoutProps {
   editorNodeViewState?: NodeViewState;
   canStartStudyMode: boolean;
   isStudyMode: boolean;
+  isSettingsOpen: boolean;
   isAnswerRevealed: boolean;
   isDocumentResizing: boolean;
   isResizingList: boolean;
@@ -59,16 +61,23 @@ export interface WorkspaceLayoutProps {
   onCloseContextMenu: () => void;
   onCreateHighlight: () => void;
   onCreateCloze: () => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
+  onStartDocumentResize: (side: ResizeSide, event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>) => void;
   onStartStudyMode: () => void;
+  onOpenSettings: () => void;
+  onCloseSettings: () => void;
+  onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
+  onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
+  onInterfaceFontSizeChange: (value: number) => void;
+  onInterfaceFontSizeReset: () => void;
+  onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => void;
+  interfaceFontPreset: InterfaceFontPreset;
+  interfaceFontSize: number;
+  markdownSyntaxVisibility: MarkdownSyntaxVisibility;
+  monospaceFontPreset: MonospaceFontPreset;
   selectedTrashNodeId: string | null;
 }
-
 export function WorkspaceLayout({
   activeNodeId,
   canGoBack,
@@ -81,6 +90,7 @@ export function WorkspaceLayout({
   editorNodeViewState,
   canStartStudyMode,
   isStudyMode,
+  isSettingsOpen,
   isAnswerRevealed,
   isDocumentResizing,
   isResizingList,
@@ -111,15 +121,25 @@ export function WorkspaceLayout({
   onCreateCloze,
   onStartDocumentResize,
   onStartStudyMode,
+  onOpenSettings,
+  onCloseSettings,
+  onInterfaceFontPresetChange,
+  onMonospaceFontPresetChange,
+  onInterfaceFontSizeChange,
+  onInterfaceFontSizeReset,
+  onMarkdownSyntaxVisibilityChange,
   onRevealAnswer,
   onGradeReview,
+  interfaceFontPreset,
+  interfaceFontSize,
+  markdownSyntaxVisibility,
+  monospaceFontPreset,
   selectedTrashNodeId
 }: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
     '--workspace-list-width': `${listWidth}px`
   } as CSSProperties;
   const documentNodeId = isViewingTrashNode ? selectedTrashNodeId : activeNodeId;
-
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
       <span
@@ -144,6 +164,8 @@ export function WorkspaceLayout({
           <WorkspaceSideToolbar
             canStartStudyMode={canStartStudyMode}
             isStudyMode={isStudyMode}
+            isSettingsOpen={isSettingsOpen}
+            onOpenSettings={onOpenSettings}
             onStartStudyMode={onStartStudyMode}
           />
         </div>
@@ -163,7 +185,7 @@ export function WorkspaceLayout({
               onSelectTrashNode={onSelectTrashNode}
               selectedTrashNodeId={selectedTrashNodeId}
             />
-            <ListSplitter
+            <WorkspaceListSplitter
               isResizingList={isResizingList}
               listWidth={listWidth}
               onResetLayout={onResetLayout}
@@ -178,6 +200,7 @@ export function WorkspaceLayout({
                 canGoParent={canGoParent}
                 contextMenu={contextMenu}
                 documentMaxWidth={documentMaxWidth}
+                editorAppearanceKey={markdownSyntaxVisibility}
                 editorContent={editorContent}
                 editorNodeId={editorNodeId}
                 editorNodeViewState={editorNodeViewState}
@@ -210,39 +233,20 @@ export function WorkspaceLayout({
           </div>
         </div>
       </div>
+      {isSettingsOpen ? (
+        <SettingsPanel
+          interfaceFontPreset={interfaceFontPreset}
+          interfaceFontSize={interfaceFontSize}
+          markdownSyntaxVisibility={markdownSyntaxVisibility}
+          monospaceFontPreset={monospaceFontPreset}
+          onClose={onCloseSettings}
+          onInterfaceFontPresetChange={onInterfaceFontPresetChange}
+          onInterfaceFontSizeChange={onInterfaceFontSizeChange}
+          onInterfaceFontSizeReset={onInterfaceFontSizeReset}
+          onMarkdownSyntaxVisibilityChange={onMarkdownSyntaxVisibilityChange}
+          onMonospaceFontPresetChange={onMonospaceFontPresetChange}
+        />
+      ) : null}
     </main>
-  );
-}
-
-interface ListSplitterProps {
-  isResizingList: boolean;
-  listWidth: number;
-  onResetLayout: () => void;
-  onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
-  onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
-}
-
-function ListSplitter({
-  isResizingList,
-  listWidth,
-  onResetLayout,
-  onSplitterKeyDown,
-  onSplitterPointerDown
-}: ListSplitterProps) {
-  return (
-    <div
-      aria-label="Resize node list"
-      aria-orientation="vertical"
-      aria-valuenow={Math.round(listWidth)}
-      className={cn('group relative self-stretch bg-transparent max-[1080px]:hidden')}
-      onDoubleClick={onResetLayout}
-      onKeyDown={onSplitterKeyDown}
-      onPointerDown={onSplitterPointerDown}
-      role="separator"
-      tabIndex={0}
-    >
-      <span aria-hidden="true" className="absolute inset-y-0 -left-1 w-3 cursor-col-resize" />
-      {isResizingList ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-px bg-border-strong" /> : null}
-    </div>
   );
 }
