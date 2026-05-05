@@ -162,6 +162,14 @@ describe('MarkdownEditor rendering', () => {
     expect(container.firstChild).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
   });
 
+  it('applies custom image max width when requested', () => {
+    const { container } = renderWithMouseGestureProvider(
+      <MarkdownEditor imageMaxWidth="50%" nodeId="node-1" onChange={vi.fn()} value="![Cover](https://example.com/cover.png)" />
+    );
+
+    expect(container.firstChild).toHaveStyle('--editor-image-max-width: 50%');
+  });
+
   it('updates title-heading visibility without recreating editor adapter', () => {
     const onChange = vi.fn();
     const view = renderWithMouseGestureProvider(<MarkdownEditor hideTitleHeading={false} nodeId="node-1" onChange={onChange} value="a" />);

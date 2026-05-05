@@ -88,9 +88,12 @@ function getDocumentPanelState(
 ) {
   const emptyState = resolveInboxEmptyState(activeNode);
   const reveal = activeNode?.reveal ?? '';
+  const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
+  const shouldConstrainItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
 
   return {
-    editorContentPaddingBottom: editorDisplayMode === 'preview' ? 'min(68dvh, 36rem)' : undefined,
+    editorContentPaddingBottom: shouldPadDocumentTail ? 'min(68dvh, 36rem)' : undefined,
+    editorImageMaxWidth: shouldConstrainItemImages ? '50%' : undefined,
     emptyState,
     hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection),
     reveal
@@ -100,6 +103,7 @@ function getDocumentPanelState(
 function getDocumentPanelBodyProps(
   props: DocumentPanelSectionProps,
   editorContentPaddingBottom: string | undefined,
+  editorImageMaxWidth: string | undefined,
   emptyState: ReturnType<typeof resolveInboxEmptyState>,
   hasAnswerSection: boolean,
   reveal: string,
@@ -110,6 +114,7 @@ function getDocumentPanelBodyProps(
     editorAppearanceKey: `${props.editorAppearanceKey}:image-cloze:${imageClozePresentationRefreshToken}`,
     editorContent: props.editorContent,
     editorContentPaddingBottom,
+    editorImageMaxWidth,
     editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
     editorNodeId: props.editorNodeId,
     editorNodeViewState: props.editorNodeViewState,
@@ -136,7 +141,7 @@ function getDocumentPanelView(
   imageClozePresentationRefreshToken: number
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(
+  const { editorContentPaddingBottom, editorImageMaxWidth, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(
     activeNode,
     editorDisplayMode,
     props.showAnswerSection
@@ -146,6 +151,7 @@ function getDocumentPanelView(
     bodyProps: getDocumentPanelBodyProps(
       props,
       editorContentPaddingBottom,
+      editorImageMaxWidth,
       emptyState,
       hasAnswerSection,
       reveal,

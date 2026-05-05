@@ -18,6 +18,7 @@ interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
+  editorImageMaxWidth?: string;
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
@@ -59,6 +60,7 @@ interface DocumentWidthHandleProps {
 interface AnswerSectionProps {
   editorAppearanceKey: string;
   editorNodeId: string | null;
+  imageMaxWidth?: string;
   onAnswerChange: (answer: string) => void;
   reveal: string;
 }
@@ -92,6 +94,7 @@ function AnswerSection({
   answerEditorDebugId,
   editorAppearanceKey,
   editorNodeId,
+  imageMaxWidth,
   onAnswerChange,
   reveal
 }: AnswerSectionProps & { answerEditorDebugId?: string }) {
@@ -108,6 +111,7 @@ function AnswerSection({
         className="answer-editor-host min-h-0"
         debugId={answerEditorDebugId}
         hideTitleHeading={false}
+        imageMaxWidth={imageMaxWidth}
         key={`answer-${editorAppearanceKey}`}
         nodeId={answerNodeId}
         onChange={onAnswerChange}
@@ -141,6 +145,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         debugId={props.promptEditorDebugId}
         hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
+        imageMaxWidth={props.editorImageMaxWidth}
         key={`prompt-${props.editorAppearanceKey}`}
         lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
@@ -165,6 +170,7 @@ function renderAnswerSection(props: DocumentPanelBodyProps) {
       answerEditorDebugId={props.answerEditorDebugId}
       editorAppearanceKey={props.editorAppearanceKey}
       editorNodeId={props.editorNodeId}
+      imageMaxWidth={props.editorImageMaxWidth}
       onAnswerChange={props.onAnswerChange}
       reveal={props.reveal}
     />

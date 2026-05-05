@@ -92,7 +92,16 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-image-widget': { maxWidth: '100%' },
   '.cm-md-image-widget-block': { display: 'block', marginBottom: '0.24rem', marginTop: '0.24rem' },
   '.cm-md-image-widget-inline': { display: 'inline-block', height: '1lh', lineHeight: '1', margin: '0 0.18rem', maxWidth: '100%', overflow: 'hidden', verticalAlign: 'text-bottom' },
-  '.cm-md-image-element': { border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)', borderRadius: '0.45rem', boxSizing: 'border-box', display: 'block', height: 'auto', maxWidth: '100%', width: 'auto', objectFit: 'contain' },
+  '.cm-md-image-element': {
+    border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)',
+    borderRadius: '0.45rem',
+    boxSizing: 'border-box',
+    display: 'block',
+    height: 'auto',
+    maxWidth: 'var(--editor-image-max-width, 100%)',
+    width: 'auto',
+    objectFit: 'contain'
+  },
   '.cm-md-image-element-block': { height: 'auto' },
   '.cm-md-image-element-inline': { height: '100%', margin: 0, maxHeight: '1lh', verticalAlign: 'bottom' },
   '.cm-md-image-status': {

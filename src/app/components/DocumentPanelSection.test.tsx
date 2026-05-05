@@ -13,8 +13,15 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   })
 }));
 
+const { documentPanelBodyMock } = vi.hoisted(() => ({
+  documentPanelBodyMock: vi.fn()
+}));
+
 vi.mock('./DocumentPanelBody', () => ({
-  DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
+  DocumentPanelBody: (props: unknown) => {
+    documentPanelBodyMock(props);
+    return <div data-testid="document-panel-body">Document body</div>;
+  }
 }));
 
 vi.mock('./ReadwiseBookActionsPanel', () => ({
@@ -111,6 +118,7 @@ function renderSectionWithProps(overrides: Partial<ComponentProps<typeof Documen
 
 beforeEach(() => {
   documentSourceUpdatePanelMock.mockReset();
+  documentPanelBodyMock.mockReset();
   useNodeSourceUpdatePreview.mockReturnValue({
     isLoading: false,
     value: null
@@ -150,6 +158,37 @@ describe('DocumentPanelSection basic views', () => {
     renderSection();
 
     expect(screen.getByText('Document body')).toBeInTheDocument();
+  });
+
+  it('keeps the extra document tail for topic nodes in preview mode', () => {
+    renderSectionWithProps({
+      nodesById: {
+        'node-1': { ...baseNode, kind: 'topic', content: '# Topic body' }
+      }
+    });
+
+    expect(documentPanelBodyMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        editorImageMaxWidth: undefined,
+        editorContentPaddingBottom: 'min(68dvh, 36rem)'
+      })
+    );
+  });
+
+  it('does not add the extra document tail for item nodes', () => {
+    renderSectionWithProps({
+      showAnswerSection: true,
+      nodesById: {
+        'node-1': { ...baseNode, kind: 'item', content: '# Prompt', reveal: 'Answer' }
+      }
+    });
+
+    expect(documentPanelBodyMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        editorImageMaxWidth: '50%',
+        editorContentPaddingBottom: undefined
+      })
+    );
   });
 
   it('shows the folder list shell for ordinary folder nodes', () => {

@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -13,9 +13,9 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
 const QUALITY_GATE_LIB_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-lib.sh');
 
-function runQualityGate(cwd, env = {}) {
+function runQualityGate(cwd, env = {}, args = []) {
   return new Promise((resolve) => {
-    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT], {
+    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
       cwd,
       env: { ...process.env, ...env }
     });
@@ -83,6 +83,18 @@ async function writePackageJson(rootDir, scripts) {
     scripts
   };
   await writeFile(path.join(rootDir, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+}
+
+async function writeExecutable(rootDir, relativePath, content) {
+  const fullPath = path.join(rootDir, relativePath);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, content, { encoding: 'utf8', mode: 0o755 });
+}
+
+async function writeFixtureFile(rootDir, relativePath, content) {
+  const fullPath = path.join(rootDir, relativePath);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, content, 'utf8');
 }
 
 describe('quality-gate-fast.sh', () => {
@@ -213,6 +225,115 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('typecheck failed:');
       expect(result.stdout).toContain('failed: typecheck exceeded memory limit');
       expect(result.stdout).toContain('peak typecheck memory:');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('uses the light level for local component changes and skips related tests', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    const typecheckMarker = path.join(tempRoot, 'typecheck.marker');
+    const lintMarker = path.join(tempRoot, 'lint.marker');
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"',
+        typecheck: `node -e "require('node:fs').writeFileSync('${typecheckMarker}', 'ok')"`,
+        test: 'node -e "console.log(\'repo test should stay unused\')"',
+        build: 'node -e "console.log(\'repo build should stay unused\')"'
+      });
+      await writeExecutable(
+        tempRoot,
+        'node_modules/.bin/eslint',
+        `#!/usr/bin/env bash\nprintf '%s\n' "$*" > "${lintMarker}"\n`
+      );
+      await writeFixtureFile(
+        tempRoot,
+        'src/features/image-cloze/components/ImageClozeCardView.tsx',
+        'export function ImageClozeCardView() { return null; }\n'
+      );
+
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'src/features/image-cloze/components/ImageClozeCardView.tsx'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-fast] selected level: light');
+      expect(await readFile(lintMarker, 'utf8')).toContain('src/features/image-cloze/components/ImageClozeCardView.tsx');
+      expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
+      expect(result.stdout).not.toContain('repo lint should stay unused');
+      expect(result.stdout).not.toContain('repo test should stay unused');
+      expect(result.stdout).not.toContain('repo build should stay unused');
+      expect(result.stdout).not.toContain('test (related)');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('uses the mid level for props signature changes and runs related tests', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    const typecheckMarker = path.join(tempRoot, 'typecheck.marker');
+    const lintMarker = path.join(tempRoot, 'lint.marker');
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"',
+        typecheck: `node -e "require('node:fs').writeFileSync('${typecheckMarker}', 'ok')"`,
+        test: 'node -e "console.log(\'repo test should stay unused\')"',
+        build: 'node -e "console.log(\'repo build should stay unused\')"'
+      });
+      await writeExecutable(
+        tempRoot,
+        'node_modules/.bin/eslint',
+        `#!/usr/bin/env bash\nprintf '%s\n' "$*" > "${lintMarker}"\n`
+      );
+      await writeExecutable(
+        tempRoot,
+        'node_modules/.bin/npx',
+        '#!/usr/bin/env bash\nif [[ "$1" == "vitest" ]]; then shift; fi\necho "related test:$*"\n'
+      );
+      await writeFixtureFile(
+        tempRoot,
+        'src/app/components/FancyCard.tsx',
+        'export interface FancyCardProps { title: string }\nexport function FancyCard(_props: FancyCardProps) { return null; }\n'
+      );
+      await writeFixtureFile(tempRoot, 'src/app/components/FancyCard.test.tsx', 'export {};\n');
+
+      const result = await runQualityGate(tempRoot, {
+        PATH: `${path.join(tempRoot, 'node_modules/.bin')}:${process.env.PATH}`,
+        QUALITY_GATE_CHANGED_FILES: 'src/app/components/FancyCard.tsx'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-fast] selected level: mid');
+      expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
+      expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
+      expect(result.stdout).toContain('related test:run --pool=threads --maxWorkers=10 src/app/components/FancyCard.test.tsx');
+      expect(result.stdout).not.toContain('repo lint should stay unused');
+      expect(result.stdout).not.toContain('repo test should stay unused');
+      expect(result.stdout).not.toContain('repo build should stay unused');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('delegates to the full gate when forced', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'full lint ok\')"',
+        typecheck: 'node -e "console.log(\'full typecheck ok\')"',
+        test: 'node -e "console.log(\'full test ok\')"',
+        build: 'node -e "console.log(\'full build ok\')"'
+      });
+
+      const result = await runQualityGate(tempRoot, {}, ['--full']);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-fast] forcing full quality gate');
+      expect(result.stdout).toContain('[quality-gate] all checks passed.');
+      expect(result.stdout).toContain('full lint ok');
+      expect(result.stdout).toContain('full typecheck ok');
+      expect(result.stdout).toContain('full test ok');
+      expect(result.stdout).toContain('full build ok');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
