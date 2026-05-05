@@ -11,7 +11,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     private FolioleCompanionBridgeContractDefinitions() {}
 
     static int resourceDefault(Context context, String key) throws Exception {
-        return section(context, "resourcePlugin").getJSONObject("defaults").getInt(key);
+        return intValue(context, "resourcePlugin", "defaults", key);
     }
 
     static int resourceExternalDocumentSearchLimitDefault(Context context) throws Exception {
@@ -239,13 +239,15 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     private static String pairingSignatureString(Context context, String objectName, String key) throws Exception {
+        return pairingSignatureObject(context, objectName).getString(key);
+    }
+
+    private static JSONObject pairingSignatureObject(Context context, String objectName) throws Exception {
         JSONObject object = section(context, "pairingPlugin").getJSONObject("signature").optJSONObject(objectName);
-        if (object == null || !object.has(key)) {
-            throw new IllegalStateException(
-                "Companion bridge contract asset is missing key: pairingPlugin.signature." + objectName + "." + key
-            );
+        if (object == null) {
+            throw new IllegalStateException("Companion bridge contract asset is missing object: pairingPlugin.signature." + objectName);
         }
-        return object.getString(key);
+        return object;
     }
 
     private static JSONObject section(Context context, String sectionName) throws Exception {
@@ -264,6 +266,10 @@ final class FolioleCompanionBridgeContractDefinitions {
             );
         }
         return object.getString(key);
+    }
+
+    private static int intValue(Context context, String sectionName, String objectName, String key) throws Exception {
+        return section(context, sectionName).getJSONObject(objectName).getInt(key);
     }
 
     private static JSONObject definitions(Context context) throws Exception {

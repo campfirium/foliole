@@ -101,6 +101,7 @@ describe('Android bridge contract metadata', () => {
 
     expect(bridgeSource).toContain('resourceRequestKey(context, "attachmentId")');
     expect(bridgeSource).toContain('resourceDefault(context, "missingResourceLimit")');
+    expect(bridgeSource).toContain('intValue(context, "resourcePlugin", "defaults", key)');
     expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey');
     expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey');
     expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceMissingResourceLimitDefault(context)');
@@ -142,6 +143,7 @@ describe('Android bridge contract metadata', () => {
 
     expect(bridgeSource).toContain('pairingCredentialRequestKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureRequestKey(context, "method")');
+    expect(bridgeSource).toContain('pairingSignatureObject(context, objectName).getString(key)');
     expect(bridgeSource).toContain('pairingPreferenceKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingStorageKey(context, "keyAlias")');
     expect(bridgeSource).toContain('pairingStateKey(context, "deviceId")');
