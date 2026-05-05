@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
+import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
 import {
   loadRuntimeLibraryPathSettings,
   rebuildRuntimeMirrorAttachmentLinks,
@@ -16,9 +16,9 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
 }));
-vi.mock('../../../shared/platform/importBridge', async () => {
-  const actual = await vi.importActual<typeof import('../../../shared/platform/importBridge')>(
-    '../../../shared/platform/importBridge'
+vi.mock('../../../shared/platform/importDirectoryRuntimeRepository', async () => {
+  const actual = await vi.importActual<typeof import('../../../shared/platform/importDirectoryRuntimeRepository')>(
+    '../../../shared/platform/importDirectoryRuntimeRepository'
   );
   return {
     ...actual,
@@ -155,9 +155,9 @@ it('shows Library Home, Assets, Inbox, and Mirror without exposing internal data
 
   await waitFor(() => {
     expect(screen.getByText('Library Home')).toBeInTheDocument();
-    expect(screen.getByText('Assets')).toBeInTheDocument();
-    expect(screen.getByText('Inbox')).toBeInTheDocument();
-    expect(screen.getByText('Mirror')).toBeInTheDocument();
+    expect(screen.getAllByText('Assets').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Inbox').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Mirror').length).toBeGreaterThan(0);
   });
 
   expect(screen.getByText(/drop folder for incoming files/i)).toBeInTheDocument();

@@ -7,7 +7,8 @@ import {
   type KeepImportPreviewSummary
 } from '../../../lib/core/import/importManagerSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import { previewRuntimeKeepImportRule, selectRuntimeImportDirectory } from '../../shared/platform/importBridge';
+import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository';
+import { previewRuntimeKeepImportRule } from '../../shared/platform/keepImportPreviewRuntimeRepository';
 
 import {
   applyReadwiseRootPath,

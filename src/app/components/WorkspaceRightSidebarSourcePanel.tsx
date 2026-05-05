@@ -1,4 +1,4 @@
-import type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource, RuntimeTextImportResult } from '../../shared/platform/importBridge';
+import type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource, RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import { AppStatusBadge, InspectorSection } from '../../shared/ui';
 
 import { useNodeSourceDetails } from './useNodeSourceDetails';

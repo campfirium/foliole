@@ -6,7 +6,7 @@ import {
   saveRuntimeExternalSearchFolders,
   type RuntimeExternalSearchFolder
 } from '../../../shared/platform/externalSearchBridge';
-import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
+import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
 
 function createDraftFolder(folderPath: string): RuntimeExternalSearchFolder {
   const now = new Date().toISOString();

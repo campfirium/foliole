@@ -1,7 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { loadRuntimeImportOverview, runRuntimeTextFileImport, selectRuntimeImportDirectory, selectRuntimeImportTextFile } from './importBridge';
+import { selectRuntimeImportDirectory } from './importDirectoryRuntimeRepository';
+import { runRuntimeTextFileImport, selectRuntimeImportTextFile } from './importExecutionRuntimeRepository';
+import { loadRuntimeImportOverview } from './importOverviewRuntimeRepository';
 const IMPORT_OVERVIEW_PAYLOAD = {
   latest_failure: {
     content_fingerprint: 'content-failure',

@@ -1,7 +1,5 @@
-import type {
-  RuntimeImportOverview,
-  RuntimeTextImportResult
-} from '../../shared/platform/importBridge';
+import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
+import type { RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 
 import type { FormalImportStatus } from './useFormalImport';
 

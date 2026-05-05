@@ -4,14 +4,13 @@ import { create } from 'zustand';
 import { onManagedInboxUpdated } from '../../shared/platform/bridge';
 import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntimeCommandRepository';
 import {
-  loadRuntimeImportOverview,
   runRuntimeClipboardImport,
   runRuntimeDirectoryImport,
   runRuntimeTextFileImport,
   type RuntimeDirectoryImportResult,
-  type RuntimeImportOverview,
   type RuntimeTextImportResult
-} from '../../shared/platform/importBridge';
+} from '../../shared/platform/importExecutionRuntimeRepository';
+import { loadRuntimeImportOverview, type RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { runResetImportDataFlow } from './formalImportReset';

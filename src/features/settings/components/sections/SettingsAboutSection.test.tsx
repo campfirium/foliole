@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../shared/platform/importBridge', () => ({
+vi.mock('../../../../shared/platform/importDirectoryRuntimeRepository', () => ({
   selectRuntimeImportDirectory: vi.fn()
 }));
 
@@ -23,7 +23,7 @@ vi.mock('../../model/databaseBackups', () => ({
 }));
 
 import { exportDiagnosticBundle } from '../../../../shared/platform/diagnosticBundle';
-import { selectRuntimeImportDirectory } from '../../../../shared/platform/importBridge';
+import { selectRuntimeImportDirectory } from '../../../../shared/platform/importDirectoryRuntimeRepository';
 import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,

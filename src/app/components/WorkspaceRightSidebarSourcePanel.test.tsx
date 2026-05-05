@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RuntimeTextImportResult } from '../../shared/platform/importBridge';
+import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import { WorkspaceRightSidebarSourcePanel } from './WorkspaceRightSidebarSourcePanel';

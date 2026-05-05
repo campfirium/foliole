@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { runRuntimeDirectoryImport } from './importBridge';
+import { runRuntimeDirectoryImport } from './importExecutionRuntimeRepository';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {

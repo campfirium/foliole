@@ -1,4 +1,4 @@
-import { resetRuntimeImportData } from '../../shared/platform/importBridge';
+import { resetRuntimeImportData } from '../../shared/platform/importOverviewRuntimeRepository';
 
 interface ResetImportDataFlowOptions {
   getIsImporting: () => boolean;

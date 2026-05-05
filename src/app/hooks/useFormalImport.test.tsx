@@ -1,7 +1,7 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import type { RuntimeImportOverview } from '../../shared/platform/importBridge';
+import type { RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const { loadRuntimeImportOverview, onManagedInboxUpdated, runtimeInvoke } = vi.hoisted(() => ({
@@ -15,8 +15,11 @@ vi.mock('../../shared/platform/bridge', () => ({
   onManagedInboxUpdated
 }));
 
-vi.mock('../../shared/platform/importBridge', () => ({
-  loadRuntimeImportOverview,
+vi.mock('../../shared/platform/importOverviewRuntimeRepository', () => ({
+  loadRuntimeImportOverview
+}));
+
+vi.mock('../../shared/platform/importExecutionRuntimeRepository', () => ({
   runRuntimeClipboardImport: vi.fn(),
   runRuntimeDirectoryImport: vi.fn(),
   runRuntimeTextFileImport: vi.fn()

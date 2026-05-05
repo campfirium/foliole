@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
+import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
 import {
   loadRuntimeLibraryPathSettings,
   updateRuntimeLibraryPathSetting,

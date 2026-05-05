@@ -2,7 +2,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeReadwiseContract';
-import { selectRuntimeImportDirectory } from '../../shared/platform/importBridge';
+import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { applyReadwiseRootPath, updateDraftImportSource } from './importSourceWorkspaceModel';
