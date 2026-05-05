@@ -54,6 +54,17 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
   };
 }
 
+function toNodeAnchorLocatorUpdatePayload(node: Node) {
+  if (!node.anchorLink) {
+    throw new Error(`missing anchor link for ${node.id}`);
+  }
+  return {
+    nodeId: node.id,
+    anchorLink: node.anchorLink,
+    updatedAt: node.updatedAt
+  };
+}
+
 function runFireAndForgetRuntimeSync<T extends FireAndForgetRuntimeCommand>(
   command: T,
   payload: NativeCommandArgs<T>,
@@ -145,11 +156,9 @@ export function syncNodeContentWithAnchorsToRuntime(parentNode: Node, affectedAn
 
   const runtimeInvoke = getRuntimeInvoke();
   const parentPayload = toNodeSnapshotPayload(parentNode, nodeOrder.indexOf(parentNode.id));
-  const anchorPayloads = affectedAnchorNodes.map((node) => toNodeSnapshotPayload(node, nodeOrder.indexOf(node.id)));
+  const anchorPayloads = affectedAnchorNodes.map(toNodeAnchorLocatorUpdatePayload);
 
-  [...anchorPayloads, parentPayload].forEach((payload) => {
-    stagePendingNodeSync(payload);
-  });
+  stagePendingNodeSync(parentPayload);
   if (!runtimeInvoke) {
     return;
   }
@@ -159,9 +168,7 @@ export function syncNodeContentWithAnchorsToRuntime(parentNode: Node, affectedAn
     affectedAnchors: anchorPayloads
   }).then(
     () => {
-      [parentPayload, ...anchorPayloads].forEach((payload) => {
-        resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
-      });
+      resolvePendingNodeSync(parentPayload.nodeId, parentPayload.updatedAt);
     },
     (error) => {
       logRuntimeError('runtime sync failed', {

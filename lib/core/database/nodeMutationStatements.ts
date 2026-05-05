@@ -50,3 +50,11 @@ export function createUpsertNodeReadingStatement(driver: DatabaseDriver) {
        state = excluded.state`
   );
 }
+
+export function createUpdateNodeAnchorLinkStatement(driver: DatabaseDriver) {
+  return driver.prepare(
+    `UPDATE nodes
+     SET anchor_link = ?, updated_at = ?, deleted_at = NULL
+     WHERE id = ?`
+  );
+}

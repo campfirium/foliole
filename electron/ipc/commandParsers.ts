@@ -51,3 +51,35 @@ export function parseNodeSnapshotPayloadArray(value: unknown, field: string) {
     return parseNodeSnapshotArgs(item as Record<string, unknown>);
   });
 }
+
+export function parseNodeAnchorLocatorUpdateArray(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error(`invalid argument: ${field}[${index}]`);
+    }
+    const parsed = parseNodeSnapshotArgs({
+      ...item,
+      parentNodeId: null,
+      kind: 'topic',
+      title: '',
+      isTitleManual: false,
+      content: '',
+      reveal: null,
+      position: null,
+      createdAt: '',
+      imageRegions: null,
+      reading: null
+    } as Record<string, unknown>);
+    if (!parsed.anchorLink) {
+      throw new Error(`invalid argument: ${field}[${index}].anchorLink`);
+    }
+    return {
+      nodeId: parsed.nodeId,
+      anchorLink: parsed.anchorLink,
+      updatedAt: parsed.updatedAt
+    };
+  });
+}

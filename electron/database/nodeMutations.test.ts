@@ -58,8 +58,8 @@ function seedNode(nodeId: string, parentNodeId: string | null, position: number)
 
 function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
-  return connection.sqlite.prepare('SELECT id, parent_id, content, deleted_at, virtual_filter FROM nodes WHERE id = ?').get(nodeId) as
-    | { content: string; id: string; parent_id: string | null; deleted_at: string | null; virtual_filter: string | null }
+  return connection.sqlite.prepare('SELECT id, parent_id, content, anchor_link, deleted_at, virtual_filter FROM nodes WHERE id = ?').get(nodeId) as
+    | { content: string; id: string; parent_id: string | null; anchor_link: string | null; deleted_at: string | null; virtual_filter: string | null }
     | undefined;
 }
 

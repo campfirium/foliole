@@ -4,12 +4,14 @@ import {
   replaceNodeOrder as replaceNodeOrderViaDriver,
   restoreNodes as restoreNodesViaDriver,
   softDeleteNodes as softDeleteNodesViaDriver,
+  updateNodeAnchorLinks as updateNodeAnchorLinksViaDriver,
   upsertNodeSnapshot as upsertNodeSnapshotViaDriver
 } from '../../lib/core/database/nodeMutations.js';
 import type {
   DeleteNodesPermanentlyInput,
   RestoreNodesInput,
   SoftDeleteNodesInput,
+  UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutations.js';
 
@@ -20,6 +22,7 @@ export type {
   DeleteNodesPermanentlyInput,
   RestoreNodesInput,
   SoftDeleteNodesInput,
+  UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
 };
 
@@ -38,6 +41,10 @@ export function upsertNodeSnapshots(inputs: UpsertNodeSnapshotInput[]): void {
 
 export function replaceNodeOrder(nodeIds: string[]): void {
   replaceNodeOrderViaDriver(openDatabaseConnection().driver, nodeIds);
+}
+
+export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void {
+  updateNodeAnchorLinksViaDriver(openDatabaseConnection().driver, inputs);
 }
 
 export function clearNodeOrder(): void {

@@ -213,6 +213,12 @@ export interface NativeNodeSnapshotArgs {
   updatedAt: string;
 }
 
+export interface NativeNodeAnchorLocatorUpdateArgs {
+  nodeId: string;
+  anchorLink: NativeWorkspaceAnchorLink;
+  updatedAt: string;
+}
+
 export interface NativeReadingProgressNodeViewState {
   nodeId: string;
   scrollTop: number;

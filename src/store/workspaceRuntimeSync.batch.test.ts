@@ -39,6 +39,7 @@ it('sends parent and affected anchor updates through one batch command', async (
     id: 'node-2',
     parentNodeId: 'node-1',
     content: 'Child',
+    anchorLink: { id: 'hl-1', kind: 'highlight' as const, locator: { from: 1, originalText: 'hi', to: 3 } },
     title: 'Child',
     updatedAt: '2026-03-06T00:00:02.000Z'
   };
@@ -48,6 +49,10 @@ it('sends parent and affected anchor updates through one batch command', async (
 
   expect(invoke).toHaveBeenCalledWith('update_node_content_with_anchors', {
     parent: expect.objectContaining({ nodeId: 'node-1', position: 0 }),
-    affectedAnchors: [expect.objectContaining({ nodeId: 'node-2', position: 1 })]
+    affectedAnchors: [expect.objectContaining({
+      nodeId: 'node-2',
+      anchorLink: { id: 'hl-1', kind: 'highlight', locator: { from: 1, originalText: 'hi', to: 3 } },
+      updatedAt: '2026-03-06T00:00:02.000Z'
+    })]
   });
 });

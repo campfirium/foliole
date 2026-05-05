@@ -13,8 +13,8 @@ import {
   replaceNodeOrder,
   restoreNodes,
   softDeleteNodes,
-  upsertNodeSnapshot,
-  upsertNodeSnapshots
+  updateNodeAnchorLinks,
+  upsertNodeSnapshot
 } from '../database/nodeMutations.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
@@ -33,9 +33,9 @@ import {
 
 import {
   asNullableString,
+  parseNodeAnchorLocatorUpdateArray,
   asString,
   asStringArray,
-  parseNodeSnapshotPayloadArray,
   parseNodeCreationArgs,
   parseNodeSnapshotArgs
 } from './commandParsers.js';
@@ -109,8 +109,9 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   }
   if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
     const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
-    const affectedAnchors = parseNodeSnapshotPayloadArray(args.affectedAnchors, 'affectedAnchors');
-    upsertNodeSnapshots([parent, ...affectedAnchors]);
+    const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
+    upsertNodeSnapshot(parent);
+    updateNodeAnchorLinks(affectedAnchors);
     scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
     return null;
   }

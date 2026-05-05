@@ -9,7 +9,7 @@ import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
   NativeImportRemoteImageAttachmentArgs,
   NativeImportLocalImageAttachmentResult,
-  NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
+  NativeRelearnNodeArgs, NativeNodeAnchorLocatorUpdateArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
   NativeMergeReadwiseTopicHighlightsResult,
   NativeReviewSchedulerSettings,
@@ -33,7 +33,7 @@ type NativeNodeSnapshotMutationSpec = {
   result: null;
 };
 type NativeNodeSnapshotBatchMutationSpec = {
-  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeSnapshotArgs[] };
+  args: { parent: NativeNodeSnapshotArgs; affectedAnchors: NativeNodeAnchorLocatorUpdateArgs[] };
   result: null;
 };
 

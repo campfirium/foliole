@@ -6,6 +6,7 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
+  createUpdateNodeAnchorLinkStatement,
   createUpsertNodeOrderStatement,
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
@@ -97,6 +98,12 @@ export interface DeleteNodesPermanentlyInput {
   nodeOrder: string[];
 }
 
+export interface UpdateNodeAnchorLinkInput {
+  anchorLink: NodeAnchorLinkPayload;
+  nodeId: string;
+  updatedAt: string;
+}
+
 function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | null {
   return anchorLink ? JSON.stringify(anchorLink) : null;
 }
@@ -184,6 +191,16 @@ export function replaceNodeOrder(driver: DatabaseDriver, nodeIds: string[]): voi
     deleteOrderStatement.run();
     for (let index = 0; index < nodeIds.length; index += 1) {
       insertOrderStatement.run([nodeIds[index], index]);
+    }
+  });
+}
+
+export function updateNodeAnchorLinks(driver: DatabaseDriver, inputs: UpdateNodeAnchorLinkInput[]): void {
+  const updateNodeAnchorLinkStatement = createUpdateNodeAnchorLinkStatement(driver);
+
+  driver.transaction(() => {
+    for (const input of inputs) {
+      updateNodeAnchorLinkStatement.run([toAnchorLinkValue(input.anchorLink), input.updatedAt, input.nodeId]);
     }
   });
 }

@@ -2,7 +2,7 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { upsertNodeSnapshots } from '../database/nodeMutations.js';
+import { updateNodeAnchorLinks, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -22,7 +22,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn(),
-  upsertNodeSnapshots: vi.fn()
+  updateNodeAnchorLinks: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn(),
@@ -61,27 +61,19 @@ it('handles batched parent and text-anchor mutations in one command', async () =
         },
         affectedAnchors: [{
           nodeId: 'node-child',
-          parentNodeId: 'node-parent',
-          kind: 'topic',
-          title: 'Beta',
-          isTitleManual: false,
-          content: 'Beta',
-          reveal: null,
           anchorLink: {
             id: 'hl-1',
             kind: 'highlight',
             locator: { from: 6, to: 12, originalText: 'Better' }
           },
-          position: 2,
-          createdAt: '2026-03-06T00:00:00.000Z',
           updatedAt: '2026-03-06T00:00:03.000Z'
         }]
       }
     })
   ).resolves.toBeNull();
 
-  expect(upsertNodeSnapshots).toHaveBeenCalledWith([
-    expect.objectContaining({ nodeId: 'node-parent', content: 'Alpha Better Gamma' }),
+  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'node-parent', content: 'Alpha Better Gamma' }));
+  expect(updateNodeAnchorLinks).toHaveBeenCalledWith([
     expect.objectContaining({
       nodeId: 'node-child',
       anchorLink: expect.objectContaining({
