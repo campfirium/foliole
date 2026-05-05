@@ -56,6 +56,7 @@ const NODE_VERSION_STORE = path.join(
   'FolioleCompanionSyncNodeVersionStore.java'
 );
 const COMPANION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-core-schema.json');
+const COMPANION_QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const SYNC_META_STORE = path.join(
   REPO_ROOT,
   'android',
@@ -71,14 +72,11 @@ const SYNC_META_STORE = path.join(
 
 describe('FolioleCompanionSyncObjectStore', () => {
   it('loads only dirty state rows for Android push', async () => {
-    const source = await readFile(SYNC_OBJECT_STORE, 'utf8');
-    const loadSyncStateChangesBody = source.slice(
-      source.indexOf('static JSObject loadSyncStateChanges'),
-      source.indexOf('static JSObject applySyncObjects')
-    );
+    const source = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
+    const sql = source.queries.syncStateChanges.sql;
 
-    expect(loadSyncStateChangesBody).toContain("sync_dirty = 1");
-    expect(loadSyncStateChangesBody).toContain("state_seq > ?");
+    expect(sql).toContain("sync_dirty = 1");
+    expect(sql).toContain("state_seq > ?");
   });
 
   it('marks remote-applied state rows clean', async () => {

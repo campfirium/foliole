@@ -57,7 +57,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         ));
         assertEquals(1, selectInt("SELECT reps FROM node_review WHERE node_id = 'node-1'"));
 
-        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(context, database, 0, 10);
         JSONObject change = changes.getJSONArray("objects").getJSONObject(0);
         assertEquals("node_review", change.getString("object_type"));
         assertEquals("desktop-review-hash", change.getString("base_content_hash"));
@@ -81,7 +81,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         );
         saveAck("node_review:node-1:4", "node_review", "node-1", "accepted", 8);
 
-        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(context, database, 0, 10);
 
         assertEquals(0, changes.getJSONArray("objects").length());
     }
@@ -99,7 +99,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         );
         saveAck("node_review:node-1:4", "node_review", "node-1", "conflict", null);
 
-        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(context, database, 0, 10);
 
         assertEquals(0, changes.getJSONArray("objects").length());
     }
@@ -126,7 +126,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
             "android-device-1"
         );
 
-        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, 0, 10);
+        JSObject changes = FolioleCompanionSyncObjectStore.loadSyncStateChanges(context, database, 0, 10);
         assertEquals(0, selectInt("SELECT COUNT(*) FROM sync_push_ack"));
         assertEquals(1, changes.getJSONArray("objects").length());
     }

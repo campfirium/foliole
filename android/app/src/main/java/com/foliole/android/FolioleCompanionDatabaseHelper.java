@@ -72,7 +72,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject loadSyncIndex() throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncObjectStore.loadSyncIndex(database);
+        return FolioleCompanionSyncObjectStore.loadSyncIndex(context, database);
     }
 
     JSObject loadSyncNodeConflicts() throws Exception {
@@ -164,7 +164,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject loadSyncStateChanges(Integer cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, cursor == null ? 0 : cursor, limit);
+        return FolioleCompanionSyncObjectStore.loadSyncStateChanges(context, database, cursor == null ? 0 : cursor, limit);
     }
 
     JSObject saveSyncPushAcks(JSONArray acks) throws Exception {

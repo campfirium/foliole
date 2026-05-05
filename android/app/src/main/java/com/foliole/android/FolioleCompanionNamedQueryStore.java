@@ -16,12 +16,16 @@ final class FolioleCompanionNamedQueryStore {
     private FolioleCompanionNamedQueryStore() {}
 
     static JSObject loadArray(Context context, SQLiteDatabase database, String queryName) throws Exception {
+        return loadArray(context, database, queryName, null);
+    }
+
+    static JSObject loadArray(Context context, SQLiteDatabase database, String queryName, String[] args) throws Exception {
         JSONObject query = loadQuery(context, queryName);
         String resultKey = query.getString("resultKey");
         String sql = query.getString("sql");
         JSONArray columns = query.getJSONArray("columns");
         JSArray rows = new JSArray();
-        try (Cursor cursor = database.rawQuery(sql, null)) {
+        try (Cursor cursor = database.rawQuery(sql, args)) {
             while (cursor.moveToNext()) {
                 rows.put(toRecord(cursor, columns));
             }
@@ -60,6 +64,10 @@ final class FolioleCompanionNamedQueryStore {
         }
         if ("json".equals(type)) {
             record.put(key, new JSONObject(cursor.getString(columnIndex)));
+            return;
+        }
+        if ("long".equals(type)) {
+            record.put(key, cursor.getLong(columnIndex));
             return;
         }
         record.put(key, cursor.getString(columnIndex));

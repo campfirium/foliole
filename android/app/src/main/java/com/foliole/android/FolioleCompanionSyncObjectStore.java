@@ -1,5 +1,6 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -15,26 +16,8 @@ import java.util.List;
 final class FolioleCompanionSyncObjectStore {
     private FolioleCompanionSyncObjectStore() {}
 
-    static JSObject loadSyncIndex(SQLiteDatabase database) throws Exception {
-        JSArray entries = new JSArray();
-        try (Cursor cursor = database.rawQuery(
-            "SELECT object_type, object_id, current_version_id, content_hash, updated_at " +
-                "FROM sync_object_state WHERE object_type <> 'node' ORDER BY updated_at ASC, object_type ASC, object_id ASC",
-            null
-        )) {
-            while (cursor.moveToNext()) {
-                JSObject entry = new JSObject();
-                entry.put("object_type", cursor.getString(0));
-                entry.put("object_id", cursor.getString(1));
-                entry.put("sync_version_id", cursor.isNull(2) ? JSONObject.NULL : cursor.getString(2));
-                entry.put("content_hash", cursor.getString(3));
-                entry.put("updated_at", cursor.getString(4));
-                entries.put(entry);
-            }
-        }
-        JSObject result = new JSObject();
-        result.put("entries", entries);
-        return result;
+    static JSObject loadSyncIndex(Context context, SQLiteDatabase database) throws Exception {
+        return FolioleCompanionNamedQueryStore.loadArray(context, database, "syncIndex");
     }
 
     static JSObject loadSyncObjects(SQLiteDatabase database, JSONArray objectIds, JSONArray objectTypes) throws Exception {
@@ -47,29 +30,12 @@ final class FolioleCompanionSyncObjectStore {
         return result;
     }
 
-    static JSObject loadSyncStateChanges(SQLiteDatabase database, int cursor, int limit) throws Exception {
-        JSArray objects = new JSArray();
-        try (Cursor row = database.rawQuery(
-            "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash " +
-                "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? " +
-                "AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type " +
-                "AND ack.object_id = sync_object_state.object_id) ORDER BY state_seq ASC LIMIT ?",
-            new String[] { String.valueOf(Math.max(0, cursor)), String.valueOf(normalizeLimit(limit)) }
-        )) {
-            while (row.moveToNext()) {
-                objects.put(toSyncObject(database, new SyncStateRow(
-                    row.getString(0),
-                    row.getString(1),
-                    row.getString(3),
-                    row.getString(4),
-                    row.isNull(5) ? null : row.getString(5),
-                    row.getInt(2),
-                    row.isNull(6) ? null : row.getString(6)
-                ), true));
-            }
-        }
-        JSObject result = new JSObject();
-        result.put("objects", objects);
+    static JSObject loadSyncStateChanges(Context context, SQLiteDatabase database, int cursor, int limit) throws Exception {
+        JSObject result = FolioleCompanionNamedQueryStore.loadArray(context, database, "syncStateChanges", new String[] {
+            String.valueOf(Math.max(0, cursor)),
+            String.valueOf(normalizeLimit(limit))
+        });
+        appendPayloads(database, result.getJSONArray("objects"));
         return result;
     }
 
@@ -121,6 +87,19 @@ final class FolioleCompanionSyncObjectStore {
             object.put("base_content_hash", row.baseContentHash == null ? JSONObject.NULL : row.baseContentHash);
         }
         return object;
+    }
+
+    private static void appendPayloads(SQLiteDatabase database, JSONArray objects) throws Exception {
+        for (int index = 0; index < objects.length(); index += 1) {
+            JSONObject object = objects.getJSONObject(index);
+            object.put("payload_json", object.isNull("deleted_at") ?
+                FolioleCompanionSyncObjectPayloadReader.readPayloadJson(
+                    database,
+                    object.getString("object_type"),
+                    object.getString("object_id")
+                ) :
+                JSONObject.NULL);
+        }
     }
 
     private static List<String> toStringList(JSONArray values) {
