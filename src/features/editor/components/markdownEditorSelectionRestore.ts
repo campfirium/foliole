@@ -32,6 +32,7 @@ function useSelectionRestoreExecution(args: {
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
@@ -52,6 +53,7 @@ function useSelectionRestoreExecution(args: {
       adapter: args.adapterRef.current,
       activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
       activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
+      beginApplyingReadingPosition: args.beginApplyingReadingPosition,
       completeApplyingReadingPosition: args.completeApplyingReadingPosition,
       isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
       lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
@@ -77,7 +79,7 @@ export function useEditorSelectionRestore(
   readingTargetViewportMode: EditorViewportMode | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   nodeViewState: EditorViewState | undefined,
-  _beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined,
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined,
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined,
   _setReadingPositionSelection: ((selection: NonNullable<EditorViewState['selection']>) => void) | undefined,
   shouldSuppressSelectionRestore: (() => boolean) | undefined,
@@ -104,6 +106,7 @@ export function useEditorSelectionRestore(
     adapterRef,
     activeRestoreSelectionKeyRef: restoreRefs.activeRestoreSelectionKeyRef,
     activeRestoreValueLengthRef: restoreRefs.activeRestoreValueLengthRef,
+    beginApplyingReadingPosition,
     completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: restoreRefs.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: restoreRefs.lastRestoredSelectionKeyRef,
@@ -155,6 +158,7 @@ function runSelectionRestore(args: {
   adapter: CodeMirrorEditorAdapter | null;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
@@ -186,6 +190,7 @@ function runSelectionRestore(args: {
   handleSelectionRestore({
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
+    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,

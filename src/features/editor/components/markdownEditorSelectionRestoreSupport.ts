@@ -20,6 +20,7 @@ import type { EditorViewState } from './markdownEditorTypes';
 export function handleSelectionRestore(args: {
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
@@ -52,6 +53,7 @@ export function handleSelectionRestore(args: {
     adapter: args.restoreTarget.adapter,
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
+    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
@@ -197,6 +199,7 @@ function restoreEditorSelection(args: {
   adapter: CodeMirrorEditorAdapter;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
@@ -213,6 +216,7 @@ function restoreEditorSelection(args: {
   valueLength: number;
 }) {
   markNodePositionRequested(args.nodeId);
+  args.beginApplyingReadingPosition?.(args.selection ?? { from: 0, to: 0 }, 'editor-restore-selection');
   pushDebugTrace('editor.restore-selection', {
     nodeId: args.nodeId,
     selection: args.selection,

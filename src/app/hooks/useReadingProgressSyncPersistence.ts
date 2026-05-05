@@ -79,7 +79,11 @@ export async function flushReadingProgressToCloseBridge(args: {
   if (!args.persistence.isWorkspaceHydrated) {
     return false;
   }
-  const resolved = args.persistence.resolveCapturedReadingProgress();
+  const isRestoreApplying = Boolean(args.persistence.getReadingPositionSyncState?.());
+  const resolved = args.persistence.resolveCapturedReadingProgress(
+    undefined,
+    isRestoreApplying ? null : undefined
+  );
   const runtimeInvoke = getRuntimeInvoke();
   if (!resolved || !runtimeInvoke) {
     return false;
