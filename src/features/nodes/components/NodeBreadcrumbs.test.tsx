@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import { NodeBreadcrumbs } from './NodeBreadcrumbs';
 
-it('shows formal kind labels inside breadcrumb items', () => {
+it('shows breadcrumb titles without kind labels', () => {
   render(
     <NodeBreadcrumbs
       activeNodeId="topic-1"
@@ -35,8 +35,8 @@ it('shows formal kind labels inside breadcrumb items', () => {
     />
   );
 
-  expect(screen.getByText('Folder')).toBeInTheDocument();
-  expect(screen.getByText('Topic')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Knowledge' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Article' })).toBeInTheDocument();
+  expect(screen.queryByText('Folder')).not.toBeInTheDocument();
+  expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });

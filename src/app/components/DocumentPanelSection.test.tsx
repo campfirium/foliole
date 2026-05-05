@@ -12,9 +12,7 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
 }));
 
 vi.mock('./DocumentPanelBody', () => ({
-  DocumentPanelBody: (props: { formalKindLabel?: string }) => (
-    <div data-testid="document-panel-body">{props.formalKindLabel ? `Document body ${props.formalKindLabel}` : 'Document body'}</div>
-  )
+  DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
 }));
 
 const { documentSourceUpdatePanelMock } = vi.hoisted(() => ({
@@ -158,17 +156,10 @@ function registerDocumentPanelSectionTests() {
     expect(splitButton.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('passes the active node formal kind into the document body shell', () => {
-    renderSectionWithProps({
-      nodesById: {
-        'node-1': {
-          ...baseNode,
-          kind: 'item'
-        }
-      }
-    });
+  it('renders the document body without passing a visible kind label', () => {
+    renderSection();
 
-    expect(screen.getByText('Document body Item')).toBeInTheDocument();
+    expect(screen.getByText('Document body')).toBeInTheDocument();
   });
 
   it('writes source update panel edits back when the panel closes', () => {

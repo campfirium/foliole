@@ -30,7 +30,6 @@ interface NodeTreeRowProps {
   isDropTarget?: boolean;
   dropIntent?: 'before' | 'after' | 'child' | null;
   label: string;
-  nodeKindLabel?: string;
   nodeId: string;
   rowSpacing: number;
   onDragEnd?: (event: ReactDragEvent<HTMLDivElement>) => void;
@@ -73,7 +72,6 @@ function renderNodeTreeRowButton(props: {
   nodeIconState: NodeTreeRowIconState;
   isSelected: boolean;
   label: string;
-  nodeKindLabel: string;
   nodeId: string;
   rowSpacing: number;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -110,7 +108,6 @@ export function NodeTreeRow(props: NodeTreeRowProps) {
         isMuted: props.isMuted ?? false,
         mutedOpacity: props.mutedOpacity ?? 1,
         nodeIconKind: props.nodeIconKind ?? 'reading',
-        nodeKindLabel: props.nodeKindLabel ?? 'Topic',
         nodeIconState: props.nodeIconState ?? 'scheduled',
         isSelected: props.isSelected,
         label: props.label,
@@ -139,7 +136,6 @@ interface NodeTreeRowButtonProps {
   nodeIconState: NodeTreeRowIconState;
   isSelected: boolean;
   label: string;
-  nodeKindLabel: string;
   nodeId: string;
   rowSpacing: number;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -163,7 +159,6 @@ function NodeTreeRowButton({
   nodeIconState,
   isSelected,
   label,
-  nodeKindLabel,
   nodeId,
   onContextMenu,
   onKeyDown,
@@ -190,7 +185,6 @@ function NodeTreeRowButton({
     label,
     mutedOpacity,
     nodeIconKind,
-    nodeKindLabel,
     nodeIconState,
     nodeId,
     onToggleCollapse,

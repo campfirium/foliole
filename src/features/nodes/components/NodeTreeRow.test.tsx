@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import { NodeTreeRow } from './NodeTreeRow';
 
-it('shows the formal kind label in the row content', () => {
+it('shows the row title without a kind label prefix', () => {
   render(
     <NodeTreeRow
       depth={0}
@@ -13,13 +13,12 @@ it('shows the formal kind label in the row content', () => {
       isSelected={false}
       label="Study prompt"
       nodeId="node-1"
-      nodeKindLabel="Item"
       onSelect={vi.fn()}
       onToggleCollapse={vi.fn()}
       rowSpacing={0}
     />
   );
 
-  expect(screen.getByText('Item')).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Study prompt' })).toBeInTheDocument();
+  expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });

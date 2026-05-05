@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
-import { getNodeKindLabel } from '../../features/nodes/model/nodeKindLabel';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
@@ -90,7 +89,6 @@ export function DocumentPanelHeader({
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
-  const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const listNodesById = useMemo(() => toWorkspaceListNodesById(nodesById), [nodesById]);
 
   return (
@@ -108,9 +106,6 @@ export function DocumentPanelHeader({
       </ToolbarActionGroup>
       <div className="min-w-0 flex-1">
         <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
-          {activeNode ? (
-            <p className="mb-0.5 text-[11px] text-foreground/45">{getNodeKindLabel(activeNode.kind)}</p>
-          ) : null}
           <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={listNodesById} onSelectNode={onSelectNode} />
         </div>
       </div>

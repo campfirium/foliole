@@ -1,3 +1,5 @@
+import { Folder, FolderOpen } from 'lucide-react';
+
 import { cn } from '../../../shared/lib/utils';
 
 import { getNodeIconStateAppearance } from './nodeIconAppearanceSettings';
@@ -35,6 +37,10 @@ function resolveDefaultIconClassName(transformMode: 'none' | 'flip-x' | 'flip-y'
 }
 
 export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
+  if (kind === 'folder-closed' || kind === 'folder-open') {
+    return <NodeTreeFolderIcon kind={kind} />;
+  }
+
   const stateAppearance = getNodeIconStateAppearance(state);
   const customIcon = resolveNodeTreeRowCustomIcon({ kind, state });
   const fallbackShape = kind === 'review' ? 'diamond' : 'hexagon';
@@ -76,6 +82,25 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
           <NodeTreeRowPresetIcon shape={fallbackShape} />
         </span>
       )}
+    </span>
+  );
+}
+
+function NodeTreeFolderIcon({ kind }: { kind: 'folder-closed' | 'folder-open' }) {
+  const FolderIcon = kind === 'folder-open' ? FolderOpen : Folder;
+
+  return (
+    <span
+      className="relative mr-1 inline-flex size-3.5 flex-none items-center justify-center text-foreground/65"
+      data-node-icon="folder"
+      data-node-icon-kind={kind}
+      data-node-icon-pattern="normal"
+      data-node-icon-source="default"
+      data-node-icon-state="static"
+      data-node-icon-tone="normal"
+      data-node-icon-variant={kind}
+    >
+      <FolderIcon aria-hidden="true" size={14} strokeWidth={1.8} />
     </span>
   );
 }

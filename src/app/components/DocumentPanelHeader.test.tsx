@@ -10,7 +10,7 @@ vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   })
 }));
 
-it('shows the active node formal kind in the document header', () => {
+it('shows the breadcrumb title without a kind label in the document header', () => {
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"
@@ -41,5 +41,6 @@ it('shows the active node formal kind in the document header', () => {
     />
   );
 
-  expect(screen.getAllByText('Item').length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: 'Prompt' })).toBeInTheDocument();
+  expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });
