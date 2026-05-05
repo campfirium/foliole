@@ -2130,6 +2130,11 @@
     }
   },
   "syncObjectRead": {
+    "groupKeys": {
+      "syncIndex": "syncIndex",
+      "syncObjects": "syncObjects",
+      "syncStateChanges": "syncStateChanges"
+    },
     "syncIndex": {
       "queryName": "syncIndex"
     },

@@ -21,6 +21,11 @@ describe('Android sync object query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.syncObjectRead).toEqual(ANDROID_COMPANION_SYNC_OBJECT_READ_RULES);
+    expect(definitions.syncObjectRead.groupKeys).toEqual({
+      syncIndex: 'syncIndex',
+      syncObjects: 'syncObjects',
+      syncStateChanges: 'syncStateChanges'
+    });
     expect(definitions.syncObjectRead.syncObjects).toMatchObject({
       objectIdsReplacement: ':objectIds',
       objectTypesReplacement: ':objectTypes',
@@ -43,6 +48,10 @@ describe('Android sync object query rules', () => {
     expect(storeSource).toContain('FolioleCompanionSyncObjectQueryRules.syncStateChangesQueryName(context)');
     expect(storeSource).toContain('FolioleCompanionSyncObjectQueryRules.emptySyncObjects(context)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncObjectRead")');
+    expect(rulesSource).toContain('syncObjectsGroup(context)');
+    expect(rulesSource).toContain('syncStateChangesGroup(context)');
+    expect(rulesSource).not.toContain('group(context, "syncObjects").');
+    expect(rulesSource).not.toContain('group(context, "syncStateChanges").');
     expect(storeSource).not.toContain('"syncObjects"');
     expect(storeSource).not.toContain('"syncStateChanges"');
     expect(storeSource).not.toContain('Math.max(1, Math.min(1000');

@@ -130,6 +130,11 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
 };
 
 export const ANDROID_COMPANION_SYNC_OBJECT_READ_RULES = {
+  groupKeys: {
+    syncIndex: 'syncIndex',
+    syncObjects: 'syncObjects',
+    syncStateChanges: 'syncStateChanges'
+  },
   syncIndex: {
     queryName: 'syncIndex'
   },

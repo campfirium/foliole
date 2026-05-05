@@ -21,7 +21,7 @@ final class FolioleCompanionSyncObjectQueryRules {
 
     static JSObject emptySyncObjects(Context context) throws Exception {
         JSObject empty = new JSObject();
-        empty.put(group(context, "syncObjects").getString("emptyResultKey"), new JSArray());
+        empty.put(syncObjectsGroup(context).getString("emptyResultKey"), new JSArray());
         return empty;
     }
 
@@ -30,11 +30,11 @@ final class FolioleCompanionSyncObjectQueryRules {
     }
 
     static String syncObjectsResultKey(Context context) throws Exception {
-        return group(context, "syncObjects").getString("resultKey");
+        return syncObjectsGroup(context).getString("resultKey");
     }
 
     static Map<String, String> syncObjectsReplacements(Context context, int idCount, int typeCount) throws Exception {
-        JSONObject group = group(context, "syncObjects");
+        JSONObject group = syncObjectsGroup(context);
         Map<String, String> replacements = new HashMap<>();
         replacements.put(group.getString("objectIdsReplacement"), placeholders(idCount));
         replacements.put(
@@ -49,15 +49,15 @@ final class FolioleCompanionSyncObjectQueryRules {
     }
 
     static String syncStateChangesResultKey(Context context) throws Exception {
-        return group(context, "syncStateChanges").getString("resultKey");
+        return syncStateChangesGroup(context).getString("resultKey");
     }
 
     static int normalizeCursor(Context context, int cursor) throws Exception {
-        return Math.max(group(context, "syncStateChanges").getInt("minCursor"), cursor);
+        return Math.max(syncStateChangesGroup(context).getInt("minCursor"), cursor);
     }
 
     static int normalizeLimit(Context context, int limit) throws Exception {
-        JSONObject group = group(context, "syncStateChanges");
+        JSONObject group = syncStateChangesGroup(context);
         int defaultLimit = group.getInt("defaultLimit");
         int minLimit = group.getInt("minLimit");
         int maxLimit = group.getInt("maxLimit");
@@ -68,13 +68,29 @@ final class FolioleCompanionSyncObjectQueryRules {
         return group(context, groupName).getString("queryName");
     }
 
+    private static JSONObject syncObjectsGroup(Context context) throws Exception {
+        return group(context, "syncObjects");
+    }
+
+    private static JSONObject syncStateChangesGroup(Context context) throws Exception {
+        return group(context, "syncStateChanges");
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
         JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "syncObjectRead");
-        JSONObject group = rules.optJSONObject(groupName);
+        JSONObject group = rules.optJSONObject(groupKey(rules, groupName));
         if (group == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync object read rule: " + groupName);
         }
         return group;
+    }
+
+    private static String groupKey(JSONObject rules, String groupName) throws Exception {
+        JSONObject groupKeys = rules.optJSONObject("groupKeys");
+        if (groupKeys == null) {
+            throw new IllegalStateException("Companion query definitions asset is missing sync object read group keys.");
+        }
+        return groupKeys.getString(groupName);
     }
 
     private static String placeholders(int count) {
