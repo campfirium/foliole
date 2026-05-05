@@ -13,6 +13,7 @@
     "deps:hardening:check": "bash scripts/npm-hardening-check.sh",
     "windows:preview": "bash scripts/windows/windows-preview.sh",
     "desktop:spike:electron": "node scripts/windows/playwright-electron-spike.mjs",
+    "desktop:test:windows": "bash scripts/windows/windows-desktop-test.sh",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",

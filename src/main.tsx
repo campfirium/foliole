@@ -12,6 +12,7 @@ import {
   resolveRuntimeAppPaths
 } from './shared/platform/bridge';
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
+import { bootstrapApp } from './startupBootstrap';
 
 const ROOT_ID = 'root';
 
@@ -128,22 +129,11 @@ async function reportDesktopBridgeReady() {
   });
 }
 
-async function bootstrap() {
-  try {
-    reportRuntimeBootStage('boot_start');
-    await syncAppSettingsWithRuntime();
-    await reportDesktopBridgeReady();
-    mountApp();
-  } catch (error) {
-    console.error('[startup] fatal bootstrap error', error);
-    reportRuntimeBootStage('fatal_bootstrap_error', {
-      message: error instanceof Error ? error.message : 'Unknown startup exception'
-    });
-    const message = error instanceof Error ? error.message : 'Unknown startup exception';
-    renderStartupError(message);
-  }
-}
-
 installDesktopDebugProbe();
-
-void bootstrap();
+bootstrapApp({
+  mountApp,
+  renderStartupError,
+  reportBootStage: reportRuntimeBootStage,
+  reportBridgeReady: reportDesktopBridgeReady,
+  syncAppSettings: syncAppSettingsWithRuntime
+});

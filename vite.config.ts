@@ -110,6 +110,7 @@ function workspaceChangeTimestampPlugin(): Plugin {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), workspaceChangeTimestampPlugin()],
   resolve: {
     alias: {

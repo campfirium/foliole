@@ -40,6 +40,7 @@ import {
   configureRuntimeAppIdentity,
   formatRuntimeDiagnosticsSnapshot
 } from './runtimeIdentity.js';
+import { resolveRuntimeMode } from './runtimeMode.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
@@ -47,6 +48,7 @@ import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowS
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const configuredIdentity = configureRuntimeAppIdentity(app, fs.mkdirSync.bind(fs));
+const runtimeMode = resolveRuntimeMode();
 const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
   appName: configuredIdentity.appName,
   existsSync: fs.existsSync,
@@ -172,10 +174,12 @@ function installInvokeHandler() {
   );
 }
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
-if (!hasSingleInstanceLock) {
-  app.quit();
-  process.exit(0);
+if (!runtimeMode.allowParallelInstance) {
+  const hasSingleInstanceLock = app.requestSingleInstanceLock();
+  if (!hasSingleInstanceLock) {
+    app.quit();
+    process.exit(0);
+  }
 }
 
 const devRestartIntentWatcher = installDevRestartIntentWatcher({

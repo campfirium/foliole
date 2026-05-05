@@ -300,10 +300,10 @@ async function readRendererPageState(windowPage) {
   }
 }
 
-async function readBootDiagnostics(appRoot) {
-  const readyMarkerPath = path.join(appRoot, '.windows-native-boot-ready.json');
-  const bridgeReadyMarkerPath = path.join(appRoot, '.windows-native-bridge-ready.json');
-  const bootEventLogPath = path.join(appRoot, 'logs', 'windows', 'native-boot-events.ndjson');
+async function readBootDiagnostics(stateRoot) {
+  const readyMarkerPath = path.join(stateRoot, '.windows-native-boot-ready.json');
+  const bridgeReadyMarkerPath = path.join(stateRoot, '.windows-native-bridge-ready.json');
+  const bootEventLogPath = path.join(stateRoot, 'logs', 'windows', 'native-boot-events.ndjson');
 
   const [readyMarker, bridgeReadyMarker, bootEvents] = await Promise.all([
     readJsonFile(readyMarkerPath),
@@ -321,8 +321,8 @@ async function readBootDiagnostics(appRoot) {
   };
 }
 
-async function readRendererStateDiagnostics(appRoot) {
-  const logPath = path.join(appRoot, 'logs', 'windows', 'renderer-state.ndjson');
+async function readRendererStateDiagnostics(stateRoot) {
+  const logPath = path.join(stateRoot, 'logs', 'windows', 'renderer-state.ndjson');
   const entries = await readNdjsonTail(logPath, MAX_RENDERER_STATE_ENTRIES);
   const latestSnapshot = getLatestRendererSnapshot(entries);
 
@@ -336,17 +336,18 @@ async function readRendererStateDiagnostics(appRoot) {
 
 export async function collectDesktopFailureDiagnostics({
   appRoot,
+  stateRoot = appRoot,
   mainProcessCollector,
   rendererPageEventCollector,
   rendererConsoleCollector,
   windowPage
 }) {
   const [boot, debugProbe, rendererRuntime, rendererPage, rendererState] = await Promise.all([
-    readBootDiagnostics(appRoot),
+    readBootDiagnostics(stateRoot),
     readDesktopDebugProbe(windowPage),
     readRendererRuntimeState(windowPage),
     readRendererPageState(windowPage),
-    readRendererStateDiagnostics(appRoot)
+    readRendererStateDiagnostics(stateRoot)
   ]);
   const mainProcessLogs = mainProcessCollector.snapshot();
   const bridgeReady =

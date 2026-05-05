@@ -35,17 +35,25 @@ export function resolveFolioleUserDataPath(appDataRoot: string) {
   return path.join(appDataRoot, FOLIOLE_APP_NAME);
 }
 
+function resolveOverridePath(envValue: string | undefined) {
+  const trimmed = envValue?.trim();
+  return trimmed ? path.resolve(trimmed) : null;
+}
+
 export function configureRuntimeAppIdentity(
   app: AppIdentityApi,
   mkdirSync: MkdirSync,
-  platform = process.platform
+  platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
 ): ConfiguredAppIdentity {
   app.setName(FOLIOLE_APP_NAME);
   const appDataRoot = app.getPath('appData');
-  const userDataPath = resolveFolioleUserDataPath(appDataRoot);
+  const userDataPath = resolveOverridePath(env.FOLIOLE_USER_DATA_PATH) ?? resolveFolioleUserDataPath(appDataRoot);
+  const sessionDataPath = resolveOverridePath(env.FOLIOLE_SESSION_DATA_PATH) ?? userDataPath;
   mkdirSync(userDataPath, { recursive: true });
+  mkdirSync(sessionDataPath, { recursive: true });
   app.setPath('userData', userDataPath);
-  app.setPath('sessionData', userDataPath);
+  app.setPath('sessionData', sessionDataPath);
 
   if (platform === 'win32') {
     app.setAppUserModelId?.(FOLIOLE_APP_NAME);

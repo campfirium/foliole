@@ -6,7 +6,7 @@ function resolveTimeoutMs() {
   if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
   }
-  return 30_000;
+  return 120_000;
 }
 
 export default defineConfig({

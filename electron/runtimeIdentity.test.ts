@@ -50,6 +50,40 @@ it('pins userData and sessionData to the foliole root on win32', () => {
   expect(mkdirSync).toHaveBeenCalledWith(expectedRoot, { recursive: true });
 });
 
+it('honors test-specific userData and sessionData overrides', () => {
+  const appDataRoot = path.join('C:', 'Users', 'zephu', 'AppData', 'Roaming');
+  let userDataPath = path.join(appDataRoot, 'Electron');
+  let sessionDataPath = path.join(appDataRoot, 'Electron');
+  const mkdirSync = vi.fn();
+  const app = {
+    getName: () => FOLIOLE_APP_NAME,
+    getPath(name: 'appData' | 'sessionData' | 'userData') {
+      if (name === 'appData') {
+        return appDataRoot;
+      }
+      return name === 'userData' ? userDataPath : sessionDataPath;
+    },
+    setName: vi.fn(),
+    setPath(name: 'sessionData' | 'userData', value: string) {
+      if (name === 'userData') {
+        userDataPath = value;
+        return;
+      }
+      sessionDataPath = value;
+    }
+  };
+
+  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'linux', {
+    FOLIOLE_SESSION_DATA_PATH: '/tmp/foliole-test/session-data',
+    FOLIOLE_USER_DATA_PATH: '/tmp/foliole-test/user-data'
+  });
+
+  expect(configured.userDataPath).toBe(path.resolve('/tmp/foliole-test/user-data'));
+  expect(configured.sessionDataPath).toBe(path.resolve('/tmp/foliole-test/session-data'));
+  expect(mkdirSync).toHaveBeenCalledWith(path.resolve('/tmp/foliole-test/user-data'), { recursive: true });
+  expect(mkdirSync).toHaveBeenCalledWith(path.resolve('/tmp/foliole-test/session-data'), { recursive: true });
+});
+
 it('collects machine-checkable runtime diagnostics for the active startup context', () => {
   const runtimeDir = path.join('C:', 'dev', 'foliole', 'electron-dist', 'electron');
   const preloadPath = path.join('C:', 'dev', 'foliole', 'electron', 'preload.cjs');

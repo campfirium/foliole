@@ -2,6 +2,7 @@
 
 import { Buffer } from 'node:buffer';
 import { EventEmitter } from 'node:events';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -52,11 +53,20 @@ describe('playwright desktop harness', () => {
 
   it('creates args-based launch options with optional executable override', () => {
     const target = resolveDesktopLaunchTarget('/workspace/foliole', () => true);
+    const stateRoot = '/tmp/foliole-playwright-state';
+    const isolationEnv = {
+      FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
+      FOLIOLE_SESSION_DATA_PATH: path.join(stateRoot, 'session-data'),
+      FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
+      FOLIOLE_WORKDIR: stateRoot
+    };
 
-    expect(createDesktopLaunchOptions(target, 12_345, {})).toEqual({
+    expect(createDesktopLaunchOptions(target, 12_345, { FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot })).toEqual({
       args: ['/workspace/foliole/electron-dist/electron/main.js'],
       cwd: '/workspace/foliole',
       env: {
+        ...isolationEnv,
         FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
       },
       executablePath: undefined,
@@ -65,10 +75,12 @@ describe('playwright desktop harness', () => {
 
     expect(
       createDesktopLaunchOptions(target, 9_999, {
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
         FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe'
       })
     ).toMatchObject({
       env: {
+        ...isolationEnv,
         FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe',
         FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
       },
@@ -211,7 +223,10 @@ describe('playwright desktop harness', () => {
     const session = await launchDesktopSession({
       appRoot: '/workspace/foliole',
       electronLauncher,
-      env: { FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345' },
+      env: {
+        FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
+      },
       existsSync: () => true
     });
 
@@ -220,14 +235,20 @@ describe('playwright desktop harness', () => {
         args: ['/workspace/foliole/electron-dist/electron/main.js'],
         cwd: '/workspace/foliole',
         env: {
+          FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
           FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
-          FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+          FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state',
+          FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',
+          FOLIOLE_SESSION_DATA_PATH: '/tmp/foliole-playwright-state/session-data',
+          FOLIOLE_USER_DATA_PATH: '/tmp/foliole-playwright-state/user-data',
+          FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
         },
         executablePath: undefined,
         timeout: 12_345
       }
     ]);
     expect(session.target.launchMode).toBe('args');
+    expect(session.target.runtimeStateRoot).toBe('/tmp/foliole-playwright-state');
     expect(session.appReady).toEqual({
       href: 'file:///workspace/foliole/dist/index.html',
       readyState: 'complete',
@@ -315,7 +336,10 @@ describe('playwright desktop harness', () => {
       launchDesktopSession({
         appRoot: '/workspace/foliole',
         electronLauncher,
-        env: { FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '30000' },
+        env: {
+          FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '30000',
+          FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
+        },
         existsSync: () => true
       })
     ).rejects.toMatchObject({

@@ -8,8 +8,9 @@ import {
   createRendererConsoleCollector,
   createRendererPageEventCollector
 } from './playwright-desktop-diagnostics.mjs';
+import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_TIMEOUT_MS = 120_000;
 const WINDOWS_MIRROR_ROOT = '/mnt/c/dev/foliole';
 export const APP_READY_FLAG = '__FOLIOLE_APP_READY_REPORTED__';
 
@@ -49,7 +50,7 @@ export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync) 
   };
 }
 
-export function createDesktopLaunchOptions(target, timeoutMs, env = process.env) {
+export function createDesktopLaunchOptions(target, timeoutMs, env = process.env, isolation = createDesktopIsolationContext(env)) {
   const executablePath = env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim();
 
   return {
@@ -57,6 +58,7 @@ export function createDesktopLaunchOptions(target, timeoutMs, env = process.env)
     cwd: target.appRoot,
     env: {
       ...env,
+      ...isolation.env,
       FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE?.trim() || '1'
     },
     executablePath: executablePath ? path.resolve(executablePath) : undefined,
@@ -112,6 +114,7 @@ async function acquireDesktopWindowWithConsole(electronApp, timeoutMs) {
 
 async function enrichDesktopLaunchError({
   appRoot,
+  stateRoot,
   error,
   mainProcessCollector
 }) {
@@ -122,6 +125,7 @@ async function enrichDesktopLaunchError({
   try {
     error.desktopDiagnostics = await collectDesktopFailureDiagnostics({
       appRoot,
+      stateRoot,
       mainProcessCollector,
       rendererConsoleCollector: collectors.rendererConsoleCollector,
       rendererPageEventCollector: collectors.rendererPageEventCollector,
@@ -176,9 +180,17 @@ export async function launchDesktopSession({
   }
 
   const launcher = electronLauncher ?? (await loadElectronLauncher());
-  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env);
+  const isolation = createDesktopIsolationContext(env);
+  target.runtimeStateRoot = isolation.runtimeStateRoot;
+  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env, isolation);
   const deadline = Date.now() + timeoutMs;
-  const electronApp = await launcher.launch(launchOptions);
+  let electronApp;
+  try {
+    electronApp = await launcher.launch(launchOptions);
+  } catch (error) {
+    isolation.cleanup();
+    throw error;
+  }
   const mainProcessCollector = createMainProcessLogCollector(electronApp.process());
   let rendererConsoleCollector;
   let rendererPageEventCollector;
@@ -196,6 +208,7 @@ export async function launchDesktopSession({
   } catch (error) {
     await enrichDesktopLaunchError({
       appRoot: target.appRoot,
+      stateRoot: target.runtimeStateRoot,
       error,
       mainProcessCollector
     });
@@ -204,6 +217,7 @@ export async function launchDesktopSession({
     (failureCollectors?.rendererConsoleCollector ?? rendererConsoleCollector)?.dispose?.();
     (failureCollectors?.rendererPageEventCollector ?? rendererPageEventCollector)?.dispose?.();
     await electronApp.close();
+    isolation.cleanup();
     throw error;
   }
 
@@ -213,6 +227,7 @@ export async function launchDesktopSession({
     collectDiagnostics: () =>
       collectDesktopFailureDiagnostics({
         appRoot: target.appRoot,
+        stateRoot: target.runtimeStateRoot,
         mainProcessCollector,
         rendererPageEventCollector,
         rendererConsoleCollector,
@@ -227,6 +242,7 @@ export async function launchDesktopSession({
       rendererPageEventCollector.dispose();
       mainProcessCollector.dispose();
       await electronApp.close();
+      isolation.cleanup();
     },
     appReady,
     electronApp,

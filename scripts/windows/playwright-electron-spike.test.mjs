@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { APP_READY_FLAG } from './playwright-desktop-harness.mjs';
@@ -92,7 +93,10 @@ describe('playwright electron spike', () => {
     const result = await runElectronLaunchSpike({
       appRoot: '/workspace/foliole',
       electronLauncher,
-      env: { FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345' },
+      env: {
+        FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345',
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
+      },
       existsSync: () => true
     });
 
@@ -101,8 +105,13 @@ describe('playwright electron spike', () => {
         args: ['/workspace/foliole/electron-dist/electron/main.js'],
         cwd: '/workspace/foliole',
         env: {
+          FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
           FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345',
-          FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+          FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state',
+          FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',
+          FOLIOLE_SESSION_DATA_PATH: path.join('/tmp/foliole-playwright-state', 'session-data'),
+          FOLIOLE_USER_DATA_PATH: path.join('/tmp/foliole-playwright-state', 'user-data'),
+          FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
         },
         executablePath: undefined,
         timeout: 12_345
