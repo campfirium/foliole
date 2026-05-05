@@ -1643,6 +1643,11 @@
       ]
     }
   },
+  "syncConflictRead": {
+    "nodeConflicts": {
+      "queryName": "nodeConflicts"
+    }
+  },
   "syncObjectRead": {
     "syncIndex": {
       "queryName": "syncIndex"

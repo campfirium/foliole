@@ -20,6 +20,7 @@ import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import {
+  ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
   ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,
   ANDROID_COMPANION_SYNC_STREAM_READ_RULES
 } from '../../lib/core/database/androidCompanionSyncQueryDefinitions.ts';
@@ -62,6 +63,7 @@ await fs.writeFile(
   queryOutputPath,
   `${JSON.stringify({
     queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
+    syncConflictRead: ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
     syncObjectRead: ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,
     syncStreamRead: ANDROID_COMPANION_SYNC_STREAM_READ_RULES,
     syncPayloadRouting: {

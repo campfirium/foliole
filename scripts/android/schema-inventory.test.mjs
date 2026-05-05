@@ -50,7 +50,7 @@ const COMPANION_SYNC_CONFLICT_STORE = path.join(
   'com',
   'foliole',
   'android',
-  'FolioleCompanionSyncConflictStore.java'
+  'FolioleCompanionSyncConflictQueryRules.java'
 );
 const COMPANION_SYNC_STATE_ROWS = path.join(
   REPO_ROOT,
@@ -102,9 +102,11 @@ describe('schema inventory drift gate', () => {
 
   it('moves Android conflict query shape out of the custom Java store', async () => {
     const schema = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
+    const conflictRulesSource = await readFile(COMPANION_SYNC_CONFLICT_STORE, 'utf8');
 
     expect(schema.queries).toEqual(ANDROID_COMPANION_QUERY_DEFINITIONS);
-    await expect(readFile(COMPANION_SYNC_CONFLICT_STORE, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(conflictRulesSource).toContain('optJSONObject("syncConflictRead")');
+    expect(conflictRulesSource).not.toContain('database, "nodeConflicts"');
   });
 
   it('moves Android sync state row mutation SQL out of the custom Java store', async () => {

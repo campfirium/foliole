@@ -176,3 +176,9 @@ export const ANDROID_COMPANION_SYNC_STREAM_READ_RULES = {
     queryName: 'syncReviewLog'
   }
 };
+
+export const ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES = {
+  nodeConflicts: {
+    queryName: 'nodeConflicts'
+  }
+} as const;

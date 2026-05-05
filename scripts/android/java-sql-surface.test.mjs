@@ -25,7 +25,7 @@ const ALLOWED_SQL_LITERALS = [
 const ALLOWED_DIRECT_LOAD_ARRAY = [
   {
     file: 'FolioleCompanionDatabaseHelper.java',
-    text: 'return FolioleCompanionNamedQueryStore.loadArray(context, database, "nodeConflicts");'
+    text: 'FolioleCompanionSyncConflictQueryRules.nodeConflictsQueryName(context)'
   },
   {
     file: 'FolioleCompanionDatabaseMigration.java',
