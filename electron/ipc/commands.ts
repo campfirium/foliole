@@ -3,6 +3,7 @@ import { BrowserWindow, app, dialog, shell, type WebContents } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { type NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 import { previewKeepImportRule } from '../import/keepImportService.js';
+import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
 import { loadReadwiseBookEpub, openReadwiseBookDownload } from '../import/readwiseBookManualActions.js';
 
 import { bootReport } from './boot.js';
@@ -115,6 +116,9 @@ async function handleImportCommand(request: InvokeRequest, context?: InvokeConte
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.loadReadwiseBookEpub)) {
     return loadReadwiseBookEpub(asString(request.args.node_id, 'node_id'), resolveTargetWindow(context));
+  }
+  if (isTypedRequest(request, NATIVE_COMMANDS.resetReadwiseBookImport)) {
+    return resetReadwiseBookImport(asString(request.args.node_id, 'node_id'));
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.runTextFileImport)) {
     return runTextFileImport(resolveTargetWindow(context), request.args);

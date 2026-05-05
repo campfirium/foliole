@@ -36,3 +36,13 @@ export interface NativeReadwiseBookEpubLoadResult {
   status: 'book_not_found' | 'cancelled' | 'selected' | 'failed';
   title: string | null;
 }
+
+export interface NativeReadwiseBookImportResetResult {
+  book_key: string | null;
+  content: string | null;
+  node_id: string | null;
+  removed_node_ids: string[];
+  status: 'book_not_found' | 'reset';
+  title: string | null;
+  updated_at: string | null;
+}

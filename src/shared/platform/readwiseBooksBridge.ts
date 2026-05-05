@@ -1,5 +1,6 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
+  NativeReadwiseBookImportResetResult,
   NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookEpubLoadResult
@@ -49,6 +50,23 @@ function isReadwiseBookEpubLoadResult(value: unknown): value is NativeReadwiseBo
       payload.status === 'cancelled' ||
       payload.status === 'selected' ||
       payload.status === 'failed')
+  );
+}
+
+function isReadwiseBookImportResetResult(value: unknown): value is NativeReadwiseBookImportResetResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const payload = value as Record<string, unknown>;
+  return (
+    (payload.book_key === null || typeof payload.book_key === 'string') &&
+    (payload.content === null || typeof payload.content === 'string') &&
+    (payload.node_id === null || typeof payload.node_id === 'string') &&
+    Array.isArray(payload.removed_node_ids) &&
+    payload.removed_node_ids.every((item) => typeof item === 'string') &&
+    (payload.status === 'book_not_found' || payload.status === 'reset') &&
+    (payload.title === null || typeof payload.title === 'string') &&
+    (payload.updated_at === null || typeof payload.updated_at === 'string')
   );
 }
 
@@ -150,6 +168,36 @@ export async function loadRuntimeReadwiseBookEpub(nodeId: string): Promise<Nativ
       action: 'load_runtime_readwise_book_epub',
       area: 'bridge',
       command: NATIVE_COMMANDS.loadReadwiseBookEpub,
+      fallback: 'return_null',
+      error
+    });
+    return null;
+  }
+}
+
+export async function resetRuntimeReadwiseBookImport(nodeId: string): Promise<NativeReadwiseBookImportResetResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.resetReadwiseBookImport, { node_id: nodeId });
+    if (!isReadwiseBookImportResetResult(result)) {
+      logRuntimeWarning('native readwise book import reset payload invalid', {
+        action: 'reset_runtime_readwise_book_import',
+        area: 'bridge',
+        command: NATIVE_COMMANDS.resetReadwiseBookImport,
+        fallback: 'return_null'
+      });
+      return null;
+    }
+    return result;
+  } catch (error) {
+    logRuntimeWarning('native readwise book import reset failed', {
+      action: 'reset_runtime_readwise_book_import',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.resetReadwiseBookImport,
       fallback: 'return_null',
       error
     });

@@ -8,6 +8,7 @@ export const NATIVE_COMMANDS = {
   loadReadwiseBooksInventory: 'load_readwise_books_inventory',
   openReadwiseBookDownload: 'open_readwise_book_download',
   loadReadwiseBookEpub: 'load_readwise_book_epub',
+  resetReadwiseBookImport: 'reset_readwise_book_import',
   loadNodeSourceDetails: 'load_node_source_details',
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',
   previewKeepImportRule: 'preview_keep_import_rule',

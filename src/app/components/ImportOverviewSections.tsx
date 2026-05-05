@@ -173,12 +173,12 @@ export function InboxImportedNodesSection({
 
 export function ReadwiseBooksInventorySection({
   inventory,
-  onReimportBook,
-  reimportingNodeId
+  onResetBookImport,
+  resettingNodeId
 }: {
   inventory: RuntimeReadwiseBooksInventory | null;
-  onReimportBook?: (input: { nodeId: string; title: string }) => void;
-  reimportingNodeId?: string | null;
+  onResetBookImport?: (input: { nodeId: string; title: string }) => void;
+  resettingNodeId?: string | null;
 }) {
   const books = inventory?.books ?? [];
   const description = inventory
@@ -211,15 +211,15 @@ export function ReadwiseBooksInventorySection({
               </div>
               <div className="mt-3 flex items-center justify-end">
                 <AppButton
-                  disabled={book.generatedNodeId === null || reimportingNodeId === book.generatedNodeId}
+                  disabled={book.generatedNodeId === null || resettingNodeId === book.generatedNodeId}
                   onClick={() => {
-                    if (book.generatedNodeId && onReimportBook) {
-                      onReimportBook({ nodeId: book.generatedNodeId, title: book.title });
+                    if (book.generatedNodeId && onResetBookImport) {
+                      onResetBookImport({ nodeId: book.generatedNodeId, title: book.title });
                     }
                   }}
                   variant="ghost"
                 >
-                  {reimportingNodeId === book.generatedNodeId ? 'Re-importing…' : 'Re-import EPUB'}
+                  {resettingNodeId === book.generatedNodeId ? 'Resetting…' : 'Re-import'}
                 </AppButton>
               </div>
             </div>

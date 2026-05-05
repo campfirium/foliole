@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
 
-const { loadReadwiseBookEpub, mockWindow, openReadwiseBookDownload } = vi.hoisted(() => ({
+const { loadReadwiseBookEpub, mockWindow, openReadwiseBookDownload, resetReadwiseBookImport } = vi.hoisted(() => ({
   loadReadwiseBookEpub: vi.fn(),
   mockWindow: {
     close: vi.fn(),
@@ -15,7 +15,8 @@ const { loadReadwiseBookEpub, mockWindow, openReadwiseBookDownload } = vi.hoiste
     unmaximize: vi.fn(),
     webContents: { send: vi.fn(), toggleDevTools: vi.fn() }
   },
-  openReadwiseBookDownload: vi.fn()
+  openReadwiseBookDownload: vi.fn(),
+  resetReadwiseBookImport: vi.fn()
 }));
 
 vi.mock('electron', () => ({
@@ -32,6 +33,9 @@ vi.mock('electron', () => ({
 vi.mock('../import/readwiseBookManualActions.js', () => ({
   loadReadwiseBookEpub,
   openReadwiseBookDownload
+}));
+vi.mock('../import/readwiseBookImportReset.js', () => ({
+  resetReadwiseBookImport
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('./paths.js', () => ({
@@ -69,6 +73,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   openReadwiseBookDownload.mockResolvedValue({ book_key: 'book-1', status: 'opened', title: 'Book 1', url: 'https://example.com' });
   loadReadwiseBookEpub.mockResolvedValue({ book_key: 'book-1', epub_path: '/tmp/book.epub', status: 'selected', title: 'Book 1' });
+  resetReadwiseBookImport.mockResolvedValue({
+    book_key: 'book-1',
+    content: '# Book 1',
+    node_id: 'node-book-1',
+    removed_node_ids: ['node-book-1-chapter'],
+    status: 'reset',
+    title: 'Book 1',
+    updated_at: '2026-04-04T00:00:00.000Z'
+  });
 });
 
 it('routes readwise book manual actions through the native invoke handler', async () => {
@@ -78,7 +91,19 @@ it('routes readwise book manual actions through the native invoke handler', asyn
   await expect(
     handleInvokeRequest({ command: 'load_readwise_book_epub', args: { node_id: 'node-book-1' } })
   ).resolves.toEqual({ book_key: 'book-1', epub_path: '/tmp/book.epub', status: 'selected', title: 'Book 1' });
+  await expect(
+    handleInvokeRequest({ command: 'reset_readwise_book_import', args: { node_id: 'node-book-1' } })
+  ).resolves.toEqual({
+    book_key: 'book-1',
+    content: '# Book 1',
+    node_id: 'node-book-1',
+    removed_node_ids: ['node-book-1-chapter'],
+    status: 'reset',
+    title: 'Book 1',
+    updated_at: '2026-04-04T00:00:00.000Z'
+  });
 
   expect(openReadwiseBookDownload).toHaveBeenCalledWith('node-book-1');
   expect(loadReadwiseBookEpub).toHaveBeenCalledWith('node-book-1', mockWindow);
+  expect(resetReadwiseBookImport).toHaveBeenCalledWith('node-book-1');
 });

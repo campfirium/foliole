@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeReadwiseBookDownloadResult,
+  NativeReadwiseBookImportResetResult,
   NativeReadwiseBookEpubLoadResult,
   NativeReadwiseDetectionResult
 } from './nativeReadwiseContract.js';
@@ -29,5 +30,11 @@ export type NativeReadwiseCommandMap = {
       node_id: string;
     };
     result: NativeReadwiseBookEpubLoadResult;
+  };
+  [NATIVE_COMMANDS.resetReadwiseBookImport]: {
+    args: {
+      node_id: string;
+    };
+    result: NativeReadwiseBookImportResetResult;
   };
 };
