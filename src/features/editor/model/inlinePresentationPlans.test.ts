@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectAutolinkPresentationPlan,
+  collectEmbedPresentationPlan,
   collectInlineCodePresentationPlan,
   collectInlineLinkPresentationPlan,
   collectWikiLinkPresentationPlan
@@ -34,6 +35,20 @@ function createWikiLinkMatch() {
       { from: 8, to: 10 }
     ],
     title: 'Node'
+  };
+}
+
+function createEmbedMatch() {
+  return {
+    from: 0,
+    to: 16,
+    labelFrom: 10,
+    labelTo: 14,
+    hiddenRanges: [
+      { from: 0, to: 10 },
+      { from: 14, to: 16 }
+    ],
+    target: 'Card'
   };
 }
 
@@ -83,7 +98,7 @@ describe('inlinePresentationPlans', () => {
   });
 });
 
-describe('wiki and autolink presentation plans', () => {
+describe('wiki presentation plans', () => {
   it('builds wiki link label marks with node title attributes', () => {
     expect(collectWikiLinkPresentationPlan([createWikiLinkMatch()], false)).toEqual({
       markRanges: [
@@ -117,9 +132,16 @@ describe('wiki and autolink presentation plans', () => {
       ]
     });
   });
+});
 
+describe('autolink presentation plans', () => {
   it('builds autolink marks with external url attributes', () => {
-    expect(collectAutolinkPresentationPlan([{ from: 4, href: 'https://example.com', to: 23 }])).toEqual({
+    expect(
+      collectAutolinkPresentationPlan(
+        [{ from: 4, hiddenRanges: [], href: 'https://example.com', labelFrom: 4, labelTo: 23, to: 23 }],
+        false
+      )
+    ).toEqual({
       markRanges: [
         {
           attributes: { 'data-md-link-url': 'https://example.com' },
@@ -129,6 +151,55 @@ describe('wiki and autolink presentation plans', () => {
         }
       ],
       replaceRanges: []
+    });
+  });
+
+  it('hides angle autolink delimiters outside source mode', () => {
+    const match = {
+      from: 4,
+      hiddenRanges: [
+        { from: 4, to: 5 },
+        { from: 24, to: 25 }
+      ],
+      href: 'https://example.com',
+      labelFrom: 5,
+      labelTo: 24,
+      to: 25
+    };
+
+    expect(collectAutolinkPresentationPlan([match], false)).toEqual({
+      markRanges: [
+        {
+          attributes: { 'data-md-link-url': 'https://example.com' },
+          className: 'cm-md-link-text',
+          from: 5,
+          to: 24
+        }
+      ],
+      replaceRanges: [
+        { from: 4, to: 5 },
+        { from: 24, to: 25 }
+      ]
+    });
+    expect(collectAutolinkPresentationPlan([match], true).replaceRanges).toEqual([]);
+  });
+});
+
+describe('embed presentation plans', () => {
+  it('builds embed label marks with target attributes', () => {
+    expect(collectEmbedPresentationPlan([createEmbedMatch()], false)).toEqual({
+      markRanges: [
+        {
+          className: 'cm-md-link-text',
+          from: 10,
+          to: 14,
+          attributes: { 'data-md-embed-target': 'Card' }
+        }
+      ],
+      replaceRanges: [
+        { from: 0, to: 10 },
+        { from: 14, to: 16 }
+      ]
     });
   });
 });

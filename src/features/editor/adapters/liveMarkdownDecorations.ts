@@ -15,6 +15,7 @@ import {
   type MarkdownPrefixRange
 } from '../model/markdownBlockProjection';
 import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
+import { collectMarkdownLinkReferences } from '../model/markdownLinkReferences';
 import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
 import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
 
@@ -98,6 +99,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
   const codeFenceProjection = collectCodeFenceProjection(view);
+  const linkReferences = collectMarkdownLinkReferences(view.state.doc.toString());
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const lineClassByFrom = collectLineClassByFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
@@ -106,6 +108,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     activePosition: null,
     anchorDecorations: getTextAnchorDecorations(view),
     from: startLine.from,
+    linkReferences,
     text: view.state.sliceDoc(startLine.from, endLine.to)
   });
   const viewportPlans = collectPreviewViewportPlans({
@@ -115,6 +118,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     hideTitleHeading: context.hideTitleHeading,
     lineClassByFrom,
     lines: collectViewportLines(view, startLineNumber, endLineNumber),
+    linkReferences,
     markdownSyntaxVisible: context.markdownSyntaxVisible,
     startInCodeBlock: false,
     thematicBreakLineFroms
@@ -152,6 +156,7 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const codeFenceProjection = collectCodeFenceProjection(view);
+  const linkReferences = collectMarkdownLinkReferences(view.state.doc.toString());
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
   const thematicBreakLineFroms = collectThematicBreakLineFroms(view);
@@ -159,6 +164,7 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,
     lines: collectViewportLines(view, startLineNumber, endLineNumber),
+    linkReferences,
     startInCodeBlock: false,
     thematicBreakLineFroms
   });

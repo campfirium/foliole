@@ -1,7 +1,8 @@
+import { projectMarkdownInlineText } from './markdownInlineTextProjection';
+
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
 const FRONTMATTER_KEY_VALUE_PATTERN = /^([^:#\s][^:]*?)(\s*:\s*)(.*)$/;
 const FRONTMATTER_LIST_ITEM_PATTERN = /^(\s*)-\s+(.*)$/;
-const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
 
 export interface FrontmatterBounds {
   startLine: number;
@@ -25,7 +26,13 @@ function isDelimiterLine(text: string) {
 }
 
 function normalizeValue(value: string) {
-  return value.replace(WIKILINK_WRAPPER_PATTERN, '$1').trim();
+  return projectMarkdownInlineText(value)
+    .map((token) => {
+      if (token.kind === 'footnote') return token.label;
+      return 'text' in token ? token.text : '';
+    })
+    .join('')
+    .trim();
 }
 
 function resolveFrontmatterBoundsInLines(lines: readonly string[]): FrontmatterBounds | null {

@@ -21,4 +21,13 @@ describe('extractDocumentOutline', () => {
       { from: 31, level: 2, text: 'Visible', to: 38 }
     ]);
   });
+
+  it('collects setext headings', () => {
+    const content = ['Title', '===', 'Section', '---'].join('\n');
+
+    expect(extractDocumentOutline(content)).toEqual([
+      { from: 0, level: 1, text: 'Title', to: 9 },
+      { from: 10, level: 2, text: 'Section', to: 21 }
+    ]);
+  });
 });

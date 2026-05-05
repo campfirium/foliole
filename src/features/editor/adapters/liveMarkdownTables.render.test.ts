@@ -150,11 +150,31 @@ describe('live markdown table inline rendering', () => {
     adapter.destroy();
   });
 
+  it('renders GFM reference-style links inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| [docs][ref] |\n\n[ref]: https://example.com');
+
+    const link = host.querySelector('td.cm-md-table-cell [data-md-link-url="https://example.com"]');
+    expect(link?.textContent).toBe('docs');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('docs');
+
+    adapter.destroy();
+  });
+
   it('renders OB-like wiki links inside inactive table cells', () => {
     const { adapter, host } = createAdapterHost('| A |\n| --- |\n| [[Folder/Card]] |');
 
     const link = host.querySelector('td.cm-md-table-cell [data-md-link-node-title="Folder/Card"]');
     expect(link?.textContent).toBe('Folder/Card');
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Folder/Card');
+
+    adapter.destroy();
+  });
+
+  it('renders OB-like embeds inside inactive table cells', () => {
+    const { adapter, host } = createAdapterHost('| A |\n| --- |\n| ![[Folder/Card]] |');
+
+    const embed = host.querySelector('td.cm-md-table-cell [data-md-embed-target="Folder/Card"]');
+    expect(embed?.textContent).toBe('Folder/Card');
     expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Folder/Card');
 
     adapter.destroy();

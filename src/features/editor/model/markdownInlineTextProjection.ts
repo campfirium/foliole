@@ -1,15 +1,22 @@
-import { collectMarkdownInlineLinkRanges, collectMarkdownInlineRanges } from './markdownInlineProjection';
+import { collectMarkdownInlineLinkRanges } from './markdownInlineLinkProjection';
+import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 import type { MarkdownInlineToken } from './markdownInlineProjectionTypes';
-import { collectMarkdownFootnoteRanges, collectMarkdownWikiLinkRanges } from './markdownOblikeInlineProjection';
+import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import {
+  collectMarkdownEmbedRanges,
+  collectMarkdownFootnoteRanges,
+  collectMarkdownWikiLinkRanges
+} from './markdownOblikeInlineProjection';
 
 type MarkdownInlineTextCandidate =
   | { from: number; href?: string; kind: 'autolink'; text: string; to: number }
   | { from: number; kind: 'footnote'; label: string; note: string | null; to: number }
+  | { from: number; kind: 'embed'; target: string; text: string; to: number }
   | { from: number; kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong'; text: string; to: number }
   | { from: number; href: string; kind: 'link'; text: string; to: number }
   | { from: number; kind: 'wikiLink'; text: string; title: string; to: number };
 
-function collectInlineTextCandidates(text: string): MarkdownInlineTextCandidate[] {
+function collectInlineTextCandidates(text: string, references: MarkdownLinkReferenceMap): MarkdownInlineTextCandidate[] {
   const markdownCandidates = collectMarkdownInlineRanges(text).map((range): MarkdownInlineTextCandidate => {
     if (range.kind === 'autolink') {
       return { from: range.from, href: range.href ?? range.text, kind: 'autolink', text: range.text, to: range.to };
@@ -23,7 +30,7 @@ function collectInlineTextCandidates(text: string): MarkdownInlineTextCandidate[
     note: footnote.note,
     to: footnote.to
   }));
-  const linkCandidates = collectMarkdownInlineLinkRanges(text).map((link): MarkdownInlineTextCandidate => ({
+  const linkCandidates = collectMarkdownInlineLinkRanges(text, 0, references).map((link): MarkdownInlineTextCandidate => ({
     from: link.from,
     href: link.href,
     kind: 'link',
@@ -37,15 +44,22 @@ function collectInlineTextCandidates(text: string): MarkdownInlineTextCandidate[
     title: link.title,
     to: link.to
   }));
-  return [...markdownCandidates, ...footnoteCandidates, ...linkCandidates, ...wikiCandidates]
+  const embedCandidates = collectMarkdownEmbedRanges(text).map((embed): MarkdownInlineTextCandidate => ({
+    from: embed.from,
+    kind: 'embed',
+    target: embed.target,
+    text: text.slice(embed.labelFrom, embed.labelTo),
+    to: embed.to
+  }));
+  return [...markdownCandidates, ...footnoteCandidates, ...linkCandidates, ...wikiCandidates, ...embedCandidates]
     .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
-export function projectMarkdownInlineText(text: string): MarkdownInlineToken[] {
+export function projectMarkdownInlineText(text: string, references: MarkdownLinkReferenceMap = new Map()): MarkdownInlineToken[] {
   const tokens: MarkdownInlineToken[] = [];
   let cursor = 0;
 
-  for (const candidate of collectInlineTextCandidates(text)) {
+  for (const candidate of collectInlineTextCandidates(text, references)) {
     if (candidate.from < cursor) continue;
     if (candidate.from > cursor) tokens.push({ kind: 'text', text: text.slice(cursor, candidate.from) });
     if (candidate.kind === 'autolink') {
@@ -56,6 +70,8 @@ export function projectMarkdownInlineText(text: string): MarkdownInlineToken[] {
       tokens.push({ href: candidate.href, kind: 'link', text: candidate.text });
     } else if (candidate.kind === 'wikiLink') {
       tokens.push({ kind: 'wikiLink', text: candidate.text, title: candidate.title });
+    } else if (candidate.kind === 'embed') {
+      tokens.push({ kind: 'embed', target: candidate.target, text: candidate.text });
     } else {
       tokens.push({ kind: candidate.kind, text: candidate.text });
     }

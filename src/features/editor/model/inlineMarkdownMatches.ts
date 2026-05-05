@@ -1,6 +1,12 @@
 import type { SemanticRange } from './inlineSemanticMarks';
-import { collectMarkdownInlineLinkRanges, collectMarkdownInlineRanges } from './markdownInlineProjection';
-import { collectMarkdownFootnoteRanges, collectMarkdownWikiLinkRanges } from './markdownOblikeInlineProjection';
+import { collectMarkdownInlineLinkRanges } from './markdownInlineLinkProjection';
+import { collectMarkdownInlineRanges } from './markdownInlineProjection';
+import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import {
+  collectMarkdownEmbedRanges,
+  collectMarkdownFootnoteRanges,
+  collectMarkdownWikiLinkRanges
+} from './markdownOblikeInlineProjection';
 
 export interface RangeBounds {
   from: number;
@@ -20,7 +26,10 @@ export interface InlineLinkMatch extends RangeBounds {
 }
 
 export interface AutolinkMatch extends RangeBounds {
+  hiddenRanges: RangeBounds[];
   href: string;
+  labelFrom: number;
+  labelTo: number;
 }
 
 export interface WikiLinkMatch extends RangeBounds {
@@ -28,6 +37,13 @@ export interface WikiLinkMatch extends RangeBounds {
   labelFrom: number;
   labelTo: number;
   title: string;
+}
+
+export interface EmbedMatch extends RangeBounds {
+  hiddenRanges: RangeBounds[];
+  labelFrom: number;
+  labelTo: number;
+  target: string;
 }
 
 export interface FootnoteMatch extends RangeBounds {
@@ -58,9 +74,10 @@ export function collectInlineCodeMatches(from: number, text: string): InlineCode
 export function collectInlineLinkMatches(
   from: number,
   text: string,
-  preservedRanges: ReadonlyArray<RangeBounds>
+  preservedRanges: ReadonlyArray<RangeBounds>,
+  references: MarkdownLinkReferenceMap = new Map()
 ): InlineLinkMatch[] {
-  return collectMarkdownInlineLinkRanges(text, from)
+  return collectMarkdownInlineLinkRanges(text, from, references)
     .filter((match) => !isWithinRanges(match.from, match.to, preservedRanges))
     .map((match) => ({
       from: match.from,
@@ -81,7 +98,10 @@ export function collectAutolinkMatches(
     .filter((match) => match.kind === 'autolink' && !isWithinRanges(match.from, match.to, preservedRanges))
     .map((match) => ({
       from: match.from,
+      hiddenRanges: match.syntaxRanges,
       href: match.href ?? match.text,
+      labelFrom: match.contentFrom,
+      labelTo: match.contentTo,
       to: match.to
     }));
 }
@@ -100,6 +120,23 @@ export function collectWikiLinkMatches(
       labelFrom: match.labelFrom,
       labelTo: match.labelTo,
       title: match.title
+    }));
+}
+
+export function collectEmbedMatches(
+  from: number,
+  text: string,
+  preservedRanges: ReadonlyArray<RangeBounds>
+): EmbedMatch[] {
+  return collectMarkdownEmbedRanges(text, from)
+    .filter((match) => !isWithinRanges(match.from, match.to, preservedRanges))
+    .map((match) => ({
+      from: match.from,
+      to: match.to,
+      hiddenRanges: match.hiddenRanges,
+      labelFrom: match.labelFrom,
+      labelTo: match.labelTo,
+      target: match.target
     }));
 }
 

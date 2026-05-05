@@ -124,6 +124,15 @@ function visitPrefixNodes(args: {
       to: extendTrailingSpaces(args.source, headerMark.to)
     });
   }
+  const setextHeaderMark = args.node.name.startsWith('SetextHeading') ? findChild(args.node, 'HeaderMark') : null;
+  if (setextHeaderMark) {
+    addPrefixRange(args.prefixes, args.source, args.offset, {
+      from: findLineStart(args.source, setextHeaderMark.from),
+      kind: 'heading',
+      markerText: '',
+      to: extendTrailingSpaces(args.source, setextHeaderMark.to)
+    });
+  }
 
   if (args.node.name === 'QuoteMark') {
     addPrefixRange(args.prefixes, args.source, args.offset, {
@@ -195,6 +204,8 @@ function visitLineClassNodes(args: {
   if (args.node.name === 'ATXHeading1') setLineClass(args.lineClasses, from, 'cm-line-h1', LINE_CLASS_PRIORITIES.heading);
   if (args.node.name === 'ATXHeading2') setLineClass(args.lineClasses, from, 'cm-line-h2', LINE_CLASS_PRIORITIES.heading);
   if (args.node.name === 'ATXHeading3') setLineClass(args.lineClasses, from, 'cm-line-h3', LINE_CLASS_PRIORITIES.heading);
+  if (args.node.name === 'SetextHeading1') setLineClass(args.lineClasses, from, 'cm-line-h1', LINE_CLASS_PRIORITIES.heading);
+  if (args.node.name === 'SetextHeading2') setLineClass(args.lineClasses, from, 'cm-line-h2', LINE_CLASS_PRIORITIES.heading);
   if (args.node.name === 'Blockquote') setLineClass(args.lineClasses, from, 'cm-line-quote', LINE_CLASS_PRIORITIES.quote);
   if (args.node.name === 'ListItem' && args.parentName === 'BulletList') {
     const className = findChild(args.node, 'Task') ? 'cm-line-list-unordered cm-line-task-list' : 'cm-line-list-unordered';

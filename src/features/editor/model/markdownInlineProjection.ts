@@ -1,5 +1,5 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
-import type { MarkdownInlineLinkRange, MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
+import type { MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -95,6 +95,23 @@ function createUrlCandidate(
   };
 }
 
+function createAutolinkCandidate(node: MarkdownSyntaxNode, source: string): InlineProjectionCandidate | null {
+  const url = collectChildNodes(node, new Set(['URL']))[0];
+  if (!url) return null;
+  const rawText = source.slice(url.from, url.to);
+  if (!rawText || PUNCTUATION_PATTERN.test(rawText)) return null;
+  return {
+    contentFrom: url.from,
+    contentTo: url.to,
+    from: node.from,
+    href: normalizeAutolinkHref(rawText),
+    kind: 'autolink',
+    syntaxRanges: collectChildRanges(node, new Set(['LinkMark'])),
+    text: rawText,
+    to: node.to
+  };
+}
+
 function visitInlineCandidates(args: {
   candidates: InlineProjectionCandidate[];
   node: MarkdownSyntaxNode;
@@ -121,6 +138,11 @@ function visitInlineCandidates(args: {
     args.candidates.push(createMarkedTextCandidate(args.node, args.source, 'inlineCode'));
     return;
   }
+  if (args.node.name === 'Autolink') {
+    const candidate = createAutolinkCandidate(args.node, args.source);
+    if (candidate) args.candidates.push(candidate);
+    return;
+  }
   if (args.node.name === 'URL' && args.parentName !== 'Link' && args.parentName !== 'Image') {
     const candidate = createUrlCandidate(args.node, args.source);
     if (candidate) args.candidates.push(candidate);
@@ -132,46 +154,6 @@ function visitInlineCandidates(args: {
       candidates: args.candidates,
       node: child,
       parentName: args.node.name,
-      source: args.source
-    });
-  }
-}
-
-function visitLinkRanges(args: {
-  links: MarkdownInlineLinkRange[];
-  node: MarkdownSyntaxNode;
-  offset: number;
-  source: string;
-}) {
-  if (args.node.name === 'Link') {
-    const marks = collectChildNodes(args.node, new Set(['LinkMark']));
-    const url = collectChildNodes(args.node, new Set(['URL']))[0];
-    const openingBracket = marks[0];
-    const closingBracket = marks[1];
-    if (openingBracket && closingBracket && url) {
-      args.links.push({
-        from: args.offset + args.node.from,
-        hiddenRanges: [...marks, url]
-          .map((range) => ({
-            from: args.offset + range.from,
-            to: args.offset + range.to
-          }))
-          .sort((left, right) => left.from - right.from),
-        href: args.source.slice(url.from, url.to),
-        labelFrom: args.offset + openingBracket.to,
-        labelTo: args.offset + closingBracket.from,
-        to: args.offset + args.node.to
-      });
-    }
-    return;
-  }
-  if (args.node.name === 'Image') return;
-
-  for (let child = args.node.firstChild; child; child = child.nextSibling) {
-    visitLinkRanges({
-      links: args.links,
-      node: child,
-      offset: args.offset,
       source: args.source
     });
   }
@@ -203,16 +185,4 @@ export function collectMarkdownInlineRanges(text: string, offset = 0): MarkdownI
     text: candidate.text,
     to: offset + candidate.to
   }));
-}
-
-export function collectMarkdownInlineLinkRanges(text: string, offset = 0): MarkdownInlineLinkRange[] {
-  const tree = folioleMarkdownParser.parse(text);
-  const links: MarkdownInlineLinkRange[] = [];
-  visitLinkRanges({
-    links,
-    node: tree.topNode,
-    offset,
-    source: text
-  });
-  return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }

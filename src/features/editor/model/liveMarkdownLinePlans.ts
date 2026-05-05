@@ -1,6 +1,7 @@
 import { collectPreviewLineMatchState, collectSourceLineMatchState } from './inlineLineMatchPlans';
 import {
   collectAutolinkPresentationPlan,
+  collectEmbedPresentationPlan,
   collectInlineCodePresentationPlan,
   collectInlineLinkPresentationPlan,
   collectWikiLinkPresentationPlan,
@@ -16,6 +17,7 @@ import {
   type InlineTextDecorationPlan
 } from './inlineTextDecorationPlans';
 import { collectImageMatches, type MarkdownImageMatch } from './markdownImageMatches';
+import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
 export interface PreviewLineDecorationPlan {
   footnoteMatches: ReturnType<typeof collectPreviewLineMatchState>['footnoteMatches'];
   imageMatches: MarkdownImageMatch[];
@@ -37,6 +39,20 @@ export interface SourceLineDecorationPlan {
   isThematicBreak: boolean;
   nextInCodeBlock: boolean;
   textDecorationPlans: InlineTextDecorationPlan[];
+}
+
+interface PreviewLineDecorationPlanArgs {
+  hideTitleHeading: boolean;
+  inCodeBlock: boolean;
+  codeFenceLineFroms?: ReadonlySet<number>;
+  isCursorLine: boolean;
+  lineFrom: number;
+  lineNumber: number;
+  lineClassByFrom?: ReadonlyMap<number, string>;
+  lineText: string;
+  linkReferences?: MarkdownLinkReferenceMap;
+  markdownSyntaxVisible: boolean;
+  thematicBreakLineFroms?: ReadonlySet<number>;
 }
 
 function collectPreviewTextDecorationPlans(args: {
@@ -81,23 +97,30 @@ function resolvePreviewLineClass(args: {
     ? 'cm-line-title-heading-hidden'
     : args.isCodeFenceLine && !args.showSyntaxOnLine
       ? 'cm-line-code-fence-hidden'
-      : baseLineClass;
+    : baseLineClass;
 }
 
-export function collectPreviewLineDecorationPlan(args: {
-  hideTitleHeading: boolean;
-  inCodeBlock: boolean;
-  codeFenceLineFroms?: ReadonlySet<number>;
-  isCursorLine: boolean;
-  lineFrom: number;
-  lineNumber: number;
-  lineClassByFrom?: ReadonlyMap<number, string>;
-  lineText: string;
-  markdownSyntaxVisible: boolean;
-  thematicBreakLineFroms?: ReadonlySet<number>;
-}): PreviewLineDecorationPlan {
+function collectPreviewInlinePresentationPlans(args: {
+  autolinkMatches: ReturnType<typeof collectPreviewLineMatchState>['autolinkMatches'];
+  embedMatches: ReturnType<typeof collectPreviewLineMatchState>['embedMatches'];
+  inlineCodeMatches: ReturnType<typeof collectPreviewLineMatchState>['inlineCodeMatches'];
+  inlineLinkMatches: ReturnType<typeof collectPreviewLineMatchState>['inlineLinkMatches'];
+  showSyntaxOnLine: boolean;
+  wikiLinkMatches: ReturnType<typeof collectPreviewLineMatchState>['wikiLinkMatches'];
+}) {
+  return [
+    collectInlineCodePresentationPlan(args.inlineCodeMatches, args.showSyntaxOnLine),
+    collectInlineLinkPresentationPlan(args.inlineLinkMatches, args.showSyntaxOnLine),
+    collectWikiLinkPresentationPlan(args.wikiLinkMatches, args.showSyntaxOnLine),
+    collectEmbedPresentationPlan(args.embedMatches, args.showSyntaxOnLine),
+    collectAutolinkPresentationPlan(args.autolinkMatches, args.showSyntaxOnLine)
+  ];
+}
+
+export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlanArgs): PreviewLineDecorationPlan {
   const isCodeFenceLine = args.codeFenceLineFroms?.has(args.lineFrom) ?? false;
   const showSyntaxOnLine = args.markdownSyntaxVisible && args.isCursorLine;
+  const linkReferences = args.linkReferences ?? new Map();
   const lineClass = resolvePreviewLineClass({
     hideTitleHeading: args.hideTitleHeading,
     inCodeBlock: args.inCodeBlock,
@@ -107,27 +130,30 @@ export function collectPreviewLineDecorationPlan(args: {
     lineNumber: args.lineNumber,
     showSyntaxOnLine
   });
-  const imageMatches = collectImageMatches(args.lineFrom, args.lineText);
+  const imageMatches = collectImageMatches(args.lineFrom, args.lineText, linkReferences);
   const {
     autolinkMatches,
+    embedMatches,
     footnoteMatches,
     footnoteRanges,
     inlineCodeMatches,
     inlineLinkMatches,
     preservedRanges,
     wikiLinkMatches
-  } = collectPreviewLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock, imageMatches);
+  } = collectPreviewLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock, imageMatches, linkReferences);
 
   return {
     footnoteMatches,
     imageMatches,
     imageVisible: !args.inCodeBlock,
-    inlinePresentationPlans: [
-      collectInlineCodePresentationPlan(inlineCodeMatches, showSyntaxOnLine),
-      collectInlineLinkPresentationPlan(inlineLinkMatches, showSyntaxOnLine),
-      collectWikiLinkPresentationPlan(wikiLinkMatches, showSyntaxOnLine),
-      collectAutolinkPresentationPlan(autolinkMatches)
-    ],
+    inlinePresentationPlans: collectPreviewInlinePresentationPlans({
+      autolinkMatches,
+      embedMatches,
+      inlineCodeMatches,
+      inlineLinkMatches,
+      showSyntaxOnLine,
+      wikiLinkMatches
+    }),
     isCodeFenceLine,
     isThematicBreak: args.thematicBreakLineFroms?.has(args.lineFrom) ?? false,
     lineClass,
@@ -150,17 +176,19 @@ export function collectSourceLineDecorationPlan(args: {
   codeFenceLineFroms?: ReadonlySet<number>;
   lineFrom: number;
   lineText: string;
+  linkReferences?: MarkdownLinkReferenceMap;
   thematicBreakLineFroms?: ReadonlySet<number>;
 }): SourceLineDecorationPlan {
   const {
     autolinkMatches,
+    embedMatches,
     footnoteMatches,
     footnoteRanges,
     inlineCodeMatches,
     inlineLinkMatches,
     preservedRanges,
     wikiLinkMatches
-  } = collectSourceLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock);
+  } = collectSourceLineMatchState(args.lineFrom, args.lineText, args.inCodeBlock, args.linkReferences);
   const isCodeFenceLine = args.codeFenceLineFroms?.has(args.lineFrom) ?? false;
 
   return {
@@ -168,7 +196,8 @@ export function collectSourceLineDecorationPlan(args: {
     inlinePresentationPlans: [
       collectInlineLinkPresentationPlan(inlineLinkMatches, true),
       collectWikiLinkPresentationPlan(wikiLinkMatches, true),
-      collectAutolinkPresentationPlan(autolinkMatches)
+      collectEmbedPresentationPlan(embedMatches, true),
+      collectAutolinkPresentationPlan(autolinkMatches, true)
     ],
     isCodeFenceLine,
     isThematicBreak: args.thematicBreakLineFroms?.has(args.lineFrom) ?? false,

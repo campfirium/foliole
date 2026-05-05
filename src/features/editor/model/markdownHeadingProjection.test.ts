@@ -17,4 +17,13 @@ describe('markdownHeadingProjection', () => {
 
     expect(collectMarkdownHeadingRanges(content)[0]?.text).toBe('Linked detail');
   });
+
+  it('collects parser-backed setext heading ranges', () => {
+    const content = ['Title **One**', '===', 'Section', '---'].join('\n');
+
+    expect(collectMarkdownHeadingRanges(content)).toEqual([
+      { contentFrom: 0, contentTo: 13, from: 0, level: 1, text: 'Title One', to: 17 },
+      { contentFrom: 18, contentTo: 25, from: 18, level: 2, text: 'Section', to: 29 }
+    ]);
+  });
 });

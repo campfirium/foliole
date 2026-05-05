@@ -1,6 +1,7 @@
 import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -26,6 +27,7 @@ export interface MarkdownTablePlan {
   anchorDecorations: readonly EditorTextAnchorDecoration[];
   columnCount: number;
   from: number;
+  linkReferences?: MarkdownLinkReferenceMap;
   rows: MarkdownTableRowPlan[];
   to: number;
 }
@@ -131,6 +133,7 @@ function resolveTableDelimiterTo(tableNode: MarkdownSyntaxNode, offset: number, 
 function collectTablePlanFromNode(args: {
   activePosition: number | null;
   anchorDecorations: readonly EditorTextAnchorDecoration[];
+  linkReferences?: MarkdownLinkReferenceMap;
   node: MarkdownSyntaxNode;
   offset: number;
   source: string;
@@ -155,6 +158,7 @@ function collectTablePlanFromNode(args: {
     anchorDecorations,
     columnCount: header.cells.length,
     from: tableFrom,
+    linkReferences: args.linkReferences,
     rows,
     to: tableTo
   };
@@ -174,6 +178,7 @@ export function collectMarkdownTablePlans(args: {
   activePosition: number | null;
   anchorDecorations?: readonly EditorTextAnchorDecoration[];
   from: number;
+  linkReferences?: MarkdownLinkReferenceMap;
   text: string;
 }): MarkdownTablePlan[] {
   const tree = folioleMarkdownParser.parse(args.text);
@@ -183,6 +188,7 @@ export function collectMarkdownTablePlans(args: {
     const plan = collectTablePlanFromNode({
       activePosition: args.activePosition,
       anchorDecorations: args.anchorDecorations ?? [],
+      linkReferences: args.linkReferences,
       node,
       offset: args.from,
       source: args.text

@@ -82,6 +82,26 @@ const INLINE_LINK_TABLE_PREVIEW = {
   }
 };
 
+const REFERENCE_LINK_TABLE_PREVIEW = {
+  table: {
+    active: false,
+    anchorDecorations: [],
+    columnCount: 1,
+    from: 0,
+    linkReferences: new Map([['ref', 'https://example.com']]),
+    rows: [
+      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
+      {
+        cells: [{ align: null, from: 18, text: '[docs][ref]', to: 29 }],
+        from: 16,
+        kind: 'body' as const,
+        to: 31
+      }
+    ],
+    to: 31
+  }
+};
+
 const WIKI_LINK_TABLE_PREVIEW = {
   table: {
     active: false,
@@ -98,6 +118,25 @@ const WIKI_LINK_TABLE_PREVIEW = {
       }
     ],
     to: 35
+  }
+};
+
+const EMBED_TABLE_PREVIEW = {
+  table: {
+    active: false,
+    anchorDecorations: [],
+    columnCount: 1,
+    from: 0,
+    rows: [
+      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
+      {
+        cells: [{ align: null, from: 18, text: '![[Folder/Card|Alias]]', to: 40 }],
+        from: 16,
+        kind: 'body' as const,
+        to: 42
+      }
+    ],
+    to: 42
   }
 };
 
@@ -186,12 +225,28 @@ describe('MarkdownTablePreviewDialog', () => {
     expect(screen.getByRole('cell', { name: 'docs' })).toBeInTheDocument();
   });
 
+  it('renders GFM reference-style links inside the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={REFERENCE_LINK_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td [data-md-link-url="https://example.com"]')?.textContent).toBe('docs');
+    expect(screen.getByRole('cell', { name: 'docs' })).toBeInTheDocument();
+  });
+
   it('renders OB-like wiki links inside the full table preview', async () => {
     render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={WIKI_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('td [data-md-link-node-title="Folder/Card"]')?.textContent).toBe('Folder/Card');
     expect(screen.getByRole('cell', { name: 'Folder/Card' })).toBeInTheDocument();
+  });
+
+  it('renders OB-like embeds inside the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={EMBED_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td [data-md-embed-target="Folder/Card"]')?.textContent).toBe('Alias');
+    expect(screen.getByRole('cell', { name: 'Alias' })).toBeInTheDocument();
   });
 
   it('renders OB-like footnotes inside the full table preview', async () => {

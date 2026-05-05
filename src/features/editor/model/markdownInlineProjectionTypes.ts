@@ -8,6 +8,7 @@ export type MarkdownInlineToken =
   | { href: string; kind: 'autolink'; text: string }
   | { kind: 'footnote'; label: string; note: string | null }
   | { href: string; kind: 'link'; text: string }
+  | { kind: 'embed'; target: string; text: string }
   | { kind: 'wikiLink'; text: string; title: string };
 
 export type MarkdownInlineRangeKind =

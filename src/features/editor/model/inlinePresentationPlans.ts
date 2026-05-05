@@ -1,4 +1,4 @@
-import type { AutolinkMatch, InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
+import type { AutolinkMatch, EmbedMatch, InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
 import type { SemanticRange } from './inlineSemanticMarks';
 
 export interface InlinePresentationMarkRange extends SemanticRange {
@@ -63,16 +63,31 @@ export function collectInlineLinkPresentationPlan(
   return { markRanges, replaceRanges };
 }
 
-export function collectAutolinkPresentationPlan(linkMatches: ReadonlyArray<AutolinkMatch>): InlinePresentationPlan {
-  return {
-    markRanges: linkMatches.map((linkMatch) => ({
+export function collectAutolinkPresentationPlan(
+  linkMatches: ReadonlyArray<AutolinkMatch>,
+  showSyntax: boolean
+): InlinePresentationPlan {
+  const markRanges: InlinePresentationMarkRange[] = [];
+  const replaceRanges: SemanticRange[] = [];
+
+  for (const linkMatch of linkMatches) {
+    markRanges.push({
       className: 'cm-md-link-text',
-      from: linkMatch.from,
-      to: linkMatch.to,
+      from: linkMatch.labelFrom,
+      to: linkMatch.labelTo,
       attributes: { 'data-md-link-url': linkMatch.href }
-    })),
-    replaceRanges: []
-  };
+    });
+
+    for (const hiddenRange of linkMatch.hiddenRanges) {
+      if (showSyntax) {
+        markRanges.push({ className: 'cm-md-syntax-visible', from: hiddenRange.from, to: hiddenRange.to });
+      } else {
+        replaceRanges.push({ from: hiddenRange.from, to: hiddenRange.to });
+      }
+    }
+  }
+
+  return { markRanges, replaceRanges };
 }
 
 export function collectWikiLinkPresentationPlan(
@@ -91,6 +106,33 @@ export function collectWikiLinkPresentationPlan(
     });
 
     for (const hiddenRange of linkMatch.hiddenRanges) {
+      if (showSyntax) {
+        markRanges.push({ className: 'cm-md-syntax-visible', from: hiddenRange.from, to: hiddenRange.to });
+      } else {
+        replaceRanges.push({ from: hiddenRange.from, to: hiddenRange.to });
+      }
+    }
+  }
+
+  return { markRanges, replaceRanges };
+}
+
+export function collectEmbedPresentationPlan(
+  embedMatches: ReadonlyArray<EmbedMatch>,
+  showSyntax: boolean
+): InlinePresentationPlan {
+  const markRanges: InlinePresentationMarkRange[] = [];
+  const replaceRanges: SemanticRange[] = [];
+
+  for (const embedMatch of embedMatches) {
+    markRanges.push({
+      className: 'cm-md-link-text',
+      from: embedMatch.labelFrom,
+      to: embedMatch.labelTo,
+      attributes: { 'data-md-embed-target': embedMatch.target }
+    });
+
+    for (const hiddenRange of embedMatch.hiddenRanges) {
       if (showSyntax) {
         markRanges.push({ className: 'cm-md-syntax-visible', from: hiddenRange.from, to: hiddenRange.to });
       } else {

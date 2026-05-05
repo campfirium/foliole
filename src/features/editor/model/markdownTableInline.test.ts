@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { tokenizeMarkdownTableInlineText } from './markdownTableInline';
 
-describe('markdownTableInline', () => {
+describe('markdownTableInline GFM tokens', () => {
   it('tokenizes table cell emphasis, strong, strikethrough, and autolinks', () => {
     expect(tokenizeMarkdownTableInlineText('A *em* **bold** and ~~gone~~ https://example.com.')).toEqual([
       { kind: 'text', text: 'A ' },
@@ -26,14 +26,6 @@ describe('markdownTableInline', () => {
     ]);
   });
 
-  it('tokenizes OB-like source highlights from the shared parser projection', () => {
-    expect(tokenizeMarkdownTableInlineText('A ==marked== cell')).toEqual([
-      { kind: 'text', text: 'A ' },
-      { kind: 'sourceHighlight', text: 'marked' },
-      { kind: 'text', text: ' cell' }
-    ]);
-  });
-
   it('tokenizes GFM inline links from the shared parser projection', () => {
     expect(tokenizeMarkdownTableInlineText('See [docs](https://example.com) now')).toEqual([
       { kind: 'text', text: 'See ' },
@@ -42,11 +34,44 @@ describe('markdownTableInline', () => {
     ]);
   });
 
+  it('tokenizes GFM reference-style links from shared reference definitions', () => {
+    expect(tokenizeMarkdownTableInlineText('See [docs][ref]', new Map([['ref', 'https://example.com']]))).toEqual([
+      { kind: 'text', text: 'See ' },
+      { href: 'https://example.com', kind: 'link', text: 'docs' }
+    ]);
+  });
+
+  it('tokenizes GFM angle autolinks without delimiter text', () => {
+    expect(tokenizeMarkdownTableInlineText('See <https://example.com> now')).toEqual([
+      { kind: 'text', text: 'See ' },
+      { href: 'https://example.com', kind: 'autolink', text: 'https://example.com' },
+      { kind: 'text', text: ' now' }
+    ]);
+  });
+});
+
+describe('markdownTableInline OB-like tokens', () => {
+  it('tokenizes OB-like source highlights from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('A ==marked== cell')).toEqual([
+      { kind: 'text', text: 'A ' },
+      { kind: 'sourceHighlight', text: 'marked' },
+      { kind: 'text', text: ' cell' }
+    ]);
+  });
+
   it('tokenizes OB-like wiki links from the shared parser projection', () => {
     expect(tokenizeMarkdownTableInlineText('See [[Folder/Card]] and ![[Raw]]')).toEqual([
       { kind: 'text', text: 'See ' },
       { kind: 'wikiLink', text: 'Folder/Card', title: 'Folder/Card' },
-      { kind: 'text', text: ' and ![[Raw]]' }
+      { kind: 'text', text: ' and ' },
+      { kind: 'embed', target: 'Raw', text: 'Raw' }
+    ]);
+  });
+
+  it('tokenizes OB-like embeds with aliases from the shared parser projection', () => {
+    expect(tokenizeMarkdownTableInlineText('See ![[Folder/Card|Alias]]')).toEqual([
+      { kind: 'text', text: 'See ' },
+      { kind: 'embed', target: 'Folder/Card', text: 'Alias' }
     ]);
   });
 

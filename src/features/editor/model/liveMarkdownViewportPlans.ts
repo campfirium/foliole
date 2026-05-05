@@ -4,6 +4,7 @@ import {
   type PreviewLineDecorationPlan,
   type SourceLineDecorationPlan
 } from './liveMarkdownLinePlans';
+import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
 
 export interface ViewportLineInput {
   from: number;
@@ -30,6 +31,7 @@ export function collectPreviewViewportPlans(args: {
   hideTitleHeading: boolean;
   lineClassByFrom?: ReadonlyMap<number, string>;
   lines: ReadonlyArray<ViewportLineInput>;
+  linkReferences?: MarkdownLinkReferenceMap;
   markdownSyntaxVisible: boolean;
   startInCodeBlock: boolean;
   thematicBreakLineFroms?: ReadonlySet<number>;
@@ -48,6 +50,7 @@ export function collectPreviewViewportPlans(args: {
       lineClassByFrom: args.lineClassByFrom,
       lineNumber: line.lineNumber,
       lineText: line.text,
+      linkReferences: args.linkReferences,
       markdownSyntaxVisible: args.markdownSyntaxVisible,
       thematicBreakLineFroms: args.thematicBreakLineFroms
     });
@@ -62,6 +65,7 @@ export function collectSourceViewportPlans(args: {
   codeFenceLineFroms?: ReadonlySet<number>;
   codeLineFroms?: ReadonlySet<number>;
   lines: ReadonlyArray<ViewportLineInput>;
+  linkReferences?: MarkdownLinkReferenceMap;
   startInCodeBlock: boolean;
   thematicBreakLineFroms?: ReadonlySet<number>;
 }): ViewportSourceLinePlan[] {
@@ -75,6 +79,7 @@ export function collectSourceViewportPlans(args: {
       inCodeBlock: lineInCodeBlock,
       lineFrom: line.from,
       lineText: line.text,
+      linkReferences: args.linkReferences,
       thematicBreakLineFroms: args.thematicBreakLineFroms
     });
     plans.push({ lineFrom: line.from, lineText: line.text, plan });

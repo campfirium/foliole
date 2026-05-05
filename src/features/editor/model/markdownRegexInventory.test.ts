@@ -89,11 +89,6 @@ const allowedRegexInventory = [
   },
   {
     path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
-    line: 'const WIKILINK_WRAPPER_PATTERN = /\\[\\[([^\\]]+)\\]\\]/g;',
-    owner: 'centralized frontmatter projection'
-  },
-  {
-    path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
     line: 'const keyMatch = line.match(FRONTMATTER_KEY_VALUE_PATTERN);',
     owner: 'centralized frontmatter projection'
   },

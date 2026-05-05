@@ -63,11 +63,41 @@ describe('liveMarkdown preview line plans', () => {
       }
     ]);
   });
+});
 
+describe('liveMarkdown reference-style preview line plans', () => {
+  it('adds reference-style link presentation to preview plans', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 0,
+      lineNumber: 1,
+      lineText: 'See [docs][ref]',
+      linkReferences: new Map([['ref', 'https://example.com']]),
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.inlinePresentationPlans[1]).toEqual({
+      markRanges: [
+        {
+          attributes: { 'data-md-link-url': 'https://example.com' },
+          className: 'cm-md-link-text',
+          from: 5,
+          to: 9
+        }
+      ],
+      replaceRanges: [
+        { from: 4, to: 5 },
+        { from: 9, to: 10 },
+        { from: 10, to: 15 }
+      ]
+    });
+  });
 });
 
 describe('liveMarkdown Obsidian-like preview line plans', () => {
-  it('keeps embeds raw while rendering non-embed wiki links', () => {
+  it('renders embeds and non-embed wiki links as separate parser-backed plans', () => {
     const plan = collectPreviewLineDecorationPlan({
       hideTitleHeading: false,
       inCodeBlock: false,
@@ -92,6 +122,20 @@ describe('liveMarkdown Obsidian-like preview line plans', () => {
         { from: 26, to: 28 }
       ]
     });
+    expect(plan.inlinePresentationPlans[3]).toEqual({
+      markRanges: [
+        {
+          attributes: { 'data-md-embed-target': 'image.png' },
+          className: 'cm-md-link-text',
+          from: 3,
+          to: 12
+        }
+      ],
+      replaceRanges: [
+        { from: 0, to: 3 },
+        { from: 12, to: 14 }
+      ]
+    });
   });
 });
 
@@ -104,7 +148,7 @@ describe('liveMarkdown source line plans', () => {
     });
 
     expect(plan.footnoteMatches).toEqual([]);
-    expect(plan.inlinePresentationPlans).toHaveLength(3);
+    expect(plan.inlinePresentationPlans).toHaveLength(4);
     expect(plan.textDecorationPlans).toHaveLength(2);
     expect(plan.nextInCodeBlock).toBe(false);
   });

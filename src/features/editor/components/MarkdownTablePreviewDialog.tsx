@@ -143,7 +143,7 @@ function renderTableRow(
             key={columnIndex}
             style={cell.align ? { textAlign: cell.align } : undefined}
           >
-            {renderCellInlineContent(cell.text.trim())}
+            {renderCellInlineContent(cell.text.trim(), preview.table.linkReferences)}
           </Tag>
         );
       })}
@@ -163,8 +163,11 @@ function resolveCellClassName(
   return classNames.join(' ');
 }
 
-function renderCellInlineContent(text: string) {
-  return tokenizeMarkdownTableInlineText(text).map((token, index) => {
+function renderCellInlineContent(
+  text: string,
+  references: MarkdownTablePreviewRequest['table']['linkReferences'] = new Map()
+) {
+  return tokenizeMarkdownTableInlineText(text, references).map((token, index) => {
     if (token.kind === 'emphasis') return <em className="cm-md-emphasis" key={index}>{token.text}</em>;
     if (token.kind === 'strong') return <strong className="font-semibold" key={index}>{token.text}</strong>;
     if (token.kind === 'strikethrough') return <s key={index}>{token.text}</s>;
@@ -176,6 +179,9 @@ function renderCellInlineContent(text: string) {
     if (token.kind === 'footnote') return renderFootnoteInlineContent(token.label, token.note, index);
     if (token.kind === 'wikiLink') {
       return <span className="cursor-pointer text-accent underline" data-md-link-node-title={token.title} key={index}>{token.text}</span>;
+    }
+    if (token.kind === 'embed') {
+      return <span className="cursor-pointer text-accent underline" data-md-embed-target={token.target} key={index}>{token.text}</span>;
     }
     return token.text;
   });

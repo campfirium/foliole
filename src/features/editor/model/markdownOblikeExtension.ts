@@ -142,7 +142,7 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
         parse(cx, next, pos) {
           return next === 33 ? parseEmbed(cx, pos) : -1;
         },
-        before: 'Image'
+        before: 'Link'
       },
       {
         name: 'Footnote',

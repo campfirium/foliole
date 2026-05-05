@@ -1,5 +1,6 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
-import { collectMarkdownInlineLinkRanges, collectMarkdownInlineRanges } from './markdownInlineProjection';
+import { collectMarkdownInlineLinkRanges } from './markdownInlineLinkProjection';
+import { collectMarkdownInlineRanges } from './markdownInlineProjection';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -22,6 +23,8 @@ function collectChildRanges(node: MarkdownSyntaxNode, name: string) {
 }
 
 function resolveHeadingLevel(nodeName: string) {
+  if (nodeName === 'SetextHeading1') return 1;
+  if (nodeName === 'SetextHeading2') return 2;
   const suffix = nodeName.slice('ATXHeading'.length);
   const level = Number.parseInt(suffix, 10);
   return Number.isInteger(level) && level >= 1 && level <= 6 ? level : null;
@@ -52,8 +55,9 @@ function createHeadingRange(node: MarkdownSyntaxNode, source: string, offset: nu
   const level = resolveHeadingLevel(node.name);
   if (!level) return null;
   const marks = collectChildRanges(node, 'HeaderMark');
-  const contentFrom = skipInlineWhitespace(source, marks[0]?.to ?? node.from, node.to);
-  const contentTo = marks.length > 1 ? marks[marks.length - 1]?.from ?? node.to : node.to;
+  const isSetext = node.name.startsWith('SetextHeading');
+  const contentFrom = isSetext ? node.from : skipInlineWhitespace(source, marks[0]?.to ?? node.from, node.to);
+  const contentTo = isSetext ? trimSetextHeadingContentTo(source, marks[0]?.from ?? node.to) : marks.length > 1 ? marks[marks.length - 1]?.from ?? node.to : node.to;
   const text = normalizeHeadingText(source, contentFrom, contentTo);
   return text
     ? {
@@ -65,6 +69,14 @@ function createHeadingRange(node: MarkdownSyntaxNode, source: string, offset: nu
         to: offset + node.to
       }
     : null;
+}
+
+function trimSetextHeadingContentTo(source: string, to: number) {
+  let cursor = to;
+  while (cursor > 0 && (source[cursor - 1] === '\n' || source[cursor - 1] === '\r' || source[cursor - 1] === ' ' || source[cursor - 1] === '\t')) {
+    cursor -= 1;
+  }
+  return cursor;
 }
 
 function skipInlineWhitespace(source: string, from: number, to: number) {
@@ -79,7 +91,7 @@ function visitHeadingNodes(args: {
   offset: number;
   source: string;
 }) {
-  if (args.node.name.startsWith('ATXHeading')) {
+  if (args.node.name.startsWith('ATXHeading') || args.node.name.startsWith('SetextHeading')) {
     const heading = createHeadingRange(args.node, args.source, args.offset);
     if (heading) args.headings.push(heading);
     return;

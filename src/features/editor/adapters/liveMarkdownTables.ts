@@ -2,6 +2,7 @@ import type { Range, Text } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
 import { buildFootnotePresentation } from '../model/footnotePresentation';
+import type { MarkdownLinkReferenceMap } from '../model/markdownLinkReferences';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import {
   getMarkdownTableCellAnchorClasses,
@@ -13,8 +14,8 @@ import { dispatchMarkdownTablePreviewRequest } from '../model/markdownTablePrevi
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
 
-function appendInlineText(container: HTMLElement, text: string) {
-  for (const token of tokenizeMarkdownTableInlineText(text)) {
+function appendInlineText(container: HTMLElement, text: string, references: MarkdownLinkReferenceMap = new Map()) {
+  for (const token of tokenizeMarkdownTableInlineText(text, references)) {
     if (token.kind === 'text') container.append(document.createTextNode(token.text));
     if (token.kind === 'emphasis') appendEmphasisElement(container, token.text);
     if (token.kind === 'strong') appendStrongElement(container, token.text);
@@ -24,6 +25,7 @@ function appendInlineText(container: HTMLElement, text: string) {
     if (token.kind === 'autolink') appendAutolinkElement(container, token.text, token.href);
     if (token.kind === 'footnote') appendFootnoteElement(container, token.label, token.note);
     if (token.kind === 'link') appendAutolinkElement(container, token.text, token.href);
+    if (token.kind === 'embed') appendEmbedElement(container, token.text, token.target);
     if (token.kind === 'wikiLink') appendWikiLinkElement(container, token.text, token.title);
   }
 }
@@ -79,6 +81,14 @@ function appendWikiLinkElement(container: HTMLElement, label: string, title: str
   container.append(link);
 }
 
+function appendEmbedElement(container: HTMLElement, label: string, target: string) {
+  const embed = document.createElement('span');
+  embed.className = 'cm-md-link-text';
+  embed.dataset.mdEmbedTarget = target;
+  embed.textContent = label;
+  container.append(embed);
+}
+
 function appendFootnoteElement(container: HTMLElement, label: string, note: string | null) {
   const presentation = buildFootnotePresentation({ label, note });
   const wrapper = document.createElement('span');
@@ -98,7 +108,8 @@ function appendFootnoteElement(container: HTMLElement, label: string, note: stri
 function createCellElement(
   cell: MarkdownTableCellPlan,
   tagName: 'td' | 'th',
-  decorations: readonly EditorTextAnchorDecoration[]
+  decorations: readonly EditorTextAnchorDecoration[],
+  references: MarkdownLinkReferenceMap = new Map()
 ) {
   const element = document.createElement(tagName);
   element.className = 'cm-md-table-cell';
@@ -106,7 +117,7 @@ function createCellElement(
   if (hasHighlight) element.classList.add('cm-md-highlight');
   if (hasCloze) element.classList.add('cm-md-cloze');
   applyCellAlignment(element, cell.align);
-  appendInlineText(element, cell.text.trim());
+  appendInlineText(element, cell.text.trim(), references);
   return element;
 }
 
@@ -133,7 +144,12 @@ function createTableElement(tablePlan: MarkdownTablePlan) {
     rowElement.className = row.kind === 'header' ? 'cm-md-table-row cm-md-table-row-header' : 'cm-md-table-row';
     for (let index = 0; index < tablePlan.columnCount; index += 1) {
       const cell = row.cells[index] ?? { align: null, from: row.to, text: '', to: row.to };
-      rowElement.append(createCellElement(cell, row.kind === 'header' ? 'th' : 'td', tablePlan.anchorDecorations));
+      rowElement.append(createCellElement(
+        cell,
+        row.kind === 'header' ? 'th' : 'td',
+        tablePlan.anchorDecorations,
+        tablePlan.linkReferences
+      ));
     }
     body.append(rowElement);
   }

@@ -41,4 +41,42 @@ describe('markdownImageMatches', () => {
       }
     ]);
   });
+
+  it('collects parser-backed image URLs without title suffixes', () => {
+    expect(collectImageMatches(0, '![Cover](https://example.com/a.png "Title")')).toEqual([
+      {
+        attachmentId: null,
+        alt: 'Cover',
+        display: 'block',
+        from: 0,
+        source: 'https://example.com/a.png',
+        to: 43
+      }
+    ]);
+  });
+
+  it('normalizes inline markdown syntax from alt text', () => {
+    expect(collectImageMatches(0, '![A **cover**](https://example.com/a.png)')[0]?.alt).toBe('A cover');
+  });
+
+  it('does not collect image syntax inside inline code', () => {
+    expect(collectImageMatches(0, '`![No](https://example.com/a.png)`')).toEqual([]);
+  });
+});
+
+describe('reference-style markdownImageMatches', () => {
+  it('collects reference-style images from shared reference definitions', () => {
+    const references = new Map([['img', 'https://example.com/a.png']]);
+
+    expect(collectImageMatches(0, '![A **cover**][img]', references)).toEqual([
+      {
+        attachmentId: null,
+        alt: 'A cover',
+        display: 'block',
+        from: 0,
+        source: 'https://example.com/a.png',
+        to: 19
+      }
+    ]);
+  });
 });

@@ -47,6 +47,14 @@ describe('markdownOblikeExtension', () => {
     expect(names).not.toContain('WikiLink');
   });
 
+  it('keeps standard images and link references parseable while embed parsing is enabled', () => {
+    const names = collectNodeNames('![alt](x.png)\n\n[img]: https://example.com/x.png');
+
+    expect(names).toContain('Image');
+    expect(names).toContain('LinkReference');
+    expect(names).toContain('URL');
+  });
+
   it('does not parse wiki links inside inline code', () => {
     const names = collectNodeNames('`[[Page]]`');
 

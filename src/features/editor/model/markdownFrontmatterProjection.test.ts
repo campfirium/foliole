@@ -20,10 +20,10 @@ describe('markdownFrontmatterProjection', () => {
 
   it('extracts values and keeps list items under the current key', () => {
     expect(
-      extractFrontmatterEntries('---\nauthor: [[Jane Doe]]\ntags:\n  - [[design]]\n  - writing\n---\n# Title')
+      extractFrontmatterEntries('---\nauthor: [[Jane Doe|Jane]]\ntags:\n  - [[design]]\n  - ![[assets/card|Card]]\n---\n# Title')
     ).toEqual([
-      { key: 'author', values: ['Jane Doe'] },
-      { key: 'tags', values: ['design', 'writing'] }
+      { key: 'author', values: ['Jane'] },
+      { key: 'tags', values: ['design', 'Card'] }
     ]);
   });
 
