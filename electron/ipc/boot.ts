@@ -30,6 +30,7 @@ export async function bootReport(stage: string, payload: unknown = null) {
   const bridgeReadyMarkerPath = path.join(repoRoot, BRIDGE_READY_MARKER_FILE);
 
   const event = {
+    head: process.env.FOLIOLE_RUNTIME_HEAD ?? null,
     timestamp: new Date().toISOString(),
     stage,
     pid: process.pid,

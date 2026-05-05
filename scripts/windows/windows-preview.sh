@@ -15,6 +15,10 @@ WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
 WINDOWS_PREVIEW_TIMEOUT_START_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS:-180}"
 WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS:-180}"
+DEV_RESTART_DELIVERY_FILE=".windows-dev-restart-delivered.json"
+DEV_RENDERER_RELOAD_DELIVERY_FILE=".windows-dev-renderer-reload-delivered.json"
+BOOT_READY_FILE=".windows-native-boot-ready.json"
+BRIDGE_READY_FILE=".windows-native-bridge-ready.json"
 
 cd "${REPO_ROOT}"
 
@@ -36,6 +40,35 @@ extract_status_reason() {
 
 extract_status_detail() {
   printf '%s\n' "$1" | sed -n 's/^\[windows-restart-client\] //p' | tail -n 1
+}
+
+extract_intent_nonce() {
+  printf '%s\n' "$1" | sed -n 's/.* nonce=\([^[:space:]]*\).*/\1/p' | head -n 1
+}
+
+read_json_field() {
+  local file_path="$1"
+  local field_name="$2"
+  if [ ! -f "${file_path}" ]; then
+    return 1
+  fi
+  node -e '
+const fs = require("node:fs");
+const filePath = process.argv[1];
+const fieldName = process.argv[2];
+const payload = JSON.parse(fs.readFileSync(filePath, "utf8"));
+const value = payload?.[fieldName];
+if (value === undefined || value === null || value === "") {
+  process.exit(1);
+}
+process.stdout.write(String(value));
+' "${file_path}" "${field_name}"
+}
+
+iso_timestamp_gte() {
+  local left="$1"
+  local right="$2"
+  [ "${left}" = "${right}" ] || [[ "${left}" > "${right}" ]]
 }
 
 has_committed_electron_changes_since() {
@@ -279,10 +312,109 @@ resolve_renderer_reload_intent_root() {
   printf '%s' "${REPO_ROOT}"
 }
 
+resolve_renderer_reload_delivery_path() {
+  printf '%s/%s' "$(resolve_renderer_reload_intent_root)" "${DEV_RENDERER_RELOAD_DELIVERY_FILE}"
+}
+
+resolve_restart_delivery_path() {
+  printf '%s/%s' "$(resolve_restart_intent_root)" "${DEV_RESTART_DELIVERY_FILE}"
+}
+
+resolve_boot_ready_path() {
+  printf '%s/%s' "$(resolve_restart_intent_root)" "${BOOT_READY_FILE}"
+}
+
+resolve_bridge_ready_path() {
+  printf '%s/%s' "$(resolve_restart_intent_root)" "${BRIDGE_READY_FILE}"
+}
+
+wait_for_delivery_nonce() {
+  local delivery_path="$1"
+  local expected_nonce="$2"
+  local timeout_seconds="$3"
+  local label="$4"
+  local elapsed_seconds=0
+
+  while [ "${elapsed_seconds}" -lt "${timeout_seconds}" ]; do
+    local delivered_nonce=""
+    set +e
+    delivered_nonce="$(read_json_field "${delivery_path}" nonce 2>/dev/null)"
+    local read_exit=$?
+    set -e
+    if [ "${read_exit}" -eq 0 ] && [ "${delivered_nonce}" = "${expected_nonce}" ]; then
+      echo "[windows-preview] ${label} delivery acknowledged nonce=${expected_nonce}"
+      return 0
+    fi
+    sleep 1
+    elapsed_seconds=$((elapsed_seconds + 1))
+  done
+
+  echo "[windows-preview] ${label} delivery timed out nonce=${expected_nonce}"
+  return 1
+}
+
+wait_for_running_status() {
+  local timeout_seconds="$1"
+  local status_label="$2"
+  local elapsed_seconds=0
+
+  while [ "${elapsed_seconds}" -lt "${timeout_seconds}" ]; do
+    local status_output=""
+    local status_exit=0
+    set +e
+    status_output="$(run_windows_client_action status)"
+    status_exit=$?
+    set -e
+    if [ "${status_exit}" -eq 0 ] && status_is_running "${status_output}"; then
+      echo "[windows-preview] ${status_label}: $(extract_status_detail "${status_output}")"
+      return 0
+    fi
+    sleep 1
+    elapsed_seconds=$((elapsed_seconds + 1))
+  done
+
+  echo "[windows-preview] ${status_label} timed out"
+  return 1
+}
+
+wait_for_restart_ready_markers() {
+  local requested_at="$1"
+  local timeout_seconds="$2"
+  local boot_ready_path
+  local bridge_ready_path
+  local elapsed_seconds=0
+
+  boot_ready_path="$(resolve_boot_ready_path)"
+  bridge_ready_path="$(resolve_bridge_ready_path)"
+
+  while [ "${elapsed_seconds}" -lt "${timeout_seconds}" ]; do
+    local boot_timestamp=""
+    local bridge_timestamp=""
+    set +e
+    boot_timestamp="$(read_json_field "${boot_ready_path}" timestamp 2>/dev/null)"
+    local boot_exit=$?
+    bridge_timestamp="$(read_json_field "${bridge_ready_path}" timestamp 2>/dev/null)"
+    local bridge_exit=$?
+    set -e
+    if [ "${boot_exit}" -eq 0 ] && [ "${bridge_exit}" -eq 0 ] &&
+      iso_timestamp_gte "${boot_timestamp}" "${requested_at}" &&
+      iso_timestamp_gte "${bridge_timestamp}" "${requested_at}"; then
+      echo "[windows-preview] restart markers updated boot=${boot_timestamp} bridge=${bridge_timestamp}"
+      return 0
+    fi
+    sleep 1
+    elapsed_seconds=$((elapsed_seconds + 1))
+  done
+
+  echo "[windows-preview] restart markers timed out requested_at=${requested_at}"
+  return 1
+}
+
 run_renderer_reload_intent() {
   local reload_output=""
   local reload_exit=0
   local reload_intent_root=""
+  local reload_nonce=""
   echo "[windows-preview] selected action: renderer-reload-intent"
   reload_intent_root="$(resolve_renderer_reload_intent_root)"
   set +e
@@ -297,6 +429,14 @@ run_renderer_reload_intent() {
   set -e
   if [ "${reload_exit}" -eq 0 ] && echo "${reload_output}" | grep -qE 'status:\s*REQUESTED'; then
     echo "${reload_output}"
+    reload_nonce="$(extract_intent_nonce "${reload_output}")"
+    if [ -z "${reload_nonce}" ]; then
+      echo "[windows-preview] renderer reload intent missing nonce"
+      return 1
+    fi
+    wait_for_delivery_nonce "$(resolve_renderer_reload_delivery_path)" "${reload_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload" || return 1
+    wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload status" || return 1
+    echo "[windows-preview] status: DELIVERED"
     return 0
   fi
   echo "[windows-preview] renderer reload intent failed"
@@ -322,6 +462,8 @@ run_restart_intent() {
   local restart_output=""
   local restart_exit=0
   local restart_intent_root=""
+  local restart_nonce=""
+  local requested_at=""
   echo "[windows-preview] selected action: restart-intent"
   restart_intent_root="$(resolve_restart_intent_root)"
   set +e
@@ -336,6 +478,26 @@ run_restart_intent() {
   set -e
   if [ "${restart_exit}" -eq 0 ] && echo "${restart_output}" | grep -qE 'status:\s*REQUESTED'; then
     echo "${restart_output}"
+    restart_nonce="$(extract_intent_nonce "${restart_output}")"
+    if [ -z "${restart_nonce}" ]; then
+      echo "[windows-preview] restart intent missing nonce"
+      return 1
+    fi
+    wait_for_delivery_nonce "$(resolve_restart_delivery_path)" "${restart_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart" || return 1
+    set +e
+    requested_at="$(read_json_field "${restart_intent_root}/.windows-dev-restart-intent.json" requestedAt 2>/dev/null)"
+    local requested_at_exit=$?
+    if [ "${requested_at_exit}" -ne 0 ] || [ -z "${requested_at}" ]; then
+      requested_at="$(read_json_field "$(resolve_restart_delivery_path)" requestedAt 2>/dev/null)"
+      requested_at_exit=$?
+    fi
+    set -e
+    if [ "${requested_at_exit}" -ne 0 ] || [ -z "${requested_at}" ]; then
+      requested_at="$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")"
+    fi
+    wait_for_restart_ready_markers "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" || return 1
+    wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart status" || return 1
+    echo "[windows-preview] status: RESTARTED"
     return 0
   fi
   echo "[windows-preview] restart intent failed"

@@ -5,6 +5,8 @@ import { saveWindowStateNow } from './ipc/windowState.js';
 
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
+export const DEV_RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
+export const DEV_RESTART_DELIVERY_KIND = 'foliole.electron.dev.restart-delivered.v1';
 
 interface RestartIntent {
   head: string | null;
@@ -30,6 +32,7 @@ interface RestartIntentFileSystem {
   readIntentFile(filePath: string): string;
   unwatchIntentFile(filePath: string, listener: () => void): void;
   watchIntentFile(filePath: string, listener: () => void): void;
+  writeDeliveryFile(filePath: string, content: string): void;
 }
 
 interface RestartIntentLogger {
@@ -56,6 +59,9 @@ function createNodeFileSystem(): RestartIntentFileSystem {
     },
     watchIntentFile(filePath, listener) {
       fs.watchFile(filePath, { interval: 250 }, listener);
+    },
+    writeDeliveryFile(filePath, content) {
+      fs.writeFileSync(filePath, content, 'utf8');
     }
   };
 }
@@ -70,6 +76,10 @@ export function isDevRestartIntentEnabled(env: NodeJS.ProcessEnv = process.env) 
 
 export function resolveDevRestartIntentPath(rootDir: string) {
   return path.join(rootDir, DEV_RESTART_INTENT_FILE);
+}
+
+export function resolveDevRestartDeliveryPath(rootDir: string) {
+  return path.join(rootDir, DEV_RESTART_DELIVERY_FILE);
 }
 
 export function parseDevRestartIntent(content: string): RestartIntent | null {
@@ -117,6 +127,39 @@ function readDevRestartIntent(fileSystem: RestartIntentFileSystem, intentPath: s
   }
 }
 
+function writeDevRestartDeliveryMarker(args: {
+  fileSystem: RestartIntentFileSystem;
+  intent: RestartIntent;
+  intentPath: string;
+  logger: RestartIntentLogger;
+}) {
+  try {
+    args.fileSystem.writeDeliveryFile(
+      resolveDevRestartDeliveryPath(path.dirname(args.intentPath)),
+      `${JSON.stringify(
+        {
+          deliveredAt: new Date().toISOString(),
+          head: args.intent.head,
+          kind: DEV_RESTART_DELIVERY_KIND,
+          nonce: args.intent.nonce,
+          reason: args.intent.reason,
+          requestedAt: args.intent.requestedAt,
+          requestedBy: args.intent.requestedBy,
+          target: args.intent.target
+        },
+        null,
+        2
+      )}\n`
+    );
+  } catch (error) {
+    args.logger.error('[electron-main] failed to write dev restart delivery marker', {
+      error,
+      intentPath: args.intentPath,
+      nonce: args.intent.nonce
+    });
+  }
+}
+
 function consumeDevRestartIntent(args: {
   app: RestartIntentApp;
   content: string;
@@ -158,6 +201,7 @@ function consumeDevRestartIntent(args: {
     requestedAt: intent.requestedAt,
     requestedBy: intent.requestedBy
   });
+  writeDevRestartDeliveryMarker({ fileSystem: args.fileSystem, intent, intentPath: args.intentPath, logger: args.logger });
   for (const window of args.getWindows()) {
     if (window.isDestroyed?.()) {
       continue;

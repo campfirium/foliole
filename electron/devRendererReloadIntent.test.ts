@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  DEV_RENDERER_RELOAD_DELIVERY_FILE,
   DEV_RENDERER_RELOAD_INTENT_FILE,
   DEV_RENDERER_RELOAD_INTENT_KIND,
   installDevRendererReloadIntentWatcher
@@ -31,6 +32,7 @@ function createWatcherState() {
     hasWindow: true,
     intentContent: null as string | null,
     onChange: null as (() => void) | null,
+    writeDeliveryFile: vi.fn(),
     unwatchPath: '',
     watchedPath: ''
   };
@@ -56,6 +58,10 @@ function createTestFileSystem(intentPath: string, state: ReturnType<typeof creat
     watchIntentFile(filePath: string, listener: () => void) {
       state.watchedPath = filePath;
       state.onChange = listener;
+    },
+    writeDeliveryFile(filePath: string, content: string) {
+      expect(filePath).toBe(path.join(path.dirname(intentPath), DEV_RENDERER_RELOAD_DELIVERY_FILE));
+      state.writeDeliveryFile(filePath, content);
     }
   };
 }
@@ -89,6 +95,7 @@ function createWatcherHarness() {
     info,
     intentPath,
     reloadIgnoringCache,
+    writeDeliveryFile: state.writeDeliveryFile,
     setHasWindow(next: boolean) {
       state.hasWindow = next;
     },
@@ -126,6 +133,16 @@ describe('installDevRendererReloadIntentWatcher', () => {
       windowCount: 1
     });
     expect(harness.error).not.toHaveBeenCalled();
+    expect(harness.writeDeliveryFile).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(harness.writeDeliveryFile.mock.calls[0][1])).toMatchObject({
+      head: 'abc123',
+      kind: 'foliole.electron.dev.renderer-reload-delivered.v1',
+      nonce: 4,
+      reason: 'Class A: renderer-only sync path',
+      requestedAt: '2026-03-18T12:20:00.000Z',
+      requestedBy: 'wsl-windows-preview',
+      target: 'electron-dev-renderer'
+    });
 
     harness.watcher?.close();
     expect(harness.unwatchPath()).toBe(harness.intentPath);
@@ -144,6 +161,7 @@ describe('installDevRendererReloadIntentWatcher', () => {
     harness.triggerChange();
 
     expect(harness.reloadIgnoringCache).toHaveBeenCalledTimes(1);
+    expect(harness.writeDeliveryFile).toHaveBeenCalledTimes(1);
     harness.watcher?.close();
   });
 });

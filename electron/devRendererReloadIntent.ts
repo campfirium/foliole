@@ -3,6 +3,8 @@ import path from 'node:path';
 
 export const DEV_RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 export const DEV_RENDERER_RELOAD_INTENT_KIND = 'foliole.electron.dev.renderer-reload-intent.v1';
+export const DEV_RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
+export const DEV_RENDERER_RELOAD_DELIVERY_KIND = 'foliole.electron.dev.renderer-reload-delivered.v1';
 
 interface RendererReloadIntent {
   head: string | null;
@@ -26,6 +28,7 @@ interface RendererReloadFileSystem {
   readIntentFile(filePath: string): string;
   unwatchIntentFile(filePath: string, listener: () => void): void;
   watchIntentFile(filePath: string, listener: () => void): void;
+  writeDeliveryFile(filePath: string, content: string): void;
 }
 
 interface RendererReloadLogger {
@@ -52,6 +55,9 @@ function createNodeFileSystem(): RendererReloadFileSystem {
     },
     watchIntentFile(filePath, listener) {
       fs.watchFile(filePath, { interval: 250 }, listener);
+    },
+    writeDeliveryFile(filePath, content) {
+      fs.writeFileSync(filePath, content, 'utf8');
     }
   };
 }
@@ -66,6 +72,10 @@ export function isDevRendererReloadIntentEnabled(env: NodeJS.ProcessEnv = proces
 
 export function resolveDevRendererReloadIntentPath(rootDir: string) {
   return path.join(rootDir, DEV_RENDERER_RELOAD_INTENT_FILE);
+}
+
+export function resolveDevRendererReloadDeliveryPath(rootDir: string) {
+  return path.join(rootDir, DEV_RENDERER_RELOAD_DELIVERY_FILE);
 }
 
 export function parseDevRendererReloadIntent(content: string): RendererReloadIntent | null {
@@ -117,6 +127,39 @@ function readDevRendererReloadIntent(
   }
 }
 
+function writeDevRendererReloadDeliveryMarker(args: {
+  fileSystem: RendererReloadFileSystem;
+  intent: RendererReloadIntent;
+  intentPath: string;
+  logger: RendererReloadLogger;
+}) {
+  try {
+    args.fileSystem.writeDeliveryFile(
+      resolveDevRendererReloadDeliveryPath(path.dirname(args.intentPath)),
+      `${JSON.stringify(
+        {
+          deliveredAt: new Date().toISOString(),
+          head: args.intent.head,
+          kind: DEV_RENDERER_RELOAD_DELIVERY_KIND,
+          nonce: args.intent.nonce,
+          reason: args.intent.reason,
+          requestedAt: args.intent.requestedAt,
+          requestedBy: args.intent.requestedBy,
+          target: args.intent.target
+        },
+        null,
+        2
+      )}\n`
+    );
+  } catch (error) {
+    args.logger.error('[electron-main] failed to write dev renderer reload delivery marker', {
+      error,
+      intentPath: args.intentPath,
+      nonce: args.intent.nonce
+    });
+  }
+}
+
 function consumeDevRendererReloadIntent(args: {
   consumedNonce: number;
   content: string;
@@ -148,6 +191,13 @@ function consumeDevRendererReloadIntent(args: {
     });
     return args.consumedNonce;
   }
+
+  writeDevRendererReloadDeliveryMarker({
+    fileSystem: args.fileSystem,
+    intent,
+    intentPath: args.intentPath,
+    logger: args.logger
+  });
 
   for (const window of windows) {
     window.webContents.reloadIgnoringCache();

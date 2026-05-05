@@ -11,6 +11,7 @@ vi.mock('./ipc/windowState.js', () => ({
 }));
 
 import {
+  DEV_RESTART_DELIVERY_FILE,
   DEV_RESTART_INTENT_KIND,
   DEV_RESTART_INTENT_FILE,
   installDevRestartIntentWatcher
@@ -34,44 +35,78 @@ function createIntentContent() {
   });
 }
 
+function createTestFileSystem(args: {
+  deliveryPath: string;
+  getIntentContent: () => string | null;
+  intentPath: string;
+  onWatch: (listener: () => void, path: string) => void;
+  onUnwatch: (path: string) => void;
+  setIntentContent: (content: string | null) => void;
+  writeDeliveryFile: ReturnType<typeof vi.fn>;
+}) {
+  return {
+    deleteIntentFile(filePath: string) {
+      expect(filePath).toBe(args.intentPath);
+      args.setIntentContent(null);
+    },
+    readIntentFile(filePath: string) {
+      expect(filePath).toBe(args.intentPath);
+      const content = args.getIntentContent();
+      if (content === null) {
+        throw createMissingFileError();
+      }
+      return content;
+    },
+    unwatchIntentFile(filePath: string, listener: () => void) {
+      expect(listener).toBeTypeOf('function');
+      args.onUnwatch(filePath);
+    },
+    watchIntentFile(filePath: string, listener: () => void) {
+      args.onWatch(listener, filePath);
+    },
+    writeDeliveryFile(filePath: string, content: string) {
+      expect(filePath).toBe(args.deliveryPath);
+      args.writeDeliveryFile(filePath, content);
+    }
+  };
+}
+
 function createWatcherHarness() {
   const repoRoot = path.join('C:', 'dev', 'foliole');
   const intentPath = path.join(repoRoot, DEV_RESTART_INTENT_FILE);
+  const deliveryPath = path.join(repoRoot, DEV_RESTART_DELIVERY_FILE);
   const relaunch = vi.fn();
   const exit = vi.fn();
   const info = vi.fn();
   const error = vi.fn();
+  const writeDeliveryFile = vi.fn();
   let watchedPath = '';
   let unwatchPath = '';
   let onChange: (() => void) | null = null;
   let intentContent: string | null = null;
   const windows = [{ isDestroyed: () => false }, { isDestroyed: () => true }];
+  const fileSystem = createTestFileSystem({
+    deliveryPath,
+    getIntentContent: () => intentContent,
+    intentPath,
+    onUnwatch(path) {
+      unwatchPath = path;
+    },
+    onWatch(listener, path) {
+      watchedPath = path;
+      onChange = listener;
+    },
+    setIntentContent(content) {
+      intentContent = content;
+    },
+    writeDeliveryFile
+  });
 
   const watcher = installDevRestartIntentWatcher({
     app: { exit, relaunch },
     cwd: repoRoot,
     env: { ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600' },
-    fileSystem: {
-      deleteIntentFile(filePath: string) {
-        expect(filePath).toBe(intentPath);
-        intentContent = null;
-      },
-      readIntentFile(filePath: string) {
-        expect(filePath).toBe(intentPath);
-        if (intentContent === null) {
-          throw createMissingFileError();
-        }
-        return intentContent;
-      },
-      unwatchIntentFile(filePath: string, listener: () => void) {
-        unwatchPath = filePath;
-        expect(listener).toBe(onChange);
-      },
-      watchIntentFile(filePath: string, listener: () => void) {
-        watchedPath = filePath;
-        onChange = listener;
-      }
-    },
+    fileSystem,
     getWindows: () => windows,
     logger: { error, info }
   });
@@ -81,6 +116,7 @@ function createWatcherHarness() {
     exit,
     info,
     intentPath,
+    writeDeliveryFile,
     relaunch,
     windows,
     setIntentContent(content: string | null) {
@@ -110,6 +146,16 @@ function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHa
     requestedBy: 'wsl-windows-preview'
   });
   expect(harness.error).not.toHaveBeenCalled();
+  expect(harness.writeDeliveryFile).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(harness.writeDeliveryFile.mock.calls[0][1])).toMatchObject({
+    head: 'abc123',
+    kind: 'foliole.electron.dev.restart-delivered.v1',
+    nonce: 7,
+    reason: 'Class B: working tree electron changes detected',
+    requestedAt: '2026-03-15T10:00:00.000Z',
+    requestedBy: 'wsl-windows-preview',
+    target: 'electron-dev'
+  });
 }
 
 describe('installDevRestartIntentWatcher', () => {

@@ -278,6 +278,39 @@ function Get-AppReadyEvent {
   }
 }
 
+function Get-ReadyMarkerHead {
+  param(
+    [string]$WorkDir,
+    [string]$ExpectedSession = ""
+  )
+
+  $events = @(
+    (Get-BridgeReadyEvent -WorkDir $WorkDir),
+    (Get-AppReadyEvent -WorkDir $WorkDir)
+  )
+
+  foreach ($event in $events) {
+    if ($null -eq $event) {
+      continue
+    }
+    $markerSession = ""
+    if ($null -ne $event.session) {
+      $markerSession = "$($event.session)".Trim()
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedSession) -and $markerSession -ne $ExpectedSession) {
+      continue
+    }
+    if ($null -ne $event.head) {
+      $markerHead = "$($event.head)".Trim()
+      if (-not [string]::IsNullOrWhiteSpace($markerHead)) {
+        return $markerHead
+      }
+    }
+  }
+
+  return $null
+}
+
 function Resolve-BridgeReadyMarkerPath {
   param([string]$WorkDir)
   return Join-Path $WorkDir ".windows-native-bridge-ready.json"
@@ -655,7 +688,11 @@ function Start-ElectronShell {
   if ([string]::IsNullOrWhiteSpace($bootSessionValue)) {
     $bootSessionValue = New-BootSession
   }
-  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set FOLIOLE_BOOT_SESSION=$bootSessionValue && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
+  $runtimeHeadValue = Get-RepoHead -WorkDir $WorkDir
+  if ([string]::IsNullOrWhiteSpace($runtimeHeadValue)) {
+    $runtimeHeadValue = ""
+  }
+  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set FOLIOLE_BOOT_SESSION=$bootSessionValue && set FOLIOLE_RUNTIME_HEAD=$runtimeHeadValue && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
 
   $proc = Start-Process `
     -FilePath "cmd.exe" `
@@ -724,6 +761,7 @@ function Start-ElectronWithHealthCheck {
   }
 
   Save-TrackedRuntimeSession -Session $bootSession
+  Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
 
   return @{ shellPid = $started.Id; runtimePid = $health.runtimePid }
 }
@@ -1076,6 +1114,14 @@ if ($Action -eq "status") {
   $runtimeTrust = $null
   if ($null -ne $runtime) {
     $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+    if ($runtimeTrust.ok) {
+      Save-TrackedRuntimePid -ProcessId $runtime.Id
+      $readyMarkerHead = Get-ReadyMarkerHead -WorkDir $WindowsWorkDir -ExpectedSession $runtimeSession
+      if (-not [string]::IsNullOrWhiteSpace($readyMarkerHead)) {
+        Save-TrackedRuntimeHead -Head $readyMarkerHead
+        $runtimeHead = $readyMarkerHead
+      }
+    }
   }
   if ($null -ne $tracked) {
     if ($null -ne $runtime -and -not $runtimeTrust.ok) {
