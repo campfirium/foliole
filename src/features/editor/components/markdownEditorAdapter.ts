@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
 
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter } from '../adapters/EditorAdapter';
@@ -91,6 +92,7 @@ function createEditorAdapter(args: {
   host: HTMLDivElement;
   initialContent: string;
   onChange: (value: string) => void;
+  onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
   readOnly: boolean | undefined;
@@ -100,6 +102,7 @@ function createEditorAdapter(args: {
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
     onChange: args.onChange,
+    onOpenExternalLink: args.onOpenExternalLink,
     onOpenNodeLink: args.onOpenNodeLink,
     onPastedAnchors: args.onPastedAnchors,
     readOnly: args.readOnly,
@@ -115,6 +118,7 @@ function useEditorAdapterInputs(args: {
   hideTitleHeading: boolean;
   initialValue: string;
   onChange: (value: string) => void;
+  onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
   onReady: ((adapter: EditorAdapter | null) => void) | undefined;
@@ -125,6 +129,7 @@ function useEditorAdapterInputs(args: {
     hideTitleHeading,
     initialValue,
     onChange,
+    onOpenExternalLink,
     onOpenNodeLink,
     onPastedAnchors,
     onReady,
@@ -133,6 +138,7 @@ function useEditorAdapterInputs(args: {
   } = args;
   const initialValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
+  const onOpenExternalLinkRef = useRef(onOpenExternalLink);
   const onOpenNodeLinkRef = useRef(onOpenNodeLink);
   const onPastedAnchorsRef = useRef(onPastedAnchors);
   const onReadyRef = useRef(onReady);
@@ -143,6 +149,7 @@ function useEditorAdapterInputs(args: {
 
   onChangeRef.current = onChange;
   initialValueRef.current = initialValue;
+  onOpenExternalLinkRef.current = onOpenExternalLink;
   onOpenNodeLinkRef.current = onOpenNodeLink;
   onPastedAnchorsRef.current = onPastedAnchors;
   onReadyRef.current = onReady;
@@ -154,6 +161,7 @@ function useEditorAdapterInputs(args: {
     hideTitleHeadingRef,
     initialValueRef,
     onChangeRef,
+    onOpenExternalLinkRef,
     onOpenNodeLinkRef,
     onPastedAnchorsRef,
     onReadyRef,
@@ -182,6 +190,7 @@ function useEditorAdapterLifecycle(args: {
       host,
       initialContent: inputs.initialValueRef.current,
       onChange: (nextValue) => inputs.onChangeRef.current(nextValue),
+      onOpenExternalLink: (href) => inputs.onOpenExternalLinkRef.current?.(href),
       onOpenNodeLink: (title) => inputs.onOpenNodeLinkRef.current?.(title),
       onPastedAnchors: (payload) => inputs.onPastedAnchorsRef.current?.(payload),
       readOnly: inputs.readOnlyRef.current,
@@ -209,6 +218,7 @@ export function useEditorAdapter(
   initialValue: string,
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'],
   hideTitleHeading: boolean,
+  onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined,
   onOpenNodeLink: ((title: string) => void) | undefined,
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'],
   readOnly: boolean | undefined
@@ -218,6 +228,7 @@ export function useEditorAdapter(
     hideTitleHeading,
     initialValue,
     onChange,
+    onOpenExternalLink,
     onOpenNodeLink,
     onPastedAnchors,
     onReady,

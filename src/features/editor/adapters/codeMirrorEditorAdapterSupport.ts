@@ -1,6 +1,7 @@
 import { Compartment, EditorState, type StateEffect } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
@@ -13,6 +14,7 @@ export interface CodeMirrorEditorAdapterOptions {
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
   onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   readOnly?: boolean;
@@ -28,6 +30,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }) {
@@ -37,6 +40,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,
+      onOpenExternalLink: args.onOpenExternalLink ?? null,
       onOpenNodeLink: args.onOpenNodeLink,
       onPastedAnchors: args.onPastedAnchors ?? null
     })
@@ -61,6 +65,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
   view: EditorView;
@@ -72,6 +77,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,
+      onOpenExternalLink: args.onOpenExternalLink ?? null,
       onOpenNodeLink: args.onOpenNodeLink,
       onPastedAnchors: args.onPastedAnchors ?? null
     })

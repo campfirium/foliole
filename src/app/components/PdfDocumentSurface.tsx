@@ -6,12 +6,14 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { markNodePositionReady } from '../../shared/platform/performanceDiagnosticsProbe';
 import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import { normalizeContextMenuPosition } from '../contextCommands';
 
 import { PdfDocumentSurfaceLayout } from './PdfDocumentSurfaceLayout';
+import { resolvePdfExternalHref } from './pdfExternalLinkTarget';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
 import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
@@ -35,6 +37,7 @@ interface PdfDocumentSurfaceProps {
   isVisible?: boolean;
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean;
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPersistViewState: (viewState: NodeViewState) => void;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
@@ -125,6 +128,7 @@ export function PdfDocumentSurface({
   nodeId,
   nodeViewState,
   onCreateHighlightFromSelection,
+  onOpenExternalLink,
   onPersistViewState,
   persistedPageCount,
   persistedPageDimensions,
@@ -141,7 +145,7 @@ export function PdfDocumentSurface({
     : null;
 
   const layoutProps = {
-    ...buildPdfSurfaceLayoutProps(nodeId, highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint),
+    ...buildPdfSurfaceLayoutProps(nodeId, highlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
     persistedPageCount,
     persistedPageDimensions
   };
@@ -157,16 +161,50 @@ function buildPdfSurfaceLayoutProps(
   pdfSystem: ReturnType<typeof usePdfSystemController>,
   selectionState: ReturnType<typeof usePdfSelectionContextMenu>,
   searchState: ReturnType<typeof usePdfSearchControls>,
-  searchIndexingHint: string | null
+  searchIndexingHint: string | null,
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void
 ): PdfSurfaceLayoutProps {
-  const selectionMenu = (
+  return {
+    ...resolvePdfSurfaceHandlers(nodeId, pdfSystem, selectionState, searchState, onOpenExternalLink),
+    highlightLocators,
+    pdfSelectionContextMenu: renderPdfSelectionMenu(selectionState),
+    searchIndexingHint
+  };
+}
+
+function renderPdfSelectionMenu(selectionState: ReturnType<typeof usePdfSelectionContextMenu>) {
+  return (
     <PdfSelectionContextMenu
       onClose={selectionState.closeSelectionMenu}
       onCreateHighlight={selectionState.handleCreateHighlight}
       state={selectionState.selectionMenuState}
     />
   );
+}
 
+function createPdfExternalLinkHandler(
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void
+): PdfSurfaceLayoutProps['handleExternalLinkClick'] {
+  return (event) => {
+    const href = resolvePdfExternalHref(event.target);
+    if (!href) {
+      return;
+    }
+    event.preventDefault();
+    onOpenExternalLink?.({
+      anchorPoint: { x: event.clientX, y: event.clientY },
+      href
+    });
+  };
+}
+
+function resolvePdfSurfaceHandlers(
+  nodeId: string | null,
+  pdfSystem: ReturnType<typeof usePdfSystemController>,
+  selectionState: ReturnType<typeof usePdfSelectionContextMenu>,
+  searchState: ReturnType<typeof usePdfSearchControls>,
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void
+) {
   return {
     clearPageJumpRequest: (requestId: number) => {
       pdfSystem.actions.clearPageJumpRequest(requestId);
@@ -175,10 +213,10 @@ function buildPdfSurfaceLayoutProps(
       }
     },
     handleContextMenu: selectionState.handleContextMenu,
+    handleExternalLinkClick: createPdfExternalLinkHandler(onOpenExternalLink),
     handleSearchRequest: searchState.handleSearchRequest,
     handleSearchRequestHandled: searchState.handleSearchRequestHandled,
     handleSearchTargetHandled: searchState.handleSearchTargetHandled,
-    highlightLocators,
     loadError: pdfSystem.state.loadError,
     maxPage: pdfSystem.state.maxPage,
     page: pdfSystem.state.page,
@@ -186,14 +224,12 @@ function buildPdfSurfaceLayoutProps(
     persistedPageCount: null,
     persistedPageDimensions: {},
     pdfSelectionLocator: selectionState.selectionOverlayLocator,
-    pdfSelectionContextMenu: selectionMenu,
     pdfSource: pdfSystem.state.pdfSource,
     reportLoadError: pdfSystem.actions.reportLoadError,
     reportLoadSuccess: pdfSystem.actions.reportLoadSuccess,
     requestPageChange: pdfSystem.actions.requestPageChange,
     rotateClockwise: pdfSystem.actions.rotateClockwise,
     rotation: pdfSystem.state.rotation,
-    searchIndexingHint,
     searchQuery: searchState.searchQuery,
     searchRequest: searchState.searchRequest,
     searchStatus: searchState.searchStatus,

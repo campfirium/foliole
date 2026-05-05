@@ -9,6 +9,7 @@ import {
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
@@ -16,12 +17,20 @@ import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import { FolderListSortControls } from './FolderListSortControls';
+import type { LinkPanelRecord } from './linkPanelState';
 
 interface DocumentPanelShellProps {
   backlinks: BacklinkItem[];
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
+  linkPanels: LinkPanelRecord[];
+  onCloseExternalLink: (panelId: string) => void;
+  onLinkPanelStateChange: (
+    panelId: string,
+    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
+  ) => void;
+  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onPreviewDocumentSelection: DocumentPanelSectionProps['onRevealDocumentSelection'];
   onPreviewTopicSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => void;
   onToggleSourceUpdatePanel: () => void;
@@ -95,11 +104,55 @@ function renderDocumentPanelHeader(args: {
   );
 }
 
+function renderDocumentPanelContent(args: {
+  bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
+  folderListSortDirection: FolderListSortDirection;
+  folderListSortKey: FolderListSortKey;
+  isFolderListView: boolean;
+  linkPanels: LinkPanelRecord[];
+  onChangeFolderListSortDirection: (value: FolderListSortDirection) => void;
+  onChangeFolderListSortKey: (value: FolderListSortKey) => void;
+  onCloseExternalLink: (panelId: string) => void;
+  onLinkPanelStateChange: (
+    panelId: string,
+    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
+  ) => void;
+  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
+  props: DocumentPanelSectionProps;
+}) {
+  return (
+    <DocumentPanelContent
+      activeNodeId={args.props.activeNodeId}
+      bodyProps={args.bodyProps}
+      folderListSortDirection={args.folderListSortDirection}
+      folderListSortKey={args.folderListSortKey}
+      onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
+      onChangeFolderListSortKey={args.onChangeFolderListSortKey}
+      isFolderListView={args.isFolderListView}
+      nodeOrder={args.props.nodeOrder}
+      trashedNodeIds={args.props.trashedNodeIds}
+      nodesById={args.props.nodesById}
+      onCreatePdfHighlight={args.props.onCreatePdfHighlight}
+      onNodeContentChange={args.props.onNodeContentChange}
+      onOpenExternalLink={args.onOpenExternalLink}
+      onPersistPdfViewState={args.props.onPersistPdfViewState}
+      onSelectNode={args.props.onSelectNode}
+      linkPanels={args.linkPanels}
+      onCloseExternalLink={args.onCloseExternalLink}
+      onLinkPanelStateChange={args.onLinkPanelStateChange}
+    />
+  );
+}
+
 export function DocumentPanelSectionShell({
   backlinks,
   bodyProps,
   isFolderListView,
   isSourceUpdatePanelOpen,
+  linkPanels,
+  onCloseExternalLink,
+  onLinkPanelStateChange,
+  onOpenExternalLink,
   onPreviewDocumentSelection,
   onPreviewTopicSearchDecorations,
   onToggleSourceUpdatePanel,
@@ -130,22 +183,19 @@ export function DocumentPanelSectionShell({
         <DocumentPriorityQuickSetHint isActive={!isFolderListView && Boolean(props.isPriorityQuickSetActive)} />
       )}
       {props.isImmersiveMode ? null : renderDocumentSearchToolbar(props, onPreviewDocumentSelection, onPreviewTopicSearchDecorations)}
-      <DocumentPanelContent
-        activeNodeId={props.activeNodeId}
-        bodyProps={bodyProps}
-        folderListSortDirection={folderListSortDirection}
-        folderListSortKey={folderListSortKey}
-        onChangeFolderListSortDirection={setFolderListSortDirection}
-        onChangeFolderListSortKey={setFolderListSortKey}
-        isFolderListView={isFolderListView}
-        nodeOrder={props.nodeOrder}
-        trashedNodeIds={props.trashedNodeIds}
-        nodesById={props.nodesById}
-        onCreatePdfHighlight={props.onCreatePdfHighlight}
-        onNodeContentChange={props.onNodeContentChange}
-        onPersistPdfViewState={props.onPersistPdfViewState}
-        onSelectNode={props.onSelectNode}
-      />
+      {renderDocumentPanelContent({
+        bodyProps,
+        folderListSortDirection,
+        folderListSortKey,
+        isFolderListView,
+        linkPanels,
+        onChangeFolderListSortDirection: setFolderListSortDirection,
+        onChangeFolderListSortKey: setFolderListSortKey,
+        onCloseExternalLink,
+        onLinkPanelStateChange,
+        onOpenExternalLink,
+        props
+      })}
     </section>
   );
 }

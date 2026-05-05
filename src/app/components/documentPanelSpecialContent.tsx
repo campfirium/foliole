@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { useRef, type ComponentProps } from 'react';
 
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
 import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
@@ -6,11 +6,14 @@ import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNo
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
 import { FolderListView } from './FolderListView';
+import { LinkPanelStack } from './LinkPanelStack';
+import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 
 function renderPdfLoadingSurface() {
@@ -102,28 +105,51 @@ function renderPdfOrBodyContent(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   isActivePdfCachedVisible: boolean;
+  linkPanels: LinkPanelRecord[];
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCloseExternalLink: (panelId: string) => void;
+  onLinkPanelStateChange: (
+    panelId: string,
+    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
+  ) => void;
+  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   pdfCache: JSX.Element;
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: PdfHighlightLocator[];
   shouldHideEditorBodyDuringSourceLoad: boolean;
 }) {
+  const contentAreaRef = useRef<HTMLDivElement | null>(null);
+  const panelStack = (
+    <LinkPanelStack
+      anchorRootRef={contentAreaRef}
+      onClose={args.onCloseExternalLink}
+      onStateChange={args.onLinkPanelStateChange}
+      panels={args.linkPanels}
+    />
+  );
+
   if (!args.pdfDocumentSurface) {
     return (
-      <>
+      <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
         {args.pdfCache}
         {args.shouldHideEditorBodyDuringSourceLoad ? renderPdfLoadingSurface() : renderDocumentBody(args.activeNodeId, args.bodyProps)}
-      </>
+        {panelStack}
+      </div>
     );
   }
 
   if (args.pdfDocumentSurface.state === 'ready') {
-    return <>{args.pdfCache}</>;
+    return (
+      <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
+        {args.pdfCache}
+        {panelStack}
+      </div>
+    );
   }
 
   return (
-    <>
+    <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
       {args.pdfCache}
       {!args.isActivePdfCachedVisible
         ? renderPdfDocumentSurface(
@@ -131,10 +157,12 @@ function renderPdfOrBodyContent(args: {
             { editorNodeId: args.bodyProps.editorNodeId, editorNodeViewState: args.bodyProps.editorNodeViewState },
             args.pdfHighlightLocators,
             args.onCreatePdfHighlight,
-            args.onPersistPdfViewState
+            args.onPersistPdfViewState,
+            args.onOpenExternalLink
           )
         : null}
-    </>
+      {panelStack}
+    </div>
   );
 }
 
@@ -148,10 +176,17 @@ export function resolveDocumentPanelContentBody(args: {
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isActivePdfCachedVisible: boolean;
   isFolderListView: boolean;
+  linkPanels: LinkPanelRecord[];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCloseExternalLink: (panelId: string) => void;
+  onLinkPanelStateChange: (
+    panelId: string,
+    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
+  ) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
+  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
   pdfCache: JSX.Element;
@@ -168,7 +203,11 @@ export function resolveDocumentPanelContentBody(args: {
     activeNodeId: args.activeNodeId,
     bodyProps: args.bodyProps,
     isActivePdfCachedVisible: args.isActivePdfCachedVisible,
+    linkPanels: args.linkPanels,
     onCreatePdfHighlight: args.onCreatePdfHighlight,
+    onCloseExternalLink: args.onCloseExternalLink,
+    onLinkPanelStateChange: args.onLinkPanelStateChange,
+    onOpenExternalLink: args.onOpenExternalLink,
     onPersistPdfViewState: args.onPersistPdfViewState,
     pdfCache: args.pdfCache,
     pdfDocumentSurface: args.pdfDocumentSurface,

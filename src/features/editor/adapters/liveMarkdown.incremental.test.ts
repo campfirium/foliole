@@ -4,13 +4,13 @@ const spies = vi.hoisted(() => ({
   buildFrontmatterDecorationState: vi.fn()
 }));
 
-const { openExternalUrl } = vi.hoisted(() => ({
+const bridgeSpies = vi.hoisted(() => ({
   openExternalUrl: vi.fn()
 }));
 
 vi.mock('../../../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn(() => null),
-  openExternalUrl
+  openExternalUrl: bridgeSpies.openExternalUrl
 }));
 
 vi.mock('./liveMarkdownFrontmatter', async () => {
@@ -59,7 +59,29 @@ describe('liveMarkdown runtime behavior', () => {
     link?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(onOpenNodeLink).toHaveBeenCalledWith('Alpha topic');
-    expect(openExternalUrl).not.toHaveBeenCalled();
+    expect(bridgeSpies.openExternalUrl).not.toHaveBeenCalled();
+
+    adapter.destroy();
+  });
+
+  it('routes markdown links through the in-app link handler', () => {
+    const host = createHost();
+    const onOpenExternalLink = vi.fn();
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      initialContent: 'Read [docs](https://example.com/docs).',
+      onOpenExternalLink
+    });
+
+    const link = host.querySelector('[data-md-link-url="https://example.com/docs"]');
+    expect(link).not.toBeNull();
+
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 320, clientY: 240 }));
+
+    expect(onOpenExternalLink).toHaveBeenCalledWith({
+      anchorPoint: { x: 320, y: 240 },
+      href: 'https://example.com/docs'
+    });
+    expect(bridgeSpies.openExternalUrl).not.toHaveBeenCalled();
 
     adapter.destroy();
   });

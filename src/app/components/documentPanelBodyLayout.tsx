@@ -9,6 +9,7 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { cn } from '../../shared/lib/utils';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
@@ -54,6 +55,7 @@ export interface DocumentPanelBodyLayoutProps {
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
@@ -153,6 +155,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         onDoubleClick={props.onEditorDoubleClick}
         onFitBlockImageMetricsChange={props.onPromptImageMetricsChange}
         onImageLoadStateChange={props.onPromptImageLoadStateChange}
+        onOpenExternalLink={props.onOpenExternalLink}
         onOpenNodeLink={props.onOpenNodeLink}
         onPastedAnchors={props.onPastedTextAnchors}
         onReady={props.onEditorReady}

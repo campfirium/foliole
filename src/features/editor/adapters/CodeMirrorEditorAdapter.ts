@@ -1,6 +1,8 @@
 import { Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+
 import {
   applyAdapterTextAnchorDecorations,
   reconfigureAdapterLiveMarkdownState
@@ -55,6 +57,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownStateCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
+  private onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | null = null;
   private onOpenNodeLink: ((title: string) => void) | null = null;
   private onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null = null;
   private paragraphMarkerCompartment = new Compartment();
@@ -71,6 +74,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.hideTitleHeading = options.hideTitleHeading === true;
     this.textAnchorDecorations = options.textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
     this.onChange = options.onChange;
+    this.onOpenExternalLink = options.onOpenExternalLink ?? null;
     this.onOpenNodeLink = options.onOpenNodeLink ?? null;
     this.onPastedAnchors = options.onPastedAnchors ?? null;
     const runtime = createCodeMirrorEditorAdapterRuntime({
@@ -242,6 +246,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       hideTitleHeading: this.hideTitleHeading,
       imageClozePresentationVersion: this.imageClozePresentationVersion,
       nodeId: this.nodeId,
+      onOpenExternalLink: this.onOpenExternalLink,
       onOpenNodeLink: this.onOpenNodeLink,
       onPastedAnchors: this.onPastedAnchors,
       view: this.view

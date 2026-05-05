@@ -1,11 +1,10 @@
 import { EditorView } from '@codemirror/view';
 
-import { openExternalUrl } from '../../../shared/platform/bridge';
 import { serializeStructuredClipboardPayload } from '../model/anchorClipboardPayload';
 
 import { createClipboardExportFromView, FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
-import { activeNodeIdFacet, openNodeLinkFacet } from './liveMarkdownState';
+import { activeNodeIdFacet, openExternalLinkFacet, openNodeLinkFacet } from './liveMarkdownState';
 
 export const markdownInteractionHandlers = EditorView.domEventHandlers({
   click(event) {
@@ -17,9 +16,16 @@ export const markdownInteractionHandlers = EditorView.domEventHandlers({
     const linkElement = element.closest('[data-md-link-url]');
     if (linkElement instanceof HTMLElement) {
       const href = linkElement.dataset.mdLinkUrl;
+      const editorHost = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+      const editorView = editorHost ? EditorView.findFromDOM(editorHost) : null;
+      const onOpenExternalLink = editorView?.state.facet(openExternalLinkFacet) ?? null;
       if (!href) return false;
+      if (!onOpenExternalLink) return false;
       event.preventDefault();
-      void openExternalUrl(href);
+      onOpenExternalLink({
+        anchorPoint: { x: event.clientX, y: event.clientY },
+        href
+      });
       return true;
     }
 

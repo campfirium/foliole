@@ -3,6 +3,8 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+
 import {
   type CodeMirrorEditorAdapterOptions,
   type EditorDocumentChangeMeta,
@@ -51,6 +53,7 @@ export function createCodeMirrorEditorExtensions(args: {
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
         nodeId: args.nodeId,
+        onOpenExternalLink: args.options.onOpenExternalLink ?? null,
         onOpenNodeLink: args.options.onOpenNodeLink ?? null,
         onPastedAnchors: args.options.onPastedAnchors ?? null
       })
@@ -76,6 +79,7 @@ export function createLiveMarkdownEffect(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPastedAnchors?: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }) {

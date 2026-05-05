@@ -6,6 +6,7 @@ import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 
@@ -29,6 +30,9 @@ export function useDocumentPanelInteractions(props: DocumentPanelSectionProps) {
 
   return {
     handleEditorReady,
+    handleOpenExternalLink: (request: ExternalLinkOpenRequest) => {
+      props.onOpenExternalLink?.(request);
+    },
     handleOpenNodeLink: (title: string) => {
       const targetNodeId = resolveInternalLinkTargetId({
         title,

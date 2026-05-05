@@ -110,6 +110,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.value,
     props.textAnchorDecorations,
     props.hideTitleHeading ?? false,
+    props.onOpenExternalLink,
     props.onOpenNodeLink,
     props.onPastedAnchors,
     props.readOnly

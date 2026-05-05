@@ -9,6 +9,7 @@ import type { PdfPageDimensions } from './pdfPageDimensions';
 interface PdfDocumentSurfaceLayoutProps {
   clearPageJumpRequest: (requestId: number) => void;
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  handleExternalLinkClick: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleSearchRequest: (direction: 'next' | 'previous') => void;
   handleSearchRequestHandled: (requestId: number) => void;
   handleSearchTargetHandled: (targetId: number) => void;
@@ -97,6 +98,7 @@ export function PdfDocumentSurfaceLayout(props: PdfDocumentSurfaceLayoutProps) {
       aria-label="PDF reader panel"
       className="pdf-document-surface relative flex min-h-0 flex-1 flex-col bg-bg-canvas"
       data-testid="pdf-document-surface"
+      onClickCapture={props.handleExternalLinkClick}
       ref={props.surfaceRef}
     >
       <div className="relative flex min-h-0 flex-1 flex-col">{renderViewport(props)}</div>

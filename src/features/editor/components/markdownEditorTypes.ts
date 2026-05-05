@@ -1,5 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type {
   EditorAdapter,
   EditorDiffDecorations,
@@ -41,6 +42,7 @@ export interface MarkdownEditorProps {
   onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
+  onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
   onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;

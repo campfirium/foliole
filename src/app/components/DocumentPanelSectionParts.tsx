@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
+import type { LinkPanelRecord } from './linkPanelState';
 import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
 import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
@@ -27,8 +29,15 @@ interface DocumentPanelContentProps {
   nodesById: Record<string, Node>;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onNodeContentChange: (nodeId: string, content: string) => void;
+  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
+  linkPanels: LinkPanelRecord[];
+  onCloseExternalLink: (panelId: string) => void;
+  onLinkPanelStateChange: (
+    panelId: string,
+    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
+  ) => void;
 }
 
 const PDF_READER_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
@@ -200,8 +209,12 @@ function buildDocumentPanelContentBodyArgs(
     nodesById: props.nodesById,
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onNodeContentChange: props.onNodeContentChange,
+    onOpenExternalLink: props.onOpenExternalLink,
     onPersistPdfViewState: props.onPersistPdfViewState,
     onSelectNode: props.onSelectNode,
+    linkPanels: props.linkPanels,
+    onCloseExternalLink: props.onCloseExternalLink,
+    onLinkPanelStateChange: props.onLinkPanelStateChange,
     pdfCache: derived.pdfCache,
     pdfDocumentSurface: derived.pdfDocumentSurface,
     pdfHighlightLocators: derived.pdfHighlightLocators,

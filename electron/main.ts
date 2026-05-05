@@ -7,7 +7,8 @@ import {
   BrowserWindow,
   ipcMain,
   type BrowserWindow as ElectronBrowserWindow,
-  type BrowserWindowConstructorOptions
+  type BrowserWindowConstructorOptions,
+  type WebContents
 } from 'electron';
 
 import { registerAttachmentProtocol, registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
@@ -75,7 +76,8 @@ function createWindowOptions(): BrowserWindowConstructorOptions {
       preload: runtimeDiagnostics.preloadPath,
       contextIsolation: true,
       sandbox: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webviewTag: true
     }
   };
 }
@@ -176,6 +178,15 @@ function installInvokeHandler() {
   );
 }
 
+function bindEmbeddedLinkPanels(contents: WebContents) {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (contents.getType() === 'webview' && url.trim()) {
+      void contents.loadURL(url);
+    }
+    return { action: 'deny' };
+  });
+}
+
 if (!runtimeMode.allowParallelInstance) {
   const hasSingleInstanceLock = app.requestSingleInstanceLock();
   if (!hasSingleInstanceLock) {
@@ -217,6 +228,9 @@ app.on('before-quit', (event) => {
 
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
+  app.on('web-contents-created', (_, contents) => {
+    bindEmbeddedLinkPanels(contents);
+  });
   initializeDatabase();
   registerAttachmentProtocol();
   installInvokeHandler();

@@ -1,6 +1,7 @@
 import { Facet, type Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 
 import {
@@ -31,6 +32,13 @@ export const openNodeLinkFacet = Facet.define<((title: string) => void) | null, 
   combine: (values) => values[0] ?? null
 });
 
+export const openExternalLinkFacet = Facet.define<
+  ((request: ExternalLinkOpenRequest) => void) | null,
+  ((request: ExternalLinkOpenRequest) => void) | null
+>({
+  combine: (values) => values[0] ?? null
+});
+
 export const pastedAnchorsFacet = Facet.define<
   ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null,
   ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null
@@ -43,6 +51,7 @@ export function createLiveMarkdownStateExtensions(args: {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
+  onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
   onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }): Extension[] {
@@ -51,6 +60,7 @@ export function createLiveMarkdownStateExtensions(args: {
     activeNodeIdFacet.of(args.nodeId),
     imageClozePresentationVersionFacet.of(args.imageClozePresentationVersion),
     textAnchorDecorationsFacet.of(args.textAnchorDecorations),
+    openExternalLinkFacet.of(args.onOpenExternalLink ?? null),
     openNodeLinkFacet.of(args.onOpenNodeLink),
     pastedAnchorsFacet.of(args.onPastedAnchors ?? null)
   ];

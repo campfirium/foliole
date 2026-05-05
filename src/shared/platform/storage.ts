@@ -56,6 +56,7 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.listCollapsed,
   APP_SETTINGS_STORAGE_KEYS.listWidth,
   APP_SETTINGS_STORAGE_KEYS.documentWidth,
+  APP_SETTINGS_STORAGE_KEYS.linkPanelSize,
   APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed,
   APP_SETTINGS_STORAGE_KEYS.rightSidebarWidth,
   APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel,
