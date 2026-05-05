@@ -95,17 +95,24 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(loadBody).toContain('"syncObjects"');
     expect(loadBody).toContain('syncObjectQueryReplacements');
     expect(source).toContain('FolioleCompanionSyncObjectPayloadReader.readPayloadJson');
-    expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({ objectType: 'attachment' });
+    expect(queryDefinitions.queries.syncPayloadAttachment.syncPayload).toEqual({
+      argMode: 'object_id',
+      objectType: 'attachment'
+    });
     expect(queryDefinitions.queries.syncPayloadViewActiveNode.syncPayload).toEqual({
+      argMode: 'none',
       objectIdKey: 'active_node',
       objectType: 'view_state'
     });
     expect(queryDefinitions.queries.syncPayloadViewNodeState.syncPayload).toEqual({
+      argMode: 'view_state_node',
       objectIdPrefix: 'node:',
       objectType: 'view_state'
     });
     expect(payloadReader).toContain('FolioleCompanionNamedQueryStore.syncPayloadQueryName');
+    expect(payloadReader).toContain('FolioleCompanionNamedQueryStore.syncPayloadQueryArgs');
     expect(payloadReader).not.toContain('syncPayloadAttachment');
+    expect(payloadReader).not.toContain('objectType.equals("view_state")');
   });
 
   it('keeps removed Android state apply forks out of the sync store', async () => {

@@ -11,19 +11,14 @@ final class FolioleCompanionSyncObjectPayloadReader {
         if (queryName == null) {
             return "{}";
         }
-        String payload = FolioleCompanionNamedQueryStore.loadString(context, database, queryName, queryArgs(objectType, objectId));
+        String objectIdKey = objectIdKey(objectId);
+        String payload = FolioleCompanionNamedQueryStore.loadString(
+            context,
+            database,
+            queryName,
+            FolioleCompanionNamedQueryStore.syncPayloadQueryArgs(context, queryName, objectId, objectIdKey, objectIdDeviceId(objectId))
+        );
         return payload == null ? "{}" : payload;
-    }
-
-    private static String[] queryArgs(String objectType, String objectId) {
-        if (!objectType.equals("view_state")) {
-            return new String[] { objectId };
-        }
-        String key = objectIdKey(objectId);
-        if (key.equals("active_node")) {
-            return null;
-        }
-        return new String[] { key.substring(5), objectIdDeviceId(objectId) };
     }
 
     private static String objectIdDeviceId(String objectId) {

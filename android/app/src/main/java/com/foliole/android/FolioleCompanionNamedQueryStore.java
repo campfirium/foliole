@@ -71,6 +71,18 @@ final class FolioleCompanionNamedQueryStore {
         return null;
     }
 
+    static String[] syncPayloadQueryArgs(Context context, String queryName, String objectId, String objectIdKey, String deviceId) throws Exception {
+        JSONObject payload = loadQuery(context, queryName).getJSONObject("syncPayload");
+        String argMode = payload.optString("argMode", "object_id");
+        if (argMode.equals("none")) {
+            return null;
+        }
+        if (argMode.equals("view_state_node")) {
+            return new String[] { objectIdKey.substring(5), deviceId };
+        }
+        return new String[] { objectId };
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;
