@@ -1,7 +1,6 @@
 import { memo } from 'react';
 
 import { NodeListHeader } from '../../features/nodes/components/NodeListHeader';
-import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
@@ -10,6 +9,7 @@ import { AppEmptyState } from '../../shared/ui';
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
+import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListStudyStatusBar } from './WorkspaceListStudyStatusBar';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
@@ -34,6 +34,28 @@ export interface WorkspaceListAreaProps {
   trashedNodeIds: string[];
 }
 
+function shouldShowWorkspaceEmptyState(args: {
+  isTrashViewOpen: boolean;
+  isVirtualViewOpen: boolean;
+  isWorkspaceHydrated?: boolean;
+  nodeOrder: string[];
+  trashedNodeIds: string[];
+}) {
+  const hasVisibleWorkspaceNodes = args.nodeOrder.some(
+    (nodeId) =>
+      nodeId !== INBOX_NODE_ID &&
+      nodeId !== VIRTUAL_ROOT_NODE_ID &&
+      !args.trashedNodeIds.includes(nodeId)
+  );
+
+  return (
+    args.isWorkspaceHydrated &&
+    !args.isTrashViewOpen &&
+    !args.isVirtualViewOpen &&
+    !hasVisibleWorkspaceNodes
+  );
+}
+
 export const WorkspaceListArea = memo(function WorkspaceListArea({
   activeNodeId,
   isStudyMode,
@@ -53,36 +75,33 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   selectedTrashNodeId,
   trashedNodeIds
 }: WorkspaceListAreaProps) {
-  const hasVisibleWorkspaceNodes = nodeOrder.some(
-    (nodeId) =>
-      nodeId !== INBOX_NODE_ID &&
-      nodeId !== VIRTUAL_ROOT_NODE_ID &&
-      !trashedNodeIds.includes(nodeId)
-  );
-  const shouldShowEmptyState =
-    isWorkspaceHydrated &&
-    !isTrashViewOpen &&
-    !isVirtualViewOpen &&
-    !hasVisibleWorkspaceNodes;
+  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({
+    isTrashViewOpen,
+    isVirtualViewOpen,
+    isWorkspaceHydrated,
+    nodeOrder,
+    trashedNodeIds
+  });
 
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden bg-bg-panel text-foreground">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg-panel text-foreground">
       {!isWorkspaceHydrated ? (
         <WorkspaceListLoadingState />
       ) : shouldShowEmptyState ? (
         <WorkspaceListEmptyState />
       ) : (
-        <NodeListTree
+        <WorkspaceDualListContent
           activeNodeId={activeNodeId}
           isTrashViewOpen={isTrashViewOpen}
           isVirtualViewOpen={isVirtualViewOpen}
+          listNodesById={listNodesById}
           nodeOrder={nodeOrder}
-          nodesById={listNodesById}
           onOpenMoveToNode={onOpenMoveToNode}
           onOpenNotesView={onOpenNotesView}
           onSelectNode={onSelectNode}
           onSelectTrashNode={onSelectTrashNode}
           selectedTrashNodeId={selectedTrashNodeId}
+          trashedNodeIds={trashedNodeIds}
         />
       )}
       <WorkspaceListStudyStatusBar

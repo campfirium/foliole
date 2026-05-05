@@ -31,7 +31,10 @@ export function WorkspaceListSplitter({
       role="separator"
       tabIndex={0}
     >
-      <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 cursor-col-resize" />
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 cursor-col-resize before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border"
+      />
       {isResizingList ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-px bg-border-strong" /> : null}
     </div>
   );
