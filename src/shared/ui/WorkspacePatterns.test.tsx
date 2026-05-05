@@ -29,14 +29,12 @@ it('renders review action bar with primary, secondary, and status slots', () => 
       reviewInputMode="hotkeys"
       reviewItemKind="fsrs"
       secondary="Hotkeys enabled"
-      status={<p>Queue status</p>}
     />
   );
 
   expect(container.querySelector('[data-mode="study"]')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.getByText('Hotkeys enabled')).toBeInTheDocument();
-  expect(screen.getByText('Queue status')).toBeInTheDocument();
 });
 
 it('renders toolbar action groups with shared grouping semantics', () => {

@@ -8,6 +8,7 @@ interface WorkspaceSideToolbarProps {
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   reviewDueCount: number;
+  showStudyDock?: boolean;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
   onOpenImportManagement: () => void;
@@ -98,8 +99,8 @@ function StudyAction({
         <AppTooltipTrigger asChild>
           <span className="inline-flex">
             <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              data-active={false}
+              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+              data-active={isStudyMode}
               disabled={!canStartStudyMode && !isStudyMode}
               icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
               label="Study"
@@ -119,6 +120,7 @@ export function WorkspaceSideToolbar({
   isStudyMode,
   isSettingsOpen,
   reviewDueCount,
+  showStudyDock = true,
   onStartClipboardImport,
   onStartImport,
   onOpenImportManagement,
@@ -146,21 +148,54 @@ export function WorkspaceSideToolbar({
         <div className="flex-1" />
         <SettingsAction isSettingsOpen={isSettingsOpen} onOpenSettings={onOpenSettings} />
       </div>
-      {isStudyMode ? (
-        <div
-          aria-hidden="true"
-          className="w-full shrink-0 border-t border-border"
-          data-testid="workspace-study-divider"
-        />
+      {showStudyDock ? (
+        <>
+          {isStudyMode ? (
+            <div
+              aria-hidden="true"
+              className="w-full shrink-0 border-t border-border"
+              data-testid="workspace-study-divider"
+            />
+          ) : null}
+          <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
+            <StudyAction
+              canStartStudyMode={canStartStudyMode}
+              isStudyMode={isStudyMode}
+              onToggleReviewSession={onToggleReviewSession}
+              reviewStatusText={reviewStatusText}
+            />
+          </div>
+        </>
       ) : null}
-      <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
-        <StudyAction
-          canStartStudyMode={canStartStudyMode}
-          isStudyMode={isStudyMode}
-          onToggleReviewSession={onToggleReviewSession}
-          reviewStatusText={reviewStatusText}
-        />
-      </div>
     </AppToolbar>
+  );
+}
+
+export function WorkspaceStudyDockTrigger({
+  canStartStudyMode,
+  isStudyMode,
+  onToggleReviewSession,
+  reviewDueCount
+}: {
+  canStartStudyMode: boolean;
+  isStudyMode: boolean;
+  onToggleReviewSession: () => void;
+  reviewDueCount: number;
+}) {
+  const reviewStatusText = isStudyMode
+    ? `Reviewing (${Math.max(reviewDueCount, 0)} remaining)`
+    : reviewDueCount > 0
+      ? `Start review (${reviewDueCount} due)`
+      : 'Start review (no due cards)';
+
+  return (
+    <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-r border-t border-border bg-bg-subtle">
+      <StudyAction
+        canStartStudyMode={canStartStudyMode}
+        isStudyMode={isStudyMode}
+        onToggleReviewSession={onToggleReviewSession}
+        reviewStatusText={reviewStatusText}
+      />
+    </div>
   );
 }

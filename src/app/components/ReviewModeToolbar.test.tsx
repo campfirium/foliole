@@ -1,16 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import type { SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
-
 import { ReviewModeToolbar } from './ReviewModeToolbar';
-
-const preview: SchedulerPreviewResult = {
-  Again: { card: { due: '2026-01-01T00:01:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Again'],
-  Hard: { card: { due: '2026-01-01T01:00:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Hard'],
-  Good: { card: { due: '2026-01-02T00:00:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Good'],
-  Easy: { card: { due: '2026-02-01T00:00:00.000Z' }, reviewed_at: '2026-01-01T00:00:00.000Z' } as SchedulerPreviewResult['Easy']
-};
 
 function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
   return render(
@@ -19,6 +10,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       isCurrentItemGradable={false}
       isReviewEditing={false}
       isStudyMode
+      reviewCompletedCount={0}
       onCompleteReviewItem={vi.fn(() => true)}
       onDeferReviewItem={vi.fn(() => true)}
       onDismissReviewItem={vi.fn(() => true)}
@@ -26,14 +18,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
       onGrade={vi.fn(async () => true)}
       onRevealAnswer={vi.fn()}
       reviewCurrentNodeId="node-1"
-      reviewPreview={preview}
-      reviewQueueVisibility={{
-        currentQueueLabel: 'Reading queue',
-        fsrsQueueCount: 2,
-        readingQueueCount: 1,
-        queueMixRatioFsrs: 1,
-        queueMixRatioReading: 2
-      }}
+      reviewQueueCount={3}
       {...overrides}
     />
   );
@@ -46,7 +31,7 @@ it('renders reading actions and queue status inside the shared review action bar
   expect(screen.getByLabelText('Reading review actions')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
-  expect(screen.getByText('Push queue live')).toBeInTheDocument();
+  expect(screen.getByText('3 left · 0 done')).toBeInTheDocument();
 });
 
 it('switches to fsrs reveal and grade actions in the shared review action bar', async () => {
@@ -67,6 +52,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       isCurrentItemGradable
       isReviewEditing={false}
       isStudyMode
+      reviewCompletedCount={0}
       onCompleteReviewItem={vi.fn(() => true)}
       onDeferReviewItem={vi.fn(() => true)}
       onDismissReviewItem={vi.fn(() => true)}
@@ -74,8 +60,7 @@ it('switches to fsrs reveal and grade actions in the shared review action bar', 
       onGrade={onGrade}
       onRevealAnswer={onRevealAnswer}
       reviewCurrentNodeId="node-1"
-      reviewPreview={preview}
-      reviewQueueVisibility={null}
+      reviewQueueCount={1}
     />
   );
 

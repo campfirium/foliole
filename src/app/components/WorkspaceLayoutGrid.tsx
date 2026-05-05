@@ -7,6 +7,8 @@ import {
 } from '../../features/nodes/model/workspaceListNode';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
+import { WorkspaceBottomReviewToolbar } from './WorkspaceBottomReviewToolbar';
+import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import {
   WorkspaceDocumentArea,
@@ -46,7 +48,7 @@ export function WorkspaceLayoutGrid({
   const listNodesById = useProjectedListNodesById(props.nodesById);
   return (
     <div
-      className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
+      className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
       style={{
         gridTemplateColumns: props.isImmersiveMode
           ? 'minmax(0, 1fr)'
@@ -59,6 +61,7 @@ export function WorkspaceLayoutGrid({
           onOpenImportManagement={onOpenImportManagement}
           onStartClipboardImport={onStartClipboardImport}
           onStartImport={onStartImport}
+          showStudyDock={!props.isStudyMode}
           props={props}
         />
       )}
@@ -72,6 +75,7 @@ export function WorkspaceLayoutGrid({
         onSelectNode={onSelectNode}
         props={props}
       />
+      <WorkspaceBottomReviewToolbar props={props} />
     </div>
   );
 }
@@ -111,13 +115,6 @@ function WorkspaceLayoutGridFrame({
       </div>
     </div>
   );
-}
-
-function getWorkspaceGridColumns(props: WorkspaceLayoutProps) {
-  if (props.isImmersiveMode) {
-    return 'grid-cols-1 xl:grid-cols-1';
-  }
-  return '[grid-template-columns:minmax(0,var(--workspace-list-current-width,300px))_var(--workspace-list-splitter-width,1px)_minmax(0,1fr)] xl:[grid-template-columns:minmax(0,var(--workspace-list-current-width,300px))_var(--workspace-list-splitter-width,1px)_minmax(0,1fr)_var(--workspace-right-sidebar-splitter-width,1px)_minmax(0,var(--workspace-right-sidebar-current-width,320px))]';
 }
 
 function WorkspaceGridContent({
@@ -171,7 +168,6 @@ function renderListColumns(args: {
       <WorkspaceListArea
         activeNodeId={args.props.activeNodeId}
         activeVirtualNodeId={args.props.activeVirtualNodeId ?? null}
-        isStudyMode={args.props.isStudyMode}
         isTrashViewOpen={args.props.isTrashViewOpen}
         isVirtualViewOpen={args.props.isVirtualViewOpen}
         isWorkspaceHydrated={args.props.isWorkspaceHydrated}
@@ -185,10 +181,6 @@ function renderListColumns(args: {
         onSelectNode={args.onSelectNode}
         onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView}
         onSelectTrashNode={args.props.onSelectTrashNode}
-        reviewCompletedCount={args.props.reviewCompletedCount}
-        reviewDueCount={args.props.reviewDueCount}
-        reviewQueueCount={args.props.reviewQueueCount}
-        reviewStatus={args.props.reviewStatus}
         selectedTrashNodeId={args.props.selectedTrashNodeId}
         trashedNodeIds={args.props.trashedNodeIds}
       />

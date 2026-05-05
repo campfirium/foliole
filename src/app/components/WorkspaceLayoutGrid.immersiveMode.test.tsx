@@ -173,7 +173,8 @@ function createGridSectionsMock() {
     WorkspaceListArea: (props: { listNodesById: unknown }) => {
       lifecycle.listAreaCalls.push({ listNodesById: props.listNodesById });
       return <div data-testid="list-area">list</div>;
-    }
+    },
+    ReviewModeToolbar: () => <div data-testid="review-toolbar">toolbar</div>
   };
 }
 

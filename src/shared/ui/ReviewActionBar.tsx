@@ -10,7 +10,6 @@ interface ReviewActionBarProps {
   reviewInputMode?: 'editing' | 'hotkeys';
   reviewItemKind?: 'fsrs' | 'reading';
   secondary?: ReactNode;
-  status?: ReactNode;
 }
 
 export function ReviewActionBar({
@@ -20,24 +19,22 @@ export function ReviewActionBar({
   primary,
   reviewInputMode,
   reviewItemKind,
-  secondary,
-  status
+  secondary
 }: ReviewActionBarProps) {
   return (
     <div
       aria-label={ariaLabel}
-      className={cn('flex h-[var(--workspace-bottom-toolbar-height)] w-full flex-none flex-col justify-center gap-1 border-t border-border bg-bg-elevated px-4 py-1', className)}
+      className={cn('flex h-[var(--workspace-bottom-toolbar-height)] w-full flex-none items-center border-t border-border bg-bg-elevated px-4', className)}
       data-mode={mode}
       data-review-input-mode={reviewInputMode}
       data-review-item-kind={reviewItemKind}
       role="group"
     >
-      <div className="grid min-h-[32px] w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-        <div className="min-w-0 text-sm text-foreground/65">{secondary}</div>
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+        <div className="min-w-0 truncate text-sm font-medium text-foreground/70">{secondary}</div>
         <div className="flex items-center justify-center">{primary}</div>
         <div aria-hidden="true" className="min-w-0" />
       </div>
-      {status ? <div className="flex items-center justify-center text-center">{status}</div> : null}
     </div>
   );
 }

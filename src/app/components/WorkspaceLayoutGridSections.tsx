@@ -6,18 +6,15 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
-import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
-import { WorkspaceListStudyStatusBar } from './WorkspaceListStudyStatusBar';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 export interface WorkspaceListAreaProps {
   activeNodeId: string | null;
   activeVirtualNodeId: string | null;
-  isStudyMode: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   isWorkspaceHydrated?: boolean;
@@ -31,10 +28,6 @@ export interface WorkspaceListAreaProps {
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
   onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
-  reviewCompletedCount: number;
-  reviewDueCount: number;
-  reviewQueueCount: number;
-  reviewStatus: WorkspaceLayoutProps['reviewStatus'];
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
 }
@@ -66,7 +59,6 @@ function shouldShowWorkspaceEmptyState(args: {
 export const WorkspaceListArea = memo(function WorkspaceListArea({
   activeNodeId,
   activeVirtualNodeId,
-  isStudyMode,
   isTrashViewOpen,
   isVirtualViewOpen,
   isWorkspaceHydrated,
@@ -80,10 +72,6 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   onSelectNode,
   onSelectNodeInVirtualView,
   onSelectTrashNode,
-  reviewCompletedCount,
-  reviewDueCount,
-  reviewQueueCount,
-  reviewStatus,
   selectedTrashNodeId,
   trashedNodeIds
 }: WorkspaceListAreaProps) {
@@ -111,13 +99,6 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
         shouldShowEmptyState,
         trashedNodeIds
       })}
-      <WorkspaceListStudyStatusBar
-        isStudyMode={isStudyMode}
-        reviewCompletedCount={reviewCompletedCount}
-        reviewDueCount={reviewDueCount}
-        reviewQueueCount={reviewQueueCount}
-        reviewStatus={reviewStatus}
-      />
     </div>
   );
 });
@@ -194,23 +175,6 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
         onShouldSuppressSelectionRestore={onShouldSuppressSelectionRestore}
         props={props}
       />
-      {props.isImmersiveMode ? null : (
-        <ReviewModeToolbar
-          isAnswerRevealed={props.isAnswerRevealed}
-          isCurrentItemGradable={props.isCurrentReviewItemGradable}
-          isReviewEditing={props.isReviewEditing}
-          isStudyMode={props.isStudyMode}
-          reviewPreview={props.reviewPreview}
-          reviewCurrentNodeId={props.reviewCurrentNodeId}
-          reviewQueueVisibility={props.reviewQueueVisibility}
-          onCompleteReviewItem={props.onCompleteReviewItem}
-          onDeferReviewItem={props.onDeferReviewItem}
-          onDismissReviewItem={props.onDismissReviewItem}
-          onExitReviewMode={props.onExitReviewMode}
-          onGrade={props.onGradeReview}
-          onRevealAnswer={props.onRevealAnswer}
-        />
-      )}
     </section>
   );
 });
@@ -242,12 +206,14 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
   onOpenImportManagement,
   onStartClipboardImport,
   onStartImport,
+  showStudyDock,
   props
 }: {
   isImportManagementOpen: boolean;
   onOpenImportManagement: () => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
+  showStudyDock?: boolean;
   props: WorkspaceLayoutProps;
 }) {
   return (
@@ -258,6 +224,7 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
         isSettingsOpen={props.isSettingsOpen}
         isStudyMode={props.isStudyMode}
         reviewDueCount={props.reviewDueCount}
+        showStudyDock={showStudyDock}
         onOpenImportManagement={onOpenImportManagement}
         onOpenSettings={props.onOpenSettings}
         onStartClipboardImport={onStartClipboardImport}

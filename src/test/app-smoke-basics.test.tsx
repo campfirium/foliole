@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import './reactPdfMock';
@@ -30,6 +30,28 @@ function createReadingProfile(nextAt: string) {
     repetitionCount: 1,
     state: 'active' as const
   };
+}
+
+function createDueReview() {
+  return {
+    due: FIXED_TIMESTAMP,
+    lastReviewAt: null,
+    state: 0,
+    stability: 0,
+    difficulty: 0,
+    elapsedDays: 0,
+    scheduledDays: 0,
+    reps: 0,
+    lapses: 0
+  };
+}
+
+function expectReviewToolbarSummary(summary: string) {
+  expect(screen.getAllByText(summary).length).toBeGreaterThan(0);
+}
+
+function getPressedTreeItem(name: string) {
+  return screen.getAllByRole('treeitem', { name }).find((item) => item.getAttribute('aria-pressed') === 'true') ?? null;
 }
 
 beforeEach(() => {
@@ -91,17 +113,7 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
         title: 'QA 2',
         content: 'Prompt [...]',
         reveal: 'Answer',
-        review: {
-          due: FIXED_TIMESTAMP,
-          lastReviewAt: null,
-          state: 0,
-          stability: 0,
-          difficulty: 0,
-          elapsedDays: 0,
-          scheduledDays: 0,
-          reps: 0,
-          lapses: 0
-        }
+        review: createDueReview()
       })
     }
   }));
@@ -111,11 +123,10 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
   expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2', 'node-1']));
-  expect(screen.getByText(/Reviewing · 2 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
+  expectReviewToolbarSummary('2 left · 0 done');
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
-  expect(screen.getByText(/Reviewing · 2 left · 0 done · Answer revealed/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
   await waitFor(() => expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument());
@@ -144,7 +155,7 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-1']));
-  expect(screen.getByText(/Reviewing · 1 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
+  expectReviewToolbarSummary('1 left · 0 done');
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
@@ -173,17 +184,7 @@ it('syncs node list selection when review grading advances active node', async (
         title: 'Welcome to Foliole',
         content: '# Welcome to Foliole\n\nStart writing markdown here.',
         reveal: 'Answer 1',
-        review: {
-          due: FIXED_TIMESTAMP,
-          lastReviewAt: null,
-          state: 0,
-          stability: 0,
-          difficulty: 0,
-          elapsedDays: 0,
-          scheduledDays: 0,
-          reps: 0,
-          lapses: 0
-        }
+        review: createDueReview()
       }),
       'node-2': createNode({
         id: 'node-2',
@@ -191,17 +192,7 @@ it('syncs node list selection when review grading advances active node', async (
         title: 'QA 2',
         content: 'Prompt 2',
         reveal: 'Answer 2',
-        review: {
-          due: FIXED_TIMESTAMP,
-          lastReviewAt: null,
-          state: 0,
-          stability: 0,
-          difficulty: 0,
-          elapsedDays: 0,
-          scheduledDays: 0,
-          reps: 0,
-          lapses: 0
-        }
+        review: createDueReview()
       })
     }
   }));
@@ -209,19 +200,18 @@ it('syncs node list selection when review grading advances active node', async (
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  expect(screen.getByText(/Reviewing · 2 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
+  expectReviewToolbarSummary('2 left · 0 done');
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
   await waitFor(() => {
-    expect(screen.getByText(/Reviewing · 1 left · 1 done · Awaiting answer/i)).toBeInTheDocument();
+    expectReviewToolbarSummary('1 left · 1 done');
   });
 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   });
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
   await waitFor(() => {
-    expect(within(listPanel).getByRole('treeitem', { name: 'QA 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(getPressedTreeItem('QA 2')).not.toBeNull();
   });
 });
 
@@ -237,17 +227,7 @@ it('keeps review toolbar visible in completed state until user exits', async () 
         title: 'Welcome to Foliole',
         content: '# Welcome to Foliole\n\nStart writing markdown here.',
         reveal: 'Answer 1',
-        review: {
-          due: FIXED_TIMESTAMP,
-          lastReviewAt: null,
-          state: 0,
-          stability: 0,
-          difficulty: 0,
-          elapsedDays: 0,
-          scheduledDays: 0,
-          reps: 0,
-          lapses: 0
-        }
+        review: createDueReview()
       })
     }
   }));

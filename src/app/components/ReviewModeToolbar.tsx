@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
+import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ReviewGradeActions } from './ReviewModeToolbarActions';
-import type { ReviewQueueVisibility } from './reviewQueueVisibility';
-import { ReviewQueueVisibilityText } from './ReviewQueueVisibilityText';
 
 interface ReviewModeToolbarProps {
+  className?: string;
+  showSummary?: boolean;
   isStudyMode: boolean;
   isAnswerRevealed: boolean;
   isCurrentItemGradable: boolean;
   isReviewEditing: boolean;
-  reviewPreview: SchedulerPreviewResult | null;
+  reviewCompletedCount: number;
   reviewCurrentNodeId: string | null;
-  reviewQueueVisibility: ReviewQueueVisibility | null;
+  reviewQueueCount: number;
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
   onCompleteReviewItem: () => boolean;
   onDeferReviewItem: () => boolean;
@@ -72,14 +72,24 @@ function useGradeFeedback(
 
   return { errorMessage, isSubmitting, submitGrade };
 }
+
+function ReviewSessionSummary({
+  reviewCompletedCount,
+  reviewQueueCount
+}: Pick<ReviewModeToolbarProps, 'reviewCompletedCount' | 'reviewQueueCount'>) {
+  return `${Math.max(reviewQueueCount, 0)} left · ${Math.max(reviewCompletedCount, 0)} done`;
+}
+
 export function ReviewModeToolbar({
+  className,
+  showSummary = true,
   isStudyMode,
   isAnswerRevealed,
   isCurrentItemGradable,
   isReviewEditing,
-  reviewPreview,
+  reviewCompletedCount,
   reviewCurrentNodeId,
-  reviewQueueVisibility,
+  reviewQueueCount,
   onGrade,
   onCompleteReviewItem,
   onDeferReviewItem,
@@ -100,6 +110,7 @@ export function ReviewModeToolbar({
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
+      className={className}
       mode={isStudyMode ? 'study' : 'edit'}
       primary={!isCurrentItemGradable ? (
         <ReadingReviewActions
@@ -113,13 +124,12 @@ export function ReviewModeToolbar({
         <ReviewGradeActions
           errorMessage={errorMessage}
           isSubmitting={isSubmitting}
-          reviewPreview={reviewPreview}
           submitGrade={submitGrade}
         />
       )}
       reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
-      status={reviewQueueVisibility ? <ReviewQueueVisibilityText visibility={reviewQueueVisibility} /> : null}
+      secondary={showSummary ? <ReviewSessionSummary reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} /> : null}
     />
   );
 }

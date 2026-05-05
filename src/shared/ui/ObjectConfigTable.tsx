@@ -2,6 +2,7 @@ import { FolderOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { AppButton } from './Button';
+
 import { cn } from '@/shared/lib/utils';
 
 interface ObjectConfigTableProps {
