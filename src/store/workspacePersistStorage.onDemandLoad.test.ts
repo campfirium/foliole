@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 
@@ -38,43 +38,84 @@ function createRuntimeInvoke() {
   });
 }
 
-describe('workspacePersistStorage on-demand document hydrate', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.mocked(getRuntimeInvoke).mockReset();
-    window.localStorage.clear();
+function createLongDocument() {
+  return Array.from({ length: 2_500 }, (_, index) => `Paragraph ${index}: ${'Long document body. '.repeat(4)}`).join('\n\n');
+}
+
+function createLongDocumentRuntimeInvoke(longDocument: string) {
+  return vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
+    if (command === 'load_workspace_list_snapshot') {
+      return Promise.resolve({
+        activeNodeId: 'node-2',
+        nodeOrder: ['node-1', 'node-2'],
+        nodesById: {
+          'node-1': { id: 'node-1', content: '', hasContent: true, hasReveal: false, reveal: null },
+          'node-2': { id: 'node-2', content: '', hasContent: true, hasReveal: false, reveal: null }
+        },
+        trashedNodeIds: []
+      });
+    }
+    if (command === 'load_node_document' && payload?.nodeId === 'node-2') {
+      return Promise.resolve({
+        nodeId: 'node-2',
+        content: longDocument,
+        hideTitleHeading: false,
+        reveal: null
+      });
+    }
+    return Promise.resolve({ activeNodeId: 'node-2', nodeViewStateById: {} });
   });
+}
 
-  it('loads only the active node document from runtime hydrate', async () => {
-    const invoke = createRuntimeInvoke();
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+beforeEach(() => {
+  vi.restoreAllMocks();
+  vi.mocked(getRuntimeInvoke).mockReset();
+  window.localStorage.clear();
+});
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
-    const nodesById = readWorkspaceNodesFromPayload(value);
-    const loadDocumentCalls = invoke.mock.calls.filter(([command]) => command === 'load_node_document');
+it('loads only the active node document from runtime hydrate', async () => {
+  const invoke = createRuntimeInvoke();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    expect(loadDocumentCalls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
-    expect(nodesById?.['node-1']).toEqual({
-      id: 'node-1',
-      content: '',
-      hasContent: true,
-      hasReveal: false,
-      reveal: null
-    });
-    expect(nodesById?.['node-2']).toEqual({
-      id: 'node-2',
-      content: 'Loaded node 2 body',
-      hasContent: true,
-      hasReveal: true,
-      hideTitleHeading: false,
-      reveal: 'Loaded node 2 answer'
-    });
-    expect(nodesById?.['node-3']).toEqual({
-      id: 'node-3',
-      content: '',
-      hasContent: true,
-      hasReveal: true,
-      reveal: null
-    });
+  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+  const nodesById = readWorkspaceNodesFromPayload(value);
+  const loadDocumentCalls = invoke.mock.calls.filter(([command]) => command === 'load_node_document');
+
+  expect(loadDocumentCalls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
+  expect(nodesById?.['node-1']).toEqual({
+    id: 'node-1',
+    content: '',
+    hasContent: true,
+    hasReveal: false,
+    reveal: null
   });
+  expect(nodesById?.['node-2']).toEqual({
+    id: 'node-2',
+    content: 'Loaded node 2 body',
+    hasContent: true,
+    hasReveal: true,
+    hideTitleHeading: false,
+    reveal: 'Loaded node 2 answer'
+  });
+  expect(nodesById?.['node-3']).toEqual({
+    id: 'node-3',
+    content: '',
+    hasContent: true,
+    hasReveal: true,
+    reveal: null
+  });
+});
+
+it('allows first open of a long document to load the full body from runtime hydrate', async () => {
+  const longDocument = createLongDocument();
+  const invoke = createLongDocumentRuntimeInvoke(longDocument);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+  const nodesById = readWorkspaceNodesFromPayload(value);
+
+  expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
+  expect(nodesById?.['node-2']?.content).toBe(longDocument);
+  expect(nodesById?.['node-2']?.content.length).toBeGreaterThan(100_000);
+  expect(nodesById?.['node-1']?.content).toBe('');
 });
