@@ -1,8 +1,10 @@
-const UNTITLED_NODE_TITLE = 'Untitled';
-const TITLE_MAX_LENGTH = 80;
+import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
+
+export const UNTITLED_NODE_TITLE = 'Untitled';
+const CLOZE_PLACEHOLDER = '[[...]]';
 
 function sanitizeTitleCandidate(value: string) {
-  return value.trim().replace(/\s+/g, ' ').slice(0, TITLE_MAX_LENGTH);
+  return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
 }
 
 function stripMarkdownPrefixes(value: string) {
@@ -21,39 +23,32 @@ function stripMarkdownInline(value: string) {
     .replace(/[*_~`]+/g, '');
 }
 
-function extractHeadingTitle(content: string) {
-  const lines = content.split(/\r?\n/);
-  for (const line of lines) {
-    const match = line.trim().match(/^#\s+(.+)$/);
-    if (!match?.[1]) {
-      continue;
-    }
-    const sanitized = sanitizeTitleCandidate(stripMarkdownInline(match[1]));
-    if (sanitized) {
-      return sanitized;
-    }
-  }
-  return null;
-}
-
-function extractFallbackTitle(content: string) {
-  const lines = content.split(/\r?\n/);
-  for (const line of lines) {
-    const normalized = sanitizeTitleCandidate(stripMarkdownInline(stripMarkdownPrefixes(line)));
-    if (!normalized) {
-      continue;
-    }
-
-    const stopIndex = normalized.search(/[。！？!?，,.;；:：]/);
-    const slice = stopIndex > 0 ? normalized.slice(0, stopIndex) : normalized;
-    const candidate = sanitizeTitleCandidate(slice);
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return null;
+function normalizeMarkdownContent(content: string) {
+  const normalized = content
+    .split(/\r?\n/)
+    .map((line) => stripMarkdownPrefixes(line))
+    .join(' ');
+  return stripMarkdownInline(normalized);
 }
 
 export function deriveNodeTitleFromContent(content: string) {
-  return extractHeadingTitle(content) ?? extractFallbackTitle(content) ?? UNTITLED_NODE_TITLE;
+  const candidate = sanitizeTitleCandidate(normalizeMarkdownContent(content));
+  return candidate || UNTITLED_NODE_TITLE;
+}
+
+export function deriveNodeTitleForCloze(promptContent: string, answerContent: string) {
+  const prompt = promptContent.trim();
+  const answer = answerContent.trim();
+  const reconstructed = prompt.includes(CLOZE_PLACEHOLDER) ? prompt.replace(CLOZE_PLACEHOLDER, answer) : prompt;
+  const reconstructedTitle = deriveNodeTitleFromContent(reconstructed);
+  if (reconstructedTitle !== UNTITLED_NODE_TITLE) {
+    return reconstructedTitle;
+  }
+
+  const answerTitle = deriveNodeTitleFromContent(answer);
+  if (answerTitle !== UNTITLED_NODE_TITLE) {
+    return answerTitle;
+  }
+
+  return deriveNodeTitleFromContent(prompt);
 }

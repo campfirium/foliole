@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { collectNodeSubtreeIds, findFallbackActiveNodeId, normalizeWidth } from './workspaceHelpers';
@@ -190,7 +190,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               [childNodeId]: {
                 id: childNodeId,
                 parentNodeId,
-                title: `Highlight ${state.nodeOrder.length + 1}`,
+                title: deriveNodeTitleFromContent(normalizedContent),
                 content: normalizedContent,
                 reveal: null,
                 review: null,
@@ -226,7 +226,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               [childNodeId]: {
                 id: childNodeId,
                 parentNodeId,
-                title: `QA ${state.nodeOrder.length + 1}`,
+                title: deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
                 content: normalizedPrompt,
                 reveal: normalizedAnswer,
                 review: createDefaultReviewProfile(timestamp),

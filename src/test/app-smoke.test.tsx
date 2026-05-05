@@ -68,6 +68,7 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
 
 describe('App', () => {
   beforeEach(() => {
+    window.history.pushState({}, '', '/');
     localStorage.clear();
     useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
     mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
@@ -245,6 +246,7 @@ describe('App', () => {
       throw new Error('expected a child node');
     }
     expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
+    expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
     expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
     expect(workspace.nodesById['node-1']?.content).toContain('==Welcome==');
   });
@@ -266,6 +268,7 @@ describe('App', () => {
       throw new Error('expected a child node');
     }
     expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
+    expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome to Foliole');
     expect(workspace.nodesById[createdNodeId]?.content).toBe('# [[...]] to Foliole');
     expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
     expect(workspace.nodesById['node-1']?.content).toContain('{{Welcome}}');

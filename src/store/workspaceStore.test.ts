@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 
-import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+import { NODE_TITLE_MAX_CHARS } from '../shared/config/nodeTitleConfig';
 
 import {
   createInitialWorkspaceState,
@@ -122,7 +123,7 @@ function createTestStore(now: Date) {
             [childNodeId]: {
               id: childNodeId,
               parentNodeId,
-              title: 'Highlight 2',
+              title: deriveNodeTitleFromContent(normalizedContent),
               content: normalizedContent,
               reveal: null,
               review: null,
@@ -158,7 +159,7 @@ function createTestStore(now: Date) {
             [childNodeId]: {
               id: childNodeId,
               parentNodeId,
-              title: 'QA 2',
+              title: deriveNodeTitleForCloze(normalizedPrompt, normalizedAnswer),
               content: normalizedPrompt,
               reveal: normalizedAnswer,
               review: {
@@ -209,18 +210,26 @@ describe('workspaceStore', () => {
     expect(node.title).toBe('updated markdown');
   });
 
-  it('derives node title from first level-1 heading', () => {
+  it('derives node title from normalized markdown content', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
     store.getState().updateNodeContent('node-1', '# New Title\n\nBody paragraph.');
 
-    expect(store.getState().nodesById['node-1']?.title).toBe('New Title');
+    expect(store.getState().nodesById['node-1']?.title).toBe('New Title Body paragraph.');
   });
 
-  it('falls back to first clause when heading is missing', () => {
+  it('keeps full normalized text instead of splitting sentence', () => {
     const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
     store.getState().updateNodeContent('node-1', 'First clause, second clause. Third sentence.');
 
-    expect(store.getState().nodesById['node-1']?.title).toBe('First clause');
+    expect(store.getState().nodesById['node-1']?.title).toBe('First clause, second clause. Third sentence.');
+  });
+
+  it('applies fixed title max length from code config', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    const longContent = `# ${'x'.repeat(NODE_TITLE_MAX_CHARS + 20)}`;
+    store.getState().updateNodeContent('node-1', longContent);
+
+    expect(store.getState().nodesById['node-1']?.title).toBe('x'.repeat(NODE_TITLE_MAX_CHARS));
   });
 
   it('uses Untitled when content has no usable text', () => {
@@ -242,6 +251,7 @@ describe('workspaceStore', () => {
     expect(childNodeId).toBe('node-test-id');
     expect(store.getState().nodeOrder).toContain('node-test-id');
     expect(store.getState().nodesById['node-test-id']?.parentNodeId).toBe('node-1');
+    expect(store.getState().nodesById['node-test-id']?.title).toBe('What is quoted text?');
     expect(store.getState().nodesById['node-test-id']?.content).toBe('What is [[...]]?');
     expect(store.getState().nodesById['node-test-id']?.reveal).toBe('quoted text');
     expect(store.getState().nodesById['node-test-id']?.review).not.toBeNull();
@@ -255,6 +265,7 @@ describe('workspaceStore', () => {
     expect(childNodeId).toBe('node-highlight-id');
     expect(store.getState().nodeOrder).toContain('node-highlight-id');
     expect(store.getState().nodesById['node-highlight-id']?.parentNodeId).toBe('node-1');
+    expect(store.getState().nodesById['node-highlight-id']?.title).toBe('selected text');
     expect(store.getState().nodesById['node-highlight-id']?.content).toBe('selected text');
     expect(store.getState().nodesById['node-highlight-id']?.reveal).toBeNull();
     expect(store.getState().nodesById['node-highlight-id']?.review).toBeNull();
