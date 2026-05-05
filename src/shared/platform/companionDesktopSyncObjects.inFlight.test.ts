@@ -20,6 +20,24 @@ const pairingMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companionDesktopSyncSummary', () => ({
+  loadCompanionDesktopSyncSummary: vi.fn(async () => ({
+    localDirtyCount: null,
+    pendingAckCount: null,
+    pushIssueCount: null,
+    remainingAttachmentBreakdown: undefined,
+    remainingAttachmentResourceBytes: null,
+    remainingAttachmentResourceCount: null,
+    remainingContentBreakdown: undefined,
+    remainingContentBlobBytes: null,
+    remainingContentBlobCount: null,
+    remainingFailedAttachmentResourceBytes: null,
+    remainingFailedAttachmentResourceCount: null,
+    remainingFailedContentBlobBytes: null,
+    remainingFailedContentBlobCount: null,
+    remainingStructureChangeCount: null
+  }))
+}));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 
 beforeEach(() => {

@@ -13,6 +13,7 @@ async function testReportsContentProgressAfterEachConcurrentChunk() {
   syncBridgeMock.loadCompanionMissingContentBlobs
     .mockResolvedValueOnce(hashes.map((hash) => ({ hash, size_bytes: 2 })))
     .mockResolvedValueOnce([]);
+  syncBridgeMock.syncCompanionContentBlobs.mockRejectedValueOnce(new Error('batch unavailable'));
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
   const onProgress = vi.fn();
 
