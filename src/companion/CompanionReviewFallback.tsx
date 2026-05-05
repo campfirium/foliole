@@ -24,10 +24,10 @@ export function CompanionReviewFallback(props: {
         <>
           <p>{hasScheduledReviews ? 'No review items are due right now.' : 'No review items have been scheduled on this device yet.'}</p>
           {nextReadingLabel ? <p className="mt-3">Next reading topic: {nextReadingLabel}</p> : null}
-          {nextFsrsLabel ? <p className="mt-2">Next FSRS card: {nextFsrsLabel}</p> : null}
+          {nextFsrsLabel ? <p className="mt-2">Next review item: {nextFsrsLabel}</p> : null}
           <p className="mt-3">
             {hasScheduledReviews
-              ? `Synced review state: ${props.reviewSession.scheduledReadingCount} reading topics, ${props.reviewSession.scheduledFsrsCount} FSRS cards.`
+              ? `Synced review state: ${props.reviewSession.scheduledReadingCount} reading topics, ${props.reviewSession.scheduledFsrsCount} review items.`
               : 'Pull a newer snapshot when you want this device to refresh upcoming review work.'}
           </p>
         </>

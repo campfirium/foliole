@@ -230,7 +230,7 @@ describe('CompanionShell review surfaces', () => {
     await renderShellWithSurface(createReviewEmptySurface());
 
     expect(screen.getByText('No review items are due right now.')).toBeInTheDocument();
-    expect(screen.getByText(/Synced review state: 2 reading topics, 9 FSRS cards\./)).toBeInTheDocument();
+    expect(screen.getByText(/Synced review state: 2 reading topics, 9 review items\./)).toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
   });
 
