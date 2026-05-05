@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -44,10 +44,10 @@ function insertNode(nodeId: string) {
   );
 }
 
-it('applies legacy mobile view state payloads as user scroll source', () => {
+it('applies legacy mobile view state payloads as user scroll source', async () => {
   insertNode('node-1');
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-active-view',
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:active_node',
@@ -72,10 +72,10 @@ it('applies legacy mobile view state payloads as user scroll source', () => {
   )).toEqual({ device_id: 'android-test', scroll_top: 128, source: 'user-scroll' });
 });
 
-it('marks sourced view state sync payloads as sync apply writes', () => {
+it('marks sourced view state sync payloads as sync apply writes', async () => {
   insertNode('node-1');
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-node-view',
     deleted_at: null,
     object_id: 'session_resume:android:phone:android-test:node:node-1',

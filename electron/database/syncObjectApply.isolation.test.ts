@@ -21,7 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -37,7 +37,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('skips malformed records without blocking later valid records', () => {
+it('skips malformed records without blocking later valid records', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const records = [{
     content_hash: 'bad-hash',
@@ -68,7 +68,7 @@ it('skips malformed records without blocking later valid records', () => {
     updated_at: '2026-04-21T16:01:00.000Z'
   }] as unknown as NativeSyncObjectRecord[];
 
-  expect(applySyncObjects(records)).toEqual(['setting:device:android:phone:*:sync_reminder']);
+  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['setting:device:android:phone:*:sync_reminder']);
   expect(warn).toHaveBeenCalled();
 
   const driver = openDatabaseConnection().driver;

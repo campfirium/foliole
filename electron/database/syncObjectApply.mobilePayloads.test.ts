@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -44,10 +44,10 @@ function insertNode(nodeId: string) {
   );
 }
 
-it('applies mobile snake_case learning payloads', () => {
+it('applies mobile snake_case learning payloads', async () => {
   insertNode('node-1');
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-review-mobile',
     deleted_at: null,
     object_id: 'node-1',

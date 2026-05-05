@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncObjects } from './syncObjectApply.js';
+import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
 
@@ -51,10 +51,10 @@ function insertAttachment(attachmentId: string) {
   );
 }
 
-it('accepts Android-exported numeric strings when applying learning objects', () => {
+it('accepts Android-exported numeric strings when applying learning objects', async () => {
   insertNode('node-1');
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-reading',
     deleted_at: null,
     object_id: 'node-1',
@@ -83,10 +83,10 @@ it('accepts Android-exported numeric strings when applying learning objects', ()
   )).toEqual({ reading_position: 42 });
 });
 
-it('accepts Android-exported numeric strings when applying pdf page text', () => {
+it('accepts Android-exported numeric strings when applying pdf page text', async () => {
   insertAttachment('attachment-1');
 
-  applySyncObjects([{
+  await applySyncObjectsAsync([{
     content_hash: 'hash-pdf-page',
     deleted_at: null,
     object_id: 'attachment-1:3',
@@ -107,8 +107,8 @@ it('accepts Android-exported numeric strings when applying pdf page text', () =>
   )).toEqual({ page: 3, page_height: 1200.5, page_width: 800.25 });
 });
 
-it('accepts Android-exported numeric strings when applying external documents', () => {
-  applySyncObjects([{
+it('accepts Android-exported numeric strings when applying external documents', async () => {
+  await applySyncObjectsAsync([{
     content_hash: 'hash-document',
     deleted_at: null,
     object_id: 'document-1',
