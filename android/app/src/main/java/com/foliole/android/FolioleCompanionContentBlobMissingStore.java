@@ -35,7 +35,7 @@ final class FolioleCompanionContentBlobMissingStore {
             count++;
             long sizeBytes = blob.getLong("size_bytes");
             bytes += sizeBytes;
-            if ("failed".equals(blob.getString("availability"))) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(blob.getString("availability"))) {
                 failedCount++;
                 failedBytes += sizeBytes;
             }

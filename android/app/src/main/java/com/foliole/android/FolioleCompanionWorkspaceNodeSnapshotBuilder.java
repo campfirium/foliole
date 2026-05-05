@@ -6,8 +6,9 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Set;
 
 final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
     private FolioleCompanionWorkspaceNodeSnapshotBuilder() {}
@@ -25,7 +26,7 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         node.put("hideTitleHeading", row.getLong("hide_title_heading") == 1);
         node.put("content", nullableString(row, "content"));
         node.put("bodyBlobHash", nullableString(row, "body_blob_hash"));
-        putBodyStatus(node, row.getString("body_status"));
+        putBodyStatus(context, node, row.getString("body_status"));
         JSONArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(context, database, nodeId);
         if (attachments.length() > 0) node.put("attachments", attachments);
         node.put("openingText", nullableString(row, "opening_text"));
@@ -42,8 +43,9 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
         return node;
     }
 
-    private static void putBodyStatus(JSObject node, String bodyStatus) throws JSONException {
-        if ("missing".equals(bodyStatus) || "empty".equals(bodyStatus) || "fetching".equals(bodyStatus) || "failed".equals(bodyStatus)) {
+    private static void putBodyStatus(Context context, JSObject node, String bodyStatus) throws Exception {
+        Set<String> visibleStatuses = FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "visibleBodyStatuses");
+        if (visibleStatuses.contains(bodyStatus)) {
             node.put("bodyStatus", bodyStatus);
         }
     }

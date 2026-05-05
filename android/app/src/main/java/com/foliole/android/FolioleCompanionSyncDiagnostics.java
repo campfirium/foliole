@@ -50,7 +50,10 @@ final class FolioleCompanionSyncDiagnostics {
         JSObject connection = new JSObject();
         connection.put("endpoint_url", endpointUrl == null ? JSONObject.NULL : endpointUrl);
         connection.put("last_error", JSONObject.NULL);
-        connection.put("state", pairing.optBoolean("is_paired", false) && endpointUrl != null ? "ready" : "missing");
+        String state = pairing.optBoolean("is_paired", false) && endpointUrl != null
+            ? FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready")
+            : FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing");
+        connection.put("state", state);
         return connection;
     }
 

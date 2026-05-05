@@ -96,17 +96,23 @@ final class FolioleCompanionReadableArticleQuery {
         return "# " + normalizeTitle(title) + "\n\n" + pdfText;
     }
 
-    private static String resolveContentStatus(String inlineContent, String bodyBlobHash, String bodyBlobData, String availability) {
+    private static String resolveContentStatus(
+        Context context,
+        String inlineContent,
+        String bodyBlobHash,
+        String bodyBlobData,
+        String availability
+    ) throws Exception {
         if (bodyBlobHash != null && !bodyBlobHash.trim().isEmpty() && bodyBlobData == null) {
-            if ("fetching".equals(availability) || "failed".equals(availability)) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses").contains(availability)) {
                 return availability;
             }
-            return "missing";
+            return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing");
         }
         if (resolveContent(inlineContent, bodyBlobData).trim().isEmpty()) {
-            return "empty";
+            return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "empty");
         }
-        return "ready";
+        return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready");
     }
 
     private static String resolveContent(String inlineContent, String bodyBlobData) {
@@ -127,7 +133,7 @@ final class FolioleCompanionReadableArticleQuery {
         article.put("title", title);
         article.put("body_blob_hash", bodyBlobHash);
         article.put("content", resolveArticleContent(context, database, title, content, pdfAttachmentId));
-        article.put("content_status", resolveContentStatus(inlineContent, bodyBlobHash, bodyBlobData, availability));
+        article.put("content_status", resolveContentStatus(context, inlineContent, bodyBlobHash, bodyBlobData, availability));
         article.put("pdf_attachment_id", pdfAttachmentId);
         return article;
     }

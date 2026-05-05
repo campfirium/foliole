@@ -1,3 +1,14 @@
+export const ANDROID_COMPANION_RESOURCE_STATUSES = {
+  cached: 'cached',
+  empty: 'empty',
+  failed: 'failed',
+  fetching: 'fetching',
+  missing: 'missing',
+  passthroughAvailabilityStatuses: ['fetching', 'failed'],
+  ready: 'ready',
+  visibleBodyStatuses: ['missing', 'empty', 'fetching', 'failed']
+} as const;
+
 export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
   pushAck: {
     confirmingStatuses: ['accepted', 'already_applied'],
@@ -5,6 +16,7 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     stateSeqRejectedObjectTypes: ['review_log'],
     statuses: ['accepted', 'already_applied', 'conflict', 'rejected']
   },
+  resourceStatuses: ANDROID_COMPANION_RESOURCE_STATUSES,
   syncEvents: {
     completedStatus: 'completed',
     fallbackStatus: 'failed',

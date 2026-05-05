@@ -25,6 +25,14 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return objectType;
     }
 
+    static String resourceStatus(Context context, String key) throws Exception {
+        return stringValue(context, "resourceStatuses", key);
+    }
+
+    static Set<String> resourceStatusSet(Context context, String key) throws Exception {
+        return stringSet(context, "resourceStatuses", key);
+    }
+
     static Set<String> stringSet(Context context, String sectionName, String key) throws Exception {
         return stringSet(section(context, sectionName), key);
     }

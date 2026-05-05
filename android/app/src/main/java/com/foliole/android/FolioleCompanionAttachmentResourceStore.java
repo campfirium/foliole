@@ -59,7 +59,7 @@ final class FolioleCompanionAttachmentResourceStore {
         }
         JSObject result = new JSObject();
         result.put("attachment_id", normalizedAttachmentId);
-        result.put("availability", "cached");
+        result.put("availability", FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 
@@ -94,7 +94,7 @@ final class FolioleCompanionAttachmentResourceStore {
             return missingFile(mimeType);
         }
         JSObject result = new JSObject();
-        result.put("status", "ready");
+        result.put("status", FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready"));
         result.put("mime_type", mimeType);
         result.put("resource_url", Uri.fromFile(file).toString());
         return result;

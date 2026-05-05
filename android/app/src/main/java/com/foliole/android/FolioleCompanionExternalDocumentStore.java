@@ -24,7 +24,7 @@ final class FolioleCompanionExternalDocumentStore {
         JSArray documents = FolioleCompanionNamedQueryStore
             .loadRows(context, database, "externalDocumentById", "documents", new String[] { documentId.trim() });
         if (documents.length() > 0) {
-            result.put("document", toDocument(documents.getJSONObject(0)));
+            result.put("document", toDocument(context, documents.getJSONObject(0)));
         }
         return result;
     }
@@ -62,7 +62,7 @@ final class FolioleCompanionExternalDocumentStore {
                 }
             );
         for (int index = 0; index < documents.length(); index += 1) {
-            results.put(toSearchResult(documents.getJSONObject(index)));
+            results.put(toSearchResult(context, documents.getJSONObject(index)));
         }
         return result;
     }
@@ -88,22 +88,22 @@ final class FolioleCompanionExternalDocumentStore {
         return entries;
     }
 
-    private static JSObject toDocument(JSONObject row) throws Exception {
+    private static JSObject toDocument(Context context, JSONObject row) throws Exception {
         JSObject document = new JSObject();
-        putDocumentFields(document, row);
+        putDocumentFields(context, document, row);
         return document;
     }
 
-    private static JSObject toSearchResult(JSONObject row) throws Exception {
+    private static JSObject toSearchResult(Context context, JSONObject row) throws Exception {
         JSObject result = new JSObject();
         int matchStart = Math.max(0, row.getInt("match_index") - 1);
-        putDocumentFields(result, row);
+        putDocumentFields(context, result, row);
         result.put("match_start", matchStart);
         result.put("excerpt", buildExcerpt(resolveContent(row), matchStart));
         return result;
     }
 
-    private static void putDocumentFields(JSObject target, JSONObject row) {
+    private static void putDocumentFields(Context context, JSObject target, JSONObject row) throws Exception {
         target.put("document_id", nullableString(row, "document_id"));
         target.put("folder_id", nullableString(row, "folder_id"));
         target.put("relative_path", nullableString(row, "relative_path"));
@@ -112,7 +112,7 @@ final class FolioleCompanionExternalDocumentStore {
         target.put("title", nullableString(row, "title"));
         target.put("opening_text", nullableString(row, "opening_text"));
         target.put("content", resolveContent(row));
-        target.put("content_status", resolveContentStatus(row));
+        target.put("content_status", resolveContentStatus(context, row));
         target.put("updated_at", nullableString(row, "updated_at"));
     }
 
@@ -121,17 +121,17 @@ final class FolioleCompanionExternalDocumentStore {
         return bodyBlobData == null ? nullableString(row, "content") : bodyBlobData;
     }
 
-    private static String resolveContentStatus(JSONObject row) {
+    private static String resolveContentStatus(Context context, JSONObject row) throws Exception {
         String bodyBlobHash = nullableString(row, "body_blob_hash");
         boolean hasBodyBlobHash = bodyBlobHash != null && !bodyBlobHash.trim().isEmpty();
         if (hasBodyBlobHash && nullableString(row, "body_blob_data") == null) {
             String availability = nullableString(row, "availability");
-            if ("fetching".equals(availability) || "failed".equals(availability)) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses").contains(availability)) {
                 return availability;
             }
-            return "missing";
+            return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing");
         }
-        return "ready";
+        return FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready");
     }
 
     private static String nullableString(JSONObject row, String key) {

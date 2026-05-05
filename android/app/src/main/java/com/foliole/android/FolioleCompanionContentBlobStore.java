@@ -59,7 +59,7 @@ final class FolioleCompanionContentBlobStore {
         }
         JSObject result = new JSObject();
         result.put("hash", hash);
-        result.put("availability", "cached");
+        result.put("availability", FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 
@@ -100,7 +100,7 @@ final class FolioleCompanionContentBlobStore {
         }
         JSObject result = new JSObject();
         result.put("hash", hash);
-        result.put("availability", "cached");
+        result.put("availability", FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 

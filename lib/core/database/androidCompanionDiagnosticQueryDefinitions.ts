@@ -1,9 +1,26 @@
+import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
+
+const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 const MISSING_TOPIC_BODY_WHERE =
   "n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL AND cb.kind = 'text_body' AND cbd.hash IS NULL";
 
 const MISSING_TOPIC_BODY_FROM =
   'FROM nodes n JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
   'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ';
+
+const BODY_STATUS_WITH_BLOB_DATA_SQL =
+  "CASE WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('" +
+  RESOURCE_STATUS.fetching +
+  "', '" +
+  RESOURCE_STATUS.failed +
+  "') THEN cb.availability " +
+  "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN '" +
+  RESOURCE_STATUS.missing +
+  "' WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN '" +
+  RESOURCE_STATUS.empty +
+  "' ELSE '" +
+  RESOURCE_STATUS.ready +
+  "' END";
 
 export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
   diagnosticStorageMetrics: {
@@ -60,10 +77,9 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
   diagnosticActiveTopic: {
     resultKey: 'topics',
     sql:
-      'SELECT n.id, n.title, CASE ' +
-      "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability " +
-      "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing' " +
-      "WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty' ELSE 'ready' END AS body_status " +
+      'SELECT n.id, n.title, ' +
+      BODY_STATUS_WITH_BLOB_DATA_SQL +
+      ' AS body_status ' +
       'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
       'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ' +
       "WHERE n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) " +

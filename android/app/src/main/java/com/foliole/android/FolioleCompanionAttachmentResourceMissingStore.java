@@ -34,6 +34,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
             JSONObject row = rows.getJSONObject(index);
             if (!isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key"))) continue;
             summary.add(
+                context,
                 row.getString("availability"),
                 row.getLong("size_bytes"),
                 row.getString("mime_type"),
@@ -70,8 +71,9 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         return row.isNull(key) ? null : row.optString(key, null);
     }
 
-    private static boolean isMissingResource(Context context, String availability, String storageKey) {
-        return !"cached".equals(availability) || !hasAttachmentFile(context, storageKey);
+    private static boolean isMissingResource(Context context, String availability, String storageKey) throws Exception {
+        return !FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached").equals(availability) ||
+            !hasAttachmentFile(context, storageKey);
     }
 
     private static boolean hasAttachmentFile(Context context, String storageKey) {
@@ -99,10 +101,10 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         long activeTopicCount;
         long dueReviewCount;
 
-        void add(String availability, long sizeBytes, String mimeType, boolean dueReview, boolean activeTopic) {
+        void add(Context context, String availability, long sizeBytes, String mimeType, boolean dueReview, boolean activeTopic) throws Exception {
             count++;
             bytes += sizeBytes;
-            if ("failed".equals(availability)) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(availability)) {
                 failedCount++;
                 failedBytes += sizeBytes;
             }

@@ -27,11 +27,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         String contentBlobJoin = canReadBodyBlobData
             ? "LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash "
             : "";
-        String bodyStatusExpression = canReadBodyBlobData
-            ? "CASE WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability " +
-                "WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing' " +
-                "WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty' ELSE 'ready' END"
-            : "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END";
+        String bodyStatusExpression = bodyStatusExpression(context, canReadBodyBlobData);
 
         JSObject nodesById = new JSObject();
         JSONArray trashedNodeIds = new JSONArray();
@@ -81,6 +77,32 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         replacements.put("__CONTENT_BLOB_JOIN__", contentBlobJoin);
         replacements.put("__BODY_STATUS_EXPRESSION__", bodyStatusExpression);
         return replacements;
+    }
+
+    private static String bodyStatusExpression(Context context, boolean canReadBodyBlobData) throws Exception {
+        String emptyStatus = sqlString(FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "empty"));
+        String readyStatus = sqlString(FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready"));
+        if (!canReadBodyBlobData) {
+            return "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN " + emptyStatus + " ELSE " + readyStatus + " END";
+        }
+        String fetchingStatus = sqlString(FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "fetching"));
+        String failedStatus = sqlString(FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed"));
+        String missingStatus = sqlString(FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing"));
+        return "CASE WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN (" +
+            fetchingStatus +
+            ", " +
+            failedStatus +
+            ") THEN cb.availability WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN " +
+            missingStatus +
+            " WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN " +
+            emptyStatus +
+            " ELSE " +
+            readyStatus +
+            " END";
+    }
+
+    private static String sqlString(String value) {
+        return "'" + value.replace("'", "''") + "'";
     }
 
     private static JSONArray loadOrderedNodeIds(Context context, SQLiteDatabase database) throws Exception {

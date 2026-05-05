@@ -1,3 +1,7 @@
+import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
+
+const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
+
 export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   attachmentResourceMissingRows: {
     resultKey: 'resources',
@@ -13,7 +17,9 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
       ') SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key ' +
       'FROM attachment_blobs b LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id ' +
       "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
-      "ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = 'failed' THEN 2 ELSE 1 END ASC, " +
+      "ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = '" +
+      RESOURCE_STATUS.failed +
+      "' THEN 2 ELSE 1 END ASC, " +
       'COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC',
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },

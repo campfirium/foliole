@@ -17,6 +17,24 @@
       "rejected"
     ]
   },
+  "resourceStatuses": {
+    "cached": "cached",
+    "empty": "empty",
+    "failed": "failed",
+    "fetching": "fetching",
+    "missing": "missing",
+    "passthroughAvailabilityStatuses": [
+      "fetching",
+      "failed"
+    ],
+    "ready": "ready",
+    "visibleBodyStatuses": [
+      "missing",
+      "empty",
+      "fetching",
+      "failed"
+    ]
+  },
   "syncEvents": {
     "completedStatus": "completed",
     "fallbackStatus": "failed",

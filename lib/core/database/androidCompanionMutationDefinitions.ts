@@ -1,3 +1,7 @@
+import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
+
+const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
+
 export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   syncPushAckDeleteByObject: 'DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?',
   syncPushAckDeleteIssuesByObject:
@@ -52,13 +56,19 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   nodeAttachmentDeleteByNode: 'DELETE FROM node_attachments WHERE node_id = ?',
   nodeAttachmentUpsert: 'INSERT OR REPLACE INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
   attachmentResourceMarkCached:
-    "UPDATE attachment_blobs SET storage_key = ?, availability = 'cached', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
-  attachmentResourceMarkFailed: "UPDATE attachment_blobs SET availability = 'failed' WHERE attachment_id = ?",
+    "UPDATE attachment_blobs SET storage_key = ?, availability = '" +
+    RESOURCE_STATUS.cached +
+    "', cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
+  attachmentResourceMarkFailed:
+    "UPDATE attachment_blobs SET availability = '" + RESOURCE_STATUS.failed + "' WHERE attachment_id = ?",
   contentBlobDataReplace: 'INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)',
   contentBlobMarkCached:
-    "UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",
-  contentBlobMarkFetching: "UPDATE content_blobs SET availability = 'fetching' WHERE hash = ?",
-  contentBlobMarkFailed: "UPDATE content_blobs SET availability = 'failed' WHERE hash = ?",
+    "UPDATE content_blobs SET availability = '" +
+    RESOURCE_STATUS.cached +
+    "', cached_at = ?, last_verified_at = ? WHERE hash = ?",
+  contentBlobMarkFetching:
+    "UPDATE content_blobs SET availability = '" + RESOURCE_STATUS.fetching + "' WHERE hash = ?",
+  contentBlobMarkFailed: "UPDATE content_blobs SET availability = '" + RESOURCE_STATUS.failed + "' WHERE hash = ?",
   migrationSyncObjectStateNextInsert:
     'INSERT INTO sync_object_state_next (' +
     'object_type, object_id, state_seq, current_version_id, content_hash, last_modified_by_device_id, ' +
