@@ -1,11 +1,12 @@
 package com.foliole.android;
 
-import android.database.Cursor;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionExternalDocumentStore {
@@ -15,36 +16,29 @@ final class FolioleCompanionExternalDocumentStore {
 
     private FolioleCompanionExternalDocumentStore() {}
 
-    static JSObject loadDocument(SQLiteDatabase database, String documentId) {
+    static JSObject loadDocument(Context context, SQLiteDatabase database, String documentId) throws Exception {
         JSObject result = new JSObject();
         result.put("document", JSONObject.NULL);
         if (documentId == null || documentId.trim().isEmpty()) {
             return result;
         }
-        try (Cursor cursor = database.rawQuery(
-            "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at " +
-                "FROM external_documents ed " +
-                "LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash " +
-                "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
-                "WHERE document_id = ? AND is_present = 1 LIMIT 1",
-            new String[] { documentId.trim() }
-        )) {
-            if (cursor.moveToFirst()) {
-                result.put("document", toDocument(cursor));
-            }
+        JSONArray documents = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "externalDocumentById", new String[] { documentId.trim() })
+            .getJSONArray("documents");
+        if (documents.length() > 0) {
+            result.put("document", toDocument(documents.getJSONObject(0)));
         }
         return result;
     }
 
-    static JSObject loadDirectory(SQLiteDatabase database) {
+    static JSObject loadDirectory(Context context, SQLiteDatabase database) throws Exception {
         JSObject result = new JSObject();
-        result.put("folders", loadFolders(database));
-        result.put("entries", loadEntries(database));
+        result.put("folders", FolioleCompanionNamedQueryStore.loadArray(context, database, "externalSearchFolders").getJSONArray("folders"));
+        result.put("entries", loadEntries(context, database));
         return result;
     }
 
-    static JSObject searchDocuments(SQLiteDatabase database, String query, int limit) {
+    static JSObject searchDocuments(Context context, SQLiteDatabase database, String query, int limit) throws Exception {
         JSObject result = new JSObject();
         JSArray results = new JSArray();
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
@@ -53,19 +47,12 @@ final class FolioleCompanionExternalDocumentStore {
         if (normalizedQuery.isEmpty()) {
             return result;
         }
-        try (Cursor cursor = database.rawQuery(
-            "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, " +
-                "ed.content, ed.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data, cb.availability, updated_at, " +
-                "instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) AS match_index " +
-                "FROM external_documents ed " +
-                "LEFT JOIN content_blobs cb ON cb.hash = ed.body_blob_hash " +
-                "LEFT JOIN content_blob_data cbd ON cbd.hash = ed.body_blob_hash " +
-                "WHERE is_present = 1 " +
-                "AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 " +
-                "OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 " +
-                "OR instr(lower(COALESCE(CAST(cbd.data AS TEXT), ed.content)), ?) > 0) " +
-                "ORDER BY updated_at DESC LIMIT ?",
-            new String[] {
+        JSONArray documents = FolioleCompanionNamedQueryStore
+            .loadArray(
+                context,
+                database,
+                "externalDocumentSearch",
+                new String[] {
                 normalizedQuery,
                 normalizedQuery,
                 normalizedQuery,
@@ -73,102 +60,86 @@ final class FolioleCompanionExternalDocumentStore {
                 normalizedQuery,
                 normalizedQuery,
                 Integer.toString(resolveLimit(limit))
-            }
-        )) {
-            while (cursor.moveToNext()) {
-                results.put(toSearchResult(cursor));
-            }
+                }
+            )
+            .getJSONArray("documents");
+        for (int index = 0; index < documents.length(); index += 1) {
+            results.put(toSearchResult(documents.getJSONObject(index)));
         }
         return result;
     }
 
-    private static JSArray loadFolders(SQLiteDatabase database) {
-        JSArray folders = new JSArray();
-        try (Cursor cursor = database.rawQuery(
-            "SELECT id, folder_path, document_count FROM external_search_folders ORDER BY folder_path COLLATE NOCASE ASC",
-            null
-        )) {
-            while (cursor.moveToNext()) {
-                JSObject folder = new JSObject();
-                folder.put("id", cursor.getString(0));
-                folder.put("folder_path", cursor.getString(1));
-                folder.put("document_count", cursor.getInt(2));
-                folders.put(folder);
-            }
-        }
-        return folders;
-    }
-
-    private static JSArray loadEntries(SQLiteDatabase database) {
+    private static JSArray loadEntries(Context context, SQLiteDatabase database) throws Exception {
         JSArray entries = new JSArray();
-        try (Cursor cursor = database.rawQuery(
-            "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at " +
-                "FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC",
-            null
-        )) {
-            while (cursor.moveToNext()) {
-                JSObject entry = new JSObject();
-                String documentId = cursor.getString(0);
-                String relativePath = cursor.getString(2);
-                entry.put("document_id", documentId);
-                entry.put("folder_id", cursor.getString(1));
-                entry.put("relative_path", relativePath);
-                entry.put("file_name", cursor.getString(3));
-                entry.put("extension", cursor.getString(4));
-                entry.put("title", cursor.getString(5));
-                entry.put("opening_text", cursor.getString(6));
-                entry.put("modified_at", cursor.getString(7));
-                entry.put("absolute_path", documentId);
-                entries.put(entry);
-            }
+        JSONArray rows = FolioleCompanionNamedQueryStore
+            .loadArray(context, database, "externalDocumentDirectoryEntries")
+            .getJSONArray("entries");
+        for (int index = 0; index < rows.length(); index += 1) {
+            JSONObject row = rows.getJSONObject(index);
+            JSObject entry = new JSObject();
+            String documentId = row.getString("document_id");
+            entry.put("document_id", documentId);
+            entry.put("folder_id", nullableString(row, "folder_id"));
+            entry.put("relative_path", nullableString(row, "relative_path"));
+            entry.put("file_name", nullableString(row, "file_name"));
+            entry.put("extension", nullableString(row, "extension"));
+            entry.put("title", nullableString(row, "title"));
+            entry.put("opening_text", nullableString(row, "opening_text"));
+            entry.put("modified_at", nullableString(row, "modified_at"));
+            entry.put("absolute_path", documentId);
+            entries.put(entry);
         }
         return entries;
     }
 
-    private static JSObject toDocument(Cursor cursor) {
+    private static JSObject toDocument(JSONObject row) throws Exception {
         JSObject document = new JSObject();
-        putDocumentFields(document, cursor);
+        putDocumentFields(document, row);
         return document;
     }
 
-    private static JSObject toSearchResult(Cursor cursor) {
+    private static JSObject toSearchResult(JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        int matchStart = Math.max(0, cursor.getInt(12) - 1);
-        putDocumentFields(result, cursor);
+        int matchStart = Math.max(0, row.getInt("match_index") - 1);
+        putDocumentFields(result, row);
         result.put("match_start", matchStart);
-        result.put("excerpt", buildExcerpt(resolveContent(cursor), matchStart));
+        result.put("excerpt", buildExcerpt(resolveContent(row), matchStart));
         return result;
     }
 
-    private static void putDocumentFields(JSObject target, Cursor cursor) {
-        target.put("document_id", cursor.getString(0));
-        target.put("folder_id", cursor.getString(1));
-        target.put("relative_path", cursor.getString(2));
-        target.put("file_name", cursor.getString(3));
-        target.put("extension", cursor.getString(4));
-        target.put("title", cursor.getString(5));
-        target.put("opening_text", cursor.getString(6));
-        target.put("content", resolveContent(cursor));
-        target.put("content_status", resolveContentStatus(cursor));
-        target.put("updated_at", cursor.getString(11));
+    private static void putDocumentFields(JSObject target, JSONObject row) {
+        target.put("document_id", nullableString(row, "document_id"));
+        target.put("folder_id", nullableString(row, "folder_id"));
+        target.put("relative_path", nullableString(row, "relative_path"));
+        target.put("file_name", nullableString(row, "file_name"));
+        target.put("extension", nullableString(row, "extension"));
+        target.put("title", nullableString(row, "title"));
+        target.put("opening_text", nullableString(row, "opening_text"));
+        target.put("content", resolveContent(row));
+        target.put("content_status", resolveContentStatus(row));
+        target.put("updated_at", nullableString(row, "updated_at"));
     }
 
-    private static String resolveContent(Cursor cursor) {
-        String bodyBlobData = cursor.isNull(9) ? null : cursor.getString(9);
-        return bodyBlobData == null ? cursor.getString(7) : bodyBlobData;
+    private static String resolveContent(JSONObject row) {
+        String bodyBlobData = nullableString(row, "body_blob_data");
+        return bodyBlobData == null ? nullableString(row, "content") : bodyBlobData;
     }
 
-    private static String resolveContentStatus(Cursor cursor) {
-        String bodyBlobHash = cursor.isNull(8) ? null : cursor.getString(8);
+    private static String resolveContentStatus(JSONObject row) {
+        String bodyBlobHash = nullableString(row, "body_blob_hash");
         boolean hasBodyBlobHash = bodyBlobHash != null && !bodyBlobHash.trim().isEmpty();
-        if (hasBodyBlobHash && cursor.isNull(9)) {
-            String availability = cursor.isNull(10) ? null : cursor.getString(10);
+        if (hasBodyBlobHash && nullableString(row, "body_blob_data") == null) {
+            String availability = nullableString(row, "availability");
             if ("fetching".equals(availability) || "failed".equals(availability)) {
                 return availability;
             }
             return "missing";
         }
         return "ready";
+    }
+
+    private static String nullableString(JSONObject row, String key) {
+        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static String buildExcerpt(String text, int matchStart) {

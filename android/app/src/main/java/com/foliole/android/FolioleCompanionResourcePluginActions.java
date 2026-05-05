@@ -59,11 +59,11 @@ final class FolioleCompanionResourcePluginActions {
         return databaseHelper.searchPdfPageText(call.getString("query"), call.getInt("limit", 20));
     }
 
-    static JSObject loadExternalDocument(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject loadExternalDocument(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadExternalDocument(call.getString("document_id"));
     }
 
-    static JSObject searchExternalDocuments(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) {
+    static JSObject searchExternalDocuments(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.searchExternalDocuments(call.getString("query"), call.getInt("limit", 20));
     }
 }
