@@ -6,152 +6,20 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import {
+  FORBIDDEN_BUSINESS_RULE_PATTERNS,
+  REMOVED_BUSINESS_FORKS,
+  classifiedFiles,
+  classificationEntries
+} from './java-adapter-boundary-rules.mjs';
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const JAVA_ROOT = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android');
-
-const CLASSIFICATIONS = {
-  asset_support: [
-    'FolioleCompanionAssetReader.java',
-    'FolioleCompanionJsonValueParser.java',
-    'FolioleCompanionSyncContentHash.java'
-  ],
-  bridge_contract_metadata: [
-    'FolioleCompanionBridgeContractDefinitions.java',
-    'FolioleCompanionHostBridgeContractDefinitions.java'
-  ],
-  bridge_plugin_adapter: [
-    'FolioleCompanionAppDataPlugin.java',
-    'FolioleCompanionBootstrapPlugin.java',
-    'FolioleCompanionDatabasePlugin.java',
-    'FolioleCompanionPairingPluginActions.java',
-    'FolioleCompanionResourcePluginActions.java',
-    'FolioleCompanionSyncDataPluginActions.java',
-    'FolioleCompanionSyncPackTransferPlugin.java',
-    'FolioleCompanionSyncPlugin.java',
-    'FolioleCompanionSyncStatePluginActions.java',
-    'FolioleCompanionWorkspaceSyncPluginActions.java'
-  ],
-  generated_definition_reader: [
-    'FolioleCompanionContentReadQueryRules.java',
-    'FolioleCompanionDocumentPayloadRules.java',
-    'FolioleCompanionHostSupportMutationRules.java',
-    'FolioleCompanionLearningPayloadRules.java',
-    'FolioleCompanionMigrationRules.java',
-    'FolioleCompanionMissingResourceQueryRules.java',
-    'FolioleCompanionMutationAssetKeys.java',
-    'FolioleCompanionNodeAttachmentQueryRules.java',
-    'FolioleCompanionQueryAssetKeys.java',
-    'FolioleCompanionQueryDefinitionShapeKeys.java',
-    'FolioleCompanionResourceMutationRules.java',
-    'FolioleCompanionResourceReadQueryRules.java',
-    'FolioleCompanionRuntimeMutationRules.java',
-    'FolioleCompanionRuntimeQueryRules.java',
-    'FolioleCompanionSyncApplyMutationRules.java',
-    'FolioleCompanionSyncConflictQueryRules.java',
-    'FolioleCompanionSyncDiagnosticQueryRules.java',
-    'FolioleCompanionSyncObjectQueryRules.java',
-    'FolioleCompanionSyncPayloadRoutingRules.java',
-    'FolioleCompanionSyncProtocolDefinitions.java',
-    'FolioleCompanionSyncPushAckRules.java',
-    'FolioleCompanionSyncReviewLogRecordRules.java',
-    'FolioleCompanionSyncSettingPayloadRules.java',
-    'FolioleCompanionSyncStreamQueryRules.java',
-    'FolioleCompanionSyncWriteRules.java',
-    'FolioleCompanionViewStatePayloadRules.java',
-    'FolioleCompanionWorkspaceReadQueryRules.java'
-  ],
-  host_platform_adapter: [
-    'FolioleCompanionAppDataStore.java',
-    'FolioleCompanionBootstrapState.java',
-    'FolioleCompanionContentBlobBatchText.java',
-    'FolioleCompanionContentBlobMultipartBatch.java',
-    'FolioleCompanionDatabaseBackup.java',
-    'FolioleCompanionDatabaseHelper.java',
-    'FolioleCompanionDesktopHttpClient.java',
-    'FolioleCompanionNetworkPluginActions.java',
-    'FolioleCompanionNsdDiscovery.java',
-    'FolioleCompanionPairingStore.java',
-    'FolioleCompanionSyncPackTransfer.java',
-    'FolioleCompanionWebView.java',
-    'MainActivity.java'
-  ],
-  migration_adapter: [
-    'FolioleCompanionDatabaseMigration.java',
-    'FolioleCompanionSchemaInstaller.java',
-    'FolioleCompanionSqliteRuntime.java'
-  ],
-  query_mutation_executor: [
-    'FolioleCompanionGeneratedMutationRunner.java',
-    'FolioleCompanionGeneratedQueryRunner.java',
-    'FolioleCompanionNamedMutationStore.java',
-    'FolioleCompanionNamedQueryStore.java'
-  ],
-  sync_diagnostic_adapter: [
-    'FolioleCompanionSyncDiagnosticContent.java',
-    'FolioleCompanionSyncDiagnosticMeta.java',
-    'FolioleCompanionSyncDiagnosticState.java',
-    'FolioleCompanionSyncDiagnosticStorage.java',
-    'FolioleCompanionSyncDiagnosticVerdicts.java',
-    'FolioleCompanionSyncDiagnostics.java'
-  ],
-  store_executor: [
-    'FolioleCompanionAttachmentResourceBatchStore.java',
-    'FolioleCompanionAttachmentResourceMissingStore.java',
-    'FolioleCompanionAttachmentResourceStore.java',
-    'FolioleCompanionContentBlobBatchManifestStore.java',
-    'FolioleCompanionContentBlobBatchStore.java',
-    'FolioleCompanionContentBlobMissingStore.java',
-    'FolioleCompanionContentBlobStore.java',
-    'FolioleCompanionDocumentSyncPayload.java',
-    'FolioleCompanionExternalDocumentStore.java',
-    'FolioleCompanionLearningSyncPayload.java',
-    'FolioleCompanionMetaRecords.java',
-    'FolioleCompanionNodeAttachmentStore.java',
-    'FolioleCompanionPdfPageTextStore.java',
-    'FolioleCompanionReadableArticleQuery.java',
-    'FolioleCompanionSyncMetaStore.java',
-    'FolioleCompanionSyncNodeVersionStore.java',
-    'FolioleCompanionSyncObjectStore.java',
-    'FolioleCompanionSyncPayloadJson.java',
-    'FolioleCompanionSyncPayloadQueryStore.java',
-    'FolioleCompanionSyncPushAckStore.java',
-    'FolioleCompanionSyncReviewLogStore.java',
-    'FolioleCompanionSyncStateWriteStore.java',
-    'FolioleCompanionTextBodyBlobs.java',
-    'FolioleCompanionViewStateSyncStore.java',
-    'FolioleCompanionWorkspaceNodeSnapshotBuilder.java',
-    'FolioleCompanionWorkspaceSnapshotExporter.java',
-    'FolioleCompanionWorkspaceViewStateExporter.java'
-  ]
-};
-
-const REMOVED_BUSINESS_FORKS = [
-  'FolioleCompanionSyncConflictStore.java',
-  'FolioleCompanionSyncObjectApply.java',
-  'FolioleCompanionSyncStateRows.java'
-];
-
-const FORBIDDEN_BUSINESS_RULE_PATTERNS = [
-  /\bchooseConflictWinner\b/,
-  /\bresolveConflict\b/,
-  /\bmergeConflict\b/,
-  /\bapplySyncObject\b/,
-  /\bbuildReviewQueue\b/,
-  /\bscheduleNextReview\b/,
-  /\bselectNextReview\b/,
-  /\bcomputeReviewSchedule\b/,
-  /\bcreateTableSql\b/,
-  /\balterTableSql\b/
-];
 
 function productionJavaFiles() {
   return fs.readdirSync(JAVA_ROOT)
     .filter((entry) => entry.endsWith('.java'))
     .sort();
-}
-
-function classifiedFiles() {
-  return Object.values(CLASSIFICATIONS).flat().sort();
 }
 
 function duplicateClassifications() {
@@ -161,6 +29,24 @@ function duplicateClassifications() {
 }
 
 describe('Android Java adapter boundary', () => {
+  it('documents a concrete host responsibility for every classification bucket', () => {
+    expect(classificationEntries().map(({ kind, responsibility, files }) => ({
+      kind,
+      hasResponsibility: responsibility.length > 20,
+      fileCount: files.length
+    }))).toEqual([
+      { kind: 'asset_support', hasResponsibility: true, fileCount: 3 },
+      { kind: 'bridge_contract_metadata', hasResponsibility: true, fileCount: 2 },
+      { kind: 'bridge_plugin_adapter', hasResponsibility: true, fileCount: 10 },
+      { kind: 'generated_definition_reader', hasResponsibility: true, fileCount: 27 },
+      { kind: 'host_platform_adapter', hasResponsibility: true, fileCount: 13 },
+      { kind: 'migration_adapter', hasResponsibility: true, fileCount: 3 },
+      { kind: 'query_mutation_executor', hasResponsibility: true, fileCount: 4 },
+      { kind: 'sync_diagnostic_adapter', hasResponsibility: true, fileCount: 6 },
+      { kind: 'store_executor', hasResponsibility: true, fileCount: 27 }
+    ]);
+  });
+
   it('keeps every production Java class explicitly classified by adapter responsibility', () => {
     expect(duplicateClassifications()).toEqual([]);
     expect(productionJavaFiles()).toEqual(classifiedFiles());
@@ -175,7 +61,7 @@ describe('Android Java adapter boundary', () => {
     const matches = productionJavaFiles().flatMap((file) => {
       const source = fs.readFileSync(path.join(JAVA_ROOT, file), 'utf8');
       return FORBIDDEN_BUSINESS_RULE_PATTERNS
-        .filter((pattern) => pattern.test(source))
+        .filter((pattern) => pattern.test(`${file}\n${source}`))
         .map((pattern) => ({ file, pattern: pattern.source }));
     });
 
