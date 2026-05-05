@@ -88,11 +88,13 @@ function desktopBase(row: SyncObjectStateRow | undefined): SyncBaseReference | u
   return row ? { baseContentHash: row.content_hash, kind: 'content_hash' } : undefined;
 }
 
-type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review' | 'setting'>;
+type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review' | 'setting' | 'view_state'>;
 
 function validStateObjectScope(item: CompanionSyncPushPayload, objectType: StatePushObjectType) {
-  if (objectType !== 'setting') return item.identity.scope === 'workspace';
-  return item.identity.scope === item.identity.objectId.split(':', 1)[0];
+  if (objectType === 'setting' || objectType === 'view_state') {
+    return item.identity.scope === item.identity.objectId.split(':', 1)[0];
+  }
+  return item.identity.scope === 'workspace';
 }
 
 function buildStateObjectRecord(
@@ -273,6 +275,7 @@ function applySinglePushItem(driver: DatabaseDriver, item: CompanionSyncPushPayl
       item.identity.objectType === 'node_reading'
       || item.identity.objectType === 'node_review'
       || item.identity.objectType === 'setting'
+      || item.identity.objectType === 'view_state'
     ) {
       return applyStateObjectPush(driver, item, item.identity.objectType);
     }

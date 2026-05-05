@@ -74,7 +74,9 @@ function stateObjectIdentity(row: Pick<NativeSyncStateObjectRecord, 'object_id' 
   return {
     objectId: row.object_id,
     objectType: row.object_type,
-    scope: row.object_type === 'setting' ? row.object_id.split(':', 1)[0] || 'setting' : 'workspace'
+    scope: row.object_type === 'setting' || row.object_type === 'view_state'
+      ? row.object_id.split(':', 1)[0] || row.object_type
+      : 'workspace'
   };
 }
 
@@ -83,7 +85,7 @@ function stateClientOpId(row: NativeSyncStateObjectRecord) {
 }
 
 function createStateObjectSyncAdapter(
-  objectType: 'node_reading' | 'node_review' | 'setting'
+  objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state'
 ): SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> {
   return {
     applyPullPayload(payload) {
@@ -128,6 +130,8 @@ export const nodeReviewSyncAdapter = createStateObjectSyncAdapter('node_review')
 
 export const settingSyncAdapter = createStateObjectSyncAdapter('setting');
 
+export const viewStateSyncAdapter = createStateObjectSyncAdapter('view_state');
+
 function reviewLogIdentity(row: Pick<NativeSyncReviewLogRecord, 'op_id'>): SyncObjectIdentity {
   return {
     objectId: row.op_id,
@@ -167,5 +171,6 @@ export const syncPushAdapters = {
   node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
   setting: settingSyncAdapter,
+  view_state: viewStateSyncAdapter,
   review_log: reviewLogSyncAdapter
 } as const;

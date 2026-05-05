@@ -46,7 +46,7 @@ function insertNode(nodeId: string) {
   );
 }
 
-function insertBaseState(objectType: 'node_reading' | 'node_review' | 'setting', objectId: string, contentHash: string) {
+function insertBaseState(objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state', objectId: string, contentHash: string) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
@@ -65,6 +65,10 @@ function insertBaseReadingState(contentHash = 'desktop-reading-base') {
 
 function insertBaseSettingState(contentHash = 'desktop-setting-base') {
   insertBaseState('setting', 'device:android:phone:*:app_settings', contentHash);
+}
+
+function insertBaseViewState(contentHash = 'desktop-view-base') {
+  insertBaseState('view_state', 'session_resume:android:phone:android-device:active_node', contentHash);
 }
 
 function createNodeReadingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
@@ -128,6 +132,23 @@ function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPa
       value_json: '{"sync":true}'
     }),
     updatedAt: '2026-04-30T01:02:00.000Z',
+    ...overrides
+  };
+}
+
+function createViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
+  return {
+    base: { baseContentHash: 'desktop-view-base', kind: 'content_hash' },
+    clientOpId: 'view_state:session_resume:android:phone:android-device:active_node:14',
+    contentHash: 'android-view-next',
+    deletedAt: null,
+    identity: {
+      objectId: 'session_resume:android:phone:android-device:active_node',
+      objectType: 'view_state',
+      scope: 'session_resume'
+    },
+    payloadJson: JSON.stringify({ active_node_id: 'node-1' }),
+    updatedAt: '2026-04-30T01:03:00.000Z',
     ...overrides
   };
 }
@@ -197,6 +218,22 @@ describe('companion sync push apply', () => {
       `SELECT value_json FROM setting_records
        WHERE key = 'app_settings' AND scope = 'device' AND platform = 'android'`
     )).toEqual({ value_json: '{"sync":true}' });
+  });
+
+  it('accepts view_state when base content hash matches the view identity', () => {
+    insertBaseViewState();
+
+    const result = applyCompanionSyncPush([createViewStatePush()]);
+
+    expect(result.appliedObjectIds).toEqual(['view_state:session_resume:android:phone:android-device:active_node']);
+    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ value: string }>(
+      "SELECT value FROM workspace_meta WHERE key = 'active_node_id'"
+    )).toEqual({ value: 'node-1' });
+    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; sync_dirty: number }>(
+      `SELECT content_hash, sync_dirty FROM sync_object_state
+       WHERE object_type = 'view_state' AND object_id = 'session_resume:android:phone:android-device:active_node'`
+    )).toEqual({ content_hash: 'android-view-next', sync_dirty: 0 });
   });
 
   it('returns conflict for node_review when desktop base has changed', () => {

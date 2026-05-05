@@ -87,6 +87,19 @@ function createLocalSettingChange(): NativeSyncStateObjectRecord {
   };
 }
 
+function createLocalViewStateChange(): NativeSyncStateObjectRecord {
+  return {
+    base_content_hash: 'desktop-view-base',
+    content_hash: 'local-view-hash',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:android-test-device:active_node',
+    object_type: 'view_state',
+    payload_json: '{"active_node_id":"node-1"}',
+    state_seq: 12,
+    updated_at: '2026-04-25T00:07:00.000Z'
+  };
+}
+
 function createLocalReviewLog(): NativeSyncReviewLogRecord {
   return {
     device_id: 'android-test-device',
@@ -135,7 +148,7 @@ describe('companion desktop sync push acknowledgements', () => {
   it('does not push unsupported state dirty through the new push endpoint', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
       ...createLocalNodeReadingChange(),
-      object_type: 'view_state'
+      object_type: 'attachment'
     }]);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
@@ -150,7 +163,8 @@ describe('companion desktop sync push acknowledgements', () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([
       createLocalNodeReadingChange(),
       createLocalNodeReviewChange(),
-      createLocalSettingChange()
+      createLocalSettingChange(),
+      createLocalViewStateChange()
     ]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -164,13 +178,18 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(result.pushedObjectIds).toEqual([
       'node_reading:node-1',
       'node_review:node-1',
-      'setting:device:android:phone:*:app_settings'
+      'setting:device:android:phone:*:app_settings',
+      'view_state:session_resume:android:phone:android-test-device:active_node'
     ]);
     expect(result.pushedReviewOpIds).toEqual(['op-1']);
     expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
       expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'accepted' }),
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'accepted' }),
-      expect.objectContaining({ clientOpId: 'setting:device:android:phone:*:app_settings:11', status: 'accepted' })
+      expect.objectContaining({ clientOpId: 'setting:device:android:phone:*:app_settings:11', status: 'accepted' }),
+      expect.objectContaining({
+        clientOpId: 'view_state:session_resume:android:phone:android-test-device:active_node:12',
+        status: 'accepted'
+      })
     ]);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).toHaveBeenCalledWith({
