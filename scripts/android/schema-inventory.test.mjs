@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import { ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
+import { ANDROID_COMPANION_MUTATION_DEFINITIONS } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
@@ -17,6 +18,7 @@ import { buildSchemaDriftReport } from './schema-inventory.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const COMPANION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-core-schema.json');
 const COMPANION_MIGRATION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-migration-schema.json');
+const COMPANION_MUTATION_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-mutation-definitions.json');
 const COMPANION_QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const COMPANION_DATABASE_MIGRATION = path.join(
   REPO_ROOT,
@@ -41,6 +43,18 @@ const COMPANION_SYNC_CONFLICT_STORE = path.join(
   'foliole',
   'android',
   'FolioleCompanionSyncConflictStore.java'
+);
+const COMPANION_SYNC_STATE_ROWS = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncStateRows.java'
 );
 
 describe('schema inventory drift gate', () => {
@@ -70,6 +84,13 @@ describe('schema inventory drift gate', () => {
 
     expect(schema.queries).toEqual(ANDROID_COMPANION_QUERY_DEFINITIONS);
     await expect(readFile(COMPANION_SYNC_CONFLICT_STORE, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('moves Android sync state row mutation SQL out of the custom Java store', async () => {
+    const schema = JSON.parse(await readFile(COMPANION_MUTATION_DEFINITIONS, 'utf8'));
+
+    expect(schema.statements).toEqual(ANDROID_COMPANION_MUTATION_DEFINITIONS);
+    await expect(readFile(COMPANION_SYNC_STATE_ROWS, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('keeps the desktop and Android core schema drift explicit', () => {

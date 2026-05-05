@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -19,7 +20,7 @@ final class FolioleCompanionViewStateSyncStore {
 
     private FolioleCompanionViewStateSyncStore() {}
 
-    static JSObject saveActiveNode(SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
+    static JSObject saveActiveNode(Context context, SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
         String nodeId = nullIfEmpty(input.optString("node_id", ""));
         JSONObject payload = new JSONObject();
         payload.put("active_node_id", nodeId == null ? JSONObject.NULL : nodeId);
@@ -29,7 +30,7 @@ final class FolioleCompanionViewStateSyncStore {
         database.beginTransaction();
         try {
             upsertActiveNode(database, nodeId, now);
-            writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
+            writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -37,7 +38,7 @@ final class FolioleCompanionViewStateSyncStore {
         return result(objectId, contentHash);
     }
 
-    static JSObject saveNodeViewState(SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
+    static JSObject saveNodeViewState(Context context, SQLiteDatabase database, JSONObject input, String deviceId) throws Exception {
         String nodeId = input.optString("node_id");
         JSONObject payload = new JSONObject();
         payload.put("node_id", nodeId);
@@ -51,7 +52,7 @@ final class FolioleCompanionViewStateSyncStore {
         database.beginTransaction();
         try {
             upsertNodeViewState(database, nodeId, deviceId, payload.optInt("scroll_top", 0), "user-scroll", now);
-            writeSyncRows(database, objectId, deviceId, contentHash, payload, now);
+            writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -102,8 +103,8 @@ final class FolioleCompanionViewStateSyncStore {
         }
     }
 
-    private static void writeSyncRows(SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) {
-        FolioleCompanionSyncStateRows.upsert(database, "view_state", objectId, null, contentHash, deviceId, now, null, 1);
+    private static void writeSyncRows(Context context, SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) throws Exception {
+        FolioleCompanionNamedMutationStore.upsertSyncStateRow(context, database, "view_state", objectId, null, contentHash, deviceId, now, null, 1);
     }
 
     private static void upsertActiveNode(SQLiteDatabase database, String nodeId, String now) {

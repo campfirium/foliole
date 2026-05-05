@@ -3,8 +3,11 @@ package com.foliole.android;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
@@ -15,10 +18,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class FolioleCompanionSyncStateWriteStoreTest {
+    private Context context;
     private SQLiteDatabase database;
 
     @Before
     public void setUp() {
+        context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         database = SQLiteDatabase.create(null);
         createTables();
     }
@@ -33,6 +38,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         insertExistingReviewState();
 
         JSObject result = FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            context,
             database,
             new JSONObject()
                 .put("node_id", "node-1")
@@ -66,6 +72,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
     public void dirtyStateChangesWaitWhilePushAckExists() throws Exception {
         insertExistingReviewState();
         FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            context,
             database,
             new JSONObject()
                 .put("node_id", "node-1")
@@ -83,6 +90,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
     public void dirtyStateChangesWaitWhilePushIssueExists() throws Exception {
         insertExistingReviewState();
         FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            context,
             database,
             new JSONObject()
                 .put("node_id", "node-1")
@@ -100,6 +108,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
     public void localRewriteClearsOldPushIssueAndExportsDirtyStateAgain() throws Exception {
         insertExistingReviewState();
         FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            context,
             database,
             new JSONObject()
                 .put("node_id", "node-1")
@@ -109,6 +118,7 @@ public class FolioleCompanionSyncStateWriteStoreTest {
         saveAck("node_review:node-1:4", "node_review", "node-1", "conflict", null);
 
         FolioleCompanionSyncStateWriteStore.saveNodeReview(
+            context,
             database,
             new JSONObject()
                 .put("node_id", "node-1")

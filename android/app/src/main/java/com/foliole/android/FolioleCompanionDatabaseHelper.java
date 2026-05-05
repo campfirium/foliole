@@ -175,31 +175,31 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     JSObject saveSyncSettingRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncStateWriteStore.saveSetting(database, record, deviceId);
+        return FolioleCompanionSyncStateWriteStore.saveSetting(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeReadingRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncStateWriteStore.saveNodeReading(database, record, deviceId);
+        return FolioleCompanionSyncStateWriteStore.saveNodeReading(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeReviewRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncStateWriteStore.saveNodeReview(database, record, deviceId);
+        return FolioleCompanionSyncStateWriteStore.saveNodeReview(context, database, record, deviceId);
     }
 
     JSObject saveSyncActiveViewState(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionViewStateSyncStore.saveActiveNode(database, record, deviceId);
+        return FolioleCompanionViewStateSyncStore.saveActiveNode(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeViewState(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionViewStateSyncStore.saveNodeViewState(database, record, deviceId);
+        return FolioleCompanionViewStateSyncStore.saveNodeViewState(context, database, record, deviceId);
     }
 
     JSObject loadReadableArticle() {

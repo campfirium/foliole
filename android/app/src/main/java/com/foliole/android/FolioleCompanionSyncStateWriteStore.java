@@ -1,5 +1,6 @@
 package com.foliole.android;
 
+import android.content.Context;
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -13,7 +14,7 @@ final class FolioleCompanionSyncStateWriteStore {
 
     private FolioleCompanionSyncStateWriteStore() {}
 
-    static JSObject saveSetting(SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
+    static JSObject saveSetting(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
         String now = Instant.now().toString();
         String key = input.optString("key");
         String scope = input.optString("scope", "device");
@@ -34,7 +35,7 @@ final class FolioleCompanionSyncStateWriteStore {
         database.beginTransaction();
         try {
             upsertSettingRecord(database, key, scope, platform, formFactor, deviceId, valueJson, contentHash, now);
-            upsertObjectState(database, objectId, contentHash, modifiedByDeviceId, now);
+            upsertObjectState(context, database, objectId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -45,7 +46,7 @@ final class FolioleCompanionSyncStateWriteStore {
         return result;
     }
 
-    static JSObject saveNodeReading(SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
+    static JSObject saveNodeReading(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
         String nodeId = input.optString("node_id");
         JSONObject payload = new JSONObject(input.optString("reading_json", "{}"));
         String now = Instant.now().toString();
@@ -58,7 +59,7 @@ final class FolioleCompanionSyncStateWriteStore {
         database.beginTransaction();
         try {
             FolioleCompanionLearningSyncPayload.applyReading(database, nodeId, buildRecord("node_reading", nodeId, payload, contentHash, now));
-            upsertTypedObjectState(database, "node_reading", nodeId, contentHash, modifiedByDeviceId, now);
+            upsertTypedObjectState(context, database, "node_reading", nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -66,7 +67,7 @@ final class FolioleCompanionSyncStateWriteStore {
         return syncSaveResult(nodeId, contentHash);
     }
 
-    static JSObject saveNodeReview(SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
+    static JSObject saveNodeReview(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
         String nodeId = input.optString("node_id");
         JSONObject payload = new JSONObject(input.optString("review_json", "{}"));
         JSONObject reviewLog = input.has("review_log_json") && !input.isNull("review_log_json")
@@ -82,7 +83,7 @@ final class FolioleCompanionSyncStateWriteStore {
             if (reviewLog != null) {
                 opId = FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(database, nodeId, reviewLog, modifiedByDeviceId);
             }
-            upsertTypedObjectState(database, "node_review", nodeId, contentHash, modifiedByDeviceId, now);
+            upsertTypedObjectState(context, database, "node_review", nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -117,19 +118,20 @@ final class FolioleCompanionSyncStateWriteStore {
         database.insertWithOnConflict("setting_records", null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
-    private static void upsertObjectState(SQLiteDatabase database, String objectId, String contentHash, String deviceId, String now) {
-        upsertTypedObjectState(database, "setting", objectId, contentHash, deviceId, now);
+    private static void upsertObjectState(Context context, SQLiteDatabase database, String objectId, String contentHash, String deviceId, String now) throws Exception {
+        upsertTypedObjectState(context, database, "setting", objectId, contentHash, deviceId, now);
     }
 
     private static void upsertTypedObjectState(
+        Context context,
         SQLiteDatabase database,
         String objectType,
         String objectId,
         String contentHash,
         String deviceId,
         String now
-    ) {
-        FolioleCompanionSyncStateRows.upsert(database, objectType, objectId, null, contentHash, deviceId, now, null, 1);
+    ) throws Exception {
+        FolioleCompanionNamedMutationStore.upsertSyncStateRow(context, database, objectType, objectId, null, contentHash, deviceId, now, null, 1);
     }
 
     private static JSONObject buildRecord(

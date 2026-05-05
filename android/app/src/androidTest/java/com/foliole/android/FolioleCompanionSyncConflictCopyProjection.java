@@ -4,6 +4,8 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import androidx.test.platform.app.InstrumentationRegistry;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -34,7 +36,18 @@ final class FolioleCompanionSyncConflictCopyProjection {
         insertNodeVersion(database, copyNodeId, localVersionId, deviceId, now, contentHash, copySnapshot);
         insertNodeOrder(database, copyNodeId);
         if (tableExists(database, "sync_object_state")) {
-            FolioleCompanionSyncStateRows.upsert(database, "node", copyNodeId, localVersionId, contentHash, deviceId, now, null, 0);
+            FolioleCompanionNamedMutationStore.upsertSyncStateRow(
+                InstrumentationRegistry.getInstrumentation().getTargetContext(),
+                database,
+                "node",
+                copyNodeId,
+                localVersionId,
+                contentHash,
+                deviceId,
+                now,
+                null,
+                0
+            );
         }
     }
 

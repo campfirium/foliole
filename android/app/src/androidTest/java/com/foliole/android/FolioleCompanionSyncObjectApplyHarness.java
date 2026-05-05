@@ -4,6 +4,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.test.platform.app.InstrumentationRegistry;
+
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
@@ -136,17 +138,22 @@ final class FolioleCompanionSyncObjectApplyHarness {
     }
 
     private static void upsertState(SQLiteDatabase database, JSONObject record, String deviceId) {
-        FolioleCompanionSyncStateRows.upsert(
-            database,
-            record.optString("object_type"),
-            record.optString("object_id"),
-            nullIfEmpty(record.optString("sync_version_id", "")),
-            record.optString("content_hash"),
-            deviceId,
-            record.optString("updated_at"),
-            nullIfEmpty(record.optString("deleted_at", "")),
-            0
-        );
+        try {
+            FolioleCompanionNamedMutationStore.upsertSyncStateRow(
+                InstrumentationRegistry.getInstrumentation().getTargetContext(),
+                database,
+                record.optString("object_type"),
+                record.optString("object_id"),
+                nullIfEmpty(record.optString("sync_version_id", "")),
+                record.optString("content_hash"),
+                deviceId,
+                record.optString("updated_at"),
+                nullIfEmpty(record.optString("deleted_at", "")),
+                0
+            );
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to upsert sync state row.", exception);
+        }
     }
 
     private static String nullIfEmpty(String value) {
