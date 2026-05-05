@@ -8,6 +8,8 @@ export interface SyncDiagnosticCountRange {
   max_state_seq: number | null;
   min_state_seq: number | null;
   object_type: string;
+  pending_ack_count?: number;
+  push_issue_count?: number;
 }
 
 export interface SyncDiagnosticDirtyObject {

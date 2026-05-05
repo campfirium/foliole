@@ -12,6 +12,10 @@ function formatHash(value: string | null | undefined) {
   return value ? value.slice(0, 10) : '-';
 }
 
+function formatObjectTypeStatus(row: SyncDiagnosticCountRange) {
+  return `${row.dirty_count ?? 0} waiting · ${row.pending_ack_count ?? 0} confirming · ${row.push_issue_count ?? 0} review needed`;
+}
+
 export function ObjectTypeRows(props: { rows: SyncDiagnosticCountRange[] }) {
   if (props.rows.length === 0) {
     return <p className="py-3 text-sm text-companion-text-secondary">No sync objects yet.</p>;
@@ -19,12 +23,10 @@ export function ObjectTypeRows(props: { rows: SyncDiagnosticCountRange[] }) {
   return (
     <div className="border-t border-companion-divider">
       {props.rows.map((row) => (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b border-companion-divider py-3 text-sm last:border-b-0" key={row.object_type}>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-companion-divider py-3 text-sm last:border-b-0" key={row.object_type}>
           <span className="min-w-0 truncate font-medium text-foreground">{row.object_type}</span>
           <span className="text-companion-text-secondary">{row.count}</span>
-          <span className={row.dirty_count ? 'text-foreground' : 'text-companion-text-secondary'}>
-            {row.dirty_count ?? 0} waiting
-          </span>
+          <span className="col-span-2 text-xs text-companion-text-secondary">{formatObjectTypeStatus(row)}</span>
         </div>
       ))}
     </div>

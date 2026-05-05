@@ -88,7 +88,15 @@ const diagnosticResult = {
         status: 'conflict'
       }],
       state_counts: [
-        { count: 1, dirty_count: 1, max_state_seq: 4, min_state_seq: 4, object_type: 'node_review' }
+        {
+          count: 1,
+          dirty_count: 1,
+          max_state_seq: 4,
+          min_state_seq: 4,
+          object_type: 'node_review',
+          pending_ack_count: 1,
+          push_issue_count: 1
+        }
       ]
     },
     verdicts: []
@@ -161,7 +169,7 @@ function expectAndroidDiagnosticRows() {
   expect(screen.getByText('Android')).toBeInTheDocument();
   expect(screen.getAllByText('Object types')).toHaveLength(2);
   expect(screen.getAllByText('node_review')).toHaveLength(4);
-  expect(screen.getByText('1 waiting')).toBeInTheDocument();
+  expect(screen.getByText('1 waiting · 1 confirming · 1 review needed')).toBeInTheDocument();
   expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
   expect(screen.getByText('Changes needing review')).toBeInTheDocument();
   expect(screen.getAllByText('Body bytes still caching').length).toBeGreaterThan(0);

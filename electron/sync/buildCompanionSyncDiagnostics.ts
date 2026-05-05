@@ -16,6 +16,7 @@ interface CountRow extends Record<string, unknown> {
 
 interface StateCountRow extends Record<string, unknown> {
   count: number;
+  dirty_count: number;
   max_state_seq: number | null;
   min_state_seq: number | null;
   object_type: string;
@@ -49,7 +50,12 @@ function loadStorage(): SyncDiagnosticStorage {
 
 function loadStateCounts() {
   return openDatabaseConnection().driver.queryAll<StateCountRow>(`
-    SELECT object_type, COUNT(*) AS count, MIN(state_seq) AS min_state_seq, MAX(state_seq) AS max_state_seq
+    SELECT
+      object_type,
+      COUNT(*) AS count,
+      SUM(CASE WHEN sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count,
+      MIN(state_seq) AS min_state_seq,
+      MAX(state_seq) AS max_state_seq
     FROM sync_object_state
     GROUP BY object_type
     ORDER BY object_type ASC

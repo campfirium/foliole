@@ -200,8 +200,18 @@ final class FolioleCompanionSyncDiagnostics {
     private static JSArray loadStateCounts(SQLiteDatabase database) throws Exception {
         JSArray items = new JSArray();
         try (Cursor cursor = database.rawQuery(
-            "SELECT object_type, COUNT(*), SUM(CASE WHEN sync_dirty = 1 THEN 1 ELSE 0 END), MIN(state_seq), MAX(state_seq) " +
-                "FROM sync_object_state GROUP BY object_type ORDER BY object_type ASC",
+            "SELECT state.object_type, COUNT(*), SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END), " +
+                "MIN(state.state_seq), MAX(state.state_seq), COALESCE(pending.count, 0), COALESCE(issues.count, 0) " +
+                "FROM sync_object_state state " +
+                "LEFT JOIN (" +
+                "SELECT object_type, COUNT(*) AS count FROM sync_push_ack " +
+                "WHERE status IN ('accepted', 'already_applied') GROUP BY object_type" +
+                ") pending ON pending.object_type = state.object_type " +
+                "LEFT JOIN (" +
+                "SELECT object_type, COUNT(*) AS count FROM sync_push_ack " +
+                "WHERE status IN ('conflict', 'rejected') GROUP BY object_type" +
+                ") issues ON issues.object_type = state.object_type " +
+                "GROUP BY state.object_type ORDER BY state.object_type ASC",
             null
         )) {
             while (cursor.moveToNext()) {
@@ -211,6 +221,8 @@ final class FolioleCompanionSyncDiagnostics {
                 row.put("dirty_count", cursor.getLong(2));
                 row.put("min_state_seq", cursor.isNull(3) ? JSONObject.NULL : cursor.getLong(3));
                 row.put("max_state_seq", cursor.isNull(4) ? JSONObject.NULL : cursor.getLong(4));
+                row.put("pending_ack_count", cursor.getLong(5));
+                row.put("push_issue_count", cursor.getLong(6));
                 items.put(row);
             }
         }
