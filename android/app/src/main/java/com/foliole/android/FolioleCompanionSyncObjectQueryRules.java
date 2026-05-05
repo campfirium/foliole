@@ -21,7 +21,7 @@ final class FolioleCompanionSyncObjectQueryRules {
 
     static JSObject emptySyncObjects(Context context) throws Exception {
         JSObject empty = new JSObject();
-        empty.put(syncObjectsGroup(context).getString("emptyResultKey"), new JSArray());
+        empty.put(syncObjectsString(context, "emptyResultKey"), new JSArray());
         return empty;
     }
 
@@ -30,16 +30,15 @@ final class FolioleCompanionSyncObjectQueryRules {
     }
 
     static String syncObjectsResultKey(Context context) throws Exception {
-        return syncObjectsGroup(context).getString("resultKey");
+        return syncObjectsString(context, "resultKey");
     }
 
     static Map<String, String> syncObjectsReplacements(Context context, int idCount, int typeCount) throws Exception {
-        JSONObject group = syncObjectsGroup(context);
         Map<String, String> replacements = new HashMap<>();
-        replacements.put(group.getString("objectIdsReplacement"), placeholders(idCount));
+        replacements.put(syncObjectsString(context, "objectIdsReplacement"), placeholders(idCount));
         replacements.put(
-            group.getString("objectTypesReplacement"),
-            typeCount > 0 ? placeholders(typeCount) : group.getString("unfilteredObjectTypesReplacement")
+            syncObjectsString(context, "objectTypesReplacement"),
+            typeCount > 0 ? placeholders(typeCount) : syncObjectsString(context, "unfilteredObjectTypesReplacement")
         );
         return replacements;
     }
@@ -49,31 +48,42 @@ final class FolioleCompanionSyncObjectQueryRules {
     }
 
     static String syncStateChangesResultKey(Context context) throws Exception {
-        return syncStateChangesGroup(context).getString("resultKey");
+        return syncStateChangesString(context, "resultKey");
     }
 
     static int normalizeCursor(Context context, int cursor) throws Exception {
-        return Math.max(syncStateChangesGroup(context).getInt("minCursor"), cursor);
+        return Math.max(syncStateChangesInt(context, "minCursor"), cursor);
     }
 
     static int normalizeLimit(Context context, int limit) throws Exception {
-        JSONObject group = syncStateChangesGroup(context);
-        int defaultLimit = group.getInt("defaultLimit");
-        int minLimit = group.getInt("minLimit");
-        int maxLimit = group.getInt("maxLimit");
+        int defaultLimit = syncStateChangesInt(context, "defaultLimit");
+        int minLimit = syncStateChangesInt(context, "minLimit");
+        int maxLimit = syncStateChangesInt(context, "maxLimit");
         return Math.max(minLimit, Math.min(maxLimit, limit <= 0 ? defaultLimit : limit));
     }
 
     private static String queryName(Context context, String groupName) throws Exception {
-        return group(context, groupName).getString("queryName");
+        return stringValue(context, groupName, "queryName");
     }
 
-    private static JSONObject syncObjectsGroup(Context context) throws Exception {
-        return group(context, "syncObjects");
+    private static String syncObjectsString(Context context, String key) throws Exception {
+        return stringValue(context, "syncObjects", key);
     }
 
-    private static JSONObject syncStateChangesGroup(Context context) throws Exception {
-        return group(context, "syncStateChanges");
+    private static int syncStateChangesInt(Context context, String key) throws Exception {
+        return intValue(context, "syncStateChanges", key);
+    }
+
+    private static String syncStateChangesString(Context context, String key) throws Exception {
+        return stringValue(context, "syncStateChanges", key);
+    }
+
+    private static String stringValue(Context context, String groupName, String key) throws Exception {
+        return group(context, groupName).getString(key);
+    }
+
+    private static int intValue(Context context, String groupName, String key) throws Exception {
+        return group(context, groupName).getInt(key);
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {

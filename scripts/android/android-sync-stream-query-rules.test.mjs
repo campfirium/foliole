@@ -56,6 +56,8 @@ describe('Android sync stream query rules', () => {
     expect(reviewLogRulesSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
     expect(reviewLogRulesSource).not.toContain('column.getString("source")');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "syncStreamRead", streamName)');
+    expect(rulesSource).toContain('stringValue(context, streamName, "emptyCursorValue")');
+    expect(rulesSource).toContain('intValue(context, streamName, "defaultLimit")');
     expect(nodeVersionSource).not.toContain('"syncNodeVersions"');
     expect(nodeVersionSource).not.toContain('"syncNodeVersionParent"');
     expect(reviewLogSource).not.toContain('"syncReviewLog"');
@@ -63,6 +65,8 @@ describe('Android sync stream query rules', () => {
     expect(reviewLogRulesSource).not.toContain('optJSONObject("queries")');
     expect(reviewLogRulesSource).not.toContain('getJSONArray("columns")');
     expect(reviewLogRulesSource).not.toContain('getString("source")');
+    expect(rulesSource).not.toContain('group.getString("emptyCursorValue")');
+    expect(rulesSource).not.toContain('group.getString("cursorCreatedAtKey")');
     expect(reviewLogSource).not.toContain('draft.getJSONObject("cardBefore")');
     expect(reviewLogSource).not.toContain('draft.getInt("grade")');
     expect(reviewLogSource).not.toContain('draft.optString("schedulerVersion"');

@@ -36,21 +36,24 @@ final class FolioleCompanionSyncStreamQueryRules {
     }
 
     static String[] cursorArgs(Context context, String streamName, JSONObject cursor, String deviceId, int limit) throws Exception {
-        JSONObject group = group(context, streamName);
-        String empty = group.getString("emptyCursorValue");
-        String createdAt = cursor == null ? empty : cursor.optString(group.getString("cursorCreatedAtKey"));
-        String changeId = cursor == null ? empty : cursor.optString(group.getString("cursorChangeIdKey"));
+        String empty = stringValue(context, streamName, "emptyCursorValue");
+        String createdAt = cursor == null ? empty : cursor.optString(stringValue(context, streamName, "cursorCreatedAtKey"));
+        String changeId = cursor == null ? empty : cursor.optString(stringValue(context, streamName, "cursorChangeIdKey"));
         if (createdAt.isEmpty() || changeId.isEmpty()) {
-            return new String[] { deviceId, empty, empty, empty, empty, empty, String.valueOf(normalizeLimit(group, limit)) };
+            return new String[] { deviceId, empty, empty, empty, empty, empty, String.valueOf(normalizeLimit(context, streamName, limit)) };
         }
-        return new String[] { deviceId, createdAt, changeId, createdAt, createdAt, changeId, String.valueOf(normalizeLimit(group, limit)) };
+        return new String[] { deviceId, createdAt, changeId, createdAt, createdAt, changeId, String.valueOf(normalizeLimit(context, streamName, limit)) };
     }
 
-    private static int normalizeLimit(JSONObject group, int limit) throws Exception {
-        int defaultLimit = group.getInt("defaultLimit");
-        int minLimit = group.getInt("minLimit");
-        int maxLimit = group.getInt("maxLimit");
+    private static int normalizeLimit(Context context, String streamName, int limit) throws Exception {
+        int defaultLimit = intValue(context, streamName, "defaultLimit");
+        int minLimit = intValue(context, streamName, "minLimit");
+        int maxLimit = intValue(context, streamName, "maxLimit");
         return Math.max(minLimit, Math.min(maxLimit, limit <= 0 ? defaultLimit : limit));
+    }
+
+    private static int intValue(Context context, String streamName, String key) throws Exception {
+        return group(context, streamName).getInt(key);
     }
 
     private static String stringValue(Context context, String streamName, String key) throws Exception {
