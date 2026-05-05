@@ -14,6 +14,7 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const CONTENT_BLOB_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobStore.java');
+const CONTENT_BLOB_BATCH_MANIFEST_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentBlobBatchManifestStore.java');
 const TEXT_BODY_BLOBS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionTextBodyBlobs.java');
 const WORKSPACE_SNAPSHOT_EXPORTER = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionWorkspaceSnapshotExporter.java');
 const ATTACHMENT_RESOURCE_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceStore.java');
@@ -37,8 +38,11 @@ describe('Android resource read query rules', () => {
       },
       dataTableName: 'content_blob_data',
       existingQueryName: 'contentBlobDataExisting',
+      hashKey: 'hash',
+      hashesReplacement: '__HASH_FILTER__',
       manifestTableName: 'content_blobs',
       manifestQueryName: 'contentBlobManifestByHash',
+      manifestsByHashesQueryName: 'contentBlobManifestsByHashes',
       resultKey: 'blobs',
       syncResponseKeys: {
         availability: 'availability',
@@ -107,6 +111,7 @@ describe('Android resource read query rules', () => {
   it('keeps resource Java stores wired to generated read rules', async () => {
     const combinedStoreSource = [
       await readFile(CONTENT_BLOB_STORE, 'utf8'),
+      await readFile(CONTENT_BLOB_BATCH_MANIFEST_STORE, 'utf8'),
       await readFile(TEXT_BODY_BLOBS, 'utf8'),
       await readFile(WORKSPACE_SNAPSHOT_EXPORTER, 'utf8'),
       await readFile(ATTACHMENT_RESOURCE_STORE, 'utf8'),
@@ -126,7 +131,9 @@ describe('Android resource read query rules', () => {
     expect(rulesSource).toContain('optJSONObject("resourceRead")');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
+    expect(combinedStoreSource).not.toContain('"contentBlobManifestsByHashes"');
     expect(combinedStoreSource).not.toContain('"contentBlobDataExisting"');
+    expect(combinedStoreSource).not.toContain('"__HASH_FILTER__"');
     expect(combinedStoreSource).not.toContain('"attachmentResourceResolve"');
     expect(combinedStoreSource).not.toContain('"attachments"');
     expect(combinedStoreSource).not.toContain('"content_blob_data"');

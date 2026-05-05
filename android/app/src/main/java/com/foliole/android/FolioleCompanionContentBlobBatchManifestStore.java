@@ -34,19 +34,19 @@ final class FolioleCompanionContentBlobBatchManifestStore {
             .load(
                 context,
                 database,
-                "contentBlobManifestsByHashes",
-                Collections.singletonMap("__HASH_FILTER__", placeholders.toString()),
+                resourceRule(context, "manifestsByHashesQueryName"),
+                Collections.singletonMap(resourceRule(context, "hashesReplacement"), placeholders.toString()),
                 hashes
             )
-            .getJSONArray("blobs");
+            .getJSONArray(resourceRule(context, "resultKey"));
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            manifests.put(row.getString("hash"), new Manifest(
-                row.getString("compression"),
-                row.getLong("original_size_bytes"),
-                row.getLong("stored_size_bytes"),
-                row.getString("original_sha256"),
-                row.getString("stored_sha256")
+            manifests.put(row.getString(resourceRule(context, "hashKey")), new Manifest(
+                row.getString(resourceRule(context, "compressionKey")),
+                row.getLong(resourceRule(context, "originalSizeBytesKey")),
+                row.getLong(resourceRule(context, "storedSizeBytesKey")),
+                row.getString(resourceRule(context, "originalSha256Key")),
+                row.getString(resourceRule(context, "storedSha256Key"))
             ));
         }
         return manifests;
@@ -58,6 +58,10 @@ final class FolioleCompanionContentBlobBatchManifestStore {
             throw new IllegalArgumentException("hash is invalid.");
         }
         return hash;
+    }
+
+    private static String resourceRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
     }
 
     static final class Manifest {

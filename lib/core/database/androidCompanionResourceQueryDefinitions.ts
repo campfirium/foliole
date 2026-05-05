@@ -68,6 +68,8 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     compressionKey: 'compression',
     dataTableName: 'content_blob_data',
     existingQueryName: 'contentBlobDataExisting',
+    hashKey: 'hash',
+    hashesReplacement: '__HASH_FILTER__',
     batchResponseKeys: {
       databaseElapsedMs: 'db_elapsed_ms',
       httpElapsedMs: 'http_elapsed_ms',
@@ -76,6 +78,7 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
       totalElapsedMs: 'total_elapsed_ms'
     },
     manifestTableName: 'content_blobs',
+    manifestsByHashesQueryName: 'contentBlobManifestsByHashes',
     manifestQueryName: 'contentBlobManifestByHash',
     originalSha256Key: 'original_sha256',
     originalSizeBytesKey: 'original_size_bytes',
