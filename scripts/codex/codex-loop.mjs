@@ -1,8 +1,10 @@
 import process from 'node:process';
 
 import { runCodexTask } from './codex-task.mjs';
-import { buildCommitMessage, commitTrackedChanges, ensureCleanWorkingTree, runCommand } from './git-state.mjs';
+import { buildCommitMessage, commitTrackedChanges, readGitStatus, runCommand } from './git-state.mjs';
 import { REPO_ROOT, completePauseTask, isPauseTask, readTodoTask } from './todo-ledger.mjs';
+
+const REPAIR_ATTEMPT_LIMIT = 2;
 
 function parseArgs(argv) {
   const options = {
@@ -48,6 +50,62 @@ async function runQualityGate() {
   });
 }
 
+export function buildRepairTask(task, reason) {
+  const normalizedTask = task || 'reconcile current workspace';
+  return [
+    `Repair the current workspace for task: ${normalizedTask}.`,
+    'Focus only on the existing uncommitted changes left by the previous loop iteration.',
+    'Fix quality-gate failures and keep the task boundary unchanged.',
+    `Failure context: ${reason}`
+  ].join(' ');
+}
+
+async function stabilizeWorkspace(task, options, dependencies, reason) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= REPAIR_ATTEMPT_LIMIT; attempt += 1) {
+    try {
+      await dependencies.runQualityGateFn();
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt === REPAIR_ATTEMPT_LIMIT) {
+        break;
+      }
+      dependencies.stdout.write(
+        `[codex-loop] repair-round ${attempt + 1}/${REPAIR_ATTEMPT_LIMIT}: ${reason}\n`
+      );
+      await dependencies.runCodexTaskFn({
+        fullAuto: true,
+        model: options.model,
+        task: buildRepairTask(task, error instanceof Error ? error.message : String(error))
+      });
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+export async function reconcileDirtyWorkspace(task, options, dependencies) {
+  const status = await dependencies.readGitStatusFn(REPO_ROOT);
+  if (!status) {
+    return false;
+  }
+
+  dependencies.stdout.write('[codex-loop] dirty workspace detected; attempting reconcile\n');
+  await stabilizeWorkspace(task, options, dependencies, 'startup dirty workspace');
+  const committed = await dependencies.commitTrackedChangesFn(
+    REPO_ROOT,
+    await dependencies.buildCommitMessageFn('reconcile dirty workspace')
+  );
+  if (committed) {
+    dependencies.stdout.write('[codex-loop] reconciled dirty workspace and committed changes\n');
+  } else {
+    dependencies.stdout.write('[codex-loop] dirty workspace had no committable changes after reconcile\n');
+  }
+  return true;
+}
+
 async function resolveGate(options) {
   const firstTask = await readTodoTask();
   if (!options.completeGate) {
@@ -62,7 +120,16 @@ async function resolveGate(options) {
 }
 
 async function runLoop(options) {
-  await ensureCleanWorkingTree(REPO_ROOT);
+  const dependencies = {
+    buildCommitMessageFn: (task) => buildCommitMessage(REPO_ROOT, task),
+    commitTrackedChangesFn: commitTrackedChanges,
+    readGitStatusFn: readGitStatus,
+    runCodexTaskFn: runCodexTask,
+    runQualityGateFn: runQualityGate,
+    stdout: process.stdout
+  };
+  const pendingTask = await readTodoTask();
+  await reconcileDirtyWorkspace(pendingTask, options, dependencies);
   let task = await resolveGate(options);
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
@@ -81,8 +148,8 @@ async function runLoop(options) {
 
     process.stdout.write(`[codex-loop] iteration ${iteration}: ${task}\n`);
     await runCodexTask({ fullAuto: true, model: options.model, task });
-    await runQualityGate();
-    const committed = await commitTrackedChanges(REPO_ROOT, buildCommitMessage(task));
+    await stabilizeWorkspace(task, options, dependencies, `quality gate after task: ${task}`);
+    const committed = await commitTrackedChanges(REPO_ROOT, await buildCommitMessage(REPO_ROOT, task));
     const nextTask = await readTodoTask();
 
     if (!committed && nextTask === task) {

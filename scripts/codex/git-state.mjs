@@ -35,17 +35,57 @@ export async function ensureCleanWorkingTree(cwd) {
   }
 }
 
-export function buildCommitMessage(task) {
-  const tokens = task
+function tokenizeTask(task) {
+  return task
     .toLowerCase()
     .replace(/[`"]/g, '')
     .match(/[a-z0-9]+/g);
-  const ascii = tokens ? tokens.join('-').slice(0, 32) : '';
+}
 
+function buildCommitSummary(task) {
+  const tokens = tokenizeTask(task);
+  const ascii = tokens ? tokens.join(' ').trim() : '';
   if (!ascii || (tokens?.length ?? 0) < 2) {
-    return 'auto(task): codex loop checkpoint';
+    return 'agent loop checkpoint';
   }
-  return `auto(task): ${ascii}`;
+  return ascii.slice(0, 60).trim();
+}
+
+function escapeBodyValue(value) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+export async function getNextCommitSequence(cwd) {
+  const result = await runCommand('git', ['log', '--pretty=%s', '-n', '200'], { cwd });
+  const subjects = result.stdout.split('\n');
+  let maxSequence = 0;
+
+  for (const subject of subjects) {
+    const match = subject.match(/^(\d{6})\s/);
+    if (!match) {
+      continue;
+    }
+    const value = Number.parseInt(match[1], 10);
+    if (Number.isInteger(value) && value > maxSequence) {
+      maxSequence = value;
+    }
+  }
+
+  return String(maxSequence + 1).padStart(6, '0');
+}
+
+export async function buildCommitMessage(cwd, task) {
+  const sequence = await getNextCommitSequence(cwd);
+  const summary = buildCommitSummary(task);
+  const normalizedTask = escapeBodyValue(task || 'current repository task');
+
+  return [
+    `${sequence} ${summary}`,
+    '',
+    `context: agent loop completed ${normalizedTask}.`,
+    `change: apply the staged code and test updates for ${normalizedTask}.`,
+    'intent: keep automated progress traceable with repository-standard commit notes.'
+  ].join('\n');
 }
 
 async function stageTrackedChanges(cwd) {
