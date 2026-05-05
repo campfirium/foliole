@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
+import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../lib/core/database/androidCompanionWorkspaceReadDefinitions.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
@@ -23,6 +23,14 @@ describe('Android workspace read query rules', () => {
     expect(definitions.workspaceRead.groupKeys).toEqual({
       snapshot: 'snapshot',
       viewState: 'viewState'
+    });
+    expect(definitions.workspaceRead.snapshotShape).toMatchObject({
+      nestedPayload: { outputKey: 'outputKey', stateRowKey: 'stateRowKey' },
+      nodePayload: {
+        attachmentsOutputKey: 'attachmentsOutputKey',
+        bodyStatusOutputKey: 'bodyStatusOutputKey',
+        bodyStatusRowKey: 'bodyStatusRowKey'
+      }
     });
     expect(definitions.workspaceRead.snapshot).toMatchObject({
       deletedAtRowKey: 'deleted_at',
@@ -71,7 +79,10 @@ describe('Android workspace read query rules', () => {
 
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
+    expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.nodePayloadBodyStatusOutputKey(context, rules)');
+    expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.nestedPayloadOutputKey(context, groupName)');
     expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
+    expect(rulesSource).toContain('snapshotShape(context, "nodePayload")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
@@ -80,6 +91,8 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).not.toContain('field.getString("outputKey")');
     expect(combinedSource).not.toContain('field.getString("rowKey")');
     expect(combinedSource).not.toContain('field.getString("type")');
+    expect(combinedSource).not.toContain('rules.getString("bodyStatusOutputKey")');
+    expect(combinedSource).not.toContain('snapshotObject(context, groupName).getString(key)');
     expect(combinedSource).not.toContain('"parentNodeId"');
     expect(combinedSource).not.toContain('"scrollTop"');
     expect(combinedSource).not.toContain('"selectionFrom"');

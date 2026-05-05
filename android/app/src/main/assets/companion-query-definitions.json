@@ -2347,6 +2347,21 @@
       "snapshot": "snapshot",
       "viewState": "viewState"
     },
+    "snapshotShape": {
+      "nestedPayload": {
+        "outputKey": "outputKey",
+        "stateRowKey": "stateRowKey"
+      },
+      "nodePayload": {
+        "attachmentsOutputKey": "attachmentsOutputKey",
+        "bodyStatusOutputKey": "bodyStatusOutputKey",
+        "bodyStatusRowKey": "bodyStatusRowKey",
+        "defaultKind": "defaultKind",
+        "defaultTitle": "defaultTitle",
+        "validKinds": "validKinds",
+        "visibleBodyStatusGroup": "visibleBodyStatusGroup"
+      }
+    },
     "snapshot": {
       "bodyStatusExpressionToken": "__BODY_STATUS_EXPRESSION__",
       "contentBlobJoinToken": "__CONTENT_BLOB_JOIN__",

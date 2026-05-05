@@ -54,7 +54,7 @@ describe('Android resource status metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "missing")');
     expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "passthroughAvailabilityStatuses")');
-    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, rules.getString("visibleBodyStatusGroup"))');
+    expect(combined).toContain('FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, nodePayloadVisibleBodyStatusGroup(context, rules))');
     expect(combined).not.toContain('"fetching".equals(availability)');
     expect(combined).not.toContain('"failed".equals(availability)');
     expect(combined).not.toContain('"cached".equals(availability)');
