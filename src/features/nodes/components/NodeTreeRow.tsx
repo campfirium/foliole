@@ -70,7 +70,7 @@ export function NodeTreeRow({
   isCollapsed,
   isDerived = false,
   nodeIconKind = 'reading',
-  nodeIconState = 'default',
+  nodeIconState = 'active',
   isSelected,
   hasChildren,
   isDragDisabled = false,

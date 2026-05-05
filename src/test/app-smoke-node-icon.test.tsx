@@ -6,8 +6,84 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 import { useWorkspaceStore } from '../store/workspaceStore';
+import type { WorkspaceState } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+
+function createReadingState(repetitionCount: number, state: 'active' | 'dismissed' = 'active') {
+  return {
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: FIXED_TIMESTAMP,
+    nextAt: FIXED_TIMESTAMP,
+    priority: 50,
+    readingPosition: 0,
+    repetitionCount,
+    state
+  };
+}
+
+function createHandledReviewState() {
+  return {
+    due: FIXED_TIMESTAMP,
+    lastReviewAt: FIXED_TIMESTAMP,
+    state: 2 as const,
+    stability: 1,
+    difficulty: 1,
+    elapsedDays: 1,
+    scheduledDays: 1,
+    reps: 1,
+    lapses: 0
+  };
+}
+
+function renderNodeIconApp(statePatch: (state: WorkspaceState) => Partial<WorkspaceState>) {
+  useWorkspaceStore.setState(statePatch);
+  render(<App />);
+  return screen.getByRole('complementary', { name: 'Node list panel' });
+}
+
+function seedIconStateNodes(state: WorkspaceState): Partial<WorkspaceState> {
+  return {
+    activeNodeId: 'reading-1',
+    nodeOrder: ['reading-1', 'reading-active', 'qa-1', 'qa-active', 'reading-dismissed'],
+    nodesById: {
+      ...state.nodesById,
+      'reading-1': createNode({ id: 'reading-1', title: 'Reading 1', content: '# Reading 1' }),
+      'reading-active': createNode({
+        id: 'reading-active',
+        title: 'Active Reading',
+        content: '# Active Reading',
+        reading: createReadingState(1)
+      }),
+      'qa-1': createNode({
+        id: 'qa-1',
+        title: 'QA Node',
+        content: '# QA Node',
+        reveal: 'Answer'
+      }),
+      'qa-active': createNode({
+        id: 'qa-active',
+        title: 'Active QA',
+        content: '# Active QA',
+        reveal: 'Answer',
+        review: createHandledReviewState()
+      }),
+      'reading-dismissed': createNode({
+        id: 'reading-dismissed',
+        title: 'Dismissed Reading',
+        content: '# Dismissed Reading',
+        reading: createReadingState(0, 'dismissed')
+      })
+    }
+  };
+}
+
+function getTreeItemIcon(listPanel: HTMLElement, name: string) {
+  return within(listPanel)
+    .getByRole('treeitem', { name })
+    .querySelector('[data-node-icon="leaf"]');
+}
 
 it('renders reading and review leaf variants in the node list', () => {
   useWorkspaceStore.setState((state) => ({
@@ -39,68 +115,39 @@ it('renders reading and review leaf variants in the node list', () => {
   ).toBe('review');
   expect(
     reviewNodeButton.querySelector('[data-node-icon="leaf"]')?.getAttribute('data-node-icon-state')
-  ).toBe('default');
+  ).toBe('pending');
 });
 
-it('maps node list icons to queued, current, and dismissed states', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'reading-1',
-    nodeOrder: ['reading-1', 'qa-1', 'reading-dismissed'],
+it('maps node list icons to pending, active, and dismissed states', () => {
+  const listPanel = renderNodeIconApp((state) => seedIconStateNodes(state));
+
+  expect(getTreeItemIcon(listPanel, 'Reading 1')).toHaveAttribute('data-node-icon-state', 'pending');
+  expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-state', 'active');
+  expect(getTreeItemIcon(listPanel, 'QA Node')).toHaveAttribute('data-node-icon-state', 'pending');
+  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-state', 'active');
+  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-kind', 'review');
+  expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-state', 'dismissed');
+});
+
+it('treats later-handled reading nodes as active instead of pending', () => {
+  const listPanel = renderNodeIconApp((state) => ({
+    activeNodeId: 'reading-later',
+    nodeOrder: ['reading-later'],
     nodesById: {
       ...state.nodesById,
-      'reading-1': createNode({ id: 'reading-1', title: 'Reading 1', content: '# Reading 1' }),
-      'qa-1': createNode({
-        id: 'qa-1',
-        title: 'QA Node',
-        content: '# QA Node',
-        reveal: 'Answer'
-      }),
-      'reading-dismissed': createNode({
-        id: 'reading-dismissed',
-        title: 'Dismissed Reading',
-        content: '# Dismissed Reading',
-        reading: {
-          intervalDurationMs: 0,
-          intervalGrowthFactor: 1,
-          lastHandledAt: FIXED_TIMESTAMP,
-          nextAt: FIXED_TIMESTAMP,
-          priority: 50,
-          readingPosition: 0,
-          repetitionCount: 0,
-          state: 'dismissed'
-        }
+      'reading-later': createNode({
+        id: 'reading-later',
+        title: 'Later Handled Reading',
+        content: '# Later Handled Reading',
+        reading: createReadingState(1)
       })
-    },
-    reviewSession: {
-      currentNodeId: 'qa-1',
-      isAnswerRevealed: false,
-      queueNodeIds: ['qa-1', 'reading-1'],
-      totalNodeCount: 2
     }
   }));
+  const nodeButton = within(listPanel).getByRole('treeitem', { name: 'Later Handled Reading' });
 
-  render(<App />);
-
-  const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  const readingNodeButton = within(listPanel).getByRole('treeitem', { name: 'Reading 1' });
-  const reviewNodeButton = within(listPanel).getByRole('treeitem', { name: 'QA Node' });
-  const dismissedNodeButton = within(listPanel).getByRole('treeitem', { name: 'Dismissed Reading' });
-
-  expect(readingNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+  expect(nodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
-    'queued'
-  );
-  expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
-    'data-node-icon-state',
-    'current'
-  );
-  expect(reviewNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
-    'data-node-icon-kind',
-    'review'
-  );
-  expect(dismissedNodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
-    'data-node-icon-state',
-    'dismissed'
+    'active'
   );
 });
 

@@ -49,9 +49,10 @@ export function NodeListRows(props: NodeListRowsProps) {
     const isDerivedNode = Boolean(node?.anchorLink);
     const isReviewCard = isFsrsReviewItemNode(node);
     const nodeIconState = resolveNodeTreeRowIconState({
-      isCurrent: props.reviewSession.currentNodeId === row.node.id,
       isDismissed: node?.reading?.state === 'dismissed',
-      isQueued: props.reviewSession.queueNodeIds.includes(row.node.id)
+      hasBeenHandled: isReviewCard
+        ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
+        : (node?.reading?.repetitionCount ?? 0) > 0
     });
 
     return (

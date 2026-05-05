@@ -20,20 +20,6 @@ function iconTransformClass(transformMode: 'none' | 'flip-x' | 'flip-y') {
   return '';
 }
 
-function NodeTreeRowIconBadge({ state }: Pick<NodeTreeRowIconProps, 'state'>) {
-  if (state === 'current') {
-    return <span aria-hidden="true" className="absolute right-0 top-0 size-1 rounded-full bg-current" />;
-  }
-  if (state === 'done') {
-    return (
-      <span aria-hidden="true" className="absolute bottom-0 right-0 text-[7px] font-semibold leading-none text-current">
-        ✓
-      </span>
-    );
-  }
-  return null;
-}
-
 export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
   const isReviewCard = kind === 'review';
   const customIcon = resolveNodeTreeRowCustomIcon({ kind, state });
@@ -62,11 +48,10 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
         <Leaf
           aria-hidden="true"
           className={cn('size-3.5', iconTransformClass(transformMode))}
-          strokeDasharray={state === 'queued' ? '2.2 1.4' : undefined}
+          strokeDasharray={state === 'pending' ? '2.2 1.4' : undefined}
           strokeWidth={1.75}
         />
       )}
-      <NodeTreeRowIconBadge state={state} />
     </span>
   );
 }

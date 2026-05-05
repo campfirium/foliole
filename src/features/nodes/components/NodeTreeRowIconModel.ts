@@ -1,23 +1,16 @@
 export type NodeTreeRowIconKind = 'reading' | 'review';
-export type NodeTreeRowIconState = 'default' | 'queued' | 'current' | 'done' | 'dismissed';
+export type NodeTreeRowIconState = 'pending' | 'active' | 'dismissed';
 
 export function resolveNodeTreeRowIconKind(isReviewCard: boolean): NodeTreeRowIconKind {
   return isReviewCard ? 'review' : 'reading';
 }
 
 export function resolveNodeTreeRowIconState(args: {
+  hasBeenHandled: boolean;
   isDismissed: boolean;
-  isCurrent: boolean;
-  isQueued: boolean;
 }): NodeTreeRowIconState {
   if (args.isDismissed) {
     return 'dismissed';
   }
-  if (args.isCurrent) {
-    return 'current';
-  }
-  if (args.isQueued) {
-    return 'queued';
-  }
-  return 'default';
+  return args.hasBeenHandled ? 'active' : 'pending';
 }
