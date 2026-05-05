@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -24,8 +25,9 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         int maxResources = FolioleCompanionMissingResourceQueryRules.attachmentLimit(context, limit);
         for (int index = 0; index < rows.length() && resources.length() < maxResources; index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            if (!isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key"))) continue;
-            resources.put(toResource(row));
+            JSONObject rowKeys = rowKeys(context);
+            if (!isMissingResource(context, row.getString(rowKeys.getString("availability")), nullableString(row, rowKeys.getString("storageKey")))) continue;
+            resources.put(toResource(context, row));
         }
         JSObject result = new JSObject();
         result.put(FolioleCompanionMissingResourceQueryRules.attachmentResultKey(context), resources);
@@ -42,17 +44,18 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            if (!isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key"))) continue;
+            JSONObject rowKeys = rowKeys(context);
+            if (!isMissingResource(context, row.getString(rowKeys.getString("availability")), nullableString(row, rowKeys.getString("storageKey")))) continue;
             summary.add(
                 context,
-                row.getString("availability"),
-                row.getLong("size_bytes"),
-                row.getString("mime_type"),
-                row.getLong("due_review") > 0,
-                row.getLong("active_topic") > 0
+                row.getString(rowKeys.getString("availability")),
+                row.getLong(rowKeys.getString("sizeBytes")),
+                row.getString(rowKeys.getString("mimeType")),
+                row.getLong(rowKeys.getString("dueReview")) > 0,
+                row.getLong(rowKeys.getString("activeTopic")) > 0
             );
         }
-        return summary.toJson();
+        return summary.toJson(context);
     }
 
     static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
@@ -71,18 +74,23 @@ final class FolioleCompanionAttachmentResourceMissingStore {
             return result;
         }
         JSONObject row = rows.getJSONObject(0);
+        JSONObject rowKeys = rowKeys(context);
         result.put(
             FolioleCompanionMissingResourceQueryRules.attachmentEmptyResultKey(context),
-            isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key")) ? toResource(row) : null
+            isMissingResource(context, row.getString(rowKeys.getString("availability")), nullableString(row, rowKeys.getString("storageKey"))) ? toResource(context, row) : null
         );
         return result;
     }
 
-    private static JSObject toResource(JSONObject row) throws Exception {
+    private static JSObject toResource(Context context, JSONObject row) throws Exception {
+        JSONObject rowKeys = rowKeys(context);
         JSObject resource = new JSObject();
-        resource.put("attachment_id", row.getString("attachment_id"));
-        resource.put("content_hash", row.getString("content_hash"));
-        resource.put("size_bytes", row.getLong("size_bytes"));
+        JSONArray resourceFields = FolioleCompanionMissingResourceQueryRules.attachmentArray(context, "resourceFields");
+        for (int index = 0; index < resourceFields.length(); index += 1) {
+            JSONObject field = resourceFields.getJSONObject(index);
+            String rowKey = rowKeys.getString(field.getString("rowKey"));
+            resource.put(field.getString("outputKey"), "long".equals(field.getString("type")) ? row.getLong(rowKey) : row.getString(rowKey));
+        }
         return resource;
     }
 
@@ -127,10 +135,11 @@ final class FolioleCompanionAttachmentResourceMissingStore {
                 failedCount++;
                 failedBytes += sizeBytes;
             }
-            if (mimeType.startsWith("image/")) {
+            JSONObject categories = FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "mimeCategories");
+            if (mimeType.startsWith(categories.getString("imagePrefix"))) {
                 imageCount++;
                 imageBytes += sizeBytes;
-            } else if (mimeType.equals("application/pdf")) {
+            } else if (mimeType.equals(categories.getString("pdfMimeType"))) {
                 pdfCount++;
                 pdfBytes += sizeBytes;
             } else {
@@ -141,21 +150,26 @@ final class FolioleCompanionAttachmentResourceMissingStore {
             if (activeTopic) activeTopicCount++;
         }
 
-        JSObject toJson() {
+        JSObject toJson(Context context) throws Exception {
+            JSONObject keys = FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "summaryKeys");
             JSObject summary = new JSObject();
-            summary.put("missing_attachment_resource_count", count);
-            summary.put("missing_attachment_resource_bytes", bytes);
-            summary.put("failed_attachment_resource_count", failedCount);
-            summary.put("failed_attachment_resource_bytes", failedBytes);
-            summary.put("missing_image_attachment_resource_count", imageCount);
-            summary.put("missing_image_attachment_resource_bytes", imageBytes);
-            summary.put("missing_pdf_attachment_resource_count", pdfCount);
-            summary.put("missing_pdf_attachment_resource_bytes", pdfBytes);
-            summary.put("missing_other_attachment_resource_count", otherCount);
-            summary.put("missing_other_attachment_resource_bytes", otherBytes);
-            summary.put("missing_active_topic_attachment_resource_count", activeTopicCount);
-            summary.put("missing_due_review_attachment_resource_count", dueReviewCount);
+            summary.put(keys.getString("count"), count);
+            summary.put(keys.getString("bytes"), bytes);
+            summary.put(keys.getString("failedCount"), failedCount);
+            summary.put(keys.getString("failedBytes"), failedBytes);
+            summary.put(keys.getString("imageCount"), imageCount);
+            summary.put(keys.getString("imageBytes"), imageBytes);
+            summary.put(keys.getString("pdfCount"), pdfCount);
+            summary.put(keys.getString("pdfBytes"), pdfBytes);
+            summary.put(keys.getString("otherCount"), otherCount);
+            summary.put(keys.getString("otherBytes"), otherBytes);
+            summary.put(keys.getString("activeTopicCount"), activeTopicCount);
+            summary.put(keys.getString("dueReviewCount"), dueReviewCount);
             return summary;
         }
+    }
+
+    private static JSONObject rowKeys(Context context) throws Exception {
+        return FolioleCompanionMissingResourceQueryRules.attachmentObject(context, "rowKeys");
     }
 }

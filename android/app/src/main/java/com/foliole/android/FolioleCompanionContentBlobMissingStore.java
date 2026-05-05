@@ -41,21 +41,23 @@ final class FolioleCompanionContentBlobMissingStore {
             FolioleCompanionMissingResourceQueryRules.contentSummaryQueryName(context),
             FolioleCompanionMissingResourceQueryRules.contentResultKey(context)
         );
+        JSONObject rowKeys = FolioleCompanionMissingResourceQueryRules.contentObject(context, "rowKeys");
         for (int index = 0; index < blobs.length(); index += 1) {
             JSONObject blob = blobs.getJSONObject(index);
             count++;
-            long sizeBytes = blob.getLong("size_bytes");
+            long sizeBytes = blob.getLong(rowKeys.getString("sizeBytes"));
             bytes += sizeBytes;
-            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(blob.getString("availability"))) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(blob.getString(rowKeys.getString("availability")))) {
                 failedCount++;
                 failedBytes += sizeBytes;
             }
         }
+        JSONObject keys = FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys");
         JSObject summary = new JSObject();
-        summary.put("missing_content_blob_count", count);
-        summary.put("missing_content_blob_bytes", bytes);
-        summary.put("failed_content_blob_count", failedCount);
-        summary.put("failed_content_blob_bytes", failedBytes);
+        summary.put(keys.getString("count"), count);
+        summary.put(keys.getString("bytes"), bytes);
+        summary.put(keys.getString("failedCount"), failedCount);
+        summary.put(keys.getString("failedBytes"), failedBytes);
         return summary;
     }
 }

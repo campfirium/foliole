@@ -24,12 +24,29 @@ describe('Android missing resource query rules', () => {
       minLimit: 1,
       resultKey: 'resources',
       rowsQueryName: 'attachmentResourceMissingRows',
+      rowKeys: {
+        attachmentId: 'attachment_id',
+        availability: 'availability',
+        storageKey: 'storage_key'
+      },
+      summaryKeys: {
+        count: 'missing_attachment_resource_count',
+        failedCount: 'failed_attachment_resource_count'
+      },
       summaryQueryName: 'attachmentResourceMissingSummaryRows'
     });
     expect(definitions.missingResourceRead.contentBlobs).toMatchObject({
       hashesQueryName: 'contentBlobMissingHashes',
       minLimit: 1,
       resultKey: 'blobs',
+      rowKeys: {
+        availability: 'availability',
+        sizeBytes: 'size_bytes'
+      },
+      summaryKeys: {
+        count: 'missing_content_blob_count',
+        failedCount: 'failed_content_blob_count'
+      },
       summaryQueryName: 'contentBlobMissingSummaryRows'
     });
   });
@@ -43,6 +60,10 @@ describe('Android missing resource query rules', () => {
     expect(rulesSource).toContain('optJSONObject("missingResourceRead")');
     expect(combinedStoreSource).not.toContain('"attachmentResourceMissingRows"');
     expect(combinedStoreSource).not.toContain('"contentBlobMissingHashes"');
+    expect(combinedStoreSource).not.toContain('"missing_attachment_resource_count"');
+    expect(combinedStoreSource).not.toContain('"missing_content_blob_count"');
+    expect(combinedStoreSource).not.toContain('"size_bytes"');
+    expect(combinedStoreSource).not.toContain('"storage_key"');
     expect(combinedStoreSource).not.toContain('Math.max(1, limit)');
   });
 });

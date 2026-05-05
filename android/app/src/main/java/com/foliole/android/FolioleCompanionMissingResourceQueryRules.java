@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.content.Context;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionMissingResourceQueryRules {
@@ -33,6 +34,14 @@ final class FolioleCompanionMissingResourceQueryRules {
         return Math.max(group(context, "attachmentResources").getInt("minLimit"), limit);
     }
 
+    static JSONObject attachmentObject(Context context, String key) throws Exception {
+        return group(context, "attachmentResources").getJSONObject(key);
+    }
+
+    static JSONArray attachmentArray(Context context, String key) throws Exception {
+        return group(context, "attachmentResources").getJSONArray(key);
+    }
+
     static String contentHashesQueryName(Context context) throws Exception {
         return stringValue(context, "contentBlobs", "hashesQueryName");
     }
@@ -55,6 +64,10 @@ final class FolioleCompanionMissingResourceQueryRules {
 
     static int contentLimit(Context context, int limit) throws Exception {
         return Math.max(group(context, "contentBlobs").getInt("minLimit"), limit);
+    }
+
+    static JSONObject contentObject(Context context, String key) throws Exception {
+        return group(context, "contentBlobs").getJSONObject(key);
     }
 
     private static String stringValue(Context context, String groupName, String key) throws Exception {
