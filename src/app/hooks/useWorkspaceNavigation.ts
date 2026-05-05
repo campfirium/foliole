@@ -78,21 +78,28 @@ function usePendingAnchorNavigation(
   return applyNavigationResult;
 }
 
-function useNavigationAction(action: () => NodeNavigationResult | null, finalize: (result: NodeNavigationResult | null) => void) {
+function useNavigationAction(
+  action: () => NodeNavigationResult | null,
+  beforeNavigate: () => void,
+  finalize: (result: NodeNavigationResult | null) => void
+) {
   return useCallback(() => {
+    beforeNavigate();
     finalize(action());
-  }, [action, finalize]);
+  }, [action, beforeNavigate, finalize]);
 }
 
 function useSelectNodeAction(
   action: (nodeId: string) => NodeNavigationResult | null,
+  beforeNavigate: () => void,
   finalize: (result: NodeNavigationResult | null) => void
 ) {
   return useCallback(
     (nodeId: string) => {
+      beforeNavigate();
       finalize(action(nodeId));
     },
-    [action, finalize]
+    [action, beforeNavigate, finalize]
   );
 }
 
@@ -116,15 +123,15 @@ export function useWorkspaceNavigation({
   const finalizeNavigation = useCallback(
     (result: NodeNavigationResult | null) => {
       closeContextMenu();
-      saveActiveNodeView();
       applyNavigationResult(result);
     },
-    [applyNavigationResult, closeContextMenu, saveActiveNodeView]
+    [applyNavigationResult, closeContextMenu]
   );
 
-  const handleSelectNode = useSelectNodeAction(openNode, finalizeNavigation);
+  const handleSelectNode = useSelectNodeAction(openNode, saveActiveNodeView, finalizeNavigation);
   const handleSelectBreadcrumbNode = useSelectNodeAction(
     (nodeId) => jumpToAncestorNode(nodeId) ?? openNode(nodeId),
+    saveActiveNodeView,
     finalizeNavigation
   );
 
@@ -132,9 +139,9 @@ export function useWorkspaceNavigation({
     canGoBack: backStackSize > 0,
     canGoForward: forwardStackSize > 0,
     canGoParent: Boolean(activeNodeParentId),
-    handleGoBack: useNavigationAction(goBack, finalizeNavigation),
-    handleGoForward: useNavigationAction(goForward, finalizeNavigation),
-    handleGoParent: useNavigationAction(goToParent, finalizeNavigation),
+    handleGoBack: useNavigationAction(goBack, saveActiveNodeView, finalizeNavigation),
+    handleGoForward: useNavigationAction(goForward, saveActiveNodeView, finalizeNavigation),
+    handleGoParent: useNavigationAction(goToParent, saveActiveNodeView, finalizeNavigation),
     handleSelectBreadcrumbNode,
     handleSelectNode
   };

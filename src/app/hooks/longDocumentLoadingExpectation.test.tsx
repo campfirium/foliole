@@ -15,7 +15,7 @@ vi.mock('../../shared/platform/bridge', () => ({
 }));
 
 const mockSetSelection = vi.fn();
-const mockSetScrollTop = vi.fn();
+const mockRevealSelection = vi.fn();
 
 vi.mock('../../features/editor/adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
@@ -39,13 +39,13 @@ vi.mock('../../features/editor/adapters/CodeMirrorEditorAdapter', () => ({
     setSelection(selection: { from: number; to: number }) {
       mockSetSelection(selection);
     }
-    revealSelection() {}
+    revealSelection(selection: { from: number; to: number }) {
+      mockRevealSelection(selection);
+    }
     getScrollTop() {
       return 0;
     }
-    setScrollTop(scrollTop: number) {
-      mockSetScrollTop(scrollTop);
-    }
+    setScrollTop() {}
     getScrollMetrics() {
       return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 };
     }
@@ -141,7 +141,7 @@ beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
   window.localStorage.clear();
   mockSetSelection.mockClear();
-  mockSetScrollTop.mockClear();
+  mockRevealSelection.mockClear();
   seedTrimmedWorkspaceState();
 });
 
@@ -215,6 +215,6 @@ it('restores a mid-document reading position after content was trimmed from memo
     />
   );
 
-  expect(mockSetSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_024 });
-  expect(mockSetScrollTop).toHaveBeenLastCalledWith(5_400);
+  expect(mockSetSelection).not.toHaveBeenCalled();
+  expect(mockRevealSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_024 });
 });

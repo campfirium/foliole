@@ -132,10 +132,13 @@ function useEditorLayoutEffects(
     if (!adapter) {
       return;
     }
-    adapter.setSelection(nodeViewState.selection);
-    adapter.setScrollTop(nodeViewState.scrollTop);
+    const selectionEnd = Math.max(nodeViewState.selection.from, nodeViewState.selection.to);
+    if (value.length === 0 && selectionEnd > 0) {
+      return;
+    }
+    adapter.revealSelection(nodeViewState.selection);
     requestAnimationFrame(syncScrollMetrics);
-  }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics]);
+  }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics, value]);
 }
 
 function buildGestureTrailPath(points: { x: number; y: number }[]) {

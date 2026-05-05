@@ -50,15 +50,15 @@ function createReadingProgressSignature(activeNodeId: string | null, nodeViewByI
 }
 
 function captureEditorNodeViewState(
-  activeNodeId: string | null,
+  nodeId: string | null,
   isViewingTrashNode: boolean,
   editorRef: MutableRefObject<EditorAdapter | null>
 ): CapturedNodeViewState | null {
-  if (isViewingTrashNode || !activeNodeId || !editorRef.current) {
+  if (isViewingTrashNode || !nodeId || !editorRef.current) {
     return null;
   }
   return {
-    nodeId: activeNodeId,
+    nodeId,
     viewState: normalizeNodeViewState({
       scrollTop: editorRef.current.getScrollTop(),
       selection: editorRef.current.getSelection()
@@ -121,11 +121,16 @@ export function useReadingProgressSync({
   const lastSyncedSignatureRef = useRef<string | null>(null);
 
   const flushReadingProgress = useCallback(
-    (activeNodeIdOverride?: string | null) => {
+    (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => {
       if (!isWorkspaceHydrated) {
         return;
       }
-      const captured = captureEditorNodeViewState(activeNodeId, isViewingTrashNode, editorRef);
+      const shouldCaptureEditorState = captureNodeIdOverride !== null;
+      const captureNodeId =
+        typeof captureNodeIdOverride === 'undefined' ? activeNodeId : captureNodeIdOverride;
+      const captured = shouldCaptureEditorState
+        ? captureEditorNodeViewState(captureNodeId, isViewingTrashNode, editorRef)
+        : null;
       const mergedNodeViewById = captured
         ? {
             ...nodeViewById,
@@ -158,7 +163,7 @@ export function useReadingProgressSync({
 
   useReadingProgressEffects({
     activeNodeId,
-    flushReadingProgress,
+    flushReadingProgress: (activeNodeIdOverride) => flushReadingProgress(activeNodeIdOverride, null),
     isWorkspaceHydrated,
     lifecycleFlush
   });

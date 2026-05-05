@@ -8,7 +8,7 @@ const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
-const mockSetScrollTop = vi.fn();
+const mockRevealSelection = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
@@ -41,13 +41,13 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setSelection(selection: { from: number; to: number }) {
       mockSetSelection(selection);
     }
-    revealSelection() {}
+    revealSelection(selection: { from: number; to: number }) {
+      mockRevealSelection(selection);
+    }
     getScrollTop() {
       return 0;
     }
-    setScrollTop(scrollTop: number) {
-      mockSetScrollTop(scrollTop);
-    }
+    setScrollTop() {}
     getScrollMetrics() {
       return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 };
     }
@@ -79,7 +79,7 @@ beforeEach(() => {
   mockSetDiffDecorations.mockClear();
   mockSetHideTitleHeading.mockClear();
   mockSetSelection.mockClear();
-  mockSetScrollTop.mockClear();
+  mockRevealSelection.mockClear();
   mockOnScroll.mockClear();
 });
 
@@ -92,13 +92,36 @@ it('restores mid-document selection and scroll when reopening a long document', 
   const view = renderEditor(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value={longDocument} />);
 
   expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockSetScrollTop).not.toHaveBeenCalled();
+  expect(mockRevealSelection).not.toHaveBeenCalled();
 
   view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
   view.rerender(
     <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />
   );
 
-  expect(mockSetSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
-  expect(mockSetScrollTop).toHaveBeenLastCalledWith(5_400);
+  expect(mockSetSelection).not.toHaveBeenCalled();
+  expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+});
+
+it('waits for on-demand content to load before restoring a saved mid-document position', () => {
+  const longDocument = createLongDocument();
+  const nodeViewState = {
+    scrollTop: 5_400,
+    selection: { from: 48_000, to: 48_024 }
+  };
+  const view = renderEditor(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="Initial body" />);
+
+  mockSetSelection.mockClear();
+  mockRevealSelection.mockClear();
+
+  view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="" />);
+
+  expect(mockSetSelection).not.toHaveBeenCalled();
+  expect(mockRevealSelection).not.toHaveBeenCalled();
+
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
+
+  expect(mockSetSelection).not.toHaveBeenCalled();
+  expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
 });

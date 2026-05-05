@@ -78,11 +78,13 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
     if (!adapter) {
       return;
     }
-    const selection = adapter.getSelection();
     adapter.revealPosition(position);
     args.ws.setNodeViewState(args.ws.activeNodeId, {
       scrollTop: adapter.getScrollTop(),
-      selection
+      selection: {
+        from: position,
+        to: position
+      }
     });
   };
 }
