@@ -52,7 +52,7 @@ it('maps every regular priority to the spec growth factor table', () => {
   ]);
 });
 
-it('inherits priority from the closest configured ancestor before building reading fields', () => {
+it('inherits reading priority from the closest configured ancestor before building schedule fields', () => {
   expect(resolveInheritedPushQueuePriority([undefined, null, 2, 8])).toBe(2);
   expect(resolveInheritedRegularPushQueuePriority([0, 3])).toBe(5);
 
@@ -70,6 +70,24 @@ it('inherits priority from the closest configured ancestor before building readi
     nextAt: '2026-03-16T10:45:30.000Z',
     priority: 2,
     repetitionCount: 4
+  });
+});
+
+it('preserves absolute reading priority inheritance while still using exact timestamp scheduling', () => {
+  expect(
+    buildReadingScheduleCoreFields({
+      intervalDurationMs: 45 * 60 * 1000,
+      lastHandledAt: '2026-03-16T09:15:30.000Z',
+      priorityChain: [0, 3],
+      repetitionCount: 1
+    })
+  ).toEqual({
+    intervalDurationMs: 45 * 60 * 1000,
+    intervalGrowthFactor: 1.1,
+    lastHandledAt: '2026-03-16T09:15:30.000Z',
+    nextAt: '2026-03-16T10:00:30.000Z',
+    priority: 0,
+    repetitionCount: 1
   });
 });
 

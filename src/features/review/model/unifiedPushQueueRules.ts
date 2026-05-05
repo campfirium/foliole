@@ -20,7 +20,7 @@ export interface ReadingScheduleCoreFields {
   intervalGrowthFactor: number;
   lastHandledAt: string;
   nextAt: string;
-  priority: RegularPushQueuePriority;
+  priority: PushQueuePriority;
   repetitionCount: number;
 }
 
@@ -205,10 +205,13 @@ export function buildReadingScheduleCoreFields(args: {
   repetitionCount: number;
   range?: ReadingIntervalGrowthFactorRange;
 }): ReadingScheduleCoreFields {
-  const priority = resolveInheritedRegularPushQueuePriority(args.priorityChain ?? []);
+  const priority = resolveInheritedPushQueuePriority(args.priorityChain ?? []);
   return {
     intervalDurationMs: args.intervalDurationMs,
-    intervalGrowthFactor: getReadingIntervalGrowthFactor(priority, args.range),
+    intervalGrowthFactor: getReadingIntervalGrowthFactor(
+      normalizeRegularPushQueuePriority(priority, 1),
+      args.range
+    ),
     lastHandledAt: args.lastHandledAt,
     nextAt: resolveReadingNextAt(args.lastHandledAt, args.intervalDurationMs),
     priority,
