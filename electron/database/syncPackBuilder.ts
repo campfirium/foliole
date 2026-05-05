@@ -66,6 +66,7 @@ function writePackManifest(
         external_documents: rows.externalDocuments,
         node_attachments: rows.nodeAttachments,
         nodes: rows.nodes,
+        review_log: rows.reviewLog,
         sync_object_state: rows.stateRows,
         sync_objects: rows.syncObjects
       },
@@ -122,6 +123,15 @@ function writePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPa
       'created_at', 'cached_at', 'last_verified_at'],
     rows: rows.contentBlobs
   });
+  copyRows({
+    db,
+    table: 'review_log',
+    columns: [
+      'id', 'op_id', 'device_id', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
+      'due_before', 'stability_before', 'difficulty_before', 'due_after', 'stability_after', 'difficulty_after'
+    ],
+    rows: rows.reviewLog
+  });
 }
 
 function sha256Uri(buffer: Buffer) {
@@ -146,6 +156,7 @@ function buildContainerManifest(args: {
       external_documents: args.rows.externalDocuments,
       node_attachments: args.rows.nodeAttachments,
       nodes: args.rows.nodes,
+      review_log: args.rows.reviewLog,
       sync_object_state: args.rows.stateRows,
       sync_objects: args.rows.syncObjects
     },

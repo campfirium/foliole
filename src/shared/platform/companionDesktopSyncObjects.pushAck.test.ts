@@ -159,7 +159,7 @@ describe('companion desktop sync push acknowledgements', () => {
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 
-  it('pushes state objects and review_log, storing state acks and advancing accepted review log cursor', async () => {
+  it('pushes state objects and review_log, storing state acks without advancing review log cursor from ack alone', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([
       createLocalNodeReadingChange(),
       createLocalNodeReviewChange(),
@@ -192,6 +192,23 @@ describe('companion desktop sync push acknowledgements', () => {
       })
     ]);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
+  });
+
+  it('advances accepted review log cursor only after the pulled pack confirms the op id', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
+    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
+    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
+      applied_blob_count: 0,
+      applied_object_count: 1,
+      applied_review_op_ids: ['op-1'],
+      to_state_seq: 10
+    });
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.appliedReviewOpIds).toEqual(['op-1']);
     expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).toHaveBeenCalledWith({
       change_id: 'op-1',
       created_at: '2026-04-25T00:05:00.000Z'

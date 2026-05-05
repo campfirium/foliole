@@ -95,6 +95,41 @@ function insertAttachmentSyncState() {
   );
 }
 
+function insertNodeReviewSyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('node-review-1', 'topic', 'Review Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO review_log (
+       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'log-1',
+      'op-1',
+      'android-test',
+      'node-review-1',
+      3,
+      'ts-fsrs@4',
+      '2026-04-27T00:05:00.000Z',
+      '2026-04-27T00:00:00.000Z',
+      1,
+      2,
+      '2026-04-28T00:00:00.000Z',
+      3,
+      4
+    ]
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node_review', 'node-review-1', 6, 'review-hash',
+       'android-test', '2026-04-27T00:05:00.000Z', 0)`
+  );
+}
+
 function insertNodeAttachmentRows() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -160,6 +195,7 @@ function readPackRows(packPath: string) {
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all(),
+      reviewLog: db.prepare('SELECT op_id, node_id, grade FROM review_log').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
       syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
     };
@@ -226,7 +262,8 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
         { name: 'nodes', row_count: 1 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 1 }
+        { name: 'content_blobs', row_count: 1 },
+        { name: 'review_log', row_count: 0 }
       ]
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
@@ -271,7 +308,8 @@ it('packs attachment metadata as a generic sync object', async () => {
         { name: 'nodes', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 }
+        { name: 'content_blobs', row_count: 0 },
+        { name: 'review_log', row_count: 0 }
       ]
     }),
     stateRows: [{ object_id: 'att-1', object_type: 'attachment', state_seq: 3 }],
@@ -306,7 +344,8 @@ it('packs external folder metadata as a generic sync object', async () => {
         { name: 'nodes', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 }
+        { name: 'content_blobs', row_count: 0 },
+        { name: 'review_log', row_count: 0 }
       ]
     }),
     stateRows: [{ object_id: 'folder-1', object_type: 'external_folder', state_seq: 4 }],
@@ -341,7 +380,8 @@ it('packs import source metadata as a generic sync object', async () => {
         { name: 'nodes', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 }
+        { name: 'content_blobs', row_count: 0 },
+        { name: 'review_log', row_count: 0 }
       ]
     }),
     stateRows: [{ object_id: 'source-1', object_type: 'import_source', state_seq: 5 }],
@@ -350,6 +390,30 @@ it('packs import source metadata as a generic sync object', async () => {
       object_type: 'import_source',
       payload_json: expect.stringContaining('notes.md')
     })]
+  });
+});
+
+it('packs review log rows with changed node review state', async () => {
+  insertNodeReviewSyncState();
+  const packPath = path.join(tempRoot, 'incoming-review-log.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-review-log-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    objectCount: 1,
+    packId: 'pack-review-log-1',
+    toStateSeq: 6
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    manifest: expect.objectContaining({
+      tables: expect.arrayContaining([{ name: 'review_log', row_count: 1 }])
+    }),
+    reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
+    stateRows: [{ object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }]
   });
 });
 
@@ -408,7 +472,8 @@ it('packs external document structure with body blob manifests but no body bytes
         { name: 'nodes', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 1 },
-        { name: 'content_blobs', row_count: 1 }
+        { name: 'content_blobs', row_count: 1 },
+        { name: 'review_log', row_count: 0 }
       ]
     }),
     stateRows: [{ object_id: 'folder-1:doc.md', object_type: 'external_document', state_seq: 1 }]

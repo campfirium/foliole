@@ -3,6 +3,7 @@ export type SyncPackTableName =
   | 'external_documents'
   | 'node_attachments'
   | 'nodes'
+  | 'review_log'
   | 'sync_object_state'
   | 'sync_objects';
 
@@ -12,7 +13,8 @@ export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'nodes',
   'node_attachments',
   'external_documents',
-  'content_blobs'
+  'content_blobs',
+  'review_log'
 ];
 
 export const SYNC_PACK_OBJECT_TYPE_TABLES = {

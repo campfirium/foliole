@@ -1,5 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
 import {
@@ -85,6 +85,8 @@ export interface ContentBlobPackRow extends DatabaseRow {
   stored_size_bytes: number;
 }
 
+export interface ReviewLogPackRow extends DatabaseRow, NativeSyncReviewLogRecord {}
+
 function placeholders(values: unknown[]) {
   return values.map(() => '?').join(', ');
 }
@@ -136,6 +138,20 @@ function loadPayloadObjects(rows: SyncStatePackRow[]): SyncObjectPackRow[] {
   );
 }
 
+function loadReviewLogRows(rows: SyncStatePackRow[]): ReviewLogPackRow[] {
+  const nodeIds = rows
+    .filter((row) => row.object_type === 'node_review')
+    .map((row) => row.object_id);
+  return queryRowsByIds<ReviewLogPackRow>(
+    `SELECT
+       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
+     FROM review_log WHERE node_id IN (__IDS__)
+     ORDER BY reviewed_at ASC, op_id ASC`,
+    nodeIds
+  );
+}
+
 function isSyncStatePackRow(row: RawSyncStatePackRow): row is SyncStatePackRow {
   return isSyncPackStateObjectType(row.object_type);
 }
@@ -174,6 +190,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
     externalDocuments,
     nodeAttachments,
     nodes,
+    reviewLog: loadReviewLogRows(stateRows),
     stateRows,
     syncObjects: loadPayloadObjects(stateRows)
   };

@@ -17,7 +17,8 @@ it('builds the pack manifest from the explicit table map', () => {
     'nodes',
     'node_attachments',
     'external_documents',
-    'content_blobs'
+    'content_blobs',
+    'review_log'
   ]);
   expect(SYNC_PACK_OBJECT_TYPE_TABLES).toEqual({
     external_document: 'external_documents',
@@ -35,6 +36,7 @@ it('builds the pack manifest from the explicit table map', () => {
       external_documents: [],
       node_attachments: [{}],
       nodes: [{}, {}],
+      review_log: [{}],
       sync_object_state: [{}, {}, {}],
       sync_objects: [{}]
     },
@@ -48,7 +50,8 @@ it('builds the pack manifest from the explicit table map', () => {
       { name: 'nodes', row_count: 2 },
       { name: 'node_attachments', row_count: 1 },
       { name: 'external_documents', row_count: 0 },
-      { name: 'content_blobs', row_count: 1 }
+      { name: 'content_blobs', row_count: 1 },
+      { name: 'review_log', row_count: 1 }
     ],
     to_state_seq: 4
   });

@@ -7,7 +7,10 @@ import {
   loadCompanionMissingAttachmentResources,
   loadCompanionMissingContentBlobs,
   loadCompanionSyncPackCursor,
+  loadCompanionSyncReviewLog,
+  loadCompanionSyncReviewLogPushCursor,
   saveCompanionSyncPackCursor,
+  saveCompanionSyncReviewLogPushCursor,
   syncCompanionContentBlob
 } from './companionSyncObjects';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
@@ -84,6 +87,25 @@ function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }
 
+async function saveConfirmedReviewLogPushCursor(confirmedOpIds: string[]) {
+  if (confirmedOpIds.length === 0) {
+    return;
+  }
+  const confirmedSet = new Set(confirmedOpIds);
+  const cursor = await loadCompanionSyncReviewLogPushCursor();
+  const reviewLog = await loadCompanionSyncReviewLog(cursor, 100);
+  let confirmed = null as null | { change_id: string; created_at: string };
+  for (const row of reviewLog) {
+    if (!confirmedSet.has(row.op_id)) {
+      break;
+    }
+    confirmed = { change_id: row.op_id, created_at: row.reviewed_at };
+  }
+  if (confirmed) {
+    await saveCompanionSyncReviewLogPushCursor(confirmed);
+  }
+}
+
 async function pullRemoteStructurePack(endpointUrl: string) {
   const cursor = await loadCompanionSyncPackCursor();
   const pathWithQuery = buildPackPath(cursor);
@@ -94,9 +116,12 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   if (result.to_state_seq > (cursor ?? 0)) {
     await saveCompanionSyncPackCursor(result.to_state_seq);
   }
+  const appliedReviewOpIds = result.applied_review_op_ids ?? [];
+  await saveConfirmedReviewLogPushCursor(appliedReviewOpIds);
   return {
     appliedPackBlobCount: result.applied_blob_count,
-    appliedPackObjectCount: result.applied_object_count
+    appliedPackObjectCount: result.applied_object_count,
+    appliedReviewOpIds
   };
 }
 
@@ -300,7 +325,7 @@ async function runCompanionObjectsSync(
     appliedPackBlobCount: pack.appliedPackBlobCount,
     appliedPackObjectCount: pack.appliedPackObjectCount,
     appliedObjectIds: [],
-    appliedReviewOpIds: [],
+    appliedReviewOpIds: pack.appliedReviewOpIds,
     changedObjectIds: [],
     pushedNodeIds: [],
     pushedObjectIds: pushed.pushedObjectIds,

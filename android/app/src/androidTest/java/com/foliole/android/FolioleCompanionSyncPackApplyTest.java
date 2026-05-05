@@ -145,6 +145,24 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void confirmsExistingReviewLogRowsFromIncomingPack() throws Exception {
+        createIncomingReviewLogPack();
+        mainDatabase.execSQL("INSERT INTO nodes (" +
+            "id, kind, title, content, created_at, updated_at) VALUES (" +
+            "'node-1', 'topic', 'Node 1', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')");
+        mainDatabase.execSQL("INSERT INTO review_log (" +
+            "id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, " +
+            "due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after) VALUES (" +
+            "'local-log-1', 'op-1', 'android-test', 'node-1', 3, 'ts-fsrs@4', '2026-04-27T00:05:00.000Z', " +
+            "'2026-04-27T00:00:00.000Z', 1.0, 2.0, '2026-04-28T00:00:00.000Z', 3.0, 4.0)");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
+
+        assertEquals("op-1", result.getJSONArray("applied_review_op_ids").getString(0));
+        assertEquals(1, selectInt("SELECT COUNT(*) FROM review_log WHERE op_id = 'op-1'"));
+    }
+
+    @Test
     public void appliesGenericSettingPayloadRowsFromIncomingPack() throws Exception {
         createIncomingPack();
         appendIncomingSettingRows();
@@ -284,6 +302,11 @@ public class FolioleCompanionSyncPackApplyTest {
             "node_id TEXT NOT NULL, device_id TEXT NOT NULL, scroll_top INTEGER NOT NULL DEFAULT 0, " +
             "selection_from INTEGER, selection_to INTEGER, source TEXT NOT NULL DEFAULT 'restore', " +
             "updated_at TEXT NOT NULL, PRIMARY KEY (node_id, device_id))");
+        mainDatabase.execSQL("CREATE TABLE review_log (" +
+            "id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, device_id TEXT NOT NULL, node_id TEXT NOT NULL, " +
+            "grade INTEGER NOT NULL, scheduler_version TEXT NOT NULL, reviewed_at TEXT NOT NULL, " +
+            "due_before TEXT NOT NULL, stability_before REAL NOT NULL, difficulty_before REAL NOT NULL, " +
+            "due_after TEXT NOT NULL, stability_after REAL NOT NULL, difficulty_after REAL NOT NULL)");
     }
 
     private void createIncomingPack() {
@@ -514,6 +537,25 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'" + objectType + "', '" + objectId + "', " + stateSeq + ", '" + contentHash + "', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void createIncomingReviewLogPack() {
+        createIncomingStateOnlyPack("node_review", "node-1", 7, "review-hash");
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            packDatabase.execSQL("CREATE TABLE review_log (" +
+                "id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, device_id TEXT NOT NULL, node_id TEXT NOT NULL, " +
+                "grade INTEGER NOT NULL, scheduler_version TEXT NOT NULL, reviewed_at TEXT NOT NULL, " +
+                "due_before TEXT NOT NULL, stability_before REAL NOT NULL, difficulty_before REAL NOT NULL, " +
+                "due_after TEXT NOT NULL, stability_after REAL NOT NULL, difficulty_after REAL NOT NULL)");
+            packDatabase.execSQL("INSERT INTO review_log (" +
+                "id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, " +
+                "due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after) VALUES (" +
+                "'desktop-log-1', 'op-1', 'android-test', 'node-1', 3, 'ts-fsrs@4', '2026-04-27T00:05:00.000Z', " +
+                "'2026-04-27T00:00:00.000Z', 1.0, 2.0, '2026-04-28T00:00:00.000Z', 3.0, 4.0)");
         } finally {
             packDatabase.close();
         }

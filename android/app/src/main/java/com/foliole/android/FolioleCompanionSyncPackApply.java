@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
@@ -25,6 +26,7 @@ final class FolioleCompanionSyncPackApply {
         int appliedObjects = 0;
         int appliedBlobs = 0;
         int toStateSeq = 0;
+        JSArray appliedReviewOpIds = new JSArray();
         boolean attached = false;
         FolioleCompanionSyncPackContainer.PreparedPack preparedPack =
             FolioleCompanionSyncPackContainer.prepare(packFile);
@@ -44,6 +46,7 @@ final class FolioleCompanionSyncPackApply {
                     replaceNodeAttachments(database);
                     upsertExternalDocuments(database);
                     upsertSyncObjects(database, deviceId);
+                    appliedReviewOpIds = applyReviewLog(database);
                     appliedObjects = upsertStateRows(database, deviceId);
                     clearConfirmedPushAcks(database);
                 }
@@ -60,6 +63,7 @@ final class FolioleCompanionSyncPackApply {
         JSObject result = new JSObject();
         result.put("applied_object_count", appliedObjects);
         result.put("applied_blob_count", appliedBlobs);
+        result.put("applied_review_op_ids", appliedReviewOpIds);
         result.put("to_state_seq", toStateSeq);
         return result;
     }
@@ -167,6 +171,47 @@ final class FolioleCompanionSyncPackApply {
                     FolioleCompanionSyncObjectApply.applyPayload(database, record);
                 }
             }
+        }
+    }
+
+    private static JSArray applyReviewLog(SQLiteDatabase database) throws Exception {
+        JSArray reviews = new JSArray();
+        if (!incomingTableExists(database, "review_log")) {
+            return reviews;
+        }
+        try (Cursor cursor = database.rawQuery(
+            "SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, " +
+                "due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after " +
+                "FROM inc.review_log ORDER BY reviewed_at ASC, op_id ASC",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                JSONObject review = new JSONObject();
+                review.put("id", cursor.getString(0));
+                review.put("op_id", cursor.getString(1));
+                review.put("device_id", cursor.getString(2));
+                review.put("node_id", cursor.getString(3));
+                review.put("grade", cursor.getInt(4));
+                review.put("scheduler_version", cursor.getString(5));
+                review.put("reviewed_at", cursor.getString(6));
+                review.put("due_before", cursor.getString(7));
+                review.put("stability_before", cursor.getDouble(8));
+                review.put("difficulty_before", cursor.getDouble(9));
+                review.put("due_after", cursor.getString(10));
+                review.put("stability_after", cursor.getDouble(11));
+                review.put("difficulty_after", cursor.getDouble(12));
+                reviews.put(review);
+            }
+        }
+        return FolioleCompanionSyncReviewLogStore.applyAndConfirmReviewLogRows(database, reviews);
+    }
+
+    private static boolean incomingTableExists(SQLiteDatabase database, String tableName) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT 1 FROM inc.sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+            new String[] { tableName }
+        )) {
+            return cursor.moveToFirst();
         }
     }
 

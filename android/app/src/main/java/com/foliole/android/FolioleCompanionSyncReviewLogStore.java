@@ -50,11 +50,20 @@ final class FolioleCompanionSyncReviewLogStore {
     }
 
     static JSObject applyReviewLog(SQLiteDatabase database, JSONArray reviews) throws Exception {
+        JSArray appliedOpIds = applyReviewLogRows(database, reviews, false);
+        JSObject result = new JSObject();
+        result.put("applied_op_ids", appliedOpIds);
+        return result;
+    }
+
+    static JSArray applyAndConfirmReviewLogRows(SQLiteDatabase database, JSONArray reviews) throws Exception {
+        return applyReviewLogRows(database, reviews, true);
+    }
+
+    private static JSArray applyReviewLogRows(SQLiteDatabase database, JSONArray reviews, boolean confirmExisting) throws Exception {
         JSArray appliedOpIds = new JSArray();
         if (reviews == null) {
-            JSObject result = new JSObject();
-            result.put("applied_op_ids", appliedOpIds);
-            return result;
+            return appliedOpIds;
         }
         database.beginTransaction();
         try {
@@ -63,17 +72,17 @@ final class FolioleCompanionSyncReviewLogStore {
                 if (record == null || record.optString("op_id", "").trim().isEmpty()) {
                     continue;
                 }
-                if (nodeExists(database, record.optString("node_id")) && insertReviewLog(database, record)) {
-                    appliedOpIds.put(record.optString("op_id"));
+                String opId = record.optString("op_id");
+                if (nodeExists(database, record.optString("node_id")) &&
+                    (insertReviewLog(database, record) || (confirmExisting && reviewLogExists(database, opId)))) {
+                    appliedOpIds.put(opId);
                 }
             }
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
         }
-        JSObject result = new JSObject();
-        result.put("applied_op_ids", appliedOpIds);
-        return result;
+        return appliedOpIds;
     }
 
     static String saveLocalReviewLog(
@@ -125,6 +134,15 @@ final class FolioleCompanionSyncReviewLogStore {
         try (Cursor cursor = database.rawQuery(
             "SELECT 1 FROM nodes WHERE id = ? LIMIT 1",
             new String[] { nodeId == null ? "" : nodeId }
+        )) {
+            return cursor.moveToFirst();
+        }
+    }
+
+    private static boolean reviewLogExists(SQLiteDatabase database, String opId) {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT 1 FROM review_log WHERE op_id = ? LIMIT 1",
+            new String[] { opId == null ? "" : opId }
         )) {
             return cursor.moveToFirst();
         }

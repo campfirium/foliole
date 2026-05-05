@@ -4,7 +4,6 @@ import {
   loadCompanionSyncReviewLogPushCursor,
   loadCompanionSyncStateChanges,
   loadCompanionSyncStatePushCursor,
-  saveCompanionSyncReviewLogPushCursor,
   saveCompanionSyncPushAcks
 } from './companionSyncObjects';
 import {
@@ -67,8 +66,7 @@ async function collectLocalPushItems() {
     .filter((item) => item !== undefined)
     .filter((item) => item.base.kind !== 'blocked');
   return {
-    items: [...stateItems, ...reviewLog.map((row) => reviewLogSyncAdapter.buildPushPayload(row))],
-    reviewLog
+    items: [...stateItems, ...reviewLog.map((row) => reviewLogSyncAdapter.buildPushPayload(row))]
   };
 }
 
@@ -86,7 +84,7 @@ function formatPushError(error: unknown) {
 
 export async function pushLocalDirtyObjects(endpointUrl: string): Promise<CompanionDesktopSyncPushResult> {
   try {
-    const { items, reviewLog } = await collectLocalPushItems();
+    const { items } = await collectLocalPushItems();
     if (items.length === 0) {
       return {
         pushConflictCount: 0,
@@ -100,7 +98,6 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
     const acks = response.acks.map(toPushAck);
     const accepted = acceptedAcks(acks);
     await saveCompanionSyncPushAcks(accepted.filter((ack) => ack.identity.objectType !== 'review_log'));
-    await saveAcceptedReviewLogPushCursor(reviewLog, accepted);
     return {
       pushedObjectIds: accepted
         .filter((ack) => ack.identity.objectType !== 'review_log')
@@ -120,26 +117,5 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
       pushError: formatPushError(error),
       pushRejectedCount: 0
     };
-  }
-}
-
-async function saveAcceptedReviewLogPushCursor(
-  reviewLog: Awaited<ReturnType<typeof loadCompanionSyncReviewLog>>,
-  acks: SyncPushAck[]
-) {
-  const acceptedOpIds = new Set(
-    acks
-      .filter((ack) => ack.identity.objectType === 'review_log')
-      .map((ack) => ack.identity.objectId)
-  );
-  let confirmed = null as null | { change_id: string; created_at: string };
-  for (const row of reviewLog) {
-    if (!acceptedOpIds.has(row.op_id)) {
-      break;
-    }
-    confirmed = { change_id: row.op_id, created_at: row.reviewed_at };
-  }
-  if (confirmed) {
-    await saveCompanionSyncReviewLogPushCursor(confirmed);
   }
 }

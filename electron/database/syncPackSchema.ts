@@ -76,5 +76,20 @@ export const PACK_SCHEMA = [
     created_at TEXT NOT NULL,
     cached_at TEXT,
     last_verified_at TEXT
+  )`,
+  `CREATE TABLE review_log (
+    id TEXT PRIMARY KEY,
+    op_id TEXT NOT NULL UNIQUE,
+    device_id TEXT NOT NULL,
+    node_id TEXT NOT NULL,
+    grade INTEGER NOT NULL,
+    scheduler_version TEXT NOT NULL,
+    reviewed_at TEXT NOT NULL,
+    due_before TEXT NOT NULL,
+    stability_before REAL NOT NULL,
+    difficulty_before REAL NOT NULL,
+    due_after TEXT NOT NULL,
+    stability_after REAL NOT NULL,
+    difficulty_after REAL NOT NULL
   )`
 ];
