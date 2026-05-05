@@ -1,4 +1,5 @@
 import type {
+  NativeSyncNodeRecord,
   NativeSyncObjectType,
   NativeSyncReviewLogRecord,
   NativeSyncStateObjectRecord
@@ -61,6 +62,8 @@ export interface SyncableStateObjectRow extends NativeSyncStateObjectRecord {
 export interface SyncableReviewLogRow extends NativeSyncReviewLogRecord {
   state_seq?: number | null;
 }
+
+export type SyncableNodeVersionRow = NativeSyncNodeRecord;
 
 function canonicalIdentityKey(identity: SyncObjectIdentity) {
   return `${identity.objectType}:${identity.scope}:${identity.objectId}`;
@@ -187,7 +190,54 @@ export const reviewLogSyncAdapter: SyncableObjectAdapter<SyncableReviewLogRow, S
   }
 };
 
+function nodeVersionIdentity(row: Pick<NativeSyncNodeRecord, 'object_id'>): SyncObjectIdentity {
+  return {
+    objectId: row.object_id,
+    objectType: 'node',
+    scope: 'workspace'
+  };
+}
+
+export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRow, SyncableNodeVersionRow> = {
+  applyPullPayload(payload) {
+    return {
+      identity: nodeVersionIdentity(payload),
+      status: 'applied'
+    };
+  },
+  baseReference(row) {
+    if (!row.version_id || !row.device_id || !row.version_created_at) {
+      return { kind: 'blocked', reason: 'missing_base_reference' };
+    }
+    return {
+      ancestorVersionIds: row.ancestor_version_ids,
+      kind: 'node_version',
+      parentVersionId: row.parent_version_id
+    };
+  },
+  buildPushPayload(row) {
+    return {
+      base: this.baseReference(row),
+      clientOpId: `node:${row.version_id ?? row.object_id}`,
+      contentHash: row.content_hash ?? undefined,
+      identity: this.identity(row),
+      payloadJson: JSON.stringify(row),
+      updatedAt: row.updated_at
+    };
+  },
+  identity(row) {
+    return nodeVersionIdentity(row);
+  },
+  isConfirmedBy(payload, ack) {
+    return sameIdentity(this.identity(payload), ack.identity)
+      && (ack.status === 'accepted' || ack.status === 'already_applied')
+      && typeof payload.version_id === 'string'
+      && ack.versionId === payload.version_id;
+  }
+};
+
 export const syncPushAdapters = {
+  node: nodeVersionSyncAdapter,
   node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
   setting: settingSyncAdapter,

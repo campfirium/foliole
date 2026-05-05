@@ -133,6 +133,7 @@ export function CompanionDirectoryContent(props: {
       <ImmersiveReadableArticle
         onExit={() => props.onChangeSelection(parentSelection ?? { kind: 'root' })}
         readableArticle={toReadableExternalArticle(externalDocument)}
+        snapshot={null}
       />
     );
   }

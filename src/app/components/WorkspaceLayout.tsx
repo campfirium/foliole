@@ -15,6 +15,7 @@ import type {
 } from '../../shared/platform/externalSearchBridge';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
+import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -34,6 +35,7 @@ export interface WorkspaceEditorContextMenu {
   mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
   notePanelLeft?: number;
   notePanelTop?: number;
+  payload?: SelectionCommandPayload | null;
   top: number;
 }
 
@@ -154,7 +156,9 @@ export interface WorkspaceLayoutProps {
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   onCreateSelectionNote: (payload: SelectionCommandPayload, note?: string) => string | null;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
-  onCreateCloze: () => void;
+  onCreateCloze: (options?: LongClozeGuardOptions) => void;
+  onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
+  onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;

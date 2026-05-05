@@ -11,6 +11,8 @@ import type {
   RuntimeExternalSearchFolder
 } from '../../shared/platform/externalSearchBridge';
 import type { NodeViewState } from '../../store/workspaceStore';
+import type { SelectionCommandPayload } from '../contextCommands';
+import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
@@ -45,8 +47,10 @@ export interface WorkspaceDocumentSurfaceSource {
   onAnswerChange: (answer: string) => void;
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
-  onCreateCloze: () => void;
+  onCreateCloze: (options?: LongClozeGuardOptions) => void;
+  onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   onCreateHighlight: () => void;
+  onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
   onCreateNote: (note: string) => void;
   onDeleteExistingHighlight: () => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
@@ -162,7 +166,9 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onCloseContextMenu: props.onCloseContextMenu,
     onCopyImage: props.onCopyImage,
     onCreateCloze: props.onCreateCloze,
+    onCreateClozeFromPayload: props.onCreateClozeFromPayload,
     onCreateHighlight: props.onCreateHighlight,
+    onCreateHighlightFromPayload: props.onCreateHighlightFromPayload,
     onCreateNote: props.onCreateNote,
     onDeleteExistingHighlight: props.onDeleteExistingHighlight,
     onCreatePdfHighlight: props.onCreatePdfHighlight,

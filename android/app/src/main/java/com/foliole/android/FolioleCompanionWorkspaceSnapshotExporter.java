@@ -42,7 +42,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
                 "n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.title, n.is_title_manual, " +
                 "n.hide_title_heading, " + contentExpression + ", n.opening_text, " + bodyStatusExpression + ", " +
                 "n.virtual_filter, n.reveal, n.anchor_link, " +
-                "n.image_regions, n.created_at, n.updated_at, n.deleted_at, " +
+                "n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, " +
                 "rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority, " +
                 "rds.reading_position, rd.repetition_count, rd.state, " +
                 "nr.due, nr.last_review_at, nr.state, nr.stability, nr.difficulty, nr.elapsed_days, " +
@@ -122,7 +122,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         node.put("isTitleManual", cursor.getInt(6) == 1);
         node.put("hideTitleHeading", cursor.getInt(7) == 1);
         node.put("content", cursor.getString(8));
-        node.put("bodyBlobHash", cursor.isNull(35) ? null : cursor.getString(35));
+        node.put("bodyBlobHash", cursor.isNull(36) ? null : cursor.getString(36));
         String bodyStatus = cursor.getString(10);
         if ("missing".equals(bodyStatus) || "empty".equals(bodyStatus) || "fetching".equals(bodyStatus) || "failed".equals(bodyStatus)) {
             node.put("bodyStatus", bodyStatus);
@@ -140,6 +140,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         node.put("review", buildReview(cursor));
         node.put("createdAt", cursor.getString(15));
         node.put("updatedAt", cursor.getString(16));
+        node.put("currentVersionId", cursor.isNull(18) ? null : cursor.getString(18));
         if (deletedAt != null) {
             node.put("deletedAt", deletedAt);
         }
@@ -147,39 +148,39 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static Object buildReading(Cursor cursor) {
-        if (cursor.isNull(20) || cursor.isNull(21) || cursor.isNull(25)) {
+        if (cursor.isNull(21) || cursor.isNull(22) || cursor.isNull(26)) {
             return null;
         }
-        String state = cursor.getString(25);
+        String state = cursor.getString(26);
         if (!"active".equals(state) && !"done".equals(state) && !"dismissed".equals(state)) {
             return null;
         }
         JSObject reading = new JSObject();
-        reading.put("intervalDurationMs", cursor.isNull(18) ? 0 : cursor.getLong(18));
-        reading.put("intervalGrowthFactor", cursor.isNull(19) ? 1 : cursor.getDouble(19));
-        reading.put("lastHandledAt", cursor.getString(20));
-        reading.put("nextAt", cursor.getString(21));
-        reading.put("priority", cursor.isNull(22) ? 0 : cursor.getDouble(22));
-        reading.put("readingPosition", cursor.isNull(23) ? 0 : cursor.getLong(23));
-        reading.put("repetitionCount", cursor.isNull(24) ? 0 : cursor.getLong(24));
+        reading.put("intervalDurationMs", cursor.isNull(19) ? 0 : cursor.getLong(19));
+        reading.put("intervalGrowthFactor", cursor.isNull(20) ? 1 : cursor.getDouble(20));
+        reading.put("lastHandledAt", cursor.getString(21));
+        reading.put("nextAt", cursor.getString(22));
+        reading.put("priority", cursor.isNull(23) ? 0 : cursor.getDouble(23));
+        reading.put("readingPosition", cursor.isNull(24) ? 0 : cursor.getLong(24));
+        reading.put("repetitionCount", cursor.isNull(25) ? 0 : cursor.getLong(25));
         reading.put("state", state);
         return reading;
     }
 
     private static Object buildReview(Cursor cursor) {
-        if (cursor.isNull(26)) {
+        if (cursor.isNull(27)) {
             return null;
         }
         JSObject review = new JSObject();
-        review.put("due", cursor.getString(26));
-        review.put("lastReviewAt", cursor.isNull(27) ? null : cursor.getString(27));
-        review.put("state", cursor.isNull(28) ? 0 : cursor.getInt(28));
-        review.put("stability", cursor.isNull(29) ? 0 : cursor.getDouble(29));
-        review.put("difficulty", cursor.isNull(30) ? 0 : cursor.getDouble(30));
-        review.put("elapsedDays", cursor.isNull(31) ? 0 : cursor.getInt(31));
-        review.put("scheduledDays", cursor.isNull(32) ? 0 : cursor.getInt(32));
-        review.put("reps", cursor.isNull(33) ? 0 : cursor.getInt(33));
-        review.put("lapses", cursor.isNull(34) ? 0 : cursor.getInt(34));
+        review.put("due", cursor.getString(27));
+        review.put("lastReviewAt", cursor.isNull(28) ? null : cursor.getString(28));
+        review.put("state", cursor.isNull(29) ? 0 : cursor.getInt(29));
+        review.put("stability", cursor.isNull(30) ? 0 : cursor.getDouble(30));
+        review.put("difficulty", cursor.isNull(31) ? 0 : cursor.getDouble(31));
+        review.put("elapsedDays", cursor.isNull(32) ? 0 : cursor.getInt(32));
+        review.put("scheduledDays", cursor.isNull(33) ? 0 : cursor.getInt(33));
+        review.put("reps", cursor.isNull(34) ? 0 : cursor.getInt(34));
+        review.put("lapses", cursor.isNull(35) ? 0 : cursor.getInt(35));
         return review;
     }
 

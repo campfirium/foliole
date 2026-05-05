@@ -2,11 +2,15 @@ import { postDesktopJson } from './companionDesktopSyncHttp';
 import {
   loadCompanionSyncReviewLog,
   loadCompanionSyncReviewLogPushCursor,
+  loadCompanionSyncNodeVersionPushCursor,
+  loadCompanionSyncNodeVersions,
   loadCompanionSyncStateChanges,
   loadCompanionSyncStatePushCursor,
+  saveCompanionSyncNodeVersionPushCursor,
   saveCompanionSyncPushAcks
 } from './companionSyncObjects';
 import {
+  nodeVersionSyncAdapter,
   nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
@@ -32,12 +36,26 @@ interface DesktopSyncPushResponse {
     identity: SyncPushAck['identity'];
     state_seq?: number | null;
     status: SyncPushAck['status'];
+    version_id?: string | null;
   }>;
 }
 
 function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
   if (
+    raw.identity.objectType === 'node'
+    && (raw.status === 'accepted' || raw.status === 'already_applied')
+    && typeof raw.version_id !== 'string'
+  ) {
+    return {
+      clientOpId: raw.client_op_id,
+      conflictReason: 'missing_version_id',
+      identity: raw.identity,
+      status: 'rejected'
+    };
+  }
+  if (
     raw.identity.objectType !== 'review_log'
+    && raw.identity.objectType !== 'node'
     && (raw.status === 'accepted' || raw.status === 'already_applied')
     && typeof raw.state_seq !== 'number'
   ) {
@@ -54,7 +72,8 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
     conflictReason: raw.conflict_reason,
     identity: raw.identity,
     stateSeq: raw.state_seq,
-    status: raw.status
+    status: raw.status,
+    versionId: raw.version_id
   };
 }
 
@@ -66,14 +85,19 @@ const statePushAdapters = {
 } as const;
 
 async function collectLocalPushItems() {
-  const [stateCursor, reviewCursor] = await Promise.all([
+  const [nodeCursor, stateCursor, reviewCursor] = await Promise.all([
+    loadCompanionSyncNodeVersionPushCursor(),
     loadCompanionSyncStatePushCursor(),
     loadCompanionSyncReviewLogPushCursor()
   ]);
-  const [stateChanges, reviewLog] = await Promise.all([
+  const [nodeVersions, stateChanges, reviewLog] = await Promise.all([
+    loadCompanionSyncNodeVersions(nodeCursor, 100),
     loadCompanionSyncStateChanges(stateCursor, 100),
     loadCompanionSyncReviewLog(reviewCursor, 100)
   ]);
+  const nodeItems = nodeVersions
+    .map((row) => nodeVersionSyncAdapter.buildPushPayload(row))
+    .filter((item) => item.base.kind !== 'blocked');
   const stateItems = stateChanges
     .map((row) => statePushAdapters[row.object_type as keyof typeof statePushAdapters]?.buildPushPayload(row))
     .filter((item) => item !== undefined)
@@ -83,12 +107,33 @@ async function collectLocalPushItems() {
     .map((item) => item.identity.objectId));
   return {
     items: [
+      ...nodeItems,
       ...stateItems,
       ...reviewLog
         .filter((row) => pushableReviewNodeIds.has(row.node_id))
         .map((row) => reviewLogSyncAdapter.buildPushPayload(row))
-    ]
+    ],
+    nodeVersions
   };
+}
+
+async function saveConfirmedNodeVersionPushCursor(
+  nodeVersions: Awaited<ReturnType<typeof loadCompanionSyncNodeVersions>>,
+  acks: SyncPushAck[]
+) {
+  const confirmedVersionIds = new Set(acceptedAcks(acks)
+    .filter((ack) => ack.identity.objectType === 'node' && ack.versionId)
+    .map((ack) => ack.versionId));
+  let confirmed = null as null | { change_id: string; created_at: string };
+  for (const row of nodeVersions) {
+    if (!row.version_id || !row.version_created_at || !confirmedVersionIds.has(row.version_id)) {
+      break;
+    }
+    confirmed = { change_id: row.version_id, created_at: row.version_created_at };
+  }
+  if (confirmed) {
+    await saveCompanionSyncNodeVersionPushCursor(confirmed);
+  }
 }
 
 function acceptedAcks(acks: SyncPushAck[]) {
@@ -105,7 +150,7 @@ function formatPushError(error: unknown) {
 
 export async function pushLocalDirtyObjects(endpointUrl: string): Promise<CompanionDesktopSyncPushResult> {
   try {
-    const { items } = await collectLocalPushItems();
+    const { items, nodeVersions } = await collectLocalPushItems();
     if (items.length === 0) {
       return {
         pushConflictCount: 0,
@@ -119,6 +164,7 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
     const acks = response.acks.map(toPushAck);
     const accepted = acceptedAcks(acks);
     await saveCompanionSyncPushAcks(acks);
+    await saveConfirmedNodeVersionPushCursor(nodeVersions, acks);
     return {
       pushedObjectIds: accepted
         .filter((ack) => ack.identity.objectType !== 'review_log')

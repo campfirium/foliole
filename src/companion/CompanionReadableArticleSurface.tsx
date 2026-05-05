@@ -1,5 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useRef, useState } from 'react';
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
@@ -11,17 +10,32 @@ import {
   ReadingHighlightSheet,
   ReadingInfoSheet
 } from './CompanionReadingSheets';
+import {
+  CompanionSelectionAnnotationToolbar,
+  type CompanionSelectionAnnotationKind,
+  type CompanionSelectionAnnotationToolbarState
+} from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
+import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
-import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
-import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
+import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
 interface ImmersiveReadableArticleProps {
   onAttachmentResourceSynced?: () => void;
+  onCreateSelectionAnnotation?: (
+    kind: CompanionSelectionAnnotationKind,
+    payload: SelectionCommandPayload,
+    note?: string
+  ) => Promise<string | null> | string | null;
+  onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string) => Promise<string | null> | string | null;
+  onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
   onExit(): void;
   readableArticle: ReadableArticle;
+  snapshot: WorkspaceSnapshot | null;
   syncEndpointUrl?: string | null;
 }
 
@@ -126,56 +140,83 @@ function ImmersiveArticleContent(props: {
   );
 }
 
+function SelectionAnnotationToolbarLayer(props: {
+  onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string) => Promise<string | null> | string | null;
+  onClose(): void;
+  onCreateSelectionAnnotation?: (
+    kind: CompanionSelectionAnnotationKind,
+    payload: SelectionCommandPayload,
+    note?: string
+  ) => Promise<string | null> | string | null;
+  onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
+  resolveSelectionPayload: () => SelectionCommandPayload | null;
+  state: CompanionSelectionAnnotationToolbarState | null;
+}) {
+  return (
+    <CompanionSelectionAnnotationToolbar
+      onAddExistingHighlightNote={async (nodeId, originalText, note) => {
+        await props.onAddExistingHighlightNote?.(nodeId, originalText, note);
+      }}
+      onApply={async (kind, payload, note) => {
+        await props.onCreateSelectionAnnotation?.(kind, payload, note);
+      }}
+      onClose={props.onClose}
+      onDeleteExistingHighlight={async (nodeId) => {
+        await props.onDeleteExistingHighlight?.(nodeId);
+      }}
+      resolveSelectionPayload={props.resolveSelectionPayload}
+      state={props.state}
+    />
+  );
+}
+
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
-  const [isChromeVisible, setIsChromeVisible] = useState(false);
-  const [isOutlineOpen, setIsOutlineOpen] = useState(false);
-  const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
-  const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
-  const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'highlight' | 'info' | null>(null);
-  const [readingSelection, setReadingSelection] = useState<EditorSelection | null>(null);
-  const editorRef = useRef<EditorAdapter | null>(null);
-  function handleSurfaceClick(event: ReactMouseEvent<HTMLElement>) {
-    if ((event.target as HTMLElement).closest('button, a, input, textarea, select')) {
-      return;
-    }
-    setIsChromeVisible(true);
-  }
-  function handleSelectOutlineItem(item: { from: number; to: number }) {
-    setReadingSelection({ from: item.from, to: item.to });
-    setIsOutlineOpen(false);
-  }
-  function openDocumentSearch() {
-    setIsActionsSheetOpen(false);
-    setIsSearchSheetOpen(true);
-  }
+  const toolbar = useCompanionSelectionAnnotationToolbar({
+    canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation),
+    nodeId: props.readableArticle.nodeId,
+    snapshot: props.snapshot
+  });
+  const reading = useImmersiveReadableArticleState(toolbar.closeSelectionToolbar);
   return (
     <section
       className="fixed inset-0 z-30 overflow-y-auto bg-companion-base px-6 pb-20 pt-6 text-foreground sm:px-7"
-      onClick={handleSurfaceClick}
+      onClick={reading.handleSurfaceClick}
+      onPointerDown={toolbar.closeSelectionToolbar}
+      onPointerMove={toolbar.closeSelectionToolbar}
+      onPointerUp={toolbar.openSelectionToolbar}
+      onTouchMove={toolbar.closeSelectionToolbar}
     >
-      {isChromeVisible ? (
+      {reading.isChromeVisible ? (
         <ImmersiveChromeLayer
-          actionsOpen={isActionsSheetOpen}
-          editor={editorRef.current}
+          actionsOpen={reading.isActionsSheetOpen}
+          editor={toolbar.editorRef.current}
           onExit={props.onExit}
-          onFindInDocument={openDocumentSearch}
-          onOpenActions={setIsActionsSheetOpen}
-          onOpenOutline={setIsOutlineOpen}
-          onOpenReadingSheet={setOpenReadingSheet}
-          onOpenSearchSheet={setIsSearchSheetOpen}
-          onSelectOutlineItem={handleSelectOutlineItem}
-          openReadingSheet={openReadingSheet}
-          outlineOpen={isOutlineOpen}
+          onFindInDocument={reading.openDocumentSearch}
+          onOpenActions={reading.setIsActionsSheetOpen}
+          onOpenOutline={reading.setIsOutlineOpen}
+          onOpenReadingSheet={reading.setOpenReadingSheet}
+          onOpenSearchSheet={reading.setIsSearchSheetOpen}
+          onSelectOutlineItem={reading.handleSelectOutlineItem}
+          openReadingSheet={reading.openReadingSheet}
+          outlineOpen={reading.isOutlineOpen}
           readableArticle={props.readableArticle}
-          searchOpen={isSearchSheetOpen}
+          searchOpen={reading.isSearchSheetOpen}
         />
       ) : null}
       <ImmersiveArticleContent
         onAttachmentResourceSynced={props.onAttachmentResourceSynced}
-        onEditorReady={(adapter) => { editorRef.current = adapter; }}
+        onEditorReady={toolbar.handleEditorReady}
         readableArticle={props.readableArticle}
-        readingSelection={readingSelection}
+        readingSelection={reading.readingSelection}
         syncEndpointUrl={props.syncEndpointUrl}
+      />
+      <SelectionAnnotationToolbarLayer
+        onAddExistingHighlightNote={props.onAddExistingHighlightNote}
+        onClose={toolbar.clearSelectionAndCloseToolbar}
+        onCreateSelectionAnnotation={props.onCreateSelectionAnnotation}
+        onDeleteExistingHighlight={props.onDeleteExistingHighlight}
+        resolveSelectionPayload={toolbar.resolveSelectionPayload}
+        state={toolbar.selectionToolbar}
       />
     </section>
   );

@@ -86,6 +86,7 @@ export interface NativeWorkspaceNodeSnapshot {
   hasReveal?: boolean;
   openingText?: string | null;
   content: string;
+  currentVersionId?: string | null;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
@@ -93,6 +94,7 @@ export interface NativeWorkspaceNodeSnapshot {
   reading: NativeWorkspaceReadingProfile | null;
   review: NativeWorkspaceReviewProfile | null;
   createdAt: string;
+  deletedAt?: string | null;
   updatedAt: string;
 }
 

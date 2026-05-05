@@ -90,7 +90,7 @@ function insertReviewLog(driver: DatabaseDriver, record: NativeSyncReviewLogReco
 export function applyReviewLogPush(driver: DatabaseDriver, item: CompanionSyncPushPayload): CompanionSyncPushResult {
   return driver.transaction((transactionDriver) => {
     const record = parseReviewLog(item);
-    if (!record) return { acks: [rejectAck(item, 'invalid_review_log_push')], appliedObjectIds: [], appliedReviewOpIds: [] };
+    if (!record) return { acks: [rejectAck(item, 'invalid_review_log_push')], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
     const existing = selectReviewLog(transactionDriver, record.op_id);
     if (existing) {
       const matches = reviewLogMatches(existing, record);
@@ -101,6 +101,7 @@ export function applyReviewLogPush(driver: DatabaseDriver, item: CompanionSyncPu
           status: matches ? 'already_applied' : 'rejected',
           ...(matches ? {} : { conflictReason: 'op_id_payload_mismatch' })
         }],
+        appliedNodeIds: [],
         appliedObjectIds: [],
         appliedReviewOpIds: []
       };
@@ -108,6 +109,7 @@ export function applyReviewLogPush(driver: DatabaseDriver, item: CompanionSyncPu
     insertReviewLog(transactionDriver, record);
     return {
       acks: [{ clientOpId: item.clientOpId, identity: item.identity, status: 'accepted' }],
+      appliedNodeIds: [],
       appliedObjectIds: [],
       appliedReviewOpIds: [record.op_id]
     };

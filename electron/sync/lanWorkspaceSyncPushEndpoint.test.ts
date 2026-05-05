@@ -18,6 +18,7 @@ const pushApplyMock = vi.hoisted(() => ({
       stateSeq: 42,
       status: 'accepted'
     }],
+    appliedNodeIds: [],
     appliedObjectIds: ['node_review:node-1'],
     appliedReviewOpIds: []
   }))

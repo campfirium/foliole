@@ -26,3 +26,25 @@ it('edits the highlight annotation prefix from editor settings', () => {
 
   expect(input).toHaveValue('※ ');
 });
+
+it('edits the long cloze front guard mode from editor settings', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
+
+  expect(screen.getByRole('radio', { name: 'Remind' })).toHaveAttribute('aria-checked', 'true');
+
+  fireEvent.click(screen.getByRole('radio', { name: 'Convert' }));
+
+  expect(screen.getByRole('radio', { name: 'Convert' })).toHaveAttribute('aria-checked', 'true');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardMode)).toBe('convert');
+
+  const selectionLimit = screen.getByLabelText('Cloze guard selected text limit');
+  const frontLimit = screen.getByLabelText('Cloze guard front length limit');
+  expect(selectionLimit).toHaveValue(20);
+  expect(frontLimit).toHaveValue(500);
+
+  fireEvent.change(selectionLimit, { target: { value: '0' } });
+  fireEvent.change(frontLimit, { target: { value: '800' } });
+
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardSelectionMin)).toBe('0');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardFrontMax)).toBe('800');
+});

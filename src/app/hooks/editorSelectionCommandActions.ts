@@ -3,12 +3,16 @@ import type { MutableRefObject } from 'react';
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
-import type { NodeAnchorLink, NodeImageRegionGroup, TextAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import type { NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
+import { createSelectionAnnotationAnchorLink } from '../../shared/selectionAnnotationActions';
 import type { SelectionCommandPayload } from '../contextCommands';
+
+import { resolveLongClozeGuardAction, type LongClozeGuardOptions } from './editorClozeGuardrail';
 
 export function runSelectionCommandFromPayload(args: {
   closeContextMenu?: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  keepOpen?: boolean;
   onApplied: (payload: SelectionCommandPayload) => string | null;
   payload: SelectionCommandPayload;
 }) {
@@ -17,7 +21,9 @@ export function runSelectionCommandFromPayload(args: {
     return null;
   }
   const createdNodeId = args.onApplied(args.payload);
-  args.closeContextMenu?.();
+  if (!args.keepOpen) {
+    args.closeContextMenu?.();
+  }
   return createdNodeId;
 }
 
@@ -68,6 +74,7 @@ function createNoteFromPayloadHandler(args: {
 }
 
 function createClozeHandlers(args: {
+  createHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,
     clozeContent: string,
@@ -77,34 +84,43 @@ function createClozeHandlers(args: {
   ) => string | null;
   runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
+    keepOpen?: boolean;
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
   }) => string | null;
 }) {
+  const createClozeFromPayload = (payload: SelectionCommandPayload) => {
+    args.createQANodeFromSelection(
+      payload.parentNodeId,
+      payload.clozeContent,
+      payload.selectionText,
+      payload.anchorId,
+      createTextAnchorLink(payload, 'cloze')
+    );
+    return null;
+  };
+  const applyClozeGuardrail = (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => {
+    if (options?.skipGuard) {
+      return createClozeFromPayload(payload);
+    }
+    const action = resolveLongClozeGuardAction(payload);
+    if (action === 'remind') {
+      options?.onRemind?.();
+      return null;
+    }
+    return action === 'highlight' ? args.createHighlightFromPayload(payload) : createClozeFromPayload(payload);
+  };
+
   return {
-    handleCreateCloze() {
+    handleCreateCloze(options?: LongClozeGuardOptions) {
       args.runSelectionCommand((payload) => {
-        args.createQANodeFromSelection(
-          payload.parentNodeId,
-          payload.clozeContent,
-          payload.selectionText,
-          payload.anchorId,
-          createTextAnchorLink(payload, 'cloze')
-        );
+        applyClozeGuardrail(payload, options);
       }, 'cloze');
     },
-    handleCreateClozeFromPayload(payload: SelectionCommandPayload) {
+    handleCreateClozeFromPayload(payload: SelectionCommandPayload, options?: LongClozeGuardOptions) {
       return args.runSelectionCommandFromPayloadHandler({
-        onApplied: () => {
-          args.createQANodeFromSelection(
-            payload.parentNodeId,
-            payload.clozeContent,
-            payload.selectionText,
-            payload.anchorId,
-            createTextAnchorLink(payload, 'cloze')
-          );
-          return null;
-        },
+        keepOpen: Boolean(options?.onRemind),
+        onApplied: (appliedPayload) => applyClozeGuardrail(appliedPayload, options),
         payload
       });
     }
@@ -183,8 +199,11 @@ export function createSelectionHandlers(args: {
     payload: SelectionCommandPayload;
   }) => string | null;
 }) {
-  const clozeHandlers = createClozeHandlers(args);
   const highlightHandlers = createHighlightHandlers(args);
+  const clozeHandlers = createClozeHandlers({
+    ...args,
+    createHighlightFromPayload: highlightHandlers.handleCreateHighlightFromPayload
+  });
 
   return {
     ...clozeHandlers,
@@ -200,19 +219,5 @@ export function createSelectionHandlers(args: {
 }
 
 function createTextAnchorLink(payload: SelectionCommandPayload, kind: 'highlight' | 'cloze'): NodeAnchorLink | undefined {
-  const locators = payload.entries.map((entry) => entry.locator).filter(Boolean) as TextAnchorLocator[];
-  if (locators.length === 0) {
-    return undefined;
-  }
-  const locator = locators.length === 1
-    ? locators[0]
-    : { ranges: locators };
-  if (!locator) {
-    return undefined;
-  }
-  return {
-    id: payload.anchorId,
-    kind,
-    locator
-  };
+  return createSelectionAnnotationAnchorLink(payload, kind) as NodeAnchorLink | undefined;
 }

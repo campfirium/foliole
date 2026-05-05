@@ -12,6 +12,7 @@ import {
 } from '../contextCommands';
 import { resolveImageContextMenuState, type ImageContextMenuState } from '../editorImageContextMenu';
 
+import type { LongClozeGuardOptions } from './editorClozeGuardrail';
 import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
 
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
@@ -26,8 +27,8 @@ export interface EditorContextCommandsResult {
   closeContextMenu: () => void;
   contextMenu: EditorContextMenuState | null;
   handleCopyImage: () => Promise<void>;
-  handleCreateCloze: () => void;
-  handleCreateClozeFromPayload: (payload: SelectionCommandPayload) => string | null;
+  handleCreateCloze: (options?: LongClozeGuardOptions) => void;
+  handleCreateClozeFromPayload: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   handleCreateHighlight: () => void;
   handleCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
   handleCreateNote: (note: string) => void;

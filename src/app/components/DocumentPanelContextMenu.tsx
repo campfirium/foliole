@@ -1,3 +1,6 @@
+import type { SelectionCommandPayload } from '../contextCommands';
+import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
+
 import { EditorContextMenu } from './EditorContextMenu';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
@@ -8,7 +11,9 @@ interface DocumentPanelContextMenuProps {
   onCreateHighlight: () => void;
   onCreateNote: (note: string) => void;
   onDeleteExistingHighlight: () => void;
-  onCreateCloze: () => void;
+  onCreateCloze: (options?: LongClozeGuardOptions) => void;
+  onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
+  onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
@@ -22,6 +27,8 @@ export function DocumentPanelContextMenu({
   onCreateNote,
   onDeleteExistingHighlight,
   onCreateCloze,
+  onCreateClozeFromPayload,
+  onCreateHighlightFromPayload,
   onCutImage,
   onDeleteImage,
   onExportImage
@@ -40,12 +47,15 @@ export function DocumentPanelContextMenu({
       onClose={onCloseContextMenu}
       onCopyImage={onCopyImage}
       onCreateCloze={onCreateCloze}
+      onCreateClozeFromPayload={onCreateClozeFromPayload ?? (() => null)}
       onCreateHighlight={onCreateHighlight}
+      onCreateHighlightFromPayload={onCreateHighlightFromPayload ?? (() => null)}
       onCreateNote={onCreateNote}
       onDeleteExistingHighlight={onDeleteExistingHighlight}
       onCutImage={onCutImage}
       onDeleteImage={onDeleteImage}
       onExportImage={onExportImage}
+      selectionPayload={contextMenu.payload}
       top={contextMenu.top}
     />
   );

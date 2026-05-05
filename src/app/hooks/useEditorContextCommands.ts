@@ -157,14 +157,17 @@ function createPayloadSelectionRunner(
 ) {
   return ({
     onApplied,
-    payload
+    payload,
+    keepOpen
   }: {
+    keepOpen?: boolean;
     onApplied: (payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload']) => string | null;
     payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload'];
   }) =>
     runSelectionCommandFromPayload({
       closeContextMenu,
       editorRef,
+      keepOpen,
       onApplied,
       payload
     });

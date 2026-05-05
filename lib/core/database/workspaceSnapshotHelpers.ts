@@ -42,6 +42,7 @@ export interface WorkspaceNodeSnapshot {
   hideTitleHeading: boolean;
   openingText?: string | null;
   content: string;
+  currentVersionId?: string | null;
   virtualFilter?: VirtualNodeFilter | null;
   reveal: string | null;
   anchorLink: StoredAnchorLink | null;
@@ -49,6 +50,7 @@ export interface WorkspaceNodeSnapshot {
   reading: WorkspaceReadingProfile | null;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
+  deletedAt?: string | null;
   updatedAt: string;
 }
 

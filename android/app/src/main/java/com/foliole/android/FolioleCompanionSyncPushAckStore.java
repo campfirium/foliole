@@ -80,6 +80,9 @@ final class FolioleCompanionSyncPushAckStore {
         if (canConfirm && objectType.equals("review_log")) {
             return false;
         }
+        if (canConfirm && objectType.equals("node")) {
+            return !clientOpId.isEmpty() && !objectId.isEmpty();
+        }
         return !clientOpId.isEmpty() &&
             !objectType.isEmpty() &&
             !objectId.isEmpty() &&

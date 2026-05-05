@@ -14,6 +14,7 @@ interface CompanionSyncPushResponse {
     identity: CompanionSyncPushPayload['identity'];
     state_seq?: number | null;
     status: 'accepted' | 'already_applied' | 'conflict' | 'rejected';
+    version_id?: string | null;
   }>;
 }
 
@@ -42,7 +43,7 @@ export function handleCompanionSyncPush(bodyText: string) {
   const items = readPushItems(bodyText);
   const result = applyCompanionSyncPush(items);
   notifyWorkspaceSyncApplied({
-    appliedNodeIds: [],
+    appliedNodeIds: result.appliedNodeIds,
     appliedObjectIds: result.appliedObjectIds,
     appliedReviewOpIds: result.appliedReviewOpIds
   });
@@ -52,7 +53,8 @@ export function handleCompanionSyncPush(bodyText: string) {
       conflict_reason: ack.conflictReason,
       identity: ack.identity,
       state_seq: ack.stateSeq,
-      status: ack.status
+      status: ack.status,
+      version_id: ack.versionId
     }))
   } satisfies CompanionSyncPushResponse;
 }

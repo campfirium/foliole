@@ -9,6 +9,11 @@ import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { CompanionSearchContent } from './CompanionSearchContent';
+import {
+  createCompanionExistingHighlightDeleteHandler,
+  createCompanionExistingHighlightNoteHandler,
+  createCompanionSelectionAnnotationHandler
+} from './companionSelectionAnnotationController';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionTabConfig } from './CompanionTabsConfig';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -49,8 +54,27 @@ function continueAttachmentResourceSync(workspaceSync: WorkspaceSync) {
   void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
 }
 
+function renderReadableArticle(props: {
+  onExit: () => void;
+  surface: Surface;
+  workspaceSync: WorkspaceSync;
+}) {
+  if (!props.surface.readableArticle) return null;
+  return (
+    <ImmersiveReadableArticle
+      onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
+      onAddExistingHighlightNote={createCompanionExistingHighlightNoteHandler(props.workspaceSync)}
+      onCreateSelectionAnnotation={createCompanionSelectionAnnotationHandler(props.workspaceSync)}
+      onDeleteExistingHighlight={createCompanionExistingHighlightDeleteHandler(props.workspaceSync)}
+      onExit={props.onExit}
+      readableArticle={props.surface.readableArticle}
+      snapshot={props.workspaceSync.state.workspace_snapshot}
+      syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
+    />
+  );
+}
+
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
-  const syncEndpointUrl = resolveShellSyncEndpoint(props.workspaceSync);
   if (props.surface.browsedFolder) {
     return (
       <NodeBrowseList
@@ -62,14 +86,11 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
     );
   }
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
-    return (
-      <ImmersiveReadableArticle
-        onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
-        onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
-        readableArticle={props.surface.readableArticle}
-        syncEndpointUrl={syncEndpointUrl}
-      />
-    );
+    return renderReadableArticle({
+      onExit: () => handleExitReadableArticle(props.surface, props.workspaceSync),
+      surface: props.surface,
+      workspaceSync: props.workspaceSync
+    });
   }
   return (
     <RecentArticleList
@@ -110,34 +131,16 @@ function ReviewContent(props: {
 function renderRecentContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
   if (props.isBrowseDirectoryOpen) {
     if (
-      props.directorySelection.kind === 'internal' &&
+      (props.directorySelection.kind === 'internal' || props.directorySelection.kind === 'virtual') &&
       props.surface.readableArticle &&
       props.surface.selectedBrowseNodeId &&
       !props.surface.browsedFolder
     ) {
-      return (
-        <ImmersiveReadableArticle
-          onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
-          onExit={props.onBackDirectorySelection}
-          readableArticle={props.surface.readableArticle}
-          syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
-        />
-      );
-    }
-    if (
-      props.directorySelection.kind === 'virtual' &&
-      props.surface.readableArticle &&
-      props.surface.selectedBrowseNodeId &&
-      !props.surface.browsedFolder
-    ) {
-      return (
-        <ImmersiveReadableArticle
-          onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
-          onExit={props.onBackDirectorySelection}
-          readableArticle={props.surface.readableArticle}
-          syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
-        />
-      );
+      return renderReadableArticle({
+        onExit: props.onBackDirectorySelection,
+        surface: props.surface,
+        workspaceSync: props.workspaceSync
+      });
     }
     return (
       <CompanionDirectoryContent

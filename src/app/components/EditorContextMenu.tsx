@@ -1,9 +1,15 @@
-import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
+import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '../../shared/lib/utils';
-import { AppButton, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../../shared/ui';
+import { AppSelectionDropdownMenu, AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../../shared/ui';
+import type { SelectionCommandPayload } from '../contextCommands';
+import { resolveLongClozeGuardAction, type LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
+
+import { AnnotationNotePanel } from './AnnotationNotePanel';
+import { ClozeGuardPanel } from './ClozeGuardPanel';
+import { ExistingHighlightToolbar } from './ExistingHighlightToolbar';
 
 export interface EditorContextMenuProps {
   kind: 'image' | 'selection';
@@ -11,13 +17,16 @@ export interface EditorContextMenuProps {
   mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
   notePanelLeft?: number;
   notePanelTop?: number;
+  selectionPayload?: SelectionCommandPayload | null;
   top: number;
   onClose: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateNote: (note: string) => void;
   onDeleteExistingHighlight: () => void;
-  onCreateCloze: () => void;
+  onCreateCloze: (options?: LongClozeGuardOptions) => void;
+  onCreateClozeFromPayload: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
+  onCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
@@ -42,35 +51,6 @@ function AnnotationToolbarButton(props: {
   );
 }
 
-function AnnotationNotePanel(props: {
-  draft: string;
-  left: number;
-  onCancel: () => void;
-  onChange: (value: string) => void;
-  onSave: () => void;
-  top: number;
-}) {
-  return (
-    <div
-      className={cn(appFloatingSurfaceClassName('popover'), 'fixed z-50 w-60 rounded-md p-2')}
-      data-annotation-toolbar="true"
-      style={{ left: props.left, top: props.top }}
-    >
-      <textarea
-        autoFocus
-        className="min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground outline-none placeholder:text-foreground/45"
-        onChange={(event) => props.onChange(event.target.value)}
-        placeholder="Add a note..."
-        value={props.draft}
-      />
-      <div className="mt-2 flex justify-end gap-2">
-        <AppButton onClick={props.onCancel} size="sm" variant="ghost">Cancel</AppButton>
-        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">Save</AppButton>
-      </div>
-    </div>
-  );
-}
-
 function resolveNotePanelPosition(props: Pick<EditorContextMenuProps, 'left' | 'notePanelLeft' | 'notePanelTop' | 'top'>) {
   return {
     left: props.notePanelLeft ?? props.left,
@@ -78,9 +58,92 @@ function resolveNotePanelPosition(props: Pick<EditorContextMenuProps, 'left' | '
   };
 }
 
-function AnnotationToolbar(props: Pick<EditorContextMenuProps, 'left' | 'top' | 'onClose' | 'onCreateHighlight' | 'onCreateNote' | 'onCreateCloze'>) {
+type AnnotationToolbarProps = Pick<EditorContextMenuProps, 'left' | 'notePanelLeft' | 'notePanelTop' | 'selectionPayload' | 'top' | 'onClose' | 'onCreateHighlight' | 'onCreateClozeFromPayload' | 'onCreateHighlightFromPayload' | 'onCreateNote' | 'onCreateCloze'>;
+
+function createClozeToolbarAction(props: Pick<AnnotationToolbarProps, 'onCreateCloze' | 'onCreateClozeFromPayload' | 'onCreateHighlight' | 'onCreateHighlightFromPayload' | 'selectionPayload'> & { onOpenGuard: () => void }) {
+  return () => {
+    const payload = props.selectionPayload;
+    const action = payload ? resolveLongClozeGuardAction(payload) : 'cloze';
+    if (action === 'highlight') {
+      if (payload) {
+        props.onCreateHighlightFromPayload(payload);
+        return;
+      }
+      props.onCreateHighlight();
+      return;
+    }
+    if (action === 'remind') {
+      props.onOpenGuard();
+      return;
+    }
+    if (payload) {
+      props.onCreateClozeFromPayload(payload, { onRemind: props.onOpenGuard });
+      return;
+    }
+    props.onCreateCloze({ onRemind: props.onOpenGuard });
+  };
+}
+
+function ClozeToolbarButton(props: Pick<AnnotationToolbarProps, 'onCreateCloze' | 'onCreateClozeFromPayload' | 'onCreateHighlight' | 'onCreateHighlightFromPayload' | 'selectionPayload'> & { onOpenGuard: () => void }) {
+  return (
+    <AnnotationToolbarButton
+      label="Cloze"
+      onClick={createClozeToolbarAction(props)}
+    >
+      <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
+    </AnnotationToolbarButton>
+  );
+}
+
+function AnnotationToolbarPanels(props: AnnotationToolbarProps & {
+  isClozeGuardOpen: boolean;
+  isNoteOpen: boolean;
+  noteDraft: string;
+  onChangeNote: (value: string) => void;
+  onCloseNote: () => void;
+}) {
+  return (
+    <>
+      {props.isNoteOpen ? (
+        <AnnotationNotePanel
+          draft={props.noteDraft}
+          {...resolveNotePanelPosition(props)}
+          onCancel={props.onCloseNote}
+          onChange={props.onChangeNote}
+          onSave={() => {
+            props.onCreateNote(props.noteDraft);
+            props.onClose();
+          }}
+        />
+      ) : null}
+      {props.isClozeGuardOpen ? (
+        <ClozeGuardPanel
+          {...resolveNotePanelPosition(props)}
+          onCancel={props.onClose}
+          onCreateCloze={() => {
+            if (props.selectionPayload) {
+              props.onCreateClozeFromPayload(props.selectionPayload, { skipGuard: true });
+              return;
+            }
+            props.onCreateCloze({ skipGuard: true });
+          }}
+          onCreateHighlight={() => {
+            if (props.selectionPayload) {
+              props.onCreateHighlightFromPayload(props.selectionPayload);
+              return;
+            }
+            props.onCreateHighlight();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function AnnotationToolbar(props: AnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [isClozeGuardOpen, setIsClozeGuardOpen] = useState(false);
 
   if (typeof document === 'undefined') {
     return null;
@@ -101,69 +164,26 @@ function AnnotationToolbar(props: Pick<EditorContextMenuProps, 'left' | 'top' | 
         <AnnotationToolbarButton label="Add Note" onClick={() => setIsNoteOpen(true)}>
           <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
         </AnnotationToolbarButton>
-        <AnnotationToolbarButton label="Cloze" onClick={props.onCreateCloze}>
-          <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
-        </AnnotationToolbarButton>
+        <ClozeToolbarButton
+          onCreateCloze={props.onCreateCloze}
+          onCreateClozeFromPayload={props.onCreateClozeFromPayload}
+          onCreateHighlight={props.onCreateHighlight}
+          onCreateHighlightFromPayload={props.onCreateHighlightFromPayload}
+          onOpenGuard={() => setIsClozeGuardOpen(true)}
+          selectionPayload={props.selectionPayload}
+        />
         <AnnotationToolbarButton label="More" onClick={() => undefined}>
           <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
         </AnnotationToolbarButton>
       </div>
-      {isNoteOpen ? (
-        <AnnotationNotePanel
-          draft={noteDraft}
-          {...resolveNotePanelPosition(props)}
-          onCancel={() => setIsNoteOpen(false)}
-          onChange={setNoteDraft}
-          onSave={() => {
-            props.onCreateNote(noteDraft);
-            props.onClose();
-          }}
-        />
-      ) : null}
-    </div>,
-    document.body
-  );
-}
-
-function ExistingHighlightToolbar(props: Pick<EditorContextMenuProps, 'left' | 'top' | 'onClose' | 'onCreateNote' | 'onDeleteExistingHighlight'>) {
-  const [noteDraft, setNoteDraft] = useState('');
-  const [isNoteOpen, setIsNoteOpen] = useState(false);
-
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  return createPortal(
-    <div
-      className="fixed z-50"
-      data-annotation-toolbar="true"
-      onContextMenu={(event) => event.preventDefault()}
-      onPointerDown={(event) => event.stopPropagation()}
-      style={{ left: props.left, top: props.top }}
-    >
-      <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
-        <AnnotationToolbarButton label="Close Highlight" onClick={props.onDeleteExistingHighlight}>
-          <X aria-hidden="true" size={19} strokeWidth={2} />
-        </AnnotationToolbarButton>
-        <AnnotationToolbarButton label="Add Note" onClick={() => setIsNoteOpen(true)}>
-          <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
-        </AnnotationToolbarButton>
-        <AnnotationToolbarButton label="More" onClick={() => undefined}>
-          <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
-        </AnnotationToolbarButton>
-      </div>
-      {isNoteOpen ? (
-        <AnnotationNotePanel
-          draft={noteDraft}
-          {...resolveNotePanelPosition(props)}
-          onCancel={() => setIsNoteOpen(false)}
-          onChange={setNoteDraft}
-          onSave={() => {
-            props.onCreateNote(noteDraft);
-            props.onClose();
-          }}
-        />
-      ) : null}
+      <AnnotationToolbarPanels
+        {...props}
+        isClozeGuardOpen={isClozeGuardOpen}
+        isNoteOpen={isNoteOpen}
+        noteDraft={noteDraft}
+        onChangeNote={setNoteDraft}
+        onCloseNote={() => setIsNoteOpen(false)}
+      />
     </div>,
     document.body
   );

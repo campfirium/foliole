@@ -8,6 +8,8 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
+import type { SelectionCommandPayload } from '../contextCommands';
+import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -56,7 +58,9 @@ export interface DocumentPanelSectionProps {
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
-  onCreateCloze: () => void;
+  onCreateCloze: (options?: LongClozeGuardOptions) => void;
+  onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
+  onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;

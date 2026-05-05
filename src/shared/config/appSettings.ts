@@ -3,6 +3,9 @@ import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbo
 export const APP_SETTINGS_STORAGE_KEYS = {
   markdownSyntaxVisibility: 'foliole-markdown-syntax-visibility',
   highlightAnnotationPrefix: 'foliole-highlight-annotation-prefix',
+  longClozeFrontGuardMode: 'foliole-long-cloze-front-guard-mode',
+  longClozeFrontGuardSelectionMin: 'foliole-long-cloze-front-guard-selection-min',
+  longClozeFrontGuardFrontMax: 'foliole-long-cloze-front-guard-front-max',
   autoLocalizeRemoteImages: 'foliole-auto-localize-remote-images',
   editorDisplayMode: 'foliole-editor-display-mode',
   settingsActiveCategory: 'foliole-settings-active-category',
