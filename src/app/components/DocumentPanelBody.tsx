@@ -112,7 +112,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
   }
 
   return (
-    <div className="min-h-0 w-full flex-1" onContextMenu={props.onEditorContextMenu}>
+    <div className="min-h-0 w-full flex-1">
       <MarkdownEditor
         ariaLabel="Prompt editor"
         className="prompt-editor-host"
@@ -122,6 +122,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         nodeId={props.editorNodeId}
         nodeViewState={props.editorNodeViewState}
         onChange={props.onEditorChange}
+        onContextMenu={props.onEditorContextMenu}
         onReady={props.onEditorReady}
         value={props.editorContent}
       />

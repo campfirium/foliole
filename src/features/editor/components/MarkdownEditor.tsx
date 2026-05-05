@@ -1,10 +1,12 @@
-import { type CSSProperties, useEffect, useMemo, useRef, type MutableRefObject } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorAdapter } from '../adapters/EditorAdapter';
+import { DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS, type EditorMouseGestureBinding } from '../model/editorMouseGestures';
 
 import { useEditorScrollbarMetrics, useScrollbarState, useThumbPointerHandlers, useTrackPointerHandler } from './markdownEditorScrollbar';
+import { useEditorMouseGesture } from './useEditorMouseGesture';
 
 interface EditorViewState {
   scrollTop: number;
@@ -23,7 +25,9 @@ interface MarkdownEditorProps {
   nodeViewState?: EditorViewState;
   value: string;
   onChange: (value: string) => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
+  mouseGestureBindings?: EditorMouseGestureBinding[];
 }
 
 function useEditorAdapter(
@@ -116,6 +120,45 @@ function useEditorLayoutEffects(
   }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics]);
 }
 
+function buildGestureTrailPath(points: { x: number; y: number }[]) {
+  if (points.length < 2) {
+    return '';
+  }
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+}
+
+function GestureTrailOverlay({
+  path,
+  trail
+}: {
+  path: string;
+  trail: { height: number; width: number } | null;
+}) {
+  if (!trail || !path) {
+    return null;
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-20 text-foreground/25"
+      height={trail.height}
+      viewBox={`0 0 ${trail.width} ${trail.height}`}
+      width={trail.width}
+    >
+      <path
+        d={path}
+        data-editor-gesture-trail="true"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
 export function MarkdownEditor({
   ariaLabel,
   className,
@@ -125,6 +168,8 @@ export function MarkdownEditor({
   nodeViewState,
   value,
   onChange,
+  onContextMenu,
+  mouseGestureBindings = DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
   onReady
 }: MarkdownEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -137,11 +182,19 @@ export function MarkdownEditor({
   const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);
   const onTrackPointerDown = useTrackPointerHandler(adapterRef, hostRef, scrollbar, syncScrollMetrics);
   const handlers = useThumbPointerHandlers(adapterRef, scrollMetrics, scrollbar, syncScrollMetrics);
+  const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, mouseGestureBindings);
   const editorStyle = { '--editor-content-padding-bottom': contentPaddingBottom } as CSSProperties;
+  const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 
   return (
-    <div className="relative h-full w-full" style={editorStyle}>
+    <div
+      className="relative h-full w-full"
+      onContextMenu={(event) => mouseGesture.handleContextMenu(event, onContextMenu)}
+      onMouseDownCapture={mouseGesture.handleMouseDownCapture}
+      style={editorStyle}
+    >
       <div aria-label={ariaLabel} className={className ? `markdown-editor-host ${className}` : 'markdown-editor-host'} ref={hostRef} />
+      <GestureTrailOverlay path={gestureTrailPath} trail={mouseGesture.trail} />
       {scrollbar.showScrollbar ? (
         <div aria-hidden="true" className="editor-scrollbar-track" onPointerDown={onTrackPointerDown}>
           <div

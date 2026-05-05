@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockDestroy = vi.fn();
@@ -57,7 +57,29 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
 
 import { MarkdownEditor } from './MarkdownEditor';
 
-describe('MarkdownEditor', () => {
+function mockSurfaceRect(surface: HTMLElement) {
+  vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
+}
+
+function drawGesture(surface: HTMLElement, events: MouseEvent[]) {
+  act(() => {
+    for (const event of events) {
+      if (event.type === 'mousedown') {
+        surface.dispatchEvent(event);
+        continue;
+      }
+      window.dispatchEvent(event);
+    }
+  });
+}
+
+function dispatchSurfaceEvent(surface: HTMLElement, event: MouseEvent) {
+  act(() => {
+    surface.dispatchEvent(event);
+  });
+}
+
+function resetMocks() {
   beforeEach(() => {
     mockCtor.mockClear();
     mockDestroy.mockClear();
@@ -67,6 +89,10 @@ describe('MarkdownEditor', () => {
     mockSetScrollTop.mockClear();
     mockOnScroll.mockClear();
   });
+}
+
+describe('MarkdownEditor rendering', () => {
+  resetMocks();
 
   it('does not recreate editor adapter when value changes', () => {
     const onChange = vi.fn();
@@ -90,5 +116,60 @@ describe('MarkdownEditor', () => {
     );
 
     expect(container.firstChild).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
+  });
+});
+
+describe('MarkdownEditor mouse gestures', () => {
+  resetMocks();
+
+  it('runs left-down gesture to scroll to top and suppresses context menu once', () => {
+    mockGetScrollMetrics.mockReturnValue({ clientHeight: 300, scrollHeight: 1200, scrollTop: 420 });
+    const onContextMenu = vi.fn();
+    const { container } = render(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} onContextMenu={onContextMenu} value="a" />);
+
+    const surface = container.firstChild as HTMLElement;
+    mockSurfaceRect(surface);
+    drawGesture(surface, [
+      new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 200, clientY: 200 }),
+      new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 160, clientY: 200 }),
+      new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 160, clientY: 240 })
+    ]);
+
+    expect(container.querySelector('[data-editor-gesture-trail="true"]')).not.toBeNull();
+
+    drawGesture(surface, [new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0, clientX: 160, clientY: 240 })]);
+    dispatchSurfaceEvent(surface, new MouseEvent('contextmenu', { bubbles: true, button: 2, clientX: 160, clientY: 240 }));
+
+    expect(mockSetScrollTop).toHaveBeenCalledWith(900);
+    expect(onContextMenu).not.toHaveBeenCalled();
+    expect(container.querySelector('[data-editor-gesture-trail="true"]')).toBeNull();
+  });
+
+  it('runs left-up gesture to scroll to top', () => {
+    mockGetScrollMetrics.mockReturnValue({ clientHeight: 250, scrollHeight: 1000, scrollTop: 0 });
+    const { container } = render(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="a" />);
+
+    const surface = container.firstChild as HTMLElement;
+    mockSurfaceRect(surface);
+    drawGesture(surface, [
+      new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 220, clientY: 220 }),
+      new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 180, clientY: 220 }),
+      new MouseEvent('mousemove', { bubbles: true, button: 2, buttons: 2, clientX: 180, clientY: 180 }),
+      new MouseEvent('mouseup', { bubbles: true, button: 2, buttons: 0, clientX: 180, clientY: 180 })
+    ]);
+
+    expect(mockSetScrollTop).toHaveBeenCalledWith(0);
+  });
+
+  it('keeps normal context menu behavior when no valid gesture is formed', () => {
+    const onContextMenu = vi.fn();
+    const { container } = render(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} onContextMenu={onContextMenu} value="a" />);
+
+    const surface = container.firstChild as HTMLElement;
+    dispatchSurfaceEvent(surface, new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2, clientX: 120, clientY: 120 }));
+    dispatchSurfaceEvent(surface, new MouseEvent('contextmenu', { bubbles: true, button: 2, clientX: 120, clientY: 120 }));
+
+    expect(mockSetScrollTop).not.toHaveBeenCalled();
+    expect(onContextMenu).toHaveBeenCalledTimes(1);
   });
 });
