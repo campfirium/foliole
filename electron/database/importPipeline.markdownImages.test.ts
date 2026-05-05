@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
-import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
+import { resolveAttachmentResource, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
 import { listNodeAttachments } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -93,6 +93,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
     .prepare('SELECT result_status, degraded_reason FROM import_runs WHERE id = ?')
     .get(imported.importId) as { degraded_reason: string | null; result_status: string };
   const attachments = listNodeAttachments(nodeId);
+  const assetsDir = path.join(mockedAppDataDir, 'Foliole', 'Assets');
 
   expect(imported.resultStatus).toBe('degraded');
   expect(imported.degradedReason).toContain('Markdown local image import degraded:');
@@ -120,7 +121,11 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   await fs.rm(sourceRoot, { recursive: true, force: true });
 
   for (const entry of attachments) {
-    expect(resolveAttachmentResource(entry.attachmentId, mockedAppDataDir)).toEqual({
+    const expectedStoragePath = resolveAttachmentStoragePath(entry.attachmentId, assetsDir, entry.attachment.originalName);
+
+    await expect(fs.access(expectedStoragePath)).resolves.toBeUndefined();
+    await expect(fs.access(path.join(assetsDir, entry.attachmentId))).rejects.toThrow();
+    expect(resolveAttachmentResource(entry.attachmentId, assetsDir)).toEqual({
       mime_type: entry.attachment.mimeType,
       resource_url: buildAttachmentAssetUrl(entry.attachmentId),
       status: 'ready'

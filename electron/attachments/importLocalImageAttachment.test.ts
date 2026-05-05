@@ -104,8 +104,9 @@ it('imports a local png into the app attachment directory and links it to the no
   });
 
   await expect(
-    fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets')))
+    fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'cover.png'))
   ).resolves.toEqual(imageBytes);
+  await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', hashBytes(imageBytes)))).rejects.toThrow();
 });
 
 it('reuses the same stored file and attachment record for repeated imports of identical content', async () => {

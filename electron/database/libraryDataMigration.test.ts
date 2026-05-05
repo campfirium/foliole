@@ -80,7 +80,7 @@ it('migrates the legacy AppData database and attachments into the library home a
   const legacyDatabasePath = createLegacyDatabase();
   const legacyAttachmentPath = path.join(mockedAppDataDir, 'legacy-attachment');
   const libraryDatabasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
-  const libraryAttachmentPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment');
+  const libraryAttachmentPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment.png');
 
   await fs.writeFile(legacyAttachmentPath, 'legacy-bytes');
 
@@ -88,6 +88,7 @@ it('migrates the legacy AppData database and attachments into the library home a
 
   expect(firstConnection.dbPath).toBe(libraryDatabasePath);
   await expect(fs.readFile(libraryAttachmentPath, 'utf8')).resolves.toBe('legacy-bytes');
+  await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment'))).rejects.toThrow();
   await expect(fs.readFile(legacyAttachmentPath, 'utf8')).resolves.toBe('legacy-bytes');
   expect(firstConnection.sqlite.prepare('SELECT COUNT(*) FROM attachments').pluck().get()).toBe(1);
   expect(resolveDatabasePath()).toBe(libraryDatabasePath);
@@ -107,7 +108,7 @@ it('falls back to legacy AppData data when attachment migration fails and retrie
   createLegacyDatabase();
   const legacyAttachmentPath = path.join(mockedAppDataDir, 'legacy-attachment');
   const libraryDatabasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
-  const libraryAttachmentPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment');
+  const libraryAttachmentPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'legacy-attachment.png');
 
   await fs.writeFile(legacyAttachmentPath, 'legacy-bytes');
   const originalCopyFileSync = nodeFs.copyFileSync.bind(nodeFs);

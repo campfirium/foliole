@@ -86,7 +86,8 @@ it('initializes and keeps using the library home directory layout across restart
     attachment_id: hash,
     stored_file: 'created'
   });
-  await expect(fs.readFile(resolveAttachmentStoragePath(hash, assetsDir))).resolves.toEqual(imageBytes);
+  await expect(fs.readFile(resolveAttachmentStoragePath(hash, assetsDir, 'cover.png'))).resolves.toEqual(imageBytes);
+  await expect(fs.access(path.join(assetsDir, hash))).rejects.toThrow();
 
   closeDatabaseConnection();
 

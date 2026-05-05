@@ -107,6 +107,11 @@ function createAttachmentRecordIfNeeded(hash: string, sourcePath: string, mimeTy
   };
 }
 
+function resolveCanonicalStoragePath(hash: string, sourcePath: string) {
+  const existingAttachment = findAttachmentRecordById(hash);
+  return resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? path.basename(sourcePath));
+}
+
 export async function importLocalImageAttachment(
   nodeId: string,
   sourcePath: string
@@ -139,7 +144,7 @@ export async function importLocalImageAttachment(
   }
 
   const hash = createContentHash(sourceBytes);
-  const storagePath = resolveAttachmentStoragePath(hash);
+  const storagePath = resolveCanonicalStoragePath(hash, normalizedSourcePath);
 
   let storedFile: 'created' | 'reused';
   try {

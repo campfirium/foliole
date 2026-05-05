@@ -53,7 +53,7 @@ function createImageAttachment() {
 
 it('returns a unified attachment resource URL when the record and file both exist', async () => {
   createImageAttachment();
-  const storedFilePath = resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'));
+  const storedFilePath = resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'diagram.png');
 
   await fs.mkdir(path.dirname(storedFilePath), { recursive: true });
   await fs.writeFile(storedFilePath, 'image-bytes');
@@ -88,7 +88,21 @@ it('returns a distinct missing-file result and logs a warning when the file is g
       action: 'resolve_attachment_resource',
       attachment_id: 'hash-1',
       fallback: 'return_missing_file',
-      expected_path: resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))
+      expected_path: resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'diagram.png')
     })
   );
+});
+
+it('still resolves legacy bare attachment files while new writes use suffixed names', async () => {
+  createImageAttachment();
+  const legacyFilePath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', 'hash-1');
+
+  await fs.mkdir(path.dirname(legacyFilePath), { recursive: true });
+  await fs.writeFile(legacyFilePath, 'legacy-image-bytes');
+
+  expect(resolveAttachmentResource('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
+    status: 'ready',
+    mime_type: 'image/png',
+    resource_url: buildAttachmentAssetUrl('hash-1')
+  });
 });

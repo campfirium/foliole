@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeAttachmentResourceResolution } from '../../lib/platform/nativeUtilityContract.js';
@@ -7,8 +6,10 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
+import { resolveAttachmentStoragePathCandidates } from './storagePath.js';
 
 interface AttachmentLookupRow extends DatabaseRow {
+  original_name: string | null;
   mime_type: string | null;
 }
 
@@ -28,7 +29,7 @@ export type ResolvedAttachmentFile =
 
 function resolveAttachmentLookup(attachmentId: string) {
   const row = openDatabaseConnection().driver.queryOne<AttachmentLookupRow>(
-    `SELECT mime_type
+    `SELECT original_name, mime_type
      FROM attachments
      WHERE id = ?`,
     [attachmentId]
@@ -36,8 +37,12 @@ function resolveAttachmentLookup(attachmentId: string) {
   return row ?? null;
 }
 
-export function resolveAttachmentStoragePath(attachmentId: string, assetsDir = resolveAttachmentAssetsDir()) {
-  return path.join(assetsDir, attachmentId);
+export function resolveAttachmentStoragePath(
+  attachmentId: string,
+  assetsDir = resolveAttachmentAssetsDir(),
+  originalName: string | null = null
+) {
+  return resolveAttachmentStoragePathCandidates(attachmentId, originalName, assetsDir)[0];
 }
 
 function resolveAttachmentAssetsDir() {
@@ -58,13 +63,17 @@ export function resolveAttachmentFile(
     return { status: 'not_found' };
   }
 
-  const resolvedPath = resolveAttachmentStoragePath(normalizedAttachmentId, assetsDir);
-  if (!fs.existsSync(resolvedPath)) {
+  const [canonicalPath, legacyPath] = resolveAttachmentStoragePathCandidates(
+    normalizedAttachmentId,
+    row.original_name,
+    assetsDir
+  );
+  if (!fs.existsSync(canonicalPath) && !fs.existsSync(legacyPath)) {
     console.warn('[native] attachment resource file missing', {
       area: 'native',
       action: 'resolve_attachment_resource',
       attachment_id: normalizedAttachmentId,
-      expected_path: resolvedPath,
+      expected_path: canonicalPath,
       fallback: 'return_missing_file'
     });
     return { status: 'missing_file', mimeType: row.mime_type };
@@ -72,7 +81,7 @@ export function resolveAttachmentFile(
 
   return {
     status: 'ready',
-    filePath: resolvedPath,
+    filePath: fs.existsSync(canonicalPath) ? canonicalPath : legacyPath,
     mimeType: row.mime_type
   };
 }

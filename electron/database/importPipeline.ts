@@ -102,7 +102,11 @@ function importLocalImageAttachment(nodeId: string, sourcePath: string) {
   try {
     const sourceBytes = fs.readFileSync(sourcePath);
     const hash = createContentHash(sourceBytes);
-    persistAttachmentFile(resolveAttachmentStoragePath(hash), sourceBytes);
+    const existingAttachment = findAttachmentRecordById(hash);
+    persistAttachmentFile(
+      resolveAttachmentStoragePath(hash, undefined, existingAttachment?.originalName ?? path.basename(sourcePath)),
+      sourceBytes
+    );
     const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, mimeType, sourceBytes.byteLength);
     createNodeAttachmentLink({ attachmentId: attachment.id, nodeId, role: IMAGE_ATTACHMENT_ROLE });
     return { attachmentId: attachment.id, status: 'imported' as const };

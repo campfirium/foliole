@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { resolveAttachmentStoragePathCandidates } from '../attachments/storagePath.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
@@ -91,7 +92,9 @@ function copyDatabaseBundle(sourceDatabasePath: string, targetDatabasePath: stri
 function listAttachmentIds(databasePath: string) {
   const sqlite = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
-    return sqlite.prepare('SELECT id FROM attachments ORDER BY id').all() as Array<{ id: string }>;
+    return sqlite
+      .prepare('SELECT id, original_name FROM attachments ORDER BY id')
+      .all() as Array<{ id: string; original_name: string | null }>;
   } catch {
     return [];
   } finally {
@@ -103,36 +106,42 @@ function resolveLegacyAttachmentRoots(appDataDir: string) {
   return Array.from(new Set([path.join(appDataDir, 'Assets'), appDataDir]));
 }
 
-function findLegacyAttachmentPath(attachmentId: string, legacyRoots: string[]) {
+function findLegacyAttachmentPath(attachmentId: string, originalName: string | null, legacyRoots: string[]) {
   for (const root of legacyRoots) {
-    const candidatePath = path.join(root, attachmentId);
-    if (fs.existsSync(candidatePath)) {
-      return candidatePath;
+    const candidates = resolveAttachmentStoragePathCandidates(attachmentId, originalName, root);
+    for (const candidatePath of candidates) {
+      if (fs.existsSync(candidatePath)) {
+        return candidatePath;
+      }
     }
   }
   return null;
 }
 
-function copyMissingAttachments(attachmentIds: string[], legacyRoots: string[], targetAssetsDir: string): AttachmentCopyResult {
+function copyMissingAttachments(
+  attachmentIds: Array<{ id: string; original_name: string | null }>,
+  legacyRoots: string[],
+  targetAssetsDir: string
+): AttachmentCopyResult {
   let copiedCount = 0;
   const failedPaths: string[] = [];
   const missingPaths: string[] = [];
   fs.mkdirSync(targetAssetsDir, { recursive: true });
-  for (const attachmentId of attachmentIds) {
-    const targetPath = path.join(targetAssetsDir, attachmentId);
+  for (const attachment of attachmentIds) {
+    const [targetPath] = resolveAttachmentStoragePathCandidates(attachment.id, attachment.original_name, targetAssetsDir);
     if (fs.existsSync(targetPath)) {
       continue;
     }
-    const sourcePath = findLegacyAttachmentPath(attachmentId, legacyRoots);
+    const sourcePath = findLegacyAttachmentPath(attachment.id, attachment.original_name, legacyRoots);
     if (!sourcePath) {
-      missingPaths.push(attachmentId);
+      missingPaths.push(attachment.id);
       continue;
     }
     try {
       copyFileAtomically(sourcePath, targetPath);
       copiedCount += 1;
     } catch {
-      failedPaths.push(attachmentId);
+      failedPaths.push(attachment.id);
     }
   }
   return { copiedCount, failedPaths, missingPaths };
@@ -187,7 +196,7 @@ function shouldSkipMigration(status: MigrationStatusRecord | null, targetDatabas
 
 function runMigrationAttempt(legacyDatabasePath: string, targetDatabasePath: string, targetAssetsDir: string) {
   const appDataDir = path.dirname(legacyDatabasePath);
-  const attachmentIds = listAttachmentIds(legacyDatabasePath).map((row) => row.id);
+  const attachmentIds = listAttachmentIds(legacyDatabasePath);
   if (!fs.existsSync(targetDatabasePath)) {
     copyDatabaseBundle(legacyDatabasePath, targetDatabasePath);
   }
