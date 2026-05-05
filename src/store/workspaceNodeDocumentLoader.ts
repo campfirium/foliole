@@ -1,5 +1,7 @@
-import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import {
+  hasWorkspaceRuntimeRepository,
+  loadWorkspaceNodeDocumentFromRuntime
+} from '../shared/platform/workspaceRuntimeRepository';
 
 import { readCachedWorkspaceNodeDocument, writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
 import type { WorkspaceNodeDocument } from './workspaceRendererBoundary';
@@ -27,8 +29,7 @@ export async function loadWorkspaceNodeDocument(
   nodeId: string,
   options: WorkspaceNodeDocumentLoadOptions
 ) {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke && !options.preloadedDocument) {
+  if (!hasWorkspaceRuntimeRepository() && !options.preloadedDocument) {
     return null;
   }
 
@@ -46,13 +47,13 @@ export async function loadWorkspaceNodeDocument(
     } else {
       options.onLoadStarted?.();
       const loadPromise =
-        runtimeInvoke?.(NATIVE_COMMANDS.loadNodeDocument, { nodeId })?.then((loadedDocument) => {
+        loadWorkspaceNodeDocumentFromRuntime(nodeId).then((loadedDocument) => {
           if (!loadedDocument) {
             return null;
           }
           writeCachedWorkspaceNodeDocument(nodeId, loadedDocument);
           return loadedDocument;
-        }) ?? Promise.resolve(null);
+        });
       pendingNodeDocumentLoadById.set(nodeId, loadPromise);
       try {
         document = await loadPromise;

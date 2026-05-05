@@ -1,6 +1,11 @@
-import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import type { NativeSqliteBackupResult, NativeSqliteRestoreResult } from '../../../../lib/platform/nativeContract';
-import { getRuntimeInvoke } from '../../../shared/platform/bridge';
+import {
+  createDatabaseBackupInRuntime,
+  hasSettingsRuntimeRepository,
+  listDatabaseBackupsFromRuntime,
+  restoreDatabaseBackupInRuntime,
+  type RuntimeSqliteBackupResult,
+  type RuntimeSqliteRestoreResult
+} from '../../../shared/platform/settingsRuntimeRepository';
 
 export interface DatabaseBackupEntry {
   fileName: string;
@@ -19,22 +24,16 @@ export interface DatabaseBackupErrorResult {
 
 export interface DatabaseBackupSuccessResult {
   ok: true;
-  value: NativeSqliteBackupResult;
+  value: RuntimeSqliteBackupResult;
 }
 
 export interface DatabaseRestoreSuccessResult {
   ok: true;
-  value: NativeSqliteRestoreResult;
+  value: RuntimeSqliteRestoreResult;
 }
 
 export type DatabaseBackupActionResult = DatabaseBackupSuccessResult | DatabaseBackupErrorResult;
 export type DatabaseRestoreActionResult = DatabaseRestoreSuccessResult | DatabaseBackupErrorResult;
-
-type UntypedInvoke = (command: string, args?: unknown) => Promise<unknown>;
-
-function getUntypedRuntimeInvoke(): UntypedInvoke | null {
-  return getRuntimeInvoke() as UntypedInvoke | null;
-}
 
 function readString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
@@ -75,7 +74,7 @@ function normalizeDatabaseBackupEntry(value: unknown): DatabaseBackupEntry | nul
   return { autoFrequency, fileName, filePath, kind, snapshotReason, sizeBytes, updatedAt };
 }
 
-function normalizeSqliteBackupResult(value: unknown): NativeSqliteBackupResult | null {
+function normalizeSqliteBackupResult(value: unknown): RuntimeSqliteBackupResult | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
@@ -90,7 +89,7 @@ function normalizeSqliteBackupResult(value: unknown): NativeSqliteBackupResult |
   return { sourcePath, destinationPath, totalPages, remainingPages };
 }
 
-function normalizeSqliteRestoreResult(value: unknown): NativeSqliteRestoreResult | null {
+function normalizeSqliteRestoreResult(value: unknown): RuntimeSqliteRestoreResult | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
@@ -119,16 +118,15 @@ function readErrorMessage(error: unknown) {
 }
 
 export function areDatabaseBackupActionsAvailable() {
-  return Boolean(getRuntimeInvoke());
+  return hasSettingsRuntimeRepository();
 }
 
 export async function listDatabaseBackups(): Promise<DatabaseBackupEntry[]> {
-  const runtimeInvoke = getUntypedRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasSettingsRuntimeRepository()) {
     return [];
   }
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.listSqliteBackups);
+    const result = await listDatabaseBackupsFromRuntime();
     if (!Array.isArray(result)) {
       return [];
     }
@@ -142,12 +140,11 @@ export async function listDatabaseBackups(): Promise<DatabaseBackupEntry[]> {
 }
 
 export async function createDatabaseBackup(): Promise<DatabaseBackupActionResult | null> {
-  const runtimeInvoke = getUntypedRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasSettingsRuntimeRepository()) {
     return null;
   }
   try {
-    const result = normalizeSqliteBackupResult(await runtimeInvoke(NATIVE_COMMANDS.backupSqliteDatabase, {}));
+    const result = normalizeSqliteBackupResult(await createDatabaseBackupInRuntime());
     if (!result) {
       return { ok: false, errorMessage: 'Backup completed but returned an invalid payload.' };
     }
@@ -158,14 +155,11 @@ export async function createDatabaseBackup(): Promise<DatabaseBackupActionResult
 }
 
 export async function restoreDatabaseBackup(sourcePath: string): Promise<DatabaseRestoreActionResult | null> {
-  const runtimeInvoke = getUntypedRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasSettingsRuntimeRepository()) {
     return null;
   }
   try {
-    const result = normalizeSqliteRestoreResult(
-      await runtimeInvoke(NATIVE_COMMANDS.restoreSqliteDatabase, { sourcePath })
-    );
+    const result = normalizeSqliteRestoreResult(await restoreDatabaseBackupInRuntime(sourcePath));
     if (!result) {
       return { ok: false, errorMessage: 'Restore completed but returned an invalid payload.' };
     }

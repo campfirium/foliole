@@ -1,8 +1,11 @@
-import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import type { NativeBackupSettings } from '../../../../lib/platform/nativeContract';
-import { getRuntimeInvoke } from '../../../shared/platform/bridge';
+import {
+  hasSettingsRuntimeRepository,
+  loadDatabaseBackupSettingsFromRuntime,
+  saveDatabaseBackupSettingsToRuntime,
+  type RuntimeBackupSettings
+} from '../../../shared/platform/settingsRuntimeRepository';
 
-export type DatabaseBackupSettings = NativeBackupSettings;
+export type DatabaseBackupSettings = RuntimeBackupSettings;
 
 const DEFAULT_BACKUP_SETTINGS: DatabaseBackupSettings = {
   auto_daily_days: 7,
@@ -40,25 +43,23 @@ export function normalizeDatabaseBackupSettings(value: unknown): DatabaseBackupS
 }
 
 export async function loadDatabaseBackupSettings(): Promise<DatabaseBackupSettings> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasSettingsRuntimeRepository()) {
     return DEFAULT_BACKUP_SETTINGS;
   }
   try {
-    return normalizeDatabaseBackupSettings(await runtimeInvoke(NATIVE_COMMANDS.loadBackupSettings));
+    return normalizeDatabaseBackupSettings(await loadDatabaseBackupSettingsFromRuntime());
   } catch {
     return DEFAULT_BACKUP_SETTINGS;
   }
 }
 
 export async function saveDatabaseBackupSettings(settings: DatabaseBackupSettings): Promise<DatabaseBackupSettings> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasSettingsRuntimeRepository()) {
     return normalizeDatabaseBackupSettings(settings);
   }
   try {
     return normalizeDatabaseBackupSettings(
-      await runtimeInvoke(NATIVE_COMMANDS.saveBackupSettings, { settings })
+      await saveDatabaseBackupSettingsToRuntime(settings)
     );
   } catch {
     return normalizeDatabaseBackupSettings(settings);

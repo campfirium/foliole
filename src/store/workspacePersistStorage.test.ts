@@ -209,7 +209,6 @@ describe('workspacePersistStorage runtime logging', () => {
       expect.objectContaining({
         area: 'persistence',
         action: 'hydrate_workspace_state',
-        command: 'load_reading_progress',
         fallback: 'merge_snapshot_without_reading_progress',
         storageKey: 'foliole-workspace-v1',
         error: { name: 'Error', message: 'sqlite busy' }

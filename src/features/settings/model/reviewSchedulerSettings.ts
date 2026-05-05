@@ -4,8 +4,11 @@ import {
   type UnifiedPushQueueRules,
   type UnifiedPushQueueRulesPatch
 } from '../../../../lib/core/review/unifiedPushQueueRules';
-import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import { getRuntimeInvoke } from '../../../shared/platform/bridge';
+import {
+  hasSettingsRuntimeRepository,
+  loadReviewSchedulerSettingsFromRuntime,
+  saveReviewSchedulerSettingsToRuntime
+} from '../../../shared/platform/settingsRuntimeRepository';
 
 export interface ReviewSchedulerSettings {
   algorithm: string;
@@ -153,13 +156,12 @@ function syncCurrentReviewSchedulerSettings(settings: ReviewSchedulerSettings) {
 }
 
 export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSettings> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasSettingsRuntimeRepository()) {
     return syncCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   }
   try {
     return syncCurrentReviewSchedulerSettings(
-      normalizeReviewSchedulerSettings(await runtimeInvoke(NATIVE_COMMANDS.loadReviewSchedulerSettings))
+      normalizeReviewSchedulerSettings(await loadReviewSchedulerSettingsFromRuntime())
     );
   } catch {
     return syncCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
@@ -169,23 +171,21 @@ export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSett
 export async function saveReviewSchedulerSettings(
   settings: ReviewSchedulerSettingsSavePatch
 ): Promise<ReviewSchedulerSettings> {
-  const runtimeInvoke = getRuntimeInvoke();
-  const baseSettings = runtimeInvoke ? await loadReviewSchedulerSettings() : getCurrentReviewSchedulerSettings();
+  const hasRuntime = hasSettingsRuntimeRepository();
+  const baseSettings = hasRuntime ? await loadReviewSchedulerSettings() : getCurrentReviewSchedulerSettings();
   const payload = normalizeReviewSchedulerSettings({
     ...baseSettings,
     ...settings,
     pushQueue: mergePushQueueSettings(baseSettings.pushQueue, settings.pushQueue)
   });
   syncCurrentReviewSchedulerSettings(payload);
-  if (!runtimeInvoke) {
+  if (!hasRuntime) {
     return payload;
   }
   try {
     return syncCurrentReviewSchedulerSettings(
       normalizeReviewSchedulerSettings(
-        await runtimeInvoke(NATIVE_COMMANDS.saveReviewSchedulerSettings, {
-          settings: payload
-        })
+        await saveReviewSchedulerSettingsToRuntime(payload)
       )
     );
   } catch {
