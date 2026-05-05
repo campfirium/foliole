@@ -28,7 +28,7 @@ describe('FolioleCompanionPairingStore', () => {
       source.indexOf('static JSObject signRequest')
     );
 
-    expect(savePairingCredentialsBody).toContain('cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey());');
+    expect(savePairingCredentialsBody).toContain('cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey(context));');
     expect(savePairingCredentialsBody).toContain('byte[] iv = cipher.getIV();');
     expect(savePairingCredentialsBody).not.toContain('new GCMParameterSpec(128, iv)');
     expect(savePairingCredentialsBody).not.toContain('new SecureRandom()');
