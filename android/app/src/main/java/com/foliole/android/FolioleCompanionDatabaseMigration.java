@@ -130,17 +130,29 @@ final class FolioleCompanionDatabaseMigration {
     }
 
     private static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
-        if (FolioleCompanionSqliteRuntime.columnExists(database, repairRuleValue(context, "syncBaseContentHash", "tableName"), repairRuleValue(context, "syncBaseContentHash", "columnName"))) {
-            return;
-        }
-        installMigrationStatement(context, database, repairRuleValue(context, "syncBaseContentHash", "statementName"), repairRuleValue(context, "syncBaseContentHash", "errorMessage"));
+        addColumnIfMissing(context, database, "syncBaseContentHash");
     }
 
     private static void addNodeViewStateSourceIfMissing(Context context, SQLiteDatabase database) {
-        if (FolioleCompanionSqliteRuntime.columnExists(database, repairRuleValue(context, "nodeViewStateSource", "tableName"), repairRuleValue(context, "nodeViewStateSource", "columnName"))) {
+        addColumnIfMissing(context, database, "nodeViewStateSource");
+    }
+
+    private static void addColumnIfMissing(Context context, SQLiteDatabase database, String groupName) {
+        if (
+            FolioleCompanionSqliteRuntime.columnExists(
+                database,
+                repairRuleValue(context, groupName, repairRuleKey(context, "tableName")),
+                repairRuleValue(context, groupName, repairRuleKey(context, "columnName"))
+            )
+        ) {
             return;
         }
-        installMigrationStatement(context, database, repairRuleValue(context, "nodeViewStateSource", "statementName"), repairRuleValue(context, "nodeViewStateSource", "errorMessage"));
+        installMigrationStatement(
+            context,
+            database,
+            repairRuleValue(context, groupName, repairRuleKey(context, "statementName")),
+            repairRuleValue(context, groupName, repairRuleKey(context, "errorMessage"))
+        );
     }
 
     private static void createSyncObjectStateIndexes(Context context, SQLiteDatabase database) {
@@ -189,6 +201,14 @@ final class FolioleCompanionDatabaseMigration {
 
     private static String rowKey(Context context, String key) throws Exception {
         return FolioleCompanionMigrationRules.rowKey(context, key);
+    }
+
+    private static String repairRuleKey(Context context, String key) {
+        try {
+            return FolioleCompanionMigrationRules.repairRuleKey(context, key);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Companion migration repair rule key is missing: " + key, exception);
+        }
     }
 
     private static String actionType(Context context, String key) {

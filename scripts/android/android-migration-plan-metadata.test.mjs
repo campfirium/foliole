@@ -60,6 +60,12 @@ describe('Android migration plan metadata', () => {
       migrationStatementsByName: 'statementsByName'
     });
     expect(schema.planKeys).toMatchObject({ actions: 'actions', beforeVersion: 'beforeVersion' });
+    expect(schema.repairRuleKeys).toMatchObject({
+      columnName: 'columnName',
+      errorMessage: 'errorMessage',
+      statementName: 'statementName',
+      tableName: 'tableName'
+    });
     expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
       legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',
@@ -101,6 +107,7 @@ describe('Android migration plan metadata', () => {
     expect(rulesSource).toContain('section(context, "actionKeys")');
     expect(rulesSource).toContain('section(context, "assetKeys")');
     expect(rulesSource).toContain('section(context, "planKeys")');
+    expect(rulesSource).toContain('section(context, "repairRuleKeys")');
     expect(rulesSource).toContain('section(context, "repairRules")');
     expect(installerSource).toContain('FolioleCompanionMigrationRules.assetKey(context, "coreStatements")');
     expect(installerSource).not.toContain('optJSONArray("statements")');
@@ -108,6 +115,7 @@ describe('Android migration plan metadata', () => {
     expect(installerSource).not.toContain('optJSONArray("plan")');
     expect(migrationSource).toContain('FolioleCompanionSchemaInstaller.migrationPlan(context)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.actionType(context, key)');
+    expect(migrationSource).toContain('FolioleCompanionMigrationRules.repairRuleKey(context, key)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
     expect(migrationSource).toContain('oldVersion < step.getInt(planKey(context, "beforeVersion"))');
     expect(migrationSource).toContain('step.getJSONArray(planKey(context, "actions"))');
@@ -116,6 +124,10 @@ describe('Android migration plan metadata', () => {
     expect(migrationSource).not.toContain('step.getInt("beforeVersion")');
     expect(migrationSource).not.toContain('step.getJSONArray("actions")');
     expect(migrationSource).not.toContain('action.optString("type"');
+    expect(migrationSource).not.toContain('repairRuleValue(context, "syncBaseContentHash", "statementName")');
+    expect(migrationSource).not.toContain('repairRuleValue(context, "syncBaseContentHash", "errorMessage")');
+    expect(migrationSource).not.toContain('repairRuleValue(context, "nodeViewStateSource", "statementName")');
+    expect(migrationSource).not.toContain('repairRuleValue(context, "nodeViewStateSource", "errorMessage")');
     expect(migrationSource).not.toContain('oldVersion < 4');
     expect(migrationSource).not.toContain('oldVersion < 14');
     expect(migrationSource).not.toContain('"migrationLegacySyncObjectStateRows"');

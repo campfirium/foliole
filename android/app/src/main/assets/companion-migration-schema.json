@@ -131,6 +131,12 @@
     "actions": "actions",
     "beforeVersion": "beforeVersion"
   },
+  "repairRuleKeys": {
+    "columnName": "columnName",
+    "errorMessage": "errorMessage",
+    "statementName": "statementName",
+    "tableName": "tableName"
+  },
   "repairRules": {
     "nodeViewStateSource": {
       "columnName": "source",

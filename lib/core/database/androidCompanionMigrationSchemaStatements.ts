@@ -50,6 +50,13 @@ export const ANDROID_COMPANION_MIGRATION_PLAN_KEYS = {
   beforeVersion: 'beforeVersion'
 } as const;
 
+export const ANDROID_COMPANION_MIGRATION_REPAIR_RULE_KEYS = {
+  columnName: 'columnName',
+  errorMessage: 'errorMessage',
+  statementName: 'statementName',
+  tableName: 'tableName'
+} as const;
+
 export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to upgrade companion schema.', type: 'installSchema' }],

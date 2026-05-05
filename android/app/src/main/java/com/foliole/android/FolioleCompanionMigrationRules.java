@@ -38,6 +38,10 @@ final class FolioleCompanionMigrationRules {
         return section(context, "planKeys").getString(key);
     }
 
+    static String repairRuleKey(Context context, String key) throws Exception {
+        return section(context, "repairRuleKeys").getString(key);
+    }
+
     static String rowKey(Context context, String key) throws Exception {
         return group(context, "syncObjectStateSequence").getJSONObject("rowKeys").getString(key);
     }
