@@ -4,7 +4,10 @@ import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
+import {
+  invalidateAttachmentResourceResolution,
+  resolveRuntimeAttachmentResource
+} from '../../../shared/platform/attachmentResources';
 import { AppButton, AppEmptyState } from '../../../shared/ui';
 import { measurePdfTextLayerCropBox, resolvePdfCropScale, type PdfCropBox } from '../model/pdfAutoCrop';
 import { configurePdfWorker } from '../model/pdfWorker';
@@ -41,15 +44,20 @@ function useElementWidth() {
   return { ref, width };
 }
 
-function useAttachmentPdfSource(attachmentId: string) {
+function useAttachmentPdfSource(
+  attachmentId: string,
+  onMissingResource?: (attachmentId: string) => Promise<void> | void
+) {
   const [source, setSource] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'missing' | 'ready'>('loading');
 
   useEffect(() => {
     let cancelled = false;
+    let retriedAfterSync = false;
     setSource(null);
     setState('loading');
-    void resolveRuntimeAttachmentResource(`asset://${attachmentId}`).then((resolution) => {
+    async function resolvePdfSource() {
+      const resolution = await resolveRuntimeAttachmentResource(`asset://${attachmentId}`);
       if (cancelled) {
         return;
       }
@@ -58,12 +66,25 @@ function useAttachmentPdfSource(attachmentId: string) {
         setState('ready');
         return;
       }
+      if (!retriedAfterSync && onMissingResource) {
+        retriedAfterSync = true;
+        try {
+          await onMissingResource(attachmentId);
+        } catch {
+          setState('missing');
+          return;
+        }
+        invalidateAttachmentResourceResolution(attachmentId);
+        await resolvePdfSource();
+        return;
+      }
       setState('missing');
-    });
+    }
+    void resolvePdfSource();
     return () => {
       cancelled = true;
     };
-  }, [attachmentId]);
+  }, [attachmentId, onMissingResource]);
 
   return { source, state };
 }
@@ -138,9 +159,14 @@ function SimplePdfToolbar(props: {
   );
 }
 
-export function SimplePdfDocument(props: { attachmentId: string; onBackToText?: () => void; title: string }) {
+export function SimplePdfDocument(props: {
+  attachmentId: string;
+  onBackToText?: () => void;
+  onMissingResource?: (attachmentId: string) => Promise<void> | void;
+  title: string;
+}) {
   const { ref, width } = useElementWidth();
-  const { source, state } = useAttachmentPdfSource(props.attachmentId);
+  const { source, state } = useAttachmentPdfSource(props.attachmentId, props.onMissingResource);
   const [loadFailed, setLoadFailed] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [zoom, setZoom] = useState(100);

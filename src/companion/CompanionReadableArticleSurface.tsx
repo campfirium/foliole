@@ -1,6 +1,6 @@
 import { Highlighter, Info, ListTree, Search, SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
@@ -15,6 +15,7 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
 import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
+import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
 import { AppButton } from '@/shared/ui';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
@@ -55,12 +56,26 @@ function ReadingChromeButton(props: {
 export function ReadableArticleDocument(props: {
   readingSelection?: EditorSelection | null;
   readableArticle: ReadableArticle;
+  syncEndpointUrl?: string | null;
 }) {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
+  const syncMissingPdfResource = useCallback(async (attachmentId: string) => {
+    if (!props.syncEndpointUrl) {
+      return;
+    }
+    await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
+  }, [props.syncEndpointUrl]);
 
   if (pdfAttachmentId && isViewingPdfOriginal) {
-    return <SimplePdfDocument attachmentId={pdfAttachmentId} onBackToText={() => setIsViewingPdfOriginal(false)} title={props.readableArticle.title} />;
+    return (
+      <SimplePdfDocument
+        attachmentId={pdfAttachmentId}
+        onBackToText={() => setIsViewingPdfOriginal(false)}
+        onMissingResource={syncMissingPdfResource}
+        title={props.readableArticle.title}
+      />
+    );
   }
   if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
     return (
@@ -154,6 +169,7 @@ export function ImmersiveReadableArticle(props: {
   onExit(): void;
   onSearch(): void;
   readableArticle: ReadableArticle;
+  syncEndpointUrl?: string | null;
 }) {
   const [isChromeVisible, setIsChromeVisible] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
@@ -195,7 +211,11 @@ export function ImmersiveReadableArticle(props: {
         </>
       ) : null}
       <div className="mx-auto min-h-full w-full max-w-[760px]">
-        <ReadableArticleDocument readableArticle={props.readableArticle} readingSelection={readingSelection} />
+        <ReadableArticleDocument
+          readableArticle={props.readableArticle}
+          readingSelection={readingSelection}
+          syncEndpointUrl={props.syncEndpointUrl}
+        />
       </div>
     </section>
   );

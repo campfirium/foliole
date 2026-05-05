@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resourceMock = vi.hoisted(() => ({
+  invalidateAttachmentResourceResolution: vi.fn(),
   resolveRuntimeAttachmentResource: vi.fn()
 }));
 
@@ -68,5 +69,19 @@ describe('SimplePdfDocument', () => {
 
     expect(screen.getByText('120%')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument();
+  });
+
+  it('retries resolving after the caller syncs a missing PDF resource', async () => {
+    const syncMissing = vi.fn(async () => undefined);
+    resourceMock.resolveRuntimeAttachmentResource
+      .mockResolvedValueOnce({ resource_url: null, status: 'missing_file' })
+      .mockResolvedValueOnce({ resource_url: 'capacitor://pdf-file', status: 'ready' });
+
+    render(<SimplePdfDocument attachmentId="pdf-attachment-1" onMissingResource={syncMissing} title="Paper" />);
+
+    await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
+    expect(syncMissing).toHaveBeenCalledWith('pdf-attachment-1');
+    expect(resourceMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('pdf-attachment-1');
+    expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
   });
 });

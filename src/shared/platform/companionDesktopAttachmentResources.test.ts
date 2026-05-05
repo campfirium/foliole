@@ -12,6 +12,11 @@ const capacitorMock = vi.hoisted(() => ({
 const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
 }));
+const syncObjectsMock = vi.hoisted(() => ({
+  loadCompanionMissingAttachmentResources: vi.fn(async () => [
+    { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
+  ])
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -21,8 +26,10 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companionSyncObjects', () => syncObjectsMock);
 
 import {
+  syncCompanionAttachmentResourceFromDesktop,
   syncCompanionAttachmentResourceRequestsFromDesktop,
   syncCompanionAttachmentResourcesFromDesktop,
   toAttachmentResourceRequest
@@ -44,6 +51,9 @@ describe('companion desktop attachment resources', () => {
     vi.clearAllMocks();
     capacitorMock.getPlatform.mockReturnValue('android');
     capacitorMock.isNativePlatform.mockReturnValue(true);
+    syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([
+      { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
+    ]);
   });
 
   it('extracts attachment resource requests from manifest payloads', () => {
@@ -80,6 +90,32 @@ describe('companion desktop attachment resources', () => {
       headers: { 'X-Signature': 'signed' },
       url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=blob-hash-2'
     });
+  });
+
+  it('downloads a missing attachment resource by attachment id for active item priority', async () => {
+    await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
+      attachmentId: 'att-3',
+      status: 'cached'
+    });
+
+    expect(syncObjectsMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(256);
+    expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledWith({
+      attachment_id: 'att-3',
+      content_hash: 'blob-hash-3',
+      headers: { 'X-Signature': 'signed' },
+      url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3'
+    });
+  });
+
+  it('reports an attachment resource as not queued when it is not missing locally', async () => {
+    syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
+
+    await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
+      attachmentId: 'att-3',
+      status: 'not_queued'
+    });
+
+    expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
   });
 
   it('skips attachment resource downloads outside native Android', async () => {

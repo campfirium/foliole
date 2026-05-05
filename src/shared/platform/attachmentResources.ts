@@ -135,3 +135,7 @@ export function readAttachmentResourceCacheStats() {
     entries: attachmentResourceResolutionCache.size
   };
 }
+
+export function invalidateAttachmentResourceResolution(attachmentId: string) {
+  attachmentResourceResolutionCache.delete(attachmentId);
+}

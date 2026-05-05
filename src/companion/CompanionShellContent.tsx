@@ -12,6 +12,7 @@ import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSetti
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { CompanionTabConfig } from './CompanionTabsConfig';
 import { CompanionTabsSettingsContent } from './CompanionTabsSettingsContent';
+import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -22,6 +23,12 @@ import { NodeBrowseList } from '@/shared/ui';
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
+
+function resolveShellSyncEndpoint(workspaceSync: WorkspaceSync) {
+  return workspaceSync.state
+    ? resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state)
+    : null;
+}
 
 function handleExitReadableArticle(surface: Surface, workspaceSync: WorkspaceSync) {
   const exitNodeId = resolveCompanionBrowseExitNodeId(
@@ -36,6 +43,7 @@ function handleExitReadableArticle(surface: Surface, workspaceSync: WorkspaceSyn
 }
 
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
+  const syncEndpointUrl = resolveShellSyncEndpoint(props.workspaceSync);
   if (props.surface.browsedFolder) {
     return (
       <NodeBrowseList
@@ -52,6 +60,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
         onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
         onSearch={() => props.surface.handleTabAction('search')}
         readableArticle={props.surface.readableArticle}
+        syncEndpointUrl={syncEndpointUrl}
       />
     );
   }
@@ -95,9 +104,15 @@ function ReadableArticleOrFallback(props: {
   error: string | null;
   hasSnapshot: boolean;
   surface: Surface;
+  workspaceSync: WorkspaceSync;
 }) {
   if (props.surface.readableArticle) {
-    return <ReadableArticleDocument readableArticle={props.surface.readableArticle} />;
+    return (
+      <ReadableArticleDocument
+        readableArticle={props.surface.readableArticle}
+        syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
+      />
+    );
   }
   return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
 }
@@ -186,6 +201,7 @@ export function renderCompanionShellContent(props: {
             onExit={() => handleExitReadableArticle(props.surface, props.workspaceSync)}
             onSearch={() => props.surface.handleTabAction('search')}
             readableArticle={props.surface.readableArticle}
+            syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
           />
         );
       }
@@ -210,7 +226,14 @@ export function renderCompanionShellContent(props: {
   if (props.surface.activeAction === 'search') {
     return <CompanionSearchContent />;
   }
-  return <ReadableArticleOrFallback error={props.workspaceError} hasSnapshot={props.hasSnapshot} surface={props.surface} />;
+  return (
+    <ReadableArticleOrFallback
+      error={props.workspaceError}
+      hasSnapshot={props.hasSnapshot}
+      surface={props.surface}
+      workspaceSync={props.workspaceSync}
+    />
+  );
 }
 
 function renderSettingsContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
