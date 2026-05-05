@@ -64,6 +64,9 @@ export interface CompanionWorkspaceSyncPlugin {
   loadMissingAttachmentResources(args: {
     limit?: number;
   }): Promise<{ resources: Array<{ attachment_id: string; content_hash: string; size_bytes?: number }> }>;
+  loadMissingAttachmentResource(args: {
+    attachment_id: string;
+  }): Promise<{ resource: { attachment_id: string; content_hash: string; size_bytes?: number } | null }>;
   loadSyncStateCursor(): Promise<{ cursor: number | null }>;
   loadSyncPackCursor(): Promise<{ cursor: number | null }>;
   loadSyncStatePushCursor(): Promise<{ cursor: number | null }>;

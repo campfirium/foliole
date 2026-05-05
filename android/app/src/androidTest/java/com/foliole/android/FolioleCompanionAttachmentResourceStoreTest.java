@@ -90,6 +90,27 @@ public class FolioleCompanionAttachmentResourceStoreTest {
     }
 
     @Test
+    public void loadsOneMissingManifestResourceByAttachmentIdForActivePriority() throws Exception {
+        insertAttachmentManifest("queued-att", "hash-queued", "2026-04-25T00:00:00.000Z");
+        insertAttachmentManifest("active-att", "hash-active", "2026-04-26T00:00:00.000Z");
+
+        JSONObject resource = FolioleCompanionAttachmentResourceStore.loadMissingResource(database, "active-att")
+            .getJSONObject("resource");
+
+        assertEquals("active-att", resource.getString("attachment_id"));
+        assertEquals("hash-active", resource.getString("content_hash"));
+        assertEquals(11, resource.getLong("size_bytes"));
+    }
+
+    @Test
+    public void doesNotLoadCachedManifestResourceForActivePriority() throws Exception {
+        insertAttachmentManifest("cached-att", "hash-cached", "2026-04-25T00:00:00.000Z");
+        database.execSQL("UPDATE attachment_blobs SET availability = 'cached' WHERE attachment_id = 'cached-att'");
+
+        assertTrue(FolioleCompanionAttachmentResourceStore.loadMissingResource(database, "cached-att").isNull("resource"));
+    }
+
+    @Test
     public void ordersMissingManifestResourcesByActiveThenRecentTopicLinks() throws Exception {
         insertAttachmentManifest("old-att", "hash-old", "2026-04-25T00:00:00.000Z");
         insertAttachmentManifest("active-att", "hash-active", "2026-04-25T00:00:00.000Z");

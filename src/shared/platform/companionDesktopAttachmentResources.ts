@@ -1,6 +1,9 @@
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
-import { loadCompanionMissingAttachmentResources } from './companionSyncObjects';
+import {
+  loadCompanionMissingAttachmentResource,
+  loadCompanionMissingAttachmentResources
+} from './companionSyncObjects';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
@@ -91,11 +94,9 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
 
 export async function syncCompanionAttachmentResourceFromDesktop(
   endpointUrl: string,
-  attachmentId: string,
-  searchLimit = 256
+  attachmentId: string
 ) {
-  const requests = await loadCompanionMissingAttachmentResources(searchLimit);
-  const request = requests.find((item) => item.attachment_id === attachmentId);
+  const request = await loadCompanionMissingAttachmentResource(attachmentId);
   if (!request) {
     return { attachmentId, status: 'not_queued' as const };
   }

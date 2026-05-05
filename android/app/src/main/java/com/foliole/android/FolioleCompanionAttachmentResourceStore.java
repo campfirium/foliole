@@ -55,6 +55,28 @@ final class FolioleCompanionAttachmentResourceStore {
         return result;
     }
 
+    static JSObject loadMissingResource(SQLiteDatabase database, String attachmentId) {
+        String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
+        JSObject result = new JSObject();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT attachment_id, content_hash, COALESCE(size_bytes, 0) FROM attachment_blobs " +
+                "WHERE attachment_id = ? AND content_hash IS NOT NULL AND TRIM(content_hash) != '' " +
+                "AND availability != 'cached' LIMIT 1",
+            new String[] { normalizedAttachmentId }
+        )) {
+            if (!cursor.moveToFirst()) {
+                result.put("resource", null);
+                return result;
+            }
+            JSObject resource = new JSObject();
+            resource.put("attachment_id", cursor.getString(0));
+            resource.put("content_hash", cursor.getString(1));
+            resource.put("size_bytes", cursor.getLong(2));
+            result.put("resource", resource);
+            return result;
+        }
+    }
+
     static JSObject syncResource(
         Context context,
         SQLiteDatabase database,

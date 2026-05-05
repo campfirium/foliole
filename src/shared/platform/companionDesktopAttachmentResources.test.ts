@@ -13,6 +13,11 @@ const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
 }));
 const syncObjectsMock = vi.hoisted(() => ({
+  loadCompanionMissingAttachmentResource: vi.fn(async () => ({
+    attachment_id: 'att-3',
+    content_hash: 'blob-hash-3',
+    size_bytes: 4096
+  })),
   loadCompanionMissingAttachmentResources: vi.fn(async () => [
     { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
   ])
@@ -54,6 +59,11 @@ describe('companion desktop attachment resources', () => {
     syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([
       { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
     ]);
+    syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue({
+      attachment_id: 'att-3',
+      content_hash: 'blob-hash-3',
+      size_bytes: 4096
+    });
   });
 
   it('extracts attachment resource requests from manifest payloads', () => {
@@ -98,7 +108,8 @@ describe('companion desktop attachment resources', () => {
       status: 'cached'
     });
 
-    expect(syncObjectsMock.loadCompanionMissingAttachmentResources).toHaveBeenCalledWith(256);
+    expect(syncObjectsMock.loadCompanionMissingAttachmentResource).toHaveBeenCalledWith('att-3');
+    expect(syncObjectsMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledWith({
       attachment_id: 'att-3',
       content_hash: 'blob-hash-3',
@@ -108,7 +119,7 @@ describe('companion desktop attachment resources', () => {
   });
 
   it('reports an attachment resource as not queued when it is not missing locally', async () => {
-    syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
+    syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue(null);
 
     await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
       attachmentId: 'att-3',
