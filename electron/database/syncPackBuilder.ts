@@ -17,6 +17,8 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 interface BuildDesktopSyncPackInput {
+  createdAt?: string;
+  fromDeviceId?: string;
   outputPath: string;
   packId: string;
   fromStateSeq: number;
@@ -153,8 +155,8 @@ function buildContainerManifest(args: {
 export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
   const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq());
-  const createdAt = new Date().toISOString();
-  const fromDeviceId = loadOrCreateDesktopDeviceId(createdAt);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const fromDeviceId = input.fromDeviceId ?? loadOrCreateDesktopDeviceId(createdAt);
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });
 

@@ -109,9 +109,12 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
   const packPath = path.join(tempRoot, 'incoming.db');
 
   const result = await buildDesktopSyncPack({
+    createdAt: '2026-04-27T02:00:00.000Z',
+    fromDeviceId: 'desktop-fixture',
     outputPath: packPath,
     packId: 'pack-1',
-    fromStateSeq: 0
+    fromStateSeq: 0,
+    toPeerId: 'android-fixture'
   });
 
   expect(result).toMatchObject({
@@ -130,8 +133,11 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
       database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       format: 'foliole.sync-pack',
       format_version: 1,
+      created_at: '2026-04-27T02:00:00.000Z',
+      from_device_id: 'desktop-fixture',
       pack_id: 'pack-1',
       schema_version: expect.any(Number),
+      to_peer_id: 'android-fixture',
       tables: [
         { name: 'sync_object_state', row_count: 1 },
         { name: 'nodes', row_count: 1 },
