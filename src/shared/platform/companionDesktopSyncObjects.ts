@@ -88,16 +88,16 @@ async function pullRemoteStructurePack(endpointUrl: string) {
 async function loadFinalSyncSummary(endpointUrl: string) {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   const desktopDiagnostics = await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
-  const desktopStateSeq = desktopDiagnostics?.sync_state.max_state_seq;
-  const androidCursor = diagnostics?.sync_state.pack_cursor;
+  const desktopStateSeq = desktopDiagnostics?.sync_state?.max_state_seq;
+  const androidCursor = diagnostics?.sync_state?.pack_cursor;
   return {
-    localDirtyCount: diagnostics?.sync_state.local_dirty_count ?? null,
-    pendingAckCount: diagnostics?.sync_state.pending_ack_count ?? null,
-    pushIssueCount: diagnostics?.sync_state.push_issue_count ?? null,
-    remainingAttachmentResourceBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null,
-    remainingAttachmentResourceCount: diagnostics?.content.missing_attachment_resource_count ?? null,
-    remainingContentBlobBytes: diagnostics?.content.missing_content_blob_bytes ?? null,
-    remainingContentBlobCount: diagnostics?.content.missing_content_blob_count ?? null,
+    localDirtyCount: diagnostics?.sync_state?.local_dirty_count ?? null,
+    pendingAckCount: diagnostics?.sync_state?.pending_ack_count ?? null,
+    pushIssueCount: diagnostics?.sync_state?.push_issue_count ?? null,
+    remainingAttachmentResourceBytes: diagnostics?.content?.missing_attachment_resource_bytes ?? null,
+    remainingAttachmentResourceCount: diagnostics?.content?.missing_attachment_resource_count ?? null,
+    remainingContentBlobBytes: diagnostics?.content?.missing_content_blob_bytes ?? null,
+    remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingStructureChangeCount: typeof desktopStateSeq === 'number' && typeof androidCursor === 'number'
       ? Math.max(0, desktopStateSeq - androidCursor)
       : null
