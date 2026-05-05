@@ -11,7 +11,7 @@ export function resolvePersistedViewStateSelection(args: {
   editor: EditorAdapter | null;
   isImmersiveMode: boolean;
   sharedReadingSelection: EditorSelection | null;
-}) {
+}): EditorSelection | null {
   if (args.isImmersiveMode && args.sharedReadingSelection) {
     return collapseSelectionToCaret(args.sharedReadingSelection);
   }
@@ -33,6 +33,9 @@ export function resolvePersistedViewStateSelection(args: {
   }
   if (args.sharedReadingSelection) {
     return collapseSelectionToCaret(args.sharedReadingSelection);
+  }
+  if (currentSelection.from === 0 && currentSelection.to === 0) {
+    return null;
   }
   return collapseSelectionToCaret(currentSelection);
 }

@@ -77,7 +77,7 @@ export function applyResetReadwiseBookImportToWorkspace(result: {
       title: currentNode?.title ?? result.title,
       updatedAt: result.updated_at
     };
-    nextNodeViewById[result.node_id] = { scrollTop: 0, selection: { from: 0, to: 0 } };
+    nextNodeViewById[result.node_id] = { scrollTop: 0, selection: null };
 
     const nextNodeOrder = placeNodeAtInboxTop(
       state.nodeOrder.filter((nodeId) => !removedNodeIds.has(nodeId)),

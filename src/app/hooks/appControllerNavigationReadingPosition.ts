@@ -25,10 +25,13 @@ export function useNavigationReadingPosition(
         ? buildAnchorViewState(result.focusAnchor, nodeViewById[result.nodeId], 0, true)
         : nodeViewById[result.nodeId] ?? {
             scrollTop: 0,
-            selection: { from: 0, to: 0 }
+            selection: null
           };
       if (!nextViewState) {
         return false;
+      }
+      if (!nextViewState.selection) {
+        return true;
       }
       requestReadingPositionApply({
         nodeId: result.nodeId,
