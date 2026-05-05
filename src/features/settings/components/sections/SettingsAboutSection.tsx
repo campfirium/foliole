@@ -62,8 +62,13 @@ async function runCreateBackup(
   setStatusMessage('');
   setIsCreatingBackup(true);
   const result = await createDatabaseBackup();
+  if (result && !result.ok) {
+    setStatusMessage(`Backup creation failed: ${result.errorMessage}`);
+    setIsCreatingBackup(false);
+    return;
+  }
   if (!result) {
-    setStatusMessage('Backup creation failed.');
+    setStatusMessage('Backup creation failed: Desktop runtime unavailable.');
     setIsCreatingBackup(false);
     return;
   }
@@ -80,8 +85,13 @@ async function runRestoreBackup(
   setStatusMessage('');
   setRestoringPath(entry.filePath);
   const result = await restoreDatabaseBackup(entry.filePath);
+  if (result && !result.ok) {
+    setStatusMessage(`Backup restore failed: ${result.errorMessage}`);
+    setRestoringPath('');
+    return;
+  }
   if (!result) {
-    setStatusMessage('Backup restore failed.');
+    setStatusMessage('Backup restore failed: Desktop runtime unavailable.');
     setRestoringPath('');
     return;
   }

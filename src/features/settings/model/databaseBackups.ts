@@ -9,6 +9,24 @@ export interface DatabaseBackupEntry {
   updatedAt: string;
 }
 
+export interface DatabaseBackupErrorResult {
+  ok: false;
+  errorMessage: string;
+}
+
+export interface DatabaseBackupSuccessResult {
+  ok: true;
+  value: NativeSqliteBackupResult;
+}
+
+export interface DatabaseRestoreSuccessResult {
+  ok: true;
+  value: NativeSqliteRestoreResult;
+}
+
+export type DatabaseBackupActionResult = DatabaseBackupSuccessResult | DatabaseBackupErrorResult;
+export type DatabaseRestoreActionResult = DatabaseRestoreSuccessResult | DatabaseBackupErrorResult;
+
 type UntypedInvoke = (command: string, args?: unknown) => Promise<unknown>;
 
 function getUntypedRuntimeInvoke(): UntypedInvoke | null {
@@ -68,6 +86,19 @@ function normalizeSqliteRestoreResult(value: unknown): NativeSqliteRestoreResult
   return { sourcePath, targetPath, totalPages, remainingPages };
 }
 
+function readErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message.trim();
+  }
+  if (typeof error === 'object' && error !== null) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message.trim();
+    }
+  }
+  return 'Unknown desktop runtime error.';
+}
+
 export function areDatabaseBackupActionsAvailable() {
   return Boolean(getRuntimeInvoke());
 }
@@ -91,29 +122,37 @@ export async function listDatabaseBackups(): Promise<DatabaseBackupEntry[]> {
   }
 }
 
-export async function createDatabaseBackup(): Promise<NativeSqliteBackupResult | null> {
+export async function createDatabaseBackup(): Promise<DatabaseBackupActionResult | null> {
   const runtimeInvoke = getUntypedRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
   try {
-    return normalizeSqliteBackupResult(await runtimeInvoke(NATIVE_COMMANDS.backupSqliteDatabase, {}));
-  } catch {
-    return null;
+    const result = normalizeSqliteBackupResult(await runtimeInvoke(NATIVE_COMMANDS.backupSqliteDatabase, {}));
+    if (!result) {
+      return { ok: false, errorMessage: 'Backup completed but returned an invalid payload.' };
+    }
+    return { ok: true, value: result };
+  } catch (error) {
+    return { ok: false, errorMessage: readErrorMessage(error) };
   }
 }
 
-export async function restoreDatabaseBackup(sourcePath: string): Promise<NativeSqliteRestoreResult | null> {
+export async function restoreDatabaseBackup(sourcePath: string): Promise<DatabaseRestoreActionResult | null> {
   const runtimeInvoke = getUntypedRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
   try {
-    return normalizeSqliteRestoreResult(
+    const result = normalizeSqliteRestoreResult(
       await runtimeInvoke(NATIVE_COMMANDS.restoreSqliteDatabase, { sourcePath })
     );
-  } catch {
-    return null;
+    if (!result) {
+      return { ok: false, errorMessage: 'Restore completed but returned an invalid payload.' };
+    }
+    return { ok: true, value: result };
+  } catch (error) {
+    return { ok: false, errorMessage: readErrorMessage(error) };
   }
 }
 

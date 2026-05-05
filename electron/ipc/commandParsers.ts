@@ -6,7 +6,7 @@ export function asString(value: unknown, field: string): string {
 }
 
 export function asNullableString(value: unknown, field: string): string | null {
-  if (value === null) {
+  if (value === null || value === undefined) {
     return null;
   }
   return asString(value, field);

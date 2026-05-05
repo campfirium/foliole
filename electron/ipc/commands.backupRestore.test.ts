@@ -80,6 +80,22 @@ it('dispatches sqlite backup command through invoke handler', async () => {
   expect(createApplicationDatabaseBackup).toHaveBeenCalledWith({ destinationPath: '/tmp/backup.db' });
 });
 
+it('dispatches sqlite backup command without destination path override', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'backup_sqlite_database',
+      args: {}
+    })
+  ).resolves.toEqual({
+    sourcePath: '/app/foliole.db',
+    destinationPath: '/app/backups/foliole.db',
+    totalPages: 3,
+    remainingPages: 0
+  });
+
+  expect(createApplicationDatabaseBackup).toHaveBeenCalledWith({ destinationPath: undefined });
+});
+
 it('dispatches sqlite backup listing command through invoke handler', async () => {
   await expect(
     handleInvokeRequest({

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "electron-dist/main.js",
+  "main": "electron-dist/electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

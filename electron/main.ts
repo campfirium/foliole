@@ -24,17 +24,14 @@ import {
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
+import { resolvePreloadScriptPath, resolveRendererIndexPath } from './runtimePaths.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function resolvePreloadPath() {
-  const sourcePreloadPath = path.join(__dirname, '..', 'electron', 'preload.cjs');
-  if (fs.existsSync(sourcePreloadPath)) {
-    return sourcePreloadPath;
-  }
-  return path.join(__dirname, 'preload.cjs');
+  return resolvePreloadScriptPath(__dirname, fs.existsSync);
 }
 
 function resolveRendererUrl() {
@@ -42,7 +39,7 @@ function resolveRendererUrl() {
 }
 
 function resolveRendererFilePath() {
-  return path.join(__dirname, '..', 'dist', 'index.html');
+  return resolveRendererIndexPath(__dirname, fs.existsSync);
 }
 
 function createWindowOptions(): BrowserWindowConstructorOptions {

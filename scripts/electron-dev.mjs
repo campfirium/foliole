@@ -91,7 +91,7 @@ await new Promise((resolve, reject) => {
 const viteState = await startViteWithPortFallback();
 const vite = viteState.viteProc;
 
-const electron = run('npx', ['electron', 'electron-dist/main.js'], {
+const electron = run('npx', ['electron', 'electron-dist/electron/main.js'], {
   env: createElectronLaunchEnv(process.env, viteState.viteUrl)
 });
 

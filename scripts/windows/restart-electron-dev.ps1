@@ -479,7 +479,7 @@ function Restart-ElectronRuntimeOnly {
   try {
     $started = Start-Process `
       -FilePath $runtimePath `
-      -ArgumentList @("electron-dist/main.js") `
+      -ArgumentList @("electron-dist/electron/main.js") `
       -WorkingDirectory $WorkDir `
       -PassThru `
       -RedirectStandardOutput $stdoutLog `
@@ -532,7 +532,7 @@ function Start-ElectronRuntimeOnly {
   try {
     $started = Start-Process `
       -FilePath $runtimePath `
-      -ArgumentList @("electron-dist/main.js") `
+      -ArgumentList @("electron-dist/electron/main.js") `
       -WorkingDirectory $WorkDir `
       -PassThru `
       -RedirectStandardOutput $stdoutLog `
