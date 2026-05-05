@@ -68,8 +68,42 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
   );
 }
 
+function useWorkspaceMainView(props: WorkspaceLayoutProps) {
+  const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
+  const handleOpenImportManagement = () => {
+    setIsImportManagementOpen(true);
+  };
+  const handleOpenNotesView = () => {
+    setIsImportManagementOpen(false);
+    props.onOpenNotesView();
+  };
+  const handleOpenTrashView = () => {
+    setIsImportManagementOpen(false);
+    props.onOpenTrashView();
+  };
+  const handleSelectNode = (nodeId: string) => {
+    setIsImportManagementOpen(false);
+    props.onSelectNode(nodeId);
+  };
+
+  return {
+    handleOpenImportManagement,
+    handleOpenNotesView,
+    handleOpenTrashView,
+    handleSelectNode,
+    isImportManagementOpen
+  };
+}
+
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>('dev');
+  const {
+    handleOpenImportManagement,
+    handleOpenNotesView,
+    handleOpenTrashView,
+    handleSelectNode,
+    isImportManagementOpen
+  } = useWorkspaceMainView(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-right-sidebar-width': `${props.rightSidebarWidth}px`
@@ -97,14 +131,21 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
         isTrashViewOpen={props.isTrashViewOpen}
         listWidth={props.listWidth}
-        onOpenNotesView={props.onOpenNotesView}
-        onOpenTrashView={props.onOpenTrashView}
+        onOpenNotesView={handleOpenNotesView}
+        onOpenTrashView={handleOpenTrashView}
         onSelectRightPanel={handleSelectRightPanel}
         onToggleListVisibility={props.onToggleListVisibility}
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
         rightSidebarWidth={props.rightSidebarWidth}
       />
-      <WorkspaceLayoutGrid activeRightPanelId={activeRightPanelId} documentNodeId={documentNodeId} props={props} />
+      <WorkspaceLayoutGrid
+        activeRightPanelId={activeRightPanelId}
+        documentNodeId={documentNodeId}
+        isImportManagementOpen={isImportManagementOpen}
+        onOpenImportManagement={handleOpenImportManagement}
+        onSelectNode={handleSelectNode}
+        props={props}
+      />
       <SettingsOverlay props={props} />
     </main>
   );
