@@ -42,13 +42,22 @@ function tokenizeTask(task) {
     .match(/[a-z0-9]+/g);
 }
 
-function buildCommitSummary(task) {
-  const tokens = tokenizeTask(task);
-  const ascii = tokens ? tokens.join(' ').trim() : '';
-  if (!ascii || (tokens?.length ?? 0) < 2) {
+const SUBJECT_STOP_WORDS = new Set(['context', 'change', 'intent']);
+
+function buildCommitTopic(task) {
+  const tokens = tokenizeTask(task) ?? [];
+  const filteredTokens = tokens.filter((token) => !SUBJECT_STOP_WORDS.has(token));
+  const ascii = (filteredTokens.length > 0 ? filteredTokens : tokens).join(' ').trim();
+
+  if (!ascii) {
     return 'agent loop checkpoint';
   }
+
   return ascii.slice(0, 60).trim();
+}
+
+function buildCommitSummary(task) {
+  return buildCommitTopic(task);
 }
 
 function escapeBodyValue(value) {
@@ -77,7 +86,7 @@ export async function getNextCommitSequence(cwd) {
 export async function buildCommitMessage(cwd, task) {
   const sequence = await getNextCommitSequence(cwd);
   const summary = buildCommitSummary(task);
-  const normalizedTask = escapeBodyValue(task || 'current repository task');
+  const normalizedTask = escapeBodyValue(buildCommitTopic(task || 'current repository task'));
 
   return [
     `${sequence} ${summary}`,

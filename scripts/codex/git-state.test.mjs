@@ -1,15 +1,17 @@
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { buildCommitMessage, commitTrackedChanges, getNextCommitSequence, runCommand } from './git-state.mjs';
 
 const tempDirs = [];
+const tempRoot = path.join(process.cwd(), '.tmp-vitest-git-state');
 
 async function createRepo() {
-  const repoDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-git-state-'));
+  await mkdir(tempRoot, { recursive: true });
+  const repoDir = await mkdtemp(path.join(tempRoot, 'foliole-git-state-'));
   tempDirs.push(repoDir);
   await runCommand('git', ['init'], { cwd: repoDir });
   await runCommand('git', ['config', 'user.name', 'Codex Test'], { cwd: repoDir });
@@ -32,9 +34,31 @@ describe('git-state commitTrackedChanges', () => {
 
     const message = await buildCommitMessage(repoDir, 'Adjust platform bridge');
     expect(message).toContain('000136 adjust platform bridge');
-    expect(message).toContain('context: agent loop completed Adjust platform bridge.');
-    expect(message).toContain('change: apply the staged code and test updates for Adjust platform bridge.');
+    expect(message).toContain('context: agent loop completed adjust platform bridge.');
+    expect(message).toContain('change: apply the staged code and test updates for adjust platform bridge.');
     expect(message).toContain('intent: keep automated progress traceable with repository-standard commit notes.');
+  });
+
+  it('keeps auto commit notes in english for mixed-language tasks', async () => {
+    const repoDir = await createRepo();
+    await writeFile(path.join(repoDir, 'tracked.txt'), 'seed\n');
+    await runCommand('git', ['add', 'tracked.txt'], { cwd: repoDir });
+    await runCommand('git', ['commit', '-m', '000135 prior subject', '-m', 'context: seed.', '-m', 'change: seed.', '-m', 'intent: seed.'], { cwd: repoDir });
+
+    const message = await buildCommitMessage(
+      repoDir,
+      '修正 agent loop 自动提交备注：对齐 `commit-note` 规范，生成 6 位编号英文 subject 和 `context/change/intent` 三行正文，而不是 `auto(task): ...`。'
+    );
+
+    const [subject, , ...bodyLines] = message.split('\n');
+    expect(subject).toMatch(/^\d{6} [a-z0-9 ]+$/);
+    expect(message).not.toContain('auto(task):');
+    expect(message).not.toMatch(/[\u4e00-\u9fff]/);
+    expect(bodyLines).toEqual([
+      expect.stringMatching(/^context: [ -~]+\.$/),
+      expect.stringMatching(/^change: [ -~]+\.$/),
+      expect.stringMatching(/^intent: [ -~]+\.$/)
+    ]);
   });
 
   it('commits non-.lab changes without tripping ignored .lab paths', async () => {
