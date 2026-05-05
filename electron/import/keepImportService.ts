@@ -9,6 +9,9 @@ import {
   type DirectoryImportSourceDescriptor
 } from '../ipc/importSourcePipeline.js';
 
+import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
+import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
+
 type KeepImportPreviewStatus = NativeKeepImportPreviewResult['entries'][number]['status'];
 
 interface KeepImportPreviewEntry {
@@ -21,6 +24,7 @@ export interface KeepImportRuleConfig {
   directoryPath: string;
   highlightPolicy: ImportHighlightPolicy;
   ruleId: string;
+  sourceType?: 'generic' | 'readwise';
 }
 
 function isBlockedByDeletedNode(ruleId: string, sourcePath: string) {
@@ -149,7 +153,11 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
   if (blockedState.blocked) {
     const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
     persistKeepImportState(config, source, blockedRecord, 'blocked_deleted');
-    return;
+    return {
+      detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+      failureReason: blockedRecord.failureReason,
+      importStatus: 'blocked_deleted' as const
+    };
   }
   try {
     const record = runPreparedImport(
@@ -164,6 +172,18 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
       record,
       record.resultStatus === 'degraded' ? 'degraded' : record.duplicateSemantic === 'duplicate' ? 'duplicate' : 'imported'
     );
+    const importStatus: 'degraded' | 'duplicate' | 'imported' =
+      record.resultStatus === 'degraded' ? 'degraded' : record.duplicateSemantic === 'duplicate' ? 'duplicate' : 'imported';
+    return {
+      detail:
+        importStatus === 'duplicate'
+          ? 'File content was already imported and no new node was created.'
+          : importStatus === 'degraded'
+            ? record.degradedReason ?? 'Imported with degraded content.'
+            : 'Imported successfully.',
+      failureReason: record.failureReason,
+      importStatus
+    };
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown keep import failure';
     const record = recordPreparedImportFailure(
@@ -171,22 +191,65 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
       failureReason
     );
     persistKeepImportState(config, source, record, 'failed');
+    return {
+      detail: failureReason,
+      failureReason,
+      importStatus: 'failed' as const
+    };
   }
 }
 
 export async function runKeepImportRule(config: KeepImportRuleConfig) {
-  const discoveredSources = await discoverDirectoryImportSources(config.directoryPath);
-  for (const source of discoveredSources) {
-    const preview = await classifySource(config, source);
-    if (preview.status === 'unchanged' || preview.status === 'failed' || preview.status === 'blocked_deleted') {
-      if (preview.status === 'blocked_deleted') {
-        const importedAt = new Date().toISOString();
-        const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
-        const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
-        persistKeepImportState(config, source, blockedRecord, 'blocked_deleted');
+  if (shouldLogReadwiseScan(config.sourceType)) {
+    await logReadwiseScanStarted({ directoryPath: config.directoryPath, ruleId: config.ruleId });
+  }
+  try {
+    const discoveredSources = await discoverDirectoryImportSources(config.directoryPath);
+    const runEntries: KeepImportRunEntry[] = [];
+    for (const source of discoveredSources) {
+      const preview = await classifySource(config, source);
+      if (preview.status === 'unchanged' || preview.status === 'failed' || preview.status === 'blocked_deleted') {
+        if (preview.status === 'blocked_deleted') {
+          const importedAt = new Date().toISOString();
+          const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+          const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
+          persistKeepImportState(config, source, blockedRecord, 'blocked_deleted');
+        }
+        runEntries.push({
+          action: 'skipped',
+          detail: preview.detail,
+          failureReason: preview.status === 'failed' ? preview.detail : preview.status === 'blocked_deleted' ? 'blocked_deleted' : null,
+          importStatus: preview.status === 'blocked_deleted' ? 'blocked_deleted' : null,
+          previewStatus: preview.status,
+          sourcePath: source.sourceName
+        });
+        continue;
       }
-      continue;
+      const result = await runKeepImportSource(config, source);
+      runEntries.push({
+        action: 'import_attempted',
+        detail: result.detail,
+        failureReason: result.failureReason,
+        importStatus: result.importStatus,
+        previewStatus: preview.status,
+        sourcePath: source.sourceName
+      });
     }
-    await runKeepImportSource(config, source);
+    if (shouldLogReadwiseScan(config.sourceType)) {
+      await logReadwiseRunCompleted({
+        directoryPath: config.directoryPath,
+        entries: runEntries,
+        ruleId: config.ruleId
+      });
+    }
+  } catch (error) {
+    if (shouldLogReadwiseScan(config.sourceType)) {
+      await logReadwiseScanFailed({
+        directoryPath: config.directoryPath,
+        error,
+        ruleId: config.ruleId
+      });
+    }
+    throw error;
   }
 }

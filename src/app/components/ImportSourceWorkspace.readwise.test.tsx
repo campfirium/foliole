@@ -151,6 +151,7 @@ it('saves the readwise reader setup only after preview and enable', async () => 
           readwiseSources: expect.arrayContaining([
             expect.objectContaining({
               id: 'draft-import-source-1',
+              keepState: 'enabled',
               primaryPath: '/tmp/chosen-folder/Full Document Contents/Articles',
               highlightPath: '/tmp/chosen-folder/Articles'
             })

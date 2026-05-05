@@ -11,7 +11,7 @@ const { resolveAppPaths } = vi.hoisted(() => ({
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths }));
 
-import { logDirectoryImportCompleted } from './importRunLogger.js';
+import { logDirectoryImportCompleted, logReadwiseScanCompleted, logReadwiseScanStarted } from './importRunLogger.js';
 
 const tempRoots: string[] = [];
 const completedImportResult = {
@@ -97,6 +97,95 @@ async function createTempRoot(prefix: string) {
   return root;
 }
 
+function buildReadwiseCompletedPayload() {
+  return {
+    blockedCount: 1,
+    directoryPath: '/tmp/readwise/Full Document Contents/Articles',
+    discoveredCount: 3,
+    entries: [
+      {
+        action: 'import_attempted' as const,
+        detail: 'Imported successfully.',
+        failureReason: null,
+        importStatus: 'imported' as const,
+        previewStatus: 'new' as const,
+        sourcePath: 'article-a.md'
+      },
+      {
+        action: 'skipped' as const,
+        detail: 'No file changes detected since the last keep scan.',
+        failureReason: null,
+        importStatus: null,
+        previewStatus: 'unchanged' as const,
+        sourcePath: 'article-b.md'
+      },
+      {
+        action: 'skipped' as const,
+        detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+        failureReason: 'blocked_deleted',
+        importStatus: 'blocked_deleted' as const,
+        previewStatus: 'blocked_deleted' as const,
+        sourcePath: 'article-c.md'
+      }
+    ],
+    failedCount: 0,
+    importedCount: 1,
+    ruleId: 'draft-import-source-1',
+    skippedCount: 2
+  };
+}
+
+function expectReadwiseLogLines(lines: string[]) {
+  expect(lines).toHaveLength(2);
+  expect(JSON.parse(lines[0] ?? '')).toEqual({
+    event: 'readwise_scan_started',
+    payload: {
+      directory_path: '/tmp/readwise/Full Document Contents/Articles',
+      rule_id: 'draft-import-source-1'
+    },
+    timestamp: '2026-03-25T09:00:00.000Z'
+  });
+  expect(JSON.parse(lines[1] ?? '')).toEqual({
+    event: 'readwise_scan_completed',
+    payload: {
+      blocked_count: 1,
+      directory_path: '/tmp/readwise/Full Document Contents/Articles',
+      discovered_count: 3,
+      entries: [
+        {
+          action: 'import_attempted',
+          detail: 'Imported successfully.',
+          failure_reason: null,
+          import_status: 'imported',
+          preview_status: 'new',
+          source_path: 'article-a.md'
+        },
+        {
+          action: 'skipped',
+          detail: 'No file changes detected since the last keep scan.',
+          failure_reason: null,
+          import_status: null,
+          preview_status: 'unchanged',
+          source_path: 'article-b.md'
+        },
+        {
+          action: 'skipped',
+          detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+          failure_reason: 'blocked_deleted',
+          import_status: 'blocked_deleted',
+          preview_status: 'blocked_deleted',
+          source_path: 'article-c.md'
+        }
+      ],
+      failed_count: 0,
+      imported_count: 1,
+      rule_id: 'draft-import-source-1',
+      skipped_count: 2
+    },
+    timestamp: '2026-03-25T09:00:00.000Z'
+  });
+}
+
 beforeEach(async () => {
   vi.clearAllMocks();
   const appDataDir = await createTempRoot('import-run-logger');
@@ -146,4 +235,22 @@ it('removes import log files older than the last seven days when appending', asy
   await expect(fs.stat(path.join(importLogDir, 'import-2026-03-17.log'))).rejects.toThrow();
   await expect(fs.readFile(path.join(importLogDir, 'import-2026-03-18.log'), 'utf8')).resolves.toBe('keep\n');
   await expect(fs.stat(path.join(importLogDir, 'import-2026-03-24.log'))).resolves.toBeTruthy();
+});
+
+it('writes readwise scan events into a dedicated per-day log file', async () => {
+  await logReadwiseScanStarted(
+    {
+      directoryPath: '/tmp/readwise/Full Document Contents/Articles',
+      ruleId: 'draft-import-source-1'
+    },
+    new Date('2026-03-25T09:00:00.000Z')
+  );
+  await logReadwiseScanCompleted(
+    buildReadwiseCompletedPayload(),
+    new Date('2026-03-25T09:00:00.000Z')
+  );
+
+  const logFile = path.join(resolveAppPaths().app_log_dir, 'import', 'readwise-2026-03-25.log');
+  const lines = (await fs.readFile(logFile, 'utf8')).trim().split('\n');
+  expectReadwiseLogLines(lines);
 });

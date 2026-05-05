@@ -93,3 +93,33 @@ it('blocks keep auto recreation after the imported node is deleted', async () =>
     last_status: 'blocked_deleted'
   });
 });
+
+it('writes a dedicated readwise scan log with per-file decisions', async () => {
+  const sourceDir = path.join(tempRoot, 'readwise-articles');
+  await fs.mkdir(sourceDir, { recursive: true });
+  await fs.writeFile(path.join(sourceDir, 'article.md'), '# Imported\nBody\n', 'utf8');
+
+  await runKeepImportRule({
+    directoryPath: sourceDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  });
+
+  const logFile = path.join(mockedAppDataDir, 'logs', 'import', `readwise-${new Date().toISOString().slice(0, 10)}.log`);
+  const lines = (await fs.readFile(logFile, 'utf8')).trim().split('\n');
+  const completedEvent = JSON.parse(lines.at(-1) ?? '{}') as {
+    event?: string;
+    payload?: { discovered_count?: number; entries?: Array<{ action?: string; source_path?: string }> };
+  };
+
+  expect(lines.length).toBeGreaterThanOrEqual(2);
+  expect(completedEvent.event).toBe('readwise_scan_completed');
+  expect(completedEvent.payload?.discovered_count).toBe(1);
+  expect(completedEvent.payload?.entries).toEqual([
+    expect.objectContaining({
+      action: 'import_attempted',
+      source_path: 'article.md'
+    })
+  ]);
+});

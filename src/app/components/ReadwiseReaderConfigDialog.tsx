@@ -6,6 +6,14 @@ import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { getArticlesSource, ReadwiseDirectorySection, ReadwiseParserFields, ReadwisePreviewDialog } from './ReadwiseReaderSetupParts';
 import { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 
+function enableReadwiseImportSource(sources: DraftImportSource[]) {
+  return sources.map((source) =>
+    source.kind === 'articles' && source.highlightPath.trim() && source.primaryPath.trim()
+      ? { ...source, keepState: 'enabled' as const }
+      : source
+  );
+}
+
 function ReadwiseConfigDialogSurface(props: {
   canPreview: boolean;
   draft: ReturnType<typeof useReadwiseSetupDraft>;
@@ -86,7 +94,7 @@ export function ReadwiseReaderConfigDialog(props: {
           props.onSave({
             config: { ...draft.draftConfig, validatedAt: new Date().toISOString() },
             readwiseRootPath: draft.draftRootPath,
-            readwiseSources: draft.draftSources
+            readwiseSources: enableReadwiseImportSource(draft.draftSources)
           });
           draft.closePreview();
           props.onOpenChange(false);

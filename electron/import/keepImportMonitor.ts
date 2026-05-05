@@ -1,19 +1,13 @@
 import fs from 'node:fs';
 
-import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
-import type { ImportManagerSettings, ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
+import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { type KeepImportConfig, type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
 import { runKeepImportRule } from './keepImportService.js';
 
 interface KeepImportWatchHandle {
   close(): void;
-}
-
-interface KeepImportConfig {
-  adapterConfigId: string;
-  directoryPath: string;
-  highlightPolicy: ImportHighlightPolicy;
 }
 
 interface KeepImportMonitorDeps {
@@ -22,10 +16,6 @@ interface KeepImportMonitorDeps {
   logError(message: string, error: unknown): void;
   runCycle(config: KeepImportConfig): Promise<void>;
   watch(rootPath: string, listener: () => void): KeepImportWatchHandle;
-}
-
-interface KeepImportSourceConfig extends KeepImportConfig {
-  sourceId: string;
 }
 
 interface KeepImportSourceState {
@@ -67,11 +57,12 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
     logError(message, error) {
       console.error(message, error);
     },
-  async runCycle(config) {
+    async runCycle(config) {
       await runKeepImportRule({
         directoryPath: config.directoryPath,
         highlightPolicy: config.highlightPolicy,
-        ruleId: config.adapterConfigId
+        ruleId: config.adapterConfigId,
+        sourceType: config.sourceType
       });
     },
     watch: watchKeepImportDirectory
@@ -99,37 +90,6 @@ function clearScheduledRun(state: KeepImportSourceState) {
 function closeWatcher(state: KeepImportSourceState) {
   state.watcher?.close();
   state.watcher = null;
-}
-
-function normalizeKeepDirectoryPath(path: string) {
-  return path.trim();
-}
-
-function toKeepImportConfig(
-  source: ImportManagerSourceDraft,
-  highlightPolicy: ImportHighlightPolicy
-): KeepImportSourceConfig | null {
-  const directoryPath = normalizeKeepDirectoryPath(source.primaryPath);
-  if (source.keepState !== 'enabled' || !directoryPath) {
-    return null;
-  }
-  return {
-    adapterConfigId: source.id,
-    directoryPath,
-    highlightPolicy,
-    sourceId: source.id
-  };
-}
-
-export function resolveKeepImportConfigs(settings: ImportManagerSettings): KeepImportSourceConfig[] {
-  return [
-    ...settings.sources
-      .map((source) => toKeepImportConfig(source, 'reference_only'))
-      .filter((config): config is KeepImportSourceConfig => config !== null),
-    ...settings.readwiseSources
-      .map((source) => toKeepImportConfig(source, 'reference_only'))
-      .filter((config): config is KeepImportSourceConfig => config !== null)
-  ];
 }
 
 async function ensureWatcher(
