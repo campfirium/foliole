@@ -183,18 +183,13 @@ function Start-EmulatorProcess {
     [string]$Timezone
   )
 
-  $logDir = Join-Path $env:TEMP "foliole-android-emulator"
-  New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-  $stdoutLog = Join-Path $logDir "emulator.stdout.log"
-  $stderrLog = Join-Path $logDir "emulator.stderr.log"
-  Set-Content -Path $stdoutLog -Value "" -Encoding utf8
-  Set-Content -Path $stderrLog -Value "" -Encoding utf8
+  $cmdPath = if ($env:ComSpec) { $env:ComSpec } else { "cmd.exe" }
+  $quotedEmulatorPath = '"' + ($EmulatorPath -replace '"', '""') + '"'
+  $quotedAvdName = '"' + ($AvdName -replace '"', '""') + '"'
+  $quotedTimezone = '"' + ($Timezone -replace '"', '""') + '"'
+  $launchCommand = "start ""Foliole Android Emulator"" /min $quotedEmulatorPath -avd $quotedAvdName -no-snapshot-load -timezone $quotedTimezone"
 
-  Start-Process `
-    -FilePath $EmulatorPath `
-    -ArgumentList "-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone `
-    -RedirectStandardOutput $stdoutLog `
-    -RedirectStandardError $stderrLog
+  Start-Process -FilePath $cmdPath -ArgumentList "/d", "/c", $launchCommand -WindowStyle Hidden
 }
 
 if ([string]::IsNullOrWhiteSpace($AvdName)) {

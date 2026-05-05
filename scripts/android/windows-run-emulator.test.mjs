@@ -23,16 +23,16 @@ describe('windows-run-emulator.ps1', () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
     expect(script).toContain('function Start-EmulatorProcess');
-    expect(script).toContain('"-avd", $AvdName, "-no-snapshot-load", "-timezone", $Timezone');
+    expect(script).toContain('-avd $quotedAvdName -no-snapshot-load -timezone $quotedTimezone');
     expect(script).toContain('Start-EmulatorProcess -EmulatorPath $emulatorPath -AvdName $AvdName -Timezone $Timezone');
   });
 
-  it('detaches emulator logs from the preview process pipe', async () => {
+  it('detaches the emulator process from the preview process tree', async () => {
     const script = await readFile(WINDOWS_RUN_EMULATOR_SCRIPT, 'utf8');
 
-    expect(script).toContain('$logDir = Join-Path $env:TEMP "foliole-android-emulator"');
-    expect(script).toContain('-RedirectStandardOutput $stdoutLog');
-    expect(script).toContain('-RedirectStandardError $stderrLog');
+    expect(script).toContain('$cmdPath = if ($env:ComSpec) { $env:ComSpec } else { "cmd.exe" }');
+    expect(script).toContain('start ""Foliole Android Emulator"" /min');
+    expect(script).toContain('Start-Process -FilePath $cmdPath -ArgumentList "/d", "/c", $launchCommand -WindowStyle Hidden');
   });
 
   it('passes an explicit zoneinfo timezone to the emulator', async () => {
