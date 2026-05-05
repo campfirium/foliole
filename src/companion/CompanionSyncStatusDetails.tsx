@@ -96,6 +96,13 @@ function resolveLastSyncRow(props: {
       valueTone: 'error' as const
     };
   }
+  if (latestEvent?.status === 'skipped') {
+    return {
+      detail: latestEvent.message,
+      value: formatClock(latestEvent.occurred_at),
+      valueTone: 'default' as const
+    };
+  }
   return {
     detail: props.lastSyncedAt ? 'Completed automatically' : 'No completed sync yet',
     value: formatClock(props.lastSyncedAt),
@@ -131,12 +138,15 @@ function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: Nat
       ? 'Earlier sync attempt did not complete'
       : 'Sync did not complete';
   }
+  if (event.status === 'skipped') {
+    return event.message;
+  }
   return `${formatEventStatus(event.status)} ${event.message}`;
 }
 
 function isSupersededFailure(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
   return event.status === 'failed' && laterEvents.some((laterEvent) => (
-    laterEvent.status === 'completed' &&
+    (laterEvent.status === 'completed' || laterEvent.status === 'skipped') &&
     laterEvent.endpoint_url === event.endpoint_url
   ));
 }

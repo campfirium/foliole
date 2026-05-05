@@ -130,4 +130,56 @@ describe('CompanionSyncPanel connected state', () => {
     expect(oldFailure).toBeInTheDocument();
     expect(oldFailure.className).not.toContain('text-error');
   });
+
+  it('shows a healthy backlog sync pass without claiming strict completion', () => {
+    render(
+      <CompanionSyncPanel
+        {...createConnectedProps()}
+        syncEvents={[
+          {
+            endpoint_url: 'http://10.0.2.2:38641',
+            id: 'backlog-event',
+            message: 'Some topic bodies are still being cached.',
+            occurred_at: '2026-04-29T02:24:44.000Z',
+            status: 'skipped'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Last sync')).toBeInTheDocument();
+    expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
+    expect(screen.queryByText('No completed sync yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Completed automatically')).not.toBeInTheDocument();
+  });
+
+  it('shows older failures as neutral history after a later backlog sync pass', () => {
+    render(
+      <CompanionSyncPanel
+        {...createConnectedProps()}
+        page="syncActivity"
+        syncEvents={[
+          {
+            endpoint_url: 'http://10.0.2.2:38641',
+            id: 'backlog-event',
+            message: 'Some topic bodies are still being cached.',
+            occurred_at: '2026-04-29T02:24:44.000Z',
+            status: 'skipped'
+          },
+          {
+            endpoint_url: 'http://10.0.2.2:38641',
+            id: 'failed-event',
+            message: 'Desktop sync timed out while fetching content blobs.',
+            occurred_at: '2026-04-29T02:18:33.000Z',
+            status: 'failed'
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Some topic bodies are still being cached.')).toBeInTheDocument();
+    const oldFailure = screen.getByText('Earlier sync attempt did not complete');
+    expect(oldFailure).toBeInTheDocument();
+    expect(oldFailure.className).not.toContain('text-error');
+  });
 });
