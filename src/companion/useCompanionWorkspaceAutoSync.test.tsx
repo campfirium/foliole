@@ -11,6 +11,14 @@ describe('useForegroundAutoSync', () => {
     vi.doMock('../shared/platform/companionWorkspaceSyncBridge', () => ({
       isNativeAndroidCompanionRuntime: () => isNativeRuntime
     }));
+    const foregroundHandlers: Array<() => void> = [];
+    const subscribeNativeAppForeground = vi.fn(async (handler: () => void) => {
+      foregroundHandlers.push(handler);
+      return vi.fn();
+    });
+    vi.doMock('../shared/platform/appLifecycle', () => ({
+      subscribeNativeAppForeground
+    }));
     const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
     const tryForegroundAutoSync = vi.fn(async () => undefined);
 
@@ -33,11 +41,11 @@ describe('useForegroundAutoSync', () => {
         tryForegroundAutoSync
       )
     );
-    return tryForegroundAutoSync;
+    return { foregroundHandlers, subscribeNativeAppForeground, tryForegroundAutoSync };
   }
 
   it('stays quiet outside the native companion runtime', async () => {
-    const tryForegroundAutoSync = await renderAutoSyncHook(false);
+    const { tryForegroundAutoSync } = await renderAutoSyncHook(false);
 
     expect(tryForegroundAutoSync).not.toHaveBeenCalled();
   });
@@ -45,18 +53,19 @@ describe('useForegroundAutoSync', () => {
   it('runs once on native foreground entry', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_000);
 
-    const tryForegroundAutoSync = await renderAutoSyncHook(true);
+    const { subscribeNativeAppForeground, tryForegroundAutoSync } = await renderAutoSyncHook(true);
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+    expect(subscribeNativeAppForeground).toHaveBeenCalledWith(expect.any(Function));
   });
 
-  it('runs again when the app returns to foreground after the interval', async () => {
+  it('runs again when the native app returns to foreground after the interval', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
-    const tryForegroundAutoSync = await renderAutoSyncHook(true);
+    const { foregroundHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
     now.mockReturnValue(31_000);
 
     await act(async () => {
-      window.dispatchEvent(new Event('focus'));
+      foregroundHandlers[0]?.();
     });
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);

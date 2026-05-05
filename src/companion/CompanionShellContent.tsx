@@ -42,7 +42,7 @@ function ReviewFallback(props: {
         <>
           <p>No article has been synced to this device yet.</p>
           <p className="mt-3">
-            Open device sync when you want to reconnect to a paired device and pull the latest snapshot by hand.
+            Connect this device with desktop, then reopen the app to sync automatically.
           </p>
         </>
       )}
@@ -81,11 +81,8 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   return (
     <RecentArticleList
       currentArticleId={props.surface.readableArticle?.nodeId ?? null}
-      endpointUrl={props.workspaceSync.state.endpoint_url}
       onSelectArticle={props.surface.handleSelectRecentArticle}
-      onSyncNow={(endpointUrl) => void props.workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined)}
       recentArticles={props.surface.recentArticles}
-      status={props.workspaceSync.status}
     />
   );
 }

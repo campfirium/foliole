@@ -252,7 +252,7 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByText('Sync log')).toBeInTheDocument();
     expect(screen.getByText('Android companion (Android)')).toBeInTheDocument();
     expect(screen.getByText('No sync records yet.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page');
   });

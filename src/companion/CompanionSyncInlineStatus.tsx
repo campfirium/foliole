@@ -1,50 +1,19 @@
-import { useEffect, useState } from 'react';
-
-import { loadCompanionPendingSyncSummary } from '../shared/platform/companionSyncObjects';
-
-import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
-
-function buildPendingLabel(pendingCount: number) {
-  return pendingCount === 1 ? '1 change waiting to sync.' : `${pendingCount} changes waiting to sync.`;
-}
-
-function usePendingSyncCount(workspaceSync: WorkspaceSyncApi) {
-  const [pendingCount, setPendingCount] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadCompanionPendingSyncSummary()
-      .then((summary) => {
-        if (!cancelled) setPendingCount(summary.pendingCount);
-      })
-      .catch(() => {
-        if (!cancelled) setPendingCount(0);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSync.state, workspaceSync.status]);
-
-  return pendingCount;
-}
 
 export function CompanionSyncInlineStatus(props: {
   workspaceSync: WorkspaceSyncApi;
 }) {
   const { workspaceSync } = props;
-  const pendingCount = usePendingSyncCount(workspaceSync);
-  const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state);
   const isSyncing = workspaceSync.status === 'syncing';
 
-  if (!isSyncing && !workspaceSync.error && pendingCount <= 0) {
+  if (!isSyncing && !workspaceSync.error) {
     return null;
   }
 
-  const title = isSyncing ? 'Syncing with desktop' : workspaceSync.error ? 'Sync needs attention' : 'Pending sync';
-  const detail = workspaceSync.error ?? (isSyncing ? 'Keeping this device and desktop up to date.' : buildPendingLabel(pendingCount));
+  const title = isSyncing ? 'Syncing with desktop' : 'Sync needs attention';
+  const detail = workspaceSync.error ?? 'Keeping this device and desktop up to date.';
 
   return (
     <section
@@ -56,15 +25,6 @@ export function CompanionSyncInlineStatus(props: {
           <p className="font-medium text-foreground">{title}</p>
           <p className="mt-1 leading-5 text-companion-text-secondary">{detail}</p>
         </div>
-        {endpointUrl && !isSyncing ? (
-          <button
-            className="shrink-0 rounded-full border border-border bg-bg-subtle px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-canvas"
-            onClick={() => void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined)}
-            type="button"
-          >
-            Sync now
-          </button>
-        ) : null}
       </div>
     </section>
   );

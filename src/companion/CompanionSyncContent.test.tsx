@@ -123,7 +123,7 @@ describe('CompanionSyncContent paired flow', () => {
     expect(screen.getByText('Android Emulator (Android)')).toBeInTheDocument();
     expect(screen.getByText('Sync log')).toBeInTheDocument();
     expect(screen.getByText('Sync completed.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 
   it('automatically completes pairing after desktop approval', async () => {

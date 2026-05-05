@@ -79,7 +79,6 @@ function SyncStatusCard(props: {
 
 function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'pairingState' | 'status' | 'syncEvents'> & {
   endpointUrl: string;
-  onSyncNow(): void;
 }) {
   const isSyncing = props.status === 'syncing';
   return (
@@ -94,11 +93,6 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'p
         status={props.status}
         syncEvents={props.syncEvents}
       />
-      <div className="mt-5">
-        <PrimaryAction disabled={isSyncing} onClick={props.onSyncNow}>
-          {isSyncing ? 'Syncing...' : 'Sync now'}
-        </PrimaryAction>
-      </div>
     </SyncStatusCard>
   );
 }
@@ -186,7 +180,6 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           <ConnectedState
             endpointUrl={endpointUrl}
             lastSyncedAt={props.lastSyncedAt}
-            onSyncNow={() => void props.onPull(endpointUrl)}
             pairingState={props.pairingState}
             status={props.status}
             syncEvents={props.syncEvents}

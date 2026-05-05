@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { isNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceSyncBridge';
 
@@ -48,19 +49,18 @@ export function useForegroundAutoSync(
       });
     }
 
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        runForegroundSyncCheck();
-      }
-    }
-
     runForegroundSyncCheck();
-    window.addEventListener('focus', runForegroundSyncCheck);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    let unsubscribe: (() => void) | null = null;
+    void subscribeNativeAppForeground(runForegroundSyncCheck).then((nextUnsubscribe) => {
+      if (cancelled) {
+        nextUnsubscribe();
+        return;
+      }
+      unsubscribe = nextUnsubscribe;
+    });
     return () => {
       cancelled = true;
-      window.removeEventListener('focus', runForegroundSyncCheck);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      unsubscribe?.();
     };
   }, [setError, setReadableArticle, setState, setStatus, state, tryForegroundAutoSync]);
 }

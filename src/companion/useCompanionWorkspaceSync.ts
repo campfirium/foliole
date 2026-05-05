@@ -53,7 +53,7 @@ async function syncDesktopStreams(args: {
 }) {
   const startedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
-    message: 'Manual sync started.',
+    message: 'Sync started.',
     status: 'started'
   });
   args.setState(startedState);
