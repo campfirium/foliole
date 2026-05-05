@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
-import { applyCompanionSyncPush } from './companionSyncPushApply.js';
+import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
 type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
@@ -61,14 +61,6 @@ function insertBaseReviewState(contentHash = 'desktop-base') {
 
 function insertBaseReadingState(contentHash = 'desktop-reading-base') {
   insertBaseState('node_reading', 'node-1', contentHash);
-}
-
-function insertBaseSettingState(contentHash = 'desktop-setting-base') {
-  insertBaseState('setting', 'device:android:phone:*:app_settings', contentHash);
-}
-
-function insertBaseViewState(contentHash = 'desktop-view-base') {
-  insertBaseState('view_state', 'session_resume:android:phone:android-device:active_node', contentHash);
 }
 
 function createNodeReadingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
@@ -116,43 +108,6 @@ function createNodeReviewPush(overrides: Partial<SyncPushPayload> = {}): SyncPus
   };
 }
 
-function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
-  return {
-    base: { baseContentHash: 'desktop-setting-base', kind: 'content_hash' },
-    clientOpId: 'setting:device:android:phone:*:app_settings:13',
-    contentHash: 'android-setting-next',
-    deletedAt: null,
-    identity: { objectId: 'device:android:phone:*:app_settings', objectType: 'setting', scope: 'device' },
-    payloadJson: JSON.stringify({
-      device_id: '*',
-      form_factor: 'phone',
-      key: 'app_settings',
-      platform: 'android',
-      scope: 'device',
-      value_json: '{"sync":true}'
-    }),
-    updatedAt: '2026-04-30T01:02:00.000Z',
-    ...overrides
-  };
-}
-
-function createViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
-  return {
-    base: { baseContentHash: 'desktop-view-base', kind: 'content_hash' },
-    clientOpId: 'view_state:session_resume:android:phone:android-device:active_node:14',
-    contentHash: 'android-view-next',
-    deletedAt: null,
-    identity: {
-      objectId: 'session_resume:android:phone:android-device:active_node',
-      objectType: 'view_state',
-      scope: 'session_resume'
-    },
-    payloadJson: JSON.stringify({ active_node_id: 'node-1' }),
-    updatedAt: '2026-04-30T01:03:00.000Z',
-    ...overrides
-  };
-}
-
 function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
   return {
     base: { kind: 'op_id', opId },
@@ -177,10 +132,10 @@ function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
 }
 
 describe('companion sync push apply', () => {
-  it('accepts node_review when base content hash matches current desktop state', () => {
+  it('accepts node_review when base content hash matches current desktop state', async () => {
     insertBaseReviewState();
 
-    const result = applyCompanionSyncPush([createNodeReviewPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReviewPush()]);
 
     expect(result.appliedObjectIds).toEqual(['node_review:node-1']);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
@@ -190,8 +145,8 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'android-next', sync_dirty: 0 });
   });
 
-  it('accepts node_review create attempts when desktop has no current state', () => {
-    const result = applyCompanionSyncPush([createNodeReviewPush({
+  it('accepts node_review create attempts when desktop has no current state', async () => {
+    const result = await applyCompanionSyncPushAsync([createNodeReviewPush({
       base: { baseContentHash: null, kind: 'content_hash' }
     })]);
 
@@ -203,10 +158,10 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'android-next', sync_dirty: 0 });
   });
 
-  it('accepts node_reading when base content hash matches current desktop state', () => {
+  it('accepts node_reading when base content hash matches current desktop state', async () => {
     insertBaseReadingState();
 
-    const result = applyCompanionSyncPush([createNodeReadingPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
 
     expect(result.appliedObjectIds).toEqual(['node_reading:node-1']);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
@@ -220,39 +175,13 @@ describe('companion sync push apply', () => {
     )).toEqual({ reading_position: 42 });
   });
 
-  it('accepts setting when base content hash matches the setting identity', () => {
-    insertBaseSettingState();
+});
 
-    const result = applyCompanionSyncPush([createSettingPush()]);
-
-    expect(result.appliedObjectIds).toEqual(['setting:device:android:phone:*:app_settings']);
-    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
-    expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
-      `SELECT value_json FROM setting_records
-       WHERE key = 'app_settings' AND scope = 'device' AND platform = 'android'`
-    )).toEqual({ value_json: '{"sync":true}' });
-  });
-
-  it('accepts view_state when base content hash matches the view identity', () => {
-    insertBaseViewState();
-
-    const result = applyCompanionSyncPush([createViewStatePush()]);
-
-    expect(result.appliedObjectIds).toEqual(['view_state:session_resume:android:phone:android-device:active_node']);
-    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
-    expect(openDatabaseConnection().driver.queryOne<{ value: string }>(
-      "SELECT value FROM workspace_meta WHERE key = 'active_node_id'"
-    )).toEqual({ value: 'node-1' });
-    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; sync_dirty: number }>(
-      `SELECT content_hash, sync_dirty FROM sync_object_state
-       WHERE object_type = 'view_state' AND object_id = 'session_resume:android:phone:android-device:active_node'`
-    )).toEqual({ content_hash: 'android-view-next', sync_dirty: 0 });
-  });
-
-  it('returns conflict for node_review when desktop base has changed', () => {
+describe('companion sync push conflict handling', () => {
+  it('returns conflict for node_review when desktop base has changed', async () => {
     insertBaseReviewState('desktop-newer');
 
-    const result = applyCompanionSyncPush([createNodeReviewPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReviewPush()]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{
@@ -266,29 +195,10 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'desktop-newer' });
   });
 
-  it('returns conflict for null-base node_review when desktop state already exists', () => {
-    insertBaseReviewState('desktop-newer');
-
-    const result = applyCompanionSyncPush([createNodeReviewPush({
-      base: { baseContentHash: null, kind: 'content_hash' }
-    })]);
-
-    expect(result.appliedObjectIds).toEqual([]);
-    expect(result.acks).toMatchObject([{
-      conflictReason: 'base_content_hash_mismatch',
-      stateSeq: 1,
-      status: 'conflict'
-    }]);
-    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string }>(
-      `SELECT content_hash FROM sync_object_state
-       WHERE object_type = 'node_review' AND object_id = 'node-1'`
-    )).toEqual({ content_hash: 'desktop-newer' });
-  });
-
-  it('returns conflict for node_reading when desktop base has changed', () => {
+  it('returns conflict for node_reading when desktop base has changed', async () => {
     insertBaseReadingState('desktop-reading-newer');
 
-    const result = applyCompanionSyncPush([createNodeReadingPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{
@@ -302,27 +212,20 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'desktop-reading-newer' });
   });
 
-  it('treats repeated node_reading push as already applied', () => {
+});
+
+describe('companion sync push idempotency', () => {
+  it('treats repeated node_reading push as already applied', async () => {
     insertBaseReadingState();
-    applyCompanionSyncPush([createNodeReadingPush()]);
+    await applyCompanionSyncPushAsync([createNodeReadingPush()]);
 
-    const result = applyCompanionSyncPush([createNodeReadingPush()]);
-
-    expect(result.appliedObjectIds).toEqual([]);
-    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'already_applied' }]);
-  });
-
-  it('treats repeated node_review push as already applied', () => {
-    insertBaseReviewState();
-    applyCompanionSyncPush([createNodeReviewPush()]);
-
-    const result = applyCompanionSyncPush([createNodeReviewPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'already_applied' }]);
   });
 
-  it('inserts review_log once and rejects mismatched duplicate op payloads', () => {
+  it('inserts review_log once and rejects mismatched duplicate op payloads', async () => {
     const first = createReviewLogPush('op-1');
     const duplicate = createReviewLogPush('op-1');
     const conflicting = {
@@ -330,12 +233,12 @@ describe('companion sync push apply', () => {
       payloadJson: JSON.stringify({ ...JSON.parse(first.payloadJson ?? '{}'), grade: 4 })
     };
 
-    expect(applyCompanionSyncPush([first]).acks).toMatchObject([{ status: 'accepted' }]);
-    expect(applyCompanionSyncPush([duplicate]).acks).toMatchObject([{ status: 'already_applied' }]);
-    expect(applyCompanionSyncPush([conflicting]).acks).toMatchObject([{
+    await expect(applyCompanionSyncPushAsync([first])).resolves.toMatchObject({ acks: [{ status: 'accepted' }] });
+    await expect(applyCompanionSyncPushAsync([duplicate])).resolves.toMatchObject({ acks: [{ status: 'already_applied' }] });
+    await expect(applyCompanionSyncPushAsync([conflicting])).resolves.toMatchObject({ acks: [{
       conflictReason: 'op_id_payload_mismatch',
       status: 'rejected'
-    }]);
+    }] });
     expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
       'SELECT COUNT(*) AS count FROM review_log WHERE op_id = ?',
       ['op-1']

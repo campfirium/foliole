@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
-import { applyCompanionSyncPush } from './companionSyncPushApply.js';
+import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
 type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
@@ -73,19 +73,19 @@ function createViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPush
 }
 
 describe('companion sync push identity validation', () => {
-  it('rejects malformed setting identity before applying payload', () => {
+  it('rejects malformed setting identity before applying payload', async () => {
     insertBaseState('setting', 'device', 'desktop-setting-base');
 
-    const result = applyCompanionSyncPush([createSettingPush()]);
+    const result = await applyCompanionSyncPushAsync([createSettingPush()]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'invalid_setting_push', status: 'rejected' }]);
   });
 
-  it('rejects malformed view_state identity before applying payload', () => {
+  it('rejects malformed view_state identity before applying payload', async () => {
     insertBaseState('view_state', 'session_resume:android:phone', 'desktop-view-base');
 
-    const result = applyCompanionSyncPush([createViewStatePush()]);
+    const result = await applyCompanionSyncPushAsync([createViewStatePush()]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'invalid_view_state_push', status: 'rejected' }]);
