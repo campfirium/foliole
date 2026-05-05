@@ -1,10 +1,9 @@
+import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 
 import { getRuntimeInvoke } from './bridge';
 import { logRuntimeWarning } from './runtimeLogging';
-
-const ATTACHMENT_RESOURCE_SCHEME = 'attachment://';
 
 function isAttachmentResourceResolution(value: unknown): value is NativeAttachmentResourceResolution {
   if (!value || typeof value !== 'object') {
@@ -16,20 +15,7 @@ function isAttachmentResourceResolution(value: unknown): value is NativeAttachme
 }
 
 export function parseAttachmentId(resourceUrl: string) {
-  if (!resourceUrl.startsWith(ATTACHMENT_RESOURCE_SCHEME)) {
-    return null;
-  }
-
-  const encodedAttachmentId = resourceUrl.slice(ATTACHMENT_RESOURCE_SCHEME.length).trim();
-  if (!encodedAttachmentId) {
-    return null;
-  }
-
-  try {
-    return decodeURIComponent(encodedAttachmentId);
-  } catch {
-    return encodedAttachmentId;
-  }
+  return parseAssetMarkdownUrl(resourceUrl);
 }
 
 export async function resolveRuntimeAttachmentResource(resourceUrl: string) {

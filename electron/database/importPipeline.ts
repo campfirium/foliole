@@ -7,6 +7,7 @@ import {
   runPreparedImport as runPreparedImportViaDriver
 } from '../../lib/core/database/index.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
+import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
 
@@ -109,7 +110,11 @@ function importLocalImageAttachment(nodeId: string, sourcePath: string) {
     );
     const attachment = createAttachmentRecordIfNeeded(hash, sourcePath, mimeType, sourceBytes.byteLength);
     createNodeAttachmentLink({ attachmentId: attachment.id, nodeId, role: IMAGE_ATTACHMENT_ROLE });
-    return { attachmentId: attachment.id, status: 'imported' as const };
+    return {
+      attachmentId: attachment.id,
+      originalName: attachment.originalName,
+      status: 'imported' as const
+    };
   } catch {
     return { message: `Local image unavailable: ${sourcePath}`, status: 'error' as const };
   }
@@ -138,7 +143,7 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   const nodeId = record.nodeId;
   const degradedMessages: string[] = [];
   const rewrittenContent = rewriteInlineImageReferences(prepared.content, (reference) => {
-    if (isRemoteImageDestination(reference.destination) || reference.destination.startsWith('attachment://')) {
+    if (isRemoteImageDestination(reference.destination) || reference.destination.startsWith('asset://')) {
       return reference.fullMatch;
     }
 
@@ -157,7 +162,7 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
     }
 
     const suffix = reference.suffix ? ` ${reference.suffix}` : '';
-    return `![${reference.altText}](attachment://${importResult.attachmentId}${suffix})`;
+    return `![${reference.altText}](${buildAssetMarkdownUrl(importResult.attachmentId, importResult.originalName)}${suffix})`;
   });
 
   if (rewrittenContent === prepared.content && degradedMessages.length === 0) {

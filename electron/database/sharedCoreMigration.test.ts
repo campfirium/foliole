@@ -119,7 +119,7 @@ it('migrates legacy attachment ids to content hashes and rewrites node reference
     }
   ]);
   expect(connection.sqlite.prepare(`SELECT content FROM nodes WHERE id = ?`).get('node-1')).toEqual({
-    content: '![Cover](attachment://hash-1)\nSecond use: attachment://hash-1'
+    content: '![Cover](asset://hash-1.png)\nSecond use: asset://hash-1.png'
   });
   expect(
     (connection.sqlite.prepare(`PRAGMA table_info(attachments)`).all() as Array<{ name: string }>).map((column) => column.name)

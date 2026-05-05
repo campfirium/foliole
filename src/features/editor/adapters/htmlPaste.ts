@@ -1,6 +1,7 @@
 import type { EditorView } from '@codemirror/view';
 
 import { convertHtmlToMarkdownCompatible } from '../../../../lib/core/import/htmlToMarkdownCompatible';
+import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { importClipboardImageAttachment } from '../../../shared/platform/attachmentImports';
 
 import { bypassAnchorStructureGuard } from './anchorStructureGuard';
@@ -76,7 +77,7 @@ function replacePlaceholder(view: EditorView, placeholder: string, content: stri
 function createMarkdownImageLine(attachmentId: string, originalName: string) {
   const baseName = originalName.replace(/\.[^.]+$/, '').trim();
   const altText = baseName.length > 0 ? baseName : 'Pasted image';
-  return `![${altText}](attachment://${attachmentId})`;
+  return `![${altText}](${buildAssetMarkdownUrl(attachmentId, originalName)})`;
 }
 
 export function handleClipboardImagePaste(clipboard: ClipboardLike | null, view: EditorView, nodeId: string | null) {

@@ -1,7 +1,7 @@
+import { ASSET_MARKDOWN_SCHEME } from '../../../../lib/platform/assetMarkdownUrl';
 import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
 
 const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
-const ATTACHMENT_RESOURCE_SCHEME = 'attachment://';
 
 export interface MarkdownImageMatch {
   from: number;
@@ -37,7 +37,7 @@ function isRemoteImageSource(value: string) {
 }
 
 function isInternalImageSource(value: string) {
-  return value.startsWith(ATTACHMENT_RESOURCE_SCHEME);
+  return value.startsWith(ASSET_MARKDOWN_SCHEME);
 }
 
 function createImageElement(alt: string, source: string) {

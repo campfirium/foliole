@@ -81,7 +81,7 @@ it('keeps epub text visible, skips embedded image attachments, and replaces them
   expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
   expect(nodeRow.content).toContain('Outro paragraph after the image.');
   expect(nodeRow.content).not.toContain('![Cover](OPS/images/cover.png)');
-  expect(nodeRow.content).not.toContain('attachment://');
+  expect(nodeRow.content).not.toContain('asset://');
   expect(attachmentCount).toBe(0);
   expect(attachmentLinkCount).toBe(0);
 });

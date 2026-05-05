@@ -1,3 +1,5 @@
+import { ASSET_MARKDOWN_SCHEME } from '../../platform/assetMarkdownUrl.js';
+
 const MARKDOWN_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
 
 function parseMarkdownImageTarget(target: string) {
@@ -44,7 +46,7 @@ export function degradeUnmanagedEpubImages(content: string) {
       return fullMatch;
     }
     if (
-      parsedTarget.destination.startsWith('attachment://') ||
+      parsedTarget.destination.startsWith(ASSET_MARKDOWN_SCHEME) ||
       isRemoteImageDestination(parsedTarget.destination)
     ) {
       return fullMatch;

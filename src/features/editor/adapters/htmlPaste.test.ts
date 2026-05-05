@@ -116,7 +116,7 @@ describe('handleClipboardImagePaste', () => {
       2,
       expect.objectContaining({
         annotations: expect.anything(),
-        changes: { from: 0, to: placeholder.length, insert: '![clip](attachment://hash-1)' }
+        changes: { from: 0, to: placeholder.length, insert: '![clip](asset://hash-1.png)' }
       })
     );
     randomUUIDSpy.mockRestore();

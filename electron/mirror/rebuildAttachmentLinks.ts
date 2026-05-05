@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import type { NativeMirrorAttachmentLinkRebuildResult } from '../../lib/platform/nativeUtilityContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
@@ -77,8 +78,9 @@ function formatMarkdownDestination(rawDestination: string, nextPath: string) {
 }
 
 function resolveCurrentAttachmentPath(destination: string, assetBasenames: Set<string>, assetsDir: string) {
-  if (destination.startsWith('attachment://')) {
-    return resolveMirrorAttachmentPath(destination.slice('attachment://'.length));
+  const attachmentId = parseAssetMarkdownUrl(destination);
+  if (attachmentId) {
+    return resolveMirrorAttachmentPath(attachmentId);
   }
 
   if (!destination.startsWith('file://') && !isAbsolutePathLike(destination)) {

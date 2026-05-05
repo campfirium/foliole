@@ -1,3 +1,5 @@
+import { buildAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
+
 export interface DatabaseMigrationTarget {
   exec(sql: string): void;
   pragma(command: string, options?: { simple?: boolean }): unknown;
@@ -203,8 +205,8 @@ function migrateAttachmentIdsToHashes(sqlite: DatabaseMigrationTarget) {
   sqlite.exec('CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)');
 
   const legacyAttachments = sqlite
-    .prepare('SELECT id, hash FROM attachments_legacy')
-    .all() as Array<{ id: string; hash: string }>;
+    .prepare('SELECT id, hash, original_name FROM attachments_legacy')
+    .all() as Array<{ hash: string; id: string; original_name: string | null }>;
 
   const updateNodeContent = sqlite.prepare(
     `UPDATE nodes
@@ -214,7 +216,7 @@ function migrateAttachmentIdsToHashes(sqlite: DatabaseMigrationTarget) {
 
   for (const attachment of legacyAttachments) {
     const oldReference = `attachment://${attachment.id}`;
-    const newReference = `attachment://${attachment.hash}`;
+    const newReference = buildAssetMarkdownUrl(attachment.hash, attachment.original_name);
     updateNodeContent.run(oldReference, newReference, `%${oldReference}%`);
   }
 

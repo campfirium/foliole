@@ -76,7 +76,7 @@ async function createMarkdownImportFixture(rootDir: string) {
 
 it('routes local markdown images into attachments, leaves remote links unchanged, and degrades missing files visibly', async () => {
   const sourceRoot = await fs.mkdtemp(path.join(tempRoot, 'markdown-images-'));
-  const { absoluteImagePath, sourceMarkdownPath } = await createMarkdownImportFixture(sourceRoot);
+  const { sourceMarkdownPath } = await createMarkdownImportFixture(sourceRoot);
   const imported = runPreparedImport(
     createPreparedDesktopTextImport({
       content: await fs.readFile(sourceMarkdownPath, 'utf8'),
@@ -101,17 +101,18 @@ it('routes local markdown images into attachments, leaves remote links unchanged
     degraded_reason: imported.degradedReason,
     result_status: 'degraded'
   });
-  expect(nodeRow.content).toContain('![Cover](attachment://');
-  expect(nodeRow.content).toContain('![Chart](attachment://');
-  expect(nodeRow.content).toContain('![Absolute](attachment://');
-  expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](attachment://');
-  expect(nodeRow.content).toContain('![Chart alias](attachment://');
+  expect(nodeRow.content).toContain('![Cover](asset://');
+  expect(nodeRow.content).toContain('![Chart](asset://');
+  expect(nodeRow.content).toContain('![Absolute](asset://');
+  expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](asset://');
+  expect(nodeRow.content).toContain('![Chart alias](asset://');
   expect(nodeRow.content).toContain('![[Linked note]]');
   expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
   expect(nodeRow.content).toContain('[Missing local image:');
-  expect(nodeRow.content).not.toContain('cover.png)');
-  expect(nodeRow.content).not.toContain('images/chart.webp)');
-  expect(nodeRow.content).not.toContain(`${absoluteImagePath})`);
+  expect(nodeRow.content).toContain('asset://');
+  expect(nodeRow.content).toContain('.png)');
+  expect(nodeRow.content).toContain('.webp)');
+  expect(nodeRow.content).toContain('.jpg)');
   expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
   expect(attachments).toHaveLength(4);
   expect(new Set(attachments.map((entry) => entry.attachment.originalName))).toEqual(
