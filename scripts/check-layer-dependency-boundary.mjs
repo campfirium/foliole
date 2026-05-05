@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const SCAN_DIRS = ['src/app', 'src/companion', 'src/features', 'src/store', 'src/shared/testing'];
 const CORE_SCAN_DIRS = ['lib/core'];
+const PLATFORM_SCAN_DIRS = ['src/shared/platform'];
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 const TEST_FILE_PATTERN = /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/;
 const BANNED_IMPORT_PATTERN =
@@ -15,6 +16,7 @@ const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
 const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/(?:bridge|runtimeInvoke)$/;
 const RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/[^/]*Bridge$/;
+const PLATFORM_COMPAT_IMPORT_SOURCE_PATTERN = /^\.\/[^/]*(?:Bridge|BridgePayloads)$/;
 const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
 
 function resolveRepoRoot() {
@@ -56,6 +58,16 @@ function isRuntimeBridgeBoundaryImport(source) {
   return RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN.test(normalizedSource);
 }
 
+function isPlatformCompatibilityImport(source) {
+  const normalizedSource = source.replace(/\\/g, '/');
+  return PLATFORM_COMPAT_IMPORT_SOURCE_PATTERN.test(normalizedSource);
+}
+
+function isPlatformCompatibilityFile(relativeFile) {
+  const basename = path.basename(relativeFile);
+  return /(?:Bridge|BridgePayloads)\.[cm]?[jt]sx?$/.test(basename);
+}
+
 function isCorePlatformImport(source) {
   const normalizedSource = source.replace(/\\/g, '/').replace(/^(?:\.\.\/)+/, '');
   return CORE_PLATFORM_IMPORT_SOURCE_PATTERN.test(normalizedSource);
@@ -95,11 +107,20 @@ function inspectFile(filePath, repoRoot) {
       }
     }
   }
+  if (relativeFile.startsWith('src/shared/platform/') && !isPlatformCompatibilityFile(relativeFile)) {
+    for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
+      if (isPlatformCompatibilityImport(match[2] ?? '')) {
+        violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'platform-compat-import' });
+      }
+    }
+  }
   return violations;
 }
 
 export function inspectLayerDependencyBoundary({ repoRoot = resolveRepoRoot() } = {}) {
-  const scannedFiles = [...SCAN_DIRS, ...CORE_SCAN_DIRS].flatMap((dir) => collectSourceFiles(path.join(repoRoot, dir)));
+  const scannedFiles = [...SCAN_DIRS, ...CORE_SCAN_DIRS, ...PLATFORM_SCAN_DIRS].flatMap((dir) =>
+    collectSourceFiles(path.join(repoRoot, dir))
+  );
   const violations = scannedFiles.flatMap((filePath) => inspectFile(filePath, repoRoot));
   return {
     ok: violations.length === 0,

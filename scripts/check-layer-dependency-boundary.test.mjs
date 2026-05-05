@@ -91,6 +91,37 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('blocks active shared platform modules from importing compatibility bridge modules', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/shared/platform/workspaceRuntimeRepository.ts', `
+      import { loadRuntimeImportOverview } from './importBridge';
+      import { toRuntimeTextImportResult } from './importBridgePayloads';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        { file: 'src/shared/platform/workspaceRuntimeRepository.ts', line: 1, kind: 'platform-compat-import' },
+        { file: 'src/shared/platform/workspaceRuntimeRepository.ts', line: 2, kind: 'platform-compat-import' }
+      ])
+    );
+  });
+
+  it('allows shared platform compatibility modules to re-export runtime modules', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/shared/platform/importBridge.ts', `
+      export { loadRuntimeImportOverview } from './importOverviewRuntimeRepository';
+    `);
+    await writeFixtureFile(repoRoot, 'src/shared/platform/importBridgePayloads.ts', `
+      export { toRuntimeTextImportResult } from './importRuntimePayloads';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.ok).toBe(true);
+  });
+
   it('blocks upper production code from importing bridge-named runtime modules', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'src/app/hooks/usePdfImports.ts', `
