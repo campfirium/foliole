@@ -1,3 +1,5 @@
+import { FileText, PanelLeft, Trash2 } from 'lucide-react';
+
 import { AppIconButton, AppToolbar } from '../../shared/ui';
 
 interface WorkspaceTopToolbarProps {
@@ -15,59 +17,29 @@ export function WorkspaceTopToolbar({
 }: WorkspaceTopToolbarProps) {
   return (
     <AppToolbar aria-label="Workspace top toolbar" className="min-h-[40px] border-b border-border bg-[#f6f6f6] px-3">
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          icon={<ToggleSidebarIcon />}
+          icon={<PanelLeft aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Toggle left panel"
           onClick={onToggleListVisibility}
         />
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
           data-active={!isTrashViewOpen}
-          icon={<NotesIcon />}
+          icon={<FileText aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Notes"
           onClick={onOpenNotesView}
         />
         <AppIconButton
           className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
           data-active={isTrashViewOpen}
-          icon={<TrashIcon />}
+          icon={<Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Trash"
           onClick={onOpenTrashView}
         />
       </div>
       <div className="flex-1" />
     </AppToolbar>
-  );
-}
-
-function ToggleSidebarIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M2.5 3h11v10h-11z" fill="none" stroke="currentColor" strokeWidth="1.05" />
-      <path d="M5.2 3v10" fill="none" stroke="currentColor" strokeWidth="1.05" />
-      <path d="M3.9 8h1.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-    </svg>
-  );
-}
-
-function NotesIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M3 2.5h10v11H3z" fill="none" stroke="currentColor" strokeWidth="1.05" />
-      <path d="M5 5h6M5 8h6M5 11h4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16">
-      <path d="M3.5 4.5h9" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path d="M6 2.8h4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-      <path d="M5 4.5v8h6v-8" fill="none" stroke="currentColor" strokeWidth="1.05" />
-      <path d="M7 6.5v4M9 6.5v4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.05" />
-    </svg>
   );
 }

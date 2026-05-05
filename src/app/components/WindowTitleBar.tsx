@@ -1,7 +1,10 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { Copy, FileText, Minus, PanelLeft, Square, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 
 type TauriRuntimeWindow = Window & { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown };
+const TITLEBAR_ICON_SIZE = 16;
+const TITLEBAR_ICON_STROKE = 1.75;
 
 function isTauriRuntime() {
   if (typeof window === 'undefined') {
@@ -107,7 +110,7 @@ export function WindowTitleBar({
               onClick={onToggleListVisibility}
               type="button"
             >
-              <ToggleSidebarIcon />
+              <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
             </button>
           </div>
           <div className="window-titlebar-leading-secondary">
@@ -118,7 +121,7 @@ export function WindowTitleBar({
               onClick={onOpenNotesView}
               type="button"
             >
-              <NotesIcon />
+              <FileText aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
             </button>
             <button
               aria-label="Trash"
@@ -127,7 +130,7 @@ export function WindowTitleBar({
               onClick={onOpenTrashView}
               type="button"
             >
-              <TrashIcon />
+              <Trash2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
             </button>
           </div>
         </div>
@@ -141,7 +144,7 @@ export function WindowTitleBar({
           onClick={handleMinimize}
           type="button"
         >
-          <MinimizeIcon />
+          <Minus aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
         </button>
         <button
           aria-label={isMaximized ? 'Restore' : 'Maximize'}
@@ -150,7 +153,11 @@ export function WindowTitleBar({
           onClick={handleToggleMaximize}
           type="button"
         >
-          {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+          {isMaximized ? (
+            <Copy aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          ) : (
+            <Square aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          )}
         </button>
         <button
           aria-label="Close"
@@ -159,72 +166,9 @@ export function WindowTitleBar({
           onClick={handleClose}
           type="button"
         >
-          <CloseIcon />
+          <X aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
         </button>
       </div>
     </header>
-  );
-}
-
-function ToggleSidebarIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-leading-icon" viewBox="0 0 16 16">
-      <path d="M2.5 3h11v10h-11z" />
-      <path d="M5.2 3v10" />
-      <path d="M3.9 8h1.6" />
-    </svg>
-  );
-}
-
-function NotesIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-leading-icon" viewBox="0 0 16 16">
-      <path d="M3 2.5h10v11H3z" />
-      <path d="M5 5h6M5 8h6M5 11h4" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-leading-icon" viewBox="0 0 16 16">
-      <path d="M3.5 4.5h9" />
-      <path d="M6 2.8h4" />
-      <path d="M5 4.5v8h6v-8" />
-      <path d="M7 6.5v4M9 6.5v4" />
-    </svg>
-  );
-}
-
-function MinimizeIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-icon" viewBox="0 0 10 10">
-      <path d="M1 5.5h8" />
-    </svg>
-  );
-}
-
-function MaximizeIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-icon" viewBox="0 0 10 10">
-      <rect height="6" width="6" x="2" y="2" />
-    </svg>
-  );
-}
-
-function RestoreIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-icon" viewBox="0 0 10 10">
-      <path d="M3 1.5h5v5" />
-      <path d="M2 3.5h5v5H2z" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg aria-hidden="true" className="window-titlebar-icon" viewBox="0 0 10 10">
-      <path d="M2 2l6 6M8 2L2 8" />
-    </svg>
   );
 }
