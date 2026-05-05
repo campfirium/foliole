@@ -23,6 +23,6 @@ it('renders tooltip content with shared floating surface baseline', () => {
   }
   expect(tooltip.className).toContain('rounded-lg');
   expect(tooltip.className).toContain('shadow-none');
-  expect(tooltip.className).toContain('border-border');
+  expect(tooltip.className).toContain('border-[var(--app-floating-border-color)]');
   expect(tooltip.className).toContain('bg-[var(--app-floating-surface-bg)]');
 });

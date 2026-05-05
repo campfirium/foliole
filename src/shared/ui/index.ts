@@ -25,7 +25,13 @@ export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
 export { AppListHeader, AppListItem, AppListSectionHeader, AppListSurface } from './ListSurface';
 export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
-export { ObjectConfigHeader, ObjectConfigPathButton, ObjectConfigPathControl, ObjectConfigRow, ObjectConfigTable } from './ObjectConfigTable';
+export {
+  ObjectConfigHeader,
+  ObjectConfigPathButton,
+  ObjectConfigPathControl,
+  ObjectConfigRow,
+  ObjectConfigTable
+} from './ObjectConfigTable';
 export { AppPanel } from './Panel';
 export { InspectorSection } from './InspectorSection';
 export { ReviewActionBar } from './ReviewActionBar';
@@ -38,8 +44,23 @@ export {
 export { AppStatusBadge } from './StatusBadge';
 export { AppToolbar } from './Toolbar';
 export { ToolbarActionGroup } from './ToolbarActionGroup';
-export { AppTooltip, AppTooltipContent, AppTooltipPortal, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
-export { appFloatingSurfaceClassName } from './FloatingSurface';
+export {
+  AppTooltip,
+  AppTooltipContent,
+  AppTooltipPortal,
+  AppTooltipProvider,
+  AppTooltipTrigger
+} from './Tooltip';
+export {
+  appFloatingEmptyStateClassName,
+  appFloatingInputClassName,
+  appFloatingItemClassName,
+  appFloatingListClassName,
+  appFloatingMetaBadgeClassName,
+  appFloatingOverlayClassName,
+  appFloatingSectionHeaderClassName,
+  appFloatingSurfaceClassName
+} from './FloatingSurface';
 export {
   SETTINGS_ACTION_TABLE_EXTERNAL_LIBRARY_COLUMNS_CLASS_NAME,
   SETTINGS_ACTION_TABLE_IMPORT_SOURCE_COLUMNS_CLASS_NAME,

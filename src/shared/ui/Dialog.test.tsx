@@ -20,7 +20,7 @@ it('renders dialog content with shared floating surface baseline', () => {
   expect(dialog).toBeInTheDocument();
   expect(dialog.className).toContain('rounded-lg');
   expect(dialog.className).toContain('shadow-panel');
-  expect(dialog.className).toContain('border-border');
+  expect(dialog.className).toContain('border-[var(--app-floating-border-color)]');
   expect(dialog.className).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(screen.getByLabelText('Demo overlay')).toBeInTheDocument();
   expect(screen.getByText('Body copy')).toBeInTheDocument();

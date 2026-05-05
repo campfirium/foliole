@@ -57,7 +57,6 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     keywords: ['import', 'management', 'sources', 'readwise', 'inbox']
   },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
-  { id: APP_COMMAND_IDS.openNotes, title: 'Show Topics', section: 'Workspace', keywords: ['notes', 'topics', 'exit', 'trash'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Workspace', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   {

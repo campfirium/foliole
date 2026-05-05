@@ -1,0 +1,45 @@
+import { useEffect, useRef } from 'react';
+
+import { appFloatingInputClassName } from '../../shared/ui';
+
+import { handleFloatingPaletteInputKeyDown } from './floatingPaletteKeyboard';
+
+interface FloatingPaletteInputProps {
+  inputLabel: string;
+  onClose: () => void;
+  onQueryChange: (value: string) => void;
+  onRunActive: () => void;
+  onSetActiveIndex: (update: (current: number) => number) => void;
+  placeholder: string;
+  query: string;
+  totalItems: number;
+}
+
+export function FloatingPaletteInput(props: FloatingPaletteInputProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <input
+      aria-label={props.inputLabel}
+      className={appFloatingInputClassName()}
+      onChange={(event) => props.onQueryChange(event.target.value)}
+      onKeyDown={(event) =>
+        handleFloatingPaletteInputKeyDown(
+          event,
+          props.totalItems,
+          props.onClose,
+          props.onRunActive,
+          props.onSetActiveIndex
+        )
+      }
+      placeholder={props.placeholder}
+      ref={inputRef}
+      type="text"
+      value={props.query}
+    />
+  );
+}

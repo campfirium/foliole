@@ -1,7 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../platform/storage';
 
-const RECENT_COMMAND_LIMIT = 12;
+const RECENT_COMMAND_LIMIT = 1;
 
 function sanitizeRecentCommands(value: unknown): string[] {
   if (!Array.isArray(value)) {
