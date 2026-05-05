@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
+  applySyncPackSettingObjectsWithDbPort,
   isConsumableSyncPackSyncObject,
   loadSyncPackSyncObjectsWithDbPort
 } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
@@ -39,6 +40,45 @@ it('filters view state records to the current mobile device', () => {
     object_id: 'device:android:phone:*:theme',
     object_type: 'setting'
   }, 'device-1')).toBe(true);
+});
+
+it('applies setting payload records from sync objects', async () => {
+  const runs: Array<{ params: unknown[]; sql: string }> = [];
+  const port = {
+    query: vi.fn(async () => [
+      {
+        content_hash: 'hash-setting',
+        deleted_at: null,
+        object_id: 'device:android:phone:*:theme',
+        object_type: 'setting',
+        payload_json: JSON.stringify({ key: 'theme', scope: 'device', value_json: '{"mode":"dark"}' }),
+        updated_at: '2026-05-04T02:00:00.000Z'
+      }
+    ]),
+    run: vi.fn(async (sql: string, params: unknown[] = []) => {
+      runs.push({ params, sql });
+      return { changes: 1, lastInsertRowId: null };
+    })
+  } as unknown as DbPort;
+
+  await expect(applySyncPackSettingObjectsWithDbPort(port, {
+    deviceId: 'device-1',
+    incomingAlias: 'incoming'
+  })).resolves.toBe(1);
+  expect(runs).toEqual([{
+    params: [
+      'device',
+      'android',
+      'phone',
+      '*',
+      'theme',
+      '{"mode":"dark"}',
+      'hash-setting',
+      '2026-05-04T02:00:00.000Z',
+      null
+    ],
+    sql: expect.stringContaining('INSERT INTO setting_records')
+  }]);
 });
 
 function syncObjectRow(objectType: string, objectId: string) {

@@ -77,7 +77,7 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
       deviceId: 'android-device'
     })).resolves.toMatchObject({
       applied: true,
-      appliedObjectCount: 1,
+      appliedObjectCount: 2,
       fromStateSeq: 0,
       toStateSeq: 1
     });
@@ -103,7 +103,11 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
   });
   expect(connection.sqlite.prepare(
     `SELECT object_id FROM sync_object_state WHERE object_type = 'setting' AND object_id = 'setting-1'`
-  ).get()).toBeUndefined();
+  ).get()).toEqual({ object_id: 'setting-1' });
+  expect(connection.sqlite.prepare(
+    `SELECT value_json FROM setting_records
+     WHERE scope = 'device' AND platform = 'android' AND form_factor = 'phone' AND device_id = '*' AND key = 'theme'`
+  ).get()).toEqual({ value_json: '{"mode":"dark"}' });
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 0 });
 });
 
@@ -121,8 +125,18 @@ function createIncomingPack(filePath: string) {
     ).run();
     db.prepare(
       `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('setting', 'setting-1', 1, 'hash-setting-1', '2026-05-04T01:00:00.000Z', NULL)`
+       VALUES ('setting', 'setting-1', 2, 'hash-setting-1', '2026-05-04T01:01:00.000Z', NULL)`
     ).run();
+    db.prepare(
+      `INSERT INTO sync_objects (object_type, object_id, content_hash, payload_json, updated_at, deleted_at)
+       VALUES ('setting', 'setting-1', 'hash-setting-1', ?, '2026-05-04T01:01:00.000Z', NULL)`
+    ).run(JSON.stringify({
+      form_factor: 'phone',
+      key: 'theme',
+      platform: 'android',
+      scope: 'device',
+      value_json: '{"mode":"dark"}'
+    }));
     db.prepare(
       `INSERT INTO nodes (
          id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash,
