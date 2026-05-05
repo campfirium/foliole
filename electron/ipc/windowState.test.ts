@@ -17,6 +17,9 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { initializeDatabase } from '../database/migrate.js';
+
 import { loadWindowState, saveWindowState } from './windowState.js';
 
 let tempRoot = '';
@@ -24,9 +27,11 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-window-state-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  initializeDatabase();
 });
 
 afterEach(async () => {
+  closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
@@ -52,18 +57,17 @@ it('persists and loads maximized window state', async () => {
 });
 
 it('returns null for malformed payload', async () => {
-  const statePath = path.join(mockedAppDataDir, 'settings', 'window-state.json');
-  await fs.mkdir(path.dirname(statePath), { recursive: true });
-  await fs.writeFile(
-    statePath,
-    JSON.stringify({
-      width: '1400',
-      height: 900,
-      isMaximized: true
-    }),
-    'utf8'
-  );
+  openDatabaseConnection().sqlite
+    .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+    .run(
+      'window_state',
+      JSON.stringify({
+        width: '1400',
+        height: 900,
+        isMaximized: true
+      }),
+      '2026-03-06T00:00:00.000Z'
+    );
 
   await expect(loadWindowState()).resolves.toBeNull();
 });
-

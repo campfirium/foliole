@@ -1,12 +1,8 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
 import type { BrowserWindow } from 'electron';
 
-import { resolveAppPaths } from './paths.js';
+import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
-const WINDOW_STATE_FILE = 'window-state.json';
-const WINDOW_STATE_NAMESPACE = 'settings';
+const WINDOW_STATE_KEY = 'window_state';
 
 export interface PersistedWindowState {
   x?: number;
@@ -44,34 +40,8 @@ function normalizeWindowStatePayload(payload: unknown): PersistedWindowState | n
   };
 }
 
-async function resolveWindowStatePath(): Promise<string> {
-  const storageDir = path.join(resolveAppPaths().app_data_dir, WINDOW_STATE_NAMESPACE);
-  await fs.mkdir(storageDir, { recursive: true });
-  return path.join(storageDir, WINDOW_STATE_FILE);
-}
-
-async function readFileIfExists(filePath: string): Promise<string | null> {
-  try {
-    return await fs.readFile(filePath, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
-}
-
 export async function loadWindowState(): Promise<PersistedWindowState | null> {
-  const statePath = await resolveWindowStatePath();
-  const payload = await readFileIfExists(statePath);
-  if (!payload) {
-    return null;
-  }
-  try {
-    return normalizeWindowStatePayload(JSON.parse(payload) as unknown);
-  } catch {
-    return null;
-  }
+  return normalizeWindowStatePayload(loadJsonSetting(WINDOW_STATE_KEY));
 }
 
 function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
@@ -86,8 +56,5 @@ function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
 }
 
 export async function saveWindowState(window: BrowserWindow): Promise<void> {
-  const statePath = await resolveWindowStatePath();
-  const payload = toWindowStateFromRuntime(window);
-  await fs.writeFile(statePath, JSON.stringify(payload), 'utf8');
+  saveJsonSetting(WINDOW_STATE_KEY, toWindowStateFromRuntime(window));
 }
-

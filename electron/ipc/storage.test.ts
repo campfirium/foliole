@@ -17,6 +17,9 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { initializeDatabase } from '../database/migrate.js';
+
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 
 let tempRoot = '';
@@ -24,13 +27,15 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-storage-test-'));
   mockedAppDataDir = path.join(tempRoot, 'config', 'Foliole');
+  initializeDatabase();
 });
 
 afterEach(async () => {
+  closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('persists app settings state into native app data file', async () => {
+it('persists app settings state into sqlite settings table', async () => {
   await saveAppSettingsState({
     'foliole-ui-font-preset': 'inter',
     'foliole-interface-font-size': '18'
@@ -40,20 +45,33 @@ it('persists app settings state into native app data file', async () => {
     'foliole-ui-font-preset': 'inter',
     'foliole-interface-font-size': '18'
   });
+
+  const row = openDatabaseConnection().sqlite
+    .prepare('SELECT key, value FROM settings WHERE key = ?')
+    .get('app_settings') as { key: string; value: string } | undefined;
+  expect(row?.key).toBe('app_settings');
+});
+
+it('returns empty object when sqlite payload is malformed json', async () => {
+  openDatabaseConnection().sqlite
+    .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+    .run('app_settings', '{bad-json', '2026-03-06T00:00:00.000Z');
+
+  await expect(loadAppSettingsState()).resolves.toEqual({});
 });
 
 it('filters malformed app settings payload values', async () => {
-  const settingsPath = path.join(mockedAppDataDir, 'settings', 'app-settings.json');
-  await fs.mkdir(path.dirname(settingsPath), { recursive: true });
-  await fs.writeFile(
-    settingsPath,
-    JSON.stringify({
-      'foliole-ui-font-preset': 'inter',
-      'bad key with spaces': 'x',
-      'foliole-interface-font-size': 18
-    }),
-    'utf8'
-  );
+  openDatabaseConnection().sqlite
+    .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+    .run(
+      'app_settings',
+      JSON.stringify({
+        'foliole-ui-font-preset': 'inter',
+        'bad key with spaces': 'x',
+        'foliole-interface-font-size': 18
+      }),
+      '2026-03-06T00:00:00.000Z'
+    );
 
   await expect(loadAppSettingsState()).resolves.toEqual({
     'foliole-ui-font-preset': 'inter'
