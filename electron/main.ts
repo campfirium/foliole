@@ -218,8 +218,16 @@ app.whenReady().then(async () => {
     bindEmbeddedLinkPanelContents(contents);
   });
   await appendBootEvent('database_init_start');
-  initializeDatabase();
+  await appendBootEvent('database_initialize_call_start');
+  initializeDatabase((stage, payload = null) => {
+    void appendBootEvent(stage, payload).catch((error) => {
+      console.error(`[electron-main] boot log failed: ${stage}`, error);
+    });
+  });
+  await appendBootEvent('database_initialize_call_complete');
+  await appendBootEvent('node_sync_flush_start');
   flushAllDirtyNodeSyncVersions();
+  await appendBootEvent('node_sync_flush_complete');
   await appendBootEvent('database_init_complete');
   registerAttachmentProtocol();
   installInvokeHandler();

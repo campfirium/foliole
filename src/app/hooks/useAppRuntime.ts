@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
-import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
+import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';

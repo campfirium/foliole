@@ -606,7 +606,17 @@ function Get-ManagedRuntimeProcess {
     return $tracked
   }
 
-  return Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession
+  $readyMarkerRuntime = Get-ReadyMarkerRuntimeProcess -WorkDir $WorkDir -ExpectedSession $ExpectedSession
+  if ($null -ne $readyMarkerRuntime) {
+    return $readyMarkerRuntime
+  }
+
+  $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
+  if ($candidates.Count -eq 1) {
+    return $candidates[0]
+  }
+
+  return $null
 }
 
 function Get-StaleElectronRuntimeProcesses {
@@ -614,9 +624,6 @@ function Get-StaleElectronRuntimeProcesses {
 
   $trackedPid = Get-TrackedRuntimePid
   $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
-  if ($candidates.Count -eq 1) {
-    return @()
-  }
   if ($null -eq $trackedPid) {
     return $candidates
   }

@@ -15,16 +15,32 @@ import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
 
 export { DATABASE_SCHEMA_VERSION, runDatabaseMigrations } from '../../lib/core/database/migrations.js';
 
-export function initializeDatabase() {
+type DatabaseInitStageReporter = (stage: string, payload?: unknown) => void;
+
+export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
   const databasePath = resolveDatabasePath();
   const shouldSnapshotBeforeMigration = shouldSnapshotExistingDatabase(databasePath);
 
   try {
+    reportStage?.('database_open_connection_start', {
+      databasePath,
+      shouldSnapshotBeforeMigration
+    });
     const connection = openDatabaseConnection();
     try {
+      reportStage?.('database_open_connection_complete', {
+        dbPath: connection.dbPath
+      });
+      reportStage?.('database_integrity_check_start');
       verifyDatabaseIntegrity(connection.sqlite);
+      reportStage?.('database_integrity_check_complete');
+      reportStage?.('database_snapshot_before_migration_start');
       snapshotBeforePendingMigration(connection, shouldSnapshotBeforeMigration);
-      return initializeDatabaseConnection(connection);
+      reportStage?.('database_snapshot_before_migration_complete');
+      reportStage?.('database_migration_start');
+      const initializedConnection = initializeDatabaseConnection(connection);
+      reportStage?.('database_migration_complete');
+      return initializedConnection;
     } catch (error) {
       closeDatabaseConnection();
       throw error;
@@ -43,9 +59,20 @@ export function initializeDatabase() {
       cause: error.message
     });
 
+    reportStage?.('database_recovery_open_connection_start', {
+      databasePath: resolveDatabasePath()
+    });
     const connection = openDatabaseConnection();
+    reportStage?.('database_recovery_open_connection_complete', {
+      dbPath: connection.dbPath
+    });
+    reportStage?.('database_recovery_integrity_check_start');
     verifyDatabaseIntegrity(connection.sqlite);
-    return initializeDatabaseConnection(connection);
+    reportStage?.('database_recovery_integrity_check_complete');
+    reportStage?.('database_recovery_migration_start');
+    const initializedConnection = initializeDatabaseConnection(connection);
+    reportStage?.('database_recovery_migration_complete');
+    return initializedConnection;
   }
 }
 
