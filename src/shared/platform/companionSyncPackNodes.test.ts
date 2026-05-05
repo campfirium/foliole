@@ -70,6 +70,30 @@ it('loads and advances the pack cursor around the shared core apply', async () =
   expect(cursorStore.saveCursor).toHaveBeenCalledWith(5);
 });
 
+it('detaches the incoming pack when shared core apply fails', async () => {
+  const connection = createFakeConnection();
+  const manager = {
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn()
+  };
+
+  connection.query.mockRejectedValueOnce(new Error('bad pack manifest'));
+
+  await expect(applyCompanionSyncPackNodesWithSharedCore({
+    currentCursor: 0,
+    deviceId: 'android-device',
+    packPath: '/tmp/bad-pack.db'
+  }, manager as never)).rejects.toThrow('bad pack manifest');
+
+  expect(connection.execute).toHaveBeenNthCalledWith(
+    1,
+    "ATTACH DATABASE '/tmp/bad-pack.db' AS inc",
+    false
+  );
+  expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
+});
+
 function createFakeConnection() {
   return {
     beginTransaction: vi.fn(),
