@@ -10,7 +10,9 @@ import {
   loadRightSidebarCollapsedPreference,
 } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
+import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { workspacePersistStorage } from './workspacePersistStorage';
+import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
@@ -154,13 +156,49 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 
 const initialState = createInitialWorkspaceState();
 
+function shouldEnforceRendererBoundary(state: WorkspaceState | Partial<WorkspaceState>) {
+  return 'activeNodeId' in state;
+}
+
+function withRendererBoundary(
+  state: WorkspaceState | Partial<WorkspaceState>,
+  currentState: WorkspaceState
+): WorkspaceState | Partial<WorkspaceState> {
+  if (!shouldEnforceRendererBoundary(state)) {
+    return state;
+  }
+
+  const nextActiveNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
+  const nextNodesById = 'nodesById' in state ? state.nodesById ?? currentState.nodesById : currentState.nodesById;
+
+  return {
+    ...state,
+    nodesById: trimWorkspaceNodesForRendererBoundary(
+      nextActiveNodeId,
+      nextNodesById,
+      new Set(listPendingNodeSyncNodeIds())
+    )
+  };
+}
+
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      const boundaryAwareSet: typeof set = (partial) => {
+        set((currentState) => {
+          const nextState = typeof partial === 'function' ? partial(currentState) : partial;
+          if (nextState === currentState) {
+            return currentState;
+          }
+          return withRendererBoundary(nextState, currentState);
+        });
+      };
+
+      return ({
       ...initialState,
-      ...createWorkspaceLayoutActions(set, defaultLayoutState),
+      ...createWorkspaceLayoutActions(boundaryAwareSet, defaultLayoutState),
       setActiveNode: (nodeId) => {
-        set((state) => {
+        boundaryAwareSet((state) => {
           if (!state.nodesById[nodeId] || state.trashedNodeIds.includes(nodeId)) {
             return state;
           }
@@ -170,10 +208,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           };
         });
       },
-      ...createWorkspaceNavigationActions(set),
-      ...createWorkspaceNodeActions(set),
-      ...createWorkspaceReviewActions(set, get)
-    }),
+      ...createWorkspaceNavigationActions(boundaryAwareSet),
+      ...createWorkspaceNodeActions(boundaryAwareSet),
+      ...createWorkspaceReviewActions(boundaryAwareSet, get)
+    });
+    },
     {
       name: WORKSPACE_STORAGE_KEY,
       storage: createJSONStorage(() => workspacePersistStorage),
