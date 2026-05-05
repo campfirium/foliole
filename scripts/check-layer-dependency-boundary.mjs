@@ -3,17 +3,17 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const SCAN_DIRS = ['src/app', 'src/features', 'src/store'];
+const SCAN_DIRS = ['src/app', 'src/features', 'src/store', 'src/shared/testing'];
 const CORE_SCAN_DIRS = ['lib/core'];
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 const TEST_FILE_PATTERN = /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/;
 const BANNED_IMPORT_PATTERN =
   /\b(?:import(?:\s+type)?[\s\S]*?\s+from\s+|import\s*\(|require\s*\()\s*['"](?:better-sqlite3|child_process(?:\/[^'"]+)?|electron(?:\/[^'"]+)?|fs(?:\/[^'"]+)?|node:child_process(?:\/[^'"]+)?|node:fs(?:\/[^'"]+)?|node:path(?:\/[^'"]+)?|path(?:\/[^'"]+)?)['"]/;
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
-const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/store/', 'src/features/'];
+const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/store/', 'src/features/', 'src/shared/testing/'];
 const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
-const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)shared\/platform\/(?:bridge|runtimeInvoke)$/;
+const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/(?:bridge|runtimeInvoke)$/;
 const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
 
 function resolveRepoRoot() {

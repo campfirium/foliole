@@ -21,6 +21,7 @@ async function createFixtureRoot() {
   await mkdir(path.join(fixtureRoot, 'src', 'features', 'settings'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'app', 'hooks'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'shared', 'platform'), { recursive: true });
+  await mkdir(path.join(fixtureRoot, 'src', 'shared', 'testing'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'lib', 'core', 'nodes'), { recursive: true });
   return fixtureRoot;
 }
@@ -87,6 +88,23 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
     expect(result.ok).toBe(true);
+  });
+
+  it('blocks shared testing debug helpers from importing runtime command details', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/shared/testing/debugRuntime.ts', `
+      import { getRuntimeInvoke } from '../platform/bridge';
+      import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        { file: 'src/shared/testing/debugRuntime.ts', line: 1, kind: 'runtime-command-import' },
+        { file: 'src/shared/testing/debugRuntime.ts', line: 2, kind: 'runtime-command-import' }
+      ])
+    );
   });
 
   it('blocks app production code from importing runtime command details', async () => {
