@@ -82,6 +82,48 @@ it('preserves line breaks inside snowflake notes when extra cloze content spans 
   expect(output).toContain('cloze: Line one [...]\nLine two; answer: real answer');
 });
 
+it('does not add a snowflake note when article content starts with a heading matching the title', async () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-article',
+    parentNodeId: null,
+    kind: 'topic',
+    title: '测试挖空',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: '# 测试挖空\n测试<cloze id="1">挖空</cloze id="1">一二三',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-cloze-heading',
+    parentNodeId: 'node-article',
+    kind: 'item',
+    title: '测试挖空',
+    isTitleManual: true,
+    content: '测试 [...] 一二三',
+    reveal: '挖空',
+    anchorLink: { id: '1', kind: 'cloze' },
+    position: 1,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({
+    queued_article_count: 1,
+    rebuilt_article_count: 1,
+    failed_article_count: 0,
+    pending_article_count: 0
+  });
+
+  const output = await fs.readFile(path.join(tempRoot, 'Library', 'Mirror', '测试挖空.md'), 'utf8');
+
+  expect(output).toContain('测试<u>挖空</u>一二三');
+  expect(output).not.toContain('❄');
+});
+
 it('does not add a snowflake note for a plain cloze that only differs by spacing around the placeholder', async () => {
   upsertNodeSnapshot({
     nodeId: 'node-article',
@@ -122,4 +164,46 @@ it('does not add a snowflake note for a plain cloze that only differs by spacing
 
   expect(output).toContain('测试<u>挖空</u>一二三');
   expect(output).not.toContain('❄ cloze: 测试 [...] 一二三');
+});
+
+it('does not add a snowflake note when the cloze prompt only changes placeholder marker symbols', async () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-article',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Mirror Demo',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: '测试<cloze id="2">挖空</cloze id="2">一二三',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-cloze-marker-only',
+    parentNodeId: 'node-article',
+    kind: 'item',
+    title: '测试挖空',
+    isTitleManual: true,
+    content: '测试【...】一二三',
+    reveal: '挖空',
+    anchorLink: { id: '2', kind: 'cloze' },
+    position: 1,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  });
+
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({
+    queued_article_count: 1,
+    rebuilt_article_count: 1,
+    failed_article_count: 0,
+    pending_article_count: 0
+  });
+
+  const output = await fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Mirror Demo.md'), 'utf8');
+
+  expect(output).toContain('测试<u>挖空</u>一二三');
+  expect(output).not.toContain('❄ cloze: 测试【...】一二三');
 });

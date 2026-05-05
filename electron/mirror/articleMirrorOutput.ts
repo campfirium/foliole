@@ -66,8 +66,8 @@ function createStableDirectoryName(title: string, nodeId: string, usedNames: Set
   return dedupedCandidate;
 }
 
-function createBaselineClozePrompt(articleContent: string, from: number, to: number) {
-  return compactNoteText(`${articleContent.slice(0, from)}[...]${articleContent.slice(to)}`);
+function createBaselineClozePrompt(articleContent: string, articleTitle: string, from: number, to: number) {
+  return compactNoteText(stripLeadingMatchingHeading(`${articleContent.slice(0, from)}[...]${articleContent.slice(to)}`, articleTitle));
 }
 
 function formatSnowflake(parts: string[]) {
@@ -99,7 +99,7 @@ function createExtraNote(
       }
 
       const parts: string[] = [];
-      const baselinePrompt = createBaselineClozePrompt(article.content, from, to);
+      const baselinePrompt = createBaselineClozePrompt(article.content, article.title.trim() || 'Untitled', from, to);
       const prompt = preserveNoteLines(stripLeadingMatchingHeading(stripAnchorTags(child.content), article.title.trim() || 'Untitled'));
       if (normalizeClozeComparableText(prompt) !== normalizeClozeComparableText(baselinePrompt)) {
         parts.push(`cloze: ${prompt || 'updated cloze'}`);
