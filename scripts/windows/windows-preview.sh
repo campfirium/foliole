@@ -33,6 +33,40 @@ run_windows_client_action() {
   WINDOWS_CLIENT_ACTION="${action}" bash "${WINDOWS_CLIENT_SCRIPT}" >"${output_file}" 2>&1 &
   action_pid=$!
   while kill -0 "${action_pid}" 2>/dev/null; do
+    local current_output=""
+    current_output="$(cat "${output_file}")"
+    if [ "${action}" = "restart" ] && echo "${current_output}" | grep -qE 'status:\s*RESTARTED'; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      printf '%s' "${current_output}"
+      rm -f "${output_file}"
+      return 0
+    fi
+    if [ "${action}" = "start" ] && echo "${current_output}" | grep -qE 'status:\s*(RUNNING|STARTED)'; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      printf '%s' "${current_output}"
+      rm -f "${output_file}"
+      return 0
+    fi
+    if [ "${action}" = "status" ] && echo "${current_output}" | grep -qE 'status:\s*(RUNNING|STOPPED)'; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      printf '%s' "${current_output}"
+      rm -f "${output_file}"
+      return 0
+    fi
+    if echo "${current_output}" | grep -qE 'status:\s*(RESTART_FAILED|START_FAILED)'; then
+      kill "${action_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${action_pid}" 2>/dev/null || true
+      printf '%s' "${current_output}"
+      rm -f "${output_file}"
+      return 1
+    fi
     if [ "${elapsed_seconds}" -ge "${timeout_seconds}" ]; then
       kill "${action_pid}" 2>/dev/null || true
       sleep 1

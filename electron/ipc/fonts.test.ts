@@ -7,18 +7,23 @@ import { listSystemFontsForPlatform } from './fonts.js';
 it('lists Windows fonts from PowerShell output with Unicode names', () => {
   const exec = vi.fn((file: string, args: string[]) => {
     const command = `${file} ${args.join(' ')}`;
-    if (command.startsWith('powershell ') && command.includes('HKEY_LOCAL_MACHINE')) {
-      return ['微软雅黑', '微软雅黑 Bold', 'Cascadia Mono'].join('\n');
-    }
-    if (command.startsWith('powershell ') && command.includes('HKEY_CURRENT_USER')) {
-      return ['微软雅黑 Semibold'].join('\n');
+    if (command.startsWith('powershell ')) {
+      return ['微软雅黑', '微软雅黑 Bold', 'Cascadia Mono', 'Wingdings 2 (TrueType)', '微软雅黑 Semibold', 'UD Digi Kyokasho N & UD Digi Kyokasho NP (TrueType)'].join('\n');
     }
     throw new Error('unexpected command');
   });
 
   const catalog = listSystemFontsForPlatform('win32', exec as never);
 
-  expect(catalog.fonts).toEqual(['Cascadia Mono', '微软雅黑', '微软雅黑 Bold', '微软雅黑 Semibold']);
+  expect(catalog.fonts).toEqual([
+    'Cascadia Mono',
+    'UD Digi Kyokasho N',
+    'UD Digi Kyokasho NP',
+    'Wingdings 2',
+    '微软雅黑',
+    '微软雅黑 Bold',
+    '微软雅黑 Semibold'
+  ]);
   expect(catalog.monospace_fonts).toEqual(['Cascadia Mono']);
 });
 

@@ -35,8 +35,18 @@ function runCommand(exec: ExecFileSyncFn, file: string, args: string[]) {
 function parsePowerShellFontPropertyNames(rawOutput: string) {
   return rawOutput
     .split(/\r?\n/)
-    .map((row) => row.trim())
-    .filter((row) => row.length > 0);
+    .flatMap((row) => expandWindowsRegistryFontName(row.trim()));
+}
+
+function expandWindowsRegistryFontName(rawName: string) {
+  const cleaned = rawName.replace(/^@/, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
+  if (!cleaned) {
+    return [];
+  }
+  return cleaned
+    .split(/\s+&\s+/)
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
 }
 
 function parseWindowsRegistryFonts(rawOutput: string) {
@@ -47,36 +57,25 @@ function parseWindowsRegistryFonts(rawOutput: string) {
     if (!match) {
       continue;
     }
-    const baseName = match[1].replace(/^@/, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
-    if (baseName) {
-      names.push(baseName);
+    for (const name of expandWindowsRegistryFontName(match[1])) {
+      names.push(name);
     }
   }
   return names;
 }
 
 function listWindowsFontsViaPowerShell(exec: ExecFileSyncFn) {
-  const hklmScript =
-    "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts' | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name";
-  const hkcuScript =
-    "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;Get-ItemProperty -Path 'Registry::HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts' | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name";
-  const hklmOutput = runCommand(exec, 'powershell', [
+  const familiesScript =
+    "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;Add-Type -AssemblyName System.Drawing; (New-Object System.Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name }";
+  const output = runCommand(exec, 'powershell', [
     '-NoProfile',
     '-NonInteractive',
     '-ExecutionPolicy',
     'Bypass',
     '-Command',
-    hklmScript
+    familiesScript
   ]);
-  const hkcuOutput = runCommand(exec, 'powershell', [
-    '-NoProfile',
-    '-NonInteractive',
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    hkcuScript
-  ]);
-  return [...parsePowerShellFontPropertyNames(hklmOutput), ...parsePowerShellFontPropertyNames(hkcuOutput)];
+  return parsePowerShellFontPropertyNames(output);
 }
 
 function listWindowsFonts(exec: ExecFileSyncFn) {

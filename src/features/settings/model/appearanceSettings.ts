@@ -71,7 +71,9 @@ function clampFontSize(value: number) {
 }
 
 function sanitizeFontFamily(value: string) {
-  return value.replace(/[;{}]/g, '').trim().slice(0, 256);
+  const cleaned = value.replace(/[;{}]/g, '').replace(/^@/, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
+  const primaryName = cleaned.split(/\s+&\s+/)[0]?.trim() ?? '';
+  return primaryName.slice(0, 256);
 }
 
 function quoteFontFamilyName(value: string) {

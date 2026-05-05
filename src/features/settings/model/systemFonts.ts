@@ -65,12 +65,51 @@ export function detectSystemFonts(): string[] {
 }
 
 function normalizeFontList(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))].sort((left, right) => left.localeCompare(right));
+  const expanded = [...new Set(values.flatMap((value) => expandWindowsRegistryLikeFontName(value)).filter((value) => value.length > 0))].sort(
+    (left, right) => left.localeCompare(right)
+  );
+  return collapseStyleVariantFamilies(expanded);
 }
 
 function detectMonospaceFonts(fonts: string[]) {
   const monoHint = /mono|code|console|consolas|courier|menlo|fira|cascadia/i;
   return fonts.filter((font) => monoHint.test(font));
+}
+
+function expandWindowsRegistryLikeFontName(rawName: string) {
+  const cleaned = rawName.replace(/^@/, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
+  if (!cleaned) {
+    return [];
+  }
+  return cleaned
+    .split(/\s+&\s+/)
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+}
+
+const FONT_STYLE_TOKEN = /(thin|extra[\s-]?light|ultra[\s-]?light|light|book|regular|normal|medium|semi[\s-]?bold|demi[\s-]?bold|bold|extra[\s-]?bold|ultra[\s-]?bold|black|heavy|italic|oblique)$/i;
+
+function trimStyleSuffix(value: string) {
+  let current = value.trim();
+  while (current.length > 0) {
+    const next = current.replace(/[\s-]+(thin|extra[\s-]?light|ultra[\s-]?light|light|book|regular|normal|medium|semi[\s-]?bold|demi[\s-]?bold|bold|extra[\s-]?bold|ultra[\s-]?bold|black|heavy|italic|oblique)$/i, '').trim();
+    if (next === current) {
+      return current;
+    }
+    current = next;
+  }
+  return value.trim();
+}
+
+function collapseStyleVariantFamilies(fonts: string[]) {
+  const familySet = new Set(fonts);
+  return fonts.filter((font) => {
+    if (!FONT_STYLE_TOKEN.test(font)) {
+      return true;
+    }
+    const stem = trimStyleSuffix(font);
+    return stem.length === 0 || !familySet.has(stem);
+  });
 }
 
 export async function listAvailableSystemFonts(): Promise<SystemFontCatalog> {
