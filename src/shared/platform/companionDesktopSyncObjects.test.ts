@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const syncBridgeMock = vi.hoisted(() => ({
   applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 2, applied_object_count: 3, to_state_seq: 8 })),
-  loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string }>),
+  loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
@@ -89,7 +89,7 @@ async function testPullsStructurePackAndContentBlobs() {
 
 async function testPullsMissingAttachmentResourcesAfterStructurePack() {
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
-    { attachment_id: 'att-1', content_hash: 'hash-att-1' }
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
 
   const { ATTACHMENT_RESOURCE_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -102,8 +102,8 @@ async function testPullsMissingAttachmentResourcesAfterStructurePack() {
     [{ attachmentId: 'att-1', contentHash: 'hash-att-1' }]
   );
   expect(result.syncedAttachmentIds).toEqual(['att-1']);
-  expect(onProgress).toHaveBeenCalledWith({ completed: 0, phase: 'attachment', total: null });
-  expect(onProgress).toHaveBeenCalledWith({ completed: 1, phase: 'attachment', total: null });
+  expect(onProgress).toHaveBeenCalledWith({ completed: 0, completedBytes: 0, phase: 'attachment', total: null, totalBytes: null });
+  expect(onProgress).toHaveBeenCalledWith({ completed: 1, completedBytes: 2048, phase: 'attachment', total: null, totalBytes: null });
 }
 
 async function testContinuesAttachmentCachingAcrossBoundedBatches() {
@@ -130,7 +130,7 @@ async function testContinuesAttachmentCachingAcrossBoundedBatches() {
 
 async function testKeepsStructureSyncSuccessfulWhenAttachmentBatchFails() {
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValueOnce([
-    { attachment_id: 'att-1', content_hash: 'hash-att-1' }
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockRejectedValueOnce(new Error('attachment unavailable'));
 

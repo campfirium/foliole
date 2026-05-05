@@ -25,6 +25,7 @@ const diagnosticResult = {
     connection: { endpoint_url: 'http://10.0.2.2:38641', last_error: null, state: 'ready' },
     content: {
       active_topic: { body_status: 'missing', id: 'topic-1', title: 'Current topic' },
+      missing_attachment_resource_bytes: 3145728,
       missing_attachment_resource_count: 2,
       missing_content_blob_count: 5,
       missing_external_document_body_count: 1,
@@ -141,6 +142,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getAllByText('node_review')).toHaveLength(3);
     expect(screen.getByText('1 waiting')).toBeInTheDocument();
     expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
+    expect(screen.getByText('3.0 MB')).toBeInTheDocument();
     expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();
     expect(screen.getByText('accepted')).toBeInTheDocument();
     expect(screen.getByText('seq 7')).toBeInTheDocument();

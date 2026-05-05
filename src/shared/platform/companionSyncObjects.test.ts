@@ -17,7 +17,7 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
     loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
     loadMissingAttachmentResources: vi.fn(async () => ({
-      resources: [{ attachment_id: 'att-1', content_hash: 'hash-att-1' }]
+      resources: [{ attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }]
     })),
     loadSyncStateCursor: vi.fn(async () => ({ cursor: 2 })),
     loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
@@ -141,7 +141,7 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
   expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
   await expect(api.loadCompanionMissingAttachmentResources(4)).resolves.toEqual([
-    { attachment_id: 'att-1', content_hash: 'hash-att-1' }
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   expect(capacitorMock.plugin.loadMissingAttachmentResources).toHaveBeenCalledWith({ limit: 4 });
   await expect(api.syncCompanionContentBlob({

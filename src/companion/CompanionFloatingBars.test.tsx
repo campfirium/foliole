@@ -31,12 +31,12 @@ describe('CompanionBottomTabBar', () => {
         config={DEFAULT_COMPANION_TAB_CONFIG}
         onAction={vi.fn()}
         onSecondaryDestination={vi.fn()}
-        syncProgress={{ completed: 4, phase: 'attachment', total: 12 }}
+        syncProgress={{ completed: 4, completedBytes: 2097152, phase: 'attachment', total: 12, totalBytes: 8388608 }}
         visible
       />
     );
 
     expect(screen.getByText('Attachment files')).toBeInTheDocument();
-    expect(screen.getByText('4/12')).toBeInTheDocument();
+    expect(screen.getByText('4/12 - 2.0 MB/8.0 MB')).toBeInTheDocument();
   });
 });

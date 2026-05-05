@@ -23,6 +23,16 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   return 'Topic body cache';
 }
 
+function formatBytes(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  return `${bytes} B`;
+}
+
 function CompanionBottomSyncStatus(props: {
   progress: CompanionDesktopSyncProgress | null;
 }) {
@@ -33,8 +43,11 @@ function CompanionBottomSyncStatus(props: {
   const completed = Math.min(props.progress.completed, total);
   const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
   const countLabel = props.progress.total === null
-    ? `${props.progress.completed} synced`
+    ? `${props.progress.completed} cached`
     : `${completed}/${total}`;
+  const byteLabel = props.progress.totalBytes == null || props.progress.completedBytes == null
+    ? null
+    : `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`;
   return (
     <section
       aria-label="Sync progress"
@@ -42,7 +55,7 @@ function CompanionBottomSyncStatus(props: {
     >
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium text-foreground">{formatSyncPhase(props.progress)}</span>
-        <span className="shrink-0 tabular-nums">{countLabel}</span>
+        <span className="shrink-0 tabular-nums">{byteLabel ? `${countLabel} - ${byteLabel}` : countLabel}</span>
       </div>
       {props.progress.total === null ? null : (
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-companion-divider">

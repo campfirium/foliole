@@ -113,6 +113,10 @@ final class FolioleCompanionSyncDiagnostics {
             "SELECT COUNT(*) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
                 "AND TRIM(content_hash) != '' AND availability <> 'cached'"
         ));
+        content.put("missing_attachment_resource_bytes", count(database,
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM attachment_blobs WHERE content_hash IS NOT NULL " +
+                "AND TRIM(content_hash) != '' AND availability <> 'cached'"
+        ));
         content.put("active_topic", loadActiveTopic(database));
         content.put("recent_topics", loadRecentTopics(database));
         return content;

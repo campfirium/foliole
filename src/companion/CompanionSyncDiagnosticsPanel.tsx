@@ -75,6 +75,19 @@ function formatNumber(value: number | null | undefined) {
   return typeof value === 'number' ? `${value}` : 'None';
 }
 
+function formatBytes(value: number | null | undefined) {
+  if (typeof value !== 'number') {
+    return 'None';
+  }
+  if (value >= 1024 * 1024) {
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (value >= 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+  return `${value} B`;
+}
+
 function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
   const snapshot = props.snapshot;
   const isAndroid = snapshot.host === 'android';
@@ -89,6 +102,7 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       {isAndroid ? <MetricRow label="Topic bodies" value={formatNumber(snapshot.content.missing_topic_body_count ?? 0)} /> : null}
       {isAndroid ? <MetricRow label="External document bodies" value={formatNumber(snapshot.content.missing_external_document_body_count ?? 0)} /> : null}
       <MetricRow label="Attachments still caching" value={formatNumber(snapshot.content.missing_attachment_resource_count ?? 0)} />
+      {isAndroid ? <MetricRow label="Attachment bytes still caching" value={formatBytes(snapshot.content.missing_attachment_resource_bytes ?? 0)} /> : null}
     </div>
   );
 }

@@ -31,7 +31,7 @@ final class FolioleCompanionAttachmentResourceStore {
                 "SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at " +
                 "FROM attachment_refs GROUP BY attachment_id" +
             ") " +
-            "SELECT b.attachment_id, b.content_hash FROM attachment_blobs b " +
+            "SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) FROM attachment_blobs b " +
                 "LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id " +
                 "WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' " +
                 "AND b.availability != 'cached' " +
@@ -42,6 +42,7 @@ final class FolioleCompanionAttachmentResourceStore {
                 JSObject resource = new JSObject();
                 resource.put("attachment_id", cursor.getString(0));
                 resource.put("content_hash", cursor.getString(1));
+                resource.put("size_bytes", cursor.getLong(2));
                 resources.put(resource);
             }
         }

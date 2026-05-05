@@ -100,7 +100,7 @@ export async function loadCompanionMissingContentBlobHashes(limit = 50) {
 
 export async function loadCompanionMissingAttachmentResources(limit = 50) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return [] as Array<{ attachment_id: string; content_hash: string }>;
+    return [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>;
   }
   return (await FolioleCompanionSync.loadMissingAttachmentResources({ limit })).resources;
 }

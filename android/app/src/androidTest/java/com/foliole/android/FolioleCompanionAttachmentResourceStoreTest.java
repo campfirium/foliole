@@ -85,6 +85,7 @@ public class FolioleCompanionAttachmentResourceStoreTest {
         assertEquals(1, result.getJSONArray("resources").length());
         assertEquals("att-android-1", resource.getString("attachment_id"));
         assertEquals("hash-android-1", resource.getString("content_hash"));
+        assertEquals(11, resource.getLong("size_bytes"));
     }
 
     @Test

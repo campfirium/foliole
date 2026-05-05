@@ -29,8 +29,10 @@ export interface CompanionDesktopSyncOptions {
 
 export interface CompanionDesktopSyncProgress {
   completed: number;
+  completedBytes?: number;
   phase: 'attachment' | 'content' | 'structure';
   total: number | null;
+  totalBytes?: number | null;
 }
 
 export interface CompanionDesktopSyncResult {
@@ -100,6 +102,14 @@ async function loadMissingAttachmentResourceCount() {
   return diagnostics?.content.missing_attachment_resource_count ?? null;
 }
 
+async function loadMissingAttachmentResourceSummary() {
+  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
+  return {
+    total: diagnostics?.content.missing_attachment_resource_count ?? null,
+    totalBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null
+  };
+}
+
 async function pullMissingContentBlobs(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
@@ -121,9 +131,10 @@ async function pullMissingContentBlobs(endpointUrl: string, onProgress?: Compani
 }
 
 async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
-  const total = await loadMissingAttachmentResourceCount();
+  const { total, totalBytes } = await loadMissingAttachmentResourceSummary();
   const syncedAttachmentIds: string[] = [];
-  onProgress?.({ completed: 0, phase: 'attachment', total });
+  let syncedBytes = 0;
+  onProgress?.({ completed: 0, completedBytes: 0, phase: 'attachment', total, totalBytes });
   for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
     if (resources.length === 0) {
@@ -137,7 +148,17 @@ async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: 
       }))
     );
     syncedAttachmentIds.push(...syncedBatchIds);
-    onProgress?.({ completed: syncedAttachmentIds.length, phase: 'attachment', total });
+    const syncedIdSet = new Set(syncedBatchIds);
+    syncedBytes += resources
+      .filter((resource) => syncedIdSet.has(resource.attachment_id))
+      .reduce((sum, resource) => sum + Math.max(0, resource.size_bytes ?? 0), 0);
+    onProgress?.({
+      completed: syncedAttachmentIds.length,
+      completedBytes: syncedBytes,
+      phase: 'attachment',
+      total,
+      totalBytes
+    });
     if (resources.length < ATTACHMENT_RESOURCE_BATCH_LIMIT || syncedBatchIds.length === 0) {
       break;
     }
