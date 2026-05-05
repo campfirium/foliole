@@ -143,6 +143,28 @@ public class FolioleCompanionSyncEventStreamsTest {
         assertEquals(0, countRows("node_sync_conflicts", "1 = 1"));
     }
 
+    @Test
+    public void doesNotReviveDeletedLocalNodeFromOldActiveHead() throws Exception {
+        database.execSQL(
+            "UPDATE nodes SET deleted_at = ?, updated_at = ?, sync_dirty = 0, current_version_id = ? WHERE id = ?",
+            new Object[] { "2026-04-26T02:00:00.000Z", "2026-04-26T02:00:00.000Z", "desktop#deleted", "node-1" }
+        );
+        insertVersion("desktop#deleted", "desktop#2", "node-1", "android-test", "hash-deleted");
+
+        JSONObject record = remoteNodeRecord("phone#old", "desktop#2", "remote active body", "2026-04-26T03:00:00.000Z")
+            .put("ancestor_version_ids", new JSONArray().put("desktop#2").put("desktop#1"));
+        JSObject applied = FolioleCompanionSyncNodeVersionStore.applyNodeVersions(
+            database,
+            new JSONArray().put(record),
+            "android-test"
+        );
+
+        assertEquals(0, applied.getJSONArray("applied_node_ids").length());
+        assertEquals("local body", selectString("nodes", "content", "id = 'node-1'"));
+        assertEquals("2026-04-26T02:00:00.000Z", selectString("nodes", "deleted_at", "id = 'node-1'"));
+        assertEquals(0, countRows("node_sync_conflicts", "conflict_version_id = 'phone#old'"));
+    }
+
     private void createTables() {
         database.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', priority INTEGER, " +

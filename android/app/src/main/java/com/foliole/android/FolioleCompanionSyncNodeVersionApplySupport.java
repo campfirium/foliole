@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.ContentValues;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import org.json.JSONArray;
@@ -12,24 +11,6 @@ import java.time.Instant;
 final class FolioleCompanionSyncNodeVersionApplySupport {
 
     private FolioleCompanionSyncNodeVersionApplySupport() {}
-
-    static String loadLocalVersionId(SQLiteDatabase database, String nodeId) {
-        try (Cursor cursor = database.query(
-            "nodes",
-            new String[] { "current_version_id" },
-            "id = ?",
-            new String[] { nodeId },
-            null,
-            null,
-            null,
-            "1"
-        )) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            return cursor.isNull(0) ? "" : cursor.getString(0);
-        }
-    }
 
     static boolean isFastForward(JSONObject record, String localVersionId) {
         if (localVersionId.isEmpty()) {

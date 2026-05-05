@@ -66,6 +66,27 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void appliesDeletedNodeTombstoneFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingDeletedNodeRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(1, result.getInt("applied_object_count"));
+        assertEquals("2026-04-27T00:02:00.000Z", selectString("SELECT deleted_at FROM nodes WHERE id = 'node-1'"));
+        assertEquals("desktop#node-1-delete", selectString("SELECT current_version_id FROM nodes WHERE id = 'node-1'"));
+        assertEquals("2026-04-27T00:02:00.000Z", selectString(
+            "SELECT deleted_at FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
+        ));
+        assertEquals("desktop#node-1-delete", selectString(
+            "SELECT current_version_id FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
+        ));
+        assertEquals(0, selectInt(
+            "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
+        ));
+    }
+
+    @Test
     public void skipsRowsOlderThanLocalSyncState() throws Exception {
         createIncomingPack();
         mainDatabase.execSQL("INSERT INTO nodes (" +
@@ -423,8 +444,8 @@ public class FolioleCompanionSyncPackApplyTest {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
             "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, created_at TEXT NOT NULL, " +
-            "updated_at TEXT NOT NULL, deleted_at TEXT)");
+            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, current_version_id TEXT, " +
+            "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0)");
         mainDatabase.execSQL("CREATE TABLE external_documents (" +
             "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
             "file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL, " +
@@ -579,6 +600,20 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'external_document', 'folder-1:doc.md', 2, 'external-state-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingDeletedNodeRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String deletedAt = "2026-04-27T00:02:00.000Z";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("UPDATE nodes SET current_version_id = 'desktop#node-1-delete', " +
+                "updated_at = '" + deletedAt + "', deleted_at = '" + deletedAt + "' WHERE id = 'node-1'");
+            packDatabase.execSQL("UPDATE sync_object_state SET state_seq = 2, content_hash = 'node-delete-hash', " +
+                "updated_at = '" + deletedAt + "', deleted_at = '" + deletedAt + "' WHERE object_type = 'node' AND object_id = 'node-1'");
         } finally {
             packDatabase.close();
         }

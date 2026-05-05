@@ -4,6 +4,7 @@ const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
   plugin: {
+    clearAppData: vi.fn(),
     loadPairingState: vi.fn(),
     loadDiscoveryCandidates: vi.fn(),
     loadReadableArticle: vi.fn(),
@@ -32,6 +33,7 @@ import {
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from './companionWorkspaceSync';
+import { clearCompanionAppData } from './companionAppData';
 import {
   createStoredSyncState,
   createUpdatedStoredSnapshot,
@@ -86,6 +88,37 @@ function registerEndpointPersistenceTest() {
 
     expect(state.endpoint_url).toBe('http://192.168.1.8:38641');
     expect(state.remembered_targets).toEqual(['http://192.168.1.8:38641']);
+  });
+
+  it('clears app data state in web preview mode', async () => {
+    window.localStorage.setItem('foliole-companion-workspace-sync-state', JSON.stringify(createStoredSyncState()));
+
+    const state = await clearCompanionAppData();
+
+    expect(state).toMatchObject({
+      endpoint_url: null,
+      last_synced_at: null,
+      remembered_targets: [],
+      sync_onboarding_status: 'pending',
+      workspace_snapshot: null
+    });
+  });
+
+  it('routes app data clearing through the native Android plugin', async () => {
+    capacitorMock.getPlatform.mockReturnValue('android');
+    capacitorMock.isNativePlatform.mockReturnValue(true);
+    capacitorMock.plugin.clearAppData.mockResolvedValue({
+      endpoint_url: null,
+      last_synced_at: null,
+      remembered_targets: [],
+      sync_events: [],
+      sync_onboarding_status: 'pending',
+      workspace_snapshot: null
+    });
+
+    await clearCompanionAppData();
+
+    expect(capacitorMock.plugin.clearAppData).toHaveBeenCalledWith();
   });
 }
 

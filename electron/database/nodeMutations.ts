@@ -17,7 +17,7 @@ import type {
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
-import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
+import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
 
@@ -76,6 +76,9 @@ export function clearNodeOrder(): void {
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   const connection = openDatabaseConnection();
   const deviceId = loadOrCreateDesktopDeviceId(input.deletedAt);
+  for (const nodeId of input.nodeIds) {
+    flushNodeSyncVersion(nodeId, input.deletedAt);
+  }
   withTransaction(connection.driver, () => {
     softDeleteNodesViaDriver(connection.driver, input);
     for (const nodeId of input.nodeIds) {
@@ -87,6 +90,9 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
       );
     }
   });
+  for (const nodeId of input.nodeIds) {
+    flushNodeSyncVersion(nodeId, input.deletedAt);
+  }
 }
 
 export function restoreNodes(input: RestoreNodesInput): void {

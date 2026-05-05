@@ -21,7 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { upsertNodeSnapshot } from './nodeMutations.js';
+import { softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
@@ -163,4 +163,63 @@ it('backfills sync state for already versioned nodes missing from sync_object_st
       ['node', 'node-1']
     )
   ).toEqual({ current_version_id: versionId, object_id: 'node-1' });
+});
+
+it('creates a tombstone sync version when soft deleting a versioned node', () => {
+  upsertTestNode();
+  const activeVersionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
+
+  softDeleteNodes({ nodeIds: ['node-1'], deletedAt: '2026-04-21T10:02:00.000Z' });
+
+  const connection = openDatabaseConnection();
+  const node = connection.driver.queryOne<{ current_version_id: string; deleted_at: string | null; sync_dirty: number }>(
+    'SELECT current_version_id, deleted_at, sync_dirty FROM nodes WHERE id = ?',
+    ['node-1']
+  );
+  expect(node).toEqual({
+    current_version_id: expect.stringMatching(/^desktop-.*#1$/),
+    deleted_at: '2026-04-21T10:02:00.000Z',
+    sync_dirty: 0
+  });
+  const tombstone = connection.driver.queryOne<{ parent_version_id: string | null; snapshot_json: string }>(
+    'SELECT parent_version_id, snapshot_json FROM node_sync_versions WHERE version_id = ?',
+    [node?.current_version_id ?? '']
+  );
+  expect(tombstone?.parent_version_id).toBe(activeVersionId);
+  expect(JSON.parse(tombstone?.snapshot_json ?? '{}')).toMatchObject({
+    deleted_at: '2026-04-21T10:02:00.000Z',
+    id: 'node-1'
+  });
+  expect(
+    connection.driver.queryOne<{ current_version_id: string; deleted_at: string | null }>(
+      'SELECT current_version_id, deleted_at FROM sync_object_state WHERE object_type = ? AND object_id = ?',
+      ['node', 'node-1']
+    )
+  ).toEqual({
+    current_version_id: node?.current_version_id,
+    deleted_at: '2026-04-21T10:02:00.000Z'
+  });
+});
+
+it('creates an active head before tombstone when soft deleting an unversioned node', () => {
+  upsertTestNode();
+
+  softDeleteNodes({ nodeIds: ['node-1'], deletedAt: '2026-04-21T10:02:00.000Z' });
+
+  const connection = openDatabaseConnection();
+  const versions = connection.driver.queryAll<{
+    parent_version_id: string | null;
+    snapshot_json: string;
+    version_id: string;
+  }>(
+    'SELECT version_id, parent_version_id, snapshot_json FROM node_sync_versions WHERE object_id = ? ORDER BY version_id ASC',
+    ['node-1']
+  );
+  expect(versions).toHaveLength(2);
+  expect(JSON.parse(versions[0].snapshot_json)).toMatchObject({ deleted_at: null, id: 'node-1' });
+  expect(versions[1].parent_version_id).toBe(versions[0].version_id);
+  expect(JSON.parse(versions[1].snapshot_json)).toMatchObject({
+    deleted_at: '2026-04-21T10:02:00.000Z',
+    id: 'node-1'
+  });
 });

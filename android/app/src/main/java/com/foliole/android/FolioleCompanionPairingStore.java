@@ -109,7 +109,7 @@ final class FolioleCompanionPairingStore {
         }
     }
 
-    private static void clearPairingCredentials(Context context) {
+    static void clearPairingCredentials(Context context) {
         prefs(context).edit()
             .remove(DEVICE_ID_KEY)
             .remove(DEVICE_KIND_KEY)

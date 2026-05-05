@@ -1,4 +1,5 @@
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
+import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { CompanionTabConfig } from './CompanionTabsConfig';
 import { CompanionTabsSettingsContent } from './CompanionTabsSettingsContent';
@@ -18,7 +19,20 @@ export function renderCompanionSettingsContent(props: {
   workspaceSync: WorkspaceSync;
 }) {
   if (props.settingsPage === 'list') {
-    return <CompanionSettingsList onOpenSync={props.onOpenSyncSettings} onOpenTabs={props.onOpenTabsSettings} />;
+    return (
+      <CompanionSettingsList
+        onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
+        onOpenSync={props.onOpenSyncSettings}
+        onOpenTabs={props.onOpenTabsSettings}
+      />
+    );
+  }
+  if (props.settingsPage === 'storage') {
+    return (
+      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="storage" title="Storage">
+        <CompanionStorageSettingsContent />
+      </CompanionSettingsDetail>
+    );
   }
   if (props.settingsPage === 'tabs') {
     return (

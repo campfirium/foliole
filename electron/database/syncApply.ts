@@ -6,6 +6,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 import { openDatabaseConnection } from './connection.js';
 import { isConflictCopyNodeId } from './syncConflictCopyIdentity.js';
 import { recordNodeConflictAndCreateCopy } from './syncConflictCopies.js';
+import { blocksIncomingNodeVersion, loadLocalNodeSyncState } from './syncLocalNodeState.js';
 import { latestBranchHeadRecords } from './syncNodeRecordBatch.js';
 
 interface ApplySyncNodesOptions {
@@ -59,13 +60,6 @@ function upsertRemoteVersion(driver: DatabaseDriver, record: NativeSyncNodeRecor
       record.content_hash ?? '',
       JSON.stringify(record.snapshot)
     ]
-  );
-}
-
-function loadLocalNodeVersion(driver: DatabaseDriver, nodeId: string) {
-  return driver.queryOne<{ current_version_id: string | null }>(
-    'SELECT current_version_id FROM nodes WHERE id = ?',
-    [nodeId]
   );
 }
 
@@ -178,7 +172,7 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
   connection.driver.transaction(() => {
     const timestamp = new Date().toISOString();
     for (const record of ordered) {
-      const localNode = loadLocalNodeVersion(connection.driver, record.object_id);
+      const localNode = loadLocalNodeSyncState(connection.driver, record.object_id);
       if (isConflictCopyNodeId(record.object_id) || isConflictCopyNodeId(record.snapshot.id)) {
         continue;
       }
@@ -191,6 +185,9 @@ export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySy
         continue;
       }
       upsertRemoteVersion(connection.driver, record);
+      if (blocksIncomingNodeVersion(localNode, record)) {
+        continue;
+      }
       if (!isRemoteFastForward(record, localNode?.current_version_id)) {
         const copyNodeId = recordNodeConflictAndCreateCopy({
           driver: connection.driver,

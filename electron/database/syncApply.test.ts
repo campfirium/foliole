@@ -84,6 +84,42 @@ function insertLocalNodeVersion(versionId: string) {
   );
 }
 
+function insertDeletedLocalNodeVersion() {
+  const connection = openDatabaseConnection();
+  connection.driver.execute(
+    `INSERT INTO nodes (
+       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty,
+       created_at, updated_at, deleted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'node-1',
+      'item',
+      'Deleted Local Node',
+      'deleted local body',
+      'desktop#delete',
+      'desktop',
+      0,
+      '2026-04-21T09:00:00.000Z',
+      '2026-04-21T12:00:00.000Z',
+      '2026-04-21T12:00:00.000Z'
+    ]
+  );
+  connection.driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'desktop#delete',
+      'node-1',
+      'desktop#0',
+      'desktop',
+      '2026-04-21T12:00:00.000Z',
+      'hash-delete',
+      JSON.stringify({ id: 'node-1', deleted_at: '2026-04-21T12:00:00.000Z' })
+    ]
+  );
+}
+
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-apply-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -201,6 +237,25 @@ it('records divergent remote node versions without overwriting the local node', 
       parent_version_id: 'desktop#0'
     }
   ]);
+});
+
+it('does not let an old active remote version revive a locally deleted node', () => {
+  insertDeletedLocalNodeVersion();
+  const record = createRemoteNodeRecord();
+  record.parent_version_id = 'desktop#0';
+  record.ancestor_version_ids = ['desktop#0'];
+
+  expect(applySyncNodes([record])).toEqual([]);
+
+  const connection = openDatabaseConnection();
+  expect(
+    connection.sqlite.prepare('SELECT current_version_id, content, deleted_at FROM nodes WHERE id = ?').get('node-1')
+  ).toEqual({
+    content: 'deleted local body',
+    current_version_id: 'desktop#delete',
+    deleted_at: '2026-04-21T12:00:00.000Z'
+  });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts').get()).toEqual({ count: 0 });
 });
 
 it('can acknowledge already applied node versions for push cursor delivery', () => {

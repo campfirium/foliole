@@ -18,10 +18,10 @@ final class FolioleCompanionSyncNodeVersionStore {
 
     static JSObject loadNodeVersions(SQLiteDatabase database, JSONObject cursor, int limit, String deviceId) throws Exception {
         JSArray nodes = new JSArray();
-        String sql = "SELECT version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json " +
-            "FROM node_sync_versions WHERE device_id = ? " + whereAfterCursor(cursor) +
-            " AND object_id NOT LIKE 'conflict-copy-%' " +
-            " ORDER BY created_at ASC, version_id ASC LIMIT ?";
+        String sql = "SELECT v.version_id, v.object_id, v.parent_version_id, v.device_id, v.created_at, v.content_hash, v.snapshot_json " +
+            "FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.device_id = ? " + whereAfterCursor(cursor) +
+            " AND v.object_id NOT LIKE 'conflict-copy-%' AND n.current_version_id = v.version_id AND n.deleted_at IS NULL " +
+            " ORDER BY v.created_at ASC, v.version_id ASC LIMIT ?";
         String[] args = cursor == null
             ? new String[] { deviceId, String.valueOf(normalizeLimit(limit)) }
             : new String[] { deviceId, cursor.optString("created_at"), cursor.optString("created_at"), cursor.optString("change_id"), String.valueOf(normalizeLimit(limit)) };
@@ -73,22 +73,26 @@ final class FolioleCompanionSyncNodeVersionStore {
                 ) {
                     continue;
                 }
-                String localVersionId = FolioleCompanionSyncNodeVersionApplySupport.loadLocalVersionId(database, record.optString("object_id"));
-                if (localVersionId == null) {
+                FolioleCompanionSyncLocalNodeState localState =
+                    FolioleCompanionSyncLocalNodeState.load(database, record.optString("object_id"));
+                if (localState == null) {
                     upsertNode(database, record, snapshot);
                     upsertVersion(database, record, snapshot);
                     appliedNodeIds.put(record.optString("object_id"));
                     continue;
                 }
                 upsertVersion(database, record, snapshot);
-                if (!FolioleCompanionSyncNodeVersionApplySupport.isFastForward(record, localVersionId)) {
+                if (localState.blocks(record, snapshot)) {
+                    continue;
+                }
+                if (!FolioleCompanionSyncNodeVersionApplySupport.isFastForward(record, localState.currentVersionId)) {
                     String copyNodeId = FolioleCompanionSyncConflictCopies.create(database, record, snapshot, deviceId, now);
                     if (copyNodeId != null) {
                         FolioleCompanionSyncNodeVersionApplySupport.recordConflict(database, record, snapshot);
                     }
                     continue;
                 }
-                if (localVersionId.equals(record.optString("version_id", ""))) {
+                if (localState.currentVersionId.equals(record.optString("version_id", ""))) {
                     continue;
                 }
                 upsertNode(database, record, snapshot);
@@ -180,7 +184,7 @@ final class FolioleCompanionSyncNodeVersionStore {
     private static String whereAfterCursor(JSONObject cursor) {
         return cursor == null || cursor.optString("created_at").isEmpty() || cursor.optString("change_id").isEmpty()
             ? ""
-            : "AND (created_at > ? OR (created_at = ? AND version_id > ?))";
+            : "AND (v.created_at > ? OR (v.created_at = ? AND v.version_id > ?))";
     }
 
     private static JSONArray listAncestorVersionIds(SQLiteDatabase database, String versionId) throws Exception {

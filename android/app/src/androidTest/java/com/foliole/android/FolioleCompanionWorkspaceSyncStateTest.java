@@ -1,8 +1,11 @@
 package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -51,5 +54,57 @@ public class FolioleCompanionWorkspaceSyncStateTest {
 
         assertEquals("2026-05-01T02:00:00.000Z", completed.getString("last_synced_at"));
         assertEquals("2026-05-01T02:01:00.000Z", checked.getString("last_synced_at"));
+    }
+
+    @Test
+    public void clearAppDataDisconnectsAndClearsLocalContent() throws Exception {
+        helper.saveWorkspaceSyncEndpoint("http://10.0.2.2:38641");
+        helper.recordWorkspaceSyncEvent(
+            "http://10.0.2.2:38641",
+            "completed",
+            "Sync fully completed.",
+            "2026-05-01T02:00:00.000Z"
+        );
+        insertNode();
+
+        JSObject cleared = FolioleCompanionAppDataStore.clear(context);
+
+        assertFalse(cleared.has("endpoint_url") && !cleared.isNull("endpoint_url"));
+        assertEquals(0, countRows("nodes"));
+        assertEquals(0, countRows("sync_object_state"));
+        assertEquals(0, countRows("workspace_meta"));
+        assertEquals(1, countRows("companion_meta"));
+    }
+
+    private void insertNode() {
+        SQLiteDatabase database = helper.getWritableDatabase();
+        database.execSQL(
+            "INSERT INTO nodes (id, kind, title, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            new Object[] {
+                "node-1",
+                "item",
+                "Local Topic",
+                "Local body",
+                "2026-05-01T01:00:00.000Z",
+                "2026-05-01T01:00:00.000Z"
+            }
+        );
+        database.execSQL(
+            "INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty) " +
+                "VALUES (?, ?, ?, ?, ?, ?, 0)",
+            new Object[] { "node", "node-1", 1, "hash-node", "android-test", "2026-05-01T01:00:00.000Z" }
+        );
+        database.execSQL(
+            "INSERT INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)",
+            new Object[] { "active_node_id", "node-1", "2026-05-01T01:00:00.000Z" }
+        );
+    }
+
+    private int countRows(String table) {
+        SQLiteDatabase database = helper.getReadableDatabase();
+        try (Cursor cursor = database.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+            cursor.moveToFirst();
+            return cursor.getInt(0);
+        }
     }
 }
