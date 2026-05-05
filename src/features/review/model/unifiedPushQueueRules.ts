@@ -180,9 +180,7 @@ export function getReadingIntervalGrowthFactor(
   return roundToTwoDecimals(mapped);
 }
 
-export function buildQueueMixCycle(
-  ratio = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.queueMixRatio
-): PushQueueKind[] {
+export function buildQueueMixCycle(ratio = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.queueMixRatio): PushQueueKind[] {
   const normalizedRatio = normalizePushQueueMixRatio(ratio);
   return [
     ...Array.from({ length: normalizedRatio.fsrs }, () => 'fsrs' as const),
@@ -198,13 +196,20 @@ export function resolveReadingNextAt(lastHandledAt: string, intervalDurationMs: 
   return new Date(lastHandledAtMs + intervalDurationMs).toISOString();
 }
 
-export function buildReadingScheduleCoreFields(args: {
-  intervalDurationMs: number;
-  lastHandledAt: string;
-  priorityChain?: readonly unknown[];
-  repetitionCount: number;
-  range?: ReadingIntervalGrowthFactorRange;
-}): ReadingScheduleCoreFields {
+export function resolveNextReadingIntervalDurationMs(args: { repetitionCount: number; previousIntervalDurationMs?: number | null; priorityChain?: readonly unknown[]; initialIntervalMs?: number; range?: ReadingIntervalGrowthFactorRange }) {
+  if (args.repetitionCount <= 0) {
+    return Math.round(args.initialIntervalMs ?? DEFAULT_UNIFIED_PUSH_QUEUE_RULES.readingInitialIntervalMs);
+  }
+  if (!isFiniteNumber(args.previousIntervalDurationMs) || args.previousIntervalDurationMs <= 0) {
+    throw new TypeError(`Invalid previous interval duration: ${args.previousIntervalDurationMs}`);
+  }
+  return Math.round(
+    args.previousIntervalDurationMs *
+      getReadingIntervalGrowthFactor(resolveInheritedRegularPushQueuePriority(args.priorityChain ?? [], 1), args.range)
+  );
+}
+
+export function buildReadingScheduleCoreFields(args: { intervalDurationMs: number; lastHandledAt: string; priorityChain?: readonly unknown[]; repetitionCount: number; range?: ReadingIntervalGrowthFactorRange }): ReadingScheduleCoreFields {
   const priority = resolveInheritedPushQueuePriority(args.priorityChain ?? []);
   return {
     intervalDurationMs: args.intervalDurationMs,
@@ -219,9 +224,26 @@ export function buildReadingScheduleCoreFields(args: {
   };
 }
 
-export function compareReadingNextAtAscending(
-  left: Pick<{ nextAt: string }, 'nextAt'>,
-  right: Pick<{ nextAt: string }, 'nextAt'>
-) {
+export function advanceReadingScheduleCoreFields(args: { lastHandledAt: string; previousIntervalDurationMs?: number | null; previousRepetitionCount: number; priorityChain?: readonly unknown[]; initialIntervalMs?: number; range?: ReadingIntervalGrowthFactorRange }) {
+  const previousRepetitionCount =
+    isFiniteNumber(args.previousRepetitionCount) && args.previousRepetitionCount > 0
+      ? Math.round(args.previousRepetitionCount)
+      : 0;
+  return buildReadingScheduleCoreFields({
+    intervalDurationMs: resolveNextReadingIntervalDurationMs({
+      repetitionCount: previousRepetitionCount,
+      previousIntervalDurationMs: args.previousIntervalDurationMs,
+      priorityChain: args.priorityChain,
+      initialIntervalMs: args.initialIntervalMs,
+      range: args.range
+    }),
+    lastHandledAt: args.lastHandledAt,
+    priorityChain: args.priorityChain,
+    repetitionCount: previousRepetitionCount + 1,
+    range: args.range
+  });
+}
+
+export function compareReadingNextAtAscending(left: Pick<{ nextAt: string }, 'nextAt'>, right: Pick<{ nextAt: string }, 'nextAt'>) {
   return parseTimestamp(left.nextAt) - parseTimestamp(right.nextAt);
 }

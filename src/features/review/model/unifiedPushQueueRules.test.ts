@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import {
+  advanceReadingScheduleCoreFields,
   buildReadingScheduleCoreFields,
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   buildQueueMixCycle,
@@ -12,6 +13,7 @@ import {
   normalizeRegularPushQueuePriority,
   resolveInheritedPushQueuePriority,
   resolveInheritedRegularPushQueuePriority,
+  resolveNextReadingIntervalDurationMs,
   normalizeUnifiedPushQueueRules,
   resolveReadingNextAt
 } from './unifiedPushQueueRules';
@@ -109,6 +111,27 @@ it('keeps reading nextAt on exact timestamps instead of day buckets', () => {
   const nextAt = resolveReadingNextAt(lastHandledAt, 90 * 60 * 1000);
 
   expect(nextAt).toBe('2026-03-16T10:45:30.000Z');
+});
+
+it('advances reading intervals from initial interval through inherited priority growth', () => {
+  expect(resolveNextReadingIntervalDurationMs({ repetitionCount: 0, priorityChain: [undefined, 3] })).toBe(
+    86_400_000
+  );
+  expect(
+    advanceReadingScheduleCoreFields({
+      lastHandledAt: '2026-03-16T09:15:30.000Z',
+      previousIntervalDurationMs: 86_400_000,
+      previousRepetitionCount: 1,
+      priorityChain: [undefined, 3]
+    })
+  ).toEqual({
+    intervalDurationMs: 103_680_000,
+    intervalGrowthFactor: 1.2,
+    lastHandledAt: '2026-03-16T09:15:30.000Z',
+    nextAt: '2026-03-17T14:03:30.000Z',
+    priority: 3,
+    repetitionCount: 2
+  });
 });
 
 it('sorts same-day reading queue candidates by exact nextAt timestamps instead of priority', () => {
