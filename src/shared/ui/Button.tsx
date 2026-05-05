@@ -1,12 +1,12 @@
+import { Button as RadixButton } from '@radix-ui/themes';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-import { Button as ShadcnButton } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type ButtonVariant = 'primary' | 'ghost' | 'subtle' | 'list';
 type ButtonSize = 'sm' | 'md';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color'> {
   children: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -15,7 +15,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 function resolveVariant(variant: ButtonVariant) {
   if (variant === 'primary') {
-    return 'default';
+    return 'solid';
   }
   if (variant === 'ghost') {
     return 'outline';
@@ -24,7 +24,7 @@ function resolveVariant(variant: ButtonVariant) {
 }
 
 function resolveSize(size: ButtonSize) {
-  return size === 'sm' ? 'sm' : 'default';
+  return size === 'sm' ? '1' : '2';
 }
 
 export function Button({
@@ -39,7 +39,7 @@ export function Button({
   const isList = variant === 'list';
 
   return (
-    <ShadcnButton
+    <RadixButton
       className={cn(
         isList && 'w-full justify-start px-3 py-2 text-left text-[13px]',
         variant === 'subtle' && 'text-stone-600 hover:text-stone-800',
@@ -53,6 +53,6 @@ export function Button({
       {...rest}
     >
       {children}
-    </ShadcnButton>
+    </RadixButton>
   );
 }

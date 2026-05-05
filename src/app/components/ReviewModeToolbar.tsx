@@ -1,3 +1,5 @@
+import { Flex } from '@radix-ui/themes';
+
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { Button } from '../../shared/ui';
 
@@ -25,13 +27,13 @@ export function ReviewModeToolbar({
       data-mode={isStudyMode ? 'study' : 'edit'}
     >
       {!isStudyMode ? (
-        <div className="inline-flex items-center justify-start gap-2">
+        <Flex align="center" gap="2" justify="start">
           <Button aria-label="Study" disabled={!canStartStudyMode} onClick={onStartStudyMode} size="sm" variant="primary">
             Study
           </Button>
-        </div>
+        </Flex>
       ) : (
-        <div className="inline-flex w-full items-center justify-center gap-2">
+        <Flex align="center" className="w-full" gap="2" justify="center">
           <Button aria-label="Show Answer" onClick={onRevealAnswer} size="sm" variant="primary">
             Show Answer
           </Button>
@@ -47,7 +49,7 @@ export function ReviewModeToolbar({
           <Button aria-label="Grade 4" className="min-w-24" disabled={!isAnswerRevealed} onClick={() => onGrade(4)} size="sm" variant="ghost">
             4
           </Button>
-        </div>
+        </Flex>
       )}
     </section>
   );

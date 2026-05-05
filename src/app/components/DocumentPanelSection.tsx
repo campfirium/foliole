@@ -64,19 +64,16 @@ export function DocumentPanelSection({
 
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const reveal = activeNode?.reveal ?? '';
-  const hasAnswerSection = activeNode?.reveal !== null && showAnswerSection;
+  const hasAnswerContent = Boolean(activeNode?.reveal && activeNode.reveal.trim().length > 0);
+  const hasAnswerSection = hasAnswerContent && showAnswerSection;
 
   return (
-    <section aria-label="Document area" className="min-h-0">
+    <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col">
       <Panel
         ariaLabel="Document panel"
-        actions={
-          <div className="min-w-0 flex-1 overflow-hidden pl-2">
-            <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
-          </div>
-        }
+        center={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
         bodyClassName="flex min-h-0 flex-1 p-4 max-[1080px]:p-2"
-        className="h-full min-h-0"
+        className="h-full min-h-0 flex-1"
         style={documentLayoutStyle}
         title="Content"
       >

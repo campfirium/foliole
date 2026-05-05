@@ -233,14 +233,52 @@ function Get-NativeTauriCmdProcesses {
   }
 }
 
+function Stop-ProcessGracefully {
+  param(
+    [int]$ProcessId,
+    [string]$ProcessLabel,
+    [int]$WaitMilliseconds = 5000
+  )
+
+  try {
+    $process = Get-Process -Id $ProcessId -ErrorAction Stop
+  } catch {
+    return $true
+  }
+
+  if ($process.HasExited) {
+    return $true
+  }
+
+  if ($process.MainWindowHandle -eq 0) {
+    return $false
+  }
+
+  try {
+    [void]$process.CloseMainWindow()
+    if ($process.WaitForExit($WaitMilliseconds)) {
+      Write-Log "[windows-native-dev] graceful stop success: $ProcessLabel pid=$ProcessId"
+      return $true
+    }
+    Write-Log "[windows-native-dev] graceful stop timeout: $ProcessLabel pid=$ProcessId"
+    return $false
+  } catch {
+    Write-Log "[windows-native-dev] graceful stop failed: $ProcessLabel pid=$ProcessId error=$($_.Exception.Message)"
+    return $false
+  }
+}
+
 function Stop-NativeDevSession {
   param([string]$WorkDir)
 
   $launchers = Get-NativeLauncherProcesses -WorkDir $WorkDir
   foreach ($launcher in $launchers) {
     try {
+      if (Stop-ProcessGracefully -ProcessId $launcher.ProcessId -ProcessLabel "launcher" -WaitMilliseconds 3000) {
+        continue
+      }
       Stop-Process -Id $launcher.ProcessId -Force -ErrorAction Stop
-      Write-Log "[windows-native-dev] stopped launcher pid=$($launcher.ProcessId)"
+      Write-Log "[windows-native-dev] force stopped launcher pid=$($launcher.ProcessId)"
     } catch {
       Write-Log "[windows-native-dev] failed to stop launcher pid=$($launcher.ProcessId): $($_.Exception.Message)"
     }
@@ -249,9 +287,12 @@ function Stop-NativeDevSession {
   $apps = Get-NativeAppProcesses -WorkDir $WorkDir
   foreach ($app in $apps) {
     try {
+      if (Stop-ProcessGracefully -ProcessId $app.ProcessId -ProcessLabel "app" -WaitMilliseconds 5000) {
+        continue
+      }
       # Use taskkill /T to kill the entire process tree (Tauri + all WebView2 children)
       $result = taskkill.exe /PID $app.ProcessId /T /F 2>&1
-      Write-Log "[windows-native-dev] stopped app pid=$($app.ProcessId) (tree): $result"
+      Write-Log "[windows-native-dev] force stopped app pid=$($app.ProcessId) (tree): $result"
     } catch {
       Write-Log "[windows-native-dev] failed to stop app pid=$($app.ProcessId): $($_.Exception.Message)"
     }

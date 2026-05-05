@@ -1,3 +1,5 @@
+import { Flex } from '@radix-ui/themes';
+
 import { IconButton } from '../../shared/ui';
 
 interface WorkspaceToolbarProps {
@@ -22,7 +24,7 @@ export function WorkspaceToolbar({
       aria-label="Workspace toolbar"
       className="flex min-h-[40px] flex-none items-center border-b border-amber-900/15 bg-gradient-to-r from-[#f7f1e6] to-[#f1e7d6] px-3"
     >
-      <div className="inline-flex gap-1">
+      <Flex gap="1">
         <IconButton
           className="size-7 rounded-md border border-transparent text-stone-600 hover:border-amber-900/20 hover:bg-amber-100/60 hover:text-stone-900"
           disabled={!canGoBack}
@@ -44,7 +46,7 @@ export function WorkspaceToolbar({
           label="Go to parent node"
           onClick={onGoParent}
         />
-      </div>
+      </Flex>
     </section>
   );
 }

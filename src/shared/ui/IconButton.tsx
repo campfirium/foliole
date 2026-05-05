@@ -1,17 +1,17 @@
+import { IconButton as RadixIconButton } from '@radix-ui/themes';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-import { Button as ShadcnButton } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color'> {
   icon: ReactNode;
   label: string;
 }
 
 export function IconButton({ icon, label, className, type = 'button', ...rest }: IconButtonProps) {
   return (
-    <ShadcnButton aria-label={label} className={cn('size-8', className)} size="icon" type={type} variant="ghost" {...rest}>
+    <RadixIconButton aria-label={label} className={cn('size-8', className)} size="1" type={type} variant="ghost" {...rest}>
       {icon}
-    </ShadcnButton>
+    </RadixIconButton>
   );
 }

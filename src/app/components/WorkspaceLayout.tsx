@@ -152,7 +152,7 @@ export function WorkspaceLayout({
           onSplitterKeyDown={onSplitterKeyDown}
           onSplitterPointerDown={onSplitterPointerDown}
         />
-        <section aria-label="Document and review area" className="flex min-h-0 flex-col gap-2">
+        <section aria-label="Document and review area" className="flex min-h-0 flex-1 flex-col gap-2">
           <DocumentPanelSection
             activeNodeId={documentNodeId}
             contextMenu={contextMenu}
