@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.getcapacitor.JSObject;
@@ -19,7 +18,7 @@ final class FolioleCompanionMetaRecords {
     private FolioleCompanionMetaRecords() {}
 
     static String loadOrCreateDeviceId(Context context, SQLiteDatabase database, String now) throws Exception {
-        String deviceId = loadValue(database, DEVICE_ID_KEY);
+        String deviceId = loadValue(context, database, DEVICE_ID_KEY);
         if (deviceId != null) {
             return deviceId;
         }
@@ -28,20 +27,20 @@ final class FolioleCompanionMetaRecords {
         return nextDeviceId;
     }
 
-    static JSObject loadNumberCursor(SQLiteDatabase database, String key) throws Exception {
+    static JSObject loadNumberCursor(Context context, SQLiteDatabase database, String key) throws Exception {
         JSObject result = new JSObject();
-        int cursor = loadNumberCursorValue(database, key);
+        int cursor = loadNumberCursorValue(context, database, key);
         result.put("cursor", cursor <= 0 ? JSONObject.NULL : cursor);
         return result;
     }
 
     static JSObject saveNumberCursor(Context context, SQLiteDatabase database, String key, Integer cursor) throws Exception {
         saveNumberCursorValue(context, database, key, cursor == null ? 0 : cursor);
-        return loadNumberCursor(database, key);
+        return loadNumberCursor(context, database, key);
     }
 
-    static int loadNumberCursorValue(SQLiteDatabase database, String key) {
-        String stored = loadValue(database, key);
+    static int loadNumberCursorValue(Context context, SQLiteDatabase database, String key) throws Exception {
+        String stored = loadValue(context, database, key);
         return stored == null ? 0 : Math.max(0, Integer.parseInt(stored));
     }
 
@@ -53,9 +52,9 @@ final class FolioleCompanionMetaRecords {
         }
     }
 
-    static JSObject loadJsonCursor(SQLiteDatabase database, String key) throws Exception {
+    static JSObject loadJsonCursor(Context context, SQLiteDatabase database, String key) throws Exception {
         JSObject result = new JSObject();
-        String stored = loadValue(database, key);
+        String stored = loadValue(context, database, key);
         result.put("cursor", stored == null ? JSONObject.NULL : new JSONObject(stored));
         return result;
     }
@@ -69,17 +68,12 @@ final class FolioleCompanionMetaRecords {
             normalized.put("change_id", cursor.getString("change_id"));
             saveValue(context, database, key, normalized.toString(), Instant.now().toString());
         }
-        return loadJsonCursor(database, key);
+        return loadJsonCursor(context, database, key);
     }
 
-    static String loadValue(SQLiteDatabase database, String key) {
-        try (Cursor cursor = database.query(META_TABLE, new String[] { "value" }, "key = ?", new String[] { key }, null, null, null)) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            String stored = cursor.getString(0);
-            return stored == null || stored.trim().isEmpty() ? null : stored;
-        }
+    static String loadValue(Context context, SQLiteDatabase database, String key) throws Exception {
+        String stored = FolioleCompanionNamedQueryStore.loadString(context, database, "companionMetaValue", new String[] { key });
+        return stored == null || stored.trim().isEmpty() ? null : stored;
     }
 
     static void deleteValue(Context context, SQLiteDatabase database, String key) throws Exception {

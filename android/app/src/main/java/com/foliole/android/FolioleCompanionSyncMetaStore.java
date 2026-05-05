@@ -26,15 +26,15 @@ final class FolioleCompanionSyncMetaStore {
 
     static JSObject loadWorkspaceSyncState(Context context, SQLiteDatabase database) throws Exception {
         JSObject result = new JSObject();
-        String endpointUrl = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
-        String lastSyncedAt = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
+        String endpointUrl = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
+        String lastSyncedAt = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(context, database, deviceId);
         result.put("endpoint_url", endpointUrl);
         result.put("last_synced_at", lastSyncedAt);
-        result.put("remembered_targets", new JSONArray(loadRememberedTargets(database)));
-        result.put("sync_events", new JSONArray(loadSyncEvents(database)));
-        result.put("sync_onboarding_status", loadSyncOnboardingStatus(database, lastSyncedAt, workspaceSnapshot));
+        result.put("remembered_targets", new JSONArray(loadRememberedTargets(context, database)));
+        result.put("sync_events", new JSONArray(loadSyncEvents(context, database)));
+        result.put("sync_onboarding_status", loadSyncOnboardingStatus(context, database, lastSyncedAt, workspaceSnapshot));
         result.put("workspace_snapshot", workspaceSnapshot);
         return result;
     }
@@ -63,7 +63,7 @@ final class FolioleCompanionSyncMetaStore {
         } else {
             String normalizedEndpointUrl = endpointUrl.trim();
             FolioleCompanionMetaRecords.saveValue(context, database, WORKSPACE_SYNC_ENDPOINT_URL_KEY, normalizedEndpointUrl, now);
-            saveRememberedTargets(context, database, appendRememberedTarget(loadRememberedTargets(database), normalizedEndpointUrl), now);
+            saveRememberedTargets(context, database, appendRememberedTarget(loadRememberedTargets(context, database), normalizedEndpointUrl), now);
         }
         return loadWorkspaceSyncState(context, database);
     }
@@ -71,9 +71,9 @@ final class FolioleCompanionSyncMetaStore {
     static JSObject removeWorkspaceSyncRememberedTarget(Context context, SQLiteDatabase database, String endpointUrl) throws Exception {
         String now = Instant.now().toString();
         String normalizedEndpointUrl = endpointUrl.trim();
-        List<String> nextTargets = removeRememberedTarget(loadRememberedTargets(database), normalizedEndpointUrl);
+        List<String> nextTargets = removeRememberedTarget(loadRememberedTargets(context, database), normalizedEndpointUrl);
         saveRememberedTargets(context, database, nextTargets, now);
-        String currentEndpointUrl = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
+        String currentEndpointUrl = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
         if (normalizedEndpointUrl.equals(currentEndpointUrl)) {
             if (nextTargets.isEmpty()) {
                 FolioleCompanionMetaRecords.deleteValue(context, database, WORKSPACE_SYNC_ENDPOINT_URL_KEY);
@@ -84,8 +84,8 @@ final class FolioleCompanionSyncMetaStore {
         return loadWorkspaceSyncState(context, database);
     }
 
-    private static List<JSONObject> loadSyncEvents(SQLiteDatabase database) throws Exception {
-        String stored = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_EVENTS_KEY);
+    private static List<JSONObject> loadSyncEvents(Context context, SQLiteDatabase database) throws Exception {
+        String stored = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_EVENTS_KEY);
         List<JSONObject> events = new ArrayList<>();
         if (stored == null || stored.trim().isEmpty()) {
             return events;
@@ -101,7 +101,7 @@ final class FolioleCompanionSyncMetaStore {
     }
 
     private static void saveSyncEvent(Context context, SQLiteDatabase database, String endpointUrl, String status, String message, String occurredAt) throws Exception {
-        List<JSONObject> events = loadSyncEvents(database);
+        List<JSONObject> events = loadSyncEvents(context, database);
         JSONArray nextEvents = new JSONArray();
         String normalizedStatus = normalizeSyncEventStatus(status);
         String normalizedOccurredAt = occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim();
@@ -132,8 +132,8 @@ final class FolioleCompanionSyncMetaStore {
         return "failed";
     }
 
-    private static List<String> loadRememberedTargets(SQLiteDatabase database) throws Exception {
-        String stored = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY);
+    private static List<String> loadRememberedTargets(Context context, SQLiteDatabase database) throws Exception {
+        String stored = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY);
         List<String> rememberedTargets = new ArrayList<>();
         if (stored == null || stored.trim().isEmpty()) {
             return rememberedTargets;
@@ -173,8 +173,8 @@ final class FolioleCompanionSyncMetaStore {
         return nextTargets;
     }
 
-    private static String loadSyncOnboardingStatus(SQLiteDatabase database, String lastSyncedAt, JSObject workspaceSnapshot) {
-        String status = FolioleCompanionMetaRecords.loadValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY);
+    private static String loadSyncOnboardingStatus(Context context, SQLiteDatabase database, String lastSyncedAt, JSObject workspaceSnapshot) throws Exception {
+        String status = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY);
         if (isValidSyncOnboardingStatus(status)) {
             return status.trim();
         }
