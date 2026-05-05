@@ -95,7 +95,7 @@ async function testRefreshesStructureBeforeContentBatchCompletes() {
 }
 
 async function testContinuesContentCachingAcrossBoundedBatches() {
-  const firstBatch = Array.from({ length: 32 }, (_, index) => `a${String(index).padStart(2, '0')}`.padEnd(64, 'a'));
+  const firstBatch = Array.from({ length: 64 }, (_, index) => index.toString(16).padStart(2, '0').repeat(32));
   const secondBatch = ['b'.repeat(64), 'c'.repeat(64)];
   syncBridgeMock.loadCompanionMissingContentBlobHashes
     .mockResolvedValueOnce(firstBatch)
@@ -107,8 +107,8 @@ async function testContinuesContentCachingAcrossBoundedBatches() {
 
   expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledTimes(2);
   expect(syncBridgeMock.loadCompanionMissingContentBlobHashes).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
-  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(34);
-  expect(result.syncedContentBlobHashes).toHaveLength(34);
+  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledTimes(66);
+  expect(result.syncedContentBlobHashes).toHaveLength(66);
 }
 
 async function testKeepsStructureSyncSuccessfulWhenContentBatchFails() {

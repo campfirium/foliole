@@ -5,13 +5,13 @@ export function CompanionArticleBodyStatusFallback(props: {
   title?: string;
 }) {
   if (props.bodyStatus === 'missing') {
-    return <ArticleBodyMessage detail="Keep this device connected to desktop and try again shortly." heading={props.title} title="Topic content is still syncing." />;
+    return <ArticleBodyMessage detail="This device has the topic list, but this body has not reached the device yet." heading={props.title} title="Waiting for topic body." />;
   }
   if (props.bodyStatus === 'fetching') {
-    return <ArticleBodyMessage detail="Keep this device connected to desktop." heading={props.title} title="Topic content is downloading." />;
+    return <ArticleBodyMessage detail="Keep this device connected to desktop." heading={props.title} title="Loading topic body." />;
   }
   if (props.bodyStatus === 'failed') {
-    return <ArticleBodyMessage detail="Reconnect this device to desktop to retry." heading={props.title} title="Topic content could not be synced." />;
+    return <ArticleBodyMessage detail="Reconnect this device to desktop to retry." heading={props.title} title="Topic body could not be loaded." />;
   }
   return <ArticleBodyMessage heading={props.title} title="This topic is empty." />;
 }

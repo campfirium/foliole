@@ -120,8 +120,8 @@ describe('CompanionShellContent PDF articles', () => {
       workspaceSync: {} as never
     }));
 
-    expect(screen.getByText('Topic content is still syncing.')).toBeInTheDocument();
-    expect(screen.getByText('Keep this device connected to desktop and try again shortly.')).toBeInTheDocument();
+    expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
+    expect(screen.getByText('This device has the topic list, but this body has not reached the device yet.')).toBeInTheDocument();
   });
 
   it('shows an empty state when the selected topic has no body', () => {
@@ -139,7 +139,7 @@ describe('CompanionShellContent PDF articles', () => {
     }));
 
     expect(screen.getByText('This topic is empty.')).toBeInTheDocument();
-    expect(screen.queryByText('Topic content is still syncing.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Waiting for topic body.')).not.toBeInTheDocument();
   });
 
   it('shows a retryable failed state when body blob sync fails validation', () => {
@@ -156,7 +156,7 @@ describe('CompanionShellContent PDF articles', () => {
       workspaceSync: {} as never
     }));
 
-    expect(screen.getByText('Topic content could not be synced.')).toBeInTheDocument();
+    expect(screen.getByText('Topic body could not be loaded.')).toBeInTheDocument();
     expect(screen.getByText('Reconnect this device to desktop to retry.')).toBeInTheDocument();
   });
 });

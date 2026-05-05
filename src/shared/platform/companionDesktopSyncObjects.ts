@@ -11,8 +11,9 @@ import { createSignedRequestHeaders } from './companionWorkspacePairing';
 const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
 const SYNC_PACK_PATH = '/companion/sync-pack';
-export const CONTENT_BLOB_BATCH_LIMIT = 32;
-export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 5;
+export const CONTENT_BLOB_BATCH_LIMIT = 64;
+export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
+export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
 export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
 
 export interface CompanionDesktopSyncOptions {
@@ -81,37 +82,43 @@ async function pullMissingContentBlobs(endpointUrl: string) {
     if (hashes.length === 0) {
       break;
     }
-    const syncedBeforeBatch = syncedContentBlobHashes.length;
-    for (const hash of hashes) {
-      const pathWithQuery = buildContentBlobPath(hash);
-      const result = await syncCompanionContentBlob({
-        hash,
-        headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
-        url: `${endpoint}${pathWithQuery}`
-      });
-      if (result.availability === 'cached') {
-        await ackContentBlob(endpoint, result.hash);
-        syncedContentBlobHashes.push(result.hash);
-      }
-    }
-    if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedContentBlobHashes.length === syncedBeforeBatch) {
+    const syncedBatchHashes = await pullContentBlobBatch(endpoint, hashes);
+    syncedContentBlobHashes.push(...syncedBatchHashes);
+    if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) {
       break;
     }
   }
   return { syncedContentBlobHashes };
 }
 
-export async function syncCompanionContentBlobFromDesktop(endpointUrl: string, hash: string) {
-  const endpoint = normalizeEndpointUrl(endpointUrl);
+async function pullContentBlobBatch(endpoint: string, hashes: string[]) {
+  const syncedContentBlobHashes: string[] = [];
+  for (let index = 0; index < hashes.length; index += CONTENT_BLOB_CONCURRENT_FETCH_LIMIT) {
+    const chunk = hashes.slice(index, index + CONTENT_BLOB_CONCURRENT_FETCH_LIMIT);
+    const syncedChunkHashes = await Promise.all(chunk.map((hash) => pullContentBlob(endpoint, hash)));
+    syncedContentBlobHashes.push(...syncedChunkHashes.filter((hash): hash is string => Boolean(hash)));
+  }
+  return syncedContentBlobHashes;
+}
+
+async function pullContentBlob(endpoint: string, hash: string) {
   const pathWithQuery = buildContentBlobPath(hash);
   const result = await syncCompanionContentBlob({
     hash,
     headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
     url: `${endpoint}${pathWithQuery}`
   });
-  if (result.availability === 'cached') {
-    await ackContentBlob(endpoint, result.hash);
+  if (result.availability !== 'cached') {
+    return null;
   }
+  await ackContentBlob(endpoint, result.hash);
+  return result.hash;
+}
+
+export async function syncCompanionContentBlobFromDesktop(endpointUrl: string, hash: string) {
+  const endpoint = normalizeEndpointUrl(endpointUrl);
+  const syncedHash = await pullContentBlob(endpoint, hash);
+  const result = { availability: syncedHash ? 'cached' as const : 'missing' as const, hash };
   return result;
 }
 

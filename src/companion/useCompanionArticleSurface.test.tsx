@@ -232,6 +232,32 @@ describe('useCompanionArticleSurface browsing', () => {
     expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('article-2');
   });
 
+  it('marks the selected missing body as loading while direct body sync runs', async () => {
+    desktopSyncMock.syncCompanionContentBlobFromDesktop.mockReturnValue(new Promise(() => undefined));
+    const snapshot = createSnapshot();
+    snapshot.nodesById['article-2'] = {
+      ...snapshot.nodesById['article-2'],
+      bodyBlobHash: 'b'.repeat(64),
+      bodyStatus: 'missing',
+      content: ''
+    };
+    const workspaceSync = createWorkspaceSync(snapshot);
+    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+
+    act(() => {
+      result.current.handleSelectRecentArticle('article-2');
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(desktopSyncMock.syncCompanionContentBlobFromDesktop).toHaveBeenCalledWith(
+      'http://10.0.2.2:38641',
+      'b'.repeat(64)
+    );
+    expect(result.current.readableArticle?.bodyStatus).toBe('fetching');
+  });
+
   it('keeps the current readable article available when snapshot recent rows are empty', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(null), createFloatingBar()));
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { BottomBarGrade, CompanionTabAction } from './CompanionFloatingBars';
 import {
@@ -232,6 +232,22 @@ function useCompanionInteractionState(
   };
 }
 
+function useReadableArticleWithBodySyncStatus(
+  readableArticle: CompanionWorkspaceSyncApi['readableArticle'],
+  fetchingBodyKey: string | null
+) {
+  return useMemo(() => {
+    if (!readableArticle?.bodyBlobHash || !fetchingBodyKey) {
+      return readableArticle;
+    }
+    const articleKey = `${readableArticle.nodeId}:${readableArticle.bodyBlobHash}:${readableArticle.bodyStatus}`;
+    if (articleKey !== fetchingBodyKey) {
+      return readableArticle;
+    }
+    return { ...readableArticle, bodyStatus: 'fetching' as const };
+  }, [fetchingBodyKey, readableArticle]);
+}
+
 export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSyncApi, floatingBar: FloatingBarVisibilityApi) {
   const [activeAction, setActiveAction] = useState<CompanionTabAction>(() => {
     return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
@@ -258,12 +274,16 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
     }
   }, [workspaceSync.state.workspace_snapshot]);
 
-  useCompanionMissingBodySync({ readableArticle: browseState.readableArticle, workspaceSync });
+  const missingBodySync = useCompanionMissingBodySync({ readableArticle: browseState.readableArticle, workspaceSync });
+  const readableArticle = useReadableArticleWithBodySyncStatus(
+    browseState.readableArticle,
+    missingBodySync.fetchingBodyKey
+  );
 
   return {
     activeAction,
     browsedFolder: browseState.browsedFolder,
-    readableArticle: browseState.readableArticle,
+    readableArticle,
     recentArticles: browseState.recentArticles,
     reviewSession: browseState.reviewSession,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,

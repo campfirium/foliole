@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { syncCompanionContentBlobFromDesktop } from '../shared/platform/companionDesktopSyncObjects';
 
@@ -13,6 +13,7 @@ export function useCompanionMissingBodySync(args: {
 }) {
   const attemptedBodySyncKeysRef = useRef(new Set<string>());
   const currentArticleNodeIdRef = useRef<string | null>(null);
+  const [fetchingBodyKey, setFetchingBodyKey] = useState<string | null>(null);
 
   useEffect(() => {
     currentArticleNodeIdRef.current = args.readableArticle?.nodeId ?? null;
@@ -27,6 +28,7 @@ export function useCompanionMissingBodySync(args: {
     const syncKey = `${article.nodeId}:${article.bodyBlobHash}:${article.bodyStatus}`;
     if (attemptedBodySyncKeysRef.current.has(syncKey)) return;
     attemptedBodySyncKeysRef.current.add(syncKey);
+    setFetchingBodyKey(syncKey);
 
     void syncCompanionContentBlobFromDesktop(endpointUrl, article.bodyBlobHash)
       .then(async () => {
@@ -34,11 +36,18 @@ export function useCompanionMissingBodySync(args: {
           await args.workspaceSync.refreshFromDevice();
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        setFetchingBodyKey((currentKey) => currentKey === syncKey ? null : currentKey);
+      });
   }, [
     args.readableArticle?.bodyBlobHash,
     args.readableArticle?.bodyStatus,
     args.readableArticle?.nodeId,
     args.workspaceSync
   ]);
+
+  return {
+    fetchingBodyKey
+  };
 }
