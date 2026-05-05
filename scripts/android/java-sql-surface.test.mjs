@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const JAVA_ROOT = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android');
-const SQL_LITERAL_PATTERN = /"[^"\n]*(?:SELECT|PRAGMA|sqlite_master)[^"\n]*"/g;
+const SQL_LITERAL_PATTERN = /"[^"\n]*\b(?:ALTER|CREATE|DELETE|DROP|INSERT|PRAGMA|SELECT|UPDATE|sqlite_master)\b[^"\n]*"/g;
 
 const ALLOWED_SQL_LITERALS = [
   {
@@ -64,7 +64,7 @@ function interestingAccessLines(filePath) {
     .readFileSync(filePath, 'utf8')
     .split(/\r?\n/)
     .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
-    .filter((entry) => /\bdatabase\.(?:rawQuery|query|execSQL)\(|\.compileStatement\(/.test(entry.text));
+    .filter((entry) => /\bdatabase\.(?:delete|execSQL|insert|query|rawQuery|update)\(|\.compileStatement\(/.test(entry.text));
 }
 
 function directNamedQueryLines(filePath) {
