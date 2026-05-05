@@ -40,13 +40,14 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
   const customIcon = resolveNodeTreeRowCustomIcon({ kind, state });
   const fallbackTransformMode = isReviewCard ? 'flip-y' : 'none';
   const transformMode = customIcon.markup ? customIcon.transformMode : fallbackTransformMode;
+  const iconStyle = state === 'pending' ? { color: '#2563eb' } : undefined;
   const iconClassName = cn(
-    'relative mr-1 inline-flex size-3.5 flex-none items-center justify-center text-foreground/65',
-    state === 'pending' && 'text-foreground/78'
+    'relative mr-1 inline-flex size-3.5 flex-none items-center justify-center text-foreground/65'
   );
   return (
     <span
       className={iconClassName}
+      style={iconStyle}
       data-node-icon="leaf"
       data-node-icon-kind={kind}
       data-node-icon-pattern={state === 'pending' ? 'dash' : 'normal'}
