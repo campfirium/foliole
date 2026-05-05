@@ -41,17 +41,46 @@ function sanitizeArticleTitle(title: string) {
   return cleaned || 'Untitled';
 }
 
-function createStableFileName(title: string, nodeId: string, usedNames: Set<string>) {
+function formatMirrorFileTimestampParts(timestamp: string) {
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) {
+    return {
+      date: 'unknown',
+      minute: 'unknown0000',
+      second: 'unknown000000'
+    };
+  }
+  const normalized = new Date(parsed).toISOString();
+  return {
+    date: normalized.slice(2, 10).replaceAll('-', ''),
+    minute: normalized.slice(2, 16).replaceAll('-', '').replace('T', '').replace(':', ''),
+    second: normalized.slice(2, 19).replaceAll('-', '').replace('T', '').replaceAll(':', '')
+  };
+}
+
+function createStableFileName(title: string, createdAt: string, usedNames: Set<string>) {
   const baseName = sanitizeArticleTitle(title);
   const firstCandidate = `${baseName}.md`;
   if (!usedNames.has(firstCandidate)) {
     usedNames.add(firstCandidate);
     return firstCandidate;
   }
-  const suffix = nodeId.replace(/^node-/, '').slice(0, 8) || nodeId.slice(-8);
-  const dedupedCandidate = `${baseName}--${suffix}.md`;
-  usedNames.add(dedupedCandidate);
-  return dedupedCandidate;
+  const timestampParts = formatMirrorFileTimestampParts(createdAt);
+  const secondCandidate = `${baseName}${timestampParts.second}.md`;
+  if (!usedNames.has(secondCandidate)) {
+    usedNames.add(secondCandidate);
+    return secondCandidate;
+  }
+
+  let duplicateIndex = 2;
+  while (true) {
+    const dedupedCandidate = `${baseName}${timestampParts.second}${duplicateIndex}.md`;
+    if (!usedNames.has(dedupedCandidate)) {
+      usedNames.add(dedupedCandidate);
+      return dedupedCandidate;
+    }
+    duplicateIndex += 1;
+  }
 }
 
 function createStableDirectoryName(title: string, nodeId: string, usedNames: Set<string>) {
@@ -219,7 +248,7 @@ export function collectArticleMirrorTargets(snapshot: WorkspaceSnapshot, mirrorR
     );
     const usedNames = usedFileNamesByDirectory.get(targetDirectory) ?? new Set<string>();
     usedFileNamesByDirectory.set(targetDirectory, usedNames);
-    const fileName = createStableFileName(article.title.trim() || 'Untitled', article.id, usedNames);
+    const fileName = createStableFileName(article.title.trim() || 'Untitled', article.createdAt, usedNames);
     const targetPath = path.join(targetDirectory, fileName);
     const { derivedByAnchorKey, derivedChildren } = buildDerivedChildMap(snapshot, article.id);
     const manualTopics = manualTopicsByArticleId.get(article.id) ?? [];

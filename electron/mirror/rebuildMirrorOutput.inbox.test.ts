@@ -97,10 +97,10 @@ it('exports direct inbox children into the Inbox directory without leaking files
     'First inbox note.'
   );
   await expect(
-    fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Inbox', 'Untitled--fb9f5fe5.md'), 'utf8')
+    fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Inbox', 'Untitled260330000000.md'), 'utf8')
   ).resolves.toContain('Second inbox note.');
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Untitled.md'))).rejects.toThrow();
-  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Untitled--fb9f5fe5.md'))).rejects.toThrow();
+  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Untitled260330000000.md'))).rejects.toThrow();
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Inbox--special-'))).rejects.toThrow();
 });
 
