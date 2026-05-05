@@ -582,6 +582,17 @@ function Capture-BootTimeoutDiagnostics {
       Write-SnapshotLine "state_file=$stateFile exists=false"
     }
 
+    # Capture WebView2 chrome_debug.log (written when --enable-logging is set).
+    $wv2DebugLog = Join-Path $webViewUserDataFolder "EBWebView\chrome_debug.log"
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[webview2] chrome_debug.log (last 40 lines)"
+    if (Test-Path $wv2DebugLog) {
+      $debugLines = Get-Content -Path $wv2DebugLog -Tail 40 -ErrorAction SilentlyContinue
+      foreach ($dl in $debugLines) { Write-SnapshotLine $dl }
+    } else {
+      Write-SnapshotLine "not found: $wv2DebugLog"
+    }
+
     Write-Log "[windows-native-dev] boot-timeout diagnostics captured: $snapshotPath"
   } catch {
     Write-Log "[windows-native-dev] boot-timeout diagnostics failed: $($_.Exception.Message)"
@@ -977,12 +988,6 @@ function Launch-NativeDev {
   if (Test-Path $bootReadyFile) {
     Remove-Item -Force $bootReadyFile -ErrorAction SilentlyContinue
   }
-
-  # Deep clean the WebView2 UDF before every launch. Stale profile data (IndexedDB,
-  # cached renderer state) from a previous session causes the Browser Process to exit
-  # silently within ~1-2 seconds on the first startup attempt. Retry succeeds because
-  # it deep cleans, so we move the clean here to avoid the first-attempt failure.
-  Reset-WebView2UserData -AppId $appId -DeepClean
 
   if (-not (Ensure-WebView2UserDataFolderWritable -UserDataFolder $webViewUserDataFolder)) {
     $script:LastBootFailureReason = "WEBVIEW2_UDF_NOT_WRITABLE"
