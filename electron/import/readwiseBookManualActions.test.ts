@@ -30,6 +30,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { loadJsonSetting } from '../database/settingsStore.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
@@ -43,6 +44,8 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-book-manual-actions-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  openExternal.mockReset();
+  showOpenDialog.mockReset();
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/selected-book.epub'] });
 });
 
@@ -142,4 +145,58 @@ it('binds the selected EPUB to the current book and keeps the received status on
 
   const snapshot = loadWorkspaceSnapshot();
   expect(snapshot?.nodesById[buildReadwiseBookPlaceholderNodeId('manual book')]?.content).toContain('EPUB received');
+});
+
+it('reopens the picker from the last selected EPUB folder after restart', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  await fs.writeFile(
+    path.join(highlightDir, 'Second Book.md'),
+    '# Second Book\n\n## Highlights\nSaved quote.\n',
+    'utf8'
+  );
+  await fs.writeFile(
+    path.join(fullDocumentDir, 'Second Book.md'),
+    '# Second Book\n\n## Full Document\nWaiting for EPUB.\n',
+    'utf8'
+  );
+
+  const downloadDir = path.join(tempRoot, 'downloads');
+  await fs.mkdir(downloadDir, { recursive: true });
+  const selectedEpubPath = path.join(downloadDir, 'selected-book.epub');
+  showOpenDialog
+    .mockResolvedValueOnce({ canceled: false, filePaths: [selectedEpubPath] })
+    .mockResolvedValueOnce({ canceled: true, filePaths: [] });
+
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const firstNodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  const secondNodeId = inventory.books.find((book) => book.bookKey === 'second book')?.generatedNodeId;
+
+  expect(firstNodeId).toBeTruthy();
+  expect(secondNodeId).toBeTruthy();
+
+  await loadReadwiseBookEpub(firstNodeId!);
+  expect(loadJsonSetting('readwise_book_epub_picker_state')).toEqual(
+    expect.objectContaining({ lastDirectory: downloadDir })
+  );
+
+  closeDatabaseConnection();
+  initializeDatabase();
+
+  const result = await loadReadwiseBookEpub(secondNodeId!);
+
+  expect(result).toEqual({
+    book_key: 'second book',
+    epub_path: null,
+    status: 'cancelled',
+    title: 'Second Book'
+  });
+  expect(showOpenDialog).toHaveBeenNthCalledWith(2, {
+    defaultPath: downloadDir,
+    filters: [{ extensions: ['epub'], name: 'EPUB' }],
+    properties: ['openFile']
+  });
 });

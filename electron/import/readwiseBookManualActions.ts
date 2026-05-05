@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 import { dialog, shell, type BrowserWindow } from 'electron';
 
@@ -7,6 +8,7 @@ import type {
   NativeReadwiseBookEpubLoadResult
 } from '../../lib/platform/nativeReadwiseContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
@@ -24,11 +26,14 @@ const PREFERRED_DOWNLOAD_METADATA_KEYS = [
   'source_url',
   'url'
 ];
+const READWISE_BOOK_EPUB_PICKER_STATE_KEY = 'readwise_book_epub_picker_state';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
 function normalizeLineEndings(value: string) {
   return value.replace(/\r\n?/g, '\n');
 }
-
 function normalizeMetadataKey(value: string) {
   return value
     .trim()
@@ -57,7 +62,6 @@ function parseMetadataEntries(markdown: string) {
       return key && value ? [{ key, value }] : [];
     });
 }
-
 function extractUrl(value: string) {
   const markdownLinkMatch = /\((https?:\/\/[^)\s]+)\)/i.exec(value);
   if (markdownLinkMatch?.[1]) {
@@ -67,6 +71,45 @@ function extractUrl(value: string) {
   return directMatch?.[1] ?? null;
 }
 
+async function pathExists(targetPath: string) {
+  try {
+    await fs.stat(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function loadRecentReadwiseBookEpubDirectory() {
+  const saved = loadJsonSetting(READWISE_BOOK_EPUB_PICKER_STATE_KEY);
+  if (!isRecord(saved) || typeof saved.lastDirectory !== 'string') {
+    return '';
+  }
+  return saved.lastDirectory.trim();
+}
+function saveRecentReadwiseBookEpubDirectory(epubPath: string) {
+  const lastDirectory = path.dirname(epubPath).trim();
+  if (!lastDirectory) {
+    return;
+  }
+  saveJsonSetting(READWISE_BOOK_EPUB_PICKER_STATE_KEY, {
+    lastDirectory,
+    updatedAt: new Date().toISOString()
+  });
+}
+async function resolveReadwiseBookEpubDialogDefaultPath(book: ReadwiseBookInventoryItem) {
+  const currentEpubPath = book.epubPath?.trim() ?? '';
+  if (currentEpubPath && (await pathExists(currentEpubPath))) {
+    return currentEpubPath;
+  }
+
+  const recentDirectory = loadRecentReadwiseBookEpubDirectory();
+  if (recentDirectory && (await pathExists(recentDirectory))) {
+    return recentDirectory;
+  }
+
+  return undefined;
+}
 async function readBookDownloadUrl(book: ReadwiseBookInventoryItem) {
   for (const sourcePath of [book.fullDocumentMarkdownPath, book.highlightMarkdownPath]) {
     if (!sourcePath) {
@@ -142,21 +185,23 @@ export async function loadReadwiseBookEpub(
     return { book_key: null, epub_path: null, status: 'book_not_found', title: null };
   }
 
+  const defaultPath = await resolveReadwiseBookEpubDialogDefaultPath(book);
+  const dialogOptions = {
+    ...(defaultPath ? { defaultPath } : {}),
+    filters: [{ extensions: ['epub'], name: 'EPUB' }],
+    properties: ['openFile']
+  } satisfies Parameters<typeof dialog.showOpenDialog>[0];
+
   const selection = window
-    ? await dialog.showOpenDialog(window, {
-        filters: [{ extensions: ['epub'], name: 'EPUB' }],
-        properties: ['openFile']
-      })
-    : await dialog.showOpenDialog({
-        filters: [{ extensions: ['epub'], name: 'EPUB' }],
-        properties: ['openFile']
-      });
+    ? await dialog.showOpenDialog(window, dialogOptions)
+    : await dialog.showOpenDialog(dialogOptions);
 
   if (selection.canceled || selection.filePaths.length === 0 || !selection.filePaths[0]?.trim()) {
     return { book_key: book.bookKey, epub_path: null, status: 'cancelled', title: book.title };
   }
 
   const epubPath = selection.filePaths[0].trim();
+  saveRecentReadwiseBookEpubDirectory(epubPath);
   const updatedBook = {
     ...book,
     epubPath,
