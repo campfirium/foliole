@@ -27,6 +27,7 @@ export const SYNC_PACK_OBJECT_TYPES = new Set<SyncPackObjectType>(
 export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'attachment',
   'external_folder',
+  'import_source',
   'node_reading',
   'node_review',
   'setting'

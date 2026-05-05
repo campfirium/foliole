@@ -170,6 +170,20 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void appliesImportSourcePayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingImportSourceRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals("notes.md", selectString("SELECT source_name FROM import_sources WHERE source_fingerprint = 'source-1'"));
+        assertEquals("import-source-hash", selectString(
+            "SELECT content_hash FROM sync_object_state WHERE object_type = 'import_source' AND object_id = 'source-1'"
+        ));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
@@ -218,6 +232,10 @@ public class FolioleCompanionSyncPackApplyTest {
             "attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]', " +
             "status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0, " +
             "indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        mainDatabase.execSQL("CREATE TABLE import_sources (" +
+            "source_fingerprint TEXT PRIMARY KEY, provider TEXT NOT NULL, source_kind TEXT NOT NULL, " +
+            "source_name TEXT NOT NULL, source_locator TEXT NOT NULL, first_imported_at TEXT NOT NULL, " +
+            "last_imported_at TEXT NOT NULL, last_content_fingerprint TEXT NOT NULL, latest_node_id TEXT)");
     }
 
     private void createIncomingPack() {
@@ -352,6 +370,27 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'external_folder', 'folder-1', 2, 'external-folder-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingImportSourceRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:09:00.000Z";
+            String payload = "{\"source_fingerprint\":\"source-1\",\"provider\":\"manual\"," +
+                "\"source_kind\":\"markdown\",\"source_name\":\"notes.md\"," +
+                "\"source_locator\":\"/library/notes.md\",\"first_imported_at\":\"" + now + "\"," +
+                "\"last_imported_at\":\"" + now + "\",\"last_content_fingerprint\":\"content-1\"," +
+                "\"latest_node_id\":\"node-1\"}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'import_source', 'source-1', 'import-source-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'import_source', 'source-1', 2, 'import-source-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }
