@@ -51,10 +51,31 @@ body {
   font-size: 0.95rem;
 }
 
+.panel-editor .panel-body {
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+}
+
 .right-stack {
   display: grid;
   grid-template-rows: minmax(220px, 2fr) minmax(180px, 1fr);
   gap: 0.75rem;
+}
+
+.markdown-editor-host {
+  height: 100%;
+  min-height: 220px;
+}
+
+.markdown-editor-host .cm-editor {
+  height: 100%;
+}
+
+.markdown-editor-host .cm-scroller {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  padding: 0.75rem;
 }
 
 @media (max-width: 900px) {

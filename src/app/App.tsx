@@ -1,4 +1,12 @@
+import { useState } from 'react';
+
+import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
+
 export function App() {
+  const [content, setContent] = useState<string>(
+    '# Welcome to Foliole\n\nStart writing markdown here.'
+  );
+
   return (
     <main className="workspace" aria-label="Foliole workspace">
       <aside className="panel panel-list" aria-label="Node list panel">
@@ -16,7 +24,7 @@ export function App() {
             <h2>Editor</h2>
           </header>
           <div className="panel-body">
-            <p>Markdown editor placeholder</p>
+            <MarkdownEditor value={content} onChange={setContent} />
           </div>
         </section>
 
