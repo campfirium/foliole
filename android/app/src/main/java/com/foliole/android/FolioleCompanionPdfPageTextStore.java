@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionPdfPageTextStore {
@@ -42,12 +41,13 @@ final class FolioleCompanionPdfPageTextStore {
         if (normalizedQuery.isEmpty()) {
             return result;
         }
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
             context,
             database,
             "pdfPageTextSearch",
+            "results",
             new String[] { normalizedQuery, normalizedQuery, Integer.toString(resolveLimit(limit)) }
-        ).getJSONArray("results");
+        );
         for (int index = 0; index < rows.length(); index += 1) {
             results.put(toSearchResult(rows.getJSONObject(index)));
         }

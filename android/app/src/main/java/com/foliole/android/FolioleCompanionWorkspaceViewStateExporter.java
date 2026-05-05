@@ -3,9 +3,9 @@ package com.foliole.android;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,9 +15,8 @@ final class FolioleCompanionWorkspaceViewStateExporter {
 
     static JSObject loadPersistedNodeViewById(Context context, SQLiteDatabase database, String deviceId) throws Exception {
         JSObject statesById = new JSObject();
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "nodeViewStatesByDevice", new String[] { deviceId })
-            .getJSONArray("states");
+        JSArray rows = FolioleCompanionNamedQueryStore
+            .loadRows(context, database, "nodeViewStatesByDevice", "states", new String[] { deviceId });
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             String nodeId = row.getString("node_id");

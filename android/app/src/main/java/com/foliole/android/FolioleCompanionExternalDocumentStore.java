@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionExternalDocumentStore {
@@ -22,9 +21,8 @@ final class FolioleCompanionExternalDocumentStore {
         if (documentId == null || documentId.trim().isEmpty()) {
             return result;
         }
-        JSONArray documents = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "externalDocumentById", new String[] { documentId.trim() })
-            .getJSONArray("documents");
+        JSArray documents = FolioleCompanionNamedQueryStore
+            .loadRows(context, database, "externalDocumentById", "documents", new String[] { documentId.trim() });
         if (documents.length() > 0) {
             result.put("document", toDocument(documents.getJSONObject(0)));
         }
@@ -33,7 +31,7 @@ final class FolioleCompanionExternalDocumentStore {
 
     static JSObject loadDirectory(Context context, SQLiteDatabase database) throws Exception {
         JSObject result = new JSObject();
-        result.put("folders", FolioleCompanionNamedQueryStore.loadArray(context, database, "externalSearchFolders").getJSONArray("folders"));
+        result.put("folders", FolioleCompanionNamedQueryStore.loadRows(context, database, "externalSearchFolders", "folders"));
         result.put("entries", loadEntries(context, database));
         return result;
     }
@@ -47,11 +45,12 @@ final class FolioleCompanionExternalDocumentStore {
         if (normalizedQuery.isEmpty()) {
             return result;
         }
-        JSONArray documents = FolioleCompanionNamedQueryStore
-            .loadArray(
+        JSArray documents = FolioleCompanionNamedQueryStore
+            .loadRows(
                 context,
                 database,
                 "externalDocumentSearch",
+                "documents",
                 new String[] {
                 normalizedQuery,
                 normalizedQuery,
@@ -61,8 +60,7 @@ final class FolioleCompanionExternalDocumentStore {
                 normalizedQuery,
                 Integer.toString(resolveLimit(limit))
                 }
-            )
-            .getJSONArray("documents");
+            );
         for (int index = 0; index < documents.length(); index += 1) {
             results.put(toSearchResult(documents.getJSONObject(index)));
         }
@@ -71,9 +69,7 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSArray loadEntries(Context context, SQLiteDatabase database) throws Exception {
         JSArray entries = new JSArray();
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "externalDocumentDirectoryEntries")
-            .getJSONArray("entries");
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "externalDocumentDirectoryEntries", "entries");
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             JSObject entry = new JSObject();
