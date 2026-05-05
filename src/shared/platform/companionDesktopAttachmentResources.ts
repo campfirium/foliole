@@ -9,6 +9,7 @@ import {
 } from './companionWorkspaceSyncBridge';
 
 const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
+export const ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT = 6;
 
 interface AttachmentResourceRequest {
   attachmentId: string;
@@ -77,24 +78,36 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedAttachmentIds: string[] = [];
   let failedAttachmentCount = 0;
-  for (const request of requests) {
-    const pathWithQuery = buildAttachmentResourcePath(request);
-    try {
-      await FolioleCompanionSync.syncAttachmentResource({
-        attachment_id: request.attachmentId,
-        content_hash: request.contentHash,
-        headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
-        url: `${endpoint}${pathWithQuery}`
-      });
-      syncedAttachmentIds.push(request.attachmentId);
-    } catch {
-      failedAttachmentCount += 1;
+  for (let index = 0; index < requests.length; index += ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT) {
+    const chunk = requests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
+    const results = await Promise.all(chunk.map((request) => syncAttachmentResourceRequest(endpoint, request)));
+    for (const result of results) {
+      if (result) {
+        syncedAttachmentIds.push(result);
+      } else {
+        failedAttachmentCount += 1;
+      }
     }
   }
   if (requests.length > 0 && failedAttachmentCount === requests.length) {
     throw new Error('Attachment batch could not download any requested file.');
   }
   return syncedAttachmentIds;
+}
+
+async function syncAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
+  const pathWithQuery = buildAttachmentResourcePath(request);
+  try {
+    await FolioleCompanionSync.syncAttachmentResource({
+      attachment_id: request.attachmentId,
+      content_hash: request.contentHash,
+      headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+      url: `${endpoint}${pathWithQuery}`
+    });
+    return request.attachmentId;
+  } catch {
+    return null;
+  }
 }
 
 export async function syncCompanionAttachmentResourceFromDesktop(

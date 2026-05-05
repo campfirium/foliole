@@ -123,6 +123,27 @@ describe('companion desktop attachment resource queue', () => {
     expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledTimes(2);
   });
 
+  it('starts attachment resource downloads in a bounded parallel batch', async () => {
+    let resolveFirst!: () => void;
+    capacitorMock.plugin.syncAttachmentResource
+      .mockImplementationOnce(async () => new Promise((resolve) => {
+        resolveFirst = () => resolve({ attachment_id: 'att-2', availability: 'cached' });
+      }))
+      .mockResolvedValueOnce({ attachment_id: 'att-3', availability: 'cached' });
+
+    const download = syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
+      { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
+      { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
+    ]);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledTimes(2);
+    resolveFirst();
+    await expect(download).resolves.toEqual(['att-2', 'att-3']);
+  });
+
   it('fails already enumerated attachment resources when the whole batch fails', async () => {
     capacitorMock.plugin.syncAttachmentResource.mockRejectedValue(new Error('Desktop returned 404.'));
 
