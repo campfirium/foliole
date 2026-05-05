@@ -139,6 +139,14 @@ async function testRecordsStructureLagWithoutCompleting() {
 async function testKeepsProgressVisibleWhenBacklogRemains() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceCount: 2,
+    remainingContentBreakdown: {
+      activeTopicBodies: 1,
+      dueReviewBodies: 2,
+      externalDocumentBodies: 1,
+      nestedTopicBodies: 3,
+      topLevelTopicBodies: 1,
+      topicBodies: 4
+    },
     remainingContentBlobCount: 5
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
@@ -158,6 +166,14 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
     completedBytes: 0,
+    contentBreakdown: {
+      activeTopicBodies: 1,
+      dueReviewBodies: 2,
+      externalDocumentBodies: 1,
+      nestedTopicBodies: 3,
+      topLevelTopicBodies: 1,
+      topicBodies: 4
+    },
     phase: 'content',
     total: 5,
     totalBytes: null

@@ -15,6 +15,7 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
     return {
       completed: 0,
       completedBytes: 0,
+      contentBreakdown: result.remainingContentBreakdown,
       phase: 'content',
       total: result.remainingContentBlobCount,
       totalBytes: result.remainingContentBlobBytes ?? null
@@ -22,6 +23,7 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
   }
   if (result.remainingAttachmentResourceCount !== 0) {
     return {
+      attachmentBreakdown: result.remainingAttachmentBreakdown,
       completed: 0,
       completedBytes: 0,
       phase: 'attachment',

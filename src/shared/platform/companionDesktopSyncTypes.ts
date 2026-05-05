@@ -49,8 +49,10 @@ export interface CompanionDesktopSyncResult {
   pushConflictCount: number;
   pushIssueCount: number | null;
   pushRejectedCount: number;
+  remainingAttachmentBreakdown?: CompanionDesktopSyncProgress['attachmentBreakdown'];
   remainingAttachmentResourceBytes: number | null;
   remainingAttachmentResourceCount: number | null;
+  remainingContentBreakdown?: CompanionDesktopSyncProgress['contentBreakdown'];
   remainingContentBlobBytes: number | null;
   remainingContentBlobCount: number | null;
   remainingStructureChangeCount: number | null;

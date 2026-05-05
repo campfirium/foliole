@@ -94,8 +94,26 @@ async function loadFinalSyncSummary(endpointUrl: string) {
     localDirtyCount: diagnostics?.sync_state?.local_dirty_count ?? null,
     pendingAckCount: diagnostics?.sync_state?.pending_ack_count ?? null,
     pushIssueCount: diagnostics?.sync_state?.push_issue_count ?? null,
+    remainingAttachmentBreakdown: diagnostics ? {
+      activeTopicAttachments: diagnostics.content?.missing_active_topic_attachment_resource_count,
+      dueReviewAttachments: diagnostics.content?.missing_due_review_attachment_resource_count,
+      imageAttachments: diagnostics.content?.missing_image_attachment_resource_count,
+      imageBytes: diagnostics.content?.missing_image_attachment_resource_bytes,
+      otherAttachments: diagnostics.content?.missing_other_attachment_resource_count,
+      otherBytes: diagnostics.content?.missing_other_attachment_resource_bytes,
+      pdfAttachments: diagnostics.content?.missing_pdf_attachment_resource_count,
+      pdfBytes: diagnostics.content?.missing_pdf_attachment_resource_bytes
+    } : undefined,
     remainingAttachmentResourceBytes: diagnostics?.content?.missing_attachment_resource_bytes ?? null,
     remainingAttachmentResourceCount: diagnostics?.content?.missing_attachment_resource_count ?? null,
+    remainingContentBreakdown: diagnostics ? {
+      activeTopicBodies: diagnostics.content?.missing_active_topic_body_count,
+      dueReviewBodies: diagnostics.content?.missing_due_review_body_count,
+      externalDocumentBodies: diagnostics.content?.missing_external_document_body_count,
+      nestedTopicBodies: diagnostics.content?.missing_nested_topic_body_count,
+      topLevelTopicBodies: diagnostics.content?.missing_top_level_topic_body_count,
+      topicBodies: diagnostics.content?.missing_topic_body_count
+    } : undefined,
     remainingContentBlobBytes: diagnostics?.content?.missing_content_blob_bytes ?? null,
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingStructureChangeCount: typeof desktopStateSeq === 'number' && typeof androidCursor === 'number'
@@ -196,8 +214,10 @@ async function runCompanionObjectsSync(
     pendingAckCount: finalSummary.pendingAckCount,
     pushConflictCount: pushed.pushConflictCount,
     pushIssueCount: finalSummary.pushIssueCount,
+    remainingAttachmentBreakdown: finalSummary.remainingAttachmentBreakdown,
     remainingAttachmentResourceBytes: finalSummary.remainingAttachmentResourceBytes,
     remainingAttachmentResourceCount: finalSummary.remainingAttachmentResourceCount,
+    remainingContentBreakdown: finalSummary.remainingContentBreakdown,
     remainingContentBlobBytes: finalSummary.remainingContentBlobBytes,
     remainingContentBlobCount: finalSummary.remainingContentBlobCount,
     remainingStructureChangeCount: finalSummary.remainingStructureChangeCount,

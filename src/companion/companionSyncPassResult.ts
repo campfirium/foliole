@@ -7,8 +7,26 @@ export interface CompanionSyncPassInput {
   pushError?: string | null;
   pushIssueCount?: number | null;
   pushRejectedCount?: number;
+  remainingAttachmentBreakdown?: {
+    activeTopicAttachments?: number;
+    dueReviewAttachments?: number;
+    imageAttachments?: number;
+    imageBytes?: number;
+    otherAttachments?: number;
+    otherBytes?: number;
+    pdfAttachments?: number;
+    pdfBytes?: number;
+  };
   remainingAttachmentResourceBytes?: number | null;
   remainingAttachmentResourceCount: number | null;
+  remainingContentBreakdown?: {
+    activeTopicBodies?: number;
+    dueReviewBodies?: number;
+    externalDocumentBodies?: number;
+    nestedTopicBodies?: number;
+    topLevelTopicBodies?: number;
+    topicBodies?: number;
+  };
   remainingContentBlobBytes?: number | null;
   remainingContentBlobCount: number | null;
   remainingStructureChangeCount?: number | null;
