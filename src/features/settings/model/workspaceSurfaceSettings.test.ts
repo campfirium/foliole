@@ -55,13 +55,13 @@ it('derives sidebar panel and scrollbar colors from the assigned workspace surfa
     palette: ['#f0f0f0', '#505050']
   });
 
-  expect(root.style.getPropertyValue('--workspace-region-main-rail-scrollbar-thumb-color')).toBe('#dbdbdb');
-  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-scrollbar-thumb-color')).toBe('#6e6e6e');
+  expect(root.style.getPropertyValue('--workspace-region-main-rail-scrollbar-thumb-color')).toBe('#ebebeb');
+  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-scrollbar-thumb-color')).toBe('#595959');
   expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-bg')).toBe('#5e5e5e');
   expect(root.style.getPropertyValue('--workspace-region-main-sidebar-panel-elevated-bg')).toBe('#696969');
 });
 
-it('keeps scrollbar thumbs in the assigned surface hue when the surface is chromatic', () => {
+it('derives scrollbar thumbs from the assigned surface color', () => {
   const root = document.documentElement;
 
   applyWorkspaceSurfaceSettings(root, {
@@ -85,11 +85,11 @@ it('keeps scrollbar thumbs in the assigned surface hue when the surface is chrom
     palette: ['#dce8f6', '#364a66']
   });
 
-  expect(root.style.getPropertyValue('--workspace-region-main-rail-scrollbar-thumb-color')).toBe('#b7d2f0');
-  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-scrollbar-thumb-color')).toBe('#456796');
+  expect(root.style.getPropertyValue('--workspace-region-main-rail-scrollbar-thumb-color')).toBe('#d2e2f3');
+  expect(root.style.getPropertyValue('--workspace-region-main-sidebar-scrollbar-thumb-color')).toBe('#3e5575');
 });
 
-it('borrows row surface hue for neutral document scrollbars', () => {
+it('keeps neutral document scrollbars on the document surface color', () => {
   const root = document.documentElement;
 
   applyWorkspaceSurfaceSettings(root, {
@@ -113,7 +113,7 @@ it('borrows row surface hue for neutral document scrollbars', () => {
     palette: ['#ffffff', '#f3ecd8']
   });
 
-  expect(root.style.getPropertyValue('--workspace-region-main-document-scrollbar-thumb-color')).toBe('#f7f0df');
+  expect(root.style.getPropertyValue('--workspace-region-main-document-scrollbar-thumb-color')).toBe('#fafafa');
 });
 
 it('derives divider direction per workspace surface instead of per base theme', () => {

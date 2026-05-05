@@ -77,9 +77,10 @@
   --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.12);
   --app-diff-removed-surface-color: rgb(var(--color-error) / 0.14);
   --app-diff-removed-spacer-color: rgb(var(--color-error) / 0.1);
-  --app-scrollbar-size: 12px;
-  --app-scrollbar-thumb-inset: 2px;
-  --app-scrollbar-thumb-color: #e5e5e5;
+  --app-scrollbar-size: 10px;
+  --app-scrollbar-thumb-inset: 3px;
+  --app-scrollbar-thumb-color: color-mix(in srgb, var(--app-surface) 98%, var(--app-scrollbar-thumb-hover-color) 2%);
+  --app-scrollbar-thumb-hover-color: color-mix(in srgb, var(--app-surface) 96%, rgb(var(--color-foreground)) 4%);
   --app-inspector-section-bg: #fbfbfb;
   --app-inspector-section-elevated-bg: #ffffff;
   --app-inspector-section-shadow-color: rgb(15 23 42 / 0.03);
@@ -138,11 +139,56 @@
   --workspace-region-footer-topic-bg: #fcfcfc;
   --workspace-region-footer-document-bg: #fcfcfc;
   --workspace-region-footer-sidebar-bg: #fcfcfc;
-  --workspace-region-main-rail-scrollbar-thumb-color: #d2d2d2;
-  --workspace-region-main-folder-scrollbar-thumb-color: #d2d2d2;
-  --workspace-region-main-topic-scrollbar-thumb-color: #d2d2d2;
-  --workspace-region-main-document-scrollbar-thumb-color: #cfcfcf;
-  --workspace-region-main-sidebar-scrollbar-thumb-color: #d2d2d2;
+  --workspace-region-main-rail-scrollbar-thumb-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-rail-bg) 96%,
+    rgb(var(--color-foreground)) 4%
+  );
+  --workspace-region-main-rail-scrollbar-thumb-hover-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-rail-bg) 92%,
+    rgb(var(--color-foreground)) 8%
+  );
+  --workspace-region-main-folder-scrollbar-thumb-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-folder-bg) 96%,
+    rgb(var(--color-foreground)) 4%
+  );
+  --workspace-region-main-folder-scrollbar-thumb-hover-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-folder-bg) 92%,
+    rgb(var(--color-foreground)) 8%
+  );
+  --workspace-region-main-topic-scrollbar-thumb-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-topic-bg) 96%,
+    rgb(var(--color-foreground)) 4%
+  );
+  --workspace-region-main-topic-scrollbar-thumb-hover-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-topic-bg) 92%,
+    rgb(var(--color-foreground)) 8%
+  );
+  --workspace-region-main-document-scrollbar-thumb-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-document-bg) 96%,
+    rgb(var(--color-foreground)) 4%
+  );
+  --workspace-region-main-document-scrollbar-thumb-hover-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-document-bg) 92%,
+    rgb(var(--color-foreground)) 8%
+  );
+  --workspace-region-main-sidebar-scrollbar-thumb-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-sidebar-bg) 96%,
+    rgb(var(--color-foreground)) 4%
+  );
+  --workspace-region-main-sidebar-scrollbar-thumb-hover-color: color-mix(
+    in srgb,
+    var(--workspace-region-main-sidebar-bg) 92%,
+    rgb(var(--color-foreground)) 8%
+  );
   --workspace-region-main-sidebar-panel-bg: #fbfbfb;
   --workspace-region-main-sidebar-panel-elevated-bg: #ffffff;
 }
@@ -335,6 +381,7 @@ b {
   --app-surface: var(--workspace-region-main-rail-bg);
   --app-divider-mix-target: var(--workspace-region-main-rail-divider-mix-target, var(--workspace-divider-mix-target));
   --app-scrollbar-thumb-color: var(--workspace-region-main-rail-scrollbar-thumb-color);
+  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-rail-scrollbar-thumb-hover-color);
 }
 
 .workspace-region-main-folder {
@@ -344,6 +391,7 @@ b {
   --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 94%, var(--workspace-region-main-topic-bg) 6%);
   --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-folder-scrollbar-thumb-color);
+  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-folder-scrollbar-thumb-hover-color);
 }
 
 .workspace-region-main-topic {
@@ -353,6 +401,7 @@ b {
   --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 94%, var(--workspace-region-main-document-bg) 6%);
   --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 88%, var(--workspace-region-main-document-bg) 12%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-topic-scrollbar-thumb-color);
+  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-topic-scrollbar-thumb-hover-color);
 }
 
 .workspace-region-main-document {
@@ -362,6 +411,7 @@ b {
   --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 94%, var(--workspace-region-main-topic-bg) 6%);
   --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
   --app-scrollbar-thumb-color: var(--workspace-region-main-document-scrollbar-thumb-color);
+  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-document-scrollbar-thumb-hover-color);
 }
 
 .workspace-toolbar-surface {
@@ -377,6 +427,7 @@ b {
   --app-inspector-section-bg: var(--workspace-region-main-sidebar-panel-bg);
   --app-inspector-section-elevated-bg: var(--workspace-region-main-sidebar-panel-elevated-bg);
   --app-scrollbar-thumb-color: var(--workspace-region-main-sidebar-scrollbar-thumb-color);
+  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-sidebar-scrollbar-thumb-hover-color);
 }
 
 .workspace-bottom-region-grid {
@@ -687,6 +738,10 @@ b {
   scrollbar-width: thin;
 }
 
+.markdown-editor-host .cm-scroller:hover {
+  scrollbar-color: var(--app-scrollbar-thumb-hover-color) transparent;
+}
+
 .markdown-editor-host .cm-scroller::-webkit-scrollbar {
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
@@ -707,6 +762,10 @@ b {
   border-radius: 999px;
   background-clip: padding-box;
   background-color: var(--app-scrollbar-thumb-color);
+}
+
+.markdown-editor-host .cm-scroller:hover::-webkit-scrollbar-thumb {
+  background-color: var(--app-scrollbar-thumb-hover-color);
 }
 
 .markdown-editor-host.scrollbar-hidden .cm-scroller {
@@ -955,6 +1014,10 @@ b {
   scrollbar-width: thin;
 }
 
+.app-scrollbar:hover {
+  scrollbar-color: var(--app-scrollbar-thumb-hover-color) transparent;
+}
+
 .app-scrollbar::-webkit-scrollbar {
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
@@ -975,6 +1038,10 @@ b {
   border-radius: 999px;
   background-clip: padding-box;
   background-color: var(--app-scrollbar-thumb-color);
+}
+
+.app-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: var(--app-scrollbar-thumb-hover-color);
 }
 
 .scrollbar-hidden {
