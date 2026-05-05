@@ -17,6 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import {
+  DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  getReviewSchedulerVersion
+} from '../reviewSchedulerSettings.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
@@ -119,7 +124,7 @@ it('writes node_review and review_log in one grading mutation', () => {
   expect(logRow).toMatchObject({
     node_id: NODE_ID,
     grade: 3,
-    scheduler_version: 'ts-fsrs@4.3.0|dr=0.90|mi=36500|fz=0|st=0',
+    scheduler_version: getReviewSchedulerVersion(DEFAULT_REVIEW_SCHEDULER_SETTINGS),
     reviewed_at: '2026-03-06T00:00:00.000Z',
     due_before: '2026-03-06T00:00:00.000Z',
     due_after: '2026-03-10T00:00:00.000Z',

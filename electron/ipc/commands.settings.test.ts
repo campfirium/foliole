@@ -41,6 +41,13 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
     maximumIntervalDays: 36500,
     enableFuzz: false,
     enableShortTerm: false,
+    pushQueue: {
+      defaultPriority: 5,
+      priorityRatio: 5,
+      queueMixRatio: { reading: 1, fsrs: 5 },
+      readingInitialIntervalMs: 24 * 60 * 60 * 1000,
+      readingIntervalGrowthFactorRange: { min: 1.1, max: 1.5 }
+    },
     updatedAt: '2026-03-06T00:00:00.000Z'
   }),
   saveReviewSchedulerSettings: vi.fn().mockReturnValue({
@@ -49,6 +56,13 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
     maximumIntervalDays: 180,
     enableFuzz: true,
     enableShortTerm: true,
+    pushQueue: {
+      defaultPriority: 5,
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingInitialIntervalMs: 24 * 60 * 60 * 1000,
+      readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+    },
     updatedAt: '2026-03-06T00:05:00.000Z'
   })
 }));
@@ -88,7 +102,12 @@ it('handles app settings storage commands', async () => {
           desiredRetention: 0.8,
           maximumIntervalDays: 180,
           enableFuzz: true,
-          enableShortTerm: true
+          enableShortTerm: true,
+          pushQueue: {
+            priorityRatio: 7,
+            queueMixRatio: { reading: 2, fsrs: 4 },
+            readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+          }
         }
       }
     })
@@ -96,13 +115,23 @@ it('handles app settings storage commands', async () => {
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
     enableFuzz: true,
-    enableShortTerm: true
+    enableShortTerm: true,
+    pushQueue: {
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+    }
   });
 
   expect(saveReviewSchedulerSettings).toHaveBeenCalledWith({
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
     enableFuzz: true,
-    enableShortTerm: true
+    enableShortTerm: true,
+    pushQueue: {
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+    }
   });
 });

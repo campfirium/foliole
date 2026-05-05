@@ -1,3 +1,9 @@
+import {
+  DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
+  normalizeUnifiedPushQueueRules,
+  type UnifiedPushQueueRules,
+  type UnifiedPushQueueRulesPatch
+} from '../../../../lib/core/review/unifiedPushQueueRules';
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 
@@ -7,7 +13,16 @@ export interface ReviewSchedulerSettings {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
+}
+
+export interface ReviewSchedulerSettingsSavePatch {
+  desiredRetention?: number;
+  maximumIntervalDays?: number;
+  enableFuzz?: boolean;
+  enableShortTerm?: boolean;
+  pushQueue?: UnifiedPushQueueRulesPatch;
 }
 
 export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
@@ -16,6 +31,7 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   maximumIntervalDays: 36500,
   enableFuzz: false,
   enableShortTerm: false,
+  pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
 
@@ -28,6 +44,31 @@ function clampDesiredRetention(value: unknown) {
     return DEFAULT_REVIEW_SCHEDULER_SETTINGS.desiredRetention;
   }
   return Math.min(0.99, Math.max(0.01, Number(value.toFixed(2))));
+}
+
+function mergePushQueueSettings(base: UnifiedPushQueueRules, value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return normalizeUnifiedPushQueueRules(base);
+  }
+  const patch = value as Record<string, unknown>;
+  return normalizeUnifiedPushQueueRules({
+    ...base,
+    ...patch,
+    queueMixRatio: {
+      ...base.queueMixRatio,
+      ...(patch.queueMixRatio && typeof patch.queueMixRatio === 'object' && !Array.isArray(patch.queueMixRatio)
+        ? (patch.queueMixRatio as Record<string, unknown>)
+        : {})
+    },
+    readingIntervalGrowthFactorRange: {
+      ...base.readingIntervalGrowthFactorRange,
+      ...(patch.readingIntervalGrowthFactorRange &&
+      typeof patch.readingIntervalGrowthFactorRange === 'object' &&
+      !Array.isArray(patch.readingIntervalGrowthFactorRange)
+        ? (patch.readingIntervalGrowthFactorRange as Record<string, unknown>)
+        : {})
+    }
+  });
 }
 
 export function normalizeReviewSchedulerSettings(value: unknown): ReviewSchedulerSettings {
@@ -53,6 +94,7 @@ export function normalizeReviewSchedulerSettings(value: unknown): ReviewSchedule
       typeof payload.enableShortTerm === 'boolean'
         ? payload.enableShortTerm
         : DEFAULT_REVIEW_SCHEDULER_SETTINGS.enableShortTerm,
+    pushQueue: mergePushQueueSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue, payload.pushQueue),
     updatedAt:
       typeof payload.updatedAt === 'string' && payload.updatedAt.trim().length > 0
         ? payload.updatedAt
@@ -66,7 +108,12 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
     settings.desiredRetention.toFixed(2),
     settings.maximumIntervalDays,
     settings.enableFuzz ? '1' : '0',
-    settings.enableShortTerm ? '1' : '0'
+    settings.enableShortTerm ? '1' : '0',
+    settings.pushQueue.defaultPriority,
+    settings.pushQueue.priorityRatio.toFixed(2),
+    `${settings.pushQueue.queueMixRatio.reading}:${settings.pushQueue.queueMixRatio.fsrs}`,
+    settings.pushQueue.readingInitialIntervalMs,
+    `${settings.pushQueue.readingIntervalGrowthFactorRange.min.toFixed(2)}-${settings.pushQueue.readingIntervalGrowthFactorRange.max.toFixed(2)}`
   ].join('|');
 }
 
@@ -83,12 +130,7 @@ export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSett
 }
 
 export async function saveReviewSchedulerSettings(
-  settings: Partial<
-    Pick<
-      ReviewSchedulerSettings,
-      'desiredRetention' | 'maximumIntervalDays' | 'enableFuzz' | 'enableShortTerm'
-    >
-  >
+  settings: ReviewSchedulerSettingsSavePatch
 ): Promise<ReviewSchedulerSettings> {
   const runtimeInvoke = getRuntimeInvoke();
   const baseSettings = runtimeInvoke
@@ -96,7 +138,8 @@ export async function saveReviewSchedulerSettings(
     : DEFAULT_REVIEW_SCHEDULER_SETTINGS;
   const payload = normalizeReviewSchedulerSettings({
     ...baseSettings,
-    ...settings
+    ...settings,
+    pushQueue: mergePushQueueSettings(baseSettings.pushQueue, settings.pushQueue)
   });
   if (!runtimeInvoke) {
     return payload;

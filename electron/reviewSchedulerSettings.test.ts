@@ -43,7 +43,12 @@ it('persists normalized review scheduler settings into sqlite settings table', (
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
     enableFuzz: true,
-    enableShortTerm: true
+    enableShortTerm: true,
+    pushQueue: {
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+    }
   });
 
   expect(saved).toMatchObject({
@@ -51,13 +56,25 @@ it('persists normalized review scheduler settings into sqlite settings table', (
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
     enableFuzz: true,
-    enableShortTerm: true
+    enableShortTerm: true,
+    pushQueue: {
+      defaultPriority: 5,
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingInitialIntervalMs: 24 * 60 * 60 * 1000,
+      readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+    }
   });
   expect(loadReviewSchedulerSettings()).toMatchObject({
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
     enableFuzz: true,
-    enableShortTerm: true
+    enableShortTerm: true,
+    pushQueue: {
+      priorityRatio: 7,
+      queueMixRatio: { reading: 2, fsrs: 4 },
+      readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+    }
   });
 });
 
@@ -77,11 +94,19 @@ it('preserves existing non-updated scheduler settings on partial save', () => {
     maximumIntervalDays: 240,
     enableFuzz: true,
     enableShortTerm: true,
+    pushQueue: {
+      priorityRatio: 6,
+      queueMixRatio: { reading: 2, fsrs: 6 },
+      readingIntervalGrowthFactorRange: { min: 1.09, max: 1.47 }
+    },
     updatedAt: '2026-03-14T00:00:00.000Z'
   });
 
   const saved = saveReviewSchedulerSettings({
     desiredRetention: 0.84,
+    pushQueue: {
+      readingIntervalGrowthFactorRange: { min: 1.12 }
+    },
     updatedAt: '2026-03-14T01:00:00.000Z'
   });
 
@@ -90,6 +115,36 @@ it('preserves existing non-updated scheduler settings on partial save', () => {
     maximumIntervalDays: 240,
     enableFuzz: true,
     enableShortTerm: true,
+    pushQueue: {
+      priorityRatio: 6,
+      queueMixRatio: { reading: 2, fsrs: 6 },
+      readingIntervalGrowthFactorRange: { min: 1.12, max: 1.47 }
+    },
     updatedAt: '2026-03-14T01:00:00.000Z'
+  });
+});
+
+it('restores push queue settings after save and database restart', () => {
+  saveReviewSchedulerSettings({
+    desiredRetention: 0.82,
+    pushQueue: {
+      priorityRatio: 8,
+      queueMixRatio: { reading: 3, fsrs: 5 },
+      readingIntervalGrowthFactorRange: { min: 1.07, max: 1.39 }
+    },
+    updatedAt: '2026-03-14T02:00:00.000Z'
+  });
+
+  closeDatabaseConnection();
+  initializeDatabase();
+
+  expect(loadReviewSchedulerSettings()).toMatchObject({
+    desiredRetention: 0.82,
+    pushQueue: {
+      priorityRatio: 8,
+      queueMixRatio: { reading: 3, fsrs: 5 },
+      readingIntervalGrowthFactorRange: { min: 1.07, max: 1.39 }
+    },
+    updatedAt: '2026-03-14T02:00:00.000Z'
   });
 });

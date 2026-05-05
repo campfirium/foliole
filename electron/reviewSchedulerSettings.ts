@@ -1,5 +1,12 @@
 import { generatorParameters } from 'ts-fsrs';
 
+import {
+  DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
+  normalizeUnifiedPushQueueRules,
+  type UnifiedPushQueueRules,
+  type UnifiedPushQueueRulesPatch
+} from '../lib/core/review/unifiedPushQueueRules.js';
+
 import { loadJsonSetting, saveJsonSetting } from './database/settingsStore.js';
 
 const REVIEW_SCHEDULER_SETTINGS_KEY = 'review_scheduler_settings';
@@ -11,6 +18,7 @@ export interface ReviewSchedulerSettings {
   maximumIntervalDays: number;
   enableFuzz: boolean;
   enableShortTerm: boolean;
+  pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
 }
 
@@ -20,6 +28,7 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   maximumIntervalDays: 36500,
   enableFuzz: false,
   enableShortTerm: false,
+  pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
 
@@ -40,6 +49,32 @@ function normalizePositiveInteger(value: unknown, fallback: number) {
   }
   const normalized = Math.round(value);
   return normalized > 0 ? normalized : fallback;
+}
+
+function mergePushQueueSettings(base: UnifiedPushQueueRules, value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return normalizeUnifiedPushQueueRules(base);
+  }
+
+  const patch = value as Record<string, unknown>;
+  return normalizeUnifiedPushQueueRules({
+    ...base,
+    ...patch,
+    queueMixRatio: {
+      ...base.queueMixRatio,
+      ...(patch.queueMixRatio && typeof patch.queueMixRatio === 'object' && !Array.isArray(patch.queueMixRatio)
+        ? (patch.queueMixRatio as Record<string, unknown>)
+        : {})
+    },
+    readingIntervalGrowthFactorRange: {
+      ...base.readingIntervalGrowthFactorRange,
+      ...(patch.readingIntervalGrowthFactorRange &&
+      typeof patch.readingIntervalGrowthFactorRange === 'object' &&
+      !Array.isArray(patch.readingIntervalGrowthFactorRange)
+        ? (patch.readingIntervalGrowthFactorRange as Record<string, unknown>)
+        : {})
+    }
+  });
 }
 
 export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedulerSettings {
@@ -66,6 +101,7 @@ export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedu
       typeof value.enableShortTerm === 'boolean'
         ? value.enableShortTerm
         : DEFAULT_REVIEW_SCHEDULER_SETTINGS.enableShortTerm,
+    pushQueue: mergePushQueueSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue, value.pushQueue),
     updatedAt:
       typeof value.updatedAt === 'string' && value.updatedAt.trim().length > 0
         ? value.updatedAt
@@ -78,7 +114,8 @@ export function loadReviewSchedulerSettings(): ReviewSchedulerSettings {
 }
 
 export function saveReviewSchedulerSettings(
-  settings: Partial<Omit<ReviewSchedulerSettings, 'updatedAt'>> & {
+  settings: Partial<Omit<ReviewSchedulerSettings, 'updatedAt' | 'pushQueue'>> & {
+    pushQueue?: UnifiedPushQueueRulesPatch;
     updatedAt?: string;
   }
 ): ReviewSchedulerSettings {
@@ -87,6 +124,7 @@ export function saveReviewSchedulerSettings(
   const normalized = normalizeReviewSchedulerSettings({
     ...current,
     ...settings,
+    pushQueue: mergePushQueueSettings(current.pushQueue, settings.pushQueue),
     algorithm: REVIEW_SCHEDULER_ALGORITHM,
     updatedAt: now
   });
@@ -109,6 +147,11 @@ export function getReviewSchedulerVersion(settings: ReviewSchedulerSettings) {
     `dr=${settings.desiredRetention.toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,
     `fz=${settings.enableFuzz ? '1' : '0'}`,
-    `st=${settings.enableShortTerm ? '1' : '0'}`
+    `st=${settings.enableShortTerm ? '1' : '0'}`,
+    `pqdp=${settings.pushQueue.defaultPriority}`,
+    `pqpr=${settings.pushQueue.priorityRatio.toFixed(2)}`,
+    `pqmx=${settings.pushQueue.queueMixRatio.reading}:${settings.pushQueue.queueMixRatio.fsrs}`,
+    `pqii=${settings.pushQueue.readingInitialIntervalMs}`,
+    `pqgr=${settings.pushQueue.readingIntervalGrowthFactorRange.min.toFixed(2)}-${settings.pushQueue.readingIntervalGrowthFactorRange.max.toFixed(2)}`
   ].join('|');
 }

@@ -32,6 +32,32 @@ function createInvokeSequence(...results: Array<Partial<typeof DEFAULT_REVIEW_SC
   );
 }
 
+function createPushQueueSettings(overrides?: Partial<typeof DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue>) {
+  return {
+    ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
+    ...overrides
+  };
+}
+
+function createPushQueuePatch() {
+  return {
+    priorityRatio: 7,
+    queueMixRatio: { reading: 2, fsrs: 4 },
+    readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+  };
+}
+
+function createExpectedSavedSettings(
+  overrides?: Partial<Omit<typeof DEFAULT_REVIEW_SCHEDULER_SETTINGS, 'pushQueue'>> & {
+    pushQueue?: Partial<typeof DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue>;
+  }
+) {
+  return createSettings({
+    ...overrides,
+    pushQueue: createPushQueueSettings(overrides?.pushQueue)
+  });
+}
+
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
 });
@@ -45,10 +71,12 @@ it('loads defaults when runtime invoke is unavailable', async () => {
 });
 
 it('saves the full scheduler settings payload through the native command', async () => {
+  const pushQueuePatch = createPushQueuePatch();
   const invoke = createInvokeSequence(
     {
       desiredRetention: 0.91,
       maximumIntervalDays: 365,
+      pushQueue: createPushQueueSettings(),
       updatedAt: '2026-03-13T00:00:00.000Z'
     },
     {
@@ -56,6 +84,7 @@ it('saves the full scheduler settings payload through the native command', async
       maximumIntervalDays: 120,
       enableFuzz: true,
       enableShortTerm: true,
+      pushQueue: createPushQueueSettings(pushQueuePatch),
       updatedAt: '2026-03-14T00:00:00.000Z'
     }
   );
@@ -66,22 +95,25 @@ it('saves the full scheduler settings payload through the native command', async
       desiredRetention: 0.83,
       maximumIntervalDays: 120,
       enableFuzz: true,
-      enableShortTerm: true
+      enableShortTerm: true,
+      pushQueue: pushQueuePatch
     })
   ).resolves.toMatchObject({
     desiredRetention: 0.83,
     maximumIntervalDays: 120,
     enableFuzz: true,
-    enableShortTerm: true
+    enableShortTerm: true,
+    pushQueue: pushQueuePatch
   });
 
   expectSavedPayload(
     invoke,
-    createSettings({
+    createExpectedSavedSettings({
       desiredRetention: 0.83,
       maximumIntervalDays: 120,
       enableFuzz: true,
       enableShortTerm: true,
+      pushQueue: pushQueuePatch,
       updatedAt: '2026-03-13T00:00:00.000Z'
     })
   );
@@ -94,6 +126,13 @@ it('preserves previously loaded values during partial saves', async () => {
       maximumIntervalDays: 240,
       enableFuzz: true,
       enableShortTerm: true,
+      pushQueue: {
+        defaultPriority: 5,
+        priorityRatio: 6,
+        queueMixRatio: { reading: 2, fsrs: 6 },
+        readingInitialIntervalMs: 24 * 60 * 60 * 1000,
+        readingIntervalGrowthFactorRange: { min: 1.09, max: 1.47 }
+      },
       updatedAt: '2026-03-13T00:00:00.000Z'
     },
     {
@@ -101,12 +140,24 @@ it('preserves previously loaded values during partial saves', async () => {
       maximumIntervalDays: 240,
       enableFuzz: true,
       enableShortTerm: true,
+      pushQueue: {
+        defaultPriority: 5,
+        priorityRatio: 6,
+        queueMixRatio: { reading: 2, fsrs: 6 },
+        readingInitialIntervalMs: 24 * 60 * 60 * 1000,
+        readingIntervalGrowthFactorRange: { min: 1.12, max: 1.47 }
+      },
       updatedAt: '2026-03-14T00:00:00.000Z'
     }
   );
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  await saveReviewSchedulerSettings({ desiredRetention: 0.84 });
+  await saveReviewSchedulerSettings({
+    desiredRetention: 0.84,
+    pushQueue: {
+      readingIntervalGrowthFactorRange: { min: 1.12 }
+    }
+  });
 
   expectSavedPayload(
     invoke,
@@ -115,6 +166,12 @@ it('preserves previously loaded values during partial saves', async () => {
       maximumIntervalDays: 240,
       enableFuzz: true,
       enableShortTerm: true,
+      pushQueue: {
+        ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
+        priorityRatio: 6,
+        queueMixRatio: { reading: 2, fsrs: 6 },
+        readingIntervalGrowthFactorRange: { min: 1.12, max: 1.47 }
+      },
       updatedAt: '2026-03-13T00:00:00.000Z'
     })
   );
