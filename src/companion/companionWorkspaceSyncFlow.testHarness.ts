@@ -46,6 +46,7 @@ export function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncR
     syncedAttachmentResourceBytes: 0,
     syncedContentBlobHashes: [],
     syncedContentBlobBytes: 0,
+    syncedResourceElapsedMs: 0,
     ...overrides
   };
 }

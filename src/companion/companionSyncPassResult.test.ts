@@ -38,9 +38,10 @@ describe('describeCompanionSyncPassResult', () => {
       syncedAttachmentIds: ['att-1'],
       syncedAttachmentResourceBytes: 2097152,
       syncedContentBlobBytes: 1048576,
-      syncedContentBlobHashes: ['hash-1', 'hash-2']
+      syncedContentBlobHashes: ['hash-1', 'hash-2'],
+      syncedResourceElapsedMs: 8000
     }))).toEqual({
-      message: 'Sync fully completed; downloaded 2 topic bodies (1.0 MB) and 1 attachment file (2.0 MB) in this sync',
+      message: 'Sync fully completed; downloaded 2 topic bodies (1.0 MB) and 1 attachment file (2.0 MB) in this sync in 8s',
       outcome: 'completed',
       status: 'completed'
     });
@@ -64,9 +65,10 @@ describe('describeCompanionSyncPassResult', () => {
       remainingContentBlobBytes: 5242880,
       remainingContentBlobCount: 5,
       syncedContentBlobBytes: 1048576,
-      syncedContentBlobHashes: ['hash-1']
+      syncedContentBlobHashes: ['hash-1'],
+      syncedResourceElapsedMs: 65000
     }))).toEqual({
-      message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync; 5 topic bodies (5.0 MB) still downloading.',
+      message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync in 1m 5s; 5 topic bodies (5.0 MB) still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });

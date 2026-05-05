@@ -47,7 +47,8 @@ async function testRecordsDownloadedResourcesForPass() {
       remainingContentBlobBytes: 5242880,
       remainingContentBlobCount: 5,
       syncedContentBlobBytes: 1048576,
-      syncedContentBlobHashes: ['hash-1']
+      syncedContentBlobHashes: ['hash-1'],
+      syncedResourceElapsedMs: 8000
     });
   });
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
@@ -73,7 +74,7 @@ async function testRecordsDownloadedResourcesForPass() {
     totalBytes: 6291456
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync; 5 topic bodies (5.0 MB) still downloading.',
+    message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync in 8s; 5 topic bodies (5.0 MB) still downloading.',
     status: 'skipped'
   }));
 }

@@ -11,6 +11,7 @@ export interface CompanionSyncPassInput {
   syncedAttachmentResourceBytes?: number;
   syncedContentBlobBytes?: number;
   syncedContentBlobHashes?: string[];
+  syncedResourceElapsedMs?: number;
   remainingAttachmentBreakdown?: {
     activeTopicAttachments?: number;
     dueReviewAttachments?: number;
@@ -62,6 +63,13 @@ function formatDownloadLabel(count: number, singular: string, plural: string, by
   return typeof bytes === 'number' && bytes > 0 ? `${label} (${formatBytes(bytes)})` : label;
 }
 
+function formatElapsedTime(elapsedMs: number | undefined) {
+  if (typeof elapsedMs !== 'number' || elapsedMs < 1000) return null;
+  const seconds = Math.round(elapsedMs / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
 function joinBacklogSuffix(prefix: string, suffix: string) {
   return `${prefix.replace(/[.;]\s*$/, '')}; ${suffix}`;
 }
@@ -81,7 +89,10 @@ function appendDownloadSuffix(prefix: string, result: CompanionSyncPassInput) {
       result.syncedAttachmentResourceBytes
     ));
   }
-  return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `downloaded ${suffixes.join(' and ')} in this sync`);
+  if (suffixes.length === 0) return prefix;
+  const elapsed = formatElapsedTime(result.syncedResourceElapsedMs);
+  const timeSuffix = elapsed ? ` in ${elapsed}` : '';
+  return joinBacklogSuffix(prefix, `downloaded ${suffixes.join(' and ')} in this sync${timeSuffix}`);
 }
 
 function syncCheckedPrefix(result: CompanionSyncPassInput) {
