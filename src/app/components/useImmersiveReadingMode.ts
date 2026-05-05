@@ -7,6 +7,7 @@ import {
   clearParagraphMarker,
   focusImmersiveEditor
 } from './immersiveReadingMarker';
+import type { ImmersiveReadingModeSource } from './immersiveReadingModeTypes';
 import { getReadableNodeIds } from './immersiveReadingNodes';
 import {
   useImmersiveEntrySelectionSync,
@@ -14,14 +15,16 @@ import {
   useImmersiveScrollSync,
   useReadingSelectionState
 } from './immersiveReadingScrollSync';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 function useImmersiveLifecycleReset(
-  props: WorkspaceLayoutProps,
+  props: Pick<
+    ImmersiveReadingModeSource,
+    'activeNodeId' | 'editorAdapterRef' | 'isImmersiveMode' | 'isStudyMode' | 'onExitImmersiveMode'
+  >,
   setIsImmersiveEditing: (value: boolean) => void,
   setIsShortcutsOverlayOpen: (value: boolean) => void,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>,
-  exitImmersiveModeRef: MutableRefObject<WorkspaceLayoutProps['onExitImmersiveMode']>
+  exitImmersiveModeRef: MutableRefObject<ImmersiveReadingModeSource['onExitImmersiveMode']>
 ) {
   useEffect(() => {
     exitImmersiveModeRef.current = props.onExitImmersiveMode;
@@ -60,7 +63,7 @@ function useImmersiveKeyboardHandler(args: {
   getReadingSelection: () => { from: number; to: number };
   isImmersiveEditing: boolean;
   markNextProgrammaticScroll: () => void;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveReadingModeSource;
   queueReadingSelectionRestore: () => void;
   readableNodeIds: string[];
   setIsImmersiveEditing: (value: boolean) => void;
@@ -104,11 +107,11 @@ function useImmersiveKeyboardHandler(args: {
   );
 }
 
-function useImmersiveReadingSelectionSyncState(props: WorkspaceLayoutProps) {
+function useImmersiveReadingSelectionSyncState(props: ImmersiveReadingModeSource) {
   return useReadingSelectionState(props);
 }
 
-function useImmersiveModeDependencies(props: WorkspaceLayoutProps) {
+function useImmersiveModeDependencies(props: ImmersiveReadingModeSource) {
   const selectionState = useImmersiveReadingSelectionSyncState(props);
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   return {
@@ -124,7 +127,7 @@ function useImmersiveReadingPositionSync(args: {
   getPendingSelection: () => { from: number; to: number } | null;
   getReadingSelection: () => { from: number; to: number };
   isImmersiveEditing: boolean;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveReadingModeSource;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>;
   wasImmersiveModeRef: MutableRefObject<boolean>;
@@ -149,7 +152,7 @@ function useImmersiveReadingPositionSync(args: {
   );
 }
 
-function useSelectionRestoreSuppression(props: WorkspaceLayoutProps) {
+function useSelectionRestoreSuppression(props: Pick<ImmersiveReadingModeSource, 'isImmersiveMode'>) {
   const shouldSuppressSelectionRestoreRef = useRef(false);
   useEffect(() => {
     shouldSuppressSelectionRestoreRef.current = false;
@@ -163,7 +166,7 @@ function useSelectionRestoreSuppression(props: WorkspaceLayoutProps) {
 }
 
 function useImmersiveEditingFocusEffect(
-  editorAdapterRef: WorkspaceLayoutProps['editorAdapterRef'],
+  editorAdapterRef: ImmersiveReadingModeSource['editorAdapterRef'],
   isImmersiveEditing: boolean,
   isImmersiveMode: boolean
 ) {
@@ -176,7 +179,7 @@ function useImmersiveEditingFocusEffect(
   }, [editorAdapterRef, isImmersiveEditing, isImmersiveMode]);
 }
 
-export function useImmersiveReadingMode(props: WorkspaceLayoutProps) {
+export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
   const [isImmersiveEditing, setIsImmersiveEditing] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);

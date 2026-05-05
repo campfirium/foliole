@@ -3,10 +3,15 @@ import { memo } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type {
+  RuntimeExternalSearchBrowseEntry,
+  RuntimeExternalSearchFolder
+} from '../../shared/platform/externalSearchBridge';
 
+import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
+import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
 
 export interface WorkspaceListAreaProps {
@@ -19,20 +24,20 @@ export interface WorkspaceListAreaProps {
   listNodesById: WorkspaceListNodesById;
   nodesById: Record<string, Node>;
   nodeOrder: string[];
-  onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
-  onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
-  onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
-  onOpenExternalLibrarySettings: WorkspaceLayoutProps['onOpenExternalLibrarySettings'];
-  onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
-  onOpenVirtualView: WorkspaceLayoutProps['onOpenVirtualView'];
+  onOpenMoveToNode: () => void;
+  onOpenNotesView: () => void;
+  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
+  onOpenExternalLibrarySettings: () => void;
+  onOpenTrashView: () => void;
+  onOpenVirtualView: (nodeId?: string) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
-  onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
+  onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
-  externalEntriesByFolderId: WorkspaceLayoutProps['externalEntriesByFolderId'];
-  externalFolders: WorkspaceLayoutProps['externalFolders'];
-  externalSelection: WorkspaceLayoutProps['externalSelection'];
+  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
+  externalFolders: RuntimeExternalSearchFolder[];
+  externalSelection: ExternalLibrarySelection;
 }
 
 function shouldShowWorkspaceEmptyState(args: {
@@ -213,27 +218,13 @@ function renderWorkspaceDualListBody(
 }
 
 export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
-  documentNodeId,
-  isImmersiveEditing,
-  onEnterImmersiveEdit,
-  onShouldSuppressSelectionRestore,
-  props
+  documentSurfaceProps
 }: {
-  documentNodeId: string | null;
-  isImmersiveEditing: boolean;
-  onEnterImmersiveEdit: () => void;
-  onShouldSuppressSelectionRestore: () => boolean;
-  props: WorkspaceLayoutProps;
+  documentSurfaceProps: WorkspaceDocumentSurfaceProps;
 }) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-      <WorkspaceDocumentSurface
-        documentNodeId={documentNodeId}
-        isImmersiveEditing={isImmersiveEditing}
-        onEnterImmersiveEdit={onEnterImmersiveEdit}
-        onShouldSuppressSelectionRestore={onShouldSuppressSelectionRestore}
-        props={props}
-      />
+      <WorkspaceDocumentSurface {...documentSurfaceProps} />
     </section>
   );
 });

@@ -3,35 +3,29 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 
-export function WorkspaceDocumentSurface(args: {
-  documentNodeId: string | null;
-  isImmersiveEditing: boolean;
-  onEnterImmersiveEdit: () => void;
-  onShouldSuppressSelectionRestore: () => boolean;
-  props: WorkspaceLayoutProps;
-}) {
+export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
   const { editorAppearanceKey } = useAppearanceSettings();
-  if (args.props.isExternalViewOpen) {
+  if (props.isExternalViewOpen) {
     return (
       <ExternalLibraryDocumentSurface
-        canGoBack={args.props.canGoBack}
-        canGoForward={args.props.canGoForward}
-        documentMaxWidth={args.props.documentMaxWidth}
-        entriesByFolderId={args.props.externalEntriesByFolderId}
-        folders={args.props.externalFolders}
-        onGoBack={args.props.onGoBack}
-        onGoForward={args.props.onGoForward}
+        canGoBack={props.canGoBack}
+        canGoForward={props.canGoForward}
+        documentMaxWidth={props.documentMaxWidth}
+        entriesByFolderId={props.externalEntriesByFolderId}
+        folders={props.externalFolders}
+        onGoBack={props.onGoBack}
+        onGoForward={props.onGoForward}
         onOpenImportedNode={(result) => {
           if (result.node_id) {
-            args.props.onSelectNode(result.node_id);
+            props.onSelectNode(result.node_id);
           }
         }}
-        onOpenSelection={args.props.onOpenExternalSelection}
-        onResetLayout={args.props.onResetLayout}
-        onStartDocumentResize={args.props.onStartDocumentResize}
-        selection={args.props.externalSelection}
+        onOpenSelection={props.onOpenExternalSelection}
+        onResetLayout={props.onResetLayout}
+        onStartDocumentResize={props.onStartDocumentResize}
+        selection={props.externalSelection}
       />
     );
   }
@@ -39,13 +33,13 @@ export function WorkspaceDocumentSurface(args: {
   return (
     <DocumentPanelSection
       {...buildDocumentSectionProps(
-        args.documentNodeId,
+        props.documentNodeId,
         editorAppearanceKey,
-        args.isImmersiveEditing,
-        args.onShouldSuppressSelectionRestore,
-        args.props
+        props.isImmersiveEditing,
+        props.onShouldSuppressSelectionRestore,
+        props
       )}
-      onEnterImmersiveEdit={args.onEnterImmersiveEdit}
+      onEnterImmersiveEdit={props.onEnterImmersiveEdit}
     />
   );
 }

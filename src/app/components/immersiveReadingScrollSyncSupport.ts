@@ -1,13 +1,32 @@
 import type { MutableRefObject } from 'react';
 
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { NodeViewState } from '../../store/workspaceStore';
+import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
 import { getCurrentApplyingSelection } from './immersiveReadingApplying';
 import { getReadingPositionSelection, getViewportReadingSelection } from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
-export function resolveStoredReadingSelection(props: WorkspaceLayoutProps) {
+interface StoredReadingSelectionSource {
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+  editorNodeViewState?: NodeViewState;
+  getReadingPositionSelection: () => EditorSelection | null;
+  getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+}
+
+interface ReadingSelectionCommitSource {
+  getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+  setReadingPositionSelection: (selection: EditorSelection) => void;
+}
+
+interface ReadingSelectionCaptureSource extends ReadingSelectionCommitSource {
+  activeNodeId: string | null;
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+}
+
+export function resolveStoredReadingSelection(props: StoredReadingSelectionSource) {
   const applyingSelection = getCurrentApplyingSelection(props);
   if (applyingSelection) {
     return applyingSelection;
@@ -24,7 +43,7 @@ export function resolveStoredReadingSelection(props: WorkspaceLayoutProps) {
 }
 
 export function shouldIgnoreWhitespaceViewportSample(
-  editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>,
+  editor: EditorAdapter,
   selection: EditorSelection
 ) {
   const currentSelection = editor.getSelection();
@@ -48,7 +67,7 @@ export function shouldIgnoreWhitespaceViewportSample(
 }
 
 export function commitReadingSelectionUpdate(args: {
-  props: WorkspaceLayoutProps;
+  props: ReadingSelectionCommitSource;
   readingSelectionRef: MutableRefObject<{ from: number; to: number }>;
   selection: { from: number; to: number };
   source: string;
@@ -67,7 +86,7 @@ export function commitReadingSelectionUpdate(args: {
 
 export function captureReadingSelection(args: {
   pendingSelectionRef: MutableRefObject<{ from: number; to: number } | null>;
-  props: WorkspaceLayoutProps;
+  props: ReadingSelectionCaptureSource;
   readingSelectionRef: MutableRefObject<{ from: number; to: number }>;
 }) {
   const selection = getViewportReadingSelection(args.props);

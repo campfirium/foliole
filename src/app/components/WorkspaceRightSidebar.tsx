@@ -1,10 +1,10 @@
 import { memo } from 'react';
 
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 import { AppPanel } from '../../shared/ui';
 
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceRightSidebarBacklinksPanel } from './WorkspaceRightSidebarBacklinksPanel';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
 import { WorkspaceRightSidebarHighlightsPanel } from './WorkspaceRightSidebarHighlightsPanel';
@@ -32,23 +32,23 @@ function getPanelTitle(panelId: WorkspaceRightPanelId) {
   return 'Review queue';
 }
 
-function renderPanel(
-  props: Pick<
-    WorkspaceLayoutProps,
-    | 'activeNodeId'
-    | 'nodeOrder'
-    | 'trashedNodeIds'
-    | 'nodesById'
-    | 'onSelectBreadcrumbNode'
-    | 'onSelectNode'
-    | 'reviewCurrentNodeId'
-    | 'reviewQueueNodeIds'
-    | 'reviewSchedulerSettings'
-  > & {
-    activePanelId: WorkspaceRightPanelId;
-    onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
-  }
-) {
+type WorkspaceRightSidebarNodesById = Record<string, Node>;
+
+interface WorkspaceRightSidebarPanelProps {
+  activeNodeId: string | null;
+  activePanelId: WorkspaceRightPanelId;
+  nodeOrder: string[];
+  nodesById: WorkspaceRightSidebarNodesById;
+  onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onSelectBreadcrumbNode: (nodeId: string) => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  reviewCurrentNodeId: string | null;
+  reviewQueueNodeIds: string[];
+  reviewSchedulerSettings: ReviewSchedulerSettings;
+  trashedNodeIds: string[];
+}
+
+function renderPanel(props: WorkspaceRightSidebarPanelProps) {
   if (props.activePanelId === 'dev') {
     return renderDevPanel(props);
   }
@@ -79,7 +79,7 @@ const SourceInfoSidebarPanel = memo(function SourceInfoSidebarPanel(props: {
 
 const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   currentNodeId: string | null;
-  nodesById: WorkspaceLayoutProps['nodesById'];
+  nodesById: WorkspaceRightSidebarNodesById;
   queueNodeIds: string[];
 }) {
   return <WorkspaceRightSidebarReviewQueuePanel {...props} />;
@@ -106,9 +106,7 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   });
 });
 
-function renderDevPanel(
-  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'>
-) {
+function renderDevPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'>) {
   return (
     <WorkspaceRightSidebarDevPanel
       activeNodeId={props.activeNodeId}
@@ -118,15 +116,11 @@ function renderDevPanel(
   );
 }
 
-function renderPerformancePanel(
-  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById'>
-) {
+function renderPerformancePanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById'>) {
   return <WorkspaceRightSidebarPerformancePanel activeNodeId={props.activeNodeId} nodesById={props.nodesById} />;
 }
 
-function renderSourceInfoPanel(
-  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodesById'>
-) {
+function renderSourceInfoPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById'>) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   return (
     <SourceInfoSidebarPanel
@@ -137,7 +131,7 @@ function renderSourceInfoPanel(
 }
 
 function renderBacklinksPanel(
-  props: Pick<WorkspaceLayoutProps, 'activeNodeId' | 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'trashedNodeIds'>
+  props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'trashedNodeIds'>
 ) {
   return (
     <WorkspaceRightSidebarBacklinksPanel
@@ -151,7 +145,7 @@ function renderBacklinksPanel(
 }
 
 function renderReviewQueuePanel(
-  props: Pick<WorkspaceLayoutProps, 'reviewCurrentNodeId' | 'nodesById' | 'reviewQueueNodeIds'>
+  props: Pick<WorkspaceRightSidebarPanelProps, 'reviewCurrentNodeId' | 'nodesById' | 'reviewQueueNodeIds'>
 ) {
   return (
     <ReviewQueueSidebarPanel
@@ -164,7 +158,7 @@ function renderReviewQueuePanel(
 
 function renderHighlightsPanel(
   props: Pick<
-    WorkspaceLayoutProps,
+    WorkspaceRightSidebarPanelProps,
     'activeNodeId' | 'nodeOrder' | 'trashedNodeIds' | 'nodesById' | 'onSelectNode'
   >
 ) {
@@ -189,22 +183,21 @@ function renderHighlightsPanel(
   );
 }
 
-export function WorkspaceRightSidebar(props: Pick<
-  WorkspaceLayoutProps,
-  | 'activeNodeId'
-  | 'nodeOrder'
-  | 'trashedNodeIds'
-  | 'nodesById'
-  | 'onSelectBreadcrumbNode'
-  | 'onSelectNode'
-  | 'reviewCurrentNodeId'
-  | 'reviewQueueNodeIds'
-  | 'reviewSchedulerSettings'
-> & {
+export interface WorkspaceRightSidebarProps {
+  activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
+  nodeOrder: string[];
+  nodesById: WorkspaceRightSidebarNodesById;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
+  onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
-}) {
+  reviewCurrentNodeId: string | null;
+  reviewQueueNodeIds: string[];
+  reviewSchedulerSettings: ReviewSchedulerSettings;
+  trashedNodeIds: string[];
+}
+
+export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   recordComponentRender('rightSidebar');
   return (
     <AppPanel

@@ -1,10 +1,27 @@
+import type { MutableRefObject } from 'react';
+
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
-export function focusImmersiveEditor(editorAdapterRef: WorkspaceLayoutProps['editorAdapterRef']) {
+type ImmersiveEditorRef = MutableRefObject<EditorAdapter | null>;
+
+interface ReadingPositionSelectionSource {
+  editorNodeViewState?: NodeViewState;
+  getReadingPositionSelection: () => EditorSelection | null;
+}
+
+interface ViewportReadingSource {
+  activeNodeId: string | null;
+  editorAdapterRef: ImmersiveEditorRef;
+}
+
+type ReadingMarkerSource = ReadingPositionSelectionSource & ViewportReadingSource;
+
+export function focusImmersiveEditor(editorAdapterRef: ImmersiveEditorRef) {
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
       editorAdapterRef.current?.focus();
@@ -18,11 +35,14 @@ export function blurImmersiveActiveElement() {
   }
 }
 
-export function clearParagraphMarker(editorAdapterRef: WorkspaceLayoutProps['editorAdapterRef']) {
+export function clearParagraphMarker(editorAdapterRef: ImmersiveEditorRef) {
   editorAdapterRef.current?.setParagraphMarker?.(null);
 }
 
-export function getReadingPositionSelection(props: WorkspaceLayoutProps, currentSelection: EditorSelection) {
+export function getReadingPositionSelection(
+  props: ReadingPositionSelectionSource,
+  currentSelection: EditorSelection
+) {
   const runtimeSelection = props.getReadingPositionSelection();
   if (runtimeSelection) {
     return runtimeSelection;
@@ -37,7 +57,7 @@ export function getReadingPositionSelection(props: WorkspaceLayoutProps, current
   return persistedSelection;
 }
 
-export function getViewportReadingPosition(props: WorkspaceLayoutProps) {
+export function getViewportReadingPosition(props: ViewportReadingSource) {
   const editor = props.editorAdapterRef.current;
   const visiblePosition = editor?.getPrimaryVisiblePosition?.();
   if (typeof visiblePosition === 'number') {
@@ -64,7 +84,7 @@ function resolveTopVisibleLineSampleY(scrollerRect: DOMRect) {
   return scrollerRect.top + Math.max(scrollerRect.height * 0.15, 12);
 }
 
-export function getViewportReadingSelection(props: WorkspaceLayoutProps) {
+export function getViewportReadingSelection(props: ViewportReadingSource) {
   const editor = props.editorAdapterRef.current;
   const position = getViewportReadingPosition(props);
   if (!editor || typeof position !== 'number') {
@@ -73,7 +93,7 @@ export function getViewportReadingSelection(props: WorkspaceLayoutProps) {
   return { from: position, to: position };
 }
 
-export function syncParagraphMarkerToReadingPosition(props: WorkspaceLayoutProps) {
+export function syncParagraphMarkerToReadingPosition(props: ReadingMarkerSource) {
   const editor = props.editorAdapterRef.current;
   if (!editor) {
     return;
@@ -82,7 +102,7 @@ export function syncParagraphMarkerToReadingPosition(props: WorkspaceLayoutProps
   editor.setParagraphMarker?.(resolveCurrentParagraphSelection(editor.getContent(), currentSelection));
 }
 
-export function syncReadingSelectionToViewport(props: WorkspaceLayoutProps) {
+export function syncReadingSelectionToViewport(props: ReadingMarkerSource) {
   const editor = props.editorAdapterRef.current;
   const position = getViewportReadingPosition(props);
   if (!editor || typeof position !== 'number') {

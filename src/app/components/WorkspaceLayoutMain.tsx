@@ -8,51 +8,31 @@ import { ClipboardImportNotice, type ClipboardImportNoticeTone } from './Clipboa
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
-import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
-import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
+import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
+import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
 import {
   loadWorkspaceRightPanelPreference,
   saveWorkspaceRightPanelPreference
 } from './workspaceRightPanelPreference';
-import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
+import {
+  selectWorkspaceSettingsOverlayProps,
+  WorkspaceSettingsOverlay
+} from './WorkspaceSettingsOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-function resolveExternalTitleBarTitle(props: WorkspaceLayoutProps) {
-  const selection = props.externalSelection;
-  if (!props.isExternalViewOpen || selection.kind !== 'document') {
-    return null;
-  }
-  const entries = props.externalEntriesByFolderId[selection.folderId] ?? [];
-  const entry = entries.find((candidate) => candidate.absolutePath === selection.absolutePath);
-  return entry?.title.trim() || entry?.fileName.trim() || selection.absolutePath.split(/[\\/]/).at(-1) || 'External document';
+interface WorkspaceSurfaceActionsSource {
+  onCloseImportManagement: () => void;
+  onOpenNotesView: () => void;
+  onOpenTrashView: () => void;
+  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }
 
-function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: WorkspaceLayoutProps['nodesById']) {
-  if (!nodeId) {
-    return null;
-  }
+type WorkspaceGridRenderSource = WorkspaceLayoutGridSource & {
+  shouldSuppressNavigationSelectionRestore: () => boolean;
+};
 
-  let cursor = nodesById[nodeId];
-  if (!cursor) {
-    return null;
-  }
-  if (cursor.kind === 'folder') {
-    return cursor.title.trim() || 'Untitled';
-  }
-
-  while (cursor.parentNodeId) {
-    const parent = nodesById[cursor.parentNodeId];
-    if (!parent || parent.kind === 'folder') {
-      break;
-    }
-    cursor = parent;
-  }
-
-  return cursor.title.trim() || 'Untitled';
-}
-
-function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
+function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
   const handleOpenNotesView = useCallback(() => {
     props.onCloseImportManagement();
     props.onOpenNotesView();
@@ -72,7 +52,7 @@ function useWorkspaceSurfaceActions(props: WorkspaceLayoutProps) {
   };
 }
 
-function useClipboardImportNotice(onStartClipboardImport: WorkspaceLayoutProps['onStartClipboardImport']) {
+function useClipboardImportNotice(onStartClipboardImport: () => boolean | Promise<boolean>) {
   const [notice, setNotice] = useState<{ id: number; message: string; tone: ClipboardImportNoticeTone } | null>(null);
 
   useEffect(() => {
@@ -143,7 +123,8 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onStartImport={() => void props.onRunImportFile()}
         onSelectNode={handleSelectNode}
         immersive={immersive}
-        props={props}
+        gridProps={props}
+        titleBarProps={props}
       />
       {clipboardImportNotice.notice ? <ClipboardImportNotice message={clipboardImportNotice.notice.message} tone={clipboardImportNotice.notice.tone} /> : null}
       <ImmersiveShortcutsOverlay visible={props.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
@@ -152,41 +133,8 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onSelectNode={handleSelectNode}
         open={props.isImportManagementOpen}
       />
-      <WorkspaceSettingsOverlay props={props} />
+      <WorkspaceSettingsOverlay {...selectWorkspaceSettingsOverlayProps(props)} />
     </main>
-  );
-}
-
-function renderWorkspaceTitleBar(args: {
-  activeRightPanelId: WorkspaceRightPanelId;
-  onOpenNotesView: () => void;
-  onOpenTrashView: () => void;
-  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
-  props: WorkspaceLayoutProps;
-}) {
-  if (args.props.isImmersiveMode) {
-    return null;
-  }
-  const externalTitle = resolveExternalTitleBarTitle(args.props);
-  return (
-    <WindowTitleBar
-      activeRightPanelId={args.activeRightPanelId}
-      centerTitle={externalTitle ?? resolveWindowTitleBarTitle(
-        args.props.isViewingTrashNode ? args.props.selectedTrashNodeId : args.props.activeNodeId,
-        args.props.nodesById
-      )}
-      centerTitleIcon={externalTitle ? 'external' : undefined}
-      isListCollapsed={args.props.isListCollapsed}
-      isRightSidebarCollapsed={args.props.isRightSidebarCollapsed}
-      isTrashViewOpen={args.props.isTrashViewOpen}
-      listWidth={args.props.listWidth}
-      onOpenNotesView={args.onOpenNotesView}
-      onOpenTrashView={args.onOpenTrashView}
-      onSelectRightPanel={args.onSelectRightPanel}
-      onToggleListVisibility={args.props.onToggleListVisibility}
-      onToggleRightSidebarVisibility={args.props.onToggleRightSidebarVisibility}
-      rightSidebarWidth={args.props.rightSidebarWidth}
-    />
   );
 }
 
@@ -200,7 +148,7 @@ function renderWorkspaceGrid(args: {
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
-  props: WorkspaceLayoutProps;
+  props: WorkspaceGridRenderSource;
 }) {
   const shouldSuppressSelectionRestore = () =>
     args.immersive.shouldSuppressSelectionRestore() || args.props.shouldSuppressNavigationSelectionRestore();
@@ -234,7 +182,8 @@ function WorkspaceMainChrome({
   onStartClipboardImport,
   onStartImport,
   immersive,
-  props
+  gridProps,
+  titleBarProps
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
@@ -246,18 +195,19 @@ function WorkspaceMainChrome({
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
-  props: WorkspaceLayoutProps;
+  gridProps: WorkspaceGridRenderSource;
+  titleBarProps: WorkspaceTitleBarSource;
   immersive: ReturnType<typeof useImmersiveReadingMode>;
 }) {
   return (
     <>
-      {renderWorkspaceTitleBar({
-        activeRightPanelId,
-        onOpenNotesView,
-        onOpenTrashView,
-        onSelectRightPanel,
-        props
-      })}
+      <WorkspaceMainTitleBar
+        activeRightPanelId={activeRightPanelId}
+        onOpenNotesView={onOpenNotesView}
+        onOpenTrashView={onOpenTrashView}
+        onSelectRightPanel={onSelectRightPanel}
+        props={titleBarProps}
+      />
       {renderWorkspaceGrid({
         activeRightPanelId,
         documentNodeId,
@@ -268,7 +218,7 @@ function WorkspaceMainChrome({
         onSelectNode,
         onStartClipboardImport,
         onStartImport,
-        props
+        props: gridProps
       })}
     </>
   );

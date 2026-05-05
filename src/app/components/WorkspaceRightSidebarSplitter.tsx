@@ -2,7 +2,7 @@ import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 
-interface WorkspaceRightSidebarSplitterProps {
+export interface WorkspaceRightSidebarSplitterProps {
   isCollapsed: boolean;
   isResizingRightSidebar: boolean;
   onResetLayout: () => void;

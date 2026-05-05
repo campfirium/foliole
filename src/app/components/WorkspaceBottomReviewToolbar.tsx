@@ -26,6 +26,52 @@ export interface WorkspaceBottomReviewToolbarProps {
   onToggleReviewSession: () => void;
 }
 
+export interface WorkspaceBottomReviewToolbarSource {
+  canStartStudyMode: boolean;
+  isAnswerRevealed: boolean;
+  isCurrentReviewItemGradable: boolean;
+  isImmersiveMode: boolean;
+  isListCollapsed: boolean;
+  isReviewEditing: boolean;
+  isStudyMode: boolean;
+  onCompleteReviewItem: () => boolean;
+  onDeferReviewItem: () => boolean;
+  onDismissReviewItem: () => boolean;
+  onExitReviewMode: () => void;
+  onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
+  onRevealAnswer: () => void;
+  onToggleReviewSession: () => void;
+  reviewCompletedCount: number;
+  reviewCurrentNodeId: string | null;
+  reviewDueCount: number;
+  reviewQueueCount: number;
+}
+
+export function selectWorkspaceBottomReviewToolbarProps(
+  props: WorkspaceBottomReviewToolbarSource
+): WorkspaceBottomReviewToolbarProps {
+  return {
+    canStartStudyMode: props.canStartStudyMode,
+    isAnswerRevealed: props.isAnswerRevealed,
+    isCurrentReviewItemGradable: props.isCurrentReviewItemGradable,
+    isImmersiveMode: props.isImmersiveMode,
+    isListCollapsed: props.isListCollapsed,
+    isReviewEditing: props.isReviewEditing,
+    isStudyMode: props.isStudyMode,
+    onCompleteReviewItem: props.onCompleteReviewItem,
+    onDeferReviewItem: props.onDeferReviewItem,
+    onDismissReviewItem: props.onDismissReviewItem,
+    onExitReviewMode: props.onExitReviewMode,
+    onGradeReview: props.onGradeReview,
+    onRevealAnswer: props.onRevealAnswer,
+    onToggleReviewSession: props.onToggleReviewSession,
+    reviewCompletedCount: props.reviewCompletedCount,
+    reviewCurrentNodeId: props.reviewCurrentNodeId,
+    reviewDueCount: props.reviewDueCount,
+    reviewQueueCount: props.reviewQueueCount
+  };
+}
+
 function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarProps) {
   return (
     <div

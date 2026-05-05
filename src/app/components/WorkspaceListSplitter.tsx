@@ -2,7 +2,7 @@ import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import { cn } from '../../shared/lib/utils';
 
-interface WorkspaceListSplitterProps {
+export interface WorkspaceListSplitterProps {
   isCollapsed: boolean;
   isResizingList: boolean;
   listWidth: number;

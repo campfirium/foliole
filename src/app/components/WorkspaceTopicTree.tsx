@@ -9,7 +9,6 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { normalizeWorkspaceContentSort, sortWorkspaceContentNodeIds } from './workspaceContentSort';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import {
   renderWorkspaceTopicTreeBody,
   toggleCollapsedNode,
@@ -25,7 +24,7 @@ interface WorkspaceTopicTreeProps {
   emptyStateTitle?: string;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
-  onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
+  onOpenMoveToNode: () => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -62,7 +61,7 @@ function useWorkspaceTopicTreeInteraction(args: {
   collapsedNodeIds: ReadonlySet<string>;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
-  onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
+  onOpenMoveToNode: () => void;
   onSelectNode: (nodeId: string) => void;
 }) {
   const actions = useWorkspaceTopicTreeActions();

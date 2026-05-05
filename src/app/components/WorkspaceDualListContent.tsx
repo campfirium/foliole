@@ -13,8 +13,13 @@ import {
   getVirtualRootResultNodes
 } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type {
+  RuntimeExternalSearchBrowseEntry,
+  RuntimeExternalSearchFolder
+} from '../../shared/platform/externalSearchBridge';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
+import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
 import { TrashResultListPanel } from './TrashResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
@@ -28,30 +33,29 @@ import {
   resolveActiveFolderColumnNodeId,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
   activeVirtualNodeId?: string | null;
-  externalEntriesByFolderId: WorkspaceLayoutProps['externalEntriesByFolderId'];
-  externalFolders: WorkspaceLayoutProps['externalFolders'];
-  externalSelection: WorkspaceLayoutProps['externalSelection'];
+  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
+  externalFolders: RuntimeExternalSearchFolder[];
+  externalSelection: ExternalLibrarySelection;
   isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   listNodesById: WorkspaceListNodesById;
   nodesById: Record<string, Node>;
   nodeOrder: string[];
-  onOpenMoveToNode: WorkspaceLayoutProps['onOpenMoveToNode'];
-  onOpenNotesView: WorkspaceLayoutProps['onOpenNotesView'];
-  onOpenExternalSelection: WorkspaceLayoutProps['onOpenExternalSelection'];
-  onOpenExternalLibrarySettings?: WorkspaceLayoutProps['onOpenExternalLibrarySettings'];
-  onOpenTrashView: WorkspaceLayoutProps['onOpenTrashView'];
-  onOpenVirtualView?: WorkspaceLayoutProps['onOpenVirtualView'];
+  onOpenMoveToNode: () => void;
+  onOpenNotesView: () => void;
+  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
+  onOpenExternalLibrarySettings?: () => void;
+  onOpenTrashView: () => void;
+  onOpenVirtualView?: (nodeId?: string) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
-  onSelectTrashNode: WorkspaceLayoutProps['onSelectTrashNode'];
+  onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
 }

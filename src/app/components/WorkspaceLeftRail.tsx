@@ -1,37 +1,87 @@
 import { memo } from 'react';
 
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
-export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
+export interface WorkspaceLeftRailProps {
+  canStartStudyMode: boolean;
+  isImportManagementOpen: boolean;
+  isSettingsOpen: boolean;
+  isStudyMode: boolean;
+  onOpenImportManagement: () => void;
+  onOpenSettings: () => void;
+  onStartClipboardImport: () => void;
+  onStartImport: () => void;
+  onToggleReviewSession: () => void;
+  reviewDueCount: number;
+  showStudyDock?: boolean;
+}
+
+export interface WorkspaceLeftRailSource {
+  canStartStudyMode: boolean;
+  isSettingsOpen: boolean;
+  isStudyMode: boolean;
+  onOpenSettings: () => void;
+  onToggleReviewSession: () => void;
+  reviewDueCount: number;
+}
+
+export function selectWorkspaceLeftRailProps({
   isImportManagementOpen,
   onOpenImportManagement,
   onStartClipboardImport,
   onStartImport,
-  showStudyDock,
-  props
+  props,
+  showStudyDock
 }: {
   isImportManagementOpen: boolean;
   onOpenImportManagement: () => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
+  props: WorkspaceLeftRailSource;
   showStudyDock?: boolean;
-  props: WorkspaceLayoutProps;
-}) {
+}): WorkspaceLeftRailProps {
+  return {
+    canStartStudyMode: props.canStartStudyMode,
+    isImportManagementOpen,
+    isSettingsOpen: props.isSettingsOpen,
+    isStudyMode: props.isStudyMode,
+    onOpenImportManagement,
+    onOpenSettings: props.onOpenSettings,
+    onStartClipboardImport,
+    onStartImport,
+    onToggleReviewSession: props.onToggleReviewSession,
+    reviewDueCount: props.reviewDueCount,
+    showStudyDock
+  };
+}
+
+export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
+  canStartStudyMode,
+  isImportManagementOpen,
+  isSettingsOpen,
+  isStudyMode,
+  onOpenImportManagement,
+  onOpenSettings,
+  onStartClipboardImport,
+  onStartImport,
+  onToggleReviewSession,
+  reviewDueCount,
+  showStudyDock,
+}: WorkspaceLeftRailProps) {
   return (
     <div className="workspace-region-main-rail h-full max-[1080px]:hidden">
       <WorkspaceSideToolbar
-        canStartStudyMode={props.canStartStudyMode}
+        canStartStudyMode={canStartStudyMode}
         isImportManagementOpen={isImportManagementOpen}
-        isSettingsOpen={props.isSettingsOpen}
-        isStudyMode={props.isStudyMode}
-        reviewDueCount={props.reviewDueCount}
+        isSettingsOpen={isSettingsOpen}
+        isStudyMode={isStudyMode}
+        reviewDueCount={reviewDueCount}
         showStudyDock={showStudyDock}
         onOpenImportManagement={onOpenImportManagement}
-        onOpenSettings={props.onOpenSettings}
+        onOpenSettings={onOpenSettings}
         onStartClipboardImport={onStartClipboardImport}
         onStartImport={onStartImport}
-        onToggleReviewSession={props.onToggleReviewSession}
+        onToggleReviewSession={onToggleReviewSession}
       />
     </div>
   );

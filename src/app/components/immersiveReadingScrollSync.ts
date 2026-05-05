@@ -1,6 +1,9 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
+import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import type { NodeViewState } from '../../store/workspaceStore';
+import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
 import {
   applyImmersiveEntrySelection,
@@ -18,9 +21,25 @@ import {
   resolveStoredReadingSelection,
   shouldIgnoreWhitespaceViewportSample
 } from './immersiveReadingScrollSyncSupport';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
-export function useImmersiveParagraphMarkerSync(props: WorkspaceLayoutProps, isImmersiveEditing: boolean) {
+interface ImmersiveScrollSyncSource {
+  activeNodeId: string | null;
+  completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+  editorNodeViewState?: NodeViewState;
+  getReadingPositionSelection: () => EditorSelection | null;
+  getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+  isImmersiveMode: boolean;
+  setReadingPositionSelection: (selection: EditorSelection) => void;
+}
+
+export function useImmersiveParagraphMarkerSync(
+  props: Pick<
+    ImmersiveScrollSyncSource,
+    'activeNodeId' | 'editorAdapterRef' | 'editorNodeViewState' | 'getReadingPositionSelection' | 'isImmersiveMode'
+  >,
+  isImmersiveEditing: boolean
+) {
   useEffect(() => {
     if (!props.isImmersiveMode || isImmersiveEditing) {
       clearParagraphMarker(props.editorAdapterRef);
@@ -32,7 +51,7 @@ export function useImmersiveParagraphMarkerSync(props: WorkspaceLayoutProps, isI
 
 export function useImmersiveScrollSync(
   getReadingSelection: () => { from: number; to: number },
-  props: WorkspaceLayoutProps,
+  props: ImmersiveScrollSyncSource,
   isImmersiveEditing: boolean,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
@@ -76,7 +95,7 @@ export function useImmersiveEntrySelectionSync(
   getReadingSelection: () => { from: number; to: number },
   getPendingSelection: () => { from: number; to: number } | null,
   clearPendingSelection: () => void,
-  props: WorkspaceLayoutProps,
+  props: ImmersiveScrollSyncSource,
   isImmersiveEditing: boolean,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
@@ -128,9 +147,9 @@ export function useImmersiveEntrySelectionSync(
 }
 
 function handleScrollSyncEvent(
-  editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>,
+  editor: EditorAdapter,
   getReadingSelection: () => { from: number; to: number },
-  props: WorkspaceLayoutProps,
+  props: ImmersiveScrollSyncSource,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
 ) {
@@ -149,9 +168,9 @@ function handleScrollSyncEvent(
 }
 
 function syncViewportReadingSelection(
-  editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>,
+  editor: EditorAdapter,
   getReadingSelection: () => { from: number; to: number },
-  props: WorkspaceLayoutProps,
+  props: ImmersiveScrollSyncSource,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void
 ) {
   const selection = getViewportReadingSelection(props);
@@ -183,7 +202,15 @@ function syncViewportReadingSelection(
 }
 
 export function useReadingSelectionState(
-  props: WorkspaceLayoutProps
+  props: Pick<
+    ImmersiveScrollSyncSource,
+    | 'activeNodeId'
+    | 'editorAdapterRef'
+    | 'editorNodeViewState'
+    | 'getReadingPositionSelection'
+    | 'getReadingPositionSyncState'
+    | 'setReadingPositionSelection'
+  >
 ) {
   const readingSelectionRef = useRef(resolveStoredReadingSelection(props));
   const pendingSelectionRef = useRef<{ from: number; to: number } | null>(null);

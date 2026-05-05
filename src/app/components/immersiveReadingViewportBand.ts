@@ -1,15 +1,20 @@
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { MutableRefObject } from 'react';
 
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 
 export const IMMERSIVE_READING_FORWARD_REVEAL_RATIO = 0.2;
 export const IMMERSIVE_READING_BACKWARD_REVEAL_RATIO = 0.8;
 const IMMERSIVE_READING_SAFE_TOP_RATIO = 0.2;
 const IMMERSIVE_READING_SAFE_BOTTOM_RATIO = 0.8;
 
+interface ImmersiveViewportBandSource {
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+}
+
 export function shouldRevealSelectionInImmersiveBand(args: {
   direction: 'backward' | 'forward';
-  props: WorkspaceLayoutProps;
+  props: ImmersiveViewportBandSource;
   selection: EditorSelection;
 }) {
   const editor = args.props.editorAdapterRef.current;
@@ -36,7 +41,7 @@ export function shouldRevealSelectionInImmersiveBand(args: {
 
 export function revealSelectionForImmersiveBand(args: {
   direction: 'backward' | 'forward';
-  props: WorkspaceLayoutProps;
+  props: ImmersiveViewportBandSource;
   selection: EditorSelection;
 }) {
   const editor = args.props.editorAdapterRef.current;

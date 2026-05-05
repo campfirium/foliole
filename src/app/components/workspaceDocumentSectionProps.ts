@@ -1,7 +1,7 @@
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 
-function buildReadingPositionProps(props: WorkspaceLayoutProps) {
+function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
   return {
     editorReadingSelection: props.getReadingPositionSelection(),
     editorReadingTargetViewportMode: props.getReadingPositionTargetViewportMode(),
@@ -16,7 +16,7 @@ function buildReadingPositionProps(props: WorkspaceLayoutProps) {
 function buildDocumentEditorProps(
   isImmersiveEditing: boolean,
   onShouldSuppressSelectionRestore: () => boolean,
-  props: WorkspaceLayoutProps
+  props: WorkspaceDocumentSurfaceProps
 ) {
   return {
     editorNodeId: props.editorNodeId,
@@ -50,7 +50,7 @@ export function buildDocumentSectionProps(
   editorAppearanceKey: string,
   isImmersiveEditing: boolean,
   onShouldSuppressSelectionRestore: () => boolean,
-  props: WorkspaceLayoutProps
+  props: WorkspaceDocumentSurfaceProps
 ): DocumentPanelSectionProps {
   return {
     activeNodeId: documentNodeId,

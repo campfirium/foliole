@@ -1,25 +1,43 @@
 import type { MutableRefObject } from 'react';
 
+import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
+import type { NodeViewState } from '../../store/workspaceStore';
+import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
 import { getViewportReadingSelection, syncParagraphMarkerToReadingPosition } from './immersiveReadingMarker';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 export const APPLYING_READING_POSITION_TIMEOUT_MS = 500;
 const IMMERSIVE_READING_ANCHOR_RATIO = 0.15;
 const IMMERSIVE_READING_CHECK_START_DELAY_FRAMES = 2;
 const IMMERSIVE_READING_MAX_CHECK_ATTEMPTS = 12;
 
-export function getCurrentApplyingSelection(props: WorkspaceLayoutProps) {
+interface ApplyingSelectionStateSource {
+  getReadingPositionSyncState: () => ReadingPositionSyncState | null;
+}
+
+interface ApplyingViewportSource extends ApplyingSelectionStateSource {
+  activeNodeId: string | null;
+  completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+}
+
+interface ApplyingEntrySource extends ApplyingViewportSource {
+  editorNodeViewState?: NodeViewState;
+  getReadingPositionSelection: () => EditorSelection | null;
+  isImmersiveMode: boolean;
+}
+
+export function getCurrentApplyingSelection(props: ApplyingSelectionStateSource) {
   return props.getReadingPositionSyncState()?.targetSelection ?? null;
 }
 
-export function isApplyingReadingPosition(props: WorkspaceLayoutProps) {
+export function isApplyingReadingPosition(props: ApplyingSelectionStateSource) {
   return getCurrentApplyingSelection(props) !== null;
 }
 
 export function completeApplyingFromViewport(
-  props: WorkspaceLayoutProps,
+  props: ApplyingViewportSource,
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   reason: string
 ) {
@@ -38,7 +56,7 @@ export function completeApplyingFromViewport(
 
 export function applyImmersiveEntrySelection(args: {
   clearPendingSelection: () => void;
-  props: WorkspaceLayoutProps;
+  props: ApplyingEntrySource;
   remainingAttempts: number;
   scheduleRetry: () => void;
   selection: { from: number; to: number };
@@ -90,8 +108,8 @@ export function applyImmersiveEntrySelection(args: {
 }
 
 function revealImmersiveEntrySelection(
-  props: WorkspaceLayoutProps,
-  editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>,
+  props: ApplyingViewportSource,
+  editor: EditorAdapter,
   selection: { from: number; to: number },
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void,
   shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
@@ -119,7 +137,7 @@ function revealImmersiveEntrySelection(
 }
 
 function revealSelectionAtAnchorRatio(
-  editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>,
+  editor: EditorAdapter,
   selection: { from: number; to: number }
 ) {
   if (editor.revealSelectionAtViewportRatio) {
@@ -130,15 +148,16 @@ function revealSelectionAtAnchorRatio(
 }
 
 function isSelectionNearImmersiveAnchor(
-  editor: NonNullable<WorkspaceLayoutProps['editorAdapterRef']['current']>,
+  editor: EditorAdapter,
   selection: { from: number; to: number }
 ) {
   if (editor.isPositionNearViewportRatio) {
     return editor.isPositionNearViewportRatio(selection.from, IMMERSIVE_READING_ANCHOR_RATIO, 0.05);
   }
   const viewportSelection = getViewportReadingSelection({
+    activeNodeId: null,
     editorAdapterRef: { current: editor }
-  } as WorkspaceLayoutProps);
+  });
   return viewportSelection?.from === selection.from && viewportSelection.to === selection.to;
 }
 

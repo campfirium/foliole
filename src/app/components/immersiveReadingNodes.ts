@@ -1,7 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
-
 export function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string, Node>, trashedNodeIds: string[]) {
   return nodeOrder.filter((nodeId) => {
     if (trashedNodeIds.includes(nodeId)) {
@@ -12,7 +10,12 @@ export function getReadableNodeIds(nodeOrder: string[], nodesById: Record<string
   });
 }
 
-export function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
+interface ReadableNodeNavigationSource {
+  activeNodeId: string | null;
+  onSelectNode: (nodeId: string) => void;
+}
+
+export function openNextReadableNode(props: ReadableNodeNavigationSource, readableNodeIds: string[]) {
   const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
   const nextNodeId = currentIndex >= 0 ? readableNodeIds[currentIndex + 1] : undefined;
   if (nextNodeId) {
@@ -20,7 +23,7 @@ export function openNextReadableNode(props: WorkspaceLayoutProps, readableNodeId
   }
 }
 
-export function openPreviousReadableNode(props: WorkspaceLayoutProps, readableNodeIds: string[]) {
+export function openPreviousReadableNode(props: ReadableNodeNavigationSource, readableNodeIds: string[]) {
   const currentIndex = props.activeNodeId ? readableNodeIds.indexOf(props.activeNodeId) : -1;
   const previousNodeId = currentIndex > 0 ? readableNodeIds[currentIndex - 1] : undefined;
   if (previousNodeId) {
@@ -29,7 +32,7 @@ export function openPreviousReadableNode(props: WorkspaceLayoutProps, readableNo
 }
 
 export function openAdjacentReadableNode(
-  props: WorkspaceLayoutProps,
+  props: ReadableNodeNavigationSource,
   readableNodeIds: string[],
   direction: 'backward' | 'forward'
 ) {

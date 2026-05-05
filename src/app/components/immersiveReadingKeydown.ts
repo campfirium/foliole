@@ -1,16 +1,16 @@
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 
 import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveReadingKeyboard';
+import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
 import { openAdjacentReadableNode } from './immersiveReadingNodes';
-import { resolveImmersiveSelectionPayload } from './immersiveReadingSelectionPayload';
+import { runImmersiveSelectionAction } from './immersiveReadingSelectionActions';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 
 function handleImmersiveExit(args: {
   isImmersiveEditing: boolean;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveKeydownSource;
   setIsImmersiveEditing: (value: boolean) => void;
 }) {
   const { props, isImmersiveEditing, setIsImmersiveEditing } = args;
@@ -29,7 +29,7 @@ function selectParagraph(args: {
   direction: 'backward' | 'forward';
   markNextProgrammaticScroll: () => void;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveKeydownSource;
   readableNodeIds: string[];
 }) {
   const editor = args.props.editorAdapterRef.current;
@@ -73,29 +73,10 @@ function selectParagraph(args: {
   return true;
 }
 
-function runImmersiveSelectionAction(args: {
-  getReadingSelection: () => { from: number; to: number };
-  props: WorkspaceLayoutProps;
-  type: 'highlight' | 'note';
-}) {
-  if (!args.props.activeNodeId) {
-    return false;
-  }
-  const payload = resolveImmersiveSelectionPayload(args);
-  if (!payload) {
-    return false;
-  }
-  if (args.type === 'highlight') {
-    return args.props.onToggleSelectionHighlight(payload) !== null;
-  }
-  args.props.onCreateSelectionNote(payload);
-  return true;
-}
-
 function handleImmersivePrimaryKey(args: {
   event: KeyboardEvent;
   isImmersiveEditing: boolean;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveKeydownSource;
   setIsImmersiveEditing: (value: boolean) => void;
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
 }) {
@@ -127,7 +108,7 @@ function handleImmersiveReadingKey(args: {
   event: KeyboardEvent;
   getReadingSelection: () => { from: number; to: number };
   markNextProgrammaticScroll: () => void;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveKeydownSource;
   readableNodeIds: string[];
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
 }) {
@@ -187,7 +168,7 @@ function handleImmersiveToggleKey(args: {
   event: KeyboardEvent;
   getReadingSelection: () => { from: number; to: number };
   isImmersiveEditing: boolean;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveKeydownSource;
   queueReadingSelectionRestore: () => void;
   suppressNextSelectionRestore: () => void;
 }) {
@@ -221,7 +202,7 @@ export function handleImmersiveKeydown(args: {
   getReadingSelection: () => { from: number; to: number };
   isImmersiveEditing: boolean;
   markNextProgrammaticScroll: () => void;
-  props: WorkspaceLayoutProps;
+  props: ImmersiveKeydownSource;
   queueReadingSelectionRestore: () => void;
   readableNodeIds: string[];
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;

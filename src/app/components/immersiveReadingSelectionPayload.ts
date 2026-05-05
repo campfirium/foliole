@@ -1,11 +1,18 @@
+import type { MutableRefObject } from 'react';
+
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getSelectionCommandPayloadForRanges } from '../contextCommands';
 
 import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+
+interface ImmersiveSelectionPayloadSource {
+  activeNodeId: string | null;
+  editorAdapterRef: MutableRefObject<EditorAdapter | null>;
+}
 
 export function resolveImmersiveSelectionPayload(args: {
   getReadingSelection: () => { from: number; to: number };
-  props: WorkspaceLayoutProps;
+  props: ImmersiveSelectionPayloadSource;
 }) {
   const editor = args.props.editorAdapterRef.current;
   if (!editor || !args.props.activeNodeId) {

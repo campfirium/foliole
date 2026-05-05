@@ -1,6 +1,6 @@
-import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+type ReviewStatus = 'awaiting-answer' | 'answer-revealed' | 'completed';
 
-function getReviewStatusLabel(status: WorkspaceLayoutProps['reviewStatus']) {
+function getReviewStatusLabel(status: ReviewStatus) {
   if (status === 'awaiting-answer') {
     return 'Awaiting answer';
   }
@@ -21,7 +21,7 @@ export function WorkspaceListStudyStatusBar({
   reviewCompletedCount: number;
   reviewDueCount: number;
   reviewQueueCount: number;
-  reviewStatus: WorkspaceLayoutProps['reviewStatus'];
+  reviewStatus: ReviewStatus;
 }) {
   if (!isStudyMode) {
     return null;

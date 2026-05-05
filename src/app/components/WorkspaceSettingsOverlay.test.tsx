@@ -33,11 +33,9 @@ import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 it('skips import settings state while the settings overlay is closed', () => {
   render(
     <WorkspaceSettingsOverlay
-      props={{
-        isSettingsOpen: false,
-        onCloseSettings: () => undefined,
-        requestedSettingsCategory: null
-      } as never}
+      isSettingsOpen={false}
+      onClose={() => undefined}
+      requestedCategory={null}
     />
   );
 
