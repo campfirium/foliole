@@ -227,7 +227,7 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync pass finished; local changes are still waiting to settle.',
     status: 'skipped'

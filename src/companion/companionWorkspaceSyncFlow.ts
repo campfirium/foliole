@@ -22,10 +22,17 @@ export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'sk
 
 function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
+  const waitingLocalChanges =
+    !result.pushError &&
+    result.pushConflictCount === 0 &&
+    result.pushRejectedCount === 0 &&
+    (result.pushIssueCount ?? 0) === 0 &&
+    ((result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0);
   return (
     result.remainingContentBlobCount !== 0 ||
     result.remainingAttachmentResourceCount !== 0 ||
-    remainingStructure > 0
+    remainingStructure > 0 ||
+    waitingLocalChanges
   );
 }
 
