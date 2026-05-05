@@ -275,12 +275,12 @@ describe('CompanionShell review surfaces', () => {
     await renderShellWithSurface(surface);
 
     fireEvent.click(screen.getByRole('button', { name: /Choose bottom tabs/ }));
-    expect(screen.getByTestId('tab-slot-shortcut')).toBeInTheDocument();
     fireEvent.change(screen.getByRole('combobox', { name: 'Shortcut tab target' }), { target: { value: 'directory' } });
 
     expect(screen.getByRole('button', { name: 'Directory' })).toBeInTheDocument();
-    fireEvent.dragStart(screen.getByTestId('tab-slot-shortcut-handle'));
-    fireEvent.drop(screen.getByTestId('tab-slot-browse'));
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => screen.getByTestId('tab-slot-browse')) });
+    fireEvent.pointerDown(screen.getByTestId('tab-slot-shortcut-handle'), { clientX: 20, clientY: 120, pointerId: 1 });
+    fireEvent.pointerUp(screen.getByTestId('tab-slot-shortcut-handle'), { clientX: 20, clientY: 20, pointerId: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
     expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
     expect(JSON.parse(window.localStorage.getItem('foliole-companion-tabs-config') ?? '{}').orderedTabIds[0]).toBe('shortcut');
