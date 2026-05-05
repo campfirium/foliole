@@ -17,10 +17,6 @@ final class FolioleCompanionSyncDataPluginActions {
         );
     }
 
-    static JSObject applySyncObjects(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.applySyncObjects(call.getData().optJSONArray("objects"));
-    }
-
     static JSObject loadSyncNodeVersions(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadSyncNodeVersions(
             call.getData().optJSONObject("cursor"),

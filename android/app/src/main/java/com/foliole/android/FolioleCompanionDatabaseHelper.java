@@ -92,13 +92,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionSyncObjectStore.loadSyncObjects(database, objectIds, objectTypes);
     }
 
-    JSObject applySyncObjects(JSONArray objects) throws Exception {
-        SQLiteDatabase database = getWritableDatabase();
-        String now = Instant.now().toString();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, now);
-        return FolioleCompanionSyncObjectStore.applySyncObjects(database, objects, deviceId);
-    }
-
     JSObject syncAttachmentResource(String attachmentId, String contentHash, String url, JSONObject headers) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionAttachmentResourceStore.syncResource(context, database, attachmentId, contentHash, url, headers);

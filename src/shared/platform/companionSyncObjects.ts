@@ -31,6 +31,7 @@ export {
   saveCompanionSyncNodeViewState,
   saveCompanionSyncSettingRecord
 } from './companionSyncStateWriters';
+export { applyCompanionSyncObjects } from './companionSyncStateObjects';
 
 export async function loadCompanionSyncIndex() {
   if (!isNativeAndroidCompanionRuntime()) {
@@ -57,15 +58,6 @@ export async function loadCompanionSyncObjects(
     object_ids: objectIds,
     object_types: objectTypes
   })).objects;
-}
-
-export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[]) {
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [];
-  }
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.applySyncObjects({ objects })
-  ).applied_object_ids);
 }
 
 export {

@@ -10,7 +10,6 @@ vi.mock('./companionSyncWriterQueue', () => ({
 
 function createApplyPluginMocks() {
   return {
-    applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
     applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
     saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] }))
   };
@@ -186,14 +185,6 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     scroll_top: 42,
     source: 'user-scroll'
   });
-  await expect(api.applyCompanionSyncObjects([{
-    content_hash: 'hash',
-    deleted_at: null,
-    object_id: 'one',
-    object_type: 'setting',
-    payload_json: '{}',
-    updated_at: '2026-04-25T00:00:00.000Z'
-  }])).resolves.toEqual(['setting:one']);
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
   await expect(api.saveCompanionSyncPushAcks([{
     clientOpId: 'client-op-1',
@@ -201,7 +192,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     stateSeq: 4,
     status: 'accepted'
   }])).resolves.toEqual(['op-1']);
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(9);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(8);
 }
 
 describe('companion sync objects bridge', () => {

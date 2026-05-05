@@ -9,7 +9,8 @@ const FORBIDDEN_MAIN_PATTERNS = [
   /\bclass\s+FolioleCompanionSyncPackApply\b/,
   /\bapplyDesktopSyncPack\s*\(/,
   /\bapplySyncPack\s*\(/,
-  /\bapplySyncNodeVersions\s*\(/
+  /\bapplySyncNodeVersions\s*\(/,
+  /\bpublic\s+void\s+applySyncObjects\s*\(/
 ];
 
 function listJavaFiles(dir: string): string[] {
