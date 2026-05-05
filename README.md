@@ -17,3 +17,9 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 1. 主干小步提交，避免长周期分支合并。
 2. 一次只做一个可验证任务。
 3. 优先稳定主链路，再扩展外围能力。
+
+## Playwright E2E
+1. 首次安装浏览器运行时：`npx playwright install chromium`
+2. 列出 E2E 用例：`npm run test:e2e -- --list`
+3. 运行 E2E（默认无头）：`npm run test:e2e`
+4. 可视化调试：`npm run test:e2e:headed` 或 `npm run test:e2e:ui`
