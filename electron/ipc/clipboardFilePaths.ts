@@ -13,8 +13,35 @@ interface ClipboardFilePathCollectorOptions {
 }
 
 function normalizeFilePath(value: string) {
-  const trimmed = value.trim().replace(/^["']|["']$/g, '').replace(/^file:\/\//i, '');
-  return decodeURIComponent(trimmed).replace(/^\/([A-Za-z]:[\\/])/, '$1');
+  return stripPathBoundary(value);
+}
+
+function stripPathBoundary(value: string) {
+  return value.trim().replace(/^["']|["']$/g, '');
+}
+
+function isPlainPathCandidate(value: string) {
+  return /^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(stripPathBoundary(value));
+}
+
+function decodeFileUriPath(value: string) {
+  const trimmed = stripPathBoundary(value);
+  if (!/^file:\/\//i.test(trimmed)) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(trimmed.replace(/^file:\/\//i, '')).replace(/^\/([A-Za-z]:[\\/])/, '$1');
+  } catch {
+    return null;
+  }
+}
+
+function normalizeTextPathCandidate(value: string) {
+  const fileUriPath = decodeFileUriPath(value);
+  if (fileUriPath) {
+    return fileUriPath;
+  }
+  return isPlainPathCandidate(value) ? normalizeFilePath(value) : null;
 }
 
 function parsePathList(value: string) {
@@ -32,14 +59,15 @@ function parseUriList(value: string) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith('#') && line.startsWith('file:'))
-    .map(normalizeFilePath);
+    .map(decodeFileUriPath)
+    .filter((filePath): filePath is string => Boolean(filePath));
 }
 
 function parseTextFilePaths(value: string) {
   const paths = value
     .split(/\r?\n/)
-    .map(normalizeFilePath)
-    .filter(Boolean);
+    .map(normalizeTextPathCandidate)
+    .filter((filePath): filePath is string => Boolean(filePath));
   if (paths.length === 0 || paths.some((candidate) => !fs.existsSync(candidate))) {
     return [];
   }

@@ -186,12 +186,31 @@ it('imports plain clipboard text as an Inbox topic through the prepared import p
   expect(runPreparedImport).toHaveBeenCalledWith(
     expect.objectContaining({
       content: '# Clipboard topic\n\nBody',
+      hideTitleHeading: false,
       nodeTitle: 'Clipboard topic',
       sourceKind: 'text',
       sourceName: 'Clipboard Text.txt'
     })
   );
   expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('import-1');
+});
+
+it('imports plain clipboard text containing malformed URI escapes instead of failing path detection', async () => {
+  clipboard.readText.mockReturnValue('# Clipboard topic\n\nLarge section is 100% incomplete');
+
+  await expect(runClipboardImport()).resolves.toMatchObject({
+    import_id: 'import-1',
+    source_kind: 'text',
+    source_name: 'Clipboard Text.txt'
+  });
+
+  expect(runPreparedImport).toHaveBeenCalledWith(
+    expect.objectContaining({
+      content: '# Clipboard topic\n\nLarge section is 100% incomplete',
+      sourceKind: 'text',
+      sourceName: 'Clipboard Text.txt'
+    })
+  );
 });
 
 it('prefers clipboard HTML over plain text and converts it before import', async () => {

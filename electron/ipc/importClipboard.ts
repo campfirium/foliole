@@ -162,7 +162,7 @@ function createClipboardTextPreparedRecord(input: {
 }) {
   const sourceName = input.kind === 'html' ? 'Clipboard HTML.html' : 'Clipboard Text.txt';
   const payload = toImportPayload(input.content, input.kind, sourceName);
-  return buildPreparedImportRecord(
+  const record = buildPreparedImportRecord(
     {
       filePath: `clipboard://${input.kind}/${input.importedAt}`,
       kind: input.kind,
@@ -176,6 +176,7 @@ function createClipboardTextPreparedRecord(input: {
       titleStrategy: input.args?.title_strategy ? resolveImportNodeTitleStrategy(input.args) : 'heading'
     }
   );
+  return { ...record, hideTitleHeading: false };
 }
 
 function readClipboardTextContent() {
