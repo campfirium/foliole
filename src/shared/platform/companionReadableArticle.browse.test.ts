@@ -7,7 +7,11 @@ import {
   resolveCompanionRecentArticles,
   resolveCompanionRootDirectoryView
 } from './companionBrowseLists';
-import { resolveCompanionBrowseExitNodeId } from './companionReadableArticle';
+import {
+  resolveCompanionBrowseExitNodeId,
+  resolveReadableCompanionArticleByNodeId,
+  resolveReadableCompanionTrashArticleByNodeId
+} from './companionReadableArticle';
 
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 
@@ -140,5 +144,14 @@ describe('companionReadableArticle directory browse helpers', () => {
     expect(resolveCompanionBrowseExitNodeId(createSnapshot(), 'node-1')).toBe('folder-1');
     expect(resolveCompanionBrowseExitNodeId(createSnapshot(), 'node-7')).toBeNull();
     expect(resolveCompanionBrowseExitNodeId(createSnapshot(), 'node-4')).toBeNull();
+  });
+
+  it('opens trashed topics only through the trash reader path', () => {
+    expect(resolveReadableCompanionArticleByNodeId(createSnapshot(), 'node-4')).toBeNull();
+    expect(resolveReadableCompanionTrashArticleByNodeId(createSnapshot(), 'node-4')).toMatchObject({
+      isTrashed: true,
+      nodeId: 'node-4',
+      title: 'Hidden'
+    });
   });
 });

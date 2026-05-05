@@ -8,17 +8,19 @@ import type {
 } from '../features/nodes/model/folderListOrdering';
 import {
   resolveCompanionFolderViewByNodeId,
-  resolveCompanionRootDirectoryView
+  resolveCompanionRootDirectoryView,
+  resolveCompanionTrashFolderViewByNodeId,
+  resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
 
+import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import {
   type CompanionDirectorySelection,
   type DirectorySection,
   type DirectoryListItem,
-  resolveDirectoryParentSelection,
-  resolveDirectorySections,
-  toReadableExternalArticle
+  resolveDirectorySections
 } from './CompanionDirectoryModel';
+import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
@@ -81,18 +83,23 @@ function useCompanionDirectorySections(args: {
 }) {
   const currentNodeId = args.selection.kind === 'internal' ? args.selection.nodeId : null;
   const virtualNodeId = args.selection.kind === 'virtual' ? args.selection.nodeId : null;
+  const trashFolderNodeId = args.selection.kind === 'trashFolder' ? args.selection.nodeId : null;
   const folderView = resolveCompanionFolderViewByNodeId(args.snapshot, currentNodeId, args.sortKey, args.sortDirection);
   const virtualView = resolveCompanionFolderViewByNodeId(args.snapshot, virtualNodeId, args.sortKey, args.sortDirection);
   const rootView = resolveCompanionRootDirectoryView(args.snapshot, args.sortKey, args.sortDirection);
+  const trashView = trashFolderNodeId
+    ? resolveCompanionTrashFolderViewByNodeId(args.snapshot, trashFolderNodeId, args.sortKey, args.sortDirection)
+    : resolveCompanionTrashView(args.snapshot, args.sortKey, args.sortDirection);
   const sections = useMemo(
     () => resolveDirectorySections({
       directory: args.directory,
       folderView: folderView ?? virtualView,
       rootView,
       selection: args.selection,
-      snapshot: args.snapshot
+      snapshot: args.snapshot,
+      trashView: trashView ?? undefined
     }),
-    [args.directory, args.selection, args.snapshot, folderView, rootView, virtualView]
+    [args.directory, args.selection, args.snapshot, folderView, rootView, trashView, virtualView]
   );
 
   return { folderView, sections, virtualView };
@@ -102,6 +109,9 @@ function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelect
   if (item.source === 'internal' || item.source === 'virtual') {
     return { kind: item.source, nodeId: item.nodeId };
   }
+  if (item.source === 'trashRoot') return { kind: 'trash' };
+  if (item.source === 'trash' && item.kind === 'folder') return { kind: 'trashFolder', nodeId: item.nodeId };
+  if (item.source === 'trash') return { kind: 'trash' };
   if (item.source === 'externalFolder') return { folderId: item.nodeId, kind: 'externalFolder' };
   if (item.source === 'externalDirectory') {
     return { directoryPath: item.directoryPath, folderId: item.folderId, kind: 'externalDirectory' };
@@ -133,7 +143,7 @@ export function CompanionDirectoryContent(props: {
   const handleSelectItem = (item: DirectoryListItem) => {
     const selection = resolveItemSelection(item);
     props.onChangeSelection(selection);
-    if (selection.kind === 'internal' || selection.kind === 'virtual') {
+    if (selection.kind === 'internal' || selection.kind === 'virtual' || item.source === 'trash') {
       props.onSelectNode(item.nodeId);
     }
   };

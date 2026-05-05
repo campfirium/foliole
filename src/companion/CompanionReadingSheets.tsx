@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
@@ -57,6 +57,7 @@ function ReadingActionRow(props: {
 export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenChange(open: boolean): void;
+  onRestoreFromTrash?: () => void;
   open: boolean;
 }) {
   return (
@@ -67,6 +68,13 @@ export function ReadingActionsSheet(props: {
           label="Find in document"
           onClick={props.onFindInDocument}
         />
+        {props.onRestoreFromTrash ? (
+          <ReadingActionRow
+            icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
+            label="Restore from Trash"
+            onClick={props.onRestoreFromTrash}
+          />
+        ) : null}
       </div>
     </ReadingBottomSheet>
   );

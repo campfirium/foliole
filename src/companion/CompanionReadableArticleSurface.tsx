@@ -2,6 +2,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
+import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import { ReadingChrome } from './CompanionReadingChrome';
 import {
   ReadingActionsSheet,
@@ -11,9 +12,7 @@ import {
   ReadingInfoSheet
 } from './CompanionReadingSheets';
 import {
-  CompanionSelectionAnnotationToolbar,
-  type CompanionSelectionAnnotationKind,
-  type CompanionSelectionAnnotationToolbarState
+  type CompanionSelectionAnnotationKind
 } from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
@@ -34,6 +33,7 @@ interface ImmersiveReadableArticleProps {
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string) => Promise<string | null> | string | null;
   onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
   onExit(): void;
+  onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
   snapshot: WorkspaceSnapshot | null;
@@ -86,6 +86,7 @@ function ImmersiveChromeLayer(props: {
   onOpenOutline(open: boolean): void;
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
   onOpenSearchSheet(open: boolean): void;
+  onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSelectOutlineItem(item: { from: number; to: number }): void;
   openReadingSheet: 'font' | 'highlight' | 'info' | null;
   outlineOpen: boolean;
@@ -104,6 +105,7 @@ function ImmersiveChromeLayer(props: {
       <ReadingActionsSheet
         onFindInDocument={props.onFindInDocument}
         onOpenChange={props.onOpenActions}
+        onRestoreFromTrash={props.readableArticle.isTrashed ? () => props.onRestoreFromTrash?.(props.readableArticle.nodeId) : undefined}
         open={props.actionsOpen}
       />
       <ReadingSheetsLayer
@@ -143,36 +145,6 @@ function ImmersiveArticleContent(props: {
   );
 }
 
-function SelectionAnnotationToolbarLayer(props: {
-  onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string) => Promise<string | null> | string | null;
-  onClose(): void;
-  onCreateSelectionAnnotation?: (
-    kind: CompanionSelectionAnnotationKind,
-    payload: SelectionCommandPayload,
-    note?: string
-  ) => Promise<string | null> | string | null;
-  onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
-  resolveSelectionPayload: () => SelectionCommandPayload | null;
-  state: CompanionSelectionAnnotationToolbarState | null;
-}) {
-  return (
-    <CompanionSelectionAnnotationToolbar
-      onAddExistingHighlightNote={async (nodeId, originalText, note) => {
-        await props.onAddExistingHighlightNote?.(nodeId, originalText, note);
-      }}
-      onApply={async (kind, payload, note) => {
-        await props.onCreateSelectionAnnotation?.(kind, payload, note);
-      }}
-      onClose={props.onClose}
-      onDeleteExistingHighlight={async (nodeId) => {
-        await props.onDeleteExistingHighlight?.(nodeId);
-      }}
-      resolveSelectionPayload={props.resolveSelectionPayload}
-      state={props.state}
-    />
-  );
-}
-
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation),
@@ -199,6 +171,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
           onOpenOutline={reading.setIsOutlineOpen}
           onOpenReadingSheet={reading.setOpenReadingSheet}
           onOpenSearchSheet={reading.setIsSearchSheetOpen}
+          onRestoreFromTrash={props.onRestoreFromTrash}
           onSelectOutlineItem={reading.handleSelectOutlineItem}
           openReadingSheet={reading.openReadingSheet}
           outlineOpen={reading.isOutlineOpen}

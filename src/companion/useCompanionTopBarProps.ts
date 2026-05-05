@@ -5,7 +5,7 @@ import type {
 } from '../features/nodes/model/folderListOrdering';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
-import { resolveDirectoryParentSelection } from './CompanionDirectoryModel';
+import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';

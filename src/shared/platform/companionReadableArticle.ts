@@ -18,6 +18,7 @@ export interface CompanionReadableArticle {
   content: string;
   contentPaddingTop?: string;
   hideTitleHeading: boolean;
+  isTrashed?: boolean;
   nodeId: string;
   persistedNodeViewState: PersistedNodeViewState | null;
   pdfAttachmentId: string | null;
@@ -55,11 +56,12 @@ function resolveReferencePdfAttachmentId(node: CompanionReadableNode) {
   return node.attachments?.find((attachment) => attachment.role === 'reference' && attachment.mimeType === 'application/pdf')?.attachmentId ?? null;
 }
 
-function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode) {
+function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode, isTrashed = false) {
   const contentPaddingTop = resolveCompanionArticleContentPaddingTop(snapshot, node);
   return {
     ...buildReadableArticle(node, snapshot.persistedNodeViewById?.[node.id] ?? null),
     ...(contentPaddingTop ? { contentPaddingTop } : {}),
+    ...(isTrashed ? { isTrashed } : {}),
     textAnchorDecorations: collectDocumentTextAnchorDecorations({
       activeNodeId: node.id,
       nodesById: snapshot.nodesById,
@@ -90,6 +92,17 @@ export function resolveReadableCompanionArticleByNodeId(
   }
   const node = snapshot.nodesById[nodeId];
   return hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node) : null;
+}
+
+export function resolveReadableCompanionTrashArticleByNodeId(
+  snapshot: WorkspaceSnapshot | null,
+  nodeId: string | null
+): CompanionReadableArticle | null {
+  if (!snapshot || !nodeId || !snapshot.trashedNodeIds.includes(nodeId)) {
+    return null;
+  }
+  const node = snapshot.nodesById[nodeId];
+  return hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node, true) : null;
 }
 
 export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | null): CompanionReadableArticle | null {

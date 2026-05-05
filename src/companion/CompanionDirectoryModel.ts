@@ -2,39 +2,40 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import {
   type CompanionFolderListEntry,
   resolveCompanionFolderViewByNodeId,
-  resolveCompanionRootDirectoryView
+  resolveCompanionRootDirectoryView,
+  resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
-import type {
-  CompanionExternalDirectory,
-  loadCompanionExternalDocument
-} from '../shared/platform/companionExternalDocuments';
-import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 import {
   buildExternalLibraryFolderBrowseState,
   compareNaturalName,
-  resolveExternalEntryDirectoryPath,
   resolveExternalFolderLabel,
   type ExternalLibraryDirectoryNode
 } from '../shared/platform/externalLibraryBrowseModel';
+
+import { toTrashItem, toTrashRootItem, type TrashDirectoryListItem } from './CompanionDirectoryTrashModel';
 
 const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
 export type CompanionDirectorySelection =
   | { kind: 'root' }
   | { kind: 'internal'; nodeId: string }
+  | { kind: 'trash' }
+  | { kind: 'trashFolder'; nodeId: string }
   | { kind: 'virtual'; nodeId: string }
   | { folderId: string; kind: 'externalFolder' }
   | { directoryPath: string; folderId: string; kind: 'externalDirectory' }
   | { documentId: string; kind: 'externalDocument' };
 
 export interface DirectorySection {
-  id: 'internal' | 'virtual' | 'external' | 'current';
+  id: 'internal' | 'virtual' | 'external' | 'current' | 'trash';
   items: DirectoryListItem[];
   title?: string;
 }
 
 export type DirectoryListItem =
   | (CompanionFolderListEntry & { id: string; source: 'internal' })
+  | TrashDirectoryListItem
   | (CompanionFolderListEntry & { id: string; source: 'virtual' })
   | { id: string; kind: 'folder'; nodeId: string; preview: null; source: 'externalFolder'; title: string }
   | {
@@ -60,7 +61,7 @@ export type DirectoryListItem =
 
 type FolderView = ReturnType<typeof resolveCompanionFolderViewByNodeId>;
 type RootView = ReturnType<typeof resolveCompanionRootDirectoryView>;
-type ExternalDocument = NonNullable<Awaited<ReturnType<typeof loadCompanionExternalDocument>>>;
+type TrashView = ReturnType<typeof resolveCompanionTrashView>;
 
 function toInternalItem(item: CompanionFolderListEntry): DirectoryListItem {
   return { ...item, id: `internal:${item.nodeId}`, source: 'internal' };
@@ -111,7 +112,13 @@ function resolveExternalSelectionItems(
   directory: CompanionExternalDirectory,
   selection: CompanionDirectorySelection
 ): DirectoryListItem[] | null {
-  if (selection.kind === 'root' || selection.kind === 'internal' || selection.kind === 'virtual') {
+  if (
+    selection.kind === 'root' ||
+    selection.kind === 'internal' ||
+    selection.kind === 'trash' ||
+    selection.kind === 'trashFolder' ||
+    selection.kind === 'virtual'
+  ) {
     return null;
   }
   const folderId = selection.kind === 'externalDocument'
@@ -157,9 +164,13 @@ export function resolveDirectorySections(args: {
   rootView: RootView;
   selection: CompanionDirectorySelection;
   snapshot: WorkspaceSnapshot | null;
+  trashView?: TrashView;
 }): DirectorySection[] {
   const externalItems = resolveExternalSelectionItems(args.directory, args.selection);
   if (externalItems) return [{ id: 'current', items: externalItems }];
+  if (args.selection.kind === 'trash' || args.selection.kind === 'trashFolder') {
+    return [{ id: 'current', items: (args.trashView?.items ?? []).map(toTrashItem) }];
+  }
   if (args.folderView) {
     const toItem = args.selection.kind === 'virtual' ? toVirtualItem : toInternalItem;
     return [{ id: 'current', items: args.folderView.items.map(toItem) }];
@@ -174,65 +185,9 @@ export function resolveDirectorySections(args: {
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
     { id: 'internal', items: internalItems, title: 'Workspace' },
+    { id: 'trash', items: [toTrashRootItem()], title: 'Trash' },
     { id: 'virtual', items: virtualItems, title: 'Virtual' },
     { id: 'external', items: externalFolders, title: 'External' }
   ];
   return sections.filter((section) => section.items.length > 0);
-}
-
-export function resolveDirectoryParentSelection(args: {
-  directory: CompanionExternalDirectory;
-  selection: CompanionDirectorySelection;
-  snapshot: WorkspaceSnapshot | null;
-}): CompanionDirectorySelection | null {
-  if (args.selection.kind === 'root') return null;
-  if (args.selection.kind === 'externalFolder') return { kind: 'root' };
-  if (args.selection.kind === 'externalDirectory') return resolveExternalDirectoryParent(args.selection);
-  if (args.selection.kind === 'externalDocument') return resolveExternalDocumentParent(args.directory, args.selection.documentId);
-  return resolveWorkspaceParent(args.snapshot, args.selection);
-}
-
-function resolveExternalDirectoryParent(
-  selection: Extract<CompanionDirectorySelection, { kind: 'externalDirectory' }>
-): CompanionDirectorySelection {
-  if (!selection.directoryPath.includes('/')) return { folderId: selection.folderId, kind: 'externalFolder' };
-  return {
-    directoryPath: selection.directoryPath.slice(0, selection.directoryPath.lastIndexOf('/')),
-    folderId: selection.folderId,
-    kind: 'externalDirectory'
-  };
-}
-
-function resolveExternalDocumentParent(
-  directory: CompanionExternalDirectory,
-  documentId: string
-): CompanionDirectorySelection {
-  const entry = directory.entries.find((candidate) => candidate.documentId === documentId);
-  if (!entry) return { kind: 'root' };
-  const directoryPath = resolveExternalEntryDirectoryPath(entry.relativePath);
-  return directoryPath
-    ? { directoryPath, folderId: entry.folderId, kind: 'externalDirectory' }
-    : { folderId: entry.folderId, kind: 'externalFolder' };
-}
-
-function resolveWorkspaceParent(
-  snapshot: WorkspaceSnapshot | null,
-  selection: Extract<CompanionDirectorySelection, { kind: 'internal' | 'virtual' }>
-): CompanionDirectorySelection {
-  const parentNodeId = snapshot?.nodesById[selection.nodeId]?.parentNodeId ?? null;
-  if (!parentNodeId || parentNodeId === VIRTUAL_ROOT_NODE_ID) return { kind: 'root' };
-  return { kind: selection.kind, nodeId: parentNodeId };
-}
-
-export function toReadableExternalArticle(document: ExternalDocument): CompanionReadableArticle {
-  return {
-    bodyStatus: document.bodyStatus,
-    content: document.content,
-    hideTitleHeading: false,
-    nodeId: document.document_id,
-    persistedNodeViewState: null,
-    pdfAttachmentId: null,
-    textAnchorDecorations: [],
-    title: document.title
-  };
 }

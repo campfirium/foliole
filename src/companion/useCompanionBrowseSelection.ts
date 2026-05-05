@@ -4,8 +4,14 @@ import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY
 } from '../features/nodes/model/folderListOrdering';
-import { resolveCompanionFolderViewByNodeId } from '../shared/platform/companionBrowseLists';
-import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
+import {
+  resolveCompanionFolderViewByNodeId,
+  resolveCompanionTrashFolderViewByNodeId
+} from '../shared/platform/companionBrowseLists';
+import {
+  resolveReadableCompanionArticleByNodeId,
+  resolveReadableCompanionTrashArticleByNodeId
+} from '../shared/platform/companionReadableArticle';
 
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -29,12 +35,14 @@ export function useCompanionBrowseSelection(
       if (readableArticle?.nodeId === selectedBrowseNodeId) {
         return readableArticle;
       }
-      return resolveReadableCompanionArticleByNodeId(snapshot, selectedBrowseNodeId);
+      return resolveReadableCompanionArticleByNodeId(snapshot, selectedBrowseNodeId) ??
+        resolveReadableCompanionTrashArticleByNodeId(snapshot, selectedBrowseNodeId);
     },
     [readableArticle, selectedBrowseNodeId, snapshot]
   );
   const browsedFolder = useMemo(
-    () => resolveCompanionFolderViewByNodeId(snapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection),
+    () => resolveCompanionFolderViewByNodeId(snapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection) ??
+      resolveCompanionTrashFolderViewByNodeId(snapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection),
     [selectedBrowseNodeId, snapshot, sort.sortDirection, sort.sortKey]
   );
 

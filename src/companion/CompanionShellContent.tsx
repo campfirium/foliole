@@ -6,6 +6,7 @@ import {
 } from '../features/nodes/model/folderListOrdering';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
+import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
@@ -21,6 +22,7 @@ import {
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionTabConfig } from './CompanionTabsConfig';
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
+import { createCompanionTrashRestoreHandler } from './companionTrashController';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -72,6 +74,7 @@ function renderReadableArticle(props: {
       onCreateSelectionAnnotation={createCompanionSelectionAnnotationHandler(props.workspaceSync)}
       onDeleteExistingHighlight={createCompanionExistingHighlightDeleteHandler(props.workspaceSync)}
       onExit={props.onExit}
+      onRestoreFromTrash={createCompanionTrashRestoreHandler(props.workspaceSync)}
       onSaveArticleContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}
@@ -137,13 +140,16 @@ function ReviewContent(props: {
 function renderRecentContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
   if (props.isBrowseDirectoryOpen) {
     if (
-      (props.directorySelection.kind === 'internal' || props.directorySelection.kind === 'virtual') &&
-      props.surface.readableArticle &&
-      props.surface.selectedBrowseNodeId &&
-      !props.surface.browsedFolder
+      (
+        props.directorySelection.kind === 'internal' ||
+        props.directorySelection.kind === 'trash' ||
+        props.directorySelection.kind === 'trashFolder' ||
+        props.directorySelection.kind === 'virtual'
+      ) &&
+      DirectoryArticle.canRenderCompanionDirectoryArticle(props)
     ) {
       return renderReadableArticle({
-        onExit: props.onBackDirectorySelection,
+        onExit: DirectoryArticle.resolveCompanionDirectoryArticleExit(props),
         surface: props.surface,
         workspaceSync: props.workspaceSync
       });
