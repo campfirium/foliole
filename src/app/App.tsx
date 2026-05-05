@@ -30,6 +30,7 @@ export function App() {
   const setDocumentMaxWidth = useWorkspaceStore((state) => state.setDocumentMaxWidth);
   const setListWidth = useWorkspaceStore((state) => state.setListWidth);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
+  const updateNodeReveal = useWorkspaceStore((state) => state.updateNodeReveal);
   const editorRef = useRef<EditorAdapter | null>(null);
   const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
 
@@ -60,6 +61,13 @@ export function App() {
 
   const handleEditorReady = (adapter: EditorAdapter | null) => {
     editorRef.current = adapter;
+  };
+
+  const handleAnswerChange = (answer: string) => {
+    if (!activeNodeId) {
+      return;
+    }
+    updateNodeReveal(activeNodeId, answer);
   };
 
   const handleSelectNode = (nodeId: string) => {
@@ -170,6 +178,7 @@ export function App() {
       onCloseContextMenu={closeContextMenu}
       onCreateHighlight={handleCreateHighlight}
       onCreateCloze={handleCreateCloze}
+      onAnswerChange={handleAnswerChange}
       onEditorChange={handleEditorChange}
       onEditorContextMenu={handleEditorContextMenu}
       onEditorReady={handleEditorReady}

@@ -19,6 +19,7 @@ export interface WorkspaceState {
   setListWidth: (width: number) => void;
   setActiveNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
+  updateNodeReveal: (nodeId: string, reveal: string) => void;
   deleteNode: (nodeId: string) => void;
   createRootNode: (content?: string) => string;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string) => string | null;
@@ -138,6 +139,25 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 ...node,
                 content,
                 title: nextTitle,
+                updatedAt: new Date().toISOString()
+              }
+            }
+          };
+        });
+      },
+      updateNodeReveal: (nodeId, reveal) => {
+        set((state) => {
+          const node = state.nodesById[nodeId];
+          if (!node || node.reveal === null) {
+            return state;
+          }
+
+          return {
+            nodesById: {
+              ...state.nodesById,
+              [nodeId]: {
+                ...node,
+                reveal,
                 updatedAt: new Date().toISOString()
               }
             }

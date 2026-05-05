@@ -12,6 +12,8 @@ interface EditorViewState {
 }
 
 interface MarkdownEditorProps {
+  ariaLabel?: string;
+  className?: string;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
   value: string;
@@ -19,7 +21,7 @@ interface MarkdownEditorProps {
   onReady?: (adapter: EditorAdapter | null) => void;
 }
 
-export function MarkdownEditor({ nodeId, nodeViewState, value, onChange, onReady }: MarkdownEditorProps) {
+export function MarkdownEditor({ ariaLabel, className, nodeId, nodeViewState, value, onChange, onReady }: MarkdownEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const onChangeRef = useRef(onChange);
@@ -65,5 +67,6 @@ export function MarkdownEditor({ nodeId, nodeViewState, value, onChange, onReady
     adapter.setScrollTop(nodeViewState.scrollTop);
   }, [nodeId, nodeViewState]);
 
-  return <div className="markdown-editor-host" ref={hostRef} />;
+  const hostClassName = className ? `markdown-editor-host ${className}` : 'markdown-editor-host';
+  return <div aria-label={ariaLabel} className={hostClassName} ref={hostRef} />;
 }

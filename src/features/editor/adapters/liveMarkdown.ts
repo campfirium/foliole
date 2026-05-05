@@ -10,6 +10,7 @@ const INLINE_TOKEN_PATTERN = /(\*\*|__|~~|`+|!\[|\[|\]\(|\]|\(|\))/g;
 const INLINE_STRONG_PATTERN = /(\*\*|__)(.+?)\1/g;
 const INLINE_HIGHLIGHT_PATTERN = /==(.+?)==/g;
 const INLINE_CLOZE_PATTERN = /\{\{(.+?)\}\}/g;
+const INLINE_CLOZE_PLACEHOLDER_PATTERN = /\[\.\.\.\]/g;
 
 function createLineClass(text: string, inCodeBlock: boolean) {
   if (CODE_FENCE_PATTERN.test(text)) {
@@ -84,7 +85,8 @@ function addInlineTokenDecorations(
   from: number,
   text: string,
   inCodeBlock: boolean,
-  showSyntax: boolean
+  showSyntax: boolean,
+  preservedRanges: ReadonlyArray<RangeBounds>
 ) {
   if (inCodeBlock) {
     return;
@@ -94,15 +96,52 @@ function addInlineTokenDecorations(
 
   while (tokenMatch) {
     const tokenFrom = from + tokenMatch.index;
+    const tokenTo = tokenFrom + tokenMatch[0].length;
+    if (isWithinRanges(tokenFrom, tokenTo, preservedRanges)) {
+      tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
+      continue;
+    }
     if (showSyntax) {
-      addMark(ranges, tokenFrom, tokenFrom + tokenMatch[0].length, 'cm-md-syntax-visible');
+      addMark(ranges, tokenFrom, tokenTo, 'cm-md-syntax-visible');
     } else {
-      addReplace(ranges, tokenFrom, tokenFrom + tokenMatch[0].length);
+      addReplace(ranges, tokenFrom, tokenTo);
     }
     tokenMatch = INLINE_TOKEN_PATTERN.exec(text);
   }
 
   INLINE_TOKEN_PATTERN.lastIndex = 0;
+}
+
+interface RangeBounds {
+  from: number;
+  to: number;
+}
+
+function collectClozePlaceholderRanges(from: number, text: string): RangeBounds[] {
+  const ranges: RangeBounds[] = [];
+  let match = INLINE_CLOZE_PLACEHOLDER_PATTERN.exec(text);
+  while (match) {
+    const start = from + match.index;
+    ranges.push({ from: start, to: start + match[0].length });
+    match = INLINE_CLOZE_PLACEHOLDER_PATTERN.exec(text);
+  }
+  INLINE_CLOZE_PLACEHOLDER_PATTERN.lastIndex = 0;
+  return ranges;
+}
+
+function isWithinRanges(from: number, to: number, ranges: ReadonlyArray<RangeBounds>) {
+  for (const range of ranges) {
+    if (from < range.to && to > range.from) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function addClozePlaceholderDecorations(ranges: Range<Decoration>[], placeholderRanges: ReadonlyArray<RangeBounds>) {
+  for (const range of placeholderRanges) {
+    addMark(ranges, range.from, range.to, 'cm-md-cloze-placeholder');
+  }
 }
 
 function addStrongTextDecorations(ranges: Range<Decoration>[], from: number, text: string, inCodeBlock: boolean) {
@@ -190,15 +229,17 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
     const showSyntaxOnLine = showMarkdownSyntax && isCursorLine;
+    const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
 
     if (lineClass) {
       addLine(ranges, line.from, lineClass);
     }
 
     addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
-    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, clozePlaceholderRanges);
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
     addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock);
+    addClozePlaceholderDecorations(ranges, clozePlaceholderRanges);
 
     if (CODE_FENCE_PATTERN.test(line.text)) {
       inCodeBlock = !inCodeBlock;
@@ -239,7 +280,7 @@ const liveMarkdownTheme = EditorView.theme({
   '.cm-content': {
     fontFamily: 'var(--font-family-sans)',
     fontSize: 'var(--font-size-16)',
-    padding: '1rem 1.1rem 2rem'
+    padding: '0.72rem 1.1rem 2rem'
   },
   '.cm-line': {
     padding: 0
@@ -302,6 +343,10 @@ const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-cloze': {
     backgroundColor: 'rgba(250, 204, 21, 0.32)',
+    borderRadius: '0.25rem'
+  },
+  '.cm-md-cloze-placeholder': {
+    backgroundColor: 'rgba(251, 113, 133, 0.24)',
     borderRadius: '0.25rem'
   },
   '.cm-activeLine': {

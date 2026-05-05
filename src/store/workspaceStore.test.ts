@@ -86,6 +86,25 @@ function createTestStore(now: Date) {
         };
       });
     },
+    updateNodeReveal: (nodeId, reveal) => {
+      set((state) => {
+        const node = state.nodesById[nodeId];
+        if (!node || node.reveal === null) {
+          return state;
+        }
+
+        return {
+          nodesById: {
+            ...state.nodesById,
+            [nodeId]: {
+              ...node,
+              reveal,
+              updatedAt: new Date().toISOString()
+            }
+          }
+        };
+      });
+    },
     deleteNode: (nodeId) => {
       set((state) => {
         if (!state.nodesById[nodeId]) {
@@ -232,6 +251,16 @@ describe('workspaceStore', () => {
     }
     expect(node.content).toBe('updated markdown');
     expect(node.title).toBe('updated markdown');
+  });
+
+  it('updates reveal content for qa node only', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().createQANodeFromSelection('node-1', 'Prompt [...]', 'answer');
+    store.getState().updateNodeReveal('node-test-id', 'updated answer');
+    store.getState().updateNodeReveal('node-1', 'should be ignored');
+
+    expect(store.getState().nodesById['node-test-id']?.reveal).toBe('updated answer');
+    expect(store.getState().nodesById['node-1']?.reveal).toBeNull();
   });
 
   it('derives node title from normalized markdown content', () => {

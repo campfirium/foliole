@@ -181,6 +181,7 @@ body {
 
 .editor-body {
   display: flex;
+  flex: 1;
   min-height: 0;
   padding: var(--space-16);
 }
@@ -188,20 +189,50 @@ body {
 .document-width-shell {
   display: flex;
   gap: var(--space-8);
+  height: 100%;
   min-height: 0;
   width: 100%;
 }
 
 .document-width-frame {
   display: flex;
+  height: 100%;
   margin: 0 auto;
   min-height: 0;
   width: min(100%, var(--document-max-width));
 }
 
-.document-editor-context-zone {
+.document-content-stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
   min-height: 0;
   width: 100%;
+}
+
+.document-editor-context-zone {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.cloze-answer-zone {
+  border-top: 1px solid var(--color-border-default);
+  display: flex;
+  flex: 0 0 calc(30dvh + 60px);
+  min-height: 0;
+  overflow: hidden;
+  padding-top: calc(var(--space-16) * 0.8);
+}
+
+.answer-editor-host {
+  min-height: 0;
+}
+
+.cloze-answer-zone .answer-editor-host .cm-content {
+  padding-top: 1.2rem;
 }
 
 .document-width-handle {

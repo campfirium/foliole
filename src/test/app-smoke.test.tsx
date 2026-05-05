@@ -41,10 +41,12 @@ const mockEditorAdapter: EditorAdapter = {
 
 vi.mock('../features/editor/components/MarkdownEditor', () => ({
   MarkdownEditor: ({
+    ariaLabel,
     value,
     onChange,
     onReady
   }: {
+    ariaLabel?: string;
     value: string;
     onChange: (value: string) => void;
     onReady?: (adapter: EditorAdapter | null) => void;
@@ -53,8 +55,8 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
     onReady?.(mockEditorAdapter);
     return (
       <textarea
-        aria-label="Mock editor"
-        data-testid="editor-value"
+        aria-label={ariaLabel ?? 'Mock editor'}
+        data-testid={ariaLabel === 'Answer editor' ? 'answer-editor-value' : 'editor-value'}
         onChange={(event) => {
           const nextValue = event.currentTarget.value;
           mockEditorState.content = nextValue;
@@ -112,6 +114,13 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'QA 2' }));
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
     expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
+    expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
+    expect(screen.getByTestId('answer-editor-value')).toHaveValue('Answer');
+    expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('answer-editor-value'), {
+      target: { value: 'Updated Answer' }
+    });
+    expect(useWorkspaceStore.getState().nodesById['node-2']?.reveal).toBe('Updated Answer');
   });
 
   it('renders breadcrumbs in document header and supports ancestor jump', () => {
@@ -297,7 +306,7 @@ describe('App', () => {
 
   it('creates highlight node from editor context menu without leaving current node', () => {
     render(<App />);
-    const editor = screen.getByLabelText('Mock editor');
+    const editor = screen.getByLabelText('Prompt editor');
     mockEditorState.selectionFrom = 2;
     mockEditorState.selectionTo = 9;
 
@@ -319,7 +328,7 @@ describe('App', () => {
 
   it('creates cloze node from editor context menu without leaving current node', () => {
     render(<App />);
-    const editor = screen.getByLabelText('Mock editor');
+    const editor = screen.getByLabelText('Prompt editor');
     mockEditorState.selectionFrom = 2;
     mockEditorState.selectionTo = 9;
 
@@ -338,6 +347,29 @@ describe('App', () => {
     expect(workspace.nodesById[createdNodeId]?.content).toBe('# [...] to Foliole\n\nStart writing markdown here.');
     expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
     expect(workspace.nodesById['node-1']?.content).toContain('<cloze id="1">Welcome</cloze>');
+  });
+
+  it('creates cloze child content without inheriting anchor tags from parent', () => {
+    useWorkspaceStore.getState().updateNodeContent('node-1', '# A <highlight id="1">B</highlight> C');
+    render(<App />);
+    const editor = screen.getByLabelText('Prompt editor');
+    const content = mockEditorState.content;
+    const start = content.lastIndexOf('C');
+    mockEditorState.selectionFrom = start;
+    mockEditorState.selectionTo = start + 1;
+
+    fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cloze' }));
+
+    const workspace = useWorkspaceStore.getState();
+    const createdNodeId = workspace.nodeOrder.find((nodeId) => nodeId !== 'node-1');
+    expect(createdNodeId).toBeTruthy();
+    if (!createdNodeId) {
+      throw new Error('expected a child node');
+    }
+    expect(workspace.nodesById[createdNodeId]?.content).toBe('# A B [...]');
+    expect(workspace.nodesById[createdNodeId]?.content).not.toContain('<highlight');
+    expect(workspace.nodesById[createdNodeId]?.content).not.toContain('</highlight>');
   });
 
   it('deletes a node from node-list context menu', () => {

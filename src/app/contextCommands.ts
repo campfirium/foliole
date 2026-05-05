@@ -9,7 +9,7 @@ export interface SelectionCommandPayload {
 }
 
 const CLOZE_PLACEHOLDER = '[...]';
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)\s+id="[^"]+"\s*>/g;
+const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 
 export function normalizeContextMenuPosition(left: number, top: number) {
   const menuWidth = 200;
@@ -38,18 +38,25 @@ export function getSelectionCommandPayload(
     return null;
   }
 
-  const selectionText = content.slice(from, to).replace(ANCHOR_TAG_PATTERN, '').trim();
+  const selectionText = stripAnchorTags(content.slice(from, to)).trim();
   if (!selectionText) {
     return null;
   }
 
-  const clozeContent = `${content.slice(0, from)}${CLOZE_PLACEHOLDER}${content.slice(to)}`.trim() || CLOZE_PLACEHOLDER;
+  const prefix = content.slice(0, from).trimEnd();
+  const suffix = content.slice(to).trimStart();
+  const clozeRawContent = `${prefix} ${CLOZE_PLACEHOLDER} ${suffix}`.trim();
+  const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
 
   return {
     parentNodeId,
     clozeContent,
     selectionText
   };
+}
+
+function stripAnchorTags(value: string) {
+  return value.replace(ANCHOR_TAG_PATTERN, '');
 }
 
 export function applySelectionMarkup(adapter: EditorAdapter | null, markupType: CommandMarkupType) {
