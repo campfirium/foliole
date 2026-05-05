@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
+import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,
@@ -14,6 +15,9 @@ const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
   timeStyle: 'short'
 });
+
+const ACTION_BUTTON_CLASS_NAME =
+  'inline-flex min-w-[112px] items-center justify-center rounded-md border border-border bg-background px-3 py-[7px] text-sm text-foreground disabled:cursor-default disabled:opacity-55';
 
 interface BackupSectionState {
   backups: DatabaseBackupEntry[];
@@ -107,98 +111,74 @@ async function runRestoreBackup(
 
 function ApplicationInfo() {
   return (
-    <section aria-label="About settings section" className="settings-group">
-      <h3 className="settings-group-title">Application</h3>
-      <div className="settings-row settings-row-readonly">
-        <div className="settings-row-copy">
-          <h4>Foliole desktop</h4>
-          <p>Reader-first outlining and review workflow built with Tauri + React.</p>
-        </div>
-        <span className="settings-pill">v0.1.0</span>
-      </div>
-    </section>
+    <SettingsSection ariaLabel="About settings section" title="Application">
+      <SettingsRow description="Reader-first outlining and review workflow built with Tauri + React." readonly title="Foliole desktop">
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.82rem] text-foreground/70">v0.1.0</span>
+      </SettingsRow>
+    </SettingsSection>
   );
 }
 
 function BackupHeaderRow(props: Pick<BackupSectionState, 'createBackup' | 'isBackupActionsAvailable' | 'isCreatingBackup' | 'restoringPath' | 'statusMessage'>) {
   return (
-    <div className="settings-row">
-      <div className="settings-row-copy">
-        <h4>Create backup</h4>
-        <p>Save a SQLite snapshot into the managed backups folder.</p>
-        {props.statusMessage ? <p className="settings-status-copy">{props.statusMessage}</p> : null}
-      </div>
-      <button
-        className="settings-action-button"
-        disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0}
-        onClick={props.createBackup}
-        type="button"
-      >
-        {props.isCreatingBackup ? 'Creating…' : 'Create backup'}
-      </button>
-    </div>
+    <SettingsRow
+      description={
+        <>
+          Save a SQLite snapshot into the managed backups folder.
+          {props.statusMessage ? <span className="mt-1 block text-emerald-700">{props.statusMessage}</span> : null}
+        </>
+      }
+      title="Create backup"
+    >
+      <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
+        <button
+          className={ACTION_BUTTON_CLASS_NAME}
+          disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0}
+          onClick={props.createBackup}
+          type="button"
+        >
+          {props.isCreatingBackup ? 'Creating…' : 'Create backup'}
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 
 function BackupStateRows(props: Pick<BackupSectionState, 'backups' | 'isBackupActionsAvailable' | 'isCreatingBackup' | 'isLoadingBackups' | 'restoringPath' | 'restoreBackup'>) {
   if (!props.isBackupActionsAvailable) {
-    return (
-      <div className="settings-row settings-row-readonly">
-        <div className="settings-row-copy">
-          <h4>Desktop runtime required</h4>
-          <p>Backup management is available in the desktop app.</p>
-        </div>
-      </div>
-    );
+    return <SettingsRow description="Backup management is available in the desktop app." readonly title="Desktop runtime required" />;
   }
 
   if (props.isLoadingBackups) {
-    return (
-      <div className="settings-row settings-row-readonly">
-        <div className="settings-row-copy">
-          <h4>Loading backups</h4>
-          <p>Scanning the managed backup folder.</p>
-        </div>
-      </div>
-    );
+    return <SettingsRow description="Scanning the managed backup folder." readonly title="Loading backups" />;
   }
 
   if (props.backups.length === 0) {
-    return (
-      <div className="settings-row settings-row-readonly">
-        <div className="settings-row-copy">
-          <h4>No backups yet</h4>
-          <p>Create a backup to keep a restorable SQLite snapshot.</p>
-        </div>
-      </div>
-    );
+    return <SettingsRow description="Create a backup to keep a restorable SQLite snapshot." readonly title="No backups yet" />;
   }
 
   return props.backups.map((entry) => (
-    <div className="settings-row" key={entry.filePath}>
-      <div className="settings-row-copy">
-        <h4>{entry.fileName}</h4>
-        <p>{formatBackupMeta(entry)}</p>
-      </div>
-      <button
-        className="settings-action-button"
-        disabled={props.isCreatingBackup || props.restoringPath.length > 0}
-        onClick={() => props.restoreBackup(entry)}
-        type="button"
-      >
-        {props.restoringPath === entry.filePath ? 'Restoring…' : 'Restore'}
-      </button>
-    </div>
+    <SettingsRow description={formatBackupMeta(entry)} key={entry.filePath} title={entry.fileName}>
+      <SettingsControlSlot className="justify-end max-[1080px]:justify-start">
+        <button
+          className={ACTION_BUTTON_CLASS_NAME}
+          disabled={props.isCreatingBackup || props.restoringPath.length > 0}
+          onClick={() => props.restoreBackup(entry)}
+          type="button"
+        >
+          {props.restoringPath === entry.filePath ? 'Restoring…' : 'Restore'}
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
   ));
 }
 
 function BackupSettingsSection(props: BackupSectionState) {
   return (
-    <section aria-label="Backup settings section" className="settings-group">
-      <h3 className="settings-group-title">Backups</h3>
+    <SettingsSection ariaLabel="Backup settings section" title="Backups">
       <BackupHeaderRow {...props} />
       <BackupStateRows {...props} />
-    </section>
+    </SettingsSection>
   );
 }
 

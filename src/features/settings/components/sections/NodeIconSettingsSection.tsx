@@ -1,3 +1,4 @@
+import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import {
   type NodeIconStateAppearance,
   type NodeIconStrokeStyle
@@ -9,6 +10,8 @@ import { CheckboxField, ColorField, NumberField, StrokeStyleSelect } from './nod
 import { useNodeIconSettingsState } from './nodeIconSettingsState';
 
 const SAMPLE_SVG = '<svg viewBox="0 0 16 16"><path d="M2 12C5 10 8 6 14 3" fill="none" stroke="currentColor"/></svg>';
+const ACTION_BUTTON_CLASS_NAME =
+  'inline-flex min-w-[112px] items-center justify-center rounded-md border border-border bg-background px-3 py-[7px] text-sm text-foreground disabled:cursor-default disabled:opacity-55';
 
 function PreviewIcon(props: {
   kind: NodeTreeRowIconKind;
@@ -33,12 +36,8 @@ function PreviewIcon(props: {
 
 function SvgRow(props: { description: string; label: string; onChange: (value: string) => void; value: string }) {
   return (
-    <div className="settings-row settings-row-node-icon">
-      <div className="settings-row-copy">
-        <h4>{props.label}</h4>
-        <p>{props.description}</p>
-      </div>
-      <div className="settings-node-icon-controls">
+    <SettingsRow className="items-start" description={props.description} title={props.label}>
+      <SettingsControlSlot className="flex-[0_0_360px] flex-col items-stretch">
         <label className="settings-node-icon-field">
           <span className="sr-only">{props.label}</span>
           <textarea
@@ -51,8 +50,8 @@ function SvgRow(props: { description: string; label: string; onChange: (value: s
             value={props.value}
           />
         </label>
-      </div>
-    </div>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 
@@ -73,12 +72,12 @@ function StateStyleRow(props: {
   const showDashControls = props.appearance.strokeStyle === 'dashed';
   const fadeOptions = props.dismissedOptions;
   return (
-    <div className="settings-row settings-row-node-icon">
-      <div className="settings-row-copy">
-        <h4>{props.label}</h4>
-        <p>Choose line type and color for this node state. Dashed states can tune dash and gap lengths.</p>
-      </div>
-      <div className="settings-node-icon-controls">
+    <SettingsRow
+      className="items-start"
+      description="Choose line type and color for this node state. Dashed states can tune dash and gap lengths."
+      title={props.label}
+    >
+      <SettingsControlSlot className="flex-[0_0_360px] flex-col items-stretch">
         <div className="settings-node-icon-inline-controls">
           <StrokeStyleSelect compact label={`${props.label} stroke style`} onChange={props.onStrokeStyleChange} value={props.appearance.strokeStyle} />
           <NumberField label={`${props.label} line width`} onChange={props.onLineWidthChange} step={0.05} value={props.appearance.lineWidth} />
@@ -103,8 +102,8 @@ function StateStyleRow(props: {
             ) : null}
           </div>
         ) : null}
-      </div>
-    </div>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 
@@ -114,12 +113,12 @@ function PreviewRow(props: {
   onReset: () => void;
 }) {
   return (
-    <div className="settings-row settings-row-node-icon">
-      <div className="settings-row-copy">
-        <h4>Preview</h4>
-        <p>Topic and item SVGs keep type semantics. Pending, scheduled, and dismissed styling comes entirely from state settings.</p>
-      </div>
-      <div className="settings-node-icon-controls">
+    <SettingsRow
+      className="items-start"
+      description="Topic and item SVGs keep type semantics. Pending, scheduled, and dismissed styling comes entirely from state settings."
+      title="Preview"
+    >
+      <SettingsControlSlot className="flex-[0_0_360px] flex-col items-stretch">
         <div aria-label="Node icon preview" className="settings-node-icon-preview">
           <PreviewIcon kind="reading" label="Topic pending" state="pending" />
           <PreviewIcon kind="review" label="Item pending" state="pending" />
@@ -138,11 +137,11 @@ function PreviewRow(props: {
             state="dismissed"
           />
         </div>
-        <button className="settings-action-button" onClick={props.onReset} type="button">
+        <button className={ACTION_BUTTON_CLASS_NAME} onClick={props.onReset} type="button">
           Restore default node icon settings
         </button>
-      </div>
-    </div>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 
@@ -150,8 +149,7 @@ export function NodeIconSettingsSection() {
   const state = useNodeIconSettingsState();
 
   return (
-    <section aria-label="Node icon settings section" className="settings-group">
-      <h3 className="settings-group-title">Node icons</h3>
+    <SettingsSection ariaLabel="Node icon settings section" title="Node icons">
       <SvgRow
         description="Paste the SVG used for topic nodes. Leave empty to fall back to the built-in geometry icon."
         label="Topic node SVG"
@@ -201,6 +199,6 @@ export function NodeIconSettingsSection() {
         dismissedFadeWholeRow={state.stateStyles.dismissed.fadeEnabled && state.stateStyles.dismissed.fadeWholeRow}
         onReset={state.handleReset}
       />
-    </section>
+    </SettingsSection>
   );
 }

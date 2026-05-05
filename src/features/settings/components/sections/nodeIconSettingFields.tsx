@@ -1,5 +1,8 @@
 import { NODE_ICON_STROKE_STYLE_OPTIONS, type NodeIconStrokeStyle } from '../../../nodes/components/nodeIconAppearanceSettings';
 
+const SETTINGS_SELECT_CLASS_NAME =
+  'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
+
 export function ColorField(props: { label: string; onChange: (value: string) => void; value: string }) {
   return (
     <label className="settings-node-icon-color-field">
@@ -23,11 +26,11 @@ export function StrokeStyleSelect(props: {
   value: NodeIconStrokeStyle;
 }) {
   return (
-    <label className={props.compact ? 'settings-select-wrap settings-select-wrap-compact' : 'settings-select-wrap'}>
+    <label className={props.compact ? 'inline-flex w-[132px] max-w-full flex-none' : 'inline-flex max-w-full flex-1'}>
       <span className="sr-only">{props.label}</span>
       <select
         aria-label={props.label}
-        className="settings-select"
+        className={SETTINGS_SELECT_CLASS_NAME}
         onChange={(event) => props.onChange(event.target.value as NodeIconStrokeStyle)}
         value={props.value}
       >

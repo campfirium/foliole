@@ -12,9 +12,9 @@ interface SettingsSectionProps {
 }
 
 interface SettingsRowProps {
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
-  description?: string;
+  description?: ReactNode;
   readonly?: boolean;
   title: string;
 }
@@ -45,9 +45,8 @@ export function SettingsRow({ children, className, description, readonly = false
   return (
     <div
       className={cn(
-        'flex min-h-[70px] items-center justify-between gap-3 border px-3 py-2.5',
+        'flex min-h-[70px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 max-[1080px]:flex-col max-[1080px]:items-start',
         readonly ? 'border-border/80 bg-bg-elevated' : 'border-border bg-bg-panel',
-        'rounded-lg',
         className
       )}
     >
@@ -61,5 +60,9 @@ export function SettingsRow({ children, className, description, readonly = false
 }
 
 export function SettingsControlSlot({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('inline-flex max-w-full flex-[0_0_360px] items-center gap-2', className)}>{children}</div>;
+  return (
+    <div className={cn('inline-flex max-w-full flex-[0_0_360px] items-center gap-2 max-[1080px]:w-full max-[1080px]:flex-auto', className)}>
+      {children}
+    </div>
+  );
 }

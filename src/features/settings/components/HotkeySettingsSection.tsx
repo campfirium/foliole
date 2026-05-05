@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
+import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../shared/ui';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
+
+const HOTKEY_INPUT_CLASS_NAME =
+  'w-40 min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground max-[1080px]:w-full';
+const HOTKEY_TEXT_BUTTON_CLASS_NAME =
+  'rounded-md border border-border bg-transparent px-[9px] py-[5px] text-[0.84rem] text-foreground';
+const HOTKEY_RESET_BUTTON_CLASS_NAME =
+  'inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground';
 
 interface HotkeySettingsSectionProps {
   items: HotkeySettingItem[];
@@ -95,13 +103,13 @@ function useHotkeySectionModel(items: HotkeySettingItem[], onUpdate: HotkeySetti
 function conflictDisplay(item: HotkeySettingItem) {
   if (item.conflictSeverity === 'error') {
     return {
-      badgeClass: 'settings-hotkey-badge settings-hotkey-badge-error',
+      badgeClass: 'rounded-full bg-red-100 px-[7px] py-[3px] text-[0.76rem] text-red-800',
       badgeText: 'Blocked'
     };
   }
   if (item.conflictSeverity === 'warning') {
     return {
-      badgeClass: 'settings-hotkey-badge settings-hotkey-badge-warning',
+      badgeClass: 'rounded-full bg-amber-100 px-[7px] py-[3px] text-[0.76rem] text-amber-800',
       badgeText: 'Warning'
     };
   }
@@ -137,11 +145,11 @@ function HotkeyInput(props: {
   };
 
   return (
-    <label className="settings-hotkey-input-wrap">
+    <label className="flex min-w-[160px] flex-1 flex-col gap-1 max-[1080px]:min-w-0">
       <span className="sr-only">{props.ariaLabel}</span>
       <input
         aria-label={props.ariaLabel}
-        className="settings-hotkey-input"
+        className={HOTKEY_INPUT_CLASS_NAME}
         onBlur={() => props.onCommit(props.commandId, props.slot)}
         onChange={(event) => props.onSetDraft(props.commandId, props.slot, event.target.value)}
         onKeyDown={handleKeyDown}
@@ -149,48 +157,51 @@ function HotkeyInput(props: {
         type="text"
         value={props.draft}
       />
-      {props.message ? <p className="settings-hotkey-error">{props.message}</p> : null}
+      {props.message ? <p className="text-[0.8rem] text-red-700">{props.message}</p> : null}
     </label>
   );
 }
 
 function HotkeyRow({ primaryDraft, secondaryDraft, item, primaryMessage, secondaryMessage, onCommit, onReset, onSetDraft }: HotkeyRowProps) {
   const { badgeClass, badgeText } = conflictDisplay(item);
+  const rowDescription = (
+    <>
+      {item.section ?? 'Other'}
+      {item.conflictMessage ? <span className="mt-1 block text-[0.8rem] text-amber-700">{item.conflictMessage}</span> : null}
+    </>
+  );
 
   return (
-    <div className="settings-hotkey-row" key={item.commandId} role="listitem">
-      <div className="settings-row-copy">
-        <h4>{item.title}</h4>
-        <p>{item.section ?? 'Other'}</p>
-        {item.conflictMessage ? <p className="settings-hotkey-hint">{item.conflictMessage}</p> : null}
-      </div>
-      <div className="settings-hotkey-controls">
-        <HotkeyInput
-          ariaLabel={`Primary shortcut for ${item.title}`}
-          commandId={item.commandId}
-          draft={primaryDraft}
-          item={item}
-          message={primaryMessage}
-          onCommit={onCommit}
-          onSetDraft={onSetDraft}
-          slot="primary"
-        />
-        <HotkeyInput
-          ariaLabel={`Secondary shortcut for ${item.title}`}
-          commandId={item.commandId}
-          draft={secondaryDraft}
-          item={item}
-          message={secondaryMessage}
-          onCommit={onCommit}
-          onSetDraft={onSetDraft}
-          slot="secondary"
-        />
-        <button className="settings-reset" onClick={() => onReset(item.commandId)} type="button">
-          ↺
-        </button>
-        {item.isCustomized ? <span className="settings-hotkey-chip">Custom</span> : null}
-        {badgeClass ? <span className={badgeClass}>{badgeText}</span> : null}
-      </div>
+    <div role="listitem">
+      <SettingsRow description={rowDescription} title={item.title}>
+        <SettingsControlSlot className="flex-[0_0_360px] flex-wrap justify-end gap-2 max-[1080px]:justify-start">
+          <HotkeyInput
+            ariaLabel={`Primary shortcut for ${item.title}`}
+            commandId={item.commandId}
+            draft={primaryDraft}
+            item={item}
+            message={primaryMessage}
+            onCommit={onCommit}
+            onSetDraft={onSetDraft}
+            slot="primary"
+          />
+          <HotkeyInput
+            ariaLabel={`Secondary shortcut for ${item.title}`}
+            commandId={item.commandId}
+            draft={secondaryDraft}
+            item={item}
+            message={secondaryMessage}
+            onCommit={onCommit}
+            onSetDraft={onSetDraft}
+            slot="secondary"
+          />
+          <button className={HOTKEY_RESET_BUTTON_CLASS_NAME} onClick={() => onReset(item.commandId)} type="button">
+            ↺
+          </button>
+          {item.isCustomized ? <span className="rounded-full bg-secondary px-[7px] py-[3px] text-[0.76rem] text-foreground/75">Custom</span> : null}
+          {badgeClass ? <span className={badgeClass}>{badgeText}</span> : null}
+        </SettingsControlSlot>
+      </SettingsRow>
     </div>
   );
 }
@@ -202,25 +213,27 @@ export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: 
   );
 
   return (
-    <section aria-label="Hotkeys settings section" className="settings-group">
-      <div className="settings-hotkey-toolbar">
-        <h3 className="settings-group-title">Hotkeys</h3>
-        <button className="settings-hotkey-reset-all" onClick={onResetAll} type="button">
+    <SettingsSection
+      actions={
+        <button className={HOTKEY_TEXT_BUTTON_CLASS_NAME} onClick={onResetAll} type="button">
           Reset all
         </button>
-      </div>
-      <div className="settings-hotkey-search-wrap">
+      }
+      ariaLabel="Hotkeys settings section"
+      title="Hotkeys"
+    >
+      <div>
         <span className="sr-only">Search shortcuts</span>
         <input
           aria-label="Search shortcuts"
-          className="settings-hotkey-search"
+          className="w-full rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search commands"
           type="search"
           value={query}
         />
       </div>
-      <div aria-label="Command shortcut list" className="settings-hotkey-list" role="list">
+      <div aria-label="Command shortcut list" className="space-y-2" role="list">
         {filteredItems.map((item) => (
           <HotkeyRow
             primaryDraft={draftById[`${item.commandId}:primary`] ?? item.primaryShortcutLabel}
@@ -234,8 +247,8 @@ export function HotkeySettingsSection({ items, onUpdate, onReset, onResetAll }: 
             onSetDraft={updateDraft}
           />
         ))}
-        {!filteredItems.length ? <p className="settings-hotkey-empty">No matching commands.</p> : null}
+        {!filteredItems.length ? <p className="text-foreground/65">No matching commands.</p> : null}
       </div>
-    </section>
+    </SettingsSection>
   );
 }
