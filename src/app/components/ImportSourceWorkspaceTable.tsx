@@ -8,6 +8,7 @@ import {
 import {
   ColumnHeader,
   FolderButton,
+  resolveFolderPathHint,
   HandlingCell,
   resolveFolderPathLabel,
   RowActions,
@@ -40,12 +41,14 @@ function SourceRow({
         label={`Original folder ${source.id}`}
         onClick={() => onChoosePrimaryFolder(source.id)}
         path={resolveFolderPathLabel(source.primaryPath, 'Choose folder')}
+        tooltip={resolveFolderPathHint(source.primaryPath)}
       />
       <FolderButton
         label={`Highlight folder ${source.id}`}
         disabled={source.highlightMode !== 'split'}
         onClick={() => onChooseHighlightFolder(source.id)}
         path={resolveFolderPathLabel(source.highlightPath, source.highlightMode === 'split' ? 'Choose folder' : 'Not used')}
+        tooltip={resolveFolderPathHint(source.highlightPath)}
       />
       <select
         aria-label={`Mode ${source.id}`}

@@ -21,10 +21,10 @@ it('shows readwise defaults for the four readwise source groups', async () => {
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Readwise Reader for Obsidian' })).toBeInTheDocument();
-  expect(screen.getByText('Books')).toBeInTheDocument();
-  expect(screen.getByText('Articles')).toBeInTheDocument();
-  expect(screen.getByText('Tweets')).toBeInTheDocument();
-  expect(screen.getByText('Podcasts')).toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise original folder draft-import-source-2')).toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise original folder draft-import-source-3')).toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise original folder draft-import-source-4')).toBeInTheDocument();
   expect(screen.getByLabelText('Trigger draft-import-source-101')).toBeInTheDocument();
 
   const triggerSelect = screen.getByLabelText('Trigger draft-import-source-1');
@@ -56,7 +56,7 @@ it('lets the user reopen the readwise advanced settings', () => {
   expect(screen.getByRole('button', { name: 'Detailed settings' })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Detailed settings' }));
-  expect(screen.getByText('Books')).toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toBeInTheDocument();
   expect(screen.getByLabelText('Trigger draft-import-source-1')).toHaveValue('scheduled');
 });
 
@@ -64,8 +64,33 @@ it('fills readwise folders from the selected root path', () => {
   const sources = createReadwiseImportSources();
   const updated = applyReadwiseRootPath(sources, '/tmp/chosen-folder');
 
-  expect(updated[0].primaryPath).toBe('/tmp/chosen-folder/Documents/Content/books');
-  expect(updated[0].highlightPath).toBe('/tmp/chosen-folder/books');
-  expect(updated[3].primaryPath).toBe('/tmp/chosen-folder/Documents/Content/podcasts');
-  expect(updated[3].highlightPath).toBe('/tmp/chosen-folder/podcasts');
+  expect(updated[0].primaryPath).toBe('/tmp/chosen-folder/Full Document Contents/Articles');
+  expect(updated[0].highlightPath).toBe('/tmp/chosen-folder/Articles');
+  expect(updated[3].primaryPath).toBe('/tmp/chosen-folder/Full Document Contents/Podcasts');
+  expect(updated[3].highlightPath).toBe('/tmp/chosen-folder/Podcasts');
+});
+
+it('keeps readwise auto-filled paths platform aware', () => {
+  const sources = createReadwiseImportSources();
+  const updated = applyReadwiseRootPath(sources, 'D:\\Dropbox\\obs\\clip\\');
+
+  expect(updated[0].primaryPath).toBe('D:\\Dropbox\\obs\\clip\\Full Document Contents\\Articles');
+  expect(updated[0].highlightPath).toBe('D:\\Dropbox\\obs\\clip\\Articles');
+});
+
+it('shows only the last folder name and keeps the full path in the hover hint', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByLabelText('Readwise root folder'));
+  fireEvent.click(screen.getByLabelText('Original folder draft-import-source-101'));
+
+  expect(await screen.findByLabelText('Readwise root folder')).toHaveTextContent('chosen-folder');
+  expect(screen.queryByText('/tmp/chosen-folder')).not.toBeInTheDocument();
+  expect(await screen.findByLabelText('Readwise original folder draft-import-source-1')).toHaveTextContent('Articles');
+  expect(screen.queryByText('/tmp/chosen-folder/Full Document Contents/Articles')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise original folder draft-import-source-1')).toHaveAttribute(
+    'title',
+    '/tmp/chosen-folder/Full Document Contents/Articles'
+  );
+  expect(screen.getByLabelText('Original folder draft-import-source-101')).toHaveAttribute('title', '/tmp/chosen-folder');
 });

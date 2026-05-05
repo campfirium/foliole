@@ -14,7 +14,15 @@ export const rowGridClassName =
   'grid grid-cols-[minmax(118px,0.72fr)_minmax(118px,0.72fr)_92px_110px_108px_96px_168px] gap-2';
 
 function compactPathLabel(path: string, emptyLabel: string) {
-  return path.trim().length > 0 ? path : emptyLabel;
+  if (path.trim().length === 0) {
+    return emptyLabel;
+  }
+  const parts = path.split(/[\\/]+/).filter(Boolean);
+  return parts.at(-1) ?? path;
+}
+
+function resolveFolderPathTooltip(path: string) {
+  return path.trim().length > 0 ? path : undefined;
 }
 
 function HeaderHelp({ label }: { label: string }) {
@@ -46,11 +54,13 @@ export function ColumnHeader({ title, help }: { title: string; help?: string }) 
 export function FolderButton({
   label,
   path,
+  tooltip,
   disabled = false,
   onClick
 }: {
   label: string;
   path: string;
+  tooltip?: string;
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -60,6 +70,7 @@ export function FolderButton({
       className="h-10 w-full justify-between rounded-md border border-border bg-bg-elevated px-3 text-left text-sm text-foreground/75 disabled:border-border/60 disabled:bg-bg-panel disabled:text-foreground/40"
       disabled={disabled}
       onClick={onClick}
+      title={disabled ? undefined : tooltip}
       variant="ghost"
     >
       <span className="truncate">{path}</span>
@@ -150,4 +161,8 @@ export function RowActions({
 
 export function resolveFolderPathLabel(path: string, emptyLabel: string) {
   return compactPathLabel(path, emptyLabel);
+}
+
+export function resolveFolderPathHint(path: string) {
+  return resolveFolderPathTooltip(path);
 }

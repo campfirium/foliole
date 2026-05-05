@@ -4,16 +4,20 @@ import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '..
 
 import {
   formatHighlightModeLabel,
-  formatReadwiseSourceLabel,
   formatTriggerModeLabel,
   importSourceSelectClassName,
   type DraftImportSource,
   type DraftImportSourceField
 } from './importSourceWorkspaceModel';
-import { ColumnHeader, FolderButton, HandlingCell, resolveFolderPathLabel, TriggerCell } from './ImportSourceWorkspaceTableParts';
-
-const readwiseRowGridClassName =
-  'grid grid-cols-[86px_minmax(118px,0.72fr)_minmax(118px,0.72fr)_92px_110px_108px_96px_72px] gap-2';
+import {
+  ColumnHeader,
+  FolderButton,
+  HandlingCell,
+  resolveFolderPathHint,
+  resolveFolderPathLabel,
+  rowGridClassName,
+  TriggerCell
+} from './ImportSourceWorkspaceTableParts';
 
 function ReadwiseRootRow({ readwiseRootPath, onChooseRootFolder }: { readwiseRootPath: string; onChooseRootFolder: () => void }) {
   return (
@@ -26,6 +30,7 @@ function ReadwiseRootRow({ readwiseRootPath, onChooseRootFolder }: { readwiseRoo
           label="Readwise root folder"
           onClick={onChooseRootFolder}
           path={resolveFolderPathLabel(readwiseRootPath, 'Choose folder')}
+          tooltip={resolveFolderPathHint(readwiseRootPath)}
         />
       </SettingsControlSlot>
     </SettingsRow>
@@ -34,15 +39,14 @@ function ReadwiseRootRow({ readwiseRootPath, onChooseRootFolder }: { readwiseRoo
 
 function ReadwiseHeader() {
   return (
-    <div className={readwiseRowGridClassName}>
-      <ColumnHeader title="Type" />
+    <div className={rowGridClassName}>
       <ColumnHeader title="Original" />
       <ColumnHeader title="Highlight" />
       <ColumnHeader title="Mode" />
       <ColumnHeader help="After import" title="Handling" />
       <ColumnHeader help="When it runs" title="Trigger" />
       <ColumnHeader help="Repeat" title="Every" />
-      <ColumnHeader title="Action" />
+      <ColumnHeader title="Actions" />
     </div>
   );
 }
@@ -67,17 +71,18 @@ function ReadwiseRow({
   }
 
   return (
-    <div className={`${readwiseRowGridClassName} items-start border-b border-border/60 py-2`}>
-      <div className="flex h-10 items-center px-1 text-sm font-medium text-foreground/78">{formatReadwiseSourceLabel(source.kind)}</div>
+    <div className={`${rowGridClassName} items-start border-b border-border/60 py-2`}>
       <FolderButton
         label={`Readwise original folder ${source.id}`}
         onClick={() => onChoosePrimaryFolder(source.id)}
         path={resolveFolderPathLabel(source.primaryPath, 'Choose folder')}
+        tooltip={resolveFolderPathHint(source.primaryPath)}
       />
       <FolderButton
         label={`Readwise highlight folder ${source.id}`}
         onClick={() => onChooseHighlightFolder(source.id)}
         path={resolveFolderPathLabel(source.highlightPath, 'Choose folder')}
+        tooltip={resolveFolderPathHint(source.highlightPath)}
       />
       <select
         aria-label={`Mode ${source.id}`}

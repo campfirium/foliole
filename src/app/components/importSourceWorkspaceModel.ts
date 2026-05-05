@@ -3,9 +3,8 @@ export type ImportSourceAction = 'delete' | 'keep' | 'move';
 export type ImportTriggerMode = 'manual' | 'scheduled';
 export type ReadwiseSourceKind = 'books' | 'articles' | 'tweets' | 'podcasts';
 
-const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['books', 'articles', 'tweets', 'podcasts'];
-
-const readwiseSourceTitles: Record<ReadwiseSourceKind, string> = {
+const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['articles', 'books', 'tweets', 'podcasts'];
+const READWISE_FOLDER_NAMES: Record<ReadwiseSourceKind, string> = {
   articles: 'Articles',
   books: 'Books',
   podcasts: 'Podcasts',
@@ -40,19 +39,31 @@ function createImportSourceId(index: number) {
   return `draft-import-source-${index}`;
 }
 
-function joinReadwisePath(rootPath: string, suffix: string) {
-  if (!rootPath.trim()) {
+function trimTrailingPathSeparators(path: string) {
+  return path.replace(/[\\/]+$/, '');
+}
+
+function resolvePathSeparator(rootPath: string) {
+  const matches = [...rootPath.matchAll(/[\\/]/g)];
+  const lastMatch = matches.at(-1);
+  return lastMatch?.[0] ?? '/';
+}
+
+function joinReadwisePath(rootPath: string, ...segments: string[]) {
+  const normalizedRootPath = trimTrailingPathSeparators(rootPath.trim());
+  if (!normalizedRootPath) {
     return '';
   }
-  return `${rootPath.replace(/[\\/]+$/, '')}/${suffix}`;
+  const separator = resolvePathSeparator(normalizedRootPath);
+  return [normalizedRootPath, ...segments].join(separator);
 }
 
 function resolveReadwiseOriginalPath(rootPath: string, kind: ReadwiseSourceKind) {
-  return joinReadwisePath(rootPath, `Documents/Content/${kind}`);
+  return joinReadwisePath(rootPath, 'Full Document Contents', READWISE_FOLDER_NAMES[kind]);
 }
 
 function resolveReadwiseHighlightPath(rootPath: string, kind: ReadwiseSourceKind) {
-  return joinReadwisePath(rootPath, kind);
+  return joinReadwisePath(rootPath, READWISE_FOLDER_NAMES[kind]);
 }
 
 export function createDraftImportSource(index: number): DraftImportSource {
@@ -83,7 +94,7 @@ function createReadwiseDraftImportSource(index: number, kind: ReadwiseSourceKind
 }
 
 export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
-  return readwiseSourceTitles[kind];
+  return READWISE_FOLDER_NAMES[kind];
 }
 
 export function createReadwiseImportSources(rootPath = '') {
