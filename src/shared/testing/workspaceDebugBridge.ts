@@ -1,7 +1,6 @@
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
-import { getRuntimeInvoke } from '../platform/bridge';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
 import { type DebugNodeSeed, persistSeedNodes } from './workspaceDebugSeedPersistence';
@@ -206,7 +205,7 @@ function createWorkspaceDebugApi(): WorkspaceDebugApi {
     ...createNodeReadDebugApi(),
     importClipboardImageAttachment: createClipboardImportHandler(),
     ...createSeedNodeDebugApi(),
-    ...createWorkspaceSyncDebugApi(getRuntimeInvoke)
+    ...createWorkspaceSyncDebugApi()
   };
 }
 

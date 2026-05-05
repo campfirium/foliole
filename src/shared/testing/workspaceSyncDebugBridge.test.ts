@@ -7,10 +7,19 @@ import type {
   NativeSyncNodeRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+const { getRuntimeInvoke } = vi.hoisted(() => ({
+  getRuntimeInvoke: vi.fn()
+}));
+
+vi.mock('../platform/runtimeInvoke', () => ({
+  getRuntimeInvoke
+}));
+
 import { createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getRuntimeInvoke.mockReturnValue(null);
 });
 
 function buildRemoteNodeRecord(): NativeSyncNodeRecord {
@@ -87,7 +96,8 @@ it('runs a node sync pull session and reads sync conflict state through the debu
     }
     return null;
   }) as NativeInvoke;
-  const debugApi = createWorkspaceSyncDebugApi(() => runtimeInvoke);
+  getRuntimeInvoke.mockReturnValue(runtimeInvoke);
+  const debugApi = createWorkspaceSyncDebugApi();
 
   const syncIndex = await debugApi.loadLocalSyncIndex();
   const result = await debugApi.runNodeSyncPullSession({ remoteIndex, remoteNodes });
