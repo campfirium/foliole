@@ -128,8 +128,8 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
   toggleEditorDisplayMode: () => void;
 }) {
   return (
-    <div className="grid min-w-0 flex-1 grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2">
-      <div className="flex min-w-0 items-center">
+    <div className="relative flex min-w-0 flex-1 items-center">
+      <div className="absolute left-0 top-1/2 flex min-w-0 -translate-y-1/2 items-center">
         {!args.isFolderListView ? (
           <ToolbarActionGroup ariaLabel="Document navigation actions">
             <NavigationButtons
@@ -162,7 +162,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
           </>
         }
       />
-      <div className="flex min-w-0 items-center justify-end">
+      <div className="absolute right-0 top-1/2 flex min-w-0 -translate-y-1/2 items-center justify-end">
         {renderHeaderActions({
           editorDisplayMode: args.editorDisplayMode,
           isFolderListView: args.isFolderListView,
@@ -202,7 +202,7 @@ export function DocumentPanelHeader({
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
   return (
-    <AppToolbar as="header" className="min-h-[var(--workspace-top-toolbar-height)] px-4">
+    <AppToolbar as="header" className="min-h-[var(--workspace-top-toolbar-height)] pl-4 pr-0 max-[1080px]:pl-2">
       <h2 className="sr-only">Content</h2>
       {renderDocumentHeaderContent({
         activeNodeId,

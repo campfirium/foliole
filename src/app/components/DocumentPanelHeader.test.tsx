@@ -68,6 +68,64 @@ it('shows the breadcrumb title without a kind label in the document header', () 
   expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });
 
+it('keeps breadcrumb and priority controls on the document content rail', () => {
+  render(
+    <DocumentPanelHeader
+      activeNodeId="node-1"
+      backlinks={[]}
+      canGoBack
+      canGoForward
+      canGoParent={false}
+      editableNodeId="node-1"
+      folderListToolbar={null}
+      isFolderListView={false}
+      isSourceUpdatePanelOpen={false}
+      nodesById={{
+        'topic-1': {
+          id: 'topic-1',
+          kind: 'topic',
+          title: 'Inbox',
+          parentNodeId: null,
+          content: '',
+          anchorLink: null,
+          reveal: null,
+          review: null,
+          createdAt: '',
+          updatedAt: ''
+        },
+        'node-1': {
+          id: 'node-1',
+          kind: 'item',
+          title: 'Prompt',
+          parentNodeId: 'topic-1',
+          content: '',
+          anchorLink: null,
+          reveal: '',
+          review: null,
+          createdAt: '',
+          updatedAt: ''
+        }
+      }}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onGoParent={vi.fn()}
+      onNodePriorityChange={vi.fn()}
+      onSelectBacklinkNode={vi.fn()}
+      onSelectBreadcrumbNode={vi.fn()}
+      onToggleSourceUpdatePanel={vi.fn()}
+      priorityQuickSetShortcutLabel="Ctrl+M"
+      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
+      showSourceUpdateAction={false}
+    />
+  );
+
+  const rail = screen.getByTestId('document-header-content-rail');
+  expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
+  expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
+  expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));
+  expect(rail).toContainElement(screen.getByRole('button', { name: /Priority P5 from the default fallback/i }));
+});
+
 it('keeps the folder-mode header free of right-side actions', () => {
   render(
     <DocumentPanelHeader

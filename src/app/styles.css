@@ -106,6 +106,7 @@
   --workspace-toolbar-inline-padding: 16px;
   --workspace-folder-column-width: 200px;
   --workspace-topic-column-width: 100px;
+  --document-content-inline-padding: 1.5rem;
   --workspace-region-titlebar-rail-bg: #fcfcfc;
   --workspace-region-titlebar-folder-bg: #fcfcfc;
   --workspace-region-titlebar-topic-bg: #fcfcfc;
@@ -128,6 +129,12 @@
   --workspace-region-main-sidebar-scrollbar-thumb-color: #d2d2d2;
   --workspace-region-main-sidebar-panel-bg: #fbfbfb;
   --workspace-region-main-sidebar-panel-elevated-bg: #ffffff;
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --document-content-inline-padding: 1rem;
+  }
 }
 
 :root[data-resolved-base-color='dark'] {

@@ -38,8 +38,11 @@ export function DocumentPanelHeaderCenter({
   }
 
   return (
-    <div className="min-w-0">
-      <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 max-w-[var(--document-max-width)]">
+    <div className="min-w-0 flex-1">
+      <div
+        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)]"
+        data-testid="document-header-content-rail"
+      >
         <NodeBreadcrumbs
           activeNodeId={activeNodeId}
           nodesById={listNodesById}
