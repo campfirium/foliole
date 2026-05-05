@@ -42,15 +42,16 @@ afterEach(async () => {
 });
 
 function saveNode(nodeId: string, parentNodeId: string | null, content: string, updatedAt: string, extra: Partial<Parameters<typeof upsertNodeSnapshot>[0]> = {}) {
+  const reveal = extra.reveal ?? null;
   upsertNodeSnapshot({
     nodeId,
     parentNodeId,
-    kind: extra.kind ?? (extra.anchorLink?.kind === 'cloze' || extra.reveal !== null ? 'item' : 'topic'),
+    kind: extra.kind ?? (extra.anchorLink?.kind === 'cloze' || reveal !== null ? 'item' : 'topic'),
     title: extra.title ?? nodeId,
     isTitleManual: true,
     hideTitleHeading: false,
     content,
-    reveal: extra.reveal ?? null,
+    reveal,
     anchorLink: extra.anchorLink ?? null,
     position: extra.position ?? 0,
     createdAt: '2026-03-30T00:00:00.000Z',
@@ -139,4 +140,19 @@ it('manual rebuild fully refreshes all article mirrors', async () => {
   await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2, queued_article_count: 2 });
   await expect(readMirror('Mirror Demo.md')).resolves.toContain('Manual rebuild refresh.');
   await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body.');
+});
+
+it('moves article mirrors when the parent folder path changes', async () => {
+  saveNode('folder-root', null, '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'Projects' });
+  saveNode('folder-child', 'folder-root', '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'Research', position: 1 });
+  saveNode('node-article', 'folder-child', 'Nested body.', '2026-03-30T00:00:00.000Z', { kind: 'topic', title: 'Mirror Demo', position: 2 });
+
+  await rebuildMirrorOutput();
+  await expect(fs.readFile(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')), 'utf8')).resolves.toContain('Nested body.');
+
+  saveNode('folder-child', 'folder-root', '', '2030-03-30T00:15:00.000Z', { kind: 'folder', title: 'Archive', position: 1 });
+
+  await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
+  await expect(fs.readFile(mirrorPath(path.join('Projects', 'Archive', 'Mirror Demo.md')), 'utf8')).resolves.toContain('Nested body.');
+  await expect(fs.access(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')))).rejects.toThrow();
 });

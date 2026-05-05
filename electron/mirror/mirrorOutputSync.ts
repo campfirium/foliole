@@ -49,6 +49,10 @@ function deleteMirrorArticleRecord(articleId: string) {
   openDatabaseConnection().sqlite.prepare('DELETE FROM mirror_articles WHERE article_id = ?').run(articleId);
 }
 
+function clearMirrorArticleRecords() {
+  openDatabaseConnection().sqlite.prepare('DELETE FROM mirror_articles').run();
+}
+
 function resolveAbsoluteMirrorPath(mirrorRoot: string, relativePath: string) {
   return path.join(mirrorRoot, ...relativePath.split('/'));
 }
@@ -80,6 +84,34 @@ async function removeLegacyMirrorArtifacts(mirrorRoot: string, targetPaths: stri
   await Promise.all(targetPaths.map((targetPath) => fs.rm(resolveLegacyArticleDirectory(targetPath), { force: true, recursive: true })));
 }
 
+async function resetMirrorRoot(mirrorRoot: string) {
+  await fs.rm(mirrorRoot, { recursive: true, force: true });
+  await fs.mkdir(mirrorRoot, { recursive: true });
+}
+
+async function prepareFullMirrorRebuild(mirrorRoot: string) {
+  await resetMirrorRoot(mirrorRoot);
+  clearMirrorArticleRecords();
+}
+
+async function removeObsoleteMirrorRecords(
+  mode: MirrorSyncMode,
+  mirrorRoot: string,
+  recordsByArticleId: Map<string, MirrorArticleRecord>,
+  targetArticleIds: Set<string>
+) {
+  if (mode === 'missing') {
+    return;
+  }
+  for (const record of recordsByArticleId.values()) {
+    if (targetArticleIds.has(record.articleId)) {
+      continue;
+    }
+    await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath));
+    deleteMirrorArticleRecord(record.articleId);
+  }
+}
+
 function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, record: MirrorArticleRecord | null, sourceUpdatedAt: string) {
   if (mode === 'full') {
     return true;
@@ -104,15 +136,11 @@ async function syncMirrorOutput(mode: MirrorSyncMode): Promise<NativeMirrorOutpu
   const recordsByArticleId = loadMirrorArticleRecords();
   const targetArticleIds = new Set(targets.map((target) => target.articleId));
 
-  if (mode !== 'missing') {
-    for (const record of recordsByArticleId.values()) {
-      if (targetArticleIds.has(record.articleId)) {
-        continue;
-      }
-      await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(paths.mirror, record.relativePath));
-      deleteMirrorArticleRecord(record.articleId);
-    }
+  if (mode === 'full') {
+    await prepareFullMirrorRebuild(paths.mirror);
   }
+
+  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds);
 
   await removeLegacyMirrorArtifacts(paths.mirror, targets.map((target) => target.targetPath));
 

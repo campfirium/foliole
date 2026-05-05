@@ -173,7 +173,7 @@ it('shows separate mirror output rebuild feedback from mirror link rebuild', asy
     expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror output *' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror output' }));
 
   await waitFor(() => {
     expect(screen.getByText(/rebuilt 2 mirror article files from 2 queued articles/i)).toBeInTheDocument();

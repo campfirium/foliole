@@ -73,7 +73,7 @@ function MirrorRebuildControls(props: {
               onClick={props.onRebuildMirrorOutput}
               type="button"
             >
-              Rebuild mirror output *
+              Rebuild mirror output
             </button>
           </div>
           <p className="text-sm text-foreground/60">
