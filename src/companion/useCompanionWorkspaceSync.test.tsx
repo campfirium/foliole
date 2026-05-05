@@ -14,6 +14,7 @@ const syncObjectsMock = vi.hoisted(() => ({
     pendingAckCount: 0,
     pushConflictCount: 0,
     pushError: null,
+    pushIssueCount: 0,
     pushRejectedCount: 0,
     remainingAttachmentResourceCount: 0,
     remainingContentBlobCount: 0

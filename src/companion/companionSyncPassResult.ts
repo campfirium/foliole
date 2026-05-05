@@ -5,6 +5,7 @@ export interface CompanionSyncPassInput {
   pendingAckCount?: number | null;
   pushConflictCount?: number;
   pushError?: string | null;
+  pushIssueCount?: number | null;
   pushRejectedCount?: number;
   remainingAttachmentResourceBytes?: number | null;
   remainingAttachmentResourceCount: number | null;
@@ -61,7 +62,10 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
       'skipped'
     );
   }
-  const rejectedOrConflicted = (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0);
+  const rejectedOrConflicted = Math.max(
+    result.pushIssueCount ?? 0,
+    (result.pushConflictCount ?? 0) + (result.pushRejectedCount ?? 0)
+  );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
       appendBacklogSuffix(`Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`, result),

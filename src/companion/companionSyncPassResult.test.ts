@@ -13,6 +13,7 @@ function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSy
     pendingAckCount: 0,
     pushConflictCount: 0,
     pushError: null,
+    pushIssueCount: 0,
     pushRejectedCount: 0,
     remainingAttachmentResourceBytes: null,
     remainingAttachmentResourceCount: 0,
@@ -73,6 +74,16 @@ describe('describeCompanionSyncPassResult', () => {
       remainingContentBlobCount: 3
     }))).toEqual({
       message: 'Sync pass finished; 1 device change(s) need review before they can be sent; 3 topic bodies still caching.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('keeps persisted push issues out of completed events', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      pushIssueCount: 1
+    }))).toEqual({
+      message: 'Sync pass finished; 1 device change(s) need review before they can be sent.',
       outcome: 'skipped',
       status: 'skipped'
     });

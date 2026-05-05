@@ -72,6 +72,7 @@ export interface CompanionDesktopSyncResult {
   localDirtyCount: number | null;
   pendingAckCount: number | null;
   pushConflictCount: number;
+  pushIssueCount: number | null;
   pushRejectedCount: number;
   remainingAttachmentResourceBytes: number | null;
   remainingAttachmentResourceCount: number | null;
@@ -176,6 +177,7 @@ async function loadFinalLocalSyncSummary() {
   return {
     localDirtyCount: diagnostics?.sync_state.local_dirty_count ?? null,
     pendingAckCount: diagnostics?.sync_state.pending_ack_count ?? null,
+    pushIssueCount: diagnostics?.sync_state.push_issue_count ?? null,
     remainingAttachmentResourceBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null,
     remainingAttachmentResourceCount: diagnostics?.content.missing_attachment_resource_count ?? null,
     remainingContentBlobBytes: diagnostics?.content.missing_content_blob_bytes ?? null,
@@ -370,6 +372,7 @@ async function runCompanionObjectsSync(
     localDirtyCount: finalSummary.localDirtyCount,
     pendingAckCount: finalSummary.pendingAckCount,
     pushConflictCount: pushed.pushConflictCount,
+    pushIssueCount: finalSummary.pushIssueCount,
     remainingAttachmentResourceBytes: finalSummary.remainingAttachmentResourceBytes,
     remainingAttachmentResourceCount: finalSummary.remainingAttachmentResourceCount,
     remainingContentBlobBytes: finalSummary.remainingContentBlobBytes,

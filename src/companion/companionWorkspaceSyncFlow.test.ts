@@ -32,6 +32,7 @@ function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncResult> 
     pushedReviewOpIds: [],
     pushConflictCount: 0,
     pushError: null,
+    pushIssueCount: 0,
     pushRejectedCount: 0,
     remainingAttachmentResourceBytes: null,
     remainingAttachmentResourceCount: 0,
