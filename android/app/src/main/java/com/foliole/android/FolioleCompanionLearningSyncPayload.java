@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 import org.json.JSONObject;
 
 final class FolioleCompanionLearningSyncPayload {
-
     private FolioleCompanionLearningSyncPayload() {}
 
     static void applyReading(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
@@ -16,21 +15,22 @@ final class FolioleCompanionLearningSyncPayload {
             return;
         }
         JSONObject payload = payload(record);
+        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName();
         FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReadingUpsert", new Object[] {
             objectId,
-            payload.optLong("interval_duration_ms", 0),
-            payload.optDouble("interval_growth_factor", 1),
-            payload.optString("last_handled_at", record.optString("updated_at")),
-            payload.optString("next_at", record.optString("updated_at")),
-            payload.optDouble("priority", 0),
-            payload.optInt("repetition_count", 0),
-            payload.optString("state", "active")
+            FolioleCompanionLearningPayloadRules.longValue(context, payload, queryName, "intervalDurationMsPayloadKey", "defaultIntervalDurationMs"),
+            FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName, "intervalGrowthFactorPayloadKey", "defaultIntervalGrowthFactor"),
+            FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "lastHandledAtPayloadKey", record.optString("updated_at")),
+            FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "nextAtPayloadKey", record.optString("updated_at")),
+            FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName, "priorityPayloadKey", "defaultPriority"),
+            FolioleCompanionLearningPayloadRules.intValue(context, payload, queryName, "repetitionCountPayloadKey", "defaultRepetitionCount"),
+            FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "statePayloadKey", defaultReadingState(context))
         });
-        if (payload.has("reading_position")) {
+        if (FolioleCompanionLearningPayloadRules.has(context, payload, queryName, "readingPositionPayloadKey")) {
             FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReadingDeviceStateUpsert", new Object[] {
                 objectId,
-                payload.optString("device_id", "*"),
-                payload.optLong("reading_position", 0),
+                FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "deviceIdPayloadKey", defaultReadingDeviceId(context)),
+                FolioleCompanionLearningPayloadRules.longValue(context, payload, queryName, "readingPositionPayloadKey", "defaultReadingPosition"),
                 record.optString("updated_at")
             });
         }
@@ -42,18 +42,35 @@ final class FolioleCompanionLearningSyncPayload {
             return;
         }
         JSONObject payload = payload(record);
+        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName();
         FolioleCompanionNamedMutationStore.execute(context, database, "syncNodeReviewUpsert", new Object[] {
             objectId,
-            payload.optString("due", record.optString("updated_at")),
-            nullIfEmpty(payload.optString("last_review_at", "")),
-            payload.optInt("state", 0),
-            payload.optDouble("stability", 0),
-            payload.optDouble("difficulty", 0),
-            payload.optInt("elapsed_days", 0),
-            payload.optInt("scheduled_days", 0),
-            payload.optInt("reps", 0),
-            payload.optInt("lapses", 0)
+            FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "duePayloadKey", record.optString("updated_at")),
+            nullIfEmpty(FolioleCompanionLearningPayloadRules.string(context, payload, queryName, "lastReviewAtPayloadKey", "")),
+            FolioleCompanionLearningPayloadRules.intValue(context, payload, queryName, "statePayloadKey", "defaultState"),
+            FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName, "stabilityPayloadKey", "defaultStability"),
+            FolioleCompanionLearningPayloadRules.doubleValue(context, payload, queryName, "difficultyPayloadKey", "defaultDifficulty"),
+            FolioleCompanionLearningPayloadRules.intValue(context, payload, queryName, "elapsedDaysPayloadKey", "defaultElapsedDays"),
+            FolioleCompanionLearningPayloadRules.intValue(context, payload, queryName, "scheduledDaysPayloadKey", "defaultScheduledDays"),
+            FolioleCompanionLearningPayloadRules.intValue(context, payload, queryName, "repsPayloadKey", "defaultReps"),
+            FolioleCompanionLearningPayloadRules.intValue(context, payload, queryName, "lapsesPayloadKey", "defaultLapses")
         });
+    }
+
+    private static String defaultReadingState(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.metadata(
+            context,
+            FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName(),
+            "defaultState"
+        );
+    }
+
+    private static String defaultReadingDeviceId(Context context) throws Exception {
+        return FolioleCompanionSyncPayloadQueryStore.metadata(
+            context,
+            FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName(),
+            "defaultDeviceId"
+        );
     }
 
     private static JSONObject payload(JSONObject record) throws Exception {

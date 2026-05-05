@@ -36,7 +36,29 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "'latest_node_id', latest_node_id) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
   },
   syncPayloadNodeReading: {
-    syncPayload: { argMode: 'object_id', objectType: 'node_reading' },
+    syncPayload: {
+      argMode: 'object_id',
+      defaultDeviceId: '*',
+      defaultIntervalDurationMs: 0,
+      defaultIntervalGrowthFactor: 1,
+      defaultPriority: 0,
+      defaultReadingPosition: 0,
+      defaultRepetitionCount: 0,
+      defaultState: 'active',
+      deviceIdPayloadKey: 'device_id',
+      hashIgnoredPayloadKeys: ['device_id', 'reading_position'],
+      inputPayloadKey: 'reading_json',
+      intervalDurationMsPayloadKey: 'interval_duration_ms',
+      intervalGrowthFactorPayloadKey: 'interval_growth_factor',
+      lastHandledAtPayloadKey: 'last_handled_at',
+      nextAtPayloadKey: 'next_at',
+      nodeIdPayloadKey: 'node_id',
+      objectType: 'node_reading',
+      priorityPayloadKey: 'priority',
+      readingPositionPayloadKey: 'reading_position',
+      repetitionCountPayloadKey: 'repetition_count',
+      statePayloadKey: 'state'
+    },
     sql:
       "SELECT json_object('node_id', node_id, 'interval_duration_ms', interval_duration_ms, " +
       "'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at, 'next_at', next_at, " +
@@ -44,7 +66,29 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       'FROM node_reading WHERE node_id = ? LIMIT 1'
   },
   syncPayloadNodeReview: {
-    syncPayload: { argMode: 'object_id', objectType: 'node_review' },
+    syncPayload: {
+      argMode: 'object_id',
+      defaultDifficulty: 0,
+      defaultElapsedDays: 0,
+      defaultLapses: 0,
+      defaultReps: 0,
+      defaultScheduledDays: 0,
+      defaultStability: 0,
+      defaultState: 0,
+      difficultyPayloadKey: 'difficulty',
+      duePayloadKey: 'due',
+      elapsedDaysPayloadKey: 'elapsed_days',
+      inputPayloadKey: 'review_json',
+      lapsesPayloadKey: 'lapses',
+      lastReviewAtPayloadKey: 'last_review_at',
+      nodeIdPayloadKey: 'node_id',
+      objectType: 'node_review',
+      repsPayloadKey: 'reps',
+      reviewLogInputPayloadKey: 'review_log_json',
+      scheduledDaysPayloadKey: 'scheduled_days',
+      stabilityPayloadKey: 'stability',
+      statePayloadKey: 'state'
+    },
     sql:
       "SELECT json_object('node_id', node_id, 'due', due, 'last_review_at', last_review_at, 'state', state, " +
       "'stability', stability, 'difficulty', difficulty, 'elapsed_days', elapsed_days, 'scheduled_days', scheduled_days, " +

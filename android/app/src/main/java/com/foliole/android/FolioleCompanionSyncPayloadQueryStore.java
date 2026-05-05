@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 
 final class FolioleCompanionSyncPayloadQueryStore {
     private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
+    private static final String NODE_READING_PAYLOAD_QUERY_NAME = "syncPayloadNodeReading";
+    private static final String NODE_REVIEW_PAYLOAD_QUERY_NAME = "syncPayloadNodeReview";
 
     private FolioleCompanionSyncPayloadQueryStore() {}
 
@@ -24,6 +26,14 @@ final class FolioleCompanionSyncPayloadQueryStore {
             throw new IllegalStateException("Companion query definitions asset is missing sync payload metadata: " + queryName + "." + key);
         }
         return value;
+    }
+
+    static String metadataArrayText(Context context, String queryName, String key) throws Exception {
+        JSONArray values = loadQuery(context, queryName).getJSONObject("syncPayload").optJSONArray(key);
+        if (values == null) {
+            throw new IllegalStateException("Companion query definitions asset is missing sync payload metadata: " + queryName + "." + key);
+        }
+        return values.toString();
     }
 
     static String viewActiveNodeKey(Context context) throws Exception {
@@ -88,6 +98,14 @@ final class FolioleCompanionSyncPayloadQueryStore {
 
     static String settingMetadata(Context context, String key) throws Exception {
         return metadata(context, "syncPayloadSetting", key);
+    }
+
+    static String nodeReadingPayloadQueryName() {
+        return NODE_READING_PAYLOAD_QUERY_NAME;
+    }
+
+    static String nodeReviewPayloadQueryName() {
+        return NODE_REVIEW_PAYLOAD_QUERY_NAME;
     }
 
     static String viewObjectId(Context context, String deviceId, String key) throws Exception {

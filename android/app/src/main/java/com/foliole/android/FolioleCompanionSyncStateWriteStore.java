@@ -40,14 +40,13 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     static JSObject saveNodeReading(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
-        String nodeId = input.optString("node_id");
-        JSONObject payload = new JSONObject(input.optString("reading_json", "{}"));
+        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName();
+        String nodeId = FolioleCompanionLearningPayloadRules.nodeId(context, input, queryName);
+        JSONObject payload = FolioleCompanionLearningPayloadRules.inputPayload(context, input, queryName);
         String now = Instant.now().toString();
-        payload.put("node_id", nodeId);
-        payload.put("device_id", modifiedByDeviceId);
-        JSONObject hashPayload = new JSONObject(payload.toString());
-        hashPayload.remove("device_id");
-        hashPayload.remove("reading_position");
+        FolioleCompanionLearningPayloadRules.put(context, payload, queryName, "nodeIdPayloadKey", nodeId);
+        FolioleCompanionLearningPayloadRules.put(context, payload, queryName, "deviceIdPayloadKey", modifiedByDeviceId);
+        JSONObject hashPayload = FolioleCompanionLearningPayloadRules.readingHashPayload(context, payload);
         String contentHash = FolioleCompanionSyncContentHash.hash(hashPayload);
         String objectType = syncObjectType(context, "nodeReading");
         database.beginTransaction();
@@ -62,13 +61,12 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     static JSObject saveNodeReview(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
-        String nodeId = input.optString("node_id");
-        JSONObject payload = new JSONObject(input.optString("review_json", "{}"));
-        JSONObject reviewLog = input.has("review_log_json") && !input.isNull("review_log_json")
-            ? new JSONObject(input.optString("review_log_json", "{}"))
-            : null;
+        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName();
+        String nodeId = FolioleCompanionLearningPayloadRules.nodeId(context, input, queryName);
+        JSONObject payload = FolioleCompanionLearningPayloadRules.inputPayload(context, input, queryName);
+        JSONObject reviewLog = FolioleCompanionLearningPayloadRules.reviewLogInput(context, input);
         String now = Instant.now().toString();
-        payload.put("node_id", nodeId);
+        FolioleCompanionLearningPayloadRules.put(context, payload, queryName, "nodeIdPayloadKey", nodeId);
         String contentHash = FolioleCompanionSyncContentHash.hash(payload);
         String opId = null;
         String objectType = syncObjectType(context, "nodeReview");
