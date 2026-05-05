@@ -1,7 +1,13 @@
 import type { BrowserWindowConstructorOptions, Session, WebContents } from 'electron';
 
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
-import { loadRenderer, logActiveRuntimeDiagnostics, type StartupRendererView } from './rendererLoader.js';
+import {
+  activateDeferredRendererEntry,
+  loadRenderer,
+  logActiveRuntimeDiagnostics,
+  type LoadRendererOptions,
+  type StartupRendererView
+} from './rendererLoader.js';
 import type { RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 
@@ -90,13 +96,18 @@ export function isAllowedEmbeddedLinkPanelUrl(url: string) {
 }
 
 export async function loadMainWindowRenderer(args: {
+  options?: LoadRendererOptions;
   runtimeDiagnostics: RuntimeDiagnosticsSnapshot;
   runtimeDir: string;
   startupView?: StartupRendererView | null;
   window: import('electron').BrowserWindow;
 }) {
-  await loadRenderer(args.window, args.runtimeDir, args.startupView);
+  await loadRenderer(args.window, args.runtimeDir, args.startupView, args.options);
   logActiveRuntimeDiagnostics(args.window, args.runtimeDir, args.runtimeDiagnostics);
+}
+
+export async function activateMainWindowRenderer(window: import('electron').BrowserWindow) {
+  await activateDeferredRendererEntry(window);
 }
 
 export { logWindowStateLifecycleEvent, logWindowStateRestoreDecision };

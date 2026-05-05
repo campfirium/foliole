@@ -14,6 +14,7 @@ const FRAME_INTERVAL_MS = Number.parseInt(process.env.FOLIOLE_STARTUP_FRAME_INTE
 const MAX_CAPTURE_MS = Number.parseInt(process.env.FOLIOLE_STARTUP_MAX_CAPTURE_MS ?? '8000', 10);
 const STABLE_FRAME_LIMIT = Number.parseInt(process.env.FOLIOLE_STARTUP_STABLE_FRAME_LIMIT ?? '16', 10);
 const SAMPLE_TIMEOUT_MS = Number.parseInt(process.env.FOLIOLE_STARTUP_SAMPLE_TIMEOUT_MS ?? '3000', 10);
+const FIRST_WINDOW_TIMEOUT_MS = Number.parseInt(process.env.FOLIOLE_STARTUP_FIRST_WINDOW_TIMEOUT_MS ?? '8000', 10);
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -203,7 +204,7 @@ async function main() {
   let lastSignature = null;
   let stableFrameCount = 0;
   try {
-    const page = await electronApp.firstWindow({ timeout: 30_000 });
+    const page = await electronApp.firstWindow({ timeout: FIRST_WINDOW_TIMEOUT_MS });
     page.on('console', (message) => {
       pageEvents.push({
         text: message.text(),

@@ -45,6 +45,7 @@ function renderStartupViewIfRequested() {
   }
   registerBootDiagnostics();
   reportRuntimeBootStage('startup_surface_render', { kind: startupView.kind });
+  document.body.dataset.bootSkeleton = 'hidden';
   renderStartupErrorView(
     rootElement,
     {
@@ -85,27 +86,6 @@ function registerBootDiagnostics() {
       reason: String(event.reason)
     });
   });
-}
-
-function registerAppReadySignals(signalAppReady: (source: string) => void) {
-  reportRuntimeBootStage('app_ready_signal_registration');
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      signalAppReady('double_raf');
-    });
-  });
-
-  window.addEventListener(
-    'load',
-    () => {
-      signalAppReady('window_load');
-    },
-    { once: true }
-  );
-
-  setTimeout(() => {
-    signalAppReady('timeout_1500ms');
-  }, 1500);
 }
 
 function registerStartupWatchdog() {
@@ -160,26 +140,7 @@ async function mountApp() {
     </React.StrictMode>
   );
   reportRuntimeBootStage('react_render_committed');
-
-  let appReadySignaled = false;
-  const signalAppReady = (source: string) => {
-    if (appReadySignaled) {
-      return;
-    }
-    appReadySignaled = true;
-    reportRuntimeBootStage('app_ready_signal_received', {
-      readyState: document.readyState,
-      source
-    });
-    reportRuntimeAppReady({
-      href: window.location.href,
-      readyState: document.readyState,
-      source
-    });
-  };
-
   registerStartupWatchdog();
-  registerAppReadySignals(signalAppReady);
 }
 
 async function reportDesktopBridgeReady() {

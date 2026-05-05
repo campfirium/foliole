@@ -33,6 +33,26 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain('foliole-asset:');
 });
 
+it('allows the local runtime index to activate the Vite module entry in dev mode', () => {
+  const previousRendererUrl = process.env.ELECTRON_RENDERER_URL;
+  process.env.ELECTRON_RENDERER_URL = 'http://127.0.0.1:24600/';
+  try {
+    const headers = withMainWindowContentSecurityPolicy('file:///C:/dev/foliole/runtime-renderer-index.html');
+    const policy = headers['Content-Security-Policy']?.[0] ?? '';
+
+    expect(policy).toContain("'unsafe-eval'");
+    expect(policy).toContain('script-src');
+    expect(policy).toContain('http://127.0.0.1:*');
+    expect(policy).toContain('base-uri');
+  } finally {
+    if (previousRendererUrl === undefined) {
+      delete process.env.ELECTRON_RENDERER_URL;
+    } else {
+      process.env.ELECTRON_RENDERER_URL = previousRendererUrl;
+    }
+  }
+});
+
 it('installs the header hook once and only handles main frame responses', () => {
   type HeaderHandler = (
     details: {

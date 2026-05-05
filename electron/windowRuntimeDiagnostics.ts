@@ -6,8 +6,15 @@ import type { BrowserWindow } from 'electron';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
 import { appendBootEvent } from './ipc/boot.js';
+import { startStartupWindowFrameCapture } from './startupWindowFrameCapture.js';
 
 const LOG_FILE_NAME = 'renderer-state.ndjson';
+const startupPresentationByWindow = new WeakMap<BrowserWindow, StartupWindowPresentation>();
+
+export interface StartupWindowPresentation {
+  isFullScreen: boolean;
+  isMaximized: boolean;
+}
 
 function appendRendererStateLog(label: string, snapshot: unknown) {
   const logPath = resolveWindowsDiagnosticLogPath(LOG_FILE_NAME);
@@ -94,37 +101,59 @@ function scheduleRendererSnapshot(window: BrowserWindow, label: string, delayMs:
   }, delayMs);
 }
 
-function showWhenRendererAppReady(window: BrowserWindow) {
-  let attempts = 0;
-  const maxAttempts = 120;
-  const interval = globalThis.setInterval(() => {
-    if (window.isDestroyed() || window.isVisible()) {
-      globalThis.clearInterval(interval);
-      return;
-    }
-    attempts += 1;
-    void window.webContents
-      .executeJavaScript(
-        `Boolean(window.__FOLIOLE_APP_READY_REPORTED__ && document.getElementById('root')?.childElementCount)`,
-        true
-      )
-      .then((isReady) => {
-        if (isReady && !window.isDestroyed() && !window.isVisible()) {
-          appendRuntimeEventLog('app-ready-show');
-          window.show();
-          globalThis.clearInterval(interval);
-        } else if (attempts >= maxAttempts) {
-          appendRuntimeEventLog('app-ready-show-timeout');
-          globalThis.clearInterval(interval);
+export function setStartupWindowPresentation(window: BrowserWindow, presentation: StartupWindowPresentation) {
+  startupPresentationByWindow.set(window, presentation);
+}
+
+async function waitForStartupSkeletonPaint(window: BrowserWindow) {
+  await window.webContents.executeJavaScript(
+    `(() => new Promise((resolve) => {
+      const settle = () => {
+        const skeleton = document.getElementById('boot-skeleton');
+        if (!skeleton) {
+          resolve({ ready: false, reason: 'missing-skeleton' });
+          return;
         }
-      })
-      .catch((error) => {
-        appendMainProcessDiagnosticLog('app_ready_show_probe_failed', { error });
-        if (attempts >= maxAttempts) {
-          globalThis.clearInterval(interval);
-        }
-      });
-  }, 50);
+        const style = getComputedStyle(skeleton);
+        const rect = skeleton.getBoundingClientRect();
+        void skeleton.offsetHeight;
+        setTimeout(() => {
+          resolve({
+            display: style.display,
+            height: rect.height,
+            ready: style.display !== 'none' && rect.width > 0 && rect.height > 0,
+            width: rect.width
+          });
+        }, 50);
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', settle, { once: true });
+      } else {
+        settle();
+      }
+    }))()`,
+    true
+  );
+}
+
+export async function presentInitialRendererWindow(window: BrowserWindow) {
+  const presentation = startupPresentationByWindow.get(window) ?? {
+    isFullScreen: false,
+    isMaximized: false
+  };
+  await waitForStartupSkeletonPaint(window).catch((error) => {
+    appendRuntimeEventLog('startup-skeleton-paint-wait-failed', {
+      message: error instanceof Error ? error.message : String(error)
+    });
+  });
+  appendRuntimeEventLog('startup-skeleton-show', {
+    isFullScreen: presentation.isFullScreen,
+    isMaximized: presentation.isMaximized
+  });
+  if (!window.isVisible()) {
+    window.show();
+  }
+  startStartupWindowFrameCapture(window);
 }
 
 export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
@@ -146,7 +175,6 @@ export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
     appendRuntimeEventLog('dom-ready', {
       url: window.webContents.getURL()
     });
-    showWhenRendererAppReady(window);
     logRendererStateSnapshot(window, 'dom-ready');
   });
 
@@ -156,15 +184,25 @@ export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
     });
   });
 
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    appendRuntimeEventLog('console-message', {
+      level,
+      line,
+      message,
+      sourceId
+    });
+  });
+
   window.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL, isMainFrame) => {
-    if (!isMainFrame) {
-      return;
-    }
     appendRuntimeEventLog('did-fail-load', {
       errorCode,
       errorDescription,
+      isMainFrame,
       validatedURL
     });
+    if (!isMainFrame) {
+      return;
+    }
     appendMainProcessDiagnosticLog('renderer_did_fail_load', {
       errorCode,
       errorDescription,

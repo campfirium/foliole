@@ -47,6 +47,7 @@
         min-height: 100%;
         grid-template-rows: var(--startup-titlebar-height) minmax(0, 1fr);
         overflow: hidden;
+        z-index: 2147483647;
       }
 
       .startup-shell__titlebar {
@@ -67,7 +68,6 @@
             var(--startup-titlebar-bg) calc(100% - var(--startup-right-sidebar-current-width)),
             var(--startup-titlebar-bg) 100%
           );
-        border-bottom: 1px solid #d9d9d6;
       }
 
       .startup-shell__body {
@@ -75,9 +75,7 @@
         grid-template-columns:
           var(--startup-rail-width)
           var(--startup-list-current-width)
-          1px
           minmax(0, 1fr)
-          1px
           var(--startup-right-sidebar-current-width);
         min-height: 0;
         overflow: hidden;
@@ -85,7 +83,6 @@
 
       .startup-shell__rail {
         background: var(--startup-list-bg);
-        border-right: 1px solid var(--startup-divider);
       }
 
       .startup-shell__list {
@@ -101,7 +98,7 @@
       }
 
       .startup-shell__divider {
-        background: var(--startup-divider);
+        display: none;
       }
 
       @media (max-width: 1279px) {
@@ -110,10 +107,9 @@
         }
 
         .startup-shell__body {
-          grid-template-columns: var(--startup-rail-width) var(--startup-list-current-width) 1px minmax(0, 1fr);
+          grid-template-columns: var(--startup-rail-width) var(--startup-list-current-width) minmax(0, 1fr);
         }
 
-        .startup-shell__body > .startup-shell__divider:last-of-type,
         .startup-shell__sidebar {
           display: none;
         }
@@ -131,21 +127,13 @@
 
         .startup-shell__rail,
         .startup-shell__list,
-        .startup-shell__divider,
         .startup-shell__sidebar {
           display: none;
         }
       }
     </style>
     <script>
-      (() => {
-        const startupCss = new URLSearchParams(window.location.search).get('startupCss');
-        if (!startupCss) return;
-        const style = document.createElement('style');
-        style.id = 'runtime-startup-tokens';
-        style.textContent = `:root { ${startupCss} }`;
-        document.head.appendChild(style);
-      })();
+      /*STARTUP_INJECTED_BOOT_SCRIPT*/
     </script>
   </head>
   <body>
@@ -154,9 +142,7 @@
       <div class="startup-shell__body">
         <div class="startup-shell__rail"></div>
         <div class="startup-shell__list"></div>
-        <div class="startup-shell__divider"></div>
         <main class="startup-shell__document"></main>
-        <div class="startup-shell__divider"></div>
         <aside class="startup-shell__sidebar"></aside>
       </div>
     </section>

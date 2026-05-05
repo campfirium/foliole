@@ -1,4 +1,3 @@
-import { NodeListHeader } from '../../features/nodes/components/NodeListHeader';
 import { AppEmptyState } from '../../shared/ui';
 
 export function WorkspaceListLoadingState() {
@@ -6,31 +5,8 @@ export function WorkspaceListLoadingState() {
     <aside
       aria-busy="true"
       aria-label="Loading workspace list"
-      className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col text-foreground"
-    >
-      <NodeListHeader
-        hasCollapsibleNodes={false}
-        hasCollapsedNodes={false}
-        isTrashViewOpen={false}
-        isVirtualViewOpen={false}
-        onCreateCommand={() => undefined}
-        onEmptyTrash={() => undefined}
-        onOpenNotesView={() => undefined}
-        onSearchQueryChange={() => undefined}
-        onToggleCollapseAll={() => undefined}
-        searchQuery=""
-        trashCount={0}
-      />
-      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div
-            aria-label="Loading workspace list indicator"
-            className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground/55"
-          />
-          <p className="m-0 text-sm text-foreground/65">Loading workspace</p>
-        </div>
-      </div>
-    </aside>
+      className="workspace-region-main-folder min-h-0 min-w-0 flex-1"
+    />
   );
 }
 

@@ -17,6 +17,10 @@ const MAIN_WINDOW_CSP = [
 ].join('; ');
 const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
   .replace(
+    "base-uri 'self'",
+    "base-uri 'self' http://localhost:* http://127.0.0.1:*"
+  )
+  .replace(
     "script-src 'self'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:* http://127.0.0.1:*"
   )
@@ -28,6 +32,9 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
 const installedSessions = new WeakSet<Session>();
 
 function isDevelopmentRendererUrl(url: string) {
+  if (process.env.ELECTRON_RENDERER_URL && url.startsWith('file:') && url.endsWith('/runtime-renderer-index.html')) {
+    return true;
+  }
   try {
     const parsed = new URL(url);
     return (

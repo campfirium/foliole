@@ -5,6 +5,7 @@ import { HotkeySettingsProvider } from '../features/settings/context/HotkeySetti
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
+import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/bridge';
 import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBridge';
 import { ensureWorkspaceHydrated } from '../store/workspaceStore';
 
@@ -32,6 +33,48 @@ function AppContent() {
     installWorkspaceDebugBridge();
     readPerformanceDiagnosticsProbe();
   }, []);
+
+  useEffect(() => {
+    if (!controller.layoutProps.isWorkspaceHydrated) {
+      return;
+    }
+    reportRuntimeBootStage('app_ready_signal_registration', {
+      source: 'workspace_hydrated'
+    });
+    if (document.visibilityState === 'hidden') {
+      document.body.dataset.bootSkeleton = 'hidden';
+      reportRuntimeAppReady({
+        href: window.location.href,
+        readyState: document.readyState,
+        source: 'workspace_hydrated_hidden_window'
+      });
+      return;
+    }
+    let cancelled = false;
+    let secondFrameId = 0;
+    const firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        if (cancelled) {
+          return;
+        }
+        document.body.dataset.bootSkeleton = 'hidden';
+        reportRuntimeBootStage('app_ready_signal_received', {
+          readyState: document.readyState,
+          source: 'workspace_hydrated_double_raf'
+        });
+        reportRuntimeAppReady({
+          href: window.location.href,
+          readyState: document.readyState,
+          source: 'workspace_hydrated_double_raf'
+        });
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(firstFrameId);
+      window.cancelAnimationFrame(secondFrameId);
+    };
+  }, [controller.layoutProps.isWorkspaceHydrated]);
 
   return (
     <HotkeySettingsProvider {...controller.hotkeySettings}>

@@ -187,9 +187,6 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
       workspaceSurfacePalette: state.workspaceSurfacePaletteState
     });
-    if (typeof document !== 'undefined') {
-      document.body.dataset.bootSkeleton = 'hidden';
-    }
   }, [
     state.accentColorPresetState,
     state.baseColorModeState,

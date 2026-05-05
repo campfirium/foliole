@@ -7,6 +7,7 @@ import {
   BrowserWindow,
   crashReporter,
   ipcMain,
+  screen,
   type BrowserWindow as ElectronBrowserWindow
 } from 'electron';
 
@@ -38,13 +39,14 @@ import {
   formatRuntimeDiagnosticsSnapshot
 } from './runtimeIdentity.js';
 import {
+  activateMainWindowRenderer,
   createMainWindowOptions,
   loadMainWindowRenderer,
   logWindowStateLifecycleEvent,
   logWindowStateRestoreDecision
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
-import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
+import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -101,16 +103,25 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
 
 async function loadRendererIntoWindow(
   window: ElectronBrowserWindow,
-  startupView?: StartupRendererView | null
+  startupView?: StartupRendererView | null,
+  options?: { deferMainScript?: boolean }
 ) {
   await appendBootEvent('renderer_load_start', {
+    deferMainScript: options?.deferMainScript === true,
     startupView: startupView?.kind ?? 'workspace'
   });
-  await loadMainWindowRenderer({ runtimeDiagnostics, runtimeDir: __dirname, startupView, window });
+  await loadMainWindowRenderer({ options, runtimeDiagnostics, runtimeDir: __dirname, startupView, window });
   await appendBootEvent('renderer_load_complete', {
+    deferMainScript: options?.deferMainScript === true,
     startupView: startupView?.kind ?? 'workspace',
     url: window.webContents.getURL()
   });
+}
+
+async function activateRendererInWindow(window: ElectronBrowserWindow) {
+  await appendBootEvent('renderer_activation_start');
+  await activateMainWindowRenderer(window);
+  await appendBootEvent('renderer_activation_complete');
 }
 
 async function createMainWindow(startupAppearance?: { backgroundColor: string } | null) {
@@ -119,6 +130,19 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
   const options = applyWindowStateToOptions(createMainWindowOptions(runtimeDiagnostics.preloadPath), restoredWindowState);
+  if (restoredWindowState?.isMaximized === true) {
+    const restoredBounds = {
+      height: options.height ?? 900,
+      width: options.width ?? 1400,
+      x: options.x ?? 0,
+      y: options.y ?? 0
+    };
+    const workArea = screen.getDisplayMatching(restoredBounds).workArea;
+    options.x = workArea.x;
+    options.y = workArea.y;
+    options.width = workArea.width;
+    options.height = workArea.height;
+  }
   if (startupAppearance?.backgroundColor) {
     options.backgroundColor = startupAppearance.backgroundColor;
   }
@@ -138,13 +162,16 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
     show: window.isVisible()
   });
   logWindowStateLifecycleEvent('window-created', window);
-  if (restoredWindowState?.isFullScreen) {
-    window.setFullScreen(true);
-    logWindowStateLifecycleEvent('window-restore-fullscreen', window);
-  } else if (restoredWindowState?.isMaximized) {
-    window.maximize();
-    logWindowStateLifecycleEvent('window-restore-maximize', window);
-  }
+  setStartupWindowPresentation(window, {
+    isFullScreen: restoredWindowState?.isFullScreen === true,
+    isMaximized: restoredWindowState?.isMaximized === true
+  });
+  await appendBootEvent('startup_window_presentation_prepared', {
+    bounds: window.getBounds(),
+    isFullScreen: window.isFullScreen(),
+    isMaximized: window.isMaximized(),
+    show: window.isVisible()
+  });
   bindWindowIpc(window);
   bindHotkeyRecorderInput(window);
   bindWindowReadingProgressFlush(window);
@@ -164,6 +191,7 @@ function installInvokeHandler() {
 }
 
 installMainLifecycle({
+  activateMainWindow: activateRendererInWindow,
   createMainWindow,
   installInvokeHandler,
   loadMainWindow: loadRendererIntoWindow,

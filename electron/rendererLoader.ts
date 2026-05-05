@@ -6,13 +6,17 @@ import type { BrowserWindow } from 'electron';
 
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { resolveRendererIndexPath } from './runtimePaths.js';
-import { getRuntimeStartupTokensInlineCss } from './runtimeStartupTokens.js';
+import { getRuntimeStartupTokensInlineCss, getRuntimeStartupTokensThemeSource } from './runtimeStartupTokens.js';
 
 export interface StartupRendererView {
   errorSummary: string;
   kind: 'startup-error';
   logPath: string | null;
   moduleLabel: string;
+}
+
+export interface LoadRendererOptions {
+  deferMainScript?: boolean;
 }
 
 function resolveRendererUrl() {
@@ -23,29 +27,89 @@ function resolveRendererFilePath(runtimeDir: string) {
   return resolveRendererIndexPath(runtimeDir, fs.existsSync);
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, ms);
-  });
+function resolveSourceRendererIndexPath(runtimeDir: string) {
+  return path.join(runtimeDir, '..', '..', 'index.html');
 }
 
-async function loadRendererUrlWithRetry(window: BrowserWindow, url: string, maxAttempts = 30) {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      await window.loadURL(url);
-      return;
-    } catch (error) {
-      lastError = error;
-      await wait(300);
-    }
-  }
-  throw lastError;
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function createLocalStartupErrorHtml(startupView: StartupRendererView) {
+  const css = getRuntimeStartupTokensInlineCss();
+  const logPathMarkup = startupView.logPath
+    ? `<p class="startup-error__path">${escapeHtml(startupView.logPath)}</p>`
+    : '';
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="color-scheme" content="dark light">
+    <style>
+      :root { ${css} }
+      html, body, #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--startup-document-bg, #1f211f);
+        color: rgb(var(--color-foreground, 232 230 223));
+        font: 13px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      #root {
+        display: grid;
+        place-items: center;
+      }
+      .startup-error {
+        box-sizing: border-box;
+        width: min(560px, calc(100vw - 64px));
+        padding: 24px;
+        border: 1px solid var(--startup-divider, rgba(232, 230, 223, 0.18));
+        background: var(--startup-list-bg, #2b2f2a);
+      }
+      .startup-error__title {
+        margin: 0 0 8px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .startup-error__message,
+      .startup-error__path {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .startup-error__path {
+        margin-top: 12px;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <main class="startup-error" role="alert">
+        <h1 class="startup-error__title">${escapeHtml(startupView.moduleLabel)}</h1>
+        <p class="startup-error__message">${escapeHtml(startupView.errorSummary)}</p>
+        ${logPathMarkup}
+      </main>
+    </div>
+    <script>
+      window.__FOLIOLE_APP_READY_REPORTED__ = true;
+    </script>
+  </body>
+</html>`;
+}
+
+async function loadLocalStartupError(window: BrowserWindow, startupView: StartupRendererView) {
+  await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(createLocalStartupErrorHtml(startupView))}`);
 }
 
 function appendRendererParamsToUrl(url: string, startupView?: StartupRendererView | null) {
   const parsedUrl = new URL(url);
-  parsedUrl.searchParams.set('startupCss', getRuntimeStartupTokensInlineCss());
   if (startupView) {
     parsedUrl.searchParams.set('startupView', startupView.kind);
     parsedUrl.searchParams.set('startupModule', startupView.moduleLabel);
@@ -57,19 +121,20 @@ function appendRendererParamsToUrl(url: string, startupView?: StartupRendererVie
   return parsedUrl.toString();
 }
 
-function toFileQuery(startupView?: StartupRendererView | null) {
-  if (!startupView) {
-    return undefined;
+function createStartupBootScript() {
+  const themeSource = getRuntimeStartupTokensThemeSource();
+  return [
+    `document.documentElement.dataset.baseColor = ${JSON.stringify(themeSource)};`,
+    `document.documentElement.dataset.resolvedBaseColor = ${JSON.stringify(themeSource)};`
+  ].join('');
+}
+
+function injectStartupBootScript(html: string) {
+  const bootScript = createStartupBootScript();
+  if (html.includes('/*STARTUP_INJECTED_BOOT_SCRIPT*/')) {
+    return html.replace('/*STARTUP_INJECTED_BOOT_SCRIPT*/', bootScript);
   }
-  const query: Record<string, string> = {
-    startupError: startupView.errorSummary,
-    startupModule: startupView.moduleLabel,
-    startupView: startupView.kind
-  };
-  if (startupView.logPath) {
-    query.startupLogPath = startupView.logPath;
-  }
-  return query;
+  return html.replace('</head>', `    <script>${bootScript}</script>\n  </head>`);
 }
 
 function createRendererHtmlBaseTag(indexPath: string) {
@@ -77,9 +142,31 @@ function createRendererHtmlBaseTag(indexPath: string) {
   return `<base href="${href}">`;
 }
 
-export function injectStartupTokensIntoRendererHtml(html: string, indexPath: string, startupCss: string) {
+function createDevRendererHtmlBaseTag(devUrl: string) {
+  const href = new URL(devUrl);
+  href.pathname = href.pathname.endsWith('/') ? href.pathname : `${href.pathname}/`;
+  href.search = '';
+  href.hash = '';
+  return `<base href="${href.toString()}">`;
+}
+
+function deferRendererModuleEntry(html: string) {
+  return html.replace(
+    /<script\s+type="module"\s+src="([^"]+)"\s*><\/script>/,
+    '<script type="application/x-foliole-deferred-module" data-startup-src="$1"></script>'
+  );
+}
+
+export function injectStartupTokensIntoRendererHtml(
+  html: string,
+  indexPath: string,
+  startupCss: string,
+  options: LoadRendererOptions = {}
+) {
   const withStartupCss = html.replace('/*STARTUP_INJECTED_CSS*/', startupCss);
-  const withLateStartupCss = withStartupCss.replace(
+  const withStartupBootScript = injectStartupBootScript(withStartupCss);
+  const withEntryMode = options.deferMainScript ? deferRendererModuleEntry(withStartupBootScript) : withStartupBootScript;
+  const withLateStartupCss = withEntryMode.replace(
     '</head>',
     `    <style id="runtime-startup-tokens">:root { ${startupCss} }</style>\n  </head>`
   );
@@ -89,12 +176,52 @@ export function injectStartupTokensIntoRendererHtml(html: string, indexPath: str
   return withLateStartupCss.replace('<head>', `<head>\n    ${createRendererHtmlBaseTag(indexPath)}`);
 }
 
-async function loadInjectedRendererFile(window: BrowserWindow, indexPath: string) {
+export function injectDevRendererIntoHtml(
+  html: string,
+  devUrl: string,
+  startupCss: string,
+  options: LoadRendererOptions = {}
+) {
+  const devOrigin = new URL(devUrl).origin;
+  const withStartupCss = html.replace('/*STARTUP_INJECTED_CSS*/', startupCss);
+  const withStartupBootScript = injectStartupBootScript(withStartupCss);
+  const withModuleEntry = withStartupBootScript.replace(
+    'src="/src/main.tsx"',
+    `src="${devOrigin}/src/main.tsx"`
+  );
+  const withEntryMode = options.deferMainScript ? deferRendererModuleEntry(withModuleEntry) : withModuleEntry;
+  if (withEntryMode.includes('<base href=')) {
+    return withEntryMode;
+  }
+  return withEntryMode.replace('<head>', `<head>\n    ${createDevRendererHtmlBaseTag(devUrl)}`);
+}
+
+async function loadInjectedRendererFile(window: BrowserWindow, indexPath: string, options: LoadRendererOptions) {
   const html = fs.readFileSync(indexPath, 'utf8');
   const injectedHtml = injectStartupTokensIntoRendererHtml(
     html,
     indexPath,
-    getRuntimeStartupTokensInlineCss()
+    getRuntimeStartupTokensInlineCss(),
+    options
+  );
+  const runtimeIndexPath = path.join(path.dirname(indexPath), 'runtime-renderer-index.html');
+  fs.writeFileSync(runtimeIndexPath, injectedHtml, 'utf8');
+  await window.loadFile(runtimeIndexPath);
+}
+
+async function loadInjectedDevRenderer(
+  window: BrowserWindow,
+  runtimeDir: string,
+  devUrl: string,
+  options: LoadRendererOptions
+) {
+  const indexPath = resolveSourceRendererIndexPath(runtimeDir);
+  const html = fs.readFileSync(indexPath, 'utf8');
+  const injectedHtml = injectDevRendererIntoHtml(
+    html,
+    devUrl,
+    getRuntimeStartupTokensInlineCss(),
+    options
   );
   const runtimeIndexPath = path.join(path.dirname(indexPath), 'runtime-renderer-index.html');
   fs.writeFileSync(runtimeIndexPath, injectedHtml, 'utf8');
@@ -104,19 +231,50 @@ async function loadInjectedRendererFile(window: BrowserWindow, indexPath: string
 export async function loadRenderer(
   window: BrowserWindow,
   runtimeDir: string,
-  startupView?: StartupRendererView | null
+  startupView?: StartupRendererView | null,
+  options: LoadRendererOptions = {}
 ) {
+  if (startupView) {
+    await loadLocalStartupError(window, startupView);
+    return;
+  }
   const devUrl = resolveRendererUrl();
   if (devUrl) {
-    await loadRendererUrlWithRetry(window, appendRendererParamsToUrl(devUrl, startupView));
+    await loadInjectedDevRenderer(window, runtimeDir, appendRendererParamsToUrl(devUrl), options);
     return;
   }
-  const query = toFileQuery(startupView);
-  if (!query) {
-    await loadInjectedRendererFile(window, resolveRendererFilePath(runtimeDir));
-    return;
-  }
-  await window.loadFile(resolveRendererFilePath(runtimeDir), { query });
+  await loadInjectedRendererFile(window, resolveRendererFilePath(runtimeDir), options);
+}
+
+export async function activateDeferredRendererEntry(window: BrowserWindow) {
+  await window.webContents.executeJavaScript(
+    `(() => {
+      const marker = document.querySelector('script[data-startup-src]');
+      const src = marker?.getAttribute('data-startup-src');
+      if (!src || document.querySelector('script[data-startup-entry="active"]')) {
+        return false;
+      }
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.dataset.startupEntry = 'active';
+      if (/^https?:\\/\\/(localhost|127\\.0\\.0\\.1)(?::\\d+)?\\//.test(src)) {
+        const refreshUrl = new URL('/@react-refresh', src).toString();
+        script.textContent = [
+          'import RefreshRuntime from ' + JSON.stringify(refreshUrl) + ';',
+          'RefreshRuntime.injectIntoGlobalHook(window);',
+          'window.$RefreshReg$ = () => {};',
+          'window.$RefreshSig$ = () => (type) => type;',
+          'window.__vite_plugin_react_preamble_installed__ = true;',
+          'import(' + JSON.stringify(src) + ');'
+        ].join('\\n');
+      } else {
+        script.src = src;
+      }
+      document.body.appendChild(script);
+      return true;
+    })()`,
+    true
+  );
 }
 
 function resolveActiveRendererUrl(window: BrowserWindow, runtimeDir: string) {

@@ -25,15 +25,21 @@ import type { RuntimeMode } from './runtimeMode.js';
 import { setRuntimeStartupTokensCss } from './runtimeStartupTokens.js';
 import { runStartupTask } from './startupTasks.js';
 import { loadStartupSkeletonAppearance } from './startupSkeletonLayout.js';
+import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 
 interface MainLifecycleArgs {
+  activateMainWindow: (window: BrowserWindow) => Promise<void>;
   createMainWindow: (startupAppearance?: { backgroundColor: string } | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
-  loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
+  loadMainWindow: (
+    window: BrowserWindow,
+    startupView?: StartupRendererView | null,
+    options?: { deferMainScript?: boolean }
+  ) => Promise<void>;
   runtimeMode: RuntimeMode;
 }
 
@@ -131,6 +137,9 @@ async function loadStartupErrorSurface(args: {
   await reportStartupRuntimeServicesFailure(args.error, args.moduleLabel);
   if (!args.window.isDestroyed()) {
     await args.loadMainWindow(args.window, createStartupErrorView(args.error, args.moduleLabel));
+    if (!args.window.isVisible()) {
+      args.window.show();
+    }
   }
 }
 
@@ -182,10 +191,23 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
     const startupAppearance = loadStartupSkeletonAppearance();
-    setRuntimeStartupTokensCss(startupAppearance.css);
+    setRuntimeStartupTokensCss(startupAppearance.css, startupAppearance.themeSource);
     nativeTheme.themeSource = startupAppearance.themeSource;
     const mainWindow = await args.createMainWindow({ backgroundColor: startupAppearance.backgroundColor });
     startDevScreenshotServer({ getWindow: () => mainWindow });
+    try {
+      await args.loadMainWindow(mainWindow, null, { deferMainScript: true });
+      await appendBootEvent('main_window_shell_ready');
+      await presentInitialRendererWindow(mainWindow);
+    } catch (error) {
+      await loadStartupErrorSurface({
+        error,
+        loadMainWindow: args.loadMainWindow,
+        moduleLabel: 'Workspace shell',
+        window: mainWindow
+      });
+      return;
+    }
     try {
       await initializeRuntimeServices();
     } catch (error) {
@@ -200,7 +222,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     try {
       installPairingFocusHandler();
       await startCompanionSyncIfEnabled();
-      await args.loadMainWindow(mainWindow);
+      await args.activateMainWindow(mainWindow);
       await appendBootEvent('main_window_ready');
       startFollowupTasks();
     } catch (error) {
@@ -215,10 +237,12 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
       notifyExternalSearchUserActivity();
       if (BrowserWindow.getAllWindows().length === 0) {
         const nextStartupAppearance = loadStartupSkeletonAppearance();
-        setRuntimeStartupTokensCss(nextStartupAppearance.css);
+        setRuntimeStartupTokensCss(nextStartupAppearance.css, nextStartupAppearance.themeSource);
         nativeTheme.themeSource = nextStartupAppearance.themeSource;
         const window = await args.createMainWindow({ backgroundColor: nextStartupAppearance.backgroundColor });
-        await args.loadMainWindow(window);
+        await args.loadMainWindow(window, null, { deferMainScript: true });
+        await presentInitialRendererWindow(window);
+        await args.activateMainWindow(window);
       }
     });
   });

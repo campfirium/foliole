@@ -3,6 +3,15 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const useAppController = vi.fn();
 const ensureWorkspaceHydrated = vi.fn(() => Promise.resolve());
+const reportRuntimeAppReady = vi.fn();
+const reportRuntimeBootStage = vi.fn();
+
+function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    value: visibilityState
+  });
+}
 
 vi.mock('./hooks/useAppController', () => ({
   useAppController
@@ -10,6 +19,12 @@ vi.mock('./hooks/useAppController', () => ({
 
 vi.mock('../store/workspaceStore', () => ({
   ensureWorkspaceHydrated
+}));
+
+vi.mock('../shared/platform/bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/platform/bridge')>()),
+  reportRuntimeAppReady,
+  reportRuntimeBootStage
 }));
 
 vi.mock('../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -55,6 +70,10 @@ vi.mock('../shared/testing/workspaceDebugBridge', () => ({
 beforeEach(() => {
   useAppController.mockReset();
   ensureWorkspaceHydrated.mockClear();
+  reportRuntimeAppReady.mockClear();
+  reportRuntimeBootStage.mockClear();
+  document.body.dataset.bootSkeleton = '';
+  setDocumentVisibility('visible');
 });
 
 it('renders the workspace chrome immediately without a boot-only shell', async () => {
@@ -77,4 +96,50 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
   await waitFor(() => {
     expect(ensureWorkspaceHydrated).toHaveBeenCalledTimes(1);
   });
+  expect(reportRuntimeAppReady).not.toHaveBeenCalled();
+});
+
+it('reports app ready only after the hydrated workspace has painted', async () => {
+  useAppController.mockReturnValue({
+    hotkeySettings: {},
+    goToNodeState: {},
+    moveToNodeState: {},
+    layoutProps: { isWorkspaceHydrated: true },
+    paletteState: {},
+    searchState: {}
+  });
+
+  const { App } = await import('./App');
+
+  render(<App />);
+
+  await waitFor(() => {
+    expect(reportRuntimeAppReady).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'workspace_hydrated_double_raf' })
+    );
+  });
+  expect(document.body.dataset.bootSkeleton).toBe('hidden');
+});
+
+it('reports app ready without waiting for animation frames while the window is hidden', async () => {
+  setDocumentVisibility('hidden');
+  useAppController.mockReturnValue({
+    hotkeySettings: {},
+    goToNodeState: {},
+    moveToNodeState: {},
+    layoutProps: { isWorkspaceHydrated: true },
+    paletteState: {},
+    searchState: {}
+  });
+
+  const { App } = await import('./App');
+
+  render(<App />);
+
+  await waitFor(() => {
+    expect(reportRuntimeAppReady).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'workspace_hydrated_hidden_window' })
+    );
+  });
+  expect(document.body.dataset.bootSkeleton).toBe('hidden');
 });

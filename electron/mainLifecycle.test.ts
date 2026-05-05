@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   nativeTheme: {
     themeSource: 'system'
   },
+  presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
   resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' })),
   setRuntimeStartupTokensCss: vi.fn()
@@ -65,6 +66,10 @@ vi.mock('./runtimeMainSupport.js', () => ({
 vi.mock('./runtimeStartupTokens.js', () => ({
   setRuntimeStartupTokensCss: mocks.setRuntimeStartupTokensCss
 }));
+vi.mock('./windowRuntimeDiagnostics.js', () => ({
+  applyStartupWindowPresentation: vi.fn(),
+  presentInitialRendererWindow: mocks.presentInitialRendererWindow
+}));
 vi.mock('./startupSkeletonLayout.js', () => ({ loadStartupSkeletonAppearance: mocks.loadStartupSkeletonAppearance }));
 vi.mock('./startupTasks.js', () => ({ runStartupTask: vi.fn() }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncEnabled: vi.fn(() => false) }));
@@ -83,14 +88,16 @@ afterEach(() => {
     themeSource: 'dark'
   });
   mocks.nativeTheme.themeSource = 'system';
+  mocks.presentInitialRendererWindow.mockClear();
   mocks.setRuntimeStartupTokensCss.mockClear();
   vi.resetModules();
 });
 
-it('creates a hidden themed window and loads the real workspace after runtime services are ready', async () => {
+it('loads the themed workspace shell before runtime services and activates React after services are ready', async () => {
   const window = {
     isDestroyed: vi.fn(() => false)
   };
+  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   const createMainWindow = vi.fn().mockResolvedValue(window);
   const installInvokeHandler = vi.fn();
   const loadMainWindow = vi.fn().mockResolvedValue(undefined);
@@ -98,6 +105,7 @@ it('creates a hidden themed window and loads the real workspace after runtime se
 
   const { installMainLifecycle } = await import('./mainLifecycle.js');
   installMainLifecycle({
+    activateMainWindow,
     createMainWindow,
     installInvokeHandler,
     loadMainWindow,
@@ -109,20 +117,33 @@ it('creates a hidden themed window and loads the real workspace after runtime se
 
   expect(installInvokeHandler).toHaveBeenCalledTimes(1);
   expect(mocks.loadStartupSkeletonAppearance).toHaveBeenCalledTimes(1);
-  expect(mocks.setRuntimeStartupTokensCss).toHaveBeenCalledWith('--startup-list-width:512px;');
+  expect(mocks.setRuntimeStartupTokensCss).toHaveBeenCalledWith('--startup-list-width:512px;', 'dark');
   expect(mocks.nativeTheme.themeSource).toBe('dark');
   expect(mocks.initializeDatabase).toHaveBeenCalledTimes(1);
   expect(createMainWindow).toHaveBeenCalledWith({
     backgroundColor: '#1f211f'
   });
   expect(createMainWindow).toHaveBeenCalledTimes(1);
-  expect(loadMainWindow).toHaveBeenCalledWith(window);
+  expect(loadMainWindow).toHaveBeenCalledWith(window, null, { deferMainScript: true });
+  expect(loadMainWindow.mock.invocationCallOrder[0]).toBeLessThan(mocks.initializeDatabase.mock.invocationCallOrder[0]);
+  expect(loadMainWindow.mock.invocationCallOrder[0]).toBeLessThan(activateMainWindow.mock.invocationCallOrder[0]);
+  expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window);
+  expect(mocks.presentInitialRendererWindow.mock.invocationCallOrder[0]).toBeLessThan(
+    mocks.initializeDatabase.mock.invocationCallOrder[0]
+  );
+  expect(activateMainWindow).toHaveBeenCalledWith(window);
 });
 
 it('keeps the startup window alive and loads the startup error surface when database startup fails', async () => {
+  let visible = false;
   const window = {
-    isDestroyed: vi.fn(() => false)
+    isDestroyed: vi.fn(() => false),
+    isVisible: vi.fn(() => visible),
+    show: vi.fn(() => {
+      visible = true;
+    })
   };
+  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   const createMainWindow = vi.fn().mockResolvedValue(window);
   const installInvokeHandler = vi.fn();
   const loadMainWindow = vi.fn().mockResolvedValue(undefined);
@@ -133,6 +154,7 @@ it('keeps the startup window alive and loads the startup error surface when data
 
   const { installMainLifecycle } = await import('./mainLifecycle.js');
   installMainLifecycle({
+    activateMainWindow,
     createMainWindow,
     installInvokeHandler,
     loadMainWindow,
@@ -146,14 +168,58 @@ it('keeps the startup window alive and loads the startup error surface when data
   expect(createMainWindow).toHaveBeenCalledWith({
     backgroundColor: '#1f211f'
   });
-  expect(loadMainWindow).toHaveBeenCalledWith(window, {
+  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window, null, { deferMainScript: true });
+  expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
     errorSummary: 'migration exploded',
     kind: 'startup-error',
     logPath: '/logs',
     moduleLabel: 'Database migration'
   });
+  expect(window.show).toHaveBeenCalledTimes(1);
+  expect(activateMainWindow).not.toHaveBeenCalled();
   expect(mocks.appendMainProcessDiagnosticLog).toHaveBeenCalledWith(
     'startup_runtime_services_failed',
     expect.objectContaining({ error: expect.any(Error) })
   );
+});
+
+it('shows a startup error surface when the workspace renderer cannot load', async () => {
+  let visible = false;
+  const window = {
+    isDestroyed: vi.fn(() => false),
+    isVisible: vi.fn(() => visible),
+    show: vi.fn(() => {
+      visible = true;
+    })
+  };
+  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
+  const createMainWindow = vi.fn().mockResolvedValue(window);
+  const installInvokeHandler = vi.fn();
+  const loadMainWindow = vi
+    .fn()
+    .mockRejectedValueOnce(new Error('ERR_CONNECTION_REFUSED'))
+    .mockResolvedValueOnce(undefined);
+  mocks.app.whenReady.mockResolvedValue(undefined);
+
+  const { installMainLifecycle } = await import('./mainLifecycle.js');
+  installMainLifecycle({
+    activateMainWindow,
+    createMainWindow,
+    installInvokeHandler,
+    loadMainWindow,
+    runtimeMode: { allowParallelInstance: true } as never
+  });
+  await vi.waitFor(() => {
+    expect(loadMainWindow).toHaveBeenCalledTimes(2);
+  });
+
+  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window, null, { deferMainScript: true });
+  expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
+    errorSummary: 'ERR_CONNECTION_REFUSED',
+    kind: 'startup-error',
+    logPath: '/logs',
+    moduleLabel: 'Workspace shell'
+  });
+  expect(window.show).toHaveBeenCalledTimes(1);
+  expect(activateMainWindow).not.toHaveBeenCalled();
 });
