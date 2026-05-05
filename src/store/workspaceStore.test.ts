@@ -219,6 +219,16 @@ it('creates root nodes with explicit folder-topic-item kinds', () => {
   expect(useWorkspaceStore.getState().nodesById[itemId]?.kind).toBe('item');
 });
 
+it('blocks creating folder children under topics', () => {
+  const topicId = useWorkspaceStore.getState().createRootNode('Topic', 'topic');
+  const beforeOrder = [...useWorkspaceStore.getState().nodeOrder];
+
+  const childId = useWorkspaceStore.getState().createChildNode(topicId, '', 'folder');
+
+  expect(useWorkspaceStore.getState().nodesById[childId]).toBeUndefined();
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual(beforeOrder);
+});
+
 it('deletes node and switches active node', () => {
   const createdId = useWorkspaceStore
     .getState()

@@ -1,3 +1,4 @@
+import { canNodeAcceptMovedNode } from './nodeMovementRules';
 import type { Node } from './nodeTypes';
 import { hasNodeContent } from './nodeTypes';
 import { isInboxNode } from './specialNodes';
@@ -30,15 +31,19 @@ export function canNodeAcceptMovedChildren(
   nodeId: string,
   nodeOrder: string[],
   nodesById: Record<string, Node | undefined>,
+  movedNodeId?: string | null,
   hiddenNodeIds?: ReadonlySet<string>
 ) {
   void nodeOrder;
   void hiddenNodeIds;
   const node = nodesById[nodeId];
-  if (!node || node.anchorLink) {
+  if (!node) {
     return false;
   }
-  return isInboxNode(node) || isNodeContentEmpty(node);
+  if (!movedNodeId) {
+    return isInboxNode(node) || node.kind !== 'item';
+  }
+  return canNodeAcceptMovedNode(node, nodesById[movedNodeId]);
 }
 
 export function isNodeContentLocked(

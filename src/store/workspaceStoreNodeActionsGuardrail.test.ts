@@ -80,16 +80,23 @@ function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
   expect(getInvokedCommands(invoke)).not.toContain('save_workspace_state');
 }
 
+function createActionsHarness() {
+  const invoke = vi.fn().mockResolvedValue(null);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  const harness = createSetStateHarness(createWorkspaceFixture());
+  return {
+    actions: createWorkspaceNodeActions(harness.setState),
+    invoke
+  };
+}
+
 describe('workspace node actions runtime guardrail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('updateNodeContent uses update_node_content only and never save_workspace_state', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
+    const { actions, invoke } = createActionsHarness();
 
     actions.updateNodeContent('node-1', '# Updated title\n\nBody');
 
@@ -98,22 +105,25 @@ describe('workspace node actions runtime guardrail', () => {
   });
 
   it('createChildNode uses sqlite commands and never save_workspace_state', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
+    const { actions, invoke } = createActionsHarness();
 
     actions.createChildNode('node-1', 'Child body');
 
-    expect(getInvokedCommands(invoke)).toEqual(['update_node_content', 'replace_node_order']);
+    expect(getInvokedCommands(invoke)).toEqual(['create_topic', 'replace_node_order']);
+    expectNoWorkspacePersist(invoke);
+  });
+
+  it('createChildNode does not sync invalid folder creation under a topic', () => {
+    const { actions, invoke } = createActionsHarness();
+
+    actions.createChildNode('node-1', '', 'folder');
+
+    expect(getInvokedCommands(invoke)).toEqual([]);
     expectNoWorkspacePersist(invoke);
   });
 
   it('moveNode uses sqlite commands and never save_workspace_state', () => {
-    const invoke = vi.fn().mockResolvedValue(null);
-    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
+    const { actions, invoke } = createActionsHarness();
     const rootNodeId = actions.createRootNode('Root B');
 
     vi.clearAllMocks();

@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from '../../platform/nativeCommands.js';
 
 import type { NodeKind } from './nodeKind.js';
+import { NODE_KINDS } from './nodeKind.js';
 
 export const FOLDER_TOPIC_ITEM_APP_COMMAND_IDS = {
   createFolder: 'workspace.createFolder',
@@ -53,4 +54,23 @@ export function findFolderTopicItemCommandByAppCommandId(commandId: string) {
 
 export function findFolderTopicItemCommandByKind(kind: NodeKind) {
   return FOLDER_TOPIC_ITEM_COMMANDS.find((command) => command.kind === kind) ?? null;
+}
+
+export function resolveAllowedChildNodeKinds(parentKind: NodeKind | null): readonly NodeKind[] {
+  if (parentKind === null || parentKind === 'folder') {
+    return NODE_KINDS;
+  }
+  if (parentKind === 'topic') {
+    return ['topic', 'item'] as const;
+  }
+  return [] as const;
+}
+
+export function canCreateChildNodeKind(parentKind: NodeKind | null, childKind: NodeKind) {
+  return resolveAllowedChildNodeKinds(parentKind).includes(childKind);
+}
+
+export function resolveAllowedFolderTopicItemCommands(parentKind: NodeKind | null) {
+  const allowedKinds = resolveAllowedChildNodeKinds(parentKind);
+  return FOLDER_TOPIC_ITEM_COMMANDS.filter((command) => allowedKinds.includes(command.kind));
 }

@@ -106,3 +106,23 @@ it('moves nodes into inbox as the newest inbox children', () => {
   ]);
   expect(useWorkspaceStore.getState().nodesById[rootId]?.parentNodeId).toBe(INBOX_NODE_ID);
 });
+
+it('blocks placing folders under topics when moving nodes', () => {
+  const topicId = useWorkspaceStore.getState().createRootNode('Topic', 'topic');
+  const folderId = useWorkspaceStore.getState().createRootNode('', 'folder');
+
+  const moved = useWorkspaceStore.getState().moveNode(folderId, topicId);
+
+  expect(moved).toBe(false);
+  expect(useWorkspaceStore.getState().nodesById[folderId]?.parentNodeId).toBeNull();
+});
+
+it('blocks moving item nodes even when the target is otherwise valid', () => {
+  const itemId = useWorkspaceStore.getState().createRootNode('Card', 'item');
+  const folderId = useWorkspaceStore.getState().createRootNode('', 'folder');
+
+  const moved = useWorkspaceStore.getState().moveNode(itemId, folderId);
+
+  expect(moved).toBe(false);
+  expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBeNull();
+});

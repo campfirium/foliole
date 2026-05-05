@@ -1,8 +1,9 @@
-import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
 
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '@/shared/ui';
 
 interface NodeListContextMenuProps {
+  createCommands: readonly FolderTopicItemCommandDefinition[];
   isTrashMenu: boolean;
   left: number;
   onClose: () => void;
@@ -31,6 +32,7 @@ function renderMenuItems(props: NodeListContextMenuProps) {
   }
   return (
     <NoteMenuItems
+      createCommands={props.createCommands}
       onCreateCommand={props.onCreateCommand}
       onDeleteNode={props.onDeleteNode}
       onDismissNode={props.onDismissNode}
@@ -89,6 +91,7 @@ function TrashMenuItems({
 }
 
 function NoteMenuItems({
+  createCommands,
   onCreateCommand,
   onDeleteNode,
   onDismissNode,
@@ -106,7 +109,7 @@ function NoteMenuItems({
 }: Omit<NodeListContextMenuProps, 'isTrashMenu' | 'left' | 'onClose' | 'onDeleteNodePermanently' | 'onRestoreNode' | 'top'>) {
   return (
     <>
-      {FOLDER_TOPIC_ITEM_COMMANDS.map((command) => (
+      {createCommands.map((command) => (
         <AppDropdownMenuItem key={command.appCommandId} onSelect={() => onCreateCommand(command.appCommandId)}>
           {command.listLabel}
         </AppDropdownMenuItem>

@@ -1,5 +1,6 @@
 import { useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
 
+import { canNodeBeMoved } from '../model/nodeMovementRules';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 const DROP_INTENT_EDGE_RATIO = 0.25;
@@ -166,7 +167,7 @@ function createDragStartHandler(
 ) {
   return (nodeId: string, event: ReactDragEvent<HTMLElement>) => {
     const node = nodesById[nodeId];
-    if (isTrashViewOpen || !node || node.anchorLink) {
+    if (isTrashViewOpen || !canNodeBeMoved(node)) {
       event.preventDefault();
       return;
     }

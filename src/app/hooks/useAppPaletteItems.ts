@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
+import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
@@ -25,6 +26,7 @@ function canNodeBeMoveTarget(args: {
     args.nodeId,
     args.ws.nodeOrder,
     args.ws.nodesById,
+    args.activeNodeId,
     new Set(args.ws.trashedNodeIds)
   );
 }
@@ -48,7 +50,7 @@ export function useAppPaletteItems(args: {
   const canMoveToNode = useMemo(
     () => {
       const activeNodeId = args.activeNodeId;
-      return activeNodeId
+      return activeNodeId && canNodeBeMoved(args.ws.nodesById[activeNodeId])
         ? args.ws.nodeOrder.some((nodeId) => canNodeBeMoveTarget({ activeNodeId, nodeId, ws: args.ws }))
         : false;
     },

@@ -16,17 +16,20 @@ it('moves the active node under an empty target node from the command palette', 
       ...state.nodesById,
       'node-2': createNode({
         id: 'node-2',
+        kind: 'topic',
         title: 'Article A',
         content: 'Current article'
       }),
       'node-3': createNode({
         id: 'node-3',
         parentNodeId: 'node-2',
+        kind: 'topic',
         title: 'Article Child',
         content: 'Descendant should never be a move target'
       }),
       'node-4': createNode({
         id: 'node-4',
+        kind: 'topic',
         title: 'Project Atlas',
         content: ''
       })
@@ -70,16 +73,16 @@ it('moves the active node under an empty target node from the command palette', 
   expect(screen.queryByRole('dialog', { name: 'Move to' })).not.toBeInTheDocument();
 });
 
-it('hides non-empty article nodes from move targets and only keeps empty targets', async () => {
+it('keeps non-derived topics as move targets even when they already have content', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5'],
     nodesById: {
       ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', title: 'Source Article', content: 'Current article' }),
-      'node-3': createNode({ id: 'node-3', title: 'Plain Article', content: 'No child nodes here' }),
-      'node-4': createNode({ id: 'node-4', title: 'Empty Group', content: '' }),
-      'node-5': createNode({ id: 'node-5', title: 'Another Empty', content: '' })
+      'node-2': createNode({ id: 'node-2', kind: 'topic', title: 'Source Article', content: 'Current article' }),
+      'node-3': createNode({ id: 'node-3', kind: 'topic', title: 'Plain Article', content: 'No child nodes here' }),
+      'node-4': createNode({ id: 'node-4', kind: 'topic', title: 'Empty Group', content: '' }),
+      'node-5': createNode({ id: 'node-5', kind: 'topic', title: 'Another Empty', content: '' })
     }
   }));
 
@@ -95,7 +98,7 @@ it('hides non-empty article nodes from move targets and only keeps empty targets
   fireEvent.change(moveInput, { target: { value: 'Article' } });
 
   await waitFor(() => {
-    expect(within(moveDialog).queryByRole('button', { name: /Plain Article/i })).not.toBeInTheDocument();
+    expect(within(moveDialog).getByRole('button', { name: /Plain Article/i })).toBeInTheDocument();
   });
 
   fireEvent.change(moveInput, { target: { value: 'Empty' } });

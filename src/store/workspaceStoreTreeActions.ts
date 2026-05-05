@@ -1,6 +1,7 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
-import { INBOX_NODE_ID, isInboxNode } from '../features/nodes/model/specialNodes';
+import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import {
   isSameNodeOrder,
@@ -8,11 +9,11 @@ import {
   resolveNextParentNodeId,
   type NodeDropIntent
 } from './workspaceMoveNodes';
+import { canCreateChildUnderParent, canMoveRootsIntoTarget } from './workspaceNodeKindRules';
 import {
   collectOrderedSubtreeIds,
   insertNodeBlockAsFirstChild,
-  insertNodeBlockUnderParent,
-  isNodeInSubtree
+  insertNodeBlockUnderParent
 } from './workspaceNodeTreeOrder';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -37,7 +38,7 @@ function resolveMovableRootNodeIds(
   const rootNodeIds = collectMoveRootIds(nodeIds, state.nodeOrder, state.nodesById).filter(
     (nodeId) => {
       const node = state.nodesById[nodeId];
-      return Boolean(node && !state.trashedNodeIds.includes(nodeId) && !node.anchorLink && !isInboxNode(node));
+      return Boolean(node && !state.trashedNodeIds.includes(nodeId) && canNodeBeMoved(node));
     }
   );
   if (rootNodeIds.length === 0) {
@@ -61,15 +62,7 @@ function canMoveToTarget(
   targetNodeId: string | null,
   intent: NodeDropIntent
 ) {
-  if (targetNodeId && movedNodeIds.includes(targetNodeId)) {
-    return false;
-  }
-  if (intent !== 'child' || !targetNodeId) {
-    return true;
-  }
-  return rootNodeIds.every(
-    (rootNodeId) => !isNodeInSubtree(targetNodeId, rootNodeId, state.nodesById)
-  );
+  return canMoveRootsIntoTarget(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
 }
 
 function buildMovedState(
@@ -204,6 +197,9 @@ export function createChildNodeAction(
 
     set((state) => {
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) {
+        return state;
+      }
+      if (!canCreateChildUnderParent(state, parentNodeId, kind)) {
         return state;
       }
       const nextChildState = buildCreatedChildState(state, parentNodeId, nodeId, content, kind, timestamp);

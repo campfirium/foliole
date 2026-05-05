@@ -1,4 +1,9 @@
-import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import {
+  canCreateChildNodeKind,
+  findFolderTopicItemCommandByAppCommandId,
+  resolveAllowedFolderTopicItemCommands
+} from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isInboxNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -42,7 +47,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     primaryTarget,
     primaryTargetId,
     showDeleteAction: isSingleNodeTarget ? !isInboxNode(primaryTarget) : contextTargets.length > 0,
-    showMoveToNodeAction: isSingleNodeTarget && !isInboxNode(primaryTarget),
+    showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showNodeImportActions: isSingleNodeTarget && !primaryTarget?.anchorLink
   };
 }
@@ -59,6 +64,11 @@ function createCreateNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: 
       props.contextMenu.closeContextMenu();
       return;
     }
+    const parentNode = props.nodesById[primaryTargetId];
+    if (!parentNode || !canCreateChildNodeKind(parentNode.kind ?? null, command.kind)) {
+      props.contextMenu.closeContextMenu();
+      return;
+    }
     props.createChildNode(primaryTargetId, '', command.kind);
     props.contextMenu.closeContextMenu();
   };
@@ -67,6 +77,10 @@ function createCreateNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: 
 function createMoveToNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: string | null) {
   return () => {
     if (!primaryTargetId) {
+      props.contextMenu.closeContextMenu();
+      return;
+    }
+    if (!canNodeBeMoved(props.nodesById[primaryTargetId])) {
       props.contextMenu.closeContextMenu();
       return;
     }
@@ -85,6 +99,7 @@ export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
 
   return (
     <NodeListContextMenu
+      createCommands={resolveAllowedFolderTopicItemCommands(menuState.isRootMenu ? null : menuState.primaryTarget?.kind ?? null)}
       isTrashMenu={props.contextMenu.contextMenuMode === 'trash'}
       left={props.contextMenu.menuPosition.left}
       onClose={props.contextMenu.closeContextMenu}

@@ -1,4 +1,5 @@
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
+import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildGoToNodeState } from './appControllerHelpers';
@@ -11,6 +12,7 @@ export function buildControllerMoveToNodeState(args: {
 }): AppGoToNodeState {
   const activeNodeId = args.ws.activeNodeId;
   const targetNodeOrder = activeNodeId
+    && canNodeBeMoved(args.ws.nodesById[activeNodeId])
     ? args.ws.nodeOrder.filter((nodeId) => {
         if (
           nodeId === activeNodeId ||
@@ -25,6 +27,7 @@ export function buildControllerMoveToNodeState(args: {
           nodeId,
           args.ws.nodeOrder,
           args.ws.nodesById,
+          activeNodeId,
           new Set(args.ws.trashedNodeIds)
         );
       })
