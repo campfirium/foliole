@@ -11,6 +11,7 @@ import {
   readSyncPackCursorWithDbPort
 } from './syncPackCursor.js';
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
+import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
@@ -46,9 +47,10 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     await applySyncPackExternalDocumentsWithDbPort(port, options);
     await applySyncPackSettingObjectsWithDbPort(port, options);
     await applySyncPackMetadataObjectsWithDbPort(port, options);
+    await applySyncPackLearningObjectsWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
       ...options,
-      objectTypes: ['node', 'external_document', 'setting', 'import_source', 'external_folder']
+      objectTypes: ['node', 'external_document', 'setting', 'import_source', 'external_folder', 'node_reading', 'node_review']
     });
   }
   await clearConfirmedSyncPushAcksWithDbPort(port, {
