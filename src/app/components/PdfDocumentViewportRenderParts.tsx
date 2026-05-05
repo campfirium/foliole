@@ -46,7 +46,13 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
 }
 
 interface PdfViewportDocumentProps {
-  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  highlightLocators: Array<{
+    id: string;
+    page: number;
+    rects?: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
   onTextLayerRender: (pageNumber: number) => void;
@@ -95,7 +101,13 @@ function stripTextLayerInlineFonts(page: HTMLDivElement | null) {
 }
 
 function resolvePageHighlightLocators(
-  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>,
+  highlightLocators: Array<{
+    id: string;
+    page: number;
+    rects?: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>,
   page: number
 ) {
   return highlightLocators.filter((locator) => locator.page === page);
@@ -106,8 +118,11 @@ function resolveMarkerSize(zoom: number) {
 }
 
 function renderPageHighlightMarker(locator: { id: string; x: number | null; y: number | null }, markerSize: number) {
-  const markerTop = `${Math.max(0, Math.min(100, (locator.y ?? 0.5) * 100))}%`;
-  const markerLeft = `${Math.max(0, Math.min(100, (locator.x ?? 0.5) * 100))}%`;
+  if (typeof locator.x !== 'number' || typeof locator.y !== 'number') {
+    return null;
+  }
+  const markerTop = `${Math.max(0, Math.min(100, locator.y * 100))}%`;
+  const markerLeft = `${Math.max(0, Math.min(100, locator.x * 100))}%`;
   return (
     <span
       aria-hidden="true"
@@ -119,6 +134,32 @@ function renderPageHighlightMarker(locator: { id: string; x: number | null; y: n
   );
 }
 
+function renderHighlightRects(locator: {
+  id: string;
+  rects?: Array<{ height: number; width: number; x: number; y: number }>;
+  x: number | null;
+  y: number | null;
+}) {
+  const rects = Array.isArray(locator.rects) ? locator.rects : [];
+  if (rects.length === 0) {
+    return null;
+  }
+  return rects.map((rect, index) => (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute z-10 rounded-[2px] bg-accent/35 ring-1 ring-accent/20"
+      data-testid="pdf-highlight-rect"
+      key={`${locator.id}:${index}`}
+      style={{
+        height: `${Math.max(0, Math.min(100, rect.height * 100))}%`,
+        left: `${Math.max(0, Math.min(100, rect.x * 100))}%`,
+        top: `${Math.max(0, Math.min(100, rect.y * 100))}%`,
+        width: `${Math.max(0, Math.min(100, rect.width * 100))}%`
+      }}
+    />
+  ));
+}
+
 function PdfDocumentPages({
   highlightLocators,
   onTextLayerRender,
@@ -127,7 +168,13 @@ function PdfDocumentPages({
   totalPages,
   zoom
 }: {
-  highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
+  highlightLocators: Array<{
+    id: string;
+    page: number;
+    rects?: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>;
   onTextLayerRender: (pageNumber: number) => void;
   pageElementsRef: PdfPageElementsRef;
   rotation: number;
@@ -139,35 +186,69 @@ function PdfDocumentPages({
   }
   return Array.from({ length: totalPages }, (_, index) => {
     const pageNumber = index + PDF_PAGE_MIN;
-    const pageHighlights = resolvePageHighlightLocators(highlightLocators, pageNumber);
-    const markerSize = resolveMarkerSize(zoom);
-    return (
-      <div
-        className="relative flex w-full justify-center px-4"
-        data-pdf-page-number={pageNumber}
-        data-testid="pdf-document-page-shell"
-        key={pageNumber}
-        ref={(element) => {
-          pageElementsRef.current[pageNumber] = element;
-        }}
-      >
-        <div className="relative inline-block">
-          <Page
-            className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
-            data-testid="pdf-document-page"
-            onRenderTextLayerSuccess={() => {
-              stripTextLayerInlineFonts(pageElementsRef.current[pageNumber]);
-              onTextLayerRender(pageNumber);
-            }}
-            pageNumber={pageNumber}
-            renderAnnotationLayer
-            renderTextLayer
-            rotate={rotation}
-            scale={zoom / 100}
-          />
-          {pageHighlights.map((locator) => renderPageHighlightMarker(locator, markerSize))}
-        </div>
-      </div>
-    );
+    return renderPdfPage({
+      highlightLocators,
+      onTextLayerRender,
+      pageElementsRef,
+      pageNumber,
+      rotation,
+      zoom
+    });
   });
+}
+
+function renderPdfPage({
+  highlightLocators,
+  onTextLayerRender,
+  pageElementsRef,
+  pageNumber,
+  rotation,
+  zoom
+}: {
+  highlightLocators: Array<{
+    id: string;
+    page: number;
+    rects?: Array<{ height: number; width: number; x: number; y: number }>;
+    x: number | null;
+    y: number | null;
+  }>;
+  onTextLayerRender: (pageNumber: number) => void;
+  pageElementsRef: PdfPageElementsRef;
+  pageNumber: number;
+  rotation: number;
+  zoom: number;
+}) {
+  const pageHighlights = resolvePageHighlightLocators(highlightLocators, pageNumber);
+  const markerSize = resolveMarkerSize(zoom);
+  return (
+    <div
+      className="relative flex w-full justify-center px-4"
+      data-pdf-page-number={pageNumber}
+      data-testid="pdf-document-page-shell"
+      key={pageNumber}
+      ref={(element) => {
+        pageElementsRef.current[pageNumber] = element;
+      }}
+    >
+      <div className="relative inline-block">
+        <Page
+          className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
+          data-testid="pdf-document-page"
+          onRenderTextLayerSuccess={() => {
+            stripTextLayerInlineFonts(pageElementsRef.current[pageNumber]);
+            onTextLayerRender(pageNumber);
+          }}
+          pageNumber={pageNumber}
+          renderAnnotationLayer
+          renderTextLayer
+          rotate={rotation}
+          scale={zoom / 100}
+        />
+        {pageHighlights.map((locator) => {
+          const highlightRects = renderHighlightRects(locator);
+          return highlightRects ?? renderPageHighlightMarker(locator, markerSize);
+        })}
+      </div>
+    </div>
+  );
 }

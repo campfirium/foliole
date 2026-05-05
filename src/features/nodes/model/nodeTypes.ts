@@ -31,6 +31,12 @@ export interface NodeAnchorLink {
     page: number;
     x: number;
     y: number;
+    rects?: Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>;
   };
 }
 

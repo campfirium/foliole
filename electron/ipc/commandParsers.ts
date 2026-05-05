@@ -1,6 +1,8 @@
 import { isNodeKind } from '../../lib/core/nodes/nodeKind.js';
 import { isVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 
+import { parseAnchorLinkLocatorRects } from './anchorLinkLocatorRects.js';
+
 export function asString(value: unknown, field: string): string {
   if (typeof value !== 'string') {
     throw new Error(`invalid argument: ${field}`);
@@ -62,6 +64,12 @@ interface AnchorLinkPayload {
   kind: 'highlight' | 'cloze';
   locator?: {
     page: number;
+    rects?: Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>;
     x: number;
     y: number;
   };
@@ -88,7 +96,7 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   const payload = value as {
     id?: unknown;
     kind?: unknown;
-    locator?: { page?: unknown; x?: unknown; y?: unknown };
+    locator?: { page?: unknown; rects?: unknown; x?: unknown; y?: unknown };
   };
   if (typeof payload.id !== 'string') {
     throw new Error(`invalid argument: ${field}.id`);
@@ -113,6 +121,7 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
     }
     anchorLink.locator = {
       page: locator.page,
+      rects: parseAnchorLinkLocatorRects(locator.rects, `${field}.locator.rects`),
       x: Math.max(0, Math.min(1, locator.x)),
       y: Math.max(0, Math.min(1, locator.y))
     };
