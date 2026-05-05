@@ -1,34 +1,39 @@
-import { isTextAnchorLocator } from '../../nodes/model/nodeTypes';
-import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
+import { getTextAnchorLocators, isTextAnchorLocator } from '../../nodes/model/nodeTypes';
+import type { NodeAnchorLink, TextAnchorLocator } from '../../nodes/model/nodeTypes';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 
-import { hasInlineAnchorMarkup } from './anchorBlocks';
-import { findAnchorRecord, getAnchorContentRange } from './anchorRecords';
 import { resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
 
 export type AnchorNavigationTarget = Pick<NodeAnchorLink, 'id' | 'kind' | 'locator'>;
+
+function resolveUnresolvedTextAnchorFallback(
+  content: string,
+  locator: NonNullable<NodeAnchorLink['locator']>
+): EditorSelection | null {
+  if (!isTextAnchorLocator(locator) || locator.from !== locator.to) {
+    return null;
+  }
+  const position = Math.max(0, Math.min(locator.from, content.length));
+  return { from: position, to: position };
+}
 
 function resolveTextAnchorSelection(
   content: string,
   locator: NonNullable<NodeAnchorLink['locator']>
 ): EditorSelection | null {
-  if (!isTextAnchorLocator(locator)) {
+  const locators = getTextAnchorLocators(locator);
+  if (locators.length === 0) {
     return null;
   }
-  return resolveTextAnchorLocatorSelection(content, locator);
+  for (const textLocator of locators) {
+    const selection = resolveTextAnchorLocatorSelection(content, textLocator);
+    if (selection) {
+      return selection;
+    }
+  }
+  return resolveUnresolvedTextAnchorFallback(content, locators[0] as TextAnchorLocator);
 }
 
 export function findAnchorSelection(content: string, anchor: AnchorNavigationTarget): EditorSelection | null {
-  const locatorSelection = anchor.locator ? resolveTextAnchorSelection(content, anchor.locator) : null;
-  if (locatorSelection) {
-    return locatorSelection;
-  }
-  if (!hasInlineAnchorMarkup(content)) {
-    return null;
-  }
-  const record = findAnchorRecord(content, anchor);
-  if (!record) {
-    return null;
-  }
-  return getAnchorContentRange(record);
+  return anchor.locator ? resolveTextAnchorSelection(content, anchor.locator) : null;
 }

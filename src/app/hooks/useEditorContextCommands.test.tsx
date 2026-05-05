@@ -267,3 +267,51 @@ it('creates a linked note from an explicit reading selection payload', () => {
   expect(onSelectNode).toHaveBeenCalledWith('note-1');
   expect(updateNodeContent).not.toHaveBeenCalled();
 });
+
+it('keeps multi-range cloze locators when creating a cloze from selection payload', () => {
+  const createQANodeFromSelection = vi.fn(() => 'qa-1');
+
+  const { result } = renderHook(() =>
+    useEditorContextCommands(
+      buildHookArgs({
+        createQANodeFromSelection
+      })
+    )
+  );
+
+  act(() => {
+    result.current.handleCreateClozeFromPayload({
+      anchorId: 'multi-1',
+      clozeContent: '[...] Beta [...] Delta',
+      entries: [
+        {
+          anchorId: 'multi-1',
+          clozeContent: '[...] Beta [...] Delta',
+          locator: { from: 0, originalText: 'Alpha', to: 5 },
+          range: { from: 0, to: 5 },
+          selectionText: 'Alpha'
+        },
+        {
+          anchorId: 'multi-2',
+          clozeContent: '[...] Beta [...] Delta',
+          locator: { from: 11, originalText: 'Gamma', to: 16 },
+          range: { from: 11, to: 16 },
+          selectionText: 'Gamma'
+        }
+      ],
+      parentNodeId: 'node-1',
+      selectionText: 'Alpha\nGamma'
+    });
+  });
+
+  expect(createQANodeFromSelection).toHaveBeenCalledWith('node-1', '[...] Beta [...] Delta', 'Alpha\nGamma', 'multi-1', {
+    id: 'multi-1',
+    kind: 'cloze',
+    locator: {
+      ranges: [
+        { from: 0, originalText: 'Alpha', to: 5 },
+        { from: 11, originalText: 'Gamma', to: 16 }
+      ]
+    }
+  });
+});

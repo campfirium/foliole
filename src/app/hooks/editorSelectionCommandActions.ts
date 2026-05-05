@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { NodeAnchorLink, TextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 export function runSelectionCommandFromPayload(args: {
@@ -176,10 +176,13 @@ export function createSelectionHandlers(args: {
 }
 
 function createTextAnchorLink(payload: SelectionCommandPayload, kind: 'highlight' | 'cloze'): NodeAnchorLink | undefined {
-  if (payload.entries.length !== 1) {
+  const locators = payload.entries.map((entry) => entry.locator).filter(Boolean) as TextAnchorLocator[];
+  if (locators.length === 0) {
     return undefined;
   }
-  const locator = payload.entries[0]?.locator;
+  const locator = locators.length === 1
+    ? locators[0]
+    : { ranges: locators };
   if (!locator) {
     return undefined;
   }

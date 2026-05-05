@@ -1,15 +1,9 @@
+import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
+
 import { renderMarkedSource } from './articleMirrorMarkup.js';
 
 interface MirrorNode {
-  anchorLink: {
-    id: string;
-    kind: 'highlight' | 'cloze';
-    locator?: {
-      from?: number;
-      originalText?: string;
-      to?: number;
-    };
-  } | null;
+  anchorLink: StoredAnchorLink | null;
   content: string;
 }
 
@@ -25,24 +19,48 @@ function isLocatorMirrorSpan(span: LocatorMirrorSpan | null): span is LocatorMir
   return span !== null && span.sourceText.length > 0;
 }
 
+function renderMirrorAnchorTag(anchorId: string, kind: 'highlight' | 'cloze', slash: boolean) {
+  return `<${slash ? '/' : ''}${kind} id="${anchorId}">`;
+}
+
+function resolveTextMirrorLocator(
+  locator: StoredAnchorLink['locator']
+): { from: number; originalText?: string; to: number } | null {
+  if (!locator) {
+    return null;
+  }
+  if ('ranges' in locator) {
+    const range = locator.ranges[0];
+    return range
+      ? { from: range.from, originalText: range.originalText, to: range.to }
+      : null;
+  }
+  if (typeof locator.from === 'number' && typeof locator.to === 'number') {
+    return {
+      from: locator.from,
+      originalText: 'originalText' in locator ? locator.originalText : undefined,
+      to: locator.to
+    };
+  }
+  return null;
+}
+
 export function collectLocatorMirrorSpans(
   articleContent: string,
   derivedByAnchorKey: Map<string, MirrorNode[]>
 ) {
-  const spans = [...derivedByAnchorKey.entries()]
+  return [...derivedByAnchorKey.entries()]
     .map(([key, linkedChildren]) => {
       const [kind, anchorId] = key.split(':') as ['highlight' | 'cloze', string];
       const locator = linkedChildren.find(
-        (child) =>
-          child.anchorLink?.locator &&
-          typeof child.anchorLink.locator.from === 'number' &&
-          typeof child.anchorLink.locator.to === 'number'
+        (child) => resolveTextMirrorLocator(child.anchorLink?.locator) !== null
       )?.anchorLink?.locator;
-      if (!locator) {
+      const textLocator = resolveTextMirrorLocator(locator);
+      if (!textLocator) {
         return null;
       }
-      const from = locator.from ?? -1;
-      const to = locator.to ?? -1;
+      const from = textLocator.from ?? -1;
+      const to = textLocator.to ?? -1;
       if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to <= from || to > articleContent.length) {
         return null;
       }
@@ -51,23 +69,78 @@ export function collectLocatorMirrorSpans(
         anchorId,
         from,
         kind,
-        sourceText: sourceText || locator.originalText || '',
+        sourceText: sourceText || textLocator.originalText || '',
         to
       } satisfies LocatorMirrorSpan;
     })
     .filter(isLocatorMirrorSpan)
     .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
+}
 
-  const filtered: LocatorMirrorSpan[] = [];
-  let cursor = -1;
+function hasOverlappingLocatorMirrorSpans(spans: ReadonlyArray<LocatorMirrorSpan>) {
+  let maxTo = -1;
   for (const span of spans) {
-    if (span.from < cursor) {
-      continue;
+    if (span.from < maxTo) {
+      return true;
     }
-    filtered.push(span);
-    cursor = span.to;
+    maxTo = Math.max(maxTo, span.to);
   }
-  return filtered;
+  return false;
+}
+
+function renderArticleBodyFromOverlappingLocators(input: {
+  articleContent: string;
+  createExtraNote: (span: LocatorMirrorSpan) => string;
+  spans: ReadonlyArray<LocatorMirrorSpan>;
+}) {
+  const openings = new Map<number, LocatorMirrorSpan[]>();
+  const closings = new Map<number, LocatorMirrorSpan[]>();
+
+  for (const span of input.spans) {
+    const startEntries = openings.get(span.from) ?? [];
+    startEntries.push(span);
+    openings.set(span.from, startEntries);
+
+    const endEntries = closings.get(span.to) ?? [];
+    endEntries.push(span);
+    closings.set(span.to, endEntries);
+  }
+
+  const parts: string[] = [];
+  for (let position = 0; position <= input.articleContent.length; position += 1) {
+    const ending = closings.get(position);
+    if (ending) {
+      ending
+        .sort((left, right) => {
+          if (left.to !== right.to) {
+            return left.to - right.to;
+          }
+          return right.from - left.from;
+        })
+        .forEach((span) => {
+          parts.push(renderMirrorAnchorTag(span.anchorId, span.kind, true));
+          parts.push(input.createExtraNote(span));
+        });
+    }
+
+    const starting = openings.get(position);
+    if (starting) {
+      starting
+        .sort((left, right) => {
+          if (left.from !== right.from) {
+            return left.from - right.from;
+          }
+          return right.to - left.to;
+        })
+        .forEach((span) => parts.push(renderMirrorAnchorTag(span.anchorId, span.kind, false)));
+    }
+
+    if (position < input.articleContent.length) {
+      parts.push(input.articleContent[position] ?? '');
+    }
+  }
+
+  return parts.join('');
 }
 
 export function renderArticleBodyFromLocators(input: {
@@ -78,6 +151,13 @@ export function renderArticleBodyFromLocators(input: {
   const spans = collectLocatorMirrorSpans(input.articleContent, input.derivedByAnchorKey);
   if (spans.length === 0) {
     return input.articleContent;
+  }
+  if (hasOverlappingLocatorMirrorSpans(spans)) {
+    return renderArticleBodyFromOverlappingLocators({
+      articleContent: input.articleContent,
+      createExtraNote: input.createExtraNote,
+      spans
+    });
   }
 
   const parts: string[] = [];

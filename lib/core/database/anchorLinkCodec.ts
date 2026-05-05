@@ -18,6 +18,12 @@ export interface StoredAnchorLink {
     x: number;
     y: number;
   } | {
+    ranges: Array<{
+      from: number;
+      originalText: string;
+      to: number;
+    }>;
+  } | {
     from: number;
     originalText: string;
     to: number;
@@ -65,10 +71,11 @@ function isFiniteNumber(value: unknown): value is number {
 function parseTextLocator(
   locator:
     | {
-        from?: unknown;
-        originalText?: unknown;
-        to?: unknown;
-      }
+      from?: unknown;
+      originalText?: unknown;
+      ranges?: unknown;
+      to?: unknown;
+    }
     | undefined
 ) {
   if (
@@ -88,6 +95,29 @@ function parseTextLocator(
     originalText: locator.originalText,
     to: locator.to
   };
+}
+
+function parseTextLocatorGroup(
+  locator:
+    | {
+      ranges?: unknown;
+    }
+    | undefined
+) {
+  if (!locator || !Array.isArray(locator.ranges) || locator.ranges.length < 2) {
+    return undefined;
+  }
+  const ranges = locator.ranges
+    .map((range) =>
+      parseTextLocator(
+        typeof range === 'object' && range !== null ? range as { from?: unknown; originalText?: unknown; to?: unknown } : undefined
+      )
+    )
+    .filter((range): range is NonNullable<typeof range> => range !== undefined);
+  if (ranges.length !== locator.ranges.length) {
+    return undefined;
+  }
+  return { ranges };
 }
 
 function parseVisualLocator(
@@ -147,6 +177,7 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
         height?: unknown;
         originalText?: unknown;
         page?: unknown;
+        ranges?: unknown;
         rects?: unknown;
         to?: unknown;
         width?: unknown;
@@ -162,6 +193,11 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     }
     const base: StoredAnchorLink = { id: parsed.id, kind: parsed.kind };
     const locator = parsed.locator;
+    const textLocatorGroup = parseTextLocatorGroup(locator);
+    if (textLocatorGroup) {
+      base.locator = textLocatorGroup;
+      return base;
+    }
     const textLocator = parseTextLocator(locator);
     if (textLocator) {
       base.locator = textLocator;

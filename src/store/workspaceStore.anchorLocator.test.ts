@@ -77,3 +77,51 @@ it('keeps text locator on cloze nodes created from editor selections', () => {
     }
   });
 });
+
+it('keeps grouped text locators on multi-range cloze nodes created from editor selections', () => {
+  const seedNodeId = getSeedNodeId();
+  const createdId = useWorkspaceStore.getState().createQANodeFromSelection(
+    seedNodeId,
+    '[...] Beta [...] Delta',
+    'Alpha\nGamma',
+    'cloze-multi-1',
+    {
+      id: 'cloze-multi-1',
+      kind: 'cloze',
+      locator: {
+        ranges: [
+          {
+            from: 0,
+            originalText: 'Alpha',
+            to: 5
+          },
+          {
+            from: 11,
+            originalText: 'Gamma',
+            to: 16
+          }
+        ]
+      }
+    }
+  );
+
+  expect(createdId).toBeTruthy();
+  expect(useWorkspaceStore.getState().nodesById[createdId ?? '']?.anchorLink).toEqual({
+    id: 'cloze-multi-1',
+    kind: 'cloze',
+    locator: {
+      ranges: [
+        {
+          from: 0,
+          originalText: 'Alpha',
+          to: 5
+        },
+        {
+          from: 11,
+          originalText: 'Gamma',
+          to: 16
+        }
+      ]
+    }
+  });
+});

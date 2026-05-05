@@ -64,4 +64,44 @@ describe('parseStoredAnchorLink', () => {
       kind: 'cloze'
     });
   });
+
+  it('keeps grouped text locators when payload contains multi-range cloze anchors', () => {
+    const value = JSON.stringify({
+      id: 'text-multi-1',
+      kind: 'cloze',
+      locator: {
+        ranges: [
+          {
+            from: 0,
+            to: 5,
+            originalText: 'Alpha'
+          },
+          {
+            from: 11,
+            to: 16,
+            originalText: 'Gamma'
+          }
+        ]
+      }
+    });
+
+    expect(parseStoredAnchorLink(value)).toEqual({
+      id: 'text-multi-1',
+      kind: 'cloze',
+      locator: {
+        ranges: [
+          {
+            from: 0,
+            to: 5,
+            originalText: 'Alpha'
+          },
+          {
+            from: 11,
+            to: 16,
+            originalText: 'Gamma'
+          }
+        ]
+      }
+    });
+  });
 });

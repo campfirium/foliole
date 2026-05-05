@@ -1,6 +1,6 @@
-import { resolveTextAnchorLocatorSelection } from '../../features/editor/model/textAnchorLocatorResolution';
+import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
-import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getTextAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { InspectorSection } from '../../shared/ui';
 
@@ -67,7 +67,11 @@ function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, N
     return false;
   }
   const anchorLink = node.anchorLink;
-  if (!anchorLink || !isTextAnchorLocator(anchorLink.locator)) {
+  if (!anchorLink?.locator) {
+    return false;
+  }
+  const textLocators = getTextAnchorLocators(anchorLink.locator);
+  if (textLocators.length === 0) {
     return true;
   }
   const parentNode = node.parentNodeId ? nodesById[node.parentNodeId] : null;
@@ -77,7 +81,7 @@ function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, N
   if (parentNode.hasContent === true && parentNode.content.length === 0) {
     return true;
   }
-  return Boolean(resolveTextAnchorLocatorSelection(parentNode.content, anchorLink.locator));
+  return textLocators.some((locator) => Boolean(findAnchorSelection(parentNode.content, { ...anchorLink, locator })));
 }
 
 function collectSubtreeHighlights(

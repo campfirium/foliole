@@ -4,7 +4,6 @@ import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
-import { cleanupDeletedTextAnchors } from './nodeDeletedAnchorCleanup.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpsertNodeOrderStatement,
@@ -26,6 +25,12 @@ interface NodeAnchorLinkPayload {
     width?: number;
     x: number;
     y: number;
+  } | {
+    ranges: Array<{
+      from: number;
+      originalText: string;
+      to: number;
+    }>;
   } | {
     from: number;
     originalText: string;
@@ -216,11 +221,8 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   const clearOrderStatement = driver.prepare('DELETE FROM node_order');
   const insertOrderStatement = driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
-  const deletedAt = new Date().toISOString();
-  let affectedParentNodeIds: string[] = [];
 
   driver.transaction(() => {
-    affectedParentNodeIds = cleanupDeletedTextAnchors(driver, input.nodeIds, deletedAt);
     for (const nodeId of input.nodeIds) {
       deleteReviewLogStatement.run([nodeId]);
       deleteNodeReviewStatement.run([nodeId]);
@@ -236,5 +238,5 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     }
   });
 
-  return affectedParentNodeIds;
+  return [];
 }

@@ -31,6 +31,12 @@ interface AnchorLinkPayload {
     x: number;
     y: number;
   } | {
+    ranges: Array<{
+      from: number;
+      originalText: string;
+      to: number;
+    }>;
+  } | {
     from: number;
     originalText: string;
     to: number;
@@ -67,6 +73,7 @@ interface RawAnchorLocator {
   height?: unknown;
   originalText?: unknown;
   page?: unknown;
+  ranges?: unknown;
   rects?: unknown;
   to?: unknown;
   width?: unknown;
@@ -88,6 +95,20 @@ function parseTextAnchorLocator(locator: RawAnchorLocator, field: string) {
     from: locator.from,
     originalText: locator.originalText,
     to: locator.to
+  };
+}
+
+function parseTextAnchorLocatorGroup(locator: RawAnchorLocator, field: string) {
+  if (!Array.isArray(locator.ranges) || locator.ranges.length < 2) {
+    throw new Error(`invalid argument: ${field}.locator.ranges`);
+  }
+  return {
+    ranges: locator.ranges.map((range, index) => {
+      if (!range || typeof range !== 'object' || Array.isArray(range)) {
+        throw new Error(`invalid argument: ${field}.locator.ranges[${index}]`);
+      }
+      return parseTextAnchorLocator(range as RawAnchorLocator, `${field}.locator.ranges[${index}]`);
+    })
   };
 }
 
@@ -144,6 +165,12 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   const locator = payload.locator;
   if (!locator || typeof locator !== 'object' || Array.isArray(locator)) {
     throw new Error(`invalid argument: ${field}.locator`);
+  }
+  if (
+    Array.isArray(locator.ranges)
+  ) {
+    anchorLink.locator = parseTextAnchorLocatorGroup(locator, field);
+    return anchorLink;
   }
   if (
     typeof locator.from === 'number' ||

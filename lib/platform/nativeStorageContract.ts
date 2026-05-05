@@ -24,6 +24,12 @@ export interface NativeWorkspaceAnchorLink {
     x: number;
     y: number;
   } | {
+    ranges: Array<{
+      from: number;
+      originalText: string;
+      to: number;
+    }>;
+  } | {
     from: number;
     originalText: string;
     to: number;

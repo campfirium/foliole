@@ -50,6 +50,10 @@ export interface TextAnchorLocator {
   to: number;
 }
 
+export interface TextAnchorLocatorGroup {
+  ranges: TextAnchorLocator[];
+}
+
 export interface NodeImageRegion {
   id: string;
   height: number;
@@ -66,7 +70,7 @@ export interface NodeImageRegionGroup {
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
-  locator?: PdfAnchorLocator | ImageAnchorLocator | TextAnchorLocator;
+  locator?: PdfAnchorLocator | ImageAnchorLocator | TextAnchorLocator | TextAnchorLocatorGroup;
 }
 
 export type NodeSpecialKind = 'inbox' | 'virtual-root' | 'virtual';
@@ -102,6 +106,7 @@ export function isPdfAnchorLocator(locator: NodeAnchorLink['locator'] | null | u
 export function isTextAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocator {
   return Boolean(
     locator &&
+      !('ranges' in locator) &&
       'from' in locator &&
       'to' in locator &&
       typeof locator.from === 'number' &&
@@ -112,6 +117,37 @@ export function isTextAnchorLocator(locator: NodeAnchorLink['locator'] | null | 
       locator.to >= locator.from &&
       typeof locator.originalText === 'string'
   );
+}
+
+export function isTextAnchorLocatorGroup(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocatorGroup {
+  return Boolean(
+    locator &&
+      'ranges' in locator &&
+      Array.isArray(locator.ranges) &&
+      locator.ranges.length > 1 &&
+      locator.ranges.every((range) =>
+        Boolean(
+          range &&
+            typeof range.from === 'number' &&
+            Number.isInteger(range.from) &&
+            range.from >= 0 &&
+            typeof range.to === 'number' &&
+            Number.isInteger(range.to) &&
+            range.to >= range.from &&
+            typeof range.originalText === 'string'
+        )
+      )
+  );
+}
+
+export function getTextAnchorLocators(locator: NodeAnchorLink['locator'] | null | undefined): TextAnchorLocator[] {
+  if (isTextAnchorLocator(locator)) {
+    return [locator];
+  }
+  if (isTextAnchorLocatorGroup(locator)) {
+    return locator.ranges;
+  }
+  return [];
 }
 
 export function hasNodeContent(node: Pick<Node, 'content' | 'hasContent'> | null | undefined) {
