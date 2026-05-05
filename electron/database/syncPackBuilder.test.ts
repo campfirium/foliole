@@ -178,6 +178,20 @@ function insertNodeReadingSyncState() {
   );
 }
 
+function insertViewStateSyncState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO workspace_meta (key, value, updated_at)
+     VALUES ('active_node_id', 'node-1', '2026-04-27T00:06:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('view_state', 'session_resume:windows:desktop:desktop-test:active_node', 9, 'view-hash',
+       'desktop-test', '2026-04-27T00:06:00.000Z', 0)`
+  );
+}
+
 function insertNodeAttachmentRows() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -558,6 +572,46 @@ it('packs node reading state as a generic sync object', async () => {
       object_id: 'node-reading-1',
       object_type: 'node_reading',
       payload_json: expect.stringContaining('interval_duration_ms')
+    })]
+  });
+});
+
+it('packs view state as a carried sync object payload', async () => {
+  insertViewStateSyncState();
+  const packPath = path.join(tempRoot, 'incoming-view-state.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath,
+    packId: 'pack-view-state-1',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({
+    objectCount: 1,
+    packId: 'pack-view-state-1',
+    toStateSeq: 9
+  });
+  expect(readPackRows(packPath)).toMatchObject({
+    manifest: expect.objectContaining({
+      tables: [
+        { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_objects', row_count: 1 },
+        { name: 'nodes', row_count: 0 },
+        { name: 'node_attachments', row_count: 0 },
+        { name: 'external_documents', row_count: 0 },
+        { name: 'content_blobs', row_count: 0 },
+        { name: 'review_log', row_count: 0 }
+      ]
+    }),
+    stateRows: [{
+      object_id: 'session_resume:windows:desktop:desktop-test:active_node',
+      object_type: 'view_state',
+      state_seq: 9
+    }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'session_resume:windows:desktop:desktop-test:active_node',
+      object_type: 'view_state',
+      payload_json: expect.stringContaining('node-1')
     })]
   });
 });
