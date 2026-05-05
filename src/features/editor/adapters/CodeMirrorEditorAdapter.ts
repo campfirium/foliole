@@ -22,10 +22,13 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
   private liveMarkdownCompartment = new Compartment();
+  private nodeId: string | null = null;
   private onChange?: (content: string) => void;
   private view: EditorView;
+  private hideTitleHeading = false;
 
   constructor(host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
+    this.hideTitleHeading = options.hideTitleHeading === true;
     this.onChange = options.onChange;
     this.view = new EditorView({
       parent: host,
@@ -44,7 +47,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           highlightActiveLine(),
           markdownInputAssist,
           this.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
-          this.liveMarkdownCompartment.of(createLiveMarkdown(options.hideTitleHeading === true)),
+          this.liveMarkdownCompartment.of(createLiveMarkdown(this.hideTitleHeading, this.nodeId)),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
               return;
@@ -101,8 +104,16 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   setHideTitleHeading(hideTitleHeading: boolean) {
+    this.hideTitleHeading = hideTitleHeading;
     this.view.dispatch({
-      effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(hideTitleHeading))
+      effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(this.hideTitleHeading, this.nodeId))
+    });
+  }
+
+  setNodeId(nodeId: string | null) {
+    this.nodeId = nodeId;
+    this.view.dispatch({
+      effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(this.hideTitleHeading, this.nodeId))
     });
   }
 

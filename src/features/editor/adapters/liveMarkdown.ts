@@ -7,6 +7,7 @@ import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 import { handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
+import { handleClipboardImagePaste } from './htmlPaste';
 import {
   addAnchorTagDecorations,
   collectSelectionTextWithExpandedLinks,
@@ -45,8 +46,19 @@ const hideTitleHeadingFacet = Facet.define<boolean, boolean>({
   combine: (values) => values[0] ?? false
 });
 
-export function createLiveMarkdown(hideTitleHeading = false) {
-  return [hideTitleHeadingFacet.of(hideTitleHeading), liveMarkdownTheme, markdownStaticPlugin, markdownLinePlugin, markdownInteractionHandlers];
+const activeNodeIdFacet = Facet.define<string | null, string | null>({
+  combine: (values) => values[0] ?? null
+});
+
+export function createLiveMarkdown(hideTitleHeading = false, nodeId: string | null = null) {
+  return [
+    hideTitleHeadingFacet.of(hideTitleHeading),
+    activeNodeIdFacet.of(nodeId),
+    liveMarkdownTheme,
+    markdownStaticPlugin,
+    markdownLinePlugin,
+    markdownInteractionHandlers
+  ];
 }
 
 function buildLineDecorations(view: EditorView): DecorationSet {
@@ -246,6 +258,10 @@ const markdownInteractionHandlers = EditorView.domEventHandlers({
     return true;
   },
   paste(event, view) {
+    if (handleClipboardImagePaste(event.clipboardData, view, view.state.facet(activeNodeIdFacet))) {
+      event.preventDefault();
+      return true;
+    }
     if (!handleMarkdownCompatibleHtmlPaste(event.clipboardData, view)) {
       return false;
     }

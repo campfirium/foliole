@@ -5,7 +5,8 @@ import type {
 } from './nativeImportContract.js';
 import type { NativeReadwiseDetectionResult } from './nativeReadwiseContract.js';
 import type {
-  NativeApplyReviewGradeArgs, NativeImportLocalImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
+  NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
+  NativeImportLocalImageAttachmentResult,
   NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
   NativeResetImportDataResult,
   NativeReviewSchedulerSettings,
@@ -96,6 +97,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & {
   [NATIVE_COMMANDS.selectImportDirectory]: {
     args: undefined;
     result: string | null;
+  };
+  [NATIVE_COMMANDS.importClipboardImageAttachment]: {
+    args: NativeImportClipboardImageAttachmentArgs;
+    result: NativeImportLocalImageAttachmentResult;
   };
   [NATIVE_COMMANDS.importLocalImageAttachment]: {
     args: NativeImportLocalImageAttachmentArgs;

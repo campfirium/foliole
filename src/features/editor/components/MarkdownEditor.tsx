@@ -120,10 +120,6 @@ function useEditorLayoutEffects(
     requestAnimationFrame(syncScrollMetrics);
   }, [adapterRef, lineDiffDecorations, syncScrollMetrics]);
 
-  useEffect(() => {
-    adapterRef.current?.setHideTitleHeading(hideTitleHeading);
-  }, [adapterRef, hideTitleHeading]);
-
   const lastRestoredSelectionKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -147,6 +143,22 @@ function useEditorLayoutEffects(
     lastRestoredSelectionKeyRef.current = selectionKey;
     requestAnimationFrame(syncScrollMetrics);
   }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics, value]);
+}
+
+function useEditorAppearanceEffects(
+  adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>,
+  hideTitleHeading: boolean,
+  nodeId: string | null
+) {
+  useEffect(() => {
+    adapterRef.current?.setHideTitleHeading(hideTitleHeading);
+  }, [adapterRef, hideTitleHeading]);
+
+  useEffect(() => {
+    if (typeof adapterRef.current?.setNodeId === 'function') {
+      adapterRef.current.setNodeId(nodeId);
+    }
+  }, [adapterRef, nodeId]);
 }
 
 function buildGestureTrailPath(points: { x: number; y: number }[]) {
@@ -211,6 +223,7 @@ export function MarkdownEditor({
   const { scrollMetrics, syncScrollMetrics } = useEditorScrollbarMetrics(adapterRef);
 
   useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, hideTitleHeading, lineDiffDecorations);
+  useEditorAppearanceEffects(adapterRef, hideTitleHeading, nodeId);
 
   const scrollbar = useScrollbarState(scrollMetrics);
   const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);

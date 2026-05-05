@@ -74,6 +74,13 @@ export interface NativeImportLocalImageAttachmentArgs {
   sourcePath: string;
 }
 
+export interface NativeImportClipboardImageAttachmentArgs {
+  bytesBase64: string;
+  mimeType: string;
+  nodeId: string;
+  originalName?: string;
+}
+
 export type NativeImportLocalImageAttachmentErrorCode =
   | 'node_not_found'
   | 'source_not_found'
