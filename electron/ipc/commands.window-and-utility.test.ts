@@ -168,6 +168,13 @@ it('selects a Markdown or TXT file through the native import command', async () 
   expect(readFile).toHaveBeenCalledWith('/tmp/inbox.md', 'utf8');
 });
 
+it('selects a directory through the native utility command', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/imports'] });
+
+  await expect(handleInvokeRequest({ command: 'select_import_directory', args: {} })).resolves.toBe('/tmp/imports');
+  expect(showOpenDialog).toHaveBeenCalledTimes(1);
+});
+
 it('runs the unified text import pipeline through the native import command', async () => {
   await expect(handleInvokeRequest({ command: 'run_text_file_import', args: {} })).resolves.toEqual({
     content_fingerprint: 'content-fingerprint',

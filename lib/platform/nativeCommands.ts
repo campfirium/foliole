@@ -6,6 +6,7 @@ export const NATIVE_COMMANDS = {
   loadImportOverview: 'load_import_overview',
   runDirectoryImport: 'run_directory_import',
   runTextFileImport: 'run_text_file_import',
+  selectImportDirectory: 'select_import_directory',
   selectImportTextFile: 'select_import_text_file',
   resolveAppPaths: 'resolve_app_paths',
   reviewGrade: 'review_grade',

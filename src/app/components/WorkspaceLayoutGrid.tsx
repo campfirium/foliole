@@ -1,7 +1,6 @@
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
-import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceListSplitter } from './WorkspaceListSplitter';
@@ -87,16 +86,14 @@ function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: str
 
 function WorkspaceDocumentArea({
   documentNodeId,
-  isImportManagementOpen,
   props
 }: {
   documentNodeId: string | null;
-  isImportManagementOpen: boolean;
   props: WorkspaceLayoutProps;
 }) {
   return (
     <section aria-label="Document and review area" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-      <WorkspaceDocumentSurface documentNodeId={documentNodeId} isImportManagementOpen={isImportManagementOpen} props={props} />
+      <WorkspaceDocumentSurface documentNodeId={documentNodeId} props={props} />
       <ReviewModeToolbar
         isAnswerRevealed={props.isAnswerRevealed}
         isCurrentItemGradable={props.isCurrentReviewItemGradable}
@@ -118,17 +115,11 @@ function WorkspaceDocumentArea({
 
 function WorkspaceDocumentSurface({
   documentNodeId,
-  isImportManagementOpen,
   props
 }: {
   documentNodeId: string | null;
-  isImportManagementOpen: boolean;
   props: WorkspaceLayoutProps;
 }) {
-  if (isImportManagementOpen) {
-    return <ImportSourceWorkspace />;
-  }
-
   return (
     <DocumentPanelSection
       activeNodeId={documentNodeId}
@@ -212,7 +203,7 @@ export function WorkspaceLayoutGrid({
           className={`grid h-full min-h-0 gap-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]`}
           data-resizing={props.isResizingList || props.isResizingRightSidebar}
         >
-          {!props.isListCollapsed ? <WorkspaceListArea onSelectNode={onSelectNode} props={props} /> : null}
+        {!props.isListCollapsed ? <WorkspaceListArea onSelectNode={onSelectNode} props={props} /> : null}
           {!props.isListCollapsed ? (
             <WorkspaceListSplitter
               isResizingList={props.isResizingList}
@@ -222,7 +213,7 @@ export function WorkspaceLayoutGrid({
               onSplitterPointerDown={props.onSplitterPointerDown}
             />
           ) : null}
-          <WorkspaceDocumentArea documentNodeId={documentNodeId} isImportManagementOpen={isImportManagementOpen} props={props} />
+          <WorkspaceDocumentArea documentNodeId={documentNodeId} props={props} />
           {!props.isRightSidebarCollapsed ? (
             <WorkspaceRightSidebarSplitter
               isResizingRightSidebar={props.isResizingRightSidebar}

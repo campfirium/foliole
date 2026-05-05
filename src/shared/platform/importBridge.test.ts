@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { loadRuntimeImportOverview, runRuntimeTextFileImport, selectRuntimeImportTextFile } from './importBridge';
+import { loadRuntimeImportOverview, runRuntimeTextFileImport, selectRuntimeImportDirectory, selectRuntimeImportTextFile } from './importBridge';
 
 const IMPORT_OVERVIEW_PAYLOAD = {
   latest_failure: {
@@ -132,6 +132,14 @@ it('normalizes the native import file payload', async () => {
     kind: 'markdown'
   });
   expect(invoke).toHaveBeenCalledWith('select_import_text_file', {});
+});
+
+it('returns the selected import directory path from the runtime bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue('/tmp/import-folder');
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(selectRuntimeImportDirectory()).resolves.toBe('/tmp/import-folder');
+  expect(invoke).toHaveBeenCalledWith('select_import_directory');
 });
 
 it('normalizes the unified import result payload', async () => {

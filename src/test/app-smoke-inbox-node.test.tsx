@@ -35,11 +35,9 @@ it('opens import management from the left toolbar instead of replacing Inbox', (
   fireEvent.click(screen.getByRole('button', { name: 'Import management' }));
 
   expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Import sources' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'New folder source' })).toBeInTheDocument();
-  expect(screen.queryByText('Formal imports will land under Inbox. When items arrive, select a child node to read or edit it.')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Trigger draft-import-source-1')).toBeInTheDocument();
 
-  fireEvent.click(inboxItem);
+  fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
 
   expect(screen.getByText('Inbox is ready')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Import management' })).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { BrowserWindow, app, shell, type WebContents } from 'electron';
+import { BrowserWindow, app, dialog, shell, type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
@@ -69,6 +69,17 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
   return undefined;
 }
 
+async function selectImportDirectory(context?: InvokeContext) {
+  const window = resolveTargetWindow(context);
+  const selection = window
+    ? await dialog.showOpenDialog(window, { properties: ['openDirectory'] })
+    : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+  if (selection.canceled || selection.filePaths.length === 0) {
+    return null;
+  }
+  return selection.filePaths[0] ?? null;
+}
+
 export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const command = request.command;
   const args = (request.args ?? {}) as Record<string, unknown>;
@@ -89,6 +100,9 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   }
   if (isTypedRequest(request, NATIVE_COMMANDS.selectImportTextFile)) {
     return selectImportTextFile(resolveTargetWindow(context), request.args);
+  }
+  if (isTypedRequest(request, NATIVE_COMMANDS.selectImportDirectory)) {
+    return selectImportDirectory(context);
   }
 
   if (isTypedRequest(request, NATIVE_COMMANDS.resolveAppPaths)) {

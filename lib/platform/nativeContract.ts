@@ -135,6 +135,10 @@ export type NativeCommandMap = {
     args: NativeTextImportArgs;
     result: NativeImportedTextFile | null;
   };
+  [NATIVE_COMMANDS.selectImportDirectory]: {
+    args: undefined;
+    result: string | null;
+  };
   [NATIVE_COMMANDS.resolveAppPaths]: {
     args: undefined;
     result: NativeResolvedAppPaths;

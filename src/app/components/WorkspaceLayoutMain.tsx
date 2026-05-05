@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 
+import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
@@ -73,24 +74,29 @@ function useWorkspaceMainView(props: WorkspaceLayoutProps) {
   const handleOpenImportManagement = () => {
     setIsImportManagementOpen(true);
   };
-  const handleOpenNotesView = () => {
+  const handleCloseImportManagement = () => {
     setIsImportManagementOpen(false);
+  };
+  const handleOpenNotesView = () => {
+    handleCloseImportManagement();
     props.onOpenNotesView();
   };
   const handleOpenTrashView = () => {
-    setIsImportManagementOpen(false);
+    handleCloseImportManagement();
     props.onOpenTrashView();
   };
   const handleSelectNode = (nodeId: string) => {
-    setIsImportManagementOpen(false);
+    handleCloseImportManagement();
     props.onSelectNode(nodeId);
   };
 
   return {
+    handleCloseImportManagement,
     handleOpenImportManagement,
     handleOpenNotesView,
     handleOpenTrashView,
     handleSelectNode,
+    setImportManagementOpen: setIsImportManagementOpen,
     isImportManagementOpen
   };
 }
@@ -102,7 +108,8 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
     handleOpenNotesView,
     handleOpenTrashView,
     handleSelectNode,
-    isImportManagementOpen
+    isImportManagementOpen,
+    setImportManagementOpen
   } = useWorkspaceMainView(props);
   const workspaceGridStyle = {
     '--workspace-list-width': `${props.listWidth}px`,
@@ -146,6 +153,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onSelectNode={handleSelectNode}
         props={props}
       />
+      <ImportSourceWorkspace onOpenChange={setImportManagementOpen} open={isImportManagementOpen} />
       <SettingsOverlay props={props} />
     </main>
   );
