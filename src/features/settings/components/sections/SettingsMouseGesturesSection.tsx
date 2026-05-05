@@ -4,9 +4,9 @@ import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../s
 import type { EditorMouseGestureId } from '../../../editor/model/editorMouseGestures';
 import {
   EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS,
-  type EditorMouseGestureActionSetting,
-  type EditorMouseGestureSettings
+  type EditorMouseGestureActionSetting
 } from '../../../editor/model/editorMouseGestureSettings';
+import { useMouseGestureSettings } from '../../context/MouseGestureSettingsProvider';
 
 const GESTURE_ROWS: Array<{
   description: string;
@@ -88,9 +88,9 @@ function MouseGestureAreaSection() {
 }
 
 function MouseGestureBindingsSection(props: {
-  gestureActions: EditorMouseGestureSettings['gestureActions'];
   onActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
 }) {
+  const { settings } = useMouseGestureSettings();
   return (
     <SettingsSection
       ariaLabel="Mouse gesture bindings section"
@@ -105,7 +105,7 @@ function MouseGestureBindingsSection(props: {
               aria-label={`${gesture.label} mouse gesture action`}
               className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
               onChange={(event) => props.onActionChange(gesture.gestureId, event.target.value as EditorMouseGestureActionSetting)}
-              value={props.gestureActions[gesture.gestureId]}
+              value={settings.gestureActions[gesture.gestureId]}
             >
               {EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS.map((action) => (
                 <option key={action} value={action}>
@@ -121,11 +121,11 @@ function MouseGestureBindingsSection(props: {
 }
 
 function MouseGestureTrailSection(props: {
-  mouseGestureSettings: EditorMouseGestureSettings;
   onTrailColorChange: (value: string) => void;
   onTrailLineWidthChange: (value: number) => void;
   onTrailOpacityChange: (value: number) => void;
 }) {
+  const { settings } = useMouseGestureSettings();
   return (
     <SettingsSection
       ariaLabel="Mouse gesture trail section"
@@ -139,24 +139,24 @@ function MouseGestureTrailSection(props: {
             className="h-10 w-14 rounded-md border border-border bg-bg-elevated p-1"
             onChange={(event) => props.onTrailColorChange(event.target.value)}
             type="color"
-            value={props.mouseGestureSettings.trailColor}
+            value={settings.trailColor}
           />
           <input
             aria-label="Mouse gesture trail color hex"
             className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
             onChange={(event) => props.onTrailColorChange(event.target.value)}
-            value={props.mouseGestureSettings.trailColor}
+            value={settings.trailColor}
           />
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow description="Visible stroke width for the gesture trail." title="Line width">
         <SettingsControlSlot>
-          <NumberField ariaLabel="Mouse gesture trail line width" max={12} min={1} onChange={props.onTrailLineWidthChange} step={0.25} suffix="px" value={props.mouseGestureSettings.trailLineWidth} />
+          <NumberField ariaLabel="Mouse gesture trail line width" max={12} min={1} onChange={props.onTrailLineWidthChange} step={0.25} suffix="px" value={settings.trailLineWidth} />
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow description="Opacity of the gesture trail line." title="Opacity">
         <SettingsControlSlot>
-          <NumberField ariaLabel="Mouse gesture trail opacity" max={1} min={0.05} onChange={props.onTrailOpacityChange} step={0.05} value={props.mouseGestureSettings.trailOpacity} />
+          <NumberField ariaLabel="Mouse gesture trail opacity" max={1} min={0.05} onChange={props.onTrailOpacityChange} step={0.05} value={settings.trailOpacity} />
         </SettingsControlSlot>
       </SettingsRow>
     </SettingsSection>
@@ -164,10 +164,10 @@ function MouseGestureTrailSection(props: {
 }
 
 function MouseGestureThresholdsSection(props: {
-  mouseGestureSettings: EditorMouseGestureSettings;
   onSegmentThresholdChange: (value: number) => void;
   onTrailPointThresholdChange: (value: number) => void;
 }) {
+  const { settings } = useMouseGestureSettings();
   return (
     <SettingsSection
       ariaLabel="Mouse gesture thresholds section"
@@ -176,50 +176,38 @@ function MouseGestureThresholdsSection(props: {
     >
       <SettingsRow description="Minimum movement before a direction is accepted." title="Direction threshold">
         <SettingsControlSlot>
-          <NumberField ariaLabel="Mouse gesture direction threshold" max={48} min={8} onChange={props.onSegmentThresholdChange} step={1} suffix="px" value={props.mouseGestureSettings.segmentThresholdPx} />
+          <NumberField ariaLabel="Mouse gesture direction threshold" max={48} min={8} onChange={props.onSegmentThresholdChange} step={1} suffix="px" value={settings.segmentThresholdPx} />
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow description="Minimum distance between points in the visible trail." title="Trail point spacing">
         <SettingsControlSlot>
-          <NumberField ariaLabel="Mouse gesture trail point threshold" max={24} min={2} onChange={props.onTrailPointThresholdChange} step={1} suffix="px" value={props.mouseGestureSettings.trailPointThresholdPx} />
+          <NumberField ariaLabel="Mouse gesture trail point threshold" max={24} min={2} onChange={props.onTrailPointThresholdChange} step={1} suffix="px" value={settings.trailPointThresholdPx} />
         </SettingsControlSlot>
       </SettingsRow>
     </SettingsSection>
   );
 }
 
-export function SettingsMouseGesturesSection({
-  mouseGestureSettings,
-  onActionChange,
-  onSegmentThresholdChange,
-  onTrailColorChange,
-  onTrailLineWidthChange,
-  onTrailOpacityChange,
-  onTrailPointThresholdChange
-}: {
-  mouseGestureSettings: EditorMouseGestureSettings;
-  onActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
-  onSegmentThresholdChange: (value: number) => void;
-  onTrailColorChange: (value: string) => void;
-  onTrailLineWidthChange: (value: number) => void;
-  onTrailOpacityChange: (value: number) => void;
-  onTrailPointThresholdChange: (value: number) => void;
-}) {
+export function SettingsMouseGesturesSection() {
+  const {
+    setAction,
+    setSegmentThreshold,
+    setTrailColor,
+    setTrailLineWidth,
+    setTrailOpacity,
+    setTrailPointThreshold
+  } = useMouseGestureSettings();
+
   return (
     <>
       <MouseGestureAreaSection />
-      <MouseGestureBindingsSection gestureActions={mouseGestureSettings.gestureActions} onActionChange={onActionChange} />
+      <MouseGestureBindingsSection onActionChange={setAction} />
       <MouseGestureTrailSection
-        mouseGestureSettings={mouseGestureSettings}
-        onTrailColorChange={onTrailColorChange}
-        onTrailLineWidthChange={onTrailLineWidthChange}
-        onTrailOpacityChange={onTrailOpacityChange}
+        onTrailColorChange={setTrailColor}
+        onTrailLineWidthChange={setTrailLineWidth}
+        onTrailOpacityChange={setTrailOpacity}
       />
-      <MouseGestureThresholdsSection
-        mouseGestureSettings={mouseGestureSettings}
-        onSegmentThresholdChange={onSegmentThresholdChange}
-        onTrailPointThresholdChange={onTrailPointThresholdChange}
-      />
+      <MouseGestureThresholdsSection onSegmentThresholdChange={setSegmentThreshold} onTrailPointThresholdChange={setTrailPointThreshold} />
     </>
   );
 }

@@ -12,7 +12,6 @@ import { buildPaletteState, useCurrentReviewPreview } from './appControllerHelpe
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import {
   useAppearanceState,
-  useMouseGestureSettingsState,
   useNowIso,
   useWorkspaceControllerState,
   useWorkspaceSelectors
@@ -168,7 +167,6 @@ function buildControllerLayoutState(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isReviewEditing: boolean;
   isStudyMode: boolean;
-  mouseGestures: ReturnType<typeof useMouseGestureSettingsState>;
   nowIso: string;
   paletteItems: CommandPaletteItem[];
   reviewDueCount: number;
@@ -190,7 +188,6 @@ function buildControllerLayoutState(args: {
     isStudyMode: args.isStudyMode,
     listResize: args.controller.listResize,
     mapPaletteItemsToHotkeyItems: (items) => mapPaletteItemsToHotkeyItems(items, args.hotkeys.overrides),
-    mouseGestures: args.mouseGestures,
     nav: args.controller.nav,
     nowIso: args.nowIso,
     reviewDueCount: args.reviewDueCount,
@@ -210,7 +207,6 @@ function buildControllerLayoutState(args: {
 export function useAppController(): AppControllerResult {
   const ws = useWorkspaceSelectors();
   const appearance = useAppearanceState();
-  const mouseGestures = useMouseGestureSettingsState();
   const reviewSettings = useReviewSchedulerSettingsState();
   const nowIso = useNowIso();
   const isWorkspaceHydrated = useWorkspaceHydration();
@@ -232,7 +228,6 @@ export function useAppController(): AppControllerResult {
     hotkeys,
     isReviewEditing,
     isStudyMode,
-    mouseGestures,
     nowIso,
     paletteItems,
     reviewDueCount,

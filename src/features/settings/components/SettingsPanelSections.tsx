@@ -1,10 +1,5 @@
 import type { RefObject } from 'react';
 
-import type { EditorMouseGestureId } from '../../editor/model/editorMouseGestures';
-import type {
-  EditorMouseGestureActionSetting,
-  EditorMouseGestureSettings
-} from '../../editor/model/editorMouseGestureSettings';
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import type {
   AccentColorPreset,
@@ -42,7 +37,6 @@ export interface SettingsCategoryContentProps {
   isInboxDesktopRuntime: boolean;
   isInboxPathPending: boolean;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-  mouseGestureSettings: EditorMouseGestureSettings;
   maximumIntervalDays: number;
   monospaceFontOptions: string[];
   onAccentColorPresetChange: (value: AccentColorPreset) => void;
@@ -64,12 +58,6 @@ export interface SettingsCategoryContentProps {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-  onMouseGestureActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
-  onMouseGestureSegmentThresholdChange: (value: number) => void;
-  onMouseGestureTrailColorChange: (value: string) => void;
-  onMouseGestureTrailLineWidthChange: (value: number) => void;
-  onMouseGestureTrailOpacityChange: (value: number) => void;
-  onMouseGestureTrailPointThresholdChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onPriorityRatioChange: (value: number) => void;
@@ -138,17 +126,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     return <AppearanceSettingsContent {...props} />;
   }
   if (props.activeCategory === 'mouse-gestures') {
-    return (
-      <SettingsMouseGesturesSection
-        mouseGestureSettings={props.mouseGestureSettings}
-        onActionChange={props.onMouseGestureActionChange}
-        onSegmentThresholdChange={props.onMouseGestureSegmentThresholdChange}
-        onTrailColorChange={props.onMouseGestureTrailColorChange}
-        onTrailLineWidthChange={props.onMouseGestureTrailLineWidthChange}
-        onTrailOpacityChange={props.onMouseGestureTrailOpacityChange}
-        onTrailPointThresholdChange={props.onMouseGestureTrailPointThresholdChange}
-      />
-    );
+    return <SettingsMouseGesturesSection />;
   }
   if (props.activeCategory === 'import') {
     return (

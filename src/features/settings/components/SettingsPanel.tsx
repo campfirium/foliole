@@ -2,11 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
-import type { EditorMouseGestureId } from '../../editor/model/editorMouseGestures';
-import type {
-  EditorMouseGestureActionSetting,
-  EditorMouseGestureSettings
-} from '../../editor/model/editorMouseGestureSettings';
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
@@ -54,7 +49,6 @@ interface SettingsPanelProps {
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];
-  mouseGestureSettings: EditorMouseGestureSettings;
   onClose: () => void;
   onBaseColorModeChange: (value: BaseColorMode) => void;
   onAccentColorPresetChange: (value: AccentColorPreset) => void;
@@ -78,12 +72,6 @@ interface SettingsPanelProps {
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-  onMouseGestureActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
-  onMouseGestureTrailColorChange: (value: string) => void;
-  onMouseGestureTrailLineWidthChange: (value: number) => void;
-  onMouseGestureTrailOpacityChange: (value: number) => void;
-  onMouseGestureSegmentThresholdChange: (value: number) => void;
-  onMouseGestureTrailPointThresholdChange: (value: number) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
   onHotkeyReset: (commandId: string) => void;
@@ -144,7 +132,6 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   readingIntervalGrowthFactorMin: number;
   readingIntervalGrowthFactorMax: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
-  mouseGestureSettings: EditorMouseGestureSettings;
   monospaceFontOptions: string[];
   onAccentColorPresetChange: (value: AccentColorPreset) => void;
   onAccentColorPresetReset: () => void;
@@ -171,12 +158,6 @@ type SettingsPanelBodyProps = SettingsCategoryContentProps & {
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
-  onMouseGestureActionChange: (gestureId: EditorMouseGestureId, action: EditorMouseGestureActionSetting) => void;
-  onMouseGestureTrailColorChange: (value: string) => void;
-  onMouseGestureTrailLineWidthChange: (value: number) => void;
-  onMouseGestureTrailOpacityChange: (value: number) => void;
-  onMouseGestureSegmentThresholdChange: (value: number) => void;
-  onMouseGestureTrailPointThresholdChange: (value: number) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onUiFontPresetChange: (value: InterfaceFontPreset) => void;
   safeAccentColor: AccentColorPreset;

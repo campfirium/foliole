@@ -1,20 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, render, screen, type RenderOptions } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 
-const DEFAULT_MOUSE_GESTURE_SETTINGS = {
-  area: 'main-panel' as const,
-  gestureActions: {
-    left: 'disabled' as const,
-    right: 'disabled' as const,
-    'left-up': 'scroll-top' as const,
-    'left-down': 'scroll-bottom' as const
-  },
-  segmentThresholdPx: 18,
-  trailColor: '#2f3b4d',
-  trailLineWidth: 3,
-  trailOpacity: 0.25,
-  trailPointThresholdPx: 6
-};
+import { MouseGestureSettingsProvider } from '../context/MouseGestureSettingsProvider';
 
 const DEFAULT_SETTINGS_PANEL_PROPS = {
   accentColorPreset: '#3f8f68' as const,
@@ -37,7 +25,6 @@ const DEFAULT_SETTINGS_PANEL_PROPS = {
   interfaceFontPreset: 'default' as const,
   interfaceFontSize: 17,
   markdownSyntaxVisibility: 'visible' as const,
-  mouseGestureSettings: DEFAULT_MOUSE_GESTURE_SETTINGS,
   monospaceFontPreset: 'default' as const,
   onAccentColorPresetChange: () => undefined,
   onAccentColorPresetReset: () => undefined,
@@ -64,12 +51,6 @@ const DEFAULT_SETTINGS_PANEL_PROPS = {
   onInterfaceFontSizeChange: () => undefined,
   onInterfaceFontSizeReset: () => undefined,
   onMarkdownSyntaxVisibilityChange: () => undefined,
-  onMouseGestureActionChange: () => undefined,
-  onMouseGestureTrailColorChange: () => undefined,
-  onMouseGestureTrailLineWidthChange: () => undefined,
-  onMouseGestureTrailOpacityChange: () => undefined,
-  onMouseGestureSegmentThresholdChange: () => undefined,
-  onMouseGestureTrailPointThresholdChange: () => undefined,
   onMonospaceFontPresetChange: () => undefined,
   onUiFontPresetChange: () => undefined,
   uiFontPreset: 'default' as const
@@ -85,6 +66,13 @@ export function createDeferred<T>() {
 
 export function createProps() {
   return { ...DEFAULT_SETTINGS_PANEL_PROPS };
+}
+
+export function renderWithMouseGestureProvider(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+  return render(ui, {
+    wrapper: ({ children }) => <MouseGestureSettingsProvider>{children}</MouseGestureSettingsProvider>,
+    ...options
+  });
 }
 
 export function openReviewSettings() {

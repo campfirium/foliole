@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getEditorDisplayMode, type EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import { getEditorMouseGestureSettings } from '../../features/editor/model/editorMouseGestureSettings';
 import {
   getMarkdownSyntaxVisibility,
   type MarkdownSyntaxVisibility
@@ -99,14 +98,6 @@ export function useAppearanceState() {
     setAccentColorPresetState, setBaseColorModeState, setCustomInterfaceFontState, setCustomMonospaceFontState,
     setCustomUiFontState, setEditorDisplayModeState, setInterfaceFontPresetState, setInterfaceFontSizeState,
     setMarkdownSyntaxVisibilityState, setMonospaceFontPresetState, setUiFontPresetState
-  };
-}
-
-export function useMouseGestureSettingsState() {
-  const [mouseGestureSettings, setMouseGestureSettingsState] = useState(() => getEditorMouseGestureSettings());
-  return {
-    mouseGestureSettings,
-    setMouseGestureSettingsState
   };
 }
 

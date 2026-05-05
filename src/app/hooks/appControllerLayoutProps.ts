@@ -68,12 +68,6 @@ export interface BuildControllerLayoutPropsArgs {
   hotkeyItems: CommandPaletteItem[];
   isReviewEditing: boolean;
   isStudyMode: boolean;
-  mouseGestures: {
-    mouseGestureSettings: import('../../features/editor/model/editorMouseGestureSettings').EditorMouseGestureSettings;
-    setMouseGestureSettingsState: (
-      value: import('../../features/editor/model/editorMouseGestureSettings').EditorMouseGestureSettings
-    ) => void;
-  };
   listResize: ReturnType<typeof useListResizer>;
   nav: ReturnType<typeof useWorkspaceNavigation>;
   nowIso: string;
@@ -161,7 +155,6 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     isReviewEditing: args.isReviewEditing,
     isImportManagementOpen: args.runtime.isImportManagementOpen,
     isListCollapsed: args.ws.isListCollapsed,
-    mouseGestures: args.mouseGestures,
     isRightSidebarCollapsed: args.ws.isRightSidebarCollapsed,
     isTrashViewOpen: args.trash.isTrashViewOpen,
     isViewingTrashNode: args.runtime.isViewingTrashNode,

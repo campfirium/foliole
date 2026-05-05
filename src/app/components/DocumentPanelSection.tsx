@@ -3,8 +3,6 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
-import type { EditorMouseGestureBinding } from '../../features/editor/model/editorMouseGestures';
-import type { EditorMouseGestureSettings } from '../../features/editor/model/editorMouseGestureSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -25,8 +23,6 @@ interface DocumentPanelSectionProps {
   documentMaxWidth: number;
   editorContent: string;
   editorDisplayMode: EditorDisplayMode;
-  editorMouseGestureBindings: EditorMouseGestureBinding[];
-  editorMouseGestureSettings: EditorMouseGestureSettings;
   editorAppearanceKey: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -103,8 +99,6 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           editorAppearanceKey={props.editorAppearanceKey}
           editorContent={props.editorContent}
           editorContentPaddingBottom={editorContentPaddingBottom}
-          editorMouseGestureBindings={props.editorMouseGestureBindings}
-          editorMouseGestureSettings={props.editorMouseGestureSettings}
           editorNodeId={props.editorNodeId}
           editorNodeViewState={props.editorNodeViewState}
           emptyState={emptyState}

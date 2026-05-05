@@ -120,8 +120,6 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       editorAppearanceKey={`${props.markdownSyntaxVisibility}-${props.editorDisplayMode}`}
       editorContent={props.editorContent}
       editorDisplayMode={props.editorDisplayMode}
-      editorMouseGestureBindings={props.mouseGestureBindings}
-      editorMouseGestureSettings={props.mouseGestureSettings}
       editorNodeId={props.editorNodeId}
       editorNodeViewState={props.editorNodeViewState}
       isDocumentResizing={props.isDocumentResizing}

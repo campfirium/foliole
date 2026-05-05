@@ -1,13 +1,9 @@
 import { type CSSProperties, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
+import { useMouseGestureSettings } from '../../settings/context/MouseGestureSettingsProvider';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorAdapter } from '../adapters/EditorAdapter';
-import { DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS, type EditorMouseGestureBinding } from '../model/editorMouseGestures';
-import {
-  DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
-  type EditorMouseGestureSettings
-} from '../model/editorMouseGestureSettings';
 
 import { useEditorScrollbarMetrics, useScrollbarState, useThumbPointerHandlers, useTrackPointerHandler } from './markdownEditorScrollbar';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
@@ -31,8 +27,6 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
-  mouseGestureBindings?: EditorMouseGestureBinding[];
-  mouseGestureSettings?: EditorMouseGestureSettings;
 }
 
 function useEditorAdapter(
@@ -175,10 +169,9 @@ export function MarkdownEditor({
   value,
   onChange,
   onContextMenu,
-  mouseGestureBindings = DEFAULT_EDITOR_MOUSE_GESTURE_BINDINGS,
-  mouseGestureSettings = DEFAULT_EDITOR_MOUSE_GESTURE_SETTINGS,
   onReady
 }: MarkdownEditorProps) {
+  const { bindings, settings } = useMouseGestureSettings();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value);
   const { scrollMetrics, syncScrollMetrics } = useEditorScrollbarMetrics(adapterRef);
@@ -189,7 +182,7 @@ export function MarkdownEditor({
   const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);
   const onTrackPointerDown = useTrackPointerHandler(adapterRef, hostRef, scrollbar, syncScrollMetrics);
   const handlers = useThumbPointerHandlers(adapterRef, scrollMetrics, scrollbar, syncScrollMetrics);
-  const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, mouseGestureBindings, mouseGestureSettings);
+  const mouseGesture = useEditorMouseGesture(adapterRef, hostRef, bindings, settings);
   const editorStyle = { '--editor-content-padding-bottom': contentPaddingBottom } as CSSProperties;
   const gestureTrailPath = useMemo(() => buildGestureTrailPath(mouseGesture.trail?.points ?? []), [mouseGesture.trail?.points]);
 

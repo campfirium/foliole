@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,8 @@ import {
   createDeferred,
   createProps,
   expectPushQueueValues,
-  openReviewSettings
+  openReviewSettings,
+  renderWithMouseGestureProvider
 } from './SettingsPanel.testUtils';
 
 function PushQueueSettingsHarness() {
@@ -101,7 +102,7 @@ it('keeps font selects disabled until system fonts are loaded', async () => {
   const deferred = createDeferred<{ fonts: string[]; monospaceFonts: string[] }>();
   mockedListAvailableSystemFonts.mockReturnValue(deferred.promise);
 
-  render(<SettingsPanel {...createProps()} />);
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
@@ -124,7 +125,7 @@ it('keeps font selects disabled until system fonts are loaded', async () => {
 it('updates desired retention from review settings slider', async () => {
   const onDesiredRetentionChange = vi.fn();
 
-  render(
+  renderWithMouseGestureProvider(
     <SettingsPanel
       {...createProps()}
       onDesiredRetentionChange={onDesiredRetentionChange}
@@ -147,7 +148,7 @@ it('updates remaining review scheduler controls from review settings section', a
   const onEnableFuzzChange = vi.fn();
   const onEnableShortTermChange = vi.fn();
 
-  render(
+  renderWithMouseGestureProvider(
     <SettingsPanel
       {...createProps()}
       onMaximumIntervalDaysChange={onMaximumIntervalDaysChange}
@@ -174,25 +175,8 @@ it('updates remaining review scheduler controls from review settings section', a
   });
 });
 
-it('updates mouse gesture bindings and trail controls from the dedicated section', async () => {
-  const onMouseGestureActionChange = vi.fn();
-  const onMouseGestureTrailColorChange = vi.fn();
-  const onMouseGestureTrailLineWidthChange = vi.fn();
-  const onMouseGestureTrailOpacityChange = vi.fn();
-  const onMouseGestureSegmentThresholdChange = vi.fn();
-  const onMouseGestureTrailPointThresholdChange = vi.fn();
-
-  render(
-    <SettingsPanel
-      {...createProps()}
-      onMouseGestureActionChange={onMouseGestureActionChange}
-      onMouseGestureTrailColorChange={onMouseGestureTrailColorChange}
-      onMouseGestureTrailLineWidthChange={onMouseGestureTrailLineWidthChange}
-      onMouseGestureTrailOpacityChange={onMouseGestureTrailOpacityChange}
-      onMouseGestureSegmentThresholdChange={onMouseGestureSegmentThresholdChange}
-      onMouseGestureTrailPointThresholdChange={onMouseGestureTrailPointThresholdChange}
-    />
-  );
+it('updates mouse gesture settings from the dedicated section and persists them', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Mouse gestures' }));
   fireEvent.change(screen.getByLabelText('Left then up mouse gesture action'), {
@@ -215,17 +199,17 @@ it('updates mouse gesture bindings and trail controls from the dedicated section
   });
 
   await waitFor(() => {
-    expect(onMouseGestureActionChange).toHaveBeenCalledWith('left-up', 'scroll-bottom');
-    expect(onMouseGestureTrailColorChange).toHaveBeenCalledWith('#ff5500');
-    expect(onMouseGestureTrailLineWidthChange).toHaveBeenCalledWith(4.5);
-    expect(onMouseGestureTrailOpacityChange).toHaveBeenCalledWith(0.6);
-    expect(onMouseGestureSegmentThresholdChange).toHaveBeenCalledWith(24);
-    expect(onMouseGestureTrailPointThresholdChange).toHaveBeenCalledWith(10);
+    expect(window.localStorage.getItem('foliole-mouse-gesture-left-up-action')).toBe('scroll-bottom');
+    expect(window.localStorage.getItem('foliole-mouse-gesture-trail-color')).toBe('#ff5500');
+    expect(window.localStorage.getItem('foliole-mouse-gesture-trail-line-width')).toBe('4.5');
+    expect(window.localStorage.getItem('foliole-mouse-gesture-trail-opacity')).toBe('0.6');
+    expect(window.localStorage.getItem('foliole-mouse-gesture-segment-threshold')).toBe('24');
+    expect(window.localStorage.getItem('foliole-mouse-gesture-trail-point-threshold')).toBe('10');
   });
 });
 
 it('keeps push queue defaults, saved values, and reopened review fields in sync', async () => {
-  render(<PushQueueSettingsHarness />);
+  renderWithMouseGestureProvider(<PushQueueSettingsHarness />);
 
   openReviewSettings();
   expectPushQueueSemanticCopy();
