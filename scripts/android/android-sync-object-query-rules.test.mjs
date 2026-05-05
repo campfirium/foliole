@@ -47,7 +47,7 @@ describe('Android sync object query rules', () => {
     expect(storeSource).toContain('FolioleCompanionSyncObjectQueryRules.syncObjectsQueryName(context)');
     expect(storeSource).toContain('FolioleCompanionSyncObjectQueryRules.syncStateChangesQueryName(context)');
     expect(storeSource).toContain('FolioleCompanionSyncObjectQueryRules.emptySyncObjects(context)');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "syncObjectRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "syncObjectRead", groupName)');
     expect(rulesSource).toContain('syncObjectsGroup(context)');
     expect(rulesSource).toContain('syncStateChangesGroup(context)');
     expect(rulesSource).not.toContain('group(context, "syncObjects").');

@@ -77,20 +77,7 @@ final class FolioleCompanionSyncObjectQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "syncObjectRead");
-        JSONObject group = rules.optJSONObject(groupKey(rules, groupName));
-        if (group == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync object read rule: " + groupName);
-        }
-        return group;
-    }
-
-    private static String groupKey(JSONObject rules, String groupName) throws Exception {
-        JSONObject groupKeys = rules.optJSONObject("groupKeys");
-        if (groupKeys == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing sync object read group keys.");
-        }
-        return groupKeys.getString(groupName);
+        return FolioleCompanionQueryAssetKeys.ruleGroup(context, "syncObjectRead", groupName);
     }
 
     private static String placeholders(int count) {

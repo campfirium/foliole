@@ -17,6 +17,10 @@ export { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES };
 export { ANDROID_COMPANION_CONTENT_READ_RULES };
 
 export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
+  groupKeys: {
+    backfillSnapshots: 'backfillSnapshots',
+    nodeAttachments: 'nodeAttachments'
+  },
   backfillSnapshots: {
     attachmentIdKey: 'attachment_id',
     attachmentsKey: 'attachments',
@@ -33,6 +37,11 @@ export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
+  groupKeys: {
+    attachmentResources: 'attachmentResources',
+    contentBlobs: 'contentBlobs',
+    pdfPageText: 'pdfPageText'
+  },
   attachmentResources: {
     attachmentIdKey: 'attachment_id',
     contentHashKey: 'content_hash',
@@ -116,6 +125,10 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
+  groupKeys: {
+    snapshot: 'snapshot',
+    viewState: 'viewState'
+  },
   snapshot: {
     bodyStatusExpressionToken: '__BODY_STATUS_EXPRESSION__',
     contentBlobJoinToken: '__CONTENT_BLOB_JOIN__',

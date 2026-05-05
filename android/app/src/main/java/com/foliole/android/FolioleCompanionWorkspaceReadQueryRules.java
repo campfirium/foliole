@@ -25,11 +25,6 @@ final class FolioleCompanionWorkspaceReadQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "workspaceRead");
-        JSONObject group = rules.optJSONObject(groupName);
-        if (group == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing workspace read rule: " + groupName);
-        }
-        return group;
+        return FolioleCompanionQueryAssetKeys.ruleGroup(context, "workspaceRead", groupName);
     }
 }

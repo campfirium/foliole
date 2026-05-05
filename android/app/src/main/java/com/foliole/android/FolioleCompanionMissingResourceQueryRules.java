@@ -73,11 +73,6 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "missingResourceRead");
-        JSONObject group = rules.optJSONObject(groupName);
-        if (group == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing resource read rule: " + groupName);
-        }
-        return group;
+        return FolioleCompanionQueryAssetKeys.ruleGroup(context, "missingResourceRead", groupName);
     }
 }

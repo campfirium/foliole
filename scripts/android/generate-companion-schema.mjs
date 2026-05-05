@@ -29,7 +29,8 @@ import {
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import {
   ANDROID_COMPANION_QUERY_ASSET_KEYS,
-  ANDROID_COMPANION_QUERY_DEFINITIONS
+  ANDROID_COMPANION_QUERY_DEFINITIONS,
+  ANDROID_COMPANION_QUERY_SHAPE_KEYS
 } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/androidCompanionPayloadQueryDefinitions.ts';
 import {
@@ -102,6 +103,7 @@ await fs.writeFile(
     diagnosticRead: ANDROID_COMPANION_DIAGNOSTIC_READ_RULES,
     missingResourceRead: ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES,
     nodeAttachmentRead: ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES,
+    queryShape: ANDROID_COMPANION_QUERY_SHAPE_KEYS,
     resourceRead: ANDROID_COMPANION_RESOURCE_READ_RULES,
     runtimeQueries: ANDROID_COMPANION_RUNTIME_QUERY_RULES,
     syncConflictRead: ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,

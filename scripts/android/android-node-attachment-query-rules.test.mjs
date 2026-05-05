@@ -18,6 +18,10 @@ describe('Android node attachment read query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.nodeAttachmentRead).toEqual(ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES);
+    expect(definitions.nodeAttachmentRead.groupKeys).toEqual({
+      backfillSnapshots: 'backfillSnapshots',
+      nodeAttachments: 'nodeAttachments'
+    });
     expect(definitions.nodeAttachmentRead.backfillSnapshots).toMatchObject({
       attachmentIdKey: 'attachment_id',
       attachmentsKey: 'attachments',
@@ -39,7 +43,7 @@ describe('Android node attachment read query rules', () => {
 
     expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.backfillSnapshotString(context, key)');
     expect(storeSource).toContain('FolioleCompanionNodeAttachmentQueryRules.nodeAttachmentString(context, key)');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "nodeAttachmentRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "nodeAttachmentRead", groupName)');
     expect(storeSource).not.toContain('"nodeAttachmentBackfillSnapshots"');
     expect(storeSource).not.toContain('"nodeAttachments"');
     expect(storeSource).not.toContain('"snapshots"');

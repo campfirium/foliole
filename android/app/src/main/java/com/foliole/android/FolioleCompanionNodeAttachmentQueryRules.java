@@ -16,11 +16,6 @@ final class FolioleCompanionNodeAttachmentQueryRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = FolioleCompanionQueryAssetKeys.section(context, "nodeAttachmentRead");
-        JSONObject group = rules.optJSONObject(groupName);
-        if (group == null) {
-            throw new IllegalStateException("Companion query definitions asset is missing node attachment read rule: " + groupName);
-        }
-        return group;
+        return FolioleCompanionQueryAssetKeys.ruleGroup(context, "nodeAttachmentRead", groupName);
     }
 }

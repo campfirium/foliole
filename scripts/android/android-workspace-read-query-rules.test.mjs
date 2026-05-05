@@ -19,6 +19,10 @@ describe('Android workspace read query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.workspaceRead).toEqual(ANDROID_COMPANION_WORKSPACE_READ_RULES);
+    expect(definitions.workspaceRead.groupKeys).toEqual({
+      snapshot: 'snapshot',
+      viewState: 'viewState'
+    });
     expect(definitions.workspaceRead.snapshot).toMatchObject({
       deletedAtRowKey: 'deleted_at',
       metaValueQueryName: 'workspaceMetaValue',
@@ -64,7 +68,7 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
     expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
     expect(combinedSource).toContain('field.getString("outputKey")');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "workspaceRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "workspaceRead", groupName)');
     expect(combinedSource).not.toContain('"parentNodeId"');
     expect(combinedSource).not.toContain('"scrollTop"');
     expect(combinedSource).not.toContain('"selectionFrom"');

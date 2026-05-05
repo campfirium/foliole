@@ -31,6 +31,11 @@ describe('Android resource read query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.resourceRead).toEqual(ANDROID_COMPANION_RESOURCE_READ_RULES);
+    expect(definitions.resourceRead.groupKeys).toEqual({
+      attachmentResources: 'attachmentResources',
+      contentBlobs: 'contentBlobs',
+      pdfPageText: 'pdfPageText'
+    });
     expect(definitions.resourceRead.contentBlobs).toMatchObject({
       batchResponseKeys: {
         syncedHashes: 'synced_hashes',
@@ -128,7 +133,7 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentObject(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextObject(context, "outputKeys")');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "resourceRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName)');
     expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestsByHashes"');

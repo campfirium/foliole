@@ -19,6 +19,10 @@ describe('Android content read query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.contentRead).toEqual(ANDROID_COMPANION_CONTENT_READ_RULES);
+    expect(definitions.contentRead.groupKeys).toEqual({
+      externalDocuments: 'externalDocuments',
+      readableArticle: 'readableArticle'
+    });
     expect(definitions.contentRead.externalDocuments).toMatchObject({
       byIdQueryName: 'externalDocumentById',
       defaultSearchLimit: 20,
@@ -40,7 +44,7 @@ describe('Android content read query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "contentRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName)');
     expect(combinedStoreSource).not.toContain('"externalDocumentById"');
     expect(combinedStoreSource).not.toContain('"readableArticleFirstNode"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextPages"');

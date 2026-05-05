@@ -1,4 +1,8 @@
 export const ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES = {
+  groupKeys: {
+    attachmentResources: 'attachmentResources',
+    contentBlobs: 'contentBlobs'
+  },
   attachmentResources: {
     byIdQueryName: 'attachmentResourceMissingById',
     emptyResultKey: 'resource',

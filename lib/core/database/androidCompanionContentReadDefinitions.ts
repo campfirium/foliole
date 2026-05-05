@@ -1,4 +1,8 @@
 export const ANDROID_COMPANION_CONTENT_READ_RULES = {
+  groupKeys: {
+    externalDocuments: 'externalDocuments',
+    readableArticle: 'readableArticle'
+  },
   externalDocuments: {
     byIdQueryName: 'externalDocumentById',
     defaultSearchLimit: 20,

@@ -54,6 +54,7 @@ describe('Android sync payload routing metadata', () => {
       diagnosticRead: 'diagnosticRead',
       missingResourceRead: 'missingResourceRead',
       nodeAttachmentRead: 'nodeAttachmentRead',
+      queryShape: 'queryShape',
       queries: 'queries',
       resourceRead: 'resourceRead',
       runtimeQueries: 'runtimeQueries',
@@ -62,6 +63,12 @@ describe('Android sync payload routing metadata', () => {
       syncStreamRead: 'syncStreamRead',
       syncPayloadRouting: 'syncPayloadRouting',
       workspaceRead: 'workspaceRead'
+    });
+    expect(definitions.queryShape).toMatchObject({
+      column: { key: 'key', source: 'source', type: 'type' },
+      columnTypes: { double: 'double', json: 'json', long: 'long' },
+      query: { columns: 'columns', resultKey: 'resultKey', sql: 'sql', syncPayload: 'syncPayload' },
+      routing: { routes: 'routes' }
     });
     expect(definitions.syncPayloadRouting).toMatchObject({
       argModeKey: 'argMode',
@@ -102,7 +109,8 @@ describe('Android sync payload routing metadata', () => {
     const payloadJson = await readFile(SYNC_PAYLOAD_JSON, 'utf8');
     const viewStateStore = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
 
-    expect(payloadStore).toContain('syncPayloadRouting(context).getJSONArray("routes")');
+    expect(payloadStore).toContain('FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes")');
+    expect(payloadStore).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "syncPayload")');
     expect(payloadStore).toContain('routingString(context, "objectIdDelimiter")');
     expect(payloadStore).toContain('routingInt(context, "objectIdPartLimit")');
     expect(payloadStore).toContain('row.getString(routingString(context, "objectTypeKey"))');
@@ -123,6 +131,8 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).not.toContain('row.put("payload_json"');
     expect(payloadJson).not.toContain('record.opt("payload_json"');
     expect(payloadStore).not.toContain('route.getString("queryName")');
+    expect(payloadStore).not.toContain('getJSONObject("syncPayload")');
+    expect(payloadStore).not.toContain('getJSONArray("routes")');
     expect(payloadStore).not.toContain('Iterator<String> names = queries.keys()');
     expect(payloadStore).toContain('FolioleCompanionQueryAssetKeys.key(context, "queries")');
     expect(payloadStore).toContain('FolioleCompanionQueryAssetKeys.key(context, "syncPayloadRouting")');

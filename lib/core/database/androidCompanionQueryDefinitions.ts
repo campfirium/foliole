@@ -17,6 +17,7 @@ export const ANDROID_COMPANION_QUERY_ASSET_KEYS = {
   diagnosticRead: 'diagnosticRead',
   missingResourceRead: 'missingResourceRead',
   nodeAttachmentRead: 'nodeAttachmentRead',
+  queryShape: 'queryShape',
   queries: 'queries',
   resourceRead: 'resourceRead',
   runtimeQueries: 'runtimeQueries',
@@ -25,4 +26,26 @@ export const ANDROID_COMPANION_QUERY_ASSET_KEYS = {
   syncStreamRead: 'syncStreamRead',
   syncPayloadRouting: 'syncPayloadRouting',
   workspaceRead: 'workspaceRead'
+} as const;
+
+export const ANDROID_COMPANION_QUERY_SHAPE_KEYS = {
+  column: {
+    key: 'key',
+    source: 'source',
+    type: 'type'
+  },
+  columnTypes: {
+    double: 'double',
+    json: 'json',
+    long: 'long'
+  },
+  query: {
+    columns: 'columns',
+    resultKey: 'resultKey',
+    sql: 'sql',
+    syncPayload: 'syncPayload'
+  },
+  routing: {
+    routes: 'routes'
+  }
 } as const;

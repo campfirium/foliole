@@ -33,13 +33,13 @@ final class FolioleCompanionNamedQueryStore {
         String[] args
     ) throws Exception {
         JSONObject query = loadQuery(context, queryName);
-        String resultKey = query.getString("resultKey");
-        String sql = replaceTokens(query.getString("sql"), replacements);
-        JSONArray columns = query.getJSONArray("columns");
+        String resultKey = query.getString(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey"));
+        String sql = replaceTokens(query.getString(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "sql")), replacements);
+        JSONArray columns = query.getJSONArray(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "columns"));
         JSArray rows = new JSArray();
         try (Cursor cursor = database.rawQuery(sql, args)) {
             while (cursor.moveToNext()) {
-                rows.put(toRecord(cursor, columns));
+                rows.put(toRecord(context, cursor, columns));
             }
         }
         JSObject result = new JSObject();
@@ -49,7 +49,7 @@ final class FolioleCompanionNamedQueryStore {
 
     static String loadString(Context context, SQLiteDatabase database, String queryName, String[] args) throws Exception {
         JSONObject query = loadQuery(context, queryName);
-        String sql = replaceTokens(query.getString("sql"), null);
+        String sql = replaceTokens(query.getString(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "sql")), null);
         try (Cursor cursor = database.rawQuery(sql, args)) {
             if (!cursor.moveToFirst() || cursor.isNull(0)) {
                 return null;
@@ -131,29 +131,36 @@ final class FolioleCompanionNamedQueryStore {
         return queries;
     }
 
-    private static JSObject toRecord(Cursor cursor, JSONArray columns) throws Exception {
+    private static JSObject toRecord(Context context, Cursor cursor, JSONArray columns) throws Exception {
         JSObject record = new JSObject();
         for (int index = 0; index < columns.length(); index += 1) {
             JSONObject column = columns.getJSONObject(index);
-            putColumn(record, cursor, column.getString("key"), column.getString("type"), cursor.getColumnIndexOrThrow(column.getString("source")));
+            putColumn(
+                context,
+                record,
+                cursor,
+                column.getString(FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "key")),
+                column.getString(FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "type")),
+                cursor.getColumnIndexOrThrow(column.getString(FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")))
+            );
         }
         return record;
     }
 
-    private static void putColumn(JSObject record, Cursor cursor, String key, String type, int columnIndex) throws Exception {
+    private static void putColumn(Context context, JSObject record, Cursor cursor, String key, String type, int columnIndex) throws Exception {
         if (cursor.isNull(columnIndex)) {
             record.put(key, JSONObject.NULL);
             return;
         }
-        if ("json".equals(type)) {
+        if (FolioleCompanionQueryDefinitionShapeKeys.columnType(context, "json").equals(type)) {
             record.put(key, new JSONObject(cursor.getString(columnIndex)));
             return;
         }
-        if ("long".equals(type)) {
+        if (FolioleCompanionQueryDefinitionShapeKeys.columnType(context, "long").equals(type)) {
             record.put(key, cursor.getLong(columnIndex));
             return;
         }
-        if ("double".equals(type)) {
+        if (FolioleCompanionQueryDefinitionShapeKeys.columnType(context, "double").equals(type)) {
             record.put(key, cursor.getDouble(columnIndex));
             return;
         }

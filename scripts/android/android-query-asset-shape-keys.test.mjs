@@ -1,0 +1,47 @@
+// @vitest-environment node
+
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
+const NAMED_QUERY_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionNamedQueryStore.java');
+const SHAPE_KEYS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionQueryDefinitionShapeKeys.java');
+const SYNC_PAYLOAD_QUERY_STORE = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPayloadQueryStore.java'
+);
+
+describe('Android query asset shape keys', () => {
+  it('generates query definition shape metadata', async () => {
+    const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
+
+    expect(definitions.assetKeys.queryShape).toBe('queryShape');
+    expect(definitions.queryShape).toEqual({
+      column: { key: 'key', source: 'source', type: 'type' },
+      columnTypes: { double: 'double', json: 'json', long: 'long' },
+      query: { columns: 'columns', resultKey: 'resultKey', sql: 'sql', syncPayload: 'syncPayload' },
+      routing: { routes: 'routes' }
+    });
+  });
+
+  it('keeps Java query readers off inline query asset field names', async () => {
+    const namedQueryStore = await readFile(NAMED_QUERY_STORE, 'utf8');
+    const shapeKeys = await readFile(SHAPE_KEYS, 'utf8');
+    const syncPayloadQueryStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
+    const combinedSource = `${namedQueryStore}\n${syncPayloadQueryStore}`;
+
+    expect(shapeKeys).toContain('FolioleCompanionQueryAssetKeys.section(context, "queryShape")');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey")');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
+    expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes")');
+    expect(combinedSource).not.toContain('getString("sql")');
+    expect(combinedSource).not.toContain('getJSONArray("columns")');
+    expect(combinedSource).not.toContain('getString("source")');
+    expect(combinedSource).not.toContain('getJSONObject("syncPayload")');
+    expect(combinedSource).not.toContain('getJSONArray("routes")');
+  });
+});

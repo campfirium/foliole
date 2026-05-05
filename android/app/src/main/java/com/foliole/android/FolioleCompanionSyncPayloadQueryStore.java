@@ -25,7 +25,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     private FolioleCompanionSyncPayloadQueryStore() {}
 
     static String metadata(Context context, String queryName, String key) throws Exception {
-        String value = loadQuery(context, queryName).getJSONObject("syncPayload").optString(key, "");
+        String value = syncPayload(context, queryName).optString(key, "");
         if (value.trim().isEmpty()) {
             throw new IllegalStateException("Companion query definitions asset is missing sync payload metadata: " + queryName + "." + key);
         }
@@ -33,7 +33,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     static String metadataArrayText(Context context, String queryName, String key) throws Exception {
-        JSONArray values = loadQuery(context, queryName).getJSONObject("syncPayload").optJSONArray(key);
+        JSONArray values = syncPayload(context, queryName).optJSONArray(key);
         if (values == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync payload metadata: " + queryName + "." + key);
         }
@@ -176,7 +176,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static JSONObject syncPayloadRoute(Context context, String objectType, String objectIdKey) throws Exception {
-        JSONArray routes = syncPayloadRouting(context).getJSONArray("routes");
+        JSONArray routes = syncPayloadRouting(context).getJSONArray(FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes"));
         for (int index = 0; index < routes.length(); index += 1) {
             JSONObject route = routes.getJSONObject(index);
             if (matches(context, route, objectType, objectIdKey)) return route;
@@ -222,6 +222,10 @@ final class FolioleCompanionSyncPayloadQueryStore {
         return routing;
     }
 
+    private static JSONObject syncPayload(Context context, String queryName) throws Exception {
+        return loadQuery(context, queryName).getJSONObject(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "syncPayload"));
+    }
+
     private static String routingString(Context context, String key) throws Exception {
         String value = syncPayloadRouting(context).optString(key, "");
         if (value.isEmpty()) {
@@ -239,7 +243,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static Set<String> metadataSet(Context context, String queryName, String key) throws Exception {
-        JSONArray values = loadQuery(context, queryName).getJSONObject("syncPayload").getJSONArray(key);
+        JSONArray values = syncPayload(context, queryName).getJSONArray(key);
         Set<String> result = new HashSet<>();
         for (int index = 0; index < values.length(); index += 1) {
             String value = values.getString(index).trim();

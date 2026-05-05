@@ -1690,6 +1690,7 @@
     "diagnosticRead": "diagnosticRead",
     "missingResourceRead": "missingResourceRead",
     "nodeAttachmentRead": "nodeAttachmentRead",
+    "queryShape": "queryShape",
     "queries": "queries",
     "resourceRead": "resourceRead",
     "runtimeQueries": "runtimeQueries",
@@ -1700,6 +1701,10 @@
     "workspaceRead": "workspaceRead"
   },
   "contentRead": {
+    "groupKeys": {
+      "externalDocuments": "externalDocuments",
+      "readableArticle": "readableArticle"
+    },
     "externalDocuments": {
       "byIdQueryName": "externalDocumentById",
       "defaultSearchLimit": 20,
@@ -1938,6 +1943,10 @@
     }
   },
   "missingResourceRead": {
+    "groupKeys": {
+      "attachmentResources": "attachmentResources",
+      "contentBlobs": "contentBlobs"
+    },
     "attachmentResources": {
       "byIdQueryName": "attachmentResourceMissingById",
       "emptyResultKey": "resource",
@@ -2011,6 +2020,10 @@
     }
   },
   "nodeAttachmentRead": {
+    "groupKeys": {
+      "backfillSnapshots": "backfillSnapshots",
+      "nodeAttachments": "nodeAttachments"
+    },
     "backfillSnapshots": {
       "attachmentIdKey": "attachment_id",
       "attachmentsKey": "attachments",
@@ -2025,7 +2038,33 @@
       "resultKey": "attachments"
     }
   },
+  "queryShape": {
+    "column": {
+      "key": "key",
+      "source": "source",
+      "type": "type"
+    },
+    "columnTypes": {
+      "double": "double",
+      "json": "json",
+      "long": "long"
+    },
+    "query": {
+      "columns": "columns",
+      "resultKey": "resultKey",
+      "sql": "sql",
+      "syncPayload": "syncPayload"
+    },
+    "routing": {
+      "routes": "routes"
+    }
+  },
   "resourceRead": {
+    "groupKeys": {
+      "attachmentResources": "attachmentResources",
+      "contentBlobs": "contentBlobs",
+      "pdfPageText": "pdfPageText"
+    },
     "attachmentResources": {
       "attachmentIdKey": "attachment_id",
       "contentHashKey": "content_hash",
@@ -2258,6 +2297,10 @@
     ]
   },
   "workspaceRead": {
+    "groupKeys": {
+      "snapshot": "snapshot",
+      "viewState": "viewState"
+    },
     "snapshot": {
       "bodyStatusExpressionToken": "__BODY_STATUS_EXPRESSION__",
       "contentBlobJoinToken": "__CONTENT_BLOB_JOIN__",

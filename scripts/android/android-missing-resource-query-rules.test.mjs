@@ -19,6 +19,10 @@ describe('Android missing resource query rules', () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
     expect(definitions.missingResourceRead).toEqual(ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES);
+    expect(definitions.missingResourceRead.groupKeys).toEqual({
+      attachmentResources: 'attachmentResources',
+      contentBlobs: 'contentBlobs'
+    });
     expect(definitions.missingResourceRead.attachmentResources).toMatchObject({
       byIdQueryName: 'attachmentResourceMissingById',
       minLimit: 1,
@@ -57,7 +61,7 @@ describe('Android missing resource query rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentRowsQueryName(context)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentHashesQueryName(context)');
-    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.section(context, "missingResourceRead")');
+    expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "missingResourceRead", groupName)');
     expect(combinedStoreSource).not.toContain('"attachmentResourceMissingRows"');
     expect(combinedStoreSource).not.toContain('"contentBlobMissingHashes"');
     expect(combinedStoreSource).not.toContain('"missing_attachment_resource_count"');
