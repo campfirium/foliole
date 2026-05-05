@@ -23,6 +23,8 @@ import {
 } from './ipc/contracts.js';
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
+import { loadWindowState } from './ipc/windowState.js';
+import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +63,7 @@ function createWindowOptions(): BrowserWindowConstructorOptions {
     }
   };
 }
+
 
 function focusFirstWindow() {
   const [firstWindow] = BrowserWindow.getAllWindows();
@@ -153,8 +156,14 @@ function bindWindowIpc(window: ElectronBrowserWindow) {
 }
 
 async function createMainWindow() {
-  const window = new BrowserWindow(createWindowOptions());
+  const restoredWindowState = await loadWindowState();
+  const options = applyWindowStateToOptions(createWindowOptions(), restoredWindowState);
+  const window = new BrowserWindow(options);
+  if (restoredWindowState?.isMaximized) {
+    window.maximize();
+  }
   bindWindowIpc(window);
+  bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   window.once('ready-to-show', () => {
     if (!window.isDestroyed()) {
