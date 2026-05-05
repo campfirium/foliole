@@ -51,6 +51,7 @@ interface BuildLayoutPropsArgs {
   onNodeContentChange: WorkspaceLayoutProps['onNodeContentChange'];
   onEditorReady: WorkspaceLayoutProps['onEditorReady'];
   onOpenNotesView: () => void;
+  onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
@@ -159,7 +160,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onRevealDocumentPosition: args.onRevealDocumentPosition,
     onRevealDocumentSelection: args.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,
-    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
+    onSelectTrashNode: args.onSelectTrashNode, onRightSidebarSplitterKeyDown: args.onRightSidebarSplitterKeyDown, onRightSidebarSplitterPointerDown: args.onRightSidebarSplitterPointerDown, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenMoveToNode: args.onOpenMoveToNode, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
     onToggleRightSidebarVisibility: args.onToggleRightSidebarVisibility,
     onOpenImportManagement: args.onOpenImportManagement,
     onCloseImportManagement: args.onCloseImportManagement,

@@ -179,6 +179,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
     onOpenNotesView: openNotesView,
+    onOpenMoveToNode: () => args.runtime.setIsMoveToNodePaletteOpen(true),
     onOpenSettings: () => args.runtime.setIsSettingsOpen(true),
     onCloseSettings: () => args.runtime.setIsSettingsOpen(false),
     onOpenImportManagement: () => args.runtime.setIsImportManagementOpen(true),

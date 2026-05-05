@@ -76,6 +76,7 @@ export interface WorkspaceLayoutProps {
   onRightSidebarSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpenNotesView: () => void;
+  onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
   onCloseImportManagement: () => void;

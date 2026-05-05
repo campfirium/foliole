@@ -17,6 +17,7 @@ interface NodeListTreeProps {
   isTrashViewOpen: boolean;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
@@ -121,7 +122,7 @@ function useNodeListTreeModel({
   onSelectNode,
   onSelectTrashNode,
   selectedTrashNodeId
-}: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'onOpenNotesView'>) {
+}: Omit<NodeListTreeProps, 'isTrashViewOpen' | 'onOpenMoveToNode' | 'onOpenNotesView'>) {
   const workspace = useNodeWorkspaceActions();
   const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
   const collapsedState = useCollapsedNodeState({
@@ -174,6 +175,7 @@ export function NodeListTree({
   isTrashViewOpen,
   nodeOrder,
   nodesById,
+  onOpenMoveToNode,
   onOpenNotesView,
   onSelectNode,
   onSelectTrashNode,
@@ -212,6 +214,7 @@ export function NodeListTree({
       isTrashViewOpen={isTrashViewOpen}
       moveNodes={model.moveNodes}
       nodesById={nodesById}
+      onOpenMoveToNode={onOpenMoveToNode}
       onOpenNotesView={onOpenNotesView}
       onSelect={model.handleSelectNode}
       reviewSession={runtimeState.reviewSession}

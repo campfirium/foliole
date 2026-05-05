@@ -8,14 +8,22 @@ import {
 
 import type { NodeTreeRow } from '../model/nodeTree';
 
-type MenuMode = 'notes' | 'trash' | null;
+type MenuMode = 'notes' | 'trash' | 'notes-root' | null;
 
 export interface NodeListContextMenuController {
   closeContextMenu: () => void;
   contextMenuMode: MenuMode;
   getContextTargets: () => string[];
   menuPosition: { left: number; top: number } | null;
-  openContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  openContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLElement>) => void;
+  openRootContextMenu: (event: ReactMouseEvent<HTMLElement>) => void;
+}
+
+function getMenuPosition(event: ReactMouseEvent<HTMLElement>) {
+  return {
+    left: Math.max(8, Math.min(event.clientX, window.innerWidth - 220)),
+    top: Math.max(8, Math.min(event.clientY, window.innerHeight - 72))
+  };
 }
 
 export function useNodeListContextMenu(
@@ -32,14 +40,18 @@ export function useNodeListContextMenu(
     setMenuPosition(null);
   };
 
-  const openContextMenu = (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+  const openContextMenu = (nodeId: string, event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();
     setContextNodeId(nodeId);
     setContextMenuMode(trashedNodeIds.includes(nodeId) ? 'trash' : 'notes');
-    setMenuPosition({
-      left: Math.max(8, Math.min(event.clientX, window.innerWidth - 220)),
-      top: Math.max(8, Math.min(event.clientY, window.innerHeight - 72))
-    });
+    setMenuPosition(getMenuPosition(event));
+  };
+
+  const openRootContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    setContextNodeId(null);
+    setContextMenuMode('notes-root');
+    setMenuPosition(getMenuPosition(event));
   };
 
   const getContextTargets = () => {
@@ -51,7 +63,7 @@ export function useNodeListContextMenu(
     return scoped.includes(contextNodeId) ? scoped : [contextNodeId];
   };
 
-  return { closeContextMenu, contextMenuMode, getContextTargets, menuPosition, openContextMenu };
+  return { closeContextMenu, contextMenuMode, getContextTargets, menuPosition, openContextMenu, openRootContextMenu };
 }
 
 export interface NodeListCollapseController {

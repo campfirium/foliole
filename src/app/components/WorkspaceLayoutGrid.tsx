@@ -65,6 +65,7 @@ function WorkspaceListArea({ onSelectNode, props }: { onSelectNode: (nodeId: str
         isTrashViewOpen={props.isTrashViewOpen}
         nodeOrder={props.nodeOrder}
         nodesById={props.nodesById}
+        onOpenMoveToNode={props.onOpenMoveToNode}
         onOpenNotesView={props.onOpenNotesView}
         onSelectNode={onSelectNode}
         onSelectTrashNode={props.onSelectTrashNode}

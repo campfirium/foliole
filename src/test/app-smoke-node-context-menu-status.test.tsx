@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
@@ -77,4 +78,49 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
     'data-node-icon-state',
     'pending'
   );
+});
+
+it('creates a child node from the inbox menu', () => {
+  render(<App />);
+
+  openNodeMenu('Inbox');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'New Node' }));
+
+  const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node?.parentNodeId === INBOX_NODE_ID);
+  expect(inboxChildren).toHaveLength(1);
+});
+
+it('creates a root node from the blank node-list area menu', () => {
+  render(<App />);
+  const initialRootCount = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node && node.id !== INBOX_NODE_ID && node.parentNodeId === null
+  ).length;
+
+  const tree = within(getNodeListPanel()).getByRole('tree');
+  fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'New Node' }));
+
+  const rootNodes = Object.values(useWorkspaceStore.getState().nodesById).filter(
+    (node) => node && node.id !== INBOX_NODE_ID && node.parentNodeId === null
+  );
+  expect(rootNodes).toHaveLength(initialRootCount + 1);
+});
+
+it('opens the move dialog from the node menu', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-source',
+    nodeOrder: ['node-source', 'node-target'],
+    nodesById: {
+      ...state.nodesById,
+      'node-source': createNode({ id: 'node-source', title: 'Source node', content: 'Move me' }),
+      'node-target': createNode({ id: 'node-target', title: 'Target node', content: '' })
+    }
+  }));
+
+  render(<App />);
+
+  openNodeMenu('Source node');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Move to' }));
+
+  expect(await screen.findByRole('dialog', { name: 'Move to' })).toBeInTheDocument();
 });

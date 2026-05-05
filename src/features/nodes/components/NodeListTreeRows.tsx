@@ -68,7 +68,7 @@ function renderNodeListRow(
       nodeIconKind={resolveNodeTreeRowIconKind(isReviewCard)}
       nodeIconState={nodeIconState}
       rowSpacing={props.rowSpacing}
-      onContextMenu={isInbox ? undefined : props.onContextMenu}
+      onContextMenu={props.onContextMenu}
       onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
       onDragEnter={props.drag.onDragEnterNode}
       onDragOver={props.drag.onDragOverNode}
