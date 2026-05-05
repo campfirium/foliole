@@ -321,12 +321,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync state cursor.",
-            databaseHelper -> {
-                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                    ? call.getData().getInt("cursor")
-                    : null;
-                return databaseHelper.saveSyncStateCursor(cursor);
-            }
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncStateCursor(databaseHelper, call)
         );
     }
 
@@ -340,12 +335,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync pack cursor.",
-            databaseHelper -> {
-                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                    ? call.getData().getInt("cursor")
-                    : null;
-                return databaseHelper.saveSyncPackCursor(cursor);
-            }
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncPackCursor(databaseHelper, call)
         );
     }
 
@@ -363,12 +353,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync state push cursor.",
-            databaseHelper -> {
-                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                    ? call.getData().getInt("cursor")
-                    : null;
-                return databaseHelper.saveSyncStatePushCursor(cursor);
-            }
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncStatePushCursor(databaseHelper, call)
         );
     }
 
@@ -386,7 +371,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync node version cursor.",
-            databaseHelper -> databaseHelper.saveSyncNodeVersionCursor(call.getData().optJSONObject("cursor"))
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncNodeVersionCursor(databaseHelper, call)
         );
     }
 
@@ -404,7 +389,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync node version push cursor.",
-            databaseHelper -> databaseHelper.saveSyncNodeVersionPushCursor(call.getData().optJSONObject("cursor"))
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncNodeVersionPushCursor(databaseHelper, call)
         );
     }
 
@@ -422,7 +407,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync review log cursor.",
-            databaseHelper -> databaseHelper.saveSyncReviewLogCursor(call.getData().optJSONObject("cursor"))
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncReviewLogCursor(databaseHelper, call)
         );
     }
 
@@ -440,7 +425,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync review log push cursor.",
-            databaseHelper -> databaseHelper.saveSyncReviewLogPushCursor(call.getData().optJSONObject("cursor"))
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncReviewLogPushCursor(databaseHelper, call)
         );
     }
 
@@ -449,7 +434,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync push acknowledgements.",
-            databaseHelper -> databaseHelper.saveSyncPushAcks(call.getData().optJSONArray("acks"))
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncPushAcks(databaseHelper, call)
         );
     }
 
@@ -458,7 +443,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync setting record.",
-            databaseHelper -> databaseHelper.saveSyncSettingRecord(call.getData())
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncSettingRecord(databaseHelper, call)
         );
     }
 
@@ -467,7 +452,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync node reading record.",
-            databaseHelper -> databaseHelper.saveSyncNodeReadingRecord(call.getData())
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncNodeReadingRecord(databaseHelper, call)
         );
     }
 
@@ -476,7 +461,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync node review record.",
-            databaseHelper -> databaseHelper.saveSyncNodeReviewRecord(call.getData())
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncNodeReviewRecord(databaseHelper, call)
         );
     }
 
@@ -485,7 +470,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync active view state.",
-            databaseHelper -> databaseHelper.saveSyncActiveViewState(call.getData())
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncActiveViewState(databaseHelper, call)
         );
     }
 
@@ -494,7 +479,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to save companion sync node view state.",
-            databaseHelper -> databaseHelper.saveSyncNodeViewState(call.getData())
+            databaseHelper -> FolioleCompanionSyncStatePluginActions.saveSyncNodeViewState(databaseHelper, call)
         );
     }
 
