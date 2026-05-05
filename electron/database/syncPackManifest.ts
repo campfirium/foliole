@@ -7,6 +7,21 @@ export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'content_blobs'
 ];
 
+export const SYNC_PACK_OBJECT_TYPE_TABLES = {
+  external_document: 'external_documents',
+  node: 'nodes'
+} as const;
+
+export type SyncPackObjectType = keyof typeof SYNC_PACK_OBJECT_TYPE_TABLES;
+
+export const SYNC_PACK_OBJECT_TYPES = new Set<SyncPackObjectType>(
+  Object.keys(SYNC_PACK_OBJECT_TYPE_TABLES) as SyncPackObjectType[]
+);
+
+export function isSyncPackObjectType(value: string): value is SyncPackObjectType {
+  return SYNC_PACK_OBJECT_TYPES.has(value as SyncPackObjectType);
+}
+
 export interface SyncPackTableManifest {
   name: SyncPackTableName;
   row_count: number;
@@ -31,4 +46,3 @@ export function buildSyncPackManifest(input: SyncPackManifestInput) {
     tables
   };
 }
-
