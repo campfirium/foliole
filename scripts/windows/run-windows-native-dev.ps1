@@ -47,6 +47,8 @@ $stateFile = Join-Path $WindowsWorkDir ".windows-native-dev-state.json"
 $lockHashStateFile = Join-Path $WindowsWorkDir ".windows-native-dev-lock.sha256"
 $bootReadyFile = Join-Path $WindowsWorkDir ".windows-native-boot-ready.json"
 $devUrl = "http://127.0.0.1:4600/"
+$webViewUserDataFolder = Join-Path $env:LOCALAPPDATA "Foliole\WebView2\DevUserData"
+$webViewLostEarlyFailAfterSec = 10
 $script:LastBootFailureReason = ""
 $appId = "com.foliole.desktop"
 
@@ -238,13 +240,15 @@ function Get-WebView2ProcessesForAppId {
   param([string]$AppId)
 
   $appIdLower = $AppId.ToLowerInvariant()
+  $uddPathLower = $webViewUserDataFolder.ToLowerInvariant().Replace("/", "\")
   return Get-CimInstance Win32_Process | Where-Object {
     if ($_.Name -ne "msedgewebview2.exe" -or -not $_.CommandLine) {
       return $false
     }
 
     $commandLineLower = $_.CommandLine.ToLowerInvariant()
-    return $commandLineLower.Contains("\$appIdLower\ebwebview")
+    return $commandLineLower.Contains("\$appIdLower\ebwebview") -or
+      $commandLineLower.Contains($uddPathLower)
   }
 }
 
@@ -255,7 +259,9 @@ function Reset-WebView2UserData {
   )
 
   $uddRoot = Join-Path $env:LOCALAPPDATA "$AppId\EBWebView"
-  $uddLock = Join-Path $uddRoot "Default\LOCK"
+  if ($webViewUserDataFolder -and $webViewUserDataFolder.Trim().Length -gt 0) {
+    $uddRoot = $webViewUserDataFolder
+  }
 
   $webviewProcesses = @(Get-WebView2ProcessesForAppId -AppId $AppId)
   foreach ($process in $webviewProcesses) {
@@ -279,11 +285,6 @@ function Reset-WebView2UserData {
     }
   }
 
-  if (Test-Path $uddLock) {
-    Remove-Item -Force $uddLock -ErrorAction SilentlyContinue
-    Write-Log "[windows-native-dev] cleared WebView2 UDD lock: $uddLock"
-  }
-
   if ($DeepClean -and (Test-Path $uddRoot)) {
     try {
       Remove-Item -Path $uddRoot -Recurse -Force -ErrorAction Stop
@@ -291,6 +292,27 @@ function Reset-WebView2UserData {
     } catch {
       Write-Log "[windows-native-dev] failed to deep clean WebView2 UDD: $uddRoot error=$($_.Exception.Message)"
     }
+  }
+}
+
+function Ensure-WebView2UserDataFolderWritable {
+  param([string]$UserDataFolder)
+
+  if ([string]::IsNullOrWhiteSpace($UserDataFolder)) {
+    Write-Log "[windows-native-dev] invalid WebView2 UDF path."
+    return $false
+  }
+
+  try {
+    New-Item -ItemType Directory -Force -Path $UserDataFolder | Out-Null
+    $probePath = Join-Path $UserDataFolder ".write-probe.tmp"
+    "ok" | Out-File -FilePath $probePath -Encoding ascii -NoNewline
+    Remove-Item -Force $probePath -ErrorAction Stop
+    Write-Log "[windows-native-dev] webview2 udf ready: $UserDataFolder"
+    return $true
+  } catch {
+    Write-Log "[windows-native-dev] webview2 udf not writable: $UserDataFolder error=$($_.Exception.Message)"
+    return $false
   }
 }
 
@@ -353,6 +375,173 @@ function Show-BootStageSummary {
   }
 
   Write-Log "[windows-native-dev] boot summary: session=$BootSession events=$($events.Count) stages=$stageText missing=$missingText last_ts=$lastTimestamp"
+}
+
+function Write-ScriptBootEvent {
+  param(
+    [string]$WorkDir,
+    [string]$BootSession,
+    [string]$Stage,
+    [hashtable]$Payload = @{}
+  )
+
+  if ([string]::IsNullOrWhiteSpace($BootSession) -or [string]::IsNullOrWhiteSpace($Stage)) {
+    return
+  }
+
+  $eventLogPath = Join-Path $WorkDir "logs\windows\native-boot-events.ndjson"
+  $event = [ordered]@{
+    timestamp = (Get-Date).ToUniversalTime().ToString("o")
+    stage = $Stage
+    pid = $PID
+    session = $BootSession.Trim()
+    payload = $Payload
+  }
+
+  try {
+    if (-not (Test-Path (Split-Path -Path $eventLogPath -Parent))) {
+      New-Item -ItemType Directory -Force -Path (Split-Path -Path $eventLogPath -Parent) | Out-Null
+    }
+    ($event | ConvertTo-Json -Compress) | Out-File -FilePath $eventLogPath -Append -Encoding utf8
+  } catch {
+    Write-Log "[windows-native-dev] failed to append script boot event stage=${Stage}: $($_.Exception.Message)"
+  }
+}
+
+function Capture-BootTimeoutDiagnostics {
+  param(
+    [string]$WorkDir,
+    [string]$BootSession
+  )
+
+  $sessionId = if ([string]::IsNullOrWhiteSpace($BootSession)) { "unknown" } else { $BootSession.Trim() }
+  $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  $snapshotPath = Join-Path $LogDir "boot-timeout-snapshot-$timestamp-$sessionId.log"
+
+  function Write-SnapshotLine {
+    param([string]$Line)
+    $Line | Out-File -FilePath $snapshotPath -Append -Encoding utf8
+    Write-Log "[windows-native-dev] [snapshot] $Line"
+  }
+
+  try {
+    "=== boot-timeout snapshot ===" | Out-File -FilePath $snapshotPath -Encoding utf8
+    "generated_at=$(Get-Date -Format "yyyy-MM-dd HH:mm:ss")" | Out-File -FilePath $snapshotPath -Append -Encoding utf8
+    "boot_session=$sessionId" | Out-File -FilePath $snapshotPath -Append -Encoding utf8
+    "workdir=$WorkDir" | Out-File -FilePath $snapshotPath -Append -Encoding utf8
+    "dev_url=$devUrl" | Out-File -FilePath $snapshotPath -Append -Encoding utf8
+
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[processes] native app"
+    $apps = @(Get-NativeAppProcesses -WorkDir $WorkDir)
+    if ($apps.Count -eq 0) {
+      Write-SnapshotLine "count=0"
+    } else {
+      foreach ($app in $apps) {
+        $windowInfo = "window=unavailable"
+        try {
+          $managed = Get-Process -Id $app.ProcessId -ErrorAction Stop
+          if ($managed.MainWindowHandle -ne 0) {
+            $rect = New-Object NativeWindowApi+RECT
+            [void][NativeWindowApi]::GetWindowRect([IntPtr]$managed.MainWindowHandle, [ref]$rect)
+            $windowInfo = "window_handle=$($managed.MainWindowHandle) rect=[$($rect.Left),$($rect.Top),$($rect.Right),$($rect.Bottom)] iconic=$([NativeWindowApi]::IsIconic([IntPtr]$managed.MainWindowHandle))"
+          } else {
+            $windowInfo = "window_handle=0"
+          }
+        } catch {
+          $windowInfo = "window_error=$($_.Exception.Message)"
+        }
+        Write-SnapshotLine "pid=$($app.ProcessId) exe=$($app.ExecutablePath) $windowInfo"
+      }
+    }
+
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[processes] launcher"
+    $launchers = @(Get-NativeLauncherProcesses -WorkDir $WorkDir)
+    if ($launchers.Count -eq 0) {
+      Write-SnapshotLine "count=0"
+    } else {
+      foreach ($launcher in $launchers) {
+        $cmd = if ($launcher.CommandLine) { $launcher.CommandLine } else { "(no commandline)" }
+        Write-SnapshotLine "pid=$($launcher.ProcessId) name=$($launcher.Name) cmd=$cmd"
+      }
+    }
+
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[processes] webview2(app scoped)"
+    $webviews = @(Get-WebView2ProcessesForAppId -AppId $appId)
+    if ($webviews.Count -eq 0) {
+      Write-SnapshotLine "count=0"
+    } else {
+      foreach ($webview in $webviews) {
+        $cmd = if ($webview.CommandLine) { $webview.CommandLine } else { "(no commandline)" }
+        Write-SnapshotLine "pid=$($webview.ProcessId) cmd=$cmd"
+      }
+    }
+
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[network] 127.0.0.1:4600 listeners"
+    $listeners = @(Get-NetTCPConnection -LocalAddress "127.0.0.1" -LocalPort 4600 -State Listen -ErrorAction SilentlyContinue)
+    if ($listeners.Count -eq 0) {
+      Write-SnapshotLine "count=0"
+    } else {
+      $ownerIds = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
+      foreach ($ownerId in $ownerIds) {
+        try {
+          $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerId"
+          if (-not $proc) {
+            Write-SnapshotLine "owner_pid=$ownerId process=missing"
+            continue
+          }
+          $cmd = if ($proc.CommandLine) { $proc.CommandLine } else { "(no commandline)" }
+          Write-SnapshotLine "owner_pid=$ownerId name=$($proc.Name) cmd=$cmd"
+        } catch {
+          Write-SnapshotLine "owner_pid=$ownerId lookup_error=$($_.Exception.Message)"
+        }
+      }
+    }
+
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[http probe] dev url and key assets"
+    foreach ($url in @($devUrl, "$($devUrl.TrimEnd('/'))/@vite/client", "$($devUrl.TrimEnd('/'))/src/main.tsx")) {
+      try {
+        $resp = Invoke-WebRequest -Uri $url -Method Get -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+        Write-SnapshotLine "url=$url status=$($resp.StatusCode) length=$($resp.RawContentLength)"
+      } catch {
+        Write-SnapshotLine "url=$url error=$($_.Exception.Message)"
+      }
+    }
+
+    Write-SnapshotLine ""
+    Write-SnapshotLine "[files] marker/state"
+    if (Test-Path $bootReadyFile) {
+      Write-SnapshotLine "boot_ready_file=$bootReadyFile exists=true"
+      try {
+        $raw = (Get-Content -Path $bootReadyFile -Raw -ErrorAction Stop).Trim()
+        Write-SnapshotLine "boot_ready_payload=$raw"
+      } catch {
+        Write-SnapshotLine "boot_ready_read_error=$($_.Exception.Message)"
+      }
+    } else {
+      Write-SnapshotLine "boot_ready_file=$bootReadyFile exists=false"
+    }
+
+    if (Test-Path $stateFile) {
+      Write-SnapshotLine "state_file=$stateFile exists=true"
+      try {
+        $rawState = (Get-Content -Path $stateFile -Raw -ErrorAction Stop).Trim()
+        Write-SnapshotLine "state_payload=$rawState"
+      } catch {
+        Write-SnapshotLine "state_read_error=$($_.Exception.Message)"
+      }
+    } else {
+      Write-SnapshotLine "state_file=$stateFile exists=false"
+    }
+
+    Write-Log "[windows-native-dev] boot-timeout diagnostics captured: $snapshotPath"
+  } catch {
+    Write-Log "[windows-native-dev] boot-timeout diagnostics failed: $($_.Exception.Message)"
+  }
 }
 
 function Stop-ProcessGracefully {
@@ -588,18 +777,20 @@ function Launch-NativeDev {
     Remove-Item -Force $bootReadyFile -ErrorAction SilentlyContinue
   }
 
-  # Clear stale WebView2 UDD lock before launch (defensive, in case last session
-  # exited without going through Stop-NativeDevSession).
-  Reset-WebView2UserData -AppId $appId
+  if (-not (Ensure-WebView2UserDataFolderWritable -UserDataFolder $webViewUserDataFolder)) {
+    $script:LastBootFailureReason = "WEBVIEW2_UDF_NOT_WRITABLE"
+    return ""
+  }
 
   $bootSession = [Guid]::NewGuid().ToString("N")
   $tauriLogTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
   $tauriLogPath = Join-Path $LogDir "tauri-dev-$tauriLogTimestamp.log"
-  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && npm run tauri:dev >> `"$tauriLogPath`" 2>&1"
+  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && set `"WEBVIEW2_USER_DATA_FOLDER=$webViewUserDataFolder`" && npm run tauri:dev >> `"$tauriLogPath`" 2>&1"
   Write-Log ""
   Write-Log "[windows-native-dev] step: launch native tauri dev"
   Write-Log "[windows-native-dev] cmd: $launchCommand"
   Write-Log "[windows-native-dev] boot session: $bootSession"
+  Write-Log "[windows-native-dev] webview2 udf: $webViewUserDataFolder"
   Write-Log "[windows-native-dev] tauri dev log: $tauriLogPath"
   $cmdProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $launchCommand -PassThru
   Save-StateFile -WorkDir $WorkDir -LauncherPid $cmdProc.Id -BootSession $bootSession -TauriLogPath $tauriLogPath
@@ -644,8 +835,48 @@ function Wait-ForFrontendReady {
     return $true
   }
 
+  $webviewSeen = $false
+  $webviewLostAfterSeen = $false
+  $webviewFirstSeenAttempt = -1
+  $webviewLastSeenAttempt = -1
+  $webviewLostAttempt = -1
+  $webviewLastCount = -1
+
   $maxAttempts = [Math]::Max(1, [Math]::Ceiling(($TimeoutSeconds * 1000) / 250))
+  $earlyFailAttempts = [Math]::Max(1, [Math]::Ceiling(($webViewLostEarlyFailAfterSec * 1000) / 250))
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $webviewCount = @(Get-WebView2ProcessesForAppId -AppId $appId).Count
+    if ($webviewCount -gt 0) {
+      if (-not $webviewSeen) {
+        $webviewSeen = $true
+        $webviewFirstSeenAttempt = $attempt
+        Write-Log "[windows-native-dev] webview2 process detected during boot: count=$webviewCount attempt=$attempt"
+        Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_process_detected" -Payload @{
+          source = "windows_native_dev_script"
+          count = $webviewCount
+          attempt = $attempt
+        }
+      }
+      $webviewLastSeenAttempt = $attempt
+    } elseif ($webviewSeen -and -not $webviewLostAfterSeen) {
+      $webviewLostAfterSeen = $true
+      $webviewLostAttempt = $attempt
+      Write-Log "[windows-native-dev] webview2 process lost before app_ready: attempt=$attempt"
+      Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_process_lost_before_app_ready" -Payload @{
+        source = "windows_native_dev_script"
+        attempt = $attempt
+        first_seen_attempt = $webviewFirstSeenAttempt
+        last_seen_attempt = $webviewLastSeenAttempt
+      }
+    }
+    $webviewLastCount = $webviewCount
+
+    if ($webviewLostAfterSeen -and $webviewLostAttempt -gt 0 -and (($attempt - $webviewLostAttempt) -ge $earlyFailAttempts)) {
+      $script:LastBootFailureReason = "WEBVIEW2_LOST_BEFORE_APP_READY"
+      Write-Log "[windows-native-dev] early boot fail after webview2 loss: lost_attempt=$webviewLostAttempt wait_sec=$webViewLostEarlyFailAfterSec"
+      break
+    }
+
     $appCount = @(Get-NativeAppProcesses -WorkDir $WorkDir).Count
     if ($appCount -eq 0) {
       Start-Sleep -Milliseconds 250
@@ -663,6 +894,15 @@ function Wait-ForFrontendReady {
       $expectedSession = $BootSession.Trim()
       if ($markerSession -eq $expectedSession -and $marker.stage -eq "app_ready") {
         $script:LastBootFailureReason = ""
+        Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_boot_observation" -Payload @{
+          source = "windows_native_dev_script"
+          outcome = "app_ready"
+          webview_seen = $webviewSeen
+          webview_lost_after_seen = $webviewLostAfterSeen
+          first_seen_attempt = $webviewFirstSeenAttempt
+          last_seen_attempt = $webviewLastSeenAttempt
+          last_count = $webviewLastCount
+        }
         Write-Log "[windows-native-dev] frontend ready marker detected."
         return $true
       }
@@ -673,10 +913,29 @@ function Wait-ForFrontendReady {
     Start-Sleep -Milliseconds 250
   }
 
-  $script:LastBootFailureReason = "BOOT_MARKER_TIMEOUT"
+  if ([string]::IsNullOrWhiteSpace($script:LastBootFailureReason)) {
+    $script:LastBootFailureReason = "BOOT_MARKER_TIMEOUT"
+  }
+  $webviewOutcome = "present_but_not_ready"
+  if (-not $webviewSeen) {
+    $webviewOutcome = "never_detected_before_timeout"
+  } elseif ($webviewLostAfterSeen) {
+    $webviewOutcome = "exited_before_app_ready"
+  }
+  Write-ScriptBootEvent -WorkDir $WorkDir -BootSession $BootSession -Stage "webview2_boot_observation" -Payload @{
+    source = "windows_native_dev_script"
+    outcome = $webviewOutcome
+    webview_seen = $webviewSeen
+    webview_lost_after_seen = $webviewLostAfterSeen
+    first_seen_attempt = $webviewFirstSeenAttempt
+    last_seen_attempt = $webviewLastSeenAttempt
+    last_count = $webviewLastCount
+  }
+  Write-Log "[windows-native-dev] webview2 boot observation: outcome=$webviewOutcome seen=$webviewSeen lost=$webviewLostAfterSeen last_count=$webviewLastCount"
   Write-Log "[windows-native-dev] frontend ready timeout after ${TimeoutSeconds}s (session=$BootSession)."
   Write-Log "[windows-native-dev] expected marker file: $bootReadyFile"
   Show-BootStageSummary -WorkDir $WorkDir -BootSession $BootSession
+  Capture-BootTimeoutDiagnostics -WorkDir $WorkDir -BootSession $BootSession
   try {
     $state = Get-Content -Path $stateFile -Raw -ErrorAction Stop | ConvertFrom-Json
     if ($state.tauri_log -and (Test-Path $state.tauri_log)) {
@@ -701,7 +960,8 @@ function Wait-FrontendReadyWithSingleRetry {
 
   Write-Log "[windows-native-dev] boot readiness check failed (reason=$script:LastBootFailureReason), retrying launch once."
   Stop-NativeDevSession -WorkDir $WorkDir
-  if ($script:LastBootFailureReason -eq "BOOT_MARKER_TIMEOUT") {
+  if ($script:LastBootFailureReason -eq "BOOT_MARKER_TIMEOUT" -or
+    $script:LastBootFailureReason -eq "WEBVIEW2_LOST_BEFORE_APP_READY") {
     Reset-WebView2UserData -AppId $appId -DeepClean
   }
   # Brief pause to let TCP port 4600 drain before re-launch avoids "port already in use"
