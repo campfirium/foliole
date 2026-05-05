@@ -177,14 +177,14 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('status: DELIVERED');
+      expect(result.stdout).toContain('status: SYNCED');
       expect(rendererReloadDelivery).toMatchObject({
         nonce: 1,
         head: 'current-head',
         reason: 'Class A: renderer-only sync path',
         target: 'electron-dev-renderer'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -226,13 +226,13 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
       expect(result.stdout).toContain('[windows-sync] include electron-dist');
       expect(result.stdout).toContain('selected action: restart-intent');
-      expect(result.stdout).toContain('status: RESTARTED');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         head: 'current-head',
         reason: 'Class B: working tree electron changes detected'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });

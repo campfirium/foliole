@@ -199,8 +199,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('electron-dist stale; compiling runtime bundle');
       expect(result.stdout).toContain('[mock-electron-compile] status: COMPILED');
       expect(result.stdout).toContain('[windows-sync] status: SYNCED');
-      expect(result.stdout).toContain('status: DELIVERED');
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(result.stdout).toContain('status: SYNCED');
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -230,14 +230,14 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
       expect(result.stdout).toContain('renderer reload delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('status: DELIVERED');
+      expect(result.stdout).toContain('status: SYNCED');
       expect(rendererReloadDelivery).toMatchObject({
         nonce: 1,
         requestedBy: 'wsl-windows-preview',
         target: 'electron-dev-renderer',
         reason: 'Class A: renderer-only sync path'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -280,15 +280,14 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('restart markers updated');
-      expect(result.stdout).toContain('status: RESTARTED');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         requestedBy: 'wsl-windows-preview',
         target: 'electron-dev',
         reason: 'Class B: working tree electron changes detected'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -332,13 +331,13 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
-      expect(result.stdout).toContain('status: RESTARTED');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         head: 'new-head',
         reason: 'Class B: runtime behind committed electron changes'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -490,14 +489,14 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('reason: Class A: renderer-only sync path');
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('status: DELIVERED');
+      expect(result.stdout).toContain('status: SYNCED');
       expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
       expect(rendererReloadDelivery).toMatchObject({
         nonce: 1,
         target: 'electron-dev-renderer',
         reason: 'Class A: renderer-only sync path'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -580,12 +579,102 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('renderer reload delivery timed out nonce=1');
       expect(result.stdout).toContain('renderer reload delivery missing; falling back to restart-intent');
       expect(result.stdout).toContain('selected action: restart-intent');
-      expect(result.stdout).toContain('status: RESTARTED');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         target: 'electron-dev'
       });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status']);
+    } finally {
+      consumer.kill('SIGTERM');
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('finishes once restart delivery is acknowledged even if ready markers never arrive', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const consumer = spawn(
+      process.execPath,
+      [
+        '-e',
+        `
+const fs = require('node:fs');
+const path = require('node:path');
+const rootDir = process.argv[1];
+const intentFile = path.join(rootDir, '${RESTART_INTENT_FILE}');
+const deliveryFile = path.join(rootDir, '${RESTART_DELIVERY_FILE}');
+
+function writeJson(filePath, payload) {
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\\n', 'utf8');
+}
+
+const start = Date.now();
+const timer = setInterval(() => {
+  if (!fs.existsSync(intentFile)) {
+    if (Date.now() - start > 15000) {
+      clearInterval(timer);
+      process.exit(0);
+    }
+    return;
+  }
+  const payload = JSON.parse(fs.readFileSync(intentFile, 'utf8'));
+  fs.unlinkSync(intentFile);
+  writeJson(deliveryFile, {
+    deliveredAt: new Date().toISOString(),
+    head: payload.head ?? null,
+    kind: 'foliole.electron.dev.restart-delivered.v1',
+    nonce: payload.nonce,
+    reason: payload.reason,
+    requestedAt: payload.requestedAt,
+    requestedBy: payload.requestedBy,
+    target: payload.target
+  });
+  clearInterval(timer);
+  process.exit(0);
+}, 50);
+        `,
+        tempRoot
+      ],
+      {
+        cwd: REPO_ROOT,
+        stdio: 'ignore'
+      }
+    );
+
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING head=old-head"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_ROOT: tempRoot,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+      });
+
+      const restartDelivery = await readRestartDelivery(tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('selected action: restart-intent');
+      expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
+      expect(result.stdout).toContain('status: RESTART_REQUESTED');
+      expect(result.stdout).not.toContain('restart markers timed out');
+      expect(restartDelivery).toMatchObject({
+        nonce: 1,
+        target: 'electron-dev'
+      });
+      expect(await readActions(actionLog)).toEqual(['status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });

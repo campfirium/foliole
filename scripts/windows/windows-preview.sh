@@ -444,12 +444,7 @@ run_renderer_reload_intent() {
       run_restart_intent
       return $?
     fi
-    if ! wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload status"; then
-      echo "[windows-preview] renderer reload status missing; falling back to restart-intent"
-      run_restart_intent
-      return $?
-    fi
-    echo "[windows-preview] status: DELIVERED"
+    echo "[windows-preview] status: SYNCED"
     return 0
   fi
   echo "[windows-preview] renderer reload intent failed"
@@ -476,7 +471,6 @@ run_restart_intent() {
   local restart_exit=0
   local restart_intent_root=""
   local restart_nonce=""
-  local requested_at=""
   echo "[windows-preview] selected action: restart-intent"
   restart_intent_root="$(resolve_restart_intent_root)"
   set +e
@@ -497,20 +491,7 @@ run_restart_intent() {
       return 1
     fi
     wait_for_delivery_nonce "$(resolve_restart_delivery_path)" "${restart_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart" || return 1
-    set +e
-    requested_at="$(read_json_field "${restart_intent_root}/.windows-dev-restart-intent.json" requestedAt 2>/dev/null)"
-    local requested_at_exit=$?
-    if [ "${requested_at_exit}" -ne 0 ] || [ -z "${requested_at}" ]; then
-      requested_at="$(read_json_field "$(resolve_restart_delivery_path)" requestedAt 2>/dev/null)"
-      requested_at_exit=$?
-    fi
-    set -e
-    if [ "${requested_at_exit}" -ne 0 ] || [ -z "${requested_at}" ]; then
-      requested_at="$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")"
-    fi
-    wait_for_restart_ready_markers "${requested_at}" "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" || return 1
-    wait_for_running_status "${WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS}" "restart status" || return 1
-    echo "[windows-preview] status: RESTARTED"
+    echo "[windows-preview] status: RESTART_REQUESTED"
     return 0
   fi
   echo "[windows-preview] restart intent failed"
