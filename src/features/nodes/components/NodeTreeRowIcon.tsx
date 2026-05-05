@@ -22,22 +22,14 @@ function iconTransformClass(transformMode: 'none' | 'flip-x' | 'flip-y') {
 
 function resolveCustomIconClassName(state: NodeTreeRowIconState, transformMode: 'none' | 'flip-x' | 'flip-y') {
   return cn(
-    'inline-flex size-3.5 items-center justify-center [&_circle]:stroke-current [&_ellipse]:stroke-current [&_line]:stroke-current [&_path]:stroke-current [&_polygon]:stroke-current [&_polyline]:stroke-current [&_rect]:stroke-current [&_svg]:block [&_svg]:overflow-visible',
-    state !== 'dismissed' &&
-      '[&_circle]:[stroke-linecap:round] [&_ellipse]:[stroke-linecap:round] [&_line]:[stroke-linecap:round] [&_path]:[stroke-linecap:round] [&_polygon]:[stroke-linecap:round] [&_polyline]:[stroke-linecap:round] [&_rect]:[stroke-linecap:round]',
-    state === 'pending' &&
-      '[&_circle]:[stroke-dasharray:3.2_1.6] [&_ellipse]:[stroke-dasharray:3.2_1.6] [&_line]:[stroke-dasharray:3.2_1.6] [&_path]:[stroke-dasharray:3.2_1.6] [&_polygon]:[stroke-dasharray:3.2_1.6] [&_polyline]:[stroke-dasharray:3.2_1.6] [&_rect]:[stroke-dasharray:3.2_1.6]',
-    state === 'active' &&
-      '[&_circle]:[stroke-dasharray:1_1.4_4.6_1.4] [&_ellipse]:[stroke-dasharray:1_1.4_4.6_1.4] [&_line]:[stroke-dasharray:1_1.4_4.6_1.4] [&_path]:[stroke-dasharray:1_1.4_4.6_1.4] [&_polygon]:[stroke-dasharray:1_1.4_4.6_1.4] [&_polyline]:[stroke-dasharray:1_1.4_4.6_1.4] [&_rect]:[stroke-dasharray:1_1.4_4.6_1.4]',
+    'inline-flex size-3.5 items-center justify-center',
     iconTransformClass(transformMode)
   );
 }
 
 function resolveDefaultIconClassName(state: NodeTreeRowIconState, transformMode: 'none' | 'flip-x' | 'flip-y') {
   return cn(
-    'size-3.5 [&_path]:[stroke-linecap:round] [&_path]:[stroke-linejoin:round]',
-    state === 'pending' && '[&_path]:[stroke-dasharray:3.2_1.6]',
-    state === 'active' && '[&_path]:[stroke-dasharray:1_1.4_4.6_1.4]',
+    'size-3.5',
     iconTransformClass(transformMode)
   );
 }
@@ -50,7 +42,6 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
   const iconClassName = cn(
     'relative mr-1 inline-flex size-3.5 flex-none items-center justify-center text-foreground/65',
     state === 'pending' && 'text-foreground/78',
-    state === 'active' && 'text-foreground/92',
     state === 'dismissed' && 'opacity-28'
   );
   return (
@@ -58,7 +49,7 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
       className={iconClassName}
       data-node-icon="leaf"
       data-node-icon-kind={kind}
-      data-node-icon-pattern={state === 'dismissed' ? 'faded' : state === 'active' ? 'dot-dash' : 'dash'}
+      data-node-icon-pattern={state === 'dismissed' ? 'faded' : state === 'pending' ? 'dash' : 'normal'}
       data-node-icon-source={customIcon.markup ? 'custom' : 'default'}
       data-node-icon-state={state}
       data-node-icon-mirror={transformMode}

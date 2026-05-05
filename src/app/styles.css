@@ -42,6 +42,37 @@ body {
   overflow: hidden;
 }
 
+[role='treeitem'][data-node-visibility='muted'] {
+  opacity: 0.35;
+}
+
+[data-node-icon='leaf'] {
+  color: rgb(32 33 36 / 0.65);
+}
+
+[data-node-icon='leaf'][data-node-icon-pattern='dash'] {
+  color: rgb(32 33 36 / 0.78);
+}
+
+[data-node-icon='leaf'][data-node-icon-pattern='faded'] {
+  opacity: 0.28;
+}
+
+[data-node-icon='leaf'] svg {
+  display: block;
+  overflow: visible;
+}
+
+[data-node-icon='leaf'] svg :is(path, circle, ellipse, line, polygon, polyline, rect) {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-node-icon='leaf'][data-node-icon-pattern='dash'] svg :is(path, circle, ellipse, line, polygon, polyline, rect) {
+  stroke-dasharray: 3.2 1.6;
+}
+
 .radix-themes {
   --default-font-family: var(--app-interface-font-family, var(--font-family-interface));
   --heading-font-family: var(--default-font-family);

@@ -38,7 +38,7 @@ function PreviewIcon(props: { kind: 'reading' | 'review'; label: string }) {
   return (
     <div className="settings-node-icon-preview-item" data-node-icon-preview={props.kind}>
       <span className="settings-node-icon-preview-badge">
-        <NodeTreeRowIcon kind={props.kind} state="active" />
+        <NodeTreeRowIcon kind={props.kind} state="scheduled" />
       </span>
       <span>{props.label}</span>
     </div>

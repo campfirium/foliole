@@ -118,31 +118,31 @@ it('renders reading and review leaf variants in the node list', () => {
   ).toBe('pending');
 });
 
-it('maps node list icons to pending, active, and dismissed states', () => {
+it('maps node list icons to pending, scheduled, and dismissed states', () => {
   const listPanel = renderNodeIconApp((state) => seedIconStateNodes(state));
   const pendingReadingRow = within(listPanel).getByRole('treeitem', { name: 'Reading 1' });
-  const activeReadingRow = within(listPanel).getByRole('treeitem', { name: 'Active Reading' });
+  const scheduledReadingRow = within(listPanel).getByRole('treeitem', { name: 'Active Reading' });
   const pendingReviewRow = within(listPanel).getByRole('treeitem', { name: 'QA Node' });
   const dismissedReadingRow = within(listPanel).getByRole('treeitem', { name: 'Dismissed Reading' });
 
   expect(getTreeItemIcon(listPanel, 'Reading 1')).toHaveAttribute('data-node-icon-state', 'pending');
   expect(getTreeItemIcon(listPanel, 'Reading 1')).toHaveAttribute('data-node-icon-pattern', 'dash');
   expect(pendingReadingRow).toHaveAttribute('data-node-visibility', 'normal');
-  expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-state', 'active');
-  expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-pattern', 'dot-dash');
-  expect(activeReadingRow).toHaveAttribute('data-node-visibility', 'normal');
+  expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-state', 'scheduled');
+  expect(getTreeItemIcon(listPanel, 'Active Reading')).toHaveAttribute('data-node-icon-pattern', 'normal');
+  expect(scheduledReadingRow).toHaveAttribute('data-node-visibility', 'normal');
   expect(getTreeItemIcon(listPanel, 'QA Node')).toHaveAttribute('data-node-icon-state', 'pending');
   expect(pendingReviewRow).toHaveAttribute('data-node-visibility', 'normal');
-  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-state', 'active');
+  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-state', 'scheduled');
   expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-kind', 'review');
-  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-pattern', 'dot-dash');
+  expect(getTreeItemIcon(listPanel, 'Active QA')).toHaveAttribute('data-node-icon-pattern', 'normal');
   expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-state', 'dismissed');
   expect(getTreeItemIcon(listPanel, 'Dismissed Reading')).toHaveAttribute('data-node-icon-pattern', 'faded');
   expect(dismissedReadingRow).toHaveAttribute('data-node-visibility', 'muted');
   expect(dismissedReadingRow.className).toContain('opacity-35');
 });
 
-it('treats later-handled reading nodes as active instead of pending', () => {
+it('treats later-handled reading nodes as scheduled instead of pending', () => {
   const listPanel = renderNodeIconApp((state) => ({
     activeNodeId: 'reading-later',
     nodeOrder: ['reading-later'],
@@ -160,7 +160,7 @@ it('treats later-handled reading nodes as active instead of pending', () => {
 
   expect(nodeButton.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
-    'active'
+    'scheduled'
   );
 });
 

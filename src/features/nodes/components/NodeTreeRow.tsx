@@ -9,10 +9,10 @@ import { cn } from '../../../shared/lib/utils';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
-import { NodeTreeRowIcon } from './NodeTreeRowIcon'; import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
+import { NodeTreeRowIcon } from './NodeTreeRowIcon';
+import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 import { NodeRenameInput, useRenameState } from './NodeTreeRowRename';
 import { resolveNodeRowButtonClassName, resolveNodeVisibilityValue } from './NodeTreeRowStyle';
-
 interface NodeTreeRowProps {
   depth: number;
   isActive: boolean;
@@ -49,9 +49,7 @@ function resolveSelectModifiers(event: ReactMouseEvent<HTMLButtonElement>): Node
 }
 
 function resolveNodeRowStyle(depth: number) {
-  return {
-    '--node-depth': depth
-  } as CSSProperties;
+  return { '--node-depth': depth } as CSSProperties;
 }
 
 function resolveNodeRowFrameClassName(
@@ -72,7 +70,7 @@ export function NodeTreeRow({
   isDerived = false,
   isMuted = false,
   nodeIconKind = 'reading',
-  nodeIconState = 'active',
+  nodeIconState = 'scheduled',
   isSelected,
   hasChildren,
   isDragDisabled = false,
@@ -125,7 +123,6 @@ export function NodeTreeRow({
     </div>
   );
 }
-
 interface NodeTreeRowButtonProps {
   depth: number;
   hasChildren: boolean;
@@ -182,14 +179,14 @@ function NodeTreeRowButton({
 }: NodeTreeRowButtonProps) {
   const rename = useRenameState(label, nodeId, onRename);
   const buttonClassName = resolveNodeRowButtonClassName({ isDerived, isMuted, isSelected });
+  const buttonStyle = isMuted ? { ...style, opacity: 0.35 } : style;
   return (
     <AppButton
       active={false}
       aria-current={isActive ? 'page' : undefined}
       aria-expanded={hasChildren ? !isCollapsed : undefined}
       aria-level={depth + 1}
-      aria-pressed={isSelected}
-      aria-selected={isSelected}
+      aria-pressed={isSelected} aria-selected={isSelected}
       className={buttonClassName}
       data-node-derived={isDerived ? 'true' : 'false'}
       data-node-emphasis={isDerived ? 'secondary' : 'primary'}
@@ -201,7 +198,7 @@ function NodeTreeRowButton({
       onClick={(event) => onSelect(nodeId, resolveSelectModifiers(event))}
       onDoubleClick={(event) => (event.stopPropagation(), rename.beginRename())}
       role="treeitem"
-      style={style}
+      style={buttonStyle}
       variant="list"
       >
       <NodeTreeRowExpandToggle
@@ -235,7 +232,6 @@ function NodeTreeRowExpandToggle({
   if (!hasChildren) {
     return <span aria-hidden="true" className="size-3 flex-none" />;
   }
-
   return (
     <span
       aria-label={isCollapsed ? `Expand ${label}` : `Collapse ${label}`}
