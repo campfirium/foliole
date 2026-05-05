@@ -249,6 +249,7 @@ function WorkspaceGridContent({
             activePanelId={activeRightPanelId}
             activeNodeId={documentNodeId}
             nodesById={props.nodesById}
+            onRevealAnchorInDocument={props.onRevealAnchorInDocument}
             reviewCurrentNodeId={props.reviewCurrentNodeId}
             reviewQueueNodeIds={props.reviewPanelQueueNodeIds}
             reviewSchedulerSettings={props.reviewSchedulerSettings}

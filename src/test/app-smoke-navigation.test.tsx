@@ -201,6 +201,30 @@ it('supports toolbar parent and navigation history actions', () => {
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
 });
 
+it('reveals document highlights from the right sidebar list', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...state.nodesById,
+      'node-2': createNode({
+        id: 'node-2',
+        title: 'Parent',
+        content: '# Parent <highlight id="1">Needle</highlight id="1">\n\n<highlight id="2">Second mark</highlight id="2">'
+      })
+    }
+  }));
+
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Highlights panel' }));
+  fireEvent.click(screen.getByRole('button', { name: /Second mark/i }));
+
+  const expectedFrom = '# Parent <highlight id="1">Needle</highlight id="1">\n\n<highlight id="2">Second mark</highlight id="2">'.indexOf('Second mark');
+  expect(mockEditorState.selectionFrom).toBe(expectedFrom);
+  expect(mockEditorState.selectionTo).toBe(expectedFrom + 'Second mark'.length);
+});
+
 it('expands compact breadcrumbs when clicking ellipsis', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-5',

@@ -123,6 +123,7 @@ describe('WindowTitleBar', () => {
     expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Review queue panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Source info panel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Highlights panel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dev panel' })).not.toBeInTheDocument();
   });
 
@@ -141,6 +142,7 @@ describe('WindowTitleBar right sidebar anchor', () => {
     expectExpandedRightAnchorLayout(container);
     expect(screen.getByRole('button', { name: 'Review queue panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Source info panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Highlights panel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dev panel' })).toBeInTheDocument();
   });
 });

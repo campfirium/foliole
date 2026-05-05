@@ -3,7 +3,7 @@ import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as Reac
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type {
   AccentColorPreset,
@@ -72,6 +72,7 @@ export interface WorkspaceLayoutProps {
   onResetLayout: () => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
+  onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
   onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;

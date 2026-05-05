@@ -15,6 +15,11 @@ import type { MarkdownSyntaxVisibility } from '../../shared/config/appSettings';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useCurrentReviewPreview } from './appControllerHelpers';
+import {
+  createRevealAnchorInDocument,
+  createToggleListVisibility,
+  createToggleRightSidebarVisibility
+} from './appControllerRuntimeActions';
 import { createOpenNotesView, createSelectNode, createToggleTrashView } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
 import type { useAppRuntime } from './useAppRuntime';
@@ -92,6 +97,7 @@ export interface BuildControllerLayoutPropsArgs {
     rightSidebarWidth: number;
     setListCollapsed: (collapsed: boolean) => void;
     setListWidth: (width: number) => void;
+    setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
     setRightSidebarCollapsed: (collapsed: boolean) => void;
     setRightSidebarWidth: (width: number) => void;
     startReviewSession: (now?: string) => boolean;
@@ -122,32 +128,6 @@ export function buildAppControllerLayoutProps(args: BuildControllerLayoutPropsAr
     ...createLayoutDataArgs(args),
     ...createLayoutHandlerArgs(args)
   });
-}
-
-function createToggleListVisibility(args: BuildControllerLayoutPropsArgs) {
-  return () => {
-    if (args.ws.isListCollapsed) {
-      args.ws.setListCollapsed(false);
-      args.ws.setListWidth(Math.max(220, args.runtime.lastExpandedListWidthRef.current || args.ws.listWidth || 300));
-      return;
-    }
-    args.runtime.lastExpandedListWidthRef.current = args.ws.listWidth;
-    args.ws.setListCollapsed(true);
-  };
-}
-
-function createToggleRightSidebarVisibility(args: BuildControllerLayoutPropsArgs) {
-  return () => {
-    if (args.ws.isRightSidebarCollapsed) {
-      args.ws.setRightSidebarCollapsed(false);
-      args.ws.setRightSidebarWidth(
-        Math.max(240, args.runtime.lastExpandedRightSidebarWidthRef.current || args.ws.rightSidebarWidth || 320)
-      );
-      return;
-    }
-    args.runtime.lastExpandedRightSidebarWidthRef.current = args.ws.rightSidebarWidth;
-    args.ws.setRightSidebarCollapsed(true);
-  };
 }
 
 function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
@@ -212,6 +192,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
 
 function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   const openNotesView = createOpenNotesView(args);
+  const revealAnchorInDocument = createRevealAnchorInDocument(args);
 
   return {
     onAnswerChange: (answer: string) => {
@@ -232,6 +213,7 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     onEditorReady: (adapter: EditorAdapter | null) => {
       args.runtime.editorRef.current = adapter;
     },
+    onRevealAnchorInDocument: revealAnchorInDocument,
     onHotkeyUpdate: args.blockedHotkeyUpdate,
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),

@@ -1,4 +1,4 @@
-import { FileSearch, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
+import { FileSearch, Highlighter, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -20,6 +20,31 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
   );
 }
 
+function RightSidebarPanelButton({
+  active,
+  ariaLabel,
+  icon,
+  onClick
+}: {
+  active: boolean;
+  ariaLabel: string;
+  icon: JSX.Element;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={ariaLabel}
+      aria-pressed={active}
+      className="window-titlebar-leading-button"
+      data-active={active}
+      onClick={onClick}
+      type="button"
+    >
+      {icon}
+    </button>
+  );
+}
+
 interface WindowTitleBarRightSidebarAnchorProps {
   activeRightPanelId: WorkspaceRightPanelId;
   isRightSidebarCollapsed: boolean;
@@ -31,6 +56,7 @@ interface WindowTitleBarRightSidebarAnchorProps {
 export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
   const isReviewQueuePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'review-queue';
   const isSourceInfoPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'source-info';
+  const isHighlightsPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'highlights';
   const isDevPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'dev';
 
   if (props.isRightSidebarCollapsed) {
@@ -51,36 +77,30 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
       </div>
       <div className="window-titlebar-right-zone">
         <div className="window-titlebar-right-panel-actions">
-          <button
-            aria-label="Review queue panel"
-            aria-pressed={isReviewQueuePanelActive}
-            className="window-titlebar-leading-button"
-            data-active={isReviewQueuePanelActive}
+          <RightSidebarPanelButton
+            active={isReviewQueuePanelActive}
+            ariaLabel="Review queue panel"
+            icon={<ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
             onClick={() => props.onSelectRightPanel('review-queue')}
-            type="button"
-          >
-            <ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
-          <button
-            aria-label="Source info panel"
-            aria-pressed={isSourceInfoPanelActive}
-            className="window-titlebar-leading-button"
-            data-active={isSourceInfoPanelActive}
+          />
+          <RightSidebarPanelButton
+            active={isSourceInfoPanelActive}
+            ariaLabel="Source info panel"
+            icon={<FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
             onClick={() => props.onSelectRightPanel('source-info')}
-            type="button"
-          >
-            <FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
-          <button
-            aria-label="Dev panel"
-            aria-pressed={isDevPanelActive}
-            className="window-titlebar-leading-button"
-            data-active={isDevPanelActive}
+          />
+          <RightSidebarPanelButton
+            active={isHighlightsPanelActive}
+            ariaLabel="Highlights panel"
+            icon={<Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
+            onClick={() => props.onSelectRightPanel('highlights')}
+          />
+          <RightSidebarPanelButton
+            active={isDevPanelActive}
+            ariaLabel="Dev panel"
+            icon={<SlidersHorizontal aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />}
             onClick={() => props.onSelectRightPanel('dev')}
-            type="button"
-          >
-            <SlidersHorizontal aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-          </button>
+          />
         </div>
       </div>
     </div>
