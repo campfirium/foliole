@@ -70,14 +70,10 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
 vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn().mockReturnValue({ reviewed_at: '2026-03-04T00:00:00.000Z', card: {} }) }));
 vi.mock('../mirror/rebuildMirrorOutput.js', () => ({
-  rebuildMirrorOutput: vi.fn(),
-  syncIncrementalMirrorOutput: vi.fn().mockResolvedValue({
-    queued_article_count: 0,
-    rebuilt_article_count: 0,
-    failed_article_count: 0,
-    pending_article_count: 0,
-    updated_at: '2026-03-30T00:00:00.000Z'
-  })
+  rebuildMirrorOutput: vi.fn()
+}));
+vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
+  scheduleMirrorSync: vi.fn()
 }));
 
 beforeEach(() => {

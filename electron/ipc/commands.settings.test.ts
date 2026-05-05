@@ -67,14 +67,10 @@ vi.mock('../mirror/rebuildMirrorOutput.js', () => ({
     failed_article_count: 0,
     pending_article_count: 0,
     updated_at: '2026-03-30T00:25:00.000Z'
-  }),
-  syncIncrementalMirrorOutput: vi.fn().mockResolvedValue({
-    queued_article_count: 0,
-    rebuilt_article_count: 0,
-    failed_article_count: 0,
-    pending_article_count: 0,
-    updated_at: '2026-03-30T00:25:00.000Z'
   })
+}));
+vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
+  scheduleMirrorSync: vi.fn()
 }));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({

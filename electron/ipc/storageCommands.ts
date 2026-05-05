@@ -24,8 +24,9 @@ import { loadImportManagerSettings, saveImportManagerSettings } from '../import/
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
+import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
-import { rebuildMirrorOutput, syncIncrementalMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
+import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
 import {
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
@@ -76,25 +77,29 @@ function handleSqliteMaintenanceCommand(command: string, args: Record<string, un
   return undefined;
 }
 
-async function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
+function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
-    upsertNodeSnapshot(parseNodeCreationArgs(args, 'folder'));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseNodeCreationArgs(args, 'folder');
+    upsertNodeSnapshot(parsed);
+    scheduleMirrorSync([parsed.nodeId]);
     return null;
   }
   if (command === NATIVE_COMMANDS.createTopic) {
-    upsertNodeSnapshot(parseNodeCreationArgs(args, 'topic'));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseNodeCreationArgs(args, 'topic');
+    upsertNodeSnapshot(parsed);
+    scheduleMirrorSync([parsed.nodeId]);
     return null;
   }
   if (command === NATIVE_COMMANDS.createItem) {
-    upsertNodeSnapshot(parseNodeCreationArgs(args, 'item'));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseNodeCreationArgs(args, 'item');
+    upsertNodeSnapshot(parsed);
+    scheduleMirrorSync([parsed.nodeId]);
     return null;
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
-    upsertNodeSnapshot(parseNodeSnapshotArgs(args));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseNodeSnapshotArgs(args);
+    upsertNodeSnapshot(parsed);
+    scheduleMirrorSync([parsed.nodeId]);
     return null;
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {
@@ -102,18 +107,21 @@ async function handleNodeMutationCommand(command: string, args: Record<string, u
     return null;
   }
   if (command === NATIVE_COMMANDS.softDeleteNodes) {
-    softDeleteNodes(parseSoftDeleteNodesArgs(args));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseSoftDeleteNodesArgs(args);
+    softDeleteNodes(parsed);
+    scheduleMirrorSync(parsed.nodeIds);
     return null;
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
-    restoreNodes(parseRestoreNodesArgs(args));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseRestoreNodesArgs(args);
+    restoreNodes(parsed);
+    scheduleMirrorSync(parsed.nodeIds);
     return null;
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
-    deleteNodesPermanently(parseDeleteNodesPermanentlyArgs(args));
-    await syncIncrementalMirrorOutput();
+    const parsed = parseDeleteNodesPermanentlyArgs(args);
+    deleteNodesPermanently(parsed);
+    scheduleMirrorSync(parsed.nodeIds);
     return null;
   }
   return undefined;

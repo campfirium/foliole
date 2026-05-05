@@ -29,6 +29,7 @@ import {
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
+import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import {
@@ -186,11 +187,23 @@ app.on('second-instance', () => {
   focusFirstWindow();
 });
 
-app.on('before-quit', () => {
+let mirrorFlushed = false;
+app.on('before-quit', (event) => {
   devRestartIntentWatcher?.close();
   devRendererReloadIntentWatcher?.close();
   stopManagedInboxMonitor();
   stopKeepImportMonitor();
+  if (!mirrorFlushed) {
+    mirrorFlushed = true;
+    event.preventDefault();
+    flushMirrorSync()
+      .catch((error) => {
+        console.error('[mirror] flush on quit failed', error);
+      })
+      .finally(() => {
+        app.quit();
+      });
+  }
 });
 
 app.whenReady().then(async () => {

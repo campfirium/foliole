@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import type { NativeMirrorOutputRebuildResult } from '../../lib/platform/nativeUtilityContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { loadWorkspaceSnapshot, type WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
-import { collectArticleMirrorTargets } from './articleMirrorOutput.js';
+import { collectArticleMirrorTargets, type ArticleMirrorTarget } from './articleMirrorOutput.js';
 
 type MirrorSyncMode = 'full' | 'incremental' | 'missing';
 
@@ -129,37 +129,42 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
   return record.mirroredAt < sourceUpdatedAt;
 }
 
-async function syncMirrorOutput(mode: MirrorSyncMode): Promise<NativeMirrorOutputRebuildResult> {
-  const updatedAt = new Date().toISOString();
-  const paths = loadLibraryPathSettingsSync();
-  const snapshot = loadWorkspaceSnapshot();
-  const targets = snapshot ? collectArticleMirrorTargets(snapshot, paths.mirror) : [];
-  const recordsByArticleId = loadMirrorArticleRecords();
-  const targetArticleIds = new Set(targets.map((target) => target.articleId));
-
-  if (mode === 'full') {
-    await prepareFullMirrorRebuild(paths.mirror);
+function resolveAffectedArticleIds(snapshot: WorkspaceSnapshot, changedNodeIds: Set<string>): Set<string> {
+  const articleIds = new Set<string>();
+  for (const nodeId of changedNodeIds) {
+    const node = snapshot.nodesById[nodeId];
+    if (!node) {
+      continue;
+    }
+    if (node.kind === 'topic' && node.anchorLink === null) {
+      articleIds.add(node.id);
+    } else if (node.parentNodeId) {
+      articleIds.add(node.parentNodeId);
+    }
   }
+  return articleIds;
+}
 
-  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds);
-
-  await removeLegacyMirrorArtifacts(paths.mirror, targets.map((target) => target.targetPath));
-
+async function writeChangedTargets(
+  mode: MirrorSyncMode,
+  mirrorRoot: string,
+  targets: ArticleMirrorTarget[],
+  recordsByArticleId: Map<string, MirrorArticleRecord>,
+  affectedArticleIds: Set<string> | null,
+  updatedAt: string
+) {
   let rebuiltArticleCount = 0;
-
   for (const target of targets) {
+    if (affectedArticleIds && !affectedArticleIds.has(target.articleId)) {
+      continue;
+    }
     const persistedRecord = recordsByArticleId.get(target.articleId) ?? null;
     const fileUpdatedAt = await readFileUpdatedAt(target.targetPath);
     const effectiveRecord =
       persistedRecord ??
       (fileUpdatedAt
-        ? {
-            articleId: target.articleId,
-            mirroredAt: fileUpdatedAt,
-            relativePath: target.relativePath
-          }
+        ? { articleId: target.articleId, mirroredAt: fileUpdatedAt, relativePath: target.relativePath }
         : null);
-
     const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== target.relativePath);
     if (!shouldWriteTarget(mode, fileUpdatedAt, effectiveRecord, target.sourceUpdatedAt) && !pathChanged) {
       if (!persistedRecord && effectiveRecord) {
@@ -167,20 +172,43 @@ async function syncMirrorOutput(mode: MirrorSyncMode): Promise<NativeMirrorOutpu
       }
       continue;
     }
-
     if (persistedRecord && persistedRecord.relativePath !== target.relativePath) {
-      await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(paths.mirror, persistedRecord.relativePath));
+      await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, persistedRecord.relativePath));
     }
-
     await fs.mkdir(path.dirname(target.targetPath), { recursive: true });
     await fs.writeFile(target.targetPath, target.markdown, 'utf8');
-    saveMirrorArticleRecord({
-      articleId: target.articleId,
-      mirroredAt: updatedAt,
-      relativePath: target.relativePath
-    });
+    saveMirrorArticleRecord({ articleId: target.articleId, mirroredAt: updatedAt, relativePath: target.relativePath });
     rebuiltArticleCount += 1;
   }
+  return rebuiltArticleCount;
+}
+
+async function syncMirrorOutput(
+  mode: MirrorSyncMode,
+  changedNodeIds: Set<string> | null = null
+): Promise<NativeMirrorOutputRebuildResult> {
+  const updatedAt = new Date().toISOString();
+  const paths = loadLibraryPathSettingsSync();
+  const snapshot = loadWorkspaceSnapshot();
+  const targets = snapshot ? collectArticleMirrorTargets(snapshot, paths.mirror) : [];
+  const recordsByArticleId = loadMirrorArticleRecords();
+  const targetArticleIds = new Set(targets.map((target) => target.articleId));
+
+  const affectedArticleIds =
+    mode === 'incremental' && snapshot && changedNodeIds
+      ? resolveAffectedArticleIds(snapshot, changedNodeIds)
+      : null;
+
+  if (mode === 'full') {
+    await prepareFullMirrorRebuild(paths.mirror);
+  }
+
+  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds);
+  await removeLegacyMirrorArtifacts(paths.mirror, targets.map((target) => target.targetPath));
+
+  const rebuiltArticleCount = await writeChangedTargets(
+    mode, paths.mirror, targets, recordsByArticleId, affectedArticleIds, updatedAt
+  );
 
   return {
     queued_article_count: mode === 'full' ? targets.length : rebuiltArticleCount,
@@ -195,8 +223,8 @@ export function rebuildAllMirrorOutput() {
   return syncMirrorOutput('full');
 }
 
-export function syncIncrementalMirrorOutput() {
-  return syncMirrorOutput('incremental');
+export function syncIncrementalMirrorOutput(changedNodeIds: Set<string> | null = null) {
+  return syncMirrorOutput('incremental', changedNodeIds);
 }
 
 export function backfillMissingMirrorOutput() {
