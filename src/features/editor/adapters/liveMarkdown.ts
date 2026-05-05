@@ -11,9 +11,9 @@ import { handleClipboardImagePaste } from './htmlPaste';
 import { handleInternalClipboardPaste } from './htmlPaste';
 import {
   addAnchorTagDecorations,
-  getCursorLineNumber,
-  INLINE_ANCHOR_TAG_PATTERN
+  getCursorLineNumber
 } from './liveMarkdownAnchors';
+import { codeFenceLineNumbersField, resolveCodeBlockStateBeforeLine } from './liveMarkdownCodeBlocks';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addFrontmatterDecorations } from './liveMarkdownFrontmatter';
 import { addImageDecorations, addInlineCodeDecorations, addInlineLinkDecorations } from './liveMarkdownInlineDecorations';
@@ -21,11 +21,11 @@ import { collectPreviewLineMatchState, collectSourceLineMatchState } from './liv
 import {
   addCodeFenceDecoration,
   addLine,
-  addMark,
   addPrefixDecoration,
   CODE_FENCE_PATTERN,
   createLineClass
 } from './liveMarkdownPrimitives';
+import { addSourceModeAnchorDecorations } from './liveMarkdownSourceAnchors';
 import {
   addClozePlaceholderDecorations,
   addInlineCodeSyntaxDecorations,
@@ -58,6 +58,7 @@ export function createLiveMarkdown(
     activeNodeIdFacet.of(nodeId),
     imageClozePresentationVersionFacet.of(imageClozePresentationVersion),
     liveMarkdownTheme,
+    codeFenceLineNumbersField,
     markdownStaticPlugin,
     markdownLinePlugin,
     markdownInteractionHandlers
@@ -74,7 +75,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const showMarkdownSyntax = getMarkdownSyntaxVisibility() === 'visible';
   const cursorLineNumber = getCursorLineNumber(view);
-  let inCodeBlock = resolveCodeBlockStateBeforeLine(view, startLineNumber);
+  let inCodeBlock = resolveCodeBlockStateBeforeLine(view.state, startLineNumber);
 
   for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
@@ -115,7 +116,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
 function buildSourceModeLineDecorations(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
-  let inCodeBlock = resolveCodeBlockStateBeforeLine(view, startLineNumber);
+  let inCodeBlock = resolveCodeBlockStateBeforeLine(view.state, startLineNumber);
 
   for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
@@ -155,52 +156,6 @@ function buildSourceModeStaticDecorations(view: EditorView): DecorationSet {
   return Decoration.set(ranges, true);
 }
 
-function addSourceModeAnchorDecorations(ranges: Range<Decoration>[], content: string) {
-  let match = INLINE_ANCHOR_TAG_PATTERN.exec(content);
-  while (match) {
-    const from = match.index ?? -1;
-    const raw = match[0] ?? '';
-    const slashPart = match[1] ?? '';
-    const kindPart = match[2] ?? '';
-    const idPart = match[3] ?? '';
-
-    if (from >= 0 && raw.length > 0) {
-      const to = from + raw.length;
-      const kindFrom = from + 1 + slashPart.length;
-      const kindTo = kindFrom + kindPart.length;
-      const idPrefix = 'id="';
-      const idPrefixOffset = raw.indexOf(idPrefix);
-
-      addMark(ranges, from, to, 'cm-md-anchor-tag-token');
-      addMark(ranges, from, from + 1, 'cm-md-anchor-tag-delimiter');
-      addMark(ranges, to - 1, to, 'cm-md-anchor-tag-delimiter');
-      if (slashPart.length > 0) addMark(ranges, from + 1, from + 1 + slashPart.length, 'cm-md-anchor-tag-delimiter');
-      addMark(ranges, kindFrom, kindTo, 'cm-md-anchor-tag-kind');
-
-      if (idPrefixOffset >= 0) {
-        const attrFrom = from + idPrefixOffset;
-        const idFrom = attrFrom + idPrefix.length;
-        const idTo = idFrom + idPart.length;
-        addMark(ranges, attrFrom, idFrom, 'cm-md-anchor-tag-attr');
-        addMark(ranges, idFrom, idTo, 'cm-md-anchor-tag-id');
-        addMark(ranges, idTo, Math.min(idTo + 1, to), 'cm-md-anchor-tag-attr');
-      }
-    }
-    match = INLINE_ANCHOR_TAG_PATTERN.exec(content);
-  }
-  INLINE_ANCHOR_TAG_PATTERN.lastIndex = 0;
-}
-
-function resolveCodeBlockStateBeforeLine(view: EditorView, lineNumber: number) {
-  let inCodeBlock = false;
-  for (let currentLineNumber = 1; currentLineNumber < lineNumber; currentLineNumber += 1) {
-    if (CODE_FENCE_PATTERN.test(view.state.doc.line(currentLineNumber).text)) {
-      inCodeBlock = !inCodeBlock;
-    }
-  }
-  return inCodeBlock;
-}
-
 const markdownStaticPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -219,7 +174,9 @@ const markdownStaticPlugin = ViewPlugin.fromClass(
 const markdownLinePlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
+    cursorLineNumber: number | null;
     constructor(view: EditorView) {
+      this.cursorLineNumber = getCursorLineNumber(view);
       this.decorations = buildLineDecorations(view);
     }
     update(update: ViewUpdate) {
@@ -228,9 +185,15 @@ const markdownLinePlugin = ViewPlugin.fromClass(
       const imageClozePresentationChanged =
         update.startState.facet(imageClozePresentationVersionFacet) !==
         update.state.facet(imageClozePresentationVersionFacet);
-      if (shouldRefreshLineDecorations(update) || nodeIdChanged || imageClozePresentationChanged) {
+      const nextCursorLineNumber = getCursorLineNumber(update.view);
+      if (
+        shouldRefreshLineDecorations(update, this.cursorLineNumber, nextCursorLineNumber) ||
+        nodeIdChanged ||
+        imageClozePresentationChanged
+      ) {
         this.decorations = buildLineDecorations(update.view);
       }
+      this.cursorLineNumber = nextCursorLineNumber;
     }
   },
   { decorations: (value) => value.decorations }

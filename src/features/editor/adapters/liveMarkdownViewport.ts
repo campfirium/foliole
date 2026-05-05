@@ -21,12 +21,16 @@ export function resolveVisibleLineWindow(view: EditorView): VisibleLineWindow {
   };
 }
 
-export function shouldRefreshLineDecorations(update: ViewUpdate) {
+export function shouldRefreshLineDecorations(
+  update: ViewUpdate,
+  previousCursorLineNumber: number | null,
+  nextCursorLineNumber: number | null
+) {
   if (update.docChanged || update.viewportChanged) {
     return true;
   }
 
-  if (update.selectionSet || update.focusChanged) {
+  if (previousCursorLineNumber !== nextCursorLineNumber) {
     return true;
   }
 
