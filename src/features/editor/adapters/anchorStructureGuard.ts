@@ -1,6 +1,8 @@
-import { Annotation, EditorState, type TransactionSpec } from '@codemirror/state';
+import { Annotation, EditorState, Transaction, type TransactionSpec } from '@codemirror/state';
 
 import { parseAnchorBlocks } from '../model/anchorBlocks';
+
+import { recoverAnchorMutation } from './anchorMutationRecovery';
 
 interface Range {
   from: number;
@@ -55,12 +57,32 @@ export const anchorStructureGuard = EditorState.transactionFilter.of((transactio
     return transaction;
   }
 
-  const changes: Range[] = [];
-  transaction.changes.iterChangedRanges((fromA, toA) => {
-    changes.push({ from: fromA, to: toA });
+  const changes: Array<Range & { insert: string }> = [];
+  transaction.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+    changes.push({ from: fromA, insert: inserted.toString(), to: toA });
   });
 
   const content = transaction.startState.doc.toString();
+  const recovered = recoverAnchorMutation({
+    changes,
+    content,
+    nextContent: transaction.newDoc.toString(),
+    selection: transaction.newSelection
+  });
+  if (recovered) {
+    const userEvent = transaction.annotation(Transaction.userEvent);
+    return {
+      annotations: [
+        bypassAnchorStructureGuard.of(true),
+        ...(userEvent ? [Transaction.userEvent.of(userEvent)] : [])
+      ],
+      changes: { from: 0, to: content.length, insert: recovered.content },
+      filter: false,
+      scrollIntoView: transaction.scrollIntoView,
+      selection: recovered.selection
+    };
+  }
+
   if (shouldBlockAnchorTagMutation(content, changes)) {
     return [];
   }

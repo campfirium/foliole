@@ -1,6 +1,7 @@
+import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 
-import { shouldBlockAnchorTagMutation } from './anchorStructureGuard';
+import { anchorStructureGuard, shouldBlockAnchorTagMutation } from './anchorStructureGuard';
 
 describe('anchorStructureGuard', () => {
   const content = 'AA<highlight id="1">BC</highlight id="1">DD';
@@ -33,5 +34,28 @@ describe('anchorStructureGuard', () => {
     const malformed = '<highlight id="2">oops';
     const insideTag = malformed.indexOf('id=');
     expect(shouldBlockAnchorTagMutation(malformed, [{ from: insideTag, to: insideTag + 2 }])).toBe(true);
+  });
+
+  it('rewrites boundary deletion so the anchor survives with remaining text', () => {
+    const state = EditorState.create({ doc: content, extensions: [anchorStructureGuard] });
+    const transaction = state.update({
+      changes: { from: 1, to: content.indexOf('BC') + 1, insert: '' },
+      selection: { anchor: 1 }
+    });
+
+    expect(transaction.newDoc.toString()).toBe('A<highlight id="1">C</highlight id="1">DD');
+    expect(transaction.newSelection.main.anchor).toBe(1);
+  });
+
+  it('rewrites full-span replacement so the anchor wraps the replacement text', () => {
+    const state = EditorState.create({ doc: content, extensions: [anchorStructureGuard] });
+    const to = content.indexOf('</highlight id="1">') + '</highlight id="1">'.length + 1;
+    const transaction = state.update({
+      changes: { from: 1, to, insert: 'Q' },
+      selection: { anchor: 2 }
+    });
+
+    expect(transaction.newDoc.toString()).toBe('A<highlight id="1">Q</highlight id="1">D');
+    expect(transaction.newSelection.main.anchor).toBe(20);
   });
 });
