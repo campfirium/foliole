@@ -9,6 +9,10 @@ import type {
 
 import { getRuntimeInvoke } from './bridge';
 
+type ExternalSearchFoldersListener = (folders: RuntimeExternalSearchFolder[]) => void;
+
+const externalSearchFoldersListeners = new Set<ExternalSearchFoldersListener>();
+
 export interface RuntimeExternalSearchFolder {
   attachmentMode: NativeExternalSearchAttachmentMode;
   attachmentRootPath: string | null;
@@ -43,6 +47,17 @@ export interface RuntimeExternalSearchBrowseEntry {
   openingText: string | null;
   relativePath: string;
   title: string;
+}
+
+export function subscribeRuntimeExternalSearchFolders(listener: ExternalSearchFoldersListener) {
+  externalSearchFoldersListeners.add(listener);
+  return () => {
+    externalSearchFoldersListeners.delete(listener);
+  };
+}
+
+function notifyRuntimeExternalSearchFolders(folders: RuntimeExternalSearchFolder[]) {
+  externalSearchFoldersListeners.forEach((listener) => listener(folders));
 }
 
 function toFolder(value: NativeExternalSearchFolder): RuntimeExternalSearchFolder {
@@ -110,7 +125,9 @@ export async function saveRuntimeExternalSearchFolders(folders: RuntimeExternalS
       id: folder.id
     }))
   });
-  return Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
+  const nextFolders = Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
+  notifyRuntimeExternalSearchFolders(nextFolders);
+  return nextFolders;
 }
 
 export async function rebuildRuntimeExternalSearchIndex(folderId?: string) {
@@ -122,7 +139,9 @@ export async function rebuildRuntimeExternalSearchIndex(folderId?: string) {
     NATIVE_COMMANDS.rebuildExternalSearchIndex,
     folderId ? { folder_id: folderId } : undefined
   );
-  return Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
+  const nextFolders = Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
+  notifyRuntimeExternalSearchFolders(nextFolders);
+  return nextFolders;
 }
 
 export async function loadRuntimeExternalSearchBrowseEntries(folderId: string) {

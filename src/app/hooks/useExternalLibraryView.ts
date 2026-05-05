@@ -3,6 +3,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   loadRuntimeExternalSearchBrowseEntries,
   loadRuntimeExternalSearchFolders,
+  subscribeRuntimeExternalSearchFolders,
   type RuntimeExternalSearchBrowseEntry,
   type RuntimeExternalSearchFolder
 } from '../../shared/platform/externalSearchBridge';
@@ -115,7 +116,26 @@ function useExternalFoldersState(
     };
   }, [setSelection]);
 
+  useEffect(
+    () =>
+      subscribeRuntimeExternalSearchFolders((nextFolders) => {
+        setFolders(nextFolders);
+        setSelection((current) => resolveExternalSelectionAfterFoldersChanged(current, nextFolders));
+      }),
+    [setSelection]
+  );
+
   return folders;
+}
+
+function resolveExternalSelectionAfterFoldersChanged(
+  current: ExternalLibrarySelection,
+  folders: RuntimeExternalSearchFolder[]
+) {
+  if (current.kind === 'root') {
+    return current;
+  }
+  return folders.some((folder) => folder.id === current.folderId) ? current : { kind: 'root' };
 }
 
 function useExternalFolderEntries(selection: ExternalLibrarySelection) {
