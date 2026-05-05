@@ -26,11 +26,6 @@ export function createToggleTrashView(args: BuildControllerLayoutPropsArgs, open
 
 export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
   return (nodeId: string, focusAnchor = null) => {
-    console.log('select-node-called', {
-      activeNodeId: args.ws.activeNodeId,
-      focusAnchor,
-      nodeId
-    });
     args.runtime.flushPendingEditorDraft();
     args.runtime.setIsViewingTrashNode(false);
     const activeNode = args.ws.activeNodeId ? args.ws.nodesById[args.ws.activeNodeId] : null;
@@ -45,7 +40,7 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
       nodeId
     });
     const applyTextAnchorSelection = (targetNodeId: string, anchorLink: typeof effectiveFocusAnchor) => {
-      const nextViewState = buildAnchorViewState(anchorLink, args.ws.nodeViewById[targetNodeId]);
+      const nextViewState = buildAnchorViewState(anchorLink, args.ws.nodeViewById[targetNodeId], undefined, true);
       if (!nextViewState) {
         return false;
       }

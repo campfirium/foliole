@@ -99,6 +99,7 @@ function useWorkspaceReadingProgressPersistence(args: {
       args.readingPositionRef.current.nodeId === args.activeNodeId ? args.readingPositionRef.current.selection : null,
     getReadingPositionSyncState: () =>
       args.readingPositionSyncRef.current.nodeId === args.activeNodeId ? args.readingPositionSyncRef.current.state : null,
+    isImmersiveMode: false,
     isViewingTrashNode: args.isViewingTrashNode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     nodeViewById: args.nodeViewById,

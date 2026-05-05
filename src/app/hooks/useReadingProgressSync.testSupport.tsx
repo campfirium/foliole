@@ -7,6 +7,7 @@ import { useReadingProgressSync } from './useReadingProgressSync';
 
 export interface HarnessProps {
   activeNodeId: string | null;
+  isImmersiveMode?: boolean;
   readingSelection?: { from: number; to: number } | null;
   readingPositionSyncState?: { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isWorkspaceHydrated: boolean;
@@ -43,6 +44,7 @@ export function HookHarness({
   activeNodeId,
   readingSelection = null,
   readingPositionSyncState = null,
+  isImmersiveMode = false,
   isWorkspaceHydrated,
   nodeViewById = {},
   scrollTop = 120,
@@ -58,6 +60,7 @@ export function HookHarness({
     editorRef,
     getReadingPositionSelection: () => readingSelection,
     getReadingPositionSyncState: () => readingPositionSyncState,
+    isImmersiveMode,
     isViewingTrashNode: false,
     isWorkspaceHydrated,
     nodeViewById,

@@ -24,6 +24,7 @@ function runRuntimeReadingPositionPersistenceTest() {
   render(
     <HookHarness
       activeNodeId="node-2"
+      isImmersiveMode={true}
       isWorkspaceHydrated={true}
       readingSelection={{ from: 48000, to: 48000 }}
       scrollTop={5400}
@@ -67,6 +68,7 @@ function renderImmediateCaptureHarness(setNodeViewState: ReturnType<typeof vi.fn
       activeNodeId: 'node-2',
       editorRef: ref,
       getReadingPositionSelection: () => null,
+      isImmersiveMode: false,
       isViewingTrashNode: false,
       isWorkspaceHydrated: true,
       nodeViewById: {},
@@ -95,12 +97,13 @@ function renderDebouncedHarness(listeners: Set<() => void>, setNodeViewState: Re
     useReadingProgressSync({
       activeNodeId: 'node-2',
       editorRef,
-        getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
-        isViewingTrashNode: false,
-        isWorkspaceHydrated: true,
-        nodeViewById: {},
-        setNodeViewState
-      });
+      getReadingPositionSelection: () => ({ from: 48000, to: 48000 }),
+      isImmersiveMode: false,
+      isViewingTrashNode: false,
+      isWorkspaceHydrated: true,
+      nodeViewById: {},
+      setNodeViewState
+    });
     return null;
   }
 
@@ -172,6 +175,7 @@ function registerScrollPersistenceTests() {
           startedAt: Date.now(),
           targetSelection: { from: 48000, to: 48024 }
         }),
+        isImmersiveMode: false,
         isViewingTrashNode: false,
         isWorkspaceHydrated: true,
         nodeViewById: {},
@@ -252,6 +256,7 @@ function registerScrollPersistenceTests() {
           startedAt: Date.now(),
           targetSelection: { from: 48000, to: 48024 }
         }),
+        isImmersiveMode: false,
         isViewingTrashNode: false,
         isWorkspaceHydrated: true,
         nodeViewById: {},
@@ -274,8 +279,37 @@ function registerScrollPersistenceTests() {
     expect(setNodeViewState).not.toHaveBeenCalled();
   });
 
-  it('persists the runtime reading position instead of the raw editor selection', () => {
+  it('persists the runtime reading position while immersive mode is active', () => {
     runRuntimeReadingPositionPersistenceTest();
+  });
+
+  it('prefers the current editor-visible position over a stale highlight jump in normal mode', () => {
+    render(
+      <HookHarness
+        activeNodeId="node-2"
+        isWorkspaceHydrated={true}
+        readingSelection={{ from: 48000, to: 48000 }}
+        scrollTop={5400}
+        selection={{ from: 3, to: 8 }}
+      />
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(1600);
+    });
+
+    expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
+      activeNodeId: 'node-2',
+      nodeViewStates: [
+        {
+          nodeId: 'node-2',
+          scrollTop: 5400,
+          selectionFrom: 3,
+          selectionTo: 3
+        }
+      ],
+      updatedAt: expect.any(String)
+    });
   });
 }
 

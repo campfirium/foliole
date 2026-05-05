@@ -5,6 +5,7 @@ import { pushDebugTrace } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
 import { applyRestoreScrollTop } from './markdownEditorSelectionRestoreScroll';
+import { shouldCollapseSelectionAfterRestore } from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
 
 const RESTORE_SELECTION_TIMEOUT_MS = 180;
@@ -136,6 +137,10 @@ function tryCompleteRestoreSelection(
   markNodePositionReady(args.nodeId);
   if (reason !== 'editor-restore-selection-timeout' && !isRestoreScrollSettled(args.adapter, args.restoreScrollTop)) {
     return false;
+  }
+  const collapsedSelection = shouldCollapseSelectionAfterRestore(args.selection);
+  if (collapsedSelection) {
+    args.adapter.setSelection(collapsedSelection);
   }
   markRestoreSelectionSettled(args);
   finishRestoreApplying({

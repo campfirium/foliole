@@ -30,6 +30,8 @@ function createRuntimeState() {
 function createRevealDocumentPositionArgs(args: {
   getScrollTop?: () => number;
   revealPosition?: (position: number) => void;
+  revealSelection?: ReturnType<typeof vi.fn>;
+  setSelection?: ReturnType<typeof vi.fn>;
   setNodeViewState: ReturnType<typeof vi.fn>;
 }) {
   return {
@@ -37,7 +39,9 @@ function createRevealDocumentPositionArgs(args: {
       editorRef: {
         current: {
           getScrollTop: args.getScrollTop ?? (() => 0),
-          revealPosition: args.revealPosition ?? (() => undefined)
+          revealPosition: args.revealPosition ?? (() => undefined),
+          revealSelection: args.revealSelection ?? vi.fn(),
+          setSelection: args.setSelection ?? vi.fn()
         }
       },
       ...createRuntimeState(),
@@ -59,7 +63,9 @@ function createRevealDocumentPositionArgs(args: {
 function createZeroWidthAnchorRevealArgs(args: {
   content: string;
   getScrollTop: () => number;
+  revealPosition?: ReturnType<typeof vi.fn>;
   revealSelection: ReturnType<typeof vi.fn>;
+  setSelection?: ReturnType<typeof vi.fn>;
   setNodeViewState: ReturnType<typeof vi.fn>;
 }) {
   return {
@@ -67,7 +73,9 @@ function createZeroWidthAnchorRevealArgs(args: {
       editorRef: {
         current: {
           getScrollTop: args.getScrollTop,
-          revealSelection: args.revealSelection
+          revealPosition: args.revealPosition ?? vi.fn(),
+          revealSelection: args.revealSelection,
+          setSelection: args.setSelection ?? vi.fn()
         }
       },
       ...createRuntimeState(),
@@ -101,12 +109,18 @@ function createZeroWidthAnchorRevealArgs(args: {
 }
 
 describe('createRevealDocumentPosition', () => {
-  it('updates the reading anchor request without eagerly committing store state when editor is available', () => {
+  it('updates the stored reading position before applying the reading anchor request', () => {
     const revealPosition = vi.fn();
+    const setSelection = vi.fn();
     const getScrollTop = vi.fn(() => 320);
     const setNodeViewState = vi.fn();
 
-    const args = createRevealDocumentPositionArgs({ getScrollTop, revealPosition, setNodeViewState }) as any;
+    const args = createRevealDocumentPositionArgs({
+      getScrollTop,
+      revealPosition,
+      setNodeViewState,
+      setSelection
+    }) as any;
     const revealDocumentPosition = createRevealDocumentPosition(args);
 
     revealDocumentPosition(48000);
@@ -116,7 +130,12 @@ describe('createRevealDocumentPosition', () => {
       nodeId: 'node-1',
       selection: { from: 48000, to: 48000 }
     });
-    expect(setNodeViewState).not.toHaveBeenCalled();
+    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+      scrollTop: 320,
+      selection: { from: 48000, to: 48000 }
+    });
+    expect(setSelection).toHaveBeenCalledWith({ from: 48000, to: 48000 });
+    expect(revealPosition).toHaveBeenCalledWith(48000);
   });
 
   it('still stores selection when editor adapter is unavailable', () => {
@@ -191,11 +210,20 @@ describe('createRevealAnchorInDocument', () => {
 
   it('reveals zero-width text anchors instead of dropping the jump', () => {
     const revealSelection = vi.fn();
+    const revealPosition = vi.fn();
+    const setSelection = vi.fn();
     const getScrollTop = vi.fn(() => 88);
     const setNodeViewState = vi.fn();
     const content = 'AD';
     const anchorPosition = 1;
-    const args = createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as any;
+    const args = createZeroWidthAnchorRevealArgs({
+      content,
+      getScrollTop,
+      revealPosition,
+      revealSelection,
+      setNodeViewState,
+      setSelection
+    }) as any;
     const revealAnchorInDocument = createRevealAnchorInDocument(args);
 
     revealAnchorInDocument({
@@ -205,7 +233,12 @@ describe('createRevealAnchorInDocument', () => {
     });
 
     expect(revealSelection).not.toHaveBeenCalled();
-    expect(setNodeViewState).not.toHaveBeenCalled();
+    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+      scrollTop: 88,
+      selection: { from: anchorPosition, to: anchorPosition }
+    });
+    expect(setSelection).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition });
+    expect(revealPosition).toHaveBeenCalledWith(anchorPosition);
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
     expect(args.runtime.readingPositionRef.current).toEqual({
       nodeId: 'node-1',

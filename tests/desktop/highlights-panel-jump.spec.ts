@@ -86,6 +86,11 @@ test('clicking a highlights panel item jumps within the current parent document 
   await seedHighlightsPanelWorkspace(desktopWindow);
 
   await expect(desktopWindow.getByRole('button', { name: 'Playwright Highlights Parent', exact: true })).toBeVisible();
+  const beforeClickSelection = await collectPromptSelection(desktopWindow);
+  await testInfo.attach('highlights-panel-before-click-selection', {
+    body: JSON.stringify(beforeClickSelection, null, 2),
+    contentType: 'application/json'
+  });
   await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
   await expect(desktopWindow.getByRole('button', { name: 'Highlight Playwright Highlights Child' })).toBeVisible();
   await desktopWindow.getByRole('button', { name: 'Highlight Playwright Highlights Child' }).click();
@@ -101,14 +106,17 @@ test('clicking a highlights panel item jumps within the current parent document 
     contentType: 'application/json'
   });
 
-  await expect.poll(async () => collectPromptSelection(desktopWindow), {
-    message: 'waiting for highlights panel jump to land on the target text range'
-  }).toMatchObject({
-    selection: {
-      from: 6,
-      to: 10
-    },
-    selectedText: 'Beta'
+  await expect.poll(async () => {
+    const state = await collectPromptSelection(desktopWindow);
+    return {
+      caretAtTarget: state.selection?.from === 6 && state.selection?.to === 6,
+      selectedText: state.selectedText
+    };
+  }, {
+    message: 'waiting for highlights panel jump to land on the target position without leaving the text selected'
+  }).toEqual({
+    caretAtTarget: true,
+    selectedText: ''
   });
 
   const finalSelection = await collectPromptSelection(desktopWindow);

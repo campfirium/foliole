@@ -24,6 +24,7 @@ export interface ReadingProgressSyncOptions {
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
+  isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -69,6 +70,7 @@ function useResolvedReadingProgressState(
         ? captureEditorNodeViewState(
             captureNodeId,
             args.getReadingPositionSelection,
+            args.isImmersiveMode,
             args.isViewingTrashNode,
             args.editorRef
           )
@@ -232,6 +234,7 @@ export function useReadingProgressSync({
   getReadingPositionSelection,
   getReadingPositionSyncState,
   isViewingTrashNode,
+  isImmersiveMode,
   isWorkspaceHydrated,
   nodeViewById,
   setNodeViewState
@@ -241,6 +244,7 @@ export function useReadingProgressSync({
     editorRef,
     getReadingPositionSelection,
     getReadingPositionSyncState,
+    isImmersiveMode,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
@@ -269,6 +273,7 @@ export function useReadingProgressSync({
     editorRef,
     getReadingPositionSelection,
     getReadingPositionSyncState,
+    isImmersiveMode,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,

@@ -8,7 +8,7 @@ import {
   beginRestoreSelection,
   scheduleRestoreSelectionCompletion
 } from './markdownEditorSelectionRestoreCompletion';
-import { resolveRestoreScrollTop } from './markdownEditorSelectionRestoreTarget';
+import { normalizeRestoreSelection, resolveRestoreScrollTop } from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function handleSelectionRestore(args: {
@@ -78,7 +78,8 @@ export function resolveRestoreTarget(args: {
   readingSelection: EditorViewState['selection'] | null | undefined;
   value: string;
 }) {
-  const selection = args.readingSelection ?? args.nodeViewState?.selection;
+  const selectionSource = args.readingSelection ?? args.nodeViewState?.selection;
+  const selection = selectionSource ? normalizeRestoreSelection(selectionSource) : null;
   if (!args.nodeId || !selection || !args.adapter || !args.pendingRestoreSelectionKey) {
     return null;
   }

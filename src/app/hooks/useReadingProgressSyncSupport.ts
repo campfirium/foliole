@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
+import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
 
 export interface CapturedNodeViewState {
   nodeId: string;
@@ -53,18 +54,22 @@ export function createReadingProgressSignature(
 export function captureEditorNodeViewState(
   nodeId: string | null,
   getReadingPositionSelection: (() => { from: number; to: number } | null) | undefined,
+  isImmersiveMode: boolean,
   isViewingTrashNode: boolean,
   editorRef: MutableRefObject<EditorAdapter | null>
 ): CapturedNodeViewState | null {
   if (isViewingTrashNode || !nodeId || !editorRef.current) {
     return null;
   }
-  const readingSelection = getReadingPositionSelection?.();
   return {
     nodeId,
     viewState: normalizeNodeViewState({
       scrollTop: editorRef.current.getScrollTop(),
-      selection: readingSelection ?? editorRef.current.getSelection()
+      selection: resolvePersistedViewStateSelection({
+        editor: editorRef.current,
+        isImmersiveMode,
+        sharedReadingSelection: getReadingPositionSelection?.() ?? null
+      })
     })
   };
 }

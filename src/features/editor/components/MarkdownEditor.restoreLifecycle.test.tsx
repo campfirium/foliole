@@ -107,7 +107,7 @@ it('releases the previous restore lock when switching to another document after 
   expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
   await waitFor(() => {
     expect(onBeginApplyingReadingPosition).toHaveBeenLastCalledWith(
-      { from: 51_200, to: 51_228 },
+      { from: 51_200, to: 51_200 },
       'editor-restore-selection'
     );
   });

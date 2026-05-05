@@ -23,12 +23,16 @@ function createRuntimeState() {
 }
 
 function createRevealTextAnchorArgs(content: string) {
+  const revealPosition = vi.fn();
+  const setSelection = vi.fn();
   return {
     runtime: {
       editorRef: {
         current: {
           getScrollTop: vi.fn(() => 64),
-          revealSelection: vi.fn()
+          revealPosition,
+          revealSelection: vi.fn(),
+          setSelection
         }
       },
       ...createRuntimeState(),
@@ -57,6 +61,10 @@ function createRevealTextAnchorArgs(content: string) {
         }
       },
       setNodeViewState: vi.fn()
+    },
+    testHarness: {
+      revealPosition,
+      setSelection
     }
   } as any;
 }
@@ -82,20 +90,31 @@ describe('createRevealAnchorInDocument text locator', () => {
     });
 
     expect(args.runtime.editorRef.current.revealSelection).not.toHaveBeenCalled();
-    expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
+    expect(args.ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
+      scrollTop: 64,
+      selection: {
+        from: content.indexOf('Beta'),
+        to: content.indexOf('Beta')
+      }
+    });
+    expect(args.testHarness.setSelection).toHaveBeenCalledWith({
+      from: content.indexOf('Beta'),
+      to: content.indexOf('Beta')
+    });
+    expect(args.testHarness.revealPosition).toHaveBeenCalledWith(content.indexOf('Beta'));
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
     expect(args.runtime.readingPositionRef.current).toEqual({
       nodeId: 'node-1',
       selection: {
         from: content.indexOf('Beta'),
-        to: content.indexOf('Beta') + 'Beta'.length
+        to: content.indexOf('Beta')
       }
     });
     expect(args.runtime.readingPositionSyncRef.current.state).toMatchObject({
       reason: 'reveal-anchor',
       targetSelection: {
         from: content.indexOf('Beta'),
-        to: content.indexOf('Beta') + 'Beta'.length
+        to: content.indexOf('Beta')
       }
     });
     expect(requestPdfAnchorJump).not.toHaveBeenCalled();
@@ -120,20 +139,31 @@ function runUnresolvedRevealCase() {
   });
 
   expect(args.runtime.editorRef.current.revealSelection).not.toHaveBeenCalled();
-  expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
+  expect(args.ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
+    scrollTop: 64,
+    selection: {
+      from: 0,
+      to: 0
+    }
+  });
+  expect(args.testHarness.setSelection).toHaveBeenCalledWith({
+    from: 0,
+    to: 0
+  });
+  expect(args.testHarness.revealPosition).toHaveBeenCalledWith(0);
   expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
   expect(args.runtime.readingPositionRef.current).toEqual({
     nodeId: 'node-1',
     selection: {
       from: 0,
-      to: 4
+      to: 0
     }
   });
   expect(args.runtime.readingPositionSyncRef.current.state).toMatchObject({
     reason: 'reveal-anchor',
     targetSelection: {
       from: 0,
-      to: 4
+      to: 0
     }
   });
   expect(requestPdfAnchorJump).not.toHaveBeenCalled();

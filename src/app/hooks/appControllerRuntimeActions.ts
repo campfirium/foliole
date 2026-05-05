@@ -6,6 +6,30 @@ import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { requestReadingPositionApply } from './readingPositionRequests';
 
+function writeNodeReadingPosition(args: BuildControllerLayoutPropsArgs, selection: EditorSelection) {
+  if (!args.ws.activeNodeId) {
+    return;
+  }
+  const existingViewState = args.ws.nodeViewById[args.ws.activeNodeId];
+  args.ws.setNodeViewState(args.ws.activeNodeId, {
+    scrollTop: args.runtime.editorRef.current?.getScrollTop() ?? existingViewState?.scrollTop ?? 0,
+    selection
+  });
+}
+
+function applyReadingPositionToActiveEditor(args: BuildControllerLayoutPropsArgs, selection: EditorSelection) {
+  const adapter = args.runtime.editorRef.current;
+  if (!adapter) {
+    return;
+  }
+  adapter.setSelection(selection);
+  if (selection.from === selection.to) {
+    adapter.revealPosition(selection.from);
+    return;
+  }
+  adapter.revealSelection(selection);
+}
+
 export function createToggleListVisibility(args: BuildControllerLayoutPropsArgs) {
   return () => {
     if (args.ws.isListCollapsed) {
@@ -53,11 +77,17 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     if (!selection) {
       return;
     }
+    const caretSelection = {
+      from: selection.from,
+      to: selection.from
+    };
+    writeNodeReadingPosition(args, caretSelection);
+    applyReadingPositionToActiveEditor(args, caretSelection);
     requestReadingPositionApply({
       nodeId: args.ws.activeNodeId,
       reason: 'reveal-anchor',
       runtime: args.runtime,
-      selection
+      selection: caretSelection
     });
   };
 }
@@ -69,6 +99,8 @@ export function createRevealDocumentSelection(args: BuildControllerLayoutPropsAr
     }
     const adapter = args.runtime.editorRef.current;
     if (adapter) {
+      writeNodeReadingPosition(args, selection);
+      applyReadingPositionToActiveEditor(args, selection);
       requestReadingPositionApply({
         nodeId: args.ws.activeNodeId,
         reason: 'reveal-selection',
@@ -96,6 +128,8 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
       to: position
     };
     if (adapter) {
+      writeNodeReadingPosition(args, selection);
+      applyReadingPositionToActiveEditor(args, selection);
       requestReadingPositionApply({
         nodeId: args.ws.activeNodeId,
         reason: 'reveal-position',

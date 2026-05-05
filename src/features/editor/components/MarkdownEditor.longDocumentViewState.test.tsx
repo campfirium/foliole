@@ -93,8 +93,18 @@ function renderEditor(ui: React.ReactElement) {
 }
 
 async function expectRestoredViewState(nodeViewState: { scrollTop: number; selection: { from: number; to: number } }) {
-  expect(mockSetSelection).not.toHaveBeenCalled();
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith({
+    from: nodeViewState.selection.from,
+    to: nodeViewState.selection.from
+  });
+  if (nodeViewState.selection.from !== nodeViewState.selection.to || nodeViewState.selection.from !== 0) {
+    expect(mockSetSelection).toHaveBeenLastCalledWith({
+      from: nodeViewState.selection.from,
+      to: nodeViewState.selection.from
+    });
+  } else {
+    expect(mockSetSelection).not.toHaveBeenCalled();
+  }
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
   });
@@ -244,7 +254,10 @@ it('prefers the current reading selection over the stale saved selection', async
     />
   );
 
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(readingSelection);
+  expect(mockRestoreSelection).toHaveBeenLastCalledWith({
+    from: readingSelection.from,
+    to: readingSelection.from
+  });
   expect(mockRestoreSelection).not.toHaveBeenCalledWith(nodeViewState.selection);
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
@@ -269,10 +282,10 @@ it('locks reading-position sync while restoring a saved selection', async () => 
   );
 
   expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
-    { from: 48_000, to: 48_024 },
+    { from: 48_000, to: 48_000 },
     'editor-restore-selection'
   );
-  expect(onSetReadingPositionSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_024 });
+  expect(onSetReadingPositionSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_000 });
   await waitFor(() => {
     expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled');
   });

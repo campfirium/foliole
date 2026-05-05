@@ -122,6 +122,7 @@ export function useImmediateReadingProgressCapture(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -139,6 +140,7 @@ export function useImmediateReadingProgressCapture(args: {
       const captured = captureEditorNodeViewState(
         args.activeNodeId,
         args.getReadingPositionSelection,
+        args.isImmersiveMode,
         args.isViewingTrashNode,
         args.editorRef
       );
@@ -167,6 +169,7 @@ export function useImmediateReadingProgressCapture(args: {
     args.editorRef,
     args.getReadingPositionSelection,
     args.getReadingPositionSyncState,
+    args.isImmersiveMode,
     args.isViewingTrashNode,
     args.isWorkspaceHydrated,
     args.nodeViewById,

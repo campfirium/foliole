@@ -121,13 +121,13 @@ describe('createSelectNode', () => {
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
     expect(setNodeViewState).toHaveBeenCalledWith('regular-node', {
       scrollTop: 0,
-      selection: { from: 14, to: 19 }
+      selection: { from: 14, to: 14 }
     });
     expect(requestReadingPositionApply).toHaveBeenCalledWith({
       nodeId: 'regular-node',
       reason: 'anchor-navigation',
       runtime: expect.any(Object),
-      selection: { from: 14, to: 19 }
+      selection: { from: 14, to: 14 }
     });
     expect(handleSelectNode).toHaveBeenCalledWith('regular-node');
   });
@@ -174,13 +174,13 @@ describe('createSelectNode', () => {
     expect(closeVirtualView).toHaveBeenCalledTimes(1);
     expect(setNodeViewState).toHaveBeenCalledWith('parent-node', {
       scrollTop: 0,
-      selection: { from: 42, to: 48 }
+      selection: { from: 42, to: 42 }
     });
     expect(requestReadingPositionApply).toHaveBeenCalledWith({
       nodeId: 'parent-node',
       reason: 'anchor-navigation',
       runtime: expect.any(Object),
-      selection: { from: 42, to: 48 }
+      selection: { from: 42, to: 42 }
     });
     expect(handleSelectNode).toHaveBeenCalledWith('parent-node');
   });
