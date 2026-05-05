@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
 const syncPlatformMock = vi.hoisted(() => ({
   loadCompanionReadableArticle: vi.fn(async () => null),
@@ -8,18 +9,35 @@ const syncPlatformMock = vi.hoisted(() => ({
 }));
 
 const syncObjectsMock = vi.hoisted(() => ({
-  syncCompanionObjectsFromDesktop: vi.fn(async () => ({
-    attachmentResourceError: null,
-    contentBlobError: null,
-    remainingAttachmentResourceBytes: null,
-    remainingAttachmentResourceCount: 0,
-    remainingContentBlobBytes: null,
-    remainingContentBlobCount: 0
-  }))
+  syncCompanionObjectsFromDesktop: vi.fn()
 }));
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
+
+function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncResult> = {}): CompanionDesktopSyncResult {
+  return {
+    appliedNodeIds: [],
+    appliedObjectIds: [],
+    appliedPackBlobCount: 0,
+    appliedPackObjectCount: 0,
+    appliedReviewOpIds: [],
+    attachmentResourceError: null,
+    changedObjectIds: [],
+    contentBlobError: null,
+    pushedNodeIds: [],
+    pushedObjectIds: [],
+    pushedReviewOpIds: [],
+    remainingAttachmentResourceBytes: null,
+    remainingAttachmentResourceCount: 0,
+    remainingContentBlobBytes: null,
+    remainingContentBlobCount: 0,
+    requestedObjectIds: [],
+    syncedAttachmentIds: [],
+    syncedContentBlobHashes: [],
+    ...overrides
+  };
+}
 
 function createSyncState(overrides: Partial<NativeCompanionWorkspaceSyncState> = {}): NativeCompanionWorkspaceSyncState {
   return {
@@ -114,14 +132,12 @@ async function testKeepsUnreachableDesktopQuiet() {
 }
 
 async function testRecordsBacklogBytes() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue({
-    attachmentResourceError: null,
-    contentBlobError: null,
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceBytes: 3145728,
     remainingAttachmentResourceCount: 2,
     remainingContentBlobBytes: 5242880,
     remainingContentBlobCount: 5
-  });
+  }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 
   await tryForegroundAutoSync({
@@ -143,14 +159,7 @@ async function testRecordsBacklogBytes() {
 describe('tryForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue({
-      attachmentResourceError: null,
-      contentBlobError: null,
-      remainingAttachmentResourceBytes: null,
-      remainingAttachmentResourceCount: 0,
-      remainingContentBlobBytes: null,
-      remainingContentBlobCount: 0
-    });
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult());
     syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
   });
 
