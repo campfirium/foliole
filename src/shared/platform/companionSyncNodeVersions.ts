@@ -4,6 +4,7 @@ import { applySyncNodesWithDbPort } from '../../../lib/core/sync/syncNodeApplyEx
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
@@ -27,7 +28,7 @@ export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord
   if (!isNativeAndroidCompanionRuntime() || nodes.length === 0) {
     return [];
   }
-  return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes);
+  return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes));
 }
 
 export async function applyCompanionSyncNodeVersionsWithSharedCore(
