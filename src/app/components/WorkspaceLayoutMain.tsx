@@ -114,19 +114,6 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   );
 }
 
-function WorkspaceListDivider({ isListCollapsed }: { isListCollapsed: boolean }) {
-  if (isListCollapsed) {
-    return null;
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 z-10 w-px bg-border max-[1080px]:hidden"
-      style={{ left: 'calc(var(--workspace-rail-width) + var(--workspace-list-width, 300px))' }}
-    />
-  );
-}
-
 function renderWorkspaceTitleBar(args: {
   activeRightPanelId: WorkspaceRightPanelId;
   onOpenNotesView: () => void;
@@ -219,7 +206,6 @@ function WorkspaceMainChrome({
 }) {
   return (
     <>
-      {props.isImmersiveMode ? null : <WorkspaceListDivider isListCollapsed={props.isListCollapsed} />}
       {renderWorkspaceTitleBar({
         activeRightPanelId,
         onOpenNotesView,

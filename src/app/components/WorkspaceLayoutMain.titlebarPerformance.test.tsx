@@ -149,4 +149,10 @@ describe('WorkspaceLayoutMain title bar rendering', () => {
 
     expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Projects' }));
   });
+
+  it('does not render an extra full-height divider over the list splitter', () => {
+    const { container } = render(<WorkspaceLayoutMain {...createProps()} />);
+
+    expect(container.querySelector('.pointer-events-none.absolute.inset-y-0.z-10.w-px.bg-border')).toBeNull();
+  });
 });
