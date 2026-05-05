@@ -14,6 +14,7 @@ export const NATIVE_COMMANDS = {
   runTextFileImport: 'run_text_file_import',
   selectImportDirectory: 'select_import_directory',
   selectImportTextFile: 'select_import_text_file',
+  resolveAttachmentResource: 'resolve_attachment_resource',
   resolveAppPaths: 'resolve_app_paths',
   reviewGrade: 'review_grade',
   reviewPreview: 'review_preview',

@@ -5,6 +5,22 @@ export interface NativeResolvedAppPaths {
   app_log_dir: string;
 }
 
+export type NativeAttachmentResourceResolution =
+  | {
+      status: 'ready';
+      mime_type: string | null;
+      resource_url: string;
+    }
+  | {
+      status: 'not_found';
+      resource_url: null;
+    }
+  | {
+      status: 'missing_file';
+      mime_type: string | null;
+      resource_url: null;
+    };
+
 export interface NativeSystemFontCatalog {
   fonts: unknown[];
   monospace_fonts: unknown[];

@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
 import {
   createApplicationDatabaseBackup,
   listApplicationDatabaseBackups,
@@ -196,6 +197,9 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadNodeDocument) {
     return loadWorkspaceNodeDocument(asString(args.nodeId, 'nodeId'));
+  }
+  if (command === NATIVE_COMMANDS.resolveAttachmentResource) {
+    return resolveAttachmentResource(asString(args.attachment_id, 'attachment_id'));
   }
   if (command === NATIVE_COMMANDS.searchWorkspace) {
     return searchWorkspace(asString(args.query, 'query'));

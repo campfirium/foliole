@@ -14,26 +14,14 @@ import type {
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
 import type {
-  NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult,
+  NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
+  NativeReviewPreviewArgs, NativeReviewPreviewResult,
   NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog
 } from './nativeUtilityContract.js';
-export type {
-  NativeApplyReviewGradeArgs, NativeRelearnNodeArgs, NativeNodeSnapshotArgs, NativeReadingProgressSnapshot,
-  NativeResetImportDataResult,
-  NativeReviewSchedulerSettings,
-  NativeSaveReadingProgressArgs,
-  NativeWorkspaceNodeDocument,
-  NativeWorkspaceSearchResult,
-  NativeWorkspaceSnapshot
-} from './nativeStorageContract.js';
-export type {
-  NativeDirectoryImportArgs, NativeDirectoryImportConsumePolicy, NativeDirectoryImportEntry, NativeDirectoryImportResult,
-  NativeDirectoryImportSourceAdapter, NativeNodeSourceDetails, NativeKeepImportPreviewArgs, NativeKeepImportPreviewEntry,
-  NativeKeepImportPreviewResult, NativeImportedTextFile, NativeManagedInboxConsumePolicy, NativeTextImportArgs,
-  NativeTextImportResult
-} from './nativeImportContract.js';
-export type { NativeReadwiseDetectionResult, NativeReadwiseDetectionSample } from './nativeReadwiseContract.js';
-export type { NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSchedulerCard, NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
+export type * from './nativeStorageContract.js';
+export type * from './nativeImportContract.js';
+export type * from './nativeReadwiseContract.js';
+export type * from './nativeUtilityContract.js';
 export type NativeCommandMap = {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -106,6 +94,12 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.selectImportDirectory]: {
     args: undefined;
     result: string | null;
+  };
+  [NATIVE_COMMANDS.resolveAttachmentResource]: {
+    args: {
+      attachment_id: string;
+    };
+    result: NativeAttachmentResourceResolution;
   };
   [NATIVE_COMMANDS.resolveAppPaths]: {
     args: undefined;
