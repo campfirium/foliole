@@ -8,6 +8,7 @@ export interface WorkspaceState {
   nodesById: Record<string, LearningNode>;
   setActiveNode: (nodeId: string) => void;
   updateSourceContent: (nodeId: string, content: string) => void;
+  createExtractFromSelection: (sourceNodeId: string, quote: string) => string | null;
 }
 
 export function createSeedSourceNode(timestamp: string): SourceNode {
@@ -64,5 +65,39 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         }
       };
     });
+  },
+  createExtractFromSelection: (sourceNodeId, quote) => {
+    const normalizedQuote = quote.trim();
+    if (!normalizedQuote) {
+      return null;
+    }
+
+    const extractId = `extract-${crypto.randomUUID()}`;
+    const timestamp = new Date().toISOString();
+
+    set((state) => {
+      const sourceNode = state.nodesById[sourceNodeId];
+      if (!sourceNode || sourceNode.kind !== 'source') {
+        return state;
+      }
+
+      return {
+        nodeOrder: [...state.nodeOrder, extractId],
+        nodesById: {
+          ...state.nodesById,
+          [extractId]: {
+            id: extractId,
+            kind: 'extract',
+            sourceNodeId,
+            quote: normalizedQuote,
+            title: `Extract ${state.nodeOrder.length}`,
+            createdAt: timestamp,
+            updatedAt: timestamp
+          }
+        }
+      };
+    });
+
+    return extractId;
   }
 }));

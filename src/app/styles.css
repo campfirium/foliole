@@ -28,8 +28,12 @@ body {
 }
 
 .panel-header {
+  align-items: center;
   border-bottom: 1px solid #e5e9f1;
   background: #f9fbff;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
   padding: 0.75rem 1rem;
 }
 
@@ -39,6 +43,21 @@ body {
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.panel-header button {
+  border: 1px solid #c5cedd;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+}
+
+.panel-header button:hover {
+  background: #f2f5fb;
 }
 
 .panel-body {

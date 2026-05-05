@@ -1,3 +1,6 @@
+import { useRef, useState } from 'react';
+
+import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { LearningNode } from '../features/nodes/model/nodeTypes';
 import { useWorkspaceStore } from '../store/workspaceStore';
@@ -7,6 +10,9 @@ export function App() {
   const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const updateSourceContent = useWorkspaceStore((state) => state.updateSourceContent);
+  const createExtractFromSelection = useWorkspaceStore((state) => state.createExtractFromSelection);
+  const editorAdapterRef = useRef<EditorAdapter | null>(null);
+  const [reviewMessage, setReviewMessage] = useState('Review area placeholder');
 
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const activeSourceNode = activeNode?.kind === 'source' ? activeNode : undefined;
@@ -17,6 +23,34 @@ export function App() {
       return;
     }
     updateSourceContent(activeSourceNode.id, content);
+  };
+
+  const handleCreateExtract = () => {
+    if (!activeSourceNode) {
+      setReviewMessage('No active source node selected.');
+      return;
+    }
+
+    const adapter = editorAdapterRef.current;
+    if (!adapter) {
+      setReviewMessage('Editor is not ready yet.');
+      return;
+    }
+
+    const selection = adapter.getSelection();
+    if (selection.from === selection.to) {
+      setReviewMessage('Select text in the editor before creating an extract.');
+      return;
+    }
+
+    const quote = editorContent.slice(selection.from, selection.to);
+    const extractId = createExtractFromSelection(activeSourceNode.id, quote);
+    if (!extractId) {
+      setReviewMessage('Failed to create extract from current selection.');
+      return;
+    }
+
+    setReviewMessage(`Extract created: ${extractId}`);
   };
 
   return (
@@ -40,9 +74,18 @@ export function App() {
         <section className="panel panel-editor" aria-label="Editor panel">
           <header className="panel-header">
             <h2>Editor</h2>
+            <button onClick={handleCreateExtract} type="button">
+              Create Extract
+            </button>
           </header>
           <div className="panel-body">
-            <MarkdownEditor value={editorContent} onChange={handleEditorChange} />
+            <MarkdownEditor
+              onChange={handleEditorChange}
+              onReady={(adapter) => {
+                editorAdapterRef.current = adapter;
+              }}
+              value={editorContent}
+            />
           </div>
         </section>
 
@@ -51,7 +94,7 @@ export function App() {
             <h2>Review</h2>
           </header>
           <div className="panel-body">
-            <p>Review area placeholder</p>
+            <p>{reviewMessage}</p>
           </div>
         </section>
       </section>

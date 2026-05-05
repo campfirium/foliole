@@ -33,6 +33,40 @@ function createTestStore(now: Date) {
           }
         };
       });
+    },
+    createExtractFromSelection: (sourceNodeId, quote) => {
+      const normalizedQuote = quote.trim();
+      if (!normalizedQuote) {
+        return null;
+      }
+
+      const extractId = 'extract-test-id';
+      const timestamp = new Date().toISOString();
+
+      set((state) => {
+        const sourceNode = state.nodesById[sourceNodeId];
+        if (!sourceNode || sourceNode.kind !== 'source') {
+          return state;
+        }
+
+        return {
+          nodeOrder: [...state.nodeOrder, extractId],
+          nodesById: {
+            ...state.nodesById,
+            [extractId]: {
+              id: extractId,
+              kind: 'extract',
+              sourceNodeId,
+              quote: normalizedQuote,
+              title: 'Extract 1',
+              createdAt: timestamp,
+              updatedAt: timestamp
+            }
+          }
+        };
+      });
+
+      return extractId;
     }
   }));
 }
@@ -57,5 +91,15 @@ describe('workspaceStore', () => {
       throw new Error('source node is required in this test');
     }
     expect(node.content).toBe('updated markdown');
+  });
+
+  it('creates extract node from selected quote', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+
+    const extractId = store.getState().createExtractFromSelection('source-1', 'quoted text');
+
+    expect(extractId).toBe('extract-test-id');
+    expect(store.getState().nodeOrder).toContain('extract-test-id');
+    expect(store.getState().nodesById['extract-test-id']?.kind).toBe('extract');
   });
 });
