@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
@@ -14,9 +15,15 @@ vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
 }));
 
+const { documentSourceUpdatePanelMock } = vi.hoisted(() => ({
+  documentSourceUpdatePanelMock: vi.fn()
+}));
+
 vi.mock('./DocumentSourceUpdatePanel', () => ({
-  DocumentSourceUpdatePanel: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="document-source-update-panel">Source update panel</div> : null
+  DocumentSourceUpdatePanel: (props: { open: boolean; onCurrentContentChange: (content: string) => void }) => {
+    documentSourceUpdatePanelMock(props);
+    return props.open ? <div data-testid="document-source-update-panel">Source update panel</div> : null;
+  }
 }));
 
 const { useNodeSourceUpdatePreview } = vi.hoisted(() => ({
@@ -43,6 +50,10 @@ const baseNode = {
 };
 
 function renderSection() {
+  return renderSectionWithProps({});
+}
+
+function renderSectionWithProps(overrides: Partial<ComponentProps<typeof DocumentPanelSection>>) {
   return render(
     <DocumentPanelSection
       activeNodeId="node-1"
@@ -64,6 +75,7 @@ function renderSection() {
       onCreateCloze={() => undefined}
       onCreateHighlight={() => undefined}
       onEditorChange={() => undefined}
+      onNodeContentChange={() => undefined}
       onEditorContextMenu={() => undefined}
       onEditorReady={() => undefined}
       onGoBack={() => undefined}
@@ -76,11 +88,13 @@ function renderSection() {
       onSelectNode={() => undefined}
       onStartDocumentResize={() => undefined}
       showAnswerSection={false}
+      {...overrides}
     />
   );
 }
 
 beforeEach(() => {
+  documentSourceUpdatePanelMock.mockReset();
   useNodeSourceUpdatePreview.mockReturnValue({
     isLoading: false,
     value: null
@@ -134,5 +148,26 @@ describe('DocumentPanelSection', () => {
     const moreButton = screen.getByRole('button', { name: 'More editor options' });
 
     expect(splitButton.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('routes source update panel edits to the concrete editor node id', () => {
+    const onNodeContentChange = vi.fn();
+    useNodeSourceUpdatePreview.mockReturnValue({
+      isLoading: false,
+      value: {
+        checkedAt: '2026-03-28T04:00:00.000Z',
+        currentContent: 'Current content',
+        sourceNodeId: 'node-1',
+        updatedContent: 'Updated content'
+      }
+    } as never);
+
+    renderSectionWithProps({ onNodeContentChange });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle source update panel' }));
+    const panelProps = documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
+    panelProps?.onCurrentContentChange('Updated from split panel');
+
+    expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Updated from split panel');
   });
 });

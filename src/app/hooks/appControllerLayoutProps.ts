@@ -167,16 +167,8 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
         args.ws.updateNodeReveal(args.ws.activeNodeId, answer);
       }
     },
-    onEditorChange: (content: string) => {
-      if (args.runtime.isViewingTrashNode) {
-        return;
-      }
-      if (args.ws.activeNodeId) {
-        args.ws.updateNodeContent(args.ws.activeNodeId, content);
-        return;
-      }
-      args.ws.createRootNode(content);
-    },
+    onEditorChange: createEditorChangeHandler(args),
+    onNodeContentChange: createNodeContentChangeHandler(args),
     onEditorReady: (adapter: EditorAdapter | null) => {
       args.runtime.editorRef.current = adapter;
     },
@@ -212,5 +204,27 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
     completeReviewItem: () => args.ws.completeReviewItem(),
     deferReviewItem: () => args.ws.deferReviewItem(),
     dismissReviewItem: () => args.ws.dismissReviewItem()
+  };
+}
+
+function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
+  return (content: string) => {
+    if (args.runtime.isViewingTrashNode) {
+      return;
+    }
+    if (args.ws.activeNodeId) {
+      args.ws.updateNodeContent(args.ws.activeNodeId, content);
+      return;
+    }
+    args.ws.createRootNode(content);
+  };
+}
+
+function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
+  return (nodeId: string, content: string) => {
+    if (args.runtime.isViewingTrashNode) {
+      return;
+    }
+    args.ws.updateNodeContent(nodeId, content);
   };
 }

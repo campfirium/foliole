@@ -1,8 +1,14 @@
 import { X } from 'lucide-react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
-import type { NodeViewState } from '../../store/workspaceStore';
+import {
+  AppButton,
+  AppDialog,
+  AppDialogContent,
+  AppDialogOverlay,
+  AppDialogPortal,
+  AppDialogTitle
+} from '../../shared/ui';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 
@@ -11,10 +17,10 @@ interface DocumentSourceUpdatePanelProps {
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
+  onCurrentContentChange: (content: string) => void;
+  onCurrentEditorReady?: (adapter: EditorAdapter | null) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-  panelNodeViewState?: NodeViewState;
-  setPanelEditorAdapter: (adapter: EditorAdapter | null) => void;
   updatedContent: string;
 }
 
@@ -27,39 +33,40 @@ function PanelColumnLabel({ description, title }: { description: string; title: 
   );
 }
 
-function ReadOnlyDocumentBody({
+function PreviewDocumentPane({
   content,
+  currentNodeId,
   documentMaxWidth,
   editorAppearanceKey,
-  editorNodeId,
-  nodeViewState,
-  onEditorReady
+  onChange,
+  onReady,
+  readOnly
 }: {
   content: string;
+  currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
-  editorNodeId: string | null;
-  nodeViewState?: NodeViewState;
-  onEditorReady?: (adapter: EditorAdapter | null) => void;
+  onChange: (content: string) => void;
+  onReady?: (adapter: EditorAdapter | null) => void;
+  readOnly?: boolean;
 }) {
   return (
     <DocumentPanelBody
       documentMaxWidth={documentMaxWidth}
       editorAppearanceKey={editorAppearanceKey}
       editorContent={content}
-      editorNodeId={editorNodeId}
-      editorNodeViewState={nodeViewState}
+      editorNodeId={currentNodeId}
       hasAnswerSection={false}
       isDocumentResizing={false}
       onAnswerChange={() => undefined}
-      onEditorChange={() => undefined}
-      onEditorReady={onEditorReady}
+      onEditorChange={onChange}
+      onEditorReady={onReady}
       onRevealDocumentPosition={() => undefined}
       onRevealDocumentSelection={() => undefined}
       onResolveDocumentPositionAtViewportY={() => null}
       onResetLayout={() => undefined}
       onStartDocumentResize={() => undefined}
-      readOnly
+      readOnly={readOnly}
       reveal=""
       showDocumentOutline={false}
       showDocumentResizeHandles={false}
@@ -85,26 +92,28 @@ export function DocumentSourceUpdatePanel(props: DocumentSourceUpdatePanelProps)
             </header>
             <div className="grid min-h-0 flex-1 grid-cols-2 overflow-hidden">
               <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-bg-elevated">
-                <PanelColumnLabel description="Current note content." title="Current" />
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <ReadOnlyDocumentBody
+                <PanelColumnLabel description="This side keeps the same reading and editing feel as the main document, but scrolls independently inside the panel." title="Current" />
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <PreviewDocumentPane
                     content={props.currentContent}
+                    currentNodeId={props.currentNodeId}
                     documentMaxWidth={props.documentMaxWidth}
-                    editorAppearanceKey={props.editorAppearanceKey}
-                    editorNodeId={props.currentNodeId}
-                    nodeViewState={props.panelNodeViewState}
-                    onEditorReady={props.setPanelEditorAdapter}
+                    editorAppearanceKey={`${props.editorAppearanceKey}-source-update-current`}
+                    onChange={props.onCurrentContentChange}
+                    onReady={props.onCurrentEditorReady}
                   />
                 </div>
               </section>
               <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
-                <PanelColumnLabel description="Latest detected source content." title="Updated Source" />
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <ReadOnlyDocumentBody
+                <PanelColumnLabel description="This side uses the same document rendering, but stays read-only." title="Updated Source" />
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <PreviewDocumentPane
                     content={props.updatedContent}
+                    currentNodeId={null}
                     documentMaxWidth={props.documentMaxWidth}
-                    editorAppearanceKey={`${props.editorAppearanceKey}-source-update`}
-                    editorNodeId={null}
+                    editorAppearanceKey={`${props.editorAppearanceKey}-source-update-reference`}
+                    onChange={() => undefined}
+                    readOnly
                   />
                 </div>
               </section>

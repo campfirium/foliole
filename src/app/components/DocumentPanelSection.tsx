@@ -33,6 +33,7 @@ interface DocumentPanelSectionProps {
   showAnswerSection: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
+  onNodeContentChange: (nodeId: string, content: string) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onCloseContextMenu: () => void;
@@ -108,69 +109,13 @@ function getDocumentPanelBodyProps(
   };
 }
 
-function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
-  return {
-    scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
-    selection: {
-      from: Math.max(0, Math.trunc(viewState.selection.from)),
-      to: Math.max(0, Math.trunc(viewState.selection.to))
-    }
-  };
-}
-
-function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState) {
-  return left?.scrollTop === right.scrollTop && left?.selection.from === right.selection.from && left?.selection.to === right.selection.to;
-}
-
-function useSplitPanelNodeViewState(activeNodeId: string | null, isSplitPanelOpen: boolean) {
-  const [panelNodeViewById, setPanelNodeViewById] = useState<Record<string, NodeViewState | undefined>>({});
-  const panelEditorRef = useRef<EditorAdapter | null>(null);
-  const panelNodeViewState = activeNodeId ? panelNodeViewById[activeNodeId] : undefined;
-
-  useEffect(() => {
-    if (!isSplitPanelOpen || !activeNodeId) {
-      return;
-    }
-    const capturePanelViewState = () => {
-      const adapter = panelEditorRef.current;
-      if (!adapter) {
-        return;
-      }
-      const nextViewState = normalizeNodeViewState({
-        scrollTop: adapter.getScrollTop(),
-        selection: adapter.getSelection()
-      });
-      setPanelNodeViewById((current) => {
-        if (isSameNodeViewState(current[activeNodeId], nextViewState)) {
-          return current;
-        }
-        return {
-          ...current,
-          [activeNodeId]: nextViewState
-        };
-      });
-    };
-    capturePanelViewState();
-    const timer = window.setInterval(capturePanelViewState, 240);
-    return () => {
-      window.clearInterval(timer);
-      capturePanelViewState();
-    };
-  }, [activeNodeId, isSplitPanelOpen]);
-
-  return {
-    panelEditorRef,
-    panelNodeViewState
-  };
-}
-
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
+  const splitPanelEditorRef = useRef<EditorAdapter | null>(null);
   const { editorContentPaddingBottom, emptyState, hasAnswerSection, reveal } = getDocumentPanelState(props, editorDisplayMode);
   const documentLayoutStyle = { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties;
   const bodyProps = getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal);
-  const { panelEditorRef, panelNodeViewState } = useSplitPanelNodeViewState(props.activeNodeId, isSourceUpdatePanelOpen);
   const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
 
   useEffect(() => {
@@ -178,6 +123,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       setIsSourceUpdatePanelOpen(false);
     }
   }, [sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
+  useSplitPanelContentSync(isSourceUpdatePanelOpen, props.editorContent, props.editorNodeId, props.onNodeContentChange, splitPanelEditorRef);
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>
@@ -198,21 +144,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         />
         <DocumentPanelBody {...bodyProps} />
       </section>
-      {sourceUpdatePreview.value ? (
-        <DocumentSourceUpdatePanel
-          currentContent={sourceUpdatePreview.value.currentContent}
-          currentNodeId={sourceUpdatePreview.value.sourceNodeId}
-          documentMaxWidth={props.documentMaxWidth}
-          editorAppearanceKey={props.editorAppearanceKey}
-          onOpenChange={setIsSourceUpdatePanelOpen}
-          open={isSourceUpdatePanelOpen}
-          panelNodeViewState={panelNodeViewState}
-          setPanelEditorAdapter={(adapter) => {
-            panelEditorRef.current = adapter;
-          }}
-          updatedContent={sourceUpdatePreview.value.updatedContent}
-        />
-      ) : null}
+      {renderSourceUpdatePanel(props, isSourceUpdatePanelOpen, splitPanelEditorRef, setIsSourceUpdatePanelOpen, sourceUpdatePreview.value)}
       {props.contextMenu ? (
         <EditorContextMenu
           canRunCommands={props.contextMenu.canRunCommands}
@@ -224,5 +156,65 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         />
       ) : null}
     </section>
+  );
+}
+
+function useSplitPanelContentSync(
+  isSourceUpdatePanelOpen: boolean,
+  editorContent: string,
+  editorNodeId: string | null,
+  onNodeContentChange: (nodeId: string, content: string) => void,
+  splitPanelEditorRef: { current: EditorAdapter | null }
+) {
+  useEffect(() => {
+    if (!isSourceUpdatePanelOpen || !editorNodeId) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      const content = splitPanelEditorRef.current?.getContent();
+      if (typeof content !== 'string' || content === editorContent) {
+        return;
+      }
+      onNodeContentChange(editorNodeId, content);
+    }, 180);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [editorContent, editorNodeId, isSourceUpdatePanelOpen, onNodeContentChange, splitPanelEditorRef]);
+}
+
+function renderSourceUpdatePanel(
+  props: DocumentPanelSectionProps,
+  isSourceUpdatePanelOpen: boolean,
+  splitPanelEditorRef: { current: EditorAdapter | null },
+  setIsSourceUpdatePanelOpen: (open: boolean) => void,
+  sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>['value']
+) {
+  if (!sourceUpdatePreview) {
+    return null;
+  }
+
+  return (
+    <DocumentSourceUpdatePanel
+      currentContent={props.editorContent}
+      currentNodeId={props.editorNodeId}
+      documentMaxWidth={props.documentMaxWidth}
+      editorAppearanceKey={props.editorAppearanceKey}
+      onCurrentContentChange={(content) => {
+        if (!props.editorNodeId) {
+          props.onEditorChange(content);
+          return;
+        }
+        props.onNodeContentChange(props.editorNodeId, content);
+      }}
+      onCurrentEditorReady={(adapter) => {
+        splitPanelEditorRef.current = adapter;
+      }}
+      onOpenChange={setIsSourceUpdatePanelOpen}
+      open={isSourceUpdatePanelOpen}
+      updatedContent={sourceUpdatePreview.updatedContent}
+    />
   );
 }

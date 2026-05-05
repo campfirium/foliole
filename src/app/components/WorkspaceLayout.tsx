@@ -60,6 +60,7 @@ export interface WorkspaceLayoutProps {
   nodesById: Record<string, Node>;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
+  onNodeContentChange: (nodeId: string, content: string) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onResetLayout: () => void;

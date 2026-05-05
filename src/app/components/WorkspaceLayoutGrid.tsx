@@ -128,6 +128,7 @@ function WorkspaceDocumentSurface({ documentNodeId, props }: { documentNodeId: s
       onCreateCloze={props.onCreateCloze}
       onCreateHighlight={props.onCreateHighlight}
       onEditorChange={props.onEditorChange}
+      onNodeContentChange={props.onNodeContentChange}
       onEditorContextMenu={props.onEditorContextMenu}
       onEditorReady={props.onEditorReady}
       onGoBack={props.onGoBack}
