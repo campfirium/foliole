@@ -34,7 +34,7 @@
 - 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增、重写或审计 agent 规则时，按 `$agents-maintainer` 流程只审根与局部 `AGENTS.md`；不默认扫描其他项目文档。
-- 仅在判断验证或停车策略时读取 `.lab/internal/runtime/windows-preview.flag` 与 `.lab/internal/runtime/park.flag`。
+- 仅在判断验证、预览或停车策略时读取 `.lab/internal/runtime/windows-preview.flag`、`.lab/internal/runtime/android-preview.flag` 与 `.lab/internal/runtime/park.flag`。
 
 ## Task Execution
 
@@ -88,11 +88,16 @@
 - 任意可复现 Bug 修复必须新增至少 1 条自动化回归测试；没有回归测试不算完成。
 - 重构、模块迁移、preload / bridge 改动、Capacitor bridge 改动与宿主生命周期改动视为高回归风险，提交前必须补齐或更新关键回归测试。
 - 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
-- 对话协作模式下，只要本轮实际修改了任何仓库文件，则在相关验证通过后、向用户汇报前，必须追加执行至少一个与受影响宿主匹配的预览。
+- 对话协作模式下，预览由“当次协作模式 + 本地 flag”共同控制，而不是每轮改文件后无条件执行：`.lab/internal/runtime/windows-preview.flag` 控制 `npm run windows:preview`，`.lab/internal/runtime/android-preview.flag` 控制 `npm run android:preview`，有效值仅 `ON` / `OFF`，缺失按 `OFF` 处理。
+- 用户说“连续推进”或等价表达时，进入连续推进模式：该模式只影响当前协作节奏，不修改任何预览 flag；即使对应预览 flag 为 `ON`，连续推进期间也默认不执行预览，除非用户当次明确要求“本轮跑预览 / 跑 Windows 预览 / 跑 Android 预览”。
+- 用户说“阶段验收”或等价表达时，进入阶段验收模式：该模式只影响当前协作节奏，不修改任何预览 flag；相关验证通过后必须执行受影响宿主对应预览，即使对应预览 flag 为 `OFF`。
+- 用户说“关闭预览”时同时写入两个 flag 为 `OFF`；用户说“打开预览”时同时写入两个 flag 为 `ON`；用户也可以明确只打开 / 关闭 Windows 或 Android 预览。
+- 非连续推进且非阶段验收时，预览 flag 为 `OFF` 则不执行对应预览，除非用户当次明确要求；预览 flag 为 `ON` 且本轮实际修改仓库文件、相关验证通过后，默认执行与受影响宿主匹配的预览。
+- 预览因连续推进或 flag 关闭未执行时，最终汇报必须在 `R` 写清未执行原因，且不能写 `pushed`。
 - 预览选择规则如下：
-- 影响 Electron / Windows / preload / IPC / sqlite / desktop runtime：执行 `npm run windows:preview`
-- 影响 `src/companion/**`、`android/**`、`capacitor.config.ts`、移动 bridge 或移动运行链路：执行 `npm run android:preview`
-- 同时影响桌面与移动共享链路时，必须分别执行 `npm run windows:preview` 与 `npm run android:preview`，除非用户明确豁免其中一侧
+- 影响 Electron / Windows / preload / IPC / sqlite / desktop runtime 且 Windows 预览开启：执行 `npm run windows:preview`
+- 影响 `src/companion/**`、`android/**`、`capacitor.config.ts`、移动 bridge 或移动运行链路且 Android 预览开启：执行 `npm run android:preview`
+- 同时影响桌面与移动共享链路时，只执行已开启 flag 对应的预览；若两个 flag 都为 `OFF`，只做相关最小验证
 - 自动任务模式默认不追加预览，只执行任务所需的最小验证；除非用户在当次明确要求，才额外执行预览。
 - 预览成功时，最终汇报末行只写 `pushed`；预览失败或未执行时，不能写 `pushed`，必须在 `R` 里写清失败阶段、失败原因或未执行原因。
 - 最终汇报面向用户验收，不面向代码审计；必须简明扼要，默认使用下面四个字段组织信息，除非用户明确要求展开：

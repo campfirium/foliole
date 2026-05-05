@@ -29,6 +29,8 @@ if command -v flock >/dev/null 2>&1; then
   echo "[windows-sync] lock acquired"
 fi
 
+rm -rf "${WINDOWS_MIRROR_DIR}/trees"
+
 RSYNC_ARGS=(
   -rlt
   --inplace
@@ -48,6 +50,7 @@ RSYNC_ARGS=(
   --exclude ".windows-native-boot-ready.json"
   --exclude ".windows-native-bridge-ready.json"
   --exclude "ref/"
+  --exclude "trees/"
   --exclude "src-tauri/"
   --exclude "node_modules/"
   --exclude "dist/"

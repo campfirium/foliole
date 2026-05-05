@@ -42,6 +42,7 @@ dependencies {
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    androidTestImplementation project(':capacitor-community-sqlite')
     implementation project(':capacitor-cordova-android-plugins')
 }
 

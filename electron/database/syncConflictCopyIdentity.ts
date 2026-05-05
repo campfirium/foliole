@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { CONFLICT_COPY_NODE_ID_PREFIX, isConflictCopyNodeId } from '../../lib/core/sync/syncNodeApplyRules.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
-
-const CONFLICT_COPY_PREFIX = 'conflict-copy-';
 
 function hashId(value: string) {
   return createHash('sha256').update(value).digest('hex').slice(0, 32);
@@ -17,16 +16,14 @@ export function conflictCopyBranchKey(record: NativeSyncNodeRecord) {
 
 export function conflictCopyNodeId(record: NativeSyncNodeRecord) {
   const key = conflictCopyBranchKey(record);
-  return `${CONFLICT_COPY_PREFIX}${hashId(`${key.objectId}\n${key.sourceDeviceId}`)}`;
+  return `${CONFLICT_COPY_NODE_ID_PREFIX}${hashId(`${key.objectId}\n${key.sourceDeviceId}`)}`;
 }
 
 export function conflictCopyVersionId(deviceId: string, copyNodeId: string, sourceVersionId: string) {
   return `${deviceId}#${copyNodeId}:${hashId(sourceVersionId)}`;
 }
 
-export function isConflictCopyNodeId(nodeId: string) {
-  return nodeId.startsWith(CONFLICT_COPY_PREFIX);
-}
+export { isConflictCopyNodeId };
 
 export function conflictCopyTitle(record: NativeSyncNodeRecord) {
   const title = baseConflictCopyTitle(record.snapshot.title);

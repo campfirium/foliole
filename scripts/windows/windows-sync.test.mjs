@@ -42,6 +42,8 @@ describe('windows-sync script', () => {
       const mockRsync = path.join(mockBinDir, 'rsync');
 
       await mkdir(mirrorDir, { recursive: true });
+      await mkdir(path.join(mirrorDir, 'trees'), { recursive: true });
+      await writeFile(path.join(mirrorDir, 'trees', 'stale.txt'), 'stale worktree copy', 'utf8');
       await mkdir(mockBinDir, { recursive: true });
       await writeFile(
         mockRsync,
@@ -76,6 +78,7 @@ describe('windows-sync script', () => {
       expect(args).toContain('.claude/');
       expect(args).toContain('.windows-native-boot-ready.json');
       expect(args).toContain('.windows-native-bridge-ready.json');
+      expect(args).toContain('trees/');
       expect(args).toContain('--inplace');
       expect(args).toContain('android/app/src/main/assets/public/');
       expect(args).toContain('android/app/src/main/assets/capacitor.config.json');
@@ -85,6 +88,7 @@ describe('windows-sync script', () => {
       expect(args).toContain('android/capacitor.settings.gradle');
       expect(args).toContain('android/capacitor-cordova-android-plugins/');
       expect(result.stdout).toContain('[windows-sync] lock acquired');
+      await expect(readFile(path.join(mirrorDir, 'trees', 'stale.txt'), 'utf8')).rejects.toThrow();
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

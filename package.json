@@ -60,7 +60,7 @@
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",
     "agent:loop:dry-run": "bash scripts/codex/run-loop.sh --dry-run",
-    "hooks:install": "git config core.hooksPath .githooks",
+    "hooks:install": "node scripts/install-git-hooks.mjs",
     "prepare": "npm run hooks:install",
     "task:finish": "node scripts/task-finish.mjs",
     "quality:fast": "bash scripts/quality-gate-fast.sh",
@@ -74,9 +74,12 @@
     "typecheck": "npm run typecheck:desktop",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "ios:sqlite-capability:gate": "node scripts/sync/ios-capacitor-sqlite-capability-gate.mjs",
+    "sync:sql-surface:scan": "node scripts/sync/sql-surface-scan.mjs"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "8.1.0",
     "@capacitor/app": "8.1.0",
     "@capacitor/core": "8.3.0",
     "@capacitor/local-notifications": "8.0.1",
@@ -84,6 +87,7 @@
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.15",
+    "@lezer/markdown": "1.6.3",
     "@radix-ui/react-dialog": "1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-tooltip": "^1.2.8",

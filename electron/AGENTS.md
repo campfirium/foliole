@@ -37,7 +37,7 @@
 
 ## Validation
 
-- 桌面相关改动默认先执行与本次改动直接相关的最小验证，并在汇报前执行 `npm run windows:preview`；只有当改动触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
-- 只要改动触及 `electron/**`、`scripts/windows/**`、桌面 bridge、桌面数据库或 Windows 桌面运行链路，对话协作模式下汇报前必须执行 `npm run windows:preview`。
+- 桌面相关改动默认先执行与本次改动直接相关的最小验证；只有当改动触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
+- `npm run windows:preview` 只在根 `AGENTS.md` 的连续推进 / 阶段验收规则允许，且 `.lab/internal/runtime/windows-preview.flag` 为 `ON`、用户当次明确要求 Windows 预览、或用户当次要求阶段验收时执行。
 - Electron Playwright、桌面自动化回归、性能诊断与时序采样默认一律走 Windows 侧现成脚本链路：`scripts/windows/windows-desktop-test.sh`、`scripts/windows/run-playwright-desktop.ps1` 与 `playwright.desktop.config.ts`；除非用户当次明确要求排查 WSL 本地运行时，否则不得把 WSL 内直接拉起的 Electron 当成默认诊断或验收入口。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。

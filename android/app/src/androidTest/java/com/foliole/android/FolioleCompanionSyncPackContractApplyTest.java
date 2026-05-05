@@ -115,8 +115,8 @@ public class FolioleCompanionSyncPackContractApplyTest {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
             "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, created_at TEXT NOT NULL, " +
-            "updated_at TEXT NOT NULL, deleted_at TEXT)");
+            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, current_version_id TEXT, " +
+            "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
         mainDatabase.execSQL("CREATE TABLE external_documents (" +
             "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
             "file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL, " +

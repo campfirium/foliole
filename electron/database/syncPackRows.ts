@@ -1,15 +1,15 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
-
-import { openDatabaseConnection } from './connection.js';
-import { loadSyncObjects } from './syncObjects.js';
 import {
   isSyncPackObjectType,
   isSyncPackPayloadObjectType,
   isSyncPackStateObjectType,
   SYNC_PACK_OBJECT_TYPE_TABLES,
   type SyncPackObjectType
-} from './syncPackManifest.js';
+} from '../../lib/core/sync/syncPackManifest.js';
+import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
+
+import { openDatabaseConnection } from './connection.js';
+import { loadSyncObjects } from './syncObjects.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
   content_hash: string;
