@@ -16,10 +16,12 @@ import {
   getCustomMonospaceFont,
   getCustomUiFont,
   getHighlightColorPreset,
+  getReadingLineHeight,
   getSelectionColorPreset,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
-  setCustomUiFont
+  setCustomUiFont,
+  setReadingLineHeight
 } from './appearanceSettings';
 
 beforeEach(() => {
@@ -55,6 +57,17 @@ it('maps legacy green highlight default to the current text-color default', () =
 it('falls back to dedicated defaults for selection and cloze colors', () => {
   expect(getSelectionColorPreset()).toBe('#3876ff');
   expect(getClozeColorPreset()).toBe('#facc15');
+});
+
+it('stores reading line height presets and ignores unknown values', () => {
+  expect(getReadingLineHeight()).toBe('standard');
+
+  setReadingLineHeight('relaxed');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
+  expect(getReadingLineHeight()).toBe('relaxed');
+
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight, '1.72');
+  expect(getReadingLineHeight()).toBe('standard');
 });
 
 it('uses dedicated dark defaults for reading colors', () => {

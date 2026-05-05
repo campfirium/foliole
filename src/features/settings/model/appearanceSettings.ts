@@ -36,13 +36,17 @@ import {
 import {
   DEFAULT_DIM_IMAGES_IN_DARK_MODE,
   DEFAULT_PDF_READING_MODE,
+  DEFAULT_READING_LINE_HEIGHT,
   PDF_READING_MODE_OPTIONS,
   type InterfaceFontPreset,
   type MonospaceFontPreset,
-  type PdfReadingMode
+  type PdfReadingMode,
+  READING_LINE_HEIGHT_OPTIONS,
+  type ReadingLineHeight
 } from './appearanceSettingsOptions';
 import {
   applyEditorTypographyScale,
+  applyReadingLineHeight,
   resolveInterfaceFontFamily,
   resolveMonospaceFontFamily
 } from './appearanceTypography';
@@ -117,24 +121,32 @@ export {
 export {
   DEFAULT_DIM_IMAGES_IN_DARK_MODE,
   DEFAULT_PDF_READING_MODE,
+  DEFAULT_READING_LINE_HEIGHT,
   INTERFACE_FONT_OPTIONS,
   INTERFACE_FONT_SIZE_DEFAULT,
   INTERFACE_FONT_SIZE_MAX,
   INTERFACE_FONT_SIZE_MIN,
   MONOSPACE_FONT_OPTIONS,
   PDF_READING_MODE_OPTIONS,
+  READING_LINE_HEIGHT_OPTIONS,
   type InterfaceFontPreset,
   type MonospaceFontPreset,
-  type PdfReadingMode
+  type PdfReadingMode,
+  type ReadingLineHeight
 } from './appearanceSettingsOptions';
 const STORAGE_KEYS = {
   baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
   pdfReadingMode: APP_SETTINGS_STORAGE_KEYS.pdfReadingMode,
+  readingLineHeight: APP_SETTINGS_STORAGE_KEYS.readingLineHeight,
   dimImagesInDarkMode: APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode
 } as const;
 
 function isPdfReadingMode(value: string): value is PdfReadingMode {
   return PDF_READING_MODE_OPTIONS.includes(value as PdfReadingMode);
+}
+
+function isReadingLineHeight(value: string): value is ReadingLineHeight {
+  return READING_LINE_HEIGHT_OPTIONS.includes(value as ReadingLineHeight);
 }
 
 export function getBaseColorMode(): BaseColorMode {
@@ -155,6 +167,15 @@ export function setPdfReadingMode(value: PdfReadingMode) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.pdfReadingMode, value);
 }
 
+export function getReadingLineHeight(): ReadingLineHeight {
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.readingLineHeight);
+  return raw && isReadingLineHeight(raw) ? raw : DEFAULT_READING_LINE_HEIGHT;
+}
+
+export function setReadingLineHeight(value: ReadingLineHeight) {
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.readingLineHeight, value);
+}
+
 export function getDimImagesInDarkMode() {
   const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.dimImagesInDarkMode);
   return raw === null ? DEFAULT_DIM_IMAGES_IN_DARK_MODE : raw === 'true';
@@ -168,6 +189,7 @@ interface ApplyAppearanceSettingsInput {
   baseColor: BaseColorMode;
   resolvedBaseColor: ResolvedBaseColorMode;
   pdfReadingMode: PdfReadingMode;
+  readingLineHeight: ReadingLineHeight;
   dimImagesInDarkMode: boolean;
   accentColor: AccentColorPreset;
   fontColor: FontColorPreset;
@@ -189,6 +211,7 @@ export function applyAppearanceSettings({
   baseColor,
   resolvedBaseColor,
   pdfReadingMode,
+  readingLineHeight,
   dimImagesInDarkMode,
   accentColor,
   fontColor,
@@ -233,4 +256,5 @@ export function applyAppearanceSettings({
   root.style.setProperty('--content-panel-font-family', interfaceFontValue);
   root.style.setProperty('--content-panel-mono-font-family', monospaceFontValue);
   applyEditorTypographyScale(root, clampedFontSize);
+  applyReadingLineHeight(root, readingLineHeight);
 }

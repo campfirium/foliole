@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { getEditorDisplayMode } from '../../editor/model/editorDisplayMode';
 import { getMarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
@@ -17,6 +17,7 @@ import {
   getFontColorPreset,
   getHighlightColorPreset,
   getPdfReadingMode,
+  getReadingLineHeight,
   getSelectionColorPreset,
   getMonospaceFontPreset,
   getUiFontPreset,
@@ -25,8 +26,8 @@ import {
 } from '../model/appearanceSettings';
 import { resolveBaseColorMode } from '../model/baseColorMode';
 
-import { createAppearanceActions } from './appearanceSettingsActions';
 import { AppearanceSettingsContext, useAppearanceSettings } from './appearanceSettingsContext';
+import { useAppearanceSettingsValue } from './appearanceSettingsValue';
 
 function getInitialAppearanceModeState() {
   const baseColorMode = getBaseColorMode();
@@ -60,7 +61,7 @@ function useModeScopedAppearanceState(resolvedBaseColorMode: 'dark' | 'light') {
   };
 }
 
-function useAppearanceStateValues() {
+export function useAppearanceStateValues() {
   const initialModeState = getInitialAppearanceModeState();
   const modeScoped = useModeScopedAppearanceState(initialModeState.resolvedBaseColorMode);
   const [autoLocalizeRemoteImagesState, setAutoLocalizeRemoteImagesState] = useState(() => getAutoLocalizeRemoteImages());
@@ -70,6 +71,7 @@ function useAppearanceStateValues() {
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
   const [pdfReadingModeState, setPdfReadingModeState] = useState(() => getPdfReadingMode());
+  const [readingLineHeightState, setReadingLineHeightState] = useState(() => getReadingLineHeight());
   const [uiFontPresetState, setUiFontPresetState] = useState(() => getUiFontPreset());
   const [customUiFontState, setCustomUiFontState] = useState(() => getCustomUiFont());
   const [interfaceFontPresetState, setInterfaceFontPresetState] = useState(() => getInterfaceFontPreset());
@@ -92,6 +94,7 @@ function useAppearanceStateValues() {
     markdownSyntaxVisibilityState,
     monospaceFontPresetState,
     pdfReadingModeState,
+    readingLineHeightState,
     resolvedBaseColorModeState,
     setAutoLocalizeRemoteImagesState,
     setBaseColorModeState,
@@ -105,6 +108,7 @@ function useAppearanceStateValues() {
     setMarkdownSyntaxVisibilityState,
     setMonospaceFontPresetState,
     setPdfReadingModeState,
+    setReadingLineHeightState,
     setResolvedBaseColorModeState,
     setUiFontPresetState,
     uiFontPresetState
@@ -166,6 +170,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       resolvedBaseColor: state.resolvedBaseColorModeState,
       dimImagesInDarkMode: state.dimImagesInDarkModeState,
       pdfReadingMode: state.pdfReadingModeState,
+      readingLineHeight: state.readingLineHeightState,
       clozeColor: state.clozeColorPresetState,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
@@ -194,6 +199,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.interfaceFontSizeState,
     state.monospaceFontPresetState,
     state.pdfReadingModeState,
+    state.readingLineHeightState,
     state.selectionColorPresetState,
     state.resolvedBaseColorModeState,
     state.uiFontPresetState,
@@ -211,57 +217,7 @@ function useAppearanceSideEffects(state: ReturnType<typeof useAppearanceStateVal
 function useAppearanceSettingsState() {
   const state = useAppearanceStateValues();
   useAppearanceSideEffects(state);
-
-  return useMemo(
-    () => ({
-      accentColorPreset: state.accentColorPresetState,
-      autoLocalizeRemoteImages: state.autoLocalizeRemoteImagesState,
-      baseColorMode: state.baseColorModeState,
-      dimImagesInDarkMode: state.dimImagesInDarkModeState,
-      resolvedBaseColorMode: state.resolvedBaseColorModeState,
-      clozeColorPreset: state.clozeColorPresetState,
-      customInterfaceFont: state.customInterfaceFontState,
-      customMonospaceFont: state.customMonospaceFontState,
-      customUiFont: state.customUiFontState,
-      editorAppearanceKey: `${state.markdownSyntaxVisibilityState}-${state.editorDisplayModeState}`,
-      editorDisplayMode: state.editorDisplayModeState,
-      fontColorPreset: state.fontColorPresetState,
-      highlightColorPreset: state.highlightColorPresetState,
-      selectionColorPreset: state.selectionColorPresetState,
-      interfaceFontPreset: state.interfaceFontPresetState,
-      interfaceFontSize: state.interfaceFontSizeState,
-      markdownSyntaxVisibility: state.markdownSyntaxVisibilityState,
-      monospaceFontPreset: state.monospaceFontPresetState,
-      pdfReadingMode: state.pdfReadingModeState,
-      uiFontPreset: state.uiFontPresetState,
-      workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
-      workspaceSurfacePalette: state.workspaceSurfacePaletteState,
-      ...createAppearanceActions(state)
-    }),
-    [
-      state.accentColorPresetState,
-      state.autoLocalizeRemoteImagesState,
-      state.baseColorModeState,
-      state.dimImagesInDarkModeState,
-      state.clozeColorPresetState,
-      state.customInterfaceFontState,
-      state.customMonospaceFontState,
-      state.customUiFontState,
-      state.editorDisplayModeState,
-      state.fontColorPresetState,
-      state.highlightColorPresetState,
-      state.selectionColorPresetState,
-      state.resolvedBaseColorModeState,
-      state.interfaceFontPresetState,
-      state.interfaceFontSizeState,
-      state.markdownSyntaxVisibilityState,
-      state.monospaceFontPresetState,
-      state.pdfReadingModeState,
-      state.uiFontPresetState,
-      state.workspaceSurfaceAssignmentsState,
-      state.workspaceSurfacePaletteState
-    ]
-  );
+  return useAppearanceSettingsValue(state);
 }
 
 export function AppearanceSettingsProvider({ children }: { children: ReactNode }) {

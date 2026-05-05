@@ -1,4 +1,5 @@
 import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSettings';
+import type { ReadingLineHeight } from './appearanceSettingsOptions';
 
 const SYSTEM_FONT_FALLBACK =
   "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif";
@@ -25,6 +26,12 @@ const MONOSPACE_FONT_PRESET_VALUES: Record<MonospaceFontPreset, string> = {
   fira: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace",
   sarasa: "'Sarasa Mono SC', 'JetBrains Mono', 'Cascadia Code', monospace",
   custom: "'JetBrains Mono', 'Cascadia Code', 'Sarasa Mono SC', 'SFMono-Regular', Menlo, Consolas, 'Noto Sans Mono CJK SC', monospace"
+};
+
+const READING_LINE_HEIGHT_VALUES: Record<ReadingLineHeight, string> = {
+  compact: '1.6',
+  standard: '1.75',
+  relaxed: '1.9'
 };
 
 function quoteFontFamilyName(value: string) {
@@ -57,4 +64,8 @@ export function applyEditorTypographyScale(root: HTMLElement, baseFontSize: numb
   root.style.setProperty('--content-panel-h2-font-size', toPx(baseFontSize * 1.18));
   root.style.setProperty('--content-panel-h3-font-size', toPx(baseFontSize * 1.04));
   root.style.setProperty('--content-panel-code-font-size', toPx(baseFontSize * 0.82));
+}
+
+export function applyReadingLineHeight(root: HTMLElement, lineHeight: ReadingLineHeight) {
+  root.style.setProperty('--content-panel-line-height', READING_LINE_HEIGHT_VALUES[lineHeight]);
 }

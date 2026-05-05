@@ -11,6 +11,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   monospaceFont: 'foliole-monospace-font-preset',
   baseColor: 'foliole-base-color',
   pdfReadingMode: 'foliole-pdf-reading-mode',
+  readingLineHeight: 'foliole-reading-line-height',
   dimImagesInDarkMode: 'foliole-dim-images-in-dark-mode',
   fontColor: 'foliole-font-color',
   accentColor: 'foliole-accent-color',
@@ -100,12 +101,14 @@ export const APP_SETTINGS_STORAGE_KEYS = {
 export const APP_SETTINGS_OPTIONS = {
   markdownSyntaxVisibility: ['hidden', 'visible'] as const,
   editorDisplayMode: ['preview', 'source'] as const,
-  pdfReadingMode: ['original', 'inverted', 'warm'] as const
+  pdfReadingMode: ['original', 'inverted', 'warm'] as const,
+  readingLineHeight: ['compact', 'standard', 'relaxed'] as const
 } as const;
 
 export type MarkdownSyntaxVisibility = (typeof APP_SETTINGS_OPTIONS.markdownSyntaxVisibility)[number];
 export type EditorDisplayMode = (typeof APP_SETTINGS_OPTIONS.editorDisplayMode)[number];
 export type PdfReadingMode = (typeof APP_SETTINGS_OPTIONS.pdfReadingMode)[number];
+export type ReadingLineHeight = (typeof APP_SETTINGS_OPTIONS.readingLineHeight)[number];
 
 export interface PersistedAppSettings {
   autoLocalizeRemoteImages: boolean;

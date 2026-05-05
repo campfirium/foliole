@@ -109,6 +109,24 @@ function AppearancePdfReadingModeRow(props: ReturnType<typeof useAppearanceSecti
   );
 }
 
+function ReadingLineHeightRow(props: ReturnType<typeof useAppearanceSectionState>) {
+  const { appearance } = props;
+
+  return (
+    <SettingsSegmentedRow
+      description="Set the reading line height for topics. The choice is saved and applied after restart."
+      label="Reading line height"
+      onChange={(value) => appearance.setReadingLineHeight(value as typeof appearance.readingLineHeight)}
+      options={[
+        { label: 'Compact', value: 'compact' },
+        { label: 'Standard', value: 'standard' },
+        { label: 'Relaxed', value: 'relaxed' }
+      ]}
+      value={appearance.readingLineHeight}
+    />
+  );
+}
+
 function DimImagesInDarkModeRow(props: ReturnType<typeof useAppearanceSectionState>) {
   const { appearance } = props;
 
@@ -178,6 +196,7 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
         setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
       />
       <AppearancePdfReadingModeRow {...props} />
+      <ReadingLineHeightRow {...props} />
       <DimImagesInDarkModeRow {...props} />
     </SettingsSection>
   );
