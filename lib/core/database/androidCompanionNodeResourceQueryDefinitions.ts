@@ -87,6 +87,18 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'id', source: 'id', type: 'string' },
       { key: 'snapshot_json', source: 'snapshot_json', type: 'string' }
     ]
+  },
+  workspaceOrderedNodeIds: {
+    resultKey: 'nodes',
+    sql:
+      'SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id ' +
+      'ORDER BY CASE WHEN no.position IS NULL THEN 1 ELSE 0 END, no.position ASC, n.created_at ASC',
+    columns: [{ key: 'id', source: 'id', type: 'string' }]
+  },
+  workspaceMetaValue: {
+    resultKey: 'rows',
+    sql: 'SELECT value FROM workspace_meta WHERE key = ? LIMIT 1',
+    columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
   }
 };
 

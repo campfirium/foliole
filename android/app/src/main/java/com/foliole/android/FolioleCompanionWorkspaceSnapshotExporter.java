@@ -8,7 +8,6 @@ import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 final class FolioleCompanionWorkspaceSnapshotExporter {
@@ -19,7 +18,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     private FolioleCompanionWorkspaceSnapshotExporter() {}
 
     static JSObject loadWorkspaceSnapshot(Context context, SQLiteDatabase database, String deviceId) throws Exception {
-        JSONArray orderedNodeIds = loadOrderedNodeIds(database);
+        JSONArray orderedNodeIds = loadOrderedNodeIds(context, database);
         if (orderedNodeIds.length() == 0) {
             return null;
         }
@@ -74,12 +73,12 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         }
 
         JSObject snapshot = new JSObject();
-        snapshot.put("activeNodeId", resolveActiveNodeId(database, nodesById, trashedNodeIds, firstActiveNodeId));
+        snapshot.put("activeNodeId", resolveActiveNodeId(context, database, nodesById, trashedNodeIds, firstActiveNodeId));
         snapshot.put("nodeOrder", orderedNodeIds);
         snapshot.put("nodesById", nodesById);
         snapshot.put("persistedNodeViewById", FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
         snapshot.put("trashedNodeIds", trashedNodeIds);
-        snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(database));
+        snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(context, database));
         return snapshot;
     }
 
@@ -92,37 +91,31 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         }
     }
 
-    private static JSONArray loadOrderedNodeIds(SQLiteDatabase database) {
+    private static JSONArray loadOrderedNodeIds(Context context, SQLiteDatabase database) throws Exception {
         JSONArray result = new JSONArray();
-        try (Cursor cursor = database.rawQuery(
-            "SELECT n.id " +
-            "FROM nodes n " +
-            "LEFT JOIN node_order no ON no.node_id = n.id " +
-            "ORDER BY CASE WHEN no.position IS NULL THEN 1 ELSE 0 END, no.position ASC, n.created_at ASC",
-            null
-        )) {
-            while (cursor.moveToNext()) {
-                result.put(cursor.getString(0));
-            }
+        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "workspaceOrderedNodeIds").getJSONArray("nodes");
+        for (int index = 0; index < rows.length(); index += 1) {
+            result.put(rows.getJSONObject(index).getString("id"));
         }
         return result;
     }
 
     private static String resolveActiveNodeId(
+        Context context,
         SQLiteDatabase database,
         JSObject nodesById,
         JSONArray trashedNodeIds,
         String fallbackActiveNodeId
-    ) {
-        String persistedActiveNodeId = loadWorkspaceMetaValue(database, ACTIVE_NODE_META_KEY);
+    ) throws Exception {
+        String persistedActiveNodeId = loadWorkspaceMetaValue(context, database, ACTIVE_NODE_META_KEY);
         if (persistedActiveNodeId != null && nodesById.has(persistedActiveNodeId) && !contains(trashedNodeIds, persistedActiveNodeId)) {
             return persistedActiveNodeId;
         }
         return fallbackActiveNodeId;
     }
 
-    private static JSObject loadUntitledSequenceByParent(SQLiteDatabase database) throws JSONException {
-        String rawValue = loadWorkspaceMetaValue(database, UNTITLED_SEQUENCE_META_KEY);
+    private static JSObject loadUntitledSequenceByParent(Context context, SQLiteDatabase database) throws Exception {
+        String rawValue = loadWorkspaceMetaValue(context, database, UNTITLED_SEQUENCE_META_KEY);
         if (rawValue == null || rawValue.trim().isEmpty()) {
             return new JSObject();
         }
@@ -130,23 +123,9 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         return parsed instanceof JSONObject ? new JSObject(rawValue) : new JSObject();
     }
 
-    private static String loadWorkspaceMetaValue(SQLiteDatabase database, String key) {
-        try (Cursor cursor = database.query(
-            "workspace_meta",
-            new String[] { "value" },
-            "key = ?",
-            new String[] { key },
-            null,
-            null,
-            null,
-            "1"
-        )) {
-            if (!cursor.moveToFirst()) {
-                return null;
-            }
-            String value = cursor.getString(0);
-            return value == null || value.trim().isEmpty() ? null : value;
-        }
+    private static String loadWorkspaceMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {
+        String value = FolioleCompanionNamedQueryStore.loadString(context, database, "workspaceMetaValue", new String[] { key });
+        return value == null || value.trim().isEmpty() ? null : value;
     }
 
     private static boolean contains(JSONArray values, String target) {
