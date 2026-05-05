@@ -11,7 +11,9 @@ const syncObjectsMock = vi.hoisted(() => ({
   syncCompanionObjectsFromDesktop: vi.fn(async () => ({
     attachmentResourceError: null,
     contentBlobError: null,
+    remainingAttachmentResourceBytes: null,
     remainingAttachmentResourceCount: 0,
+    remainingContentBlobBytes: null,
     remainingContentBlobCount: 0
   }))
 }));
@@ -144,7 +146,9 @@ describe('tryForegroundAutoSync', () => {
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue({
       attachmentResourceError: null,
       contentBlobError: null,
+      remainingAttachmentResourceBytes: null,
       remainingAttachmentResourceCount: 0,
+      remainingContentBlobBytes: null,
       remainingContentBlobCount: 0
     });
     syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
