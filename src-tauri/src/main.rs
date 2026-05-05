@@ -1,7 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde_json::json;
-use tauri::{PageLoadEvent, WindowEvent};
+use tauri::webview::PageLoadEvent;
+use tauri::WindowEvent;
 
 fn main() {
     let builder = tauri::Builder::default()
