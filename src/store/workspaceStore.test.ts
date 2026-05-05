@@ -15,6 +15,11 @@ function createTestStore(now: Date) {
 
   return createStore<WorkspaceState>((set) => ({
     ...initial,
+    reviewSession: {
+      currentNodeId: null,
+      isAnswerRevealed: false,
+      queueNodeIds: []
+    },
     resetLayout: () => {
       set(() => ({
         layout: {
@@ -120,6 +125,10 @@ function createTestStore(now: Date) {
         };
       });
     },
+    startReviewSession: () => false,
+    revealReviewAnswer: () => undefined,
+    gradeReviewCard: async () => false,
+    exitReviewSession: () => undefined,
     deleteNode: (nodeId) => {
       set((state) => {
         if (!state.nodesById[nodeId]) {

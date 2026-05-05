@@ -7,3 +7,5 @@ playwright-report/
 test-results/
 blob-report/
 *.tsbuildinfo
+src-tauri/target/
+**/*.rs.bk

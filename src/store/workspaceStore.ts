@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import { normalizeWidth } from './workspaceHelpers';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 
 export interface WorkspaceState {
   activeNodeId: string | null;
@@ -16,6 +18,7 @@ export interface WorkspaceState {
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  reviewSession: ReviewSessionState;
   trashedNodeIds: string[];
   goBack: () => NodeNavigationResult | null;
   goForward: () => NodeNavigationResult | null;
@@ -29,6 +32,10 @@ export interface WorkspaceState {
   setActiveNode: (nodeId: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => void;
+  startReviewSession: (now?: string) => boolean;
+  revealReviewAnswer: () => void;
+  gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
+  exitReviewSession: () => void;
   deleteNode: (nodeId: string) => void;
   restoreNode: (nodeId: string) => void;
   deleteNodePermanently: (nodeId: string) => void;
@@ -56,6 +63,12 @@ export interface WorkspaceLayoutState {
   listWidth: number;
 }
 
+export interface ReviewSessionState {
+  currentNodeId: string | null;
+  isAnswerRevealed: boolean;
+  queueNodeIds: string[];
+}
+
 export interface NodeViewState {
   scrollTop: number;
   selection: {
@@ -75,11 +88,23 @@ const defaultLayoutState: WorkspaceLayoutState = {
 
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
-  'activeNodeId' | 'layout' | 'navigation' | 'nodeOrder' | 'nodesById' | 'nodeViewById' | 'trashedNodeIds'
+  | 'activeNodeId'
+  | 'layout'
+  | 'navigation'
+  | 'nodeOrder'
+  | 'nodesById'
+  | 'nodeViewById'
+  | 'reviewSession'
+  | 'trashedNodeIds'
 > {
   return {
     ...createInitialWorkspaceSnapshot(now, defaultLayoutState),
-    navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE }
+    navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
+    reviewSession: {
+      currentNodeId: null,
+      isAnswerRevealed: false,
+      queueNodeIds: []
+    }
   };
 }
 
@@ -87,7 +112,7 @@ const initialState = createInitialWorkspaceState();
 
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
       resetLayout: () => {
         set({ layout: { ...defaultLayoutState } });
@@ -125,7 +150,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         });
       },
       ...createWorkspaceNavigationActions(set),
-      ...createWorkspaceNodeActions(set)
+      ...createWorkspaceNodeActions(set),
+      ...createWorkspaceReviewActions(set, get)
     }),
     {
       name: WORKSPACE_STORAGE_KEY,

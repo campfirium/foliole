@@ -1,0 +1,88 @@
+import type { NodeReviewProfile } from '../../nodes/model/nodeTypes';
+
+export type ReviewGrade = 1 | 2 | 3 | 4;
+
+export interface SchedulerCard {
+  due: string;
+  last_review: string | null;
+  state: number;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  reps: number;
+  lapses: number;
+}
+
+export interface SchedulerGradeInput {
+  card: SchedulerCard;
+  grade: ReviewGrade;
+  now: string;
+}
+
+export interface SchedulerGradeResult {
+  card: SchedulerCard;
+  reviewed_at: string;
+}
+
+export interface ReviewSchedulerAdapter {
+  grade: (input: SchedulerGradeInput) => Promise<SchedulerGradeResult>;
+}
+
+export function createInitialSchedulerCard(now: string): SchedulerCard {
+  return {
+    due: now,
+    last_review: null,
+    state: 0,
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0
+  };
+}
+
+export function toSchedulerCard(profile: NodeReviewProfile | null, now: string): SchedulerCard {
+  if (!profile) {
+    return createInitialSchedulerCard(now);
+  }
+  return {
+    due: profile.due,
+    last_review: profile.lastReviewAt,
+    state: profile.state,
+    stability: profile.stability,
+    difficulty: profile.difficulty,
+    elapsed_days: profile.elapsedDays,
+    scheduled_days: profile.scheduledDays,
+    reps: profile.reps,
+    lapses: profile.lapses
+  };
+}
+
+export function toNodeReviewProfile(card: SchedulerCard): NodeReviewProfile {
+  return {
+    due: card.due,
+    lastReviewAt: card.last_review,
+    state: card.state,
+    stability: card.stability,
+    difficulty: card.difficulty,
+    elapsedDays: card.elapsed_days,
+    scheduledDays: card.scheduled_days,
+    reps: card.reps,
+    lapses: card.lapses
+  };
+}
+
+export function mapGradeToRustRating(grade: ReviewGrade): 'Again' | 'Hard' | 'Good' | 'Easy' {
+  if (grade === 1) {
+    return 'Again';
+  }
+  if (grade === 2) {
+    return 'Hard';
+  }
+  if (grade === 3) {
+    return 'Good';
+  }
+  return 'Easy';
+}

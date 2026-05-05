@@ -3,6 +3,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, Point
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -28,10 +29,12 @@ export interface WorkspaceLayoutProps {
   editorNodeViewState?: NodeViewState;
   canStartStudyMode: boolean;
   isStudyMode: boolean;
+  isAnswerRevealed: boolean;
   isDocumentResizing: boolean;
   isResizingList: boolean;
   isTrashViewOpen: boolean;
   isViewingTrashNode: boolean;
+  showAnswerSection: boolean;
   listWidth: number;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
@@ -58,6 +61,8 @@ export interface WorkspaceLayoutProps {
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
   onStartStudyMode: () => void;
+  onRevealAnswer: () => void;
+  onGradeReview: (grade: ReviewGrade) => void;
   selectedTrashNodeId: string | null;
 }
 
@@ -73,10 +78,12 @@ export function WorkspaceLayout({
   editorNodeViewState,
   canStartStudyMode,
   isStudyMode,
+  isAnswerRevealed,
   isDocumentResizing,
   isResizingList,
   isTrashViewOpen,
   isViewingTrashNode,
+  showAnswerSection,
   listWidth,
   nodeOrder,
   nodesById,
@@ -100,6 +107,8 @@ export function WorkspaceLayout({
   onCreateCloze,
   onStartDocumentResize,
   onStartStudyMode,
+  onRevealAnswer,
+  onGradeReview,
   selectedTrashNodeId
 }: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
@@ -155,10 +164,14 @@ export function WorkspaceLayout({
             onResetLayout={onResetLayout}
             onSelectNode={onSelectBreadcrumbNode}
             onStartDocumentResize={onStartDocumentResize}
+            showAnswerSection={showAnswerSection}
           />
           <ReviewModeToolbar
             canStartStudyMode={canStartStudyMode}
+            isAnswerRevealed={isAnswerRevealed}
             isStudyMode={isStudyMode}
+            onGrade={onGradeReview}
+            onRevealAnswer={onRevealAnswer}
             onStartStudyMode={onStartStudyMode}
           />
         </section>

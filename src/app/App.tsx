@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { WorkspaceLayout } from './components/WorkspaceLayout';
@@ -20,6 +21,7 @@ export function App() {
   const goBack = useWorkspaceStore((state) => state.goBack);
   const goForward = useWorkspaceStore((state) => state.goForward);
   const goToParent = useWorkspaceStore((state) => state.goToParent);
+  const gradeReviewCard = useWorkspaceStore((state) => state.gradeReviewCard);
   const jumpToAncestorNode = useWorkspaceStore((state) => state.jumpToAncestorNode);
   const listWidth = useWorkspaceStore((state) => state.layout.listWidth);
   const navigation = useWorkspaceStore((state) => state.navigation);
@@ -27,13 +29,17 @@ export function App() {
   const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const openNode = useWorkspaceStore((state) => state.openNode);
+  const revealReviewAnswer = useWorkspaceStore((state) => state.revealReviewAnswer);
+  const reviewSession = useWorkspaceStore((state) => state.reviewSession);
   const resetLayout = useWorkspaceStore((state) => state.resetLayout);
   const setDocumentMaxWidth = useWorkspaceStore((state) => state.setDocumentMaxWidth);
   const setListWidth = useWorkspaceStore((state) => state.setListWidth);
   const setNodeViewState = useWorkspaceStore((state) => state.setNodeViewState);
+  const startReviewSession = useWorkspaceStore((state) => state.startReviewSession);
   const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
   const updateNodeReveal = useWorkspaceStore((state) => state.updateNodeReveal);
+  const exitReviewSession = useWorkspaceStore((state) => state.exitReviewSession);
 
   const editorRef = useRef<EditorAdapter | null>(null);
 
@@ -131,6 +137,7 @@ export function App() {
 
   const handleOpenTrashView = () => {
     resetStudyMode();
+    exitReviewSession();
     setIsViewingTrashNode(false);
     if (isTrashViewOpen) {
       closeTrashView();
@@ -141,6 +148,8 @@ export function App() {
   };
 
   const handleOpenNotesView = () => {
+    resetStudyMode();
+    exitReviewSession();
     setIsViewingTrashNode(false);
     if (isTrashViewOpen) {
       closeTrashView();
@@ -152,12 +161,14 @@ export function App() {
 
   const handleSelectNode = (nodeId: string) => {
     resetStudyMode();
+    exitReviewSession();
     setIsViewingTrashNode(false);
     handleSelectNoteNode(nodeId);
   };
 
   const handleSelectTrashNode = (nodeId: string) => {
     resetStudyMode();
+    exitReviewSession();
     setIsViewingTrashNode(true);
     openTrashView();
     setSelectedTrashNodeId(nodeId);
@@ -165,8 +176,31 @@ export function App() {
 
   const handleSelectBreadcrumbNode = (nodeId: string) => {
     resetStudyMode();
+    exitReviewSession();
     setIsViewingTrashNode(false);
     handleSelectBreadcrumbNodeRaw(nodeId);
+  };
+
+  const handleStartStudyMode = () => {
+    const started = startReviewSession();
+    if (!started) {
+      return;
+    }
+    startStudyMode();
+  };
+
+  const handleRevealAnswer = () => {
+    revealReviewAnswer();
+  };
+
+  const handleGradeReview = async (grade: ReviewGrade) => {
+    const graded = await gradeReviewCard(grade);
+    if (!graded) {
+      return;
+    }
+    if (!useWorkspaceStore.getState().reviewSession.currentNodeId) {
+      resetStudyMode();
+    }
   };
 
   useEffect(() => {
@@ -177,6 +211,13 @@ export function App() {
       setIsViewingTrashNode(false);
     }
   }, [isTrashViewOpen, isViewingTrashNode, selectedTrashNodeId, trashedNodeIds]);
+
+  useEffect(() => {
+    if (!isStudyMode || reviewSession.currentNodeId) {
+      return;
+    }
+    resetStudyMode();
+  }, [isStudyMode, resetStudyMode, reviewSession.currentNodeId]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -230,6 +271,7 @@ export function App() {
       isResizingList={listResize.isResizingList}
       isTrashViewOpen={isTrashViewOpen}
       isViewingTrashNode={isViewingTrashNode}
+      isAnswerRevealed={reviewSession.isAnswerRevealed}
       listWidth={listWidth}
       nodeOrder={nodeOrder}
       nodesById={nodesById}
@@ -243,17 +285,20 @@ export function App() {
       onGoBack={handleGoBack}
       onGoForward={handleGoForward}
       onGoParent={handleGoParent}
+      onGradeReview={handleGradeReview}
       onResetLayout={resetLayout}
+      onRevealAnswer={handleRevealAnswer}
       onSelectBreadcrumbNode={handleSelectBreadcrumbNode}
       onSelectNode={handleSelectNode}
       onSelectTrashNode={handleSelectTrashNode}
       onSplitterKeyDown={listResize.handleSplitterKeyDown}
       onSplitterPointerDown={listResize.handleSplitterPointerDown}
       onStartDocumentResize={documentResize.startResize}
-      onStartStudyMode={startStudyMode}
+      onStartStudyMode={handleStartStudyMode}
       onOpenNotesView={handleOpenNotesView}
       onOpenTrashView={handleOpenTrashView}
       selectedTrashNodeId={selectedTrashNodeId}
+      showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}
     />
   );
 }

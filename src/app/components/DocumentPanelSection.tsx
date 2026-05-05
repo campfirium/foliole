@@ -19,6 +19,7 @@ interface DocumentPanelSectionProps {
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
+  showAnswerSection: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -43,6 +44,7 @@ export function DocumentPanelSection({
   editorNodeId,
   editorNodeViewState,
   isDocumentResizing,
+  showAnswerSection,
   onAnswerChange,
   onEditorChange,
   onEditorContextMenu,
@@ -61,7 +63,7 @@ export function DocumentPanelSection({
 
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const reveal = activeNode?.reveal ?? '';
-  const hasAnswerSection = activeNode?.reveal !== null;
+  const hasAnswerSection = activeNode?.reveal !== null && showAnswerSection;
 
   return (
     <section aria-label="Document area" className="panel-document-shell">

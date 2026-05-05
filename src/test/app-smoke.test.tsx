@@ -95,7 +95,37 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Create QA Node' })).not.toBeInTheDocument();
   });
 
-  it('enters study mode only after clicking Study in the review toolbar', () => {
+  it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const qaNode: Node = {
+      id: 'node-2',
+      parentNodeId: 'node-1',
+      title: 'QA 2',
+      content: 'Prompt [...]',
+      reveal: 'Answer',
+      review: {
+        due: timestamp,
+        lastReviewAt: null,
+        state: 0,
+        stability: 0,
+        difficulty: 0,
+        elapsedDays: 0,
+        scheduledDays: 0,
+        reps: 0,
+        lapses: 0
+      },
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': qaNode
+      }
+    }));
+
     render(<App />);
 
     expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
@@ -103,10 +133,16 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Study' }));
 
+    expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Grade 1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Grade 2' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Grade 3' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Grade 4' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grade 1' })).toBeDisabled();
+    expect(screen.queryByLabelText('Cloze answer section')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
+    expect(screen.getByRole('button', { name: 'Grade 1' })).toBeEnabled();
+    expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Study' })).not.toBeInTheDocument();
   });
 
