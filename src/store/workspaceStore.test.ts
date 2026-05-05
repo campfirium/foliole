@@ -1,5 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 
+import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+
 import {
   createInitialWorkspaceState,
   DOCUMENT_WIDTH_DEFAULT,
@@ -76,6 +78,7 @@ function createTestStore(now: Date) {
             [nodeId]: {
               ...node,
               content,
+              title: deriveNodeTitleFromContent(content),
               updatedAt: new Date().toISOString()
             }
           }
@@ -153,6 +156,28 @@ describe('workspaceStore', () => {
       throw new Error('seed node is required in this test');
     }
     expect(node.content).toBe('updated markdown');
+    expect(node.title).toBe('updated markdown');
+  });
+
+  it('derives node title from first level-1 heading', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().updateNodeContent('node-1', '# New Title\n\nBody paragraph.');
+
+    expect(store.getState().nodesById['node-1']?.title).toBe('New Title');
+  });
+
+  it('falls back to first clause when heading is missing', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().updateNodeContent('node-1', 'First clause, second clause. Third sentence.');
+
+    expect(store.getState().nodesById['node-1']?.title).toBe('First clause');
+  });
+
+  it('uses Untitled when content has no usable text', () => {
+    const store = createTestStore(new Date('2026-02-25T00:00:00.000Z'));
+    store.getState().updateNodeContent('node-1', ' \n\t  ');
+
+    expect(store.getState().nodesById['node-1']?.title).toBe('Untitled');
   });
 
   it('creates QA node from selected content', () => {

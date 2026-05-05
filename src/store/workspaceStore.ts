@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
 export interface WorkspaceState {
@@ -67,11 +68,12 @@ export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile
 }
 
 export function createSeedNode(timestamp: string): Node {
+  const seedContent = '# Welcome to Foliole\n\nStart writing markdown here.';
   return {
     id: 'node-1',
     parentNodeId: null,
-    title: 'Getting Started',
-    content: '# Welcome to Foliole\n\nStart writing markdown here.',
+    title: deriveNodeTitleFromContent(seedContent),
+    content: seedContent,
     reveal: null,
     review: null,
     createdAt: timestamp,
@@ -161,6 +163,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (!node) {
             return state;
           }
+          const nextTitle = deriveNodeTitleFromContent(content);
 
           return {
             nodesById: {
@@ -168,6 +171,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               [nodeId]: {
                 ...node,
                 content,
+                title: nextTitle,
                 updatedAt: new Date().toISOString()
               }
             }
