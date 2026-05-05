@@ -50,14 +50,6 @@ function expectInsert(view: EditorView, changes: { from: number; insert: string;
   });
 }
 
-function expectPastedAnchors(onPastedAnchors: ReturnType<typeof vi.fn>, anchors: Array<{ from: number; kind: 'highlight' | 'cloze'; to: number }>) {
-  expect(onPastedAnchors).toHaveBeenCalledWith({
-    anchors,
-    content: 'Before important after',
-    nodeId: 'node-1'
-  });
-}
-
 function runStructuredClipboardCase() {
   const onPastedAnchors = vi.fn();
   const view = createPasteView({
@@ -82,7 +74,7 @@ function runStructuredClipboardCase() {
   ).toBe(true);
 
   expectInsert(view, { from: 1, insert: 'hello', to: 4 }, 6);
-  expectPastedAnchors(onPastedAnchors, [{ from: 1, kind: 'highlight', to: 6 }]);
+  expect(onPastedAnchors).not.toHaveBeenCalled();
 }
 
 function runRawClipboardCase() {
@@ -149,10 +141,7 @@ function runExternalMarkedTextCase() {
   ).toBe(true);
 
   expectInsert(view, { from: 0, insert: 'Before important and hidden', to: 0 }, 27);
-  expectPastedAnchors(onPastedAnchors, [
-    { from: 7, kind: 'highlight', to: 16 },
-    { from: 21, kind: 'cloze', to: 27 }
-  ]);
+  expect(onPastedAnchors).not.toHaveBeenCalled();
 }
 
 async function runClipboardImageCase() {
@@ -205,7 +194,7 @@ describe('handleMarkdownCompatibleHtmlPaste', () => {
   it('converts clipboard HTML into markdown-compatible text before insertion', runHtmlMarkdownCase);
   it('leaves plain text paste untouched when clipboard has no HTML', runHtmlMissingCase);
   it('keeps degraded HTML structures visible during rich text paste', runHtmlDegradedCase);
-  it('converts external marked text into plain text and pasted anchors', runExternalMarkedTextCase);
+  it('converts external marked text into editable plain text without recreating child anchors', runExternalMarkedTextCase);
 });
 
 describe('handleClipboardImagePaste', () => {
