@@ -1,5 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
+import { getRuntimeInvoke } from './bridge';
+
 const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.editorDisplayMode,
   APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility,
@@ -27,6 +29,29 @@ function canUseLocalStorage() {
   return typeof window !== 'undefined';
 }
 
+function readWhitelistedLocalStorageSnapshot() {
+  const snapshot: Record<string, string> = {};
+  if (!canUseLocalStorage()) {
+    return snapshot;
+  }
+  for (const key of LOCAL_STORAGE_WHITELIST) {
+    const value = window.localStorage.getItem(key);
+    if (typeof value === 'string') {
+      snapshot[key] = value;
+    }
+  }
+  return snapshot;
+}
+
+function persistSnapshotToRuntimeStorage() {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return;
+  }
+  const settings = readWhitelistedLocalStorageSnapshot();
+  void runtimeInvoke('save_app_settings_state', { settings }).catch(() => undefined);
+}
+
 export function getWhitelistedLocalStorageItem(key: string): string | null {
   if (!canUseLocalStorage()) {
     return null;
@@ -41,6 +66,7 @@ export function setWhitelistedLocalStorageItem(key: string, value: string) {
   }
   assertLocalStorageWhitelist(key);
   window.localStorage.setItem(key, value);
+  persistSnapshotToRuntimeStorage();
 }
 
 export function removeWhitelistedLocalStorageItem(key: string) {
@@ -49,6 +75,7 @@ export function removeWhitelistedLocalStorageItem(key: string) {
   }
   assertLocalStorageWhitelist(key);
   window.localStorage.removeItem(key);
+  persistSnapshotToRuntimeStorage();
 }
 
 export function getLocalStorageWhitelist() {

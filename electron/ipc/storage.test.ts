@@ -17,7 +17,12 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
-import { migrateLegacyWorkspaceState, resolveLegacyWorkspaceCandidatePaths } from './storage.js';
+import {
+  loadAppSettingsState,
+  migrateLegacyWorkspaceState,
+  resolveLegacyWorkspaceCandidatePaths,
+  saveAppSettingsState
+} from './storage.js';
 
 const STORAGE_KEY = 'foliole-workspace-v1';
 
@@ -123,4 +128,34 @@ it('does not overwrite existing target payload during migration', async () => {
   const currentPayload = await fs.readFile(targetPath, 'utf8');
   expect(currentPayload).toContain('current');
   expect(currentPayload).not.toContain('legacy');
+});
+
+it('persists app settings state into native app data file', async () => {
+  await saveAppSettingsState({
+    'foliole-ui-font-preset': 'inter',
+    'foliole-interface-font-size': '18'
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-ui-font-preset': 'inter',
+    'foliole-interface-font-size': '18'
+  });
+});
+
+it('filters malformed app settings payload values', async () => {
+  const settingsPath = path.join(mockedAppDataDir, 'settings', 'app-settings.json');
+  await fs.mkdir(path.dirname(settingsPath), { recursive: true });
+  await fs.writeFile(
+    settingsPath,
+    JSON.stringify({
+      'foliole-ui-font-preset': 'inter',
+      'bad key with spaces': 'x',
+      'foliole-interface-font-size': 18
+    }),
+    'utf8'
+  );
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-ui-font-preset': 'inter'
+  });
 });

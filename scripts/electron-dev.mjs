@@ -5,8 +5,8 @@ import { createElectronLaunchEnv } from './electron-dev-env.mjs';
 import { isViteServerReady } from './electron-dev-server.mjs';
 
 const VITE_HOST = '127.0.0.1';
-const VITE_PORT_DEFAULT = 5173;
-const VITE_PORT_MAX_ATTEMPTS = 5;
+const VITE_PORT_DEFAULT = 24600;
+const VITE_PORT_MAX_ATTEMPTS = 8;
 
 function run(command, args, options = {}) {
   return spawn(command, args, {
@@ -31,56 +31,50 @@ function resolveRequestedPort() {
   return VITE_PORT_DEFAULT;
 }
 
-function buildViteUrl(port) {
+function resolveViteUrl(port) {
   return `http://${VITE_HOST}:${port}`;
 }
 
-async function waitForViteReady(viteUrl, maxAttempts = 60) {
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    if (await isViteServerReady(viteUrl)) {
-      return;
-    }
-    await wait(500);
-  }
-  throw new Error('vite dev server did not become ready');
-}
-
 async function startViteWithPortFallback() {
-  const requestedPort = resolveRequestedPort();
-  const candidates = new Set();
-  for (let attempt = 0; attempt < VITE_PORT_MAX_ATTEMPTS; attempt += 1) {
-    candidates.add(requestedPort + attempt);
-  }
-  for (let attempt = 0; attempt < VITE_PORT_MAX_ATTEMPTS; attempt += 1) {
-    candidates.add(5173 + attempt);
-  }
-  for (let attempt = 0; attempt < VITE_PORT_MAX_ATTEMPTS; attempt += 1) {
-    candidates.add(3000 + attempt);
+  const preferredPort = resolveRequestedPort();
+  const candidatePorts = new Set([preferredPort]);
+  for (let offset = 0; offset < VITE_PORT_MAX_ATTEMPTS; offset += 1) {
+    candidatePorts.add(preferredPort + 100 + offset);
+    candidatePorts.add(5173 + offset);
+    candidatePorts.add(3000 + offset);
   }
 
-  const portsToTry = [...candidates];
-  for (const port of portsToTry) {
-    const viteUrl = buildViteUrl(port);
+  for (const port of candidatePorts) {
+    const viteUrl = resolveViteUrl(port);
     if (await isViteServerReady(viteUrl)) {
-      return { port, url: viteUrl, proc: null };
+      return { viteUrl, viteProc: null };
     }
 
-    const proc = run('npm', ['run', 'dev'], {
-      env: { ...process.env, FOLIOLE_VITE_PORT: String(port) }
+    const viteProc = run('npm', ['run', 'dev'], {
+      env: {
+        ...process.env,
+        FOLIOLE_VITE_PORT: String(port)
+      }
     });
 
-    try {
-      await waitForViteReady(viteUrl);
-      return { port, url: viteUrl, proc };
-    } catch {
-      if (!proc.killed) {
-        proc.kill('SIGTERM');
+    const maxAttempts = 24;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (await isViteServerReady(viteUrl)) {
+        return { viteUrl, viteProc };
       }
+      if (viteProc.exitCode !== null) {
+        break;
+      }
+      await wait(500);
+    }
+
+    if (!viteProc.killed && viteProc.exitCode === null) {
+      viteProc.kill('SIGTERM');
       await wait(250);
     }
   }
 
-  throw new Error('vite dev server did not start');
+  throw new Error('vite dev server did not become ready');
 }
 
 const compile = run('npm', ['run', 'electron:compile']);
@@ -95,10 +89,10 @@ await new Promise((resolve, reject) => {
 });
 
 const viteState = await startViteWithPortFallback();
-const vite = viteState.proc;
+const vite = viteState.viteProc;
 
 const electron = run('npx', ['electron', 'electron-dist/main.js'], {
-  env: createElectronLaunchEnv(process.env, viteState.url)
+  env: createElectronLaunchEnv(process.env, viteState.viteUrl)
 });
 
 const shutdown = () => {

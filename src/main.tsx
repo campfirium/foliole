@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client';
 
 import { App } from './app/App';
 import './app/styles.css';
+import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import { getRuntimeInvoke } from './shared/platform/bridge';
 import { reportNativeAppReady, reportNativeBootStage } from './shared/testing/nativeBootReporter';
 
@@ -109,14 +110,19 @@ function mountApp() {
   registerAppReadySignals(signalAppReady);
 }
 
-try {
-  reportNativeBootStage('boot_start');
-  mountApp();
-} catch (error) {
-  console.error('[startup] fatal bootstrap error', error);
-  reportNativeBootStage('fatal_bootstrap_error', {
-    message: error instanceof Error ? error.message : 'Unknown startup exception'
-  });
-  const message = error instanceof Error ? error.message : 'Unknown startup exception';
-  renderStartupError(message);
+async function bootstrap() {
+  try {
+    reportNativeBootStage('boot_start');
+    await syncAppSettingsWithRuntime();
+    mountApp();
+  } catch (error) {
+    console.error('[startup] fatal bootstrap error', error);
+    reportNativeBootStage('fatal_bootstrap_error', {
+      message: error instanceof Error ? error.message : 'Unknown startup exception'
+    });
+    const message = error instanceof Error ? error.message : 'Unknown startup exception';
+    renderStartupError(message);
+  }
 }
+
+void bootstrap();

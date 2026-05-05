@@ -6,6 +6,8 @@ import { resolveAppPaths } from './paths.js';
 
 const STORAGE_NAMESPACE = 'workspace';
 const STORAGE_EXT = 'json';
+const APP_SETTINGS_NAMESPACE = 'settings';
+const APP_SETTINGS_FILE = 'app-settings.json';
 
 function sanitizeStorageKey(storageKey: string): string {
   const isValidLength = storageKey.length > 0 && storageKey.length <= 128;
@@ -23,6 +25,12 @@ async function resolveWorkspaceStatePath(storageKey: string): Promise<string> {
   const storageDir = path.join(resolveAppPaths().app_data_dir, STORAGE_NAMESPACE);
   await fs.mkdir(storageDir, { recursive: true });
   return path.join(storageDir, `${sanitizedKey}.${STORAGE_EXT}`);
+}
+
+async function resolveAppSettingsPath(): Promise<string> {
+  const storageDir = path.join(resolveAppPaths().app_data_dir, APP_SETTINGS_NAMESPACE);
+  await fs.mkdir(storageDir, { recursive: true });
+  return path.join(storageDir, APP_SETTINGS_FILE);
 }
 
 function createWorkspaceFileName(storageKey: string) {
@@ -108,6 +116,24 @@ async function readFileIfExists(filePath: string): Promise<string | null> {
     }
     return null;
   }
+}
+
+function normalizeAppSettingsPayload(payload: unknown): Record<string, string> {
+  if (!payload || typeof payload !== 'object') {
+    return {};
+  }
+  const entries = Object.entries(payload as Record<string, unknown>);
+  const normalized: Record<string, string> = {};
+  for (const [key, value] of entries) {
+    if (typeof key !== 'string' || !/^[a-zA-Z0-9._:-]{1,128}$/.test(key)) {
+      continue;
+    }
+    if (typeof value !== 'string') {
+      continue;
+    }
+    normalized[key] = value;
+  }
+  return normalized;
 }
 
 interface WorkspacePayloadSummary {
@@ -208,6 +234,25 @@ export async function loadWorkspaceState(storageKey: string): Promise<string | n
     }
     throw new Error(`read workspace state failed: ${(error as Error).message}`);
   }
+}
+
+export async function loadAppSettingsState(): Promise<Record<string, string>> {
+  const settingsPath = await resolveAppSettingsPath();
+  const payload = await readFileIfExists(settingsPath);
+  if (!payload) {
+    return {};
+  }
+  try {
+    return normalizeAppSettingsPayload(JSON.parse(payload) as unknown);
+  } catch {
+    return {};
+  }
+}
+
+export async function saveAppSettingsState(settings: Record<string, unknown>): Promise<void> {
+  const settingsPath = await resolveAppSettingsPath();
+  const normalized = normalizeAppSettingsPayload(settings);
+  await fs.writeFile(settingsPath, JSON.stringify(normalized), 'utf8');
 }
 
 export async function saveWorkspaceState(storageKey: string, payload: string): Promise<void> {

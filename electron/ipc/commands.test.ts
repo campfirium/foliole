@@ -31,6 +31,8 @@ vi.mock('./paths.js', () => ({
   })
 }));
 vi.mock('./storage.js', () => ({
+  loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
+  saveAppSettingsState: vi.fn().mockResolvedValue(undefined),
   clearWorkspaceState: vi.fn().mockResolvedValue(undefined),
   loadWorkspaceState: vi.fn().mockResolvedValue('{"state":1}'),
   saveWorkspaceState: vi.fn().mockResolvedValue(undefined)
@@ -64,6 +66,23 @@ it('handles workspace storage commands', async () => {
     handleInvokeRequest({
       command: 'clear_workspace_state',
       args: { storageKey: 'foliole-workspace-v1' }
+    })
+  ).resolves.toBeNull();
+});
+
+it('handles app settings storage commands', async () => {
+  await expect(handleInvokeRequest({ command: 'load_app_settings_state' })).resolves.toEqual({
+    'foliole-ui-font-preset': 'inter'
+  });
+
+  await expect(
+    handleInvokeRequest({
+      command: 'save_app_settings_state',
+      args: {
+        settings: {
+          'foliole-ui-font-preset': 'source-sans'
+        }
+      }
     })
   ).resolves.toBeNull();
 });

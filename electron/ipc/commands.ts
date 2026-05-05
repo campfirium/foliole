@@ -8,7 +8,9 @@ import { resolveAppPaths } from './paths.js';
 import { reviewGrade, type ReviewGradeRequest } from './review.js';
 import {
   clearWorkspaceState,
+  loadAppSettingsState,
   loadWorkspaceState,
+  saveAppSettingsState,
   saveWorkspaceState
 } from './storage.js';
 
@@ -68,6 +70,17 @@ async function handleWindowCommand(command: string, context?: InvokeContext): Pr
 }
 
 async function handleStorageCommand(command: string, args: Record<string, unknown>): Promise<unknown> {
+  if (command === 'load_app_settings_state') {
+    return loadAppSettingsState();
+  }
+  if (command === 'save_app_settings_state') {
+    const settings = args.settings;
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      throw new Error('invalid argument: settings');
+    }
+    await saveAppSettingsState(settings as Record<string, unknown>);
+    return null;
+  }
   if (command === 'load_workspace_state') {
     return loadWorkspaceState(asString(args.storageKey, 'storageKey'));
   }

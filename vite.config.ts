@@ -9,7 +9,7 @@ function resolveDevPort() {
   if (Number.isFinite(parsed) && parsed > 0 && parsed < 65536) {
     return parsed;
   }
-  return 5173;
+  return 24600;
 }
 
 export default defineConfig({
