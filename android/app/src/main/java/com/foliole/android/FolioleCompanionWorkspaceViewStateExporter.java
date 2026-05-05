@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionWorkspaceViewStateExporter {
@@ -14,7 +15,7 @@ final class FolioleCompanionWorkspaceViewStateExporter {
 
     static JSObject loadPersistedNodeViewById(Context context, SQLiteDatabase database, String deviceId) throws Exception {
         JSObject statesById = new JSObject();
-        JSArray rows = FolioleCompanionNamedQueryStore
+        JSArray rows = FolioleCompanionGeneratedQueryRunner
             .loadRows(
                 context,
                 database,
@@ -24,23 +25,33 @@ final class FolioleCompanionWorkspaceViewStateExporter {
             );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            String nodeId = row.getString("node_id");
-            statesById.put(nodeId, buildViewState(context, row, nodeId));
+            String nodeId = row.getString(FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, "nodeIdRowKey"));
+            statesById.put(nodeId, buildViewState(context, row));
         }
         return statesById;
     }
 
-    private static JSObject buildViewState(Context context, JSONObject row, String nodeId) throws Exception {
+    private static JSObject buildViewState(Context context, JSONObject row) throws Exception {
         JSObject viewState = new JSObject();
-        viewState.put("nodeId", nodeId);
-        viewState.put("scrollTop", Math.max(0, row.getLong("scroll_top")));
-        viewState.put("selectionFrom", row.isNull("selection_from") ? JSONObject.NULL : Math.max(0, row.getLong("selection_from")));
-        viewState.put("selectionTo", row.isNull("selection_to") ? JSONObject.NULL : Math.max(0, row.getLong("selection_to")));
-        viewState.put("updatedAt", row.getString("updated_at"));
-        viewState.put(
-            "source",
-            row.isNull("source") ? FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, "defaultSource") : row.getString("source")
-        );
+        JSONArray fields = FolioleCompanionWorkspaceReadQueryRules.viewStateArray(context, "fields");
+        for (int index = 0; index < fields.length(); index += 1) {
+            JSONObject field = fields.getJSONObject(index);
+            viewState.put(field.getString("outputKey"), fieldValue(context, row, field));
+        }
         return viewState;
+    }
+
+    private static Object fieldValue(Context context, JSONObject row, JSONObject field) throws Exception {
+        String rowKey = field.getString("rowKey");
+        String type = field.getString("type");
+        if ("string".equals(type)) return row.getString(rowKey);
+        if ("nonNegativeLong".equals(type)) return Math.max(0, row.getLong(rowKey));
+        if ("nullableNonNegativeLong".equals(type)) return row.isNull(rowKey) ? JSONObject.NULL : Math.max(0, row.getLong(rowKey));
+        if ("defaultedString".equals(type)) {
+            return row.isNull(rowKey)
+                ? FolioleCompanionWorkspaceReadQueryRules.viewStateString(context, field.getString("defaultRuleKey"))
+                : row.getString(rowKey);
+        }
+        throw new IllegalStateException("Unsupported workspace view-state field type: " + type);
     }
 }

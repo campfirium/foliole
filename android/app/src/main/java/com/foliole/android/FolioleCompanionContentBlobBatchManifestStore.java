@@ -30,8 +30,8 @@ final class FolioleCompanionContentBlobBatchManifestStore {
             if (index > 0) placeholders.append(", ");
             placeholders.append("?");
         }
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(
+        JSONArray rows = FolioleCompanionGeneratedQueryRunner
+            .load(
                 context,
                 database,
                 "contentBlobManifestsByHashes",

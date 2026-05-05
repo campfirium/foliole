@@ -135,8 +135,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             placeholders.append("?");
             args[index] = attachmentIds.get(index);
         }
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(
+        JSONArray rows = FolioleCompanionGeneratedQueryRunner
+            .load(
                 context,
                 database,
                 resourceRule(context, "contentHashesByIdsQueryName"),

@@ -15,81 +15,99 @@ final class FolioleCompanionWorkspaceNodeSnapshotBuilder {
 
     static JSObject build(Context context, SQLiteDatabase database, JSONObject row, String deletedAt) throws Exception {
         JSObject node = new JSObject();
-        String nodeId = row.getString("id");
-        node.put("id", nodeId);
-        node.put("parentNodeId", nullableString(row, "parent_id"));
-        node.put("kind", normalizeKind(nullableString(row, "kind")));
-        if (!row.isNull("priority")) node.put("priority", row.getLong("priority"));
-        if (!row.isNull("desired_retention")) node.put("desiredRetention", row.getDouble("desired_retention"));
-        node.put("title", normalizeTitle(nullableString(row, "title")));
-        node.put("isTitleManual", row.getLong("is_title_manual") == 1);
-        node.put("hideTitleHeading", row.getLong("hide_title_heading") == 1);
-        node.put("content", nullableString(row, "content"));
-        node.put("bodyBlobHash", nullableString(row, "body_blob_hash"));
-        putBodyStatus(context, node, row.getString("body_status"));
+        JSONObject rules = nodePayloadRules(context);
+        String nodeId = row.getString(snapshotString(context, "nodeIdRowKey"));
+        putFields(node, row, rules.getJSONArray("fields"), rules);
+        putBodyStatus(context, node, row.getString(rules.getString("bodyStatusRowKey")));
         JSONArray attachments = FolioleCompanionNodeAttachmentStore.loadNodeAttachments(context, database, nodeId);
-        if (attachments.length() > 0) node.put("attachments", attachments);
-        node.put("openingText", nullableString(row, "opening_text"));
-        node.put("virtualFilter", FolioleCompanionJsonValueParser.parse(nullableString(row, "virtual_filter")));
-        node.put("reveal", nullableString(row, "reveal"));
-        node.put("anchorLink", FolioleCompanionJsonValueParser.parse(nullableString(row, "anchor_link")));
-        node.put("imageRegions", FolioleCompanionJsonValueParser.parse(nullableString(row, "image_regions")));
-        node.put("reading", buildReading(row));
-        node.put("review", buildReview(row));
-        node.put("createdAt", row.getString("created_at"));
-        node.put("updatedAt", row.getString("updated_at"));
-        node.put("currentVersionId", nullableString(row, "current_version_id"));
-        if (deletedAt != null) node.put("deletedAt", deletedAt);
+        if (attachments.length() > 0) node.put(rules.getString("attachmentsOutputKey"), attachments);
+        node.put(payloadString(context, "readingPayload", "outputKey"), buildNestedPayload(context, row, "readingPayload"));
+        node.put(payloadString(context, "reviewPayload", "outputKey"), buildNestedPayload(context, row, "reviewPayload"));
+        if (deletedAt != null) putField(node, row, rules.getJSONObject("deletedAtField"), rules);
         return node;
     }
 
     private static void putBodyStatus(Context context, JSObject node, String bodyStatus) throws Exception {
-        Set<String> visibleStatuses = FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, "visibleBodyStatuses");
+        JSONObject rules = nodePayloadRules(context);
+        Set<String> visibleStatuses = FolioleCompanionSyncProtocolDefinitions.resourceStatusSet(context, rules.getString("visibleBodyStatusGroup"));
         if (visibleStatuses.contains(bodyStatus)) {
-            node.put("bodyStatus", bodyStatus);
+            node.put(rules.getString("bodyStatusOutputKey"), bodyStatus);
         }
     }
 
-    private static Object buildReading(JSONObject row) {
-        if (row.isNull("last_handled_at") || row.isNull("next_at") || row.isNull("reading_state")) return null;
-        String state = row.optString("reading_state", null);
-        if (!"active".equals(state) && !"done".equals(state) && !"dismissed".equals(state)) return null;
-        JSObject reading = new JSObject();
-        reading.put("intervalDurationMs", row.isNull("interval_duration_ms") ? 0 : row.optLong("interval_duration_ms", 0));
-        reading.put("intervalGrowthFactor", row.isNull("interval_growth_factor") ? 1 : row.optDouble("interval_growth_factor", 1));
-        reading.put("lastHandledAt", row.optString("last_handled_at", null));
-        reading.put("nextAt", row.optString("next_at", null));
-        reading.put("priority", row.isNull("reading_priority") ? 0 : row.optDouble("reading_priority", 0));
-        reading.put("readingPosition", row.isNull("reading_position") ? 0 : row.optLong("reading_position", 0));
-        reading.put("repetitionCount", row.isNull("repetition_count") ? 0 : row.optLong("repetition_count", 0));
-        reading.put("state", state);
-        return reading;
-    }
-
-    private static Object buildReview(JSONObject row) {
-        if (row.isNull("due")) return null;
-        JSObject review = new JSObject();
-        review.put("due", row.optString("due", null));
-        review.put("lastReviewAt", nullableString(row, "last_review_at"));
-        review.put("state", row.isNull("review_state") ? 0 : row.optLong("review_state", 0));
-        review.put("stability", row.isNull("stability") ? 0 : row.optDouble("stability", 0));
-        review.put("difficulty", row.isNull("difficulty") ? 0 : row.optDouble("difficulty", 0));
-        review.put("elapsedDays", row.isNull("elapsed_days") ? 0 : row.optLong("elapsed_days", 0));
-        review.put("scheduledDays", row.isNull("scheduled_days") ? 0 : row.optLong("scheduled_days", 0));
-        review.put("reps", row.isNull("reps") ? 0 : row.optLong("reps", 0));
-        review.put("lapses", row.isNull("lapses") ? 0 : row.optLong("lapses", 0));
-        return review;
+    private static Object buildNestedPayload(Context context, JSONObject row, String groupName) throws Exception {
+        JSONObject rules = snapshotObject(context, groupName);
+        JSONArray requiredRowKeys = rules.getJSONArray("requiredRowKeys");
+        for (int index = 0; index < requiredRowKeys.length(); index += 1) {
+            if (row.isNull(requiredRowKeys.getString(index))) return null;
+        }
+        if (rules.has("validStates")) {
+            String state = row.optString(rules.getString("stateRowKey"), null);
+            if (!contains(rules.getJSONArray("validStates"), state)) return null;
+        }
+        JSObject payload = new JSObject();
+        putFields(payload, row, rules.getJSONArray("fields"), nodePayloadRules(context));
+        return payload;
     }
 
     private static String nullableString(JSONObject row, String key) {
         return row.isNull(key) ? null : row.optString(key, null);
     }
 
-    private static String normalizeKind(String kind) {
-        return "folder".equals(kind) || "item".equals(kind) || "topic".equals(kind) ? kind : "topic";
+    private static void putFields(JSObject target, JSONObject row, JSONArray fields, JSONObject nodeRules) throws Exception {
+        for (int index = 0; index < fields.length(); index += 1) {
+            putField(target, row, fields.getJSONObject(index), nodeRules);
+        }
     }
 
-    private static String normalizeTitle(String title) {
-        return title == null || title.trim().isEmpty() ? "Untitled" : title.trim();
+    private static void putField(JSObject target, JSONObject row, JSONObject field, JSONObject nodeRules) throws Exception {
+        String rowKey = field.getString("rowKey");
+        if (field.optBoolean("omitWhenNull", false) && row.isNull(rowKey)) return;
+        target.put(field.getString("outputKey"), fieldValue(row, field, nodeRules));
+    }
+
+    private static Object fieldValue(JSONObject row, JSONObject field, JSONObject nodeRules) throws Exception {
+        String rowKey = field.getString("rowKey");
+        String type = field.getString("type");
+        if ("string".equals(type)) return row.getString(rowKey);
+        if ("nullableString".equals(type)) return nullableString(row, rowKey);
+        if ("long".equals(type)) return row.isNull(rowKey) ? field.optLong("defaultValue", 0) : row.getLong(rowKey);
+        if ("double".equals(type)) return row.isNull(rowKey) ? field.optDouble("defaultValue", 0) : row.getDouble(rowKey);
+        if ("booleanLong".equals(type)) return row.getLong(rowKey) == 1;
+        if ("json".equals(type)) return FolioleCompanionJsonValueParser.parse(nullableString(row, rowKey));
+        if ("kind".equals(type)) return normalizeKind(nullableString(row, rowKey), nodeRules);
+        if ("title".equals(type)) return normalizeTitle(nullableString(row, rowKey), nodeRules);
+        throw new IllegalStateException("Unsupported workspace snapshot field type: " + type);
+    }
+
+    private static String normalizeKind(String kind, JSONObject rules) throws Exception {
+        return contains(rules.getJSONArray("validKinds"), kind) ? kind : rules.getString("defaultKind");
+    }
+
+    private static String normalizeTitle(String title, JSONObject rules) throws Exception {
+        return title == null || title.trim().isEmpty() ? rules.getString("defaultTitle") : title.trim();
+    }
+
+    private static boolean contains(JSONArray values, String target) {
+        for (int index = 0; index < values.length(); index += 1) {
+            if (values.optString(index, null).equals(target)) return true;
+        }
+        return false;
+    }
+
+    private static JSONObject nodePayloadRules(Context context) throws Exception {
+        return snapshotObject(context, "nodePayload");
+    }
+
+    private static JSONObject snapshotObject(Context context, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotObject(context, key);
+    }
+
+    private static String snapshotString(Context context, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key);
+    }
+
+    private static String payloadString(Context context, String groupName, String key) throws Exception {
+        return snapshotObject(context, groupName).getString(key);
     }
 }

@@ -58,7 +58,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
     static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
         JSObject result = new JSObject();
-        JSArray rows = FolioleCompanionNamedQueryStore
+        JSArray rows = FolioleCompanionGeneratedQueryRunner
             .loadRows(
                 context,
                 database,

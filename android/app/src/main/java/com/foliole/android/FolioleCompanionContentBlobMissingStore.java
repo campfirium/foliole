@@ -13,7 +13,7 @@ final class FolioleCompanionContentBlobMissingStore {
 
     static JSObject loadMissingHashes(Context context, SQLiteDatabase database, int limit) throws Exception {
         JSArray hashes = new JSArray();
-        JSArray blobs = FolioleCompanionNamedQueryStore
+        JSArray blobs = FolioleCompanionGeneratedQueryRunner
             .loadRows(
                 context,
                 database,

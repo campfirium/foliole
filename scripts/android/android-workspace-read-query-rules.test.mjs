@@ -20,16 +20,40 @@ describe('Android workspace read query rules', () => {
 
     expect(definitions.workspaceRead).toEqual(ANDROID_COMPANION_WORKSPACE_READ_RULES);
     expect(definitions.workspaceRead.snapshot).toMatchObject({
+      deletedAtRowKey: 'deleted_at',
       metaValueQueryName: 'workspaceMetaValue',
+      nodeIdRowKey: 'id',
       nodesQueryName: 'workspaceSnapshotNodes',
       orderedNodeIdsQueryName: 'workspaceOrderedNodeIds',
+      outputKeys: {
+        activeNodeId: 'activeNodeId',
+        nodesById: 'nodesById'
+      },
       untitledSequenceMetaKey: 'untitled_sequence_by_parent'
     });
+    expect(definitions.workspaceRead.snapshot.nodePayload.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ outputKey: 'parentNodeId', rowKey: 'parent_id' }),
+        expect.objectContaining({ outputKey: 'desiredRetention', rowKey: 'desired_retention' }),
+        expect.objectContaining({ outputKey: 'bodyBlobHash', rowKey: 'body_blob_hash' })
+      ])
+    );
+    expect(definitions.workspaceRead.snapshot.readingPayload.validStates).toEqual(['active', 'done', 'dismissed']);
+    expect(definitions.workspaceRead.snapshot.reviewPayload.fields).toEqual(
+      expect.arrayContaining([expect.objectContaining({ outputKey: 'lastReviewAt', rowKey: 'last_review_at' })])
+    );
     expect(definitions.workspaceRead.viewState).toMatchObject({
       defaultSource: 'user-scroll',
+      nodeIdRowKey: 'node_id',
       queryName: 'nodeViewStatesByDevice',
       resultKey: 'states'
     });
+    expect(definitions.workspaceRead.viewState.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ outputKey: 'scrollTop', rowKey: 'scroll_top', type: 'nonNegativeLong' }),
+        expect.objectContaining({ outputKey: 'selectionFrom', rowKey: 'selection_from', type: 'nullableNonNegativeLong' })
+      ])
+    );
   });
 
   it('keeps workspace Java exporters wired to generated read rules', async () => {
@@ -38,7 +62,13 @@ describe('Android workspace read query rules', () => {
 
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateString(context');
+    expect(combinedSource).toContain('snapshotObject(context, "outputKeys")');
+    expect(combinedSource).toContain('field.getString("outputKey")');
     expect(rulesSource).toContain('optJSONObject("workspaceRead")');
+    expect(combinedSource).not.toContain('"parentNodeId"');
+    expect(combinedSource).not.toContain('"scrollTop"');
+    expect(combinedSource).not.toContain('"selectionFrom"');
+    expect(combinedSource).not.toContain('snapshot.put("activeNodeId"');
     expect(combinedSource).not.toContain('"workspaceSnapshotNodes"');
     expect(combinedSource).not.toContain('"workspaceOrderedNodeIds"');
     expect(combinedSource).not.toContain('"nodeViewStatesByDevice"');

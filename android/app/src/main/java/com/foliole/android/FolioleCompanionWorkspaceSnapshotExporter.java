@@ -40,8 +40,9 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         );
         for (int index = 0; index < nodes.length(); index += 1) {
             JSONObject row = nodes.getJSONObject(index);
-            String nodeId = row.getString("id");
-            String deletedAt = row.isNull("deleted_at") ? null : row.getString("deleted_at");
+            String nodeId = row.getString(snapshotRule(context, "nodeIdRowKey"));
+            String deletedAtRowKey = snapshotRule(context, "deletedAtRowKey");
+            String deletedAt = row.isNull(deletedAtRowKey) ? null : row.getString(deletedAtRowKey);
             if (deletedAt != null) {
                 trashedNodeIds.put(nodeId);
             } else if (firstActiveNodeId == null) {
@@ -55,12 +56,13 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         }
 
         JSObject snapshot = new JSObject();
-        snapshot.put("activeNodeId", resolveActiveNodeId(context, database, nodesById, trashedNodeIds, firstActiveNodeId));
-        snapshot.put("nodeOrder", orderedNodeIds);
-        snapshot.put("nodesById", nodesById);
-        snapshot.put("persistedNodeViewById", FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
-        snapshot.put("trashedNodeIds", trashedNodeIds);
-        snapshot.put("untitledSequenceByParent", loadUntitledSequenceByParent(context, database));
+        JSONObject outputKeys = snapshotObject(context, "outputKeys");
+        snapshot.put(outputKeys.getString("activeNodeId"), resolveActiveNodeId(context, database, nodesById, trashedNodeIds, firstActiveNodeId));
+        snapshot.put(outputKeys.getString("nodeOrder"), orderedNodeIds);
+        snapshot.put(outputKeys.getString("nodesById"), nodesById);
+        snapshot.put(outputKeys.getString("persistedNodeViewById"), FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
+        snapshot.put(outputKeys.getString("trashedNodeIds"), trashedNodeIds);
+        snapshot.put(outputKeys.getString("untitledSequenceByParent"), loadUntitledSequenceByParent(context, database));
         return snapshot;
     }
 
@@ -112,7 +114,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
             snapshotRule(context, "orderedNodeIdsResultKey")
         );
         for (int index = 0; index < rows.length(); index += 1) {
-            result.put(rows.getJSONObject(index).getString("id"));
+            result.put(rows.getJSONObject(index).getString(snapshotRule(context, "nodeIdRowKey")));
         }
         return result;
     }
@@ -161,6 +163,10 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private static String snapshotRule(Context context, String key) throws Exception {
         return FolioleCompanionWorkspaceReadQueryRules.snapshotString(context, key);
+    }
+
+    private static JSONObject snapshotObject(Context context, String key) throws Exception {
+        return FolioleCompanionWorkspaceReadQueryRules.snapshotObject(context, key);
     }
 
     private static String contentBlobRule(Context context, String key) throws Exception {

@@ -17,7 +17,7 @@ final class FolioleCompanionExternalDocumentStore {
         if (documentId == null || documentId.trim().isEmpty()) {
             return result;
         }
-        JSArray documents = FolioleCompanionNamedQueryStore
+        JSArray documents = FolioleCompanionGeneratedQueryRunner
             .loadRows(
                 context,
                 database,
@@ -55,7 +55,7 @@ final class FolioleCompanionExternalDocumentStore {
         if (normalizedQuery.isEmpty()) {
             return result;
         }
-        JSArray documents = FolioleCompanionNamedQueryStore
+        JSArray documents = FolioleCompanionGeneratedQueryRunner
             .loadRows(
                 context,
                 database,

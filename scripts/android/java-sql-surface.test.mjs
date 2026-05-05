@@ -68,21 +68,25 @@ function interestingAccessLines(filePath) {
 }
 
 function directNamedQueryLines(filePath) {
-  return fs
-    .readFileSync(filePath, 'utf8')
-    .split(/\r?\n/)
-    .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
+  const content = fs.readFileSync(filePath, 'utf8');
+  return [...content.matchAll(/FolioleCompanionNamedQueryStore\s*\./g)]
+    .map((match) => ({
+      file: relativeFile(filePath),
+      line: content.slice(0, match.index).split(/\r?\n/).length,
+      text: match[0].replace(/\s+/g, '')
+    }))
     .filter((entry) => entry.file !== 'FolioleCompanionNamedQueryStore.java')
-    .filter((entry) => entry.text.includes('FolioleCompanionNamedQueryStore.'));
 }
 
 function directNamedMutationLines(filePath) {
-  return fs
-    .readFileSync(filePath, 'utf8')
-    .split(/\r?\n/)
-    .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
+  const content = fs.readFileSync(filePath, 'utf8');
+  return [...content.matchAll(/FolioleCompanionNamedMutationStore\s*\./g)]
+    .map((match) => ({
+      file: relativeFile(filePath),
+      line: content.slice(0, match.index).split(/\r?\n/).length,
+      text: match[0].replace(/\s+/g, '')
+    }))
     .filter((entry) => entry.file !== 'FolioleCompanionNamedMutationStore.java')
-    .filter((entry) => entry.text.includes('FolioleCompanionNamedMutationStore.'));
 }
 
 function isAllowedAccessLine(entry) {
