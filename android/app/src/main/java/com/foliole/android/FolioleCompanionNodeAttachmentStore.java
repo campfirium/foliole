@@ -12,7 +12,7 @@ final class FolioleCompanionNodeAttachmentStore {
 
     static void backfillNodeAttachmentsFromVersions(Context context, SQLiteDatabase database) {
         try {
-            JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(
+            JSONArray rows = FolioleCompanionGeneratedQueryRunner.loadRows(
                 context,
                 database,
                 backfillSnapshotRule(context, "queryName"),
@@ -48,7 +48,7 @@ final class FolioleCompanionNodeAttachmentStore {
     }
 
     static JSONArray loadNodeAttachments(Context context, SQLiteDatabase database, String nodeId) throws Exception {
-        return FolioleCompanionGeneratedArrayQueryRunner.load(
+        return FolioleCompanionGeneratedQueryRunner.load(
             context,
             database,
             nodeAttachmentRule(context, "queryName"),

@@ -35,7 +35,7 @@ final class FolioleCompanionExternalDocumentStore {
         JSObject result = new JSObject();
         result.put(
             stringRule(context, "foldersResultKey"),
-            FolioleCompanionNamedQueryStore.loadRows(
+            FolioleCompanionGeneratedQueryRunner.loadRows(
                 context,
                 database,
                 stringRule(context, "foldersQueryName"),
@@ -79,7 +79,7 @@ final class FolioleCompanionExternalDocumentStore {
 
     private static JSArray loadEntries(Context context, SQLiteDatabase database) throws Exception {
         JSArray entries = new JSArray();
-        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
+        JSArray rows = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             stringRule(context, "directoryEntriesQueryName"),

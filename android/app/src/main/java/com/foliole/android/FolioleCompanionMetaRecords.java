@@ -72,7 +72,7 @@ final class FolioleCompanionMetaRecords {
     }
 
     static String loadValue(Context context, SQLiteDatabase database, String key) throws Exception {
-        String stored = FolioleCompanionNamedQueryStore.loadString(
+        String stored = FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,
             runtimeRule(context, "companionMeta", "queryName"),

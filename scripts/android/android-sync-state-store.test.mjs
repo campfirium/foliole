@@ -214,7 +214,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
       source.indexOf('private static JSONArray listAncestorVersionIds')
     );
 
-    expect(loadBody).toContain('FolioleCompanionGeneratedArrayQueryRunner.load');
+    expect(loadBody).toContain('FolioleCompanionGeneratedQueryRunner.load');
     expect(loadBody).toContain('FolioleCompanionSyncStreamQueryRules.nodeVersionIdKey(context)');
     expect(source).toContain('private static JSONArray listAncestorVersionIds');
     expect(queryDefinitions).toContain('"syncNodeVersionParent"');

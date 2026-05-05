@@ -64,7 +64,7 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static ContentBlobManifest loadManifest(Context context, SQLiteDatabase database, String hash) throws Exception {
-        JSONObject blob = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject blob = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             resourceRule(context, "manifestQueryName"),
@@ -84,7 +84,7 @@ final class FolioleCompanionContentBlobStore {
     }
 
     private static boolean hasCachedBlobData(Context context, SQLiteDatabase database, String hash) throws Exception {
-        return FolioleCompanionNamedQueryStore.hasRows(
+        return FolioleCompanionGeneratedQueryRunner.hasRows(
             context,
             database,
             resourceRule(context, "existingQueryName"),

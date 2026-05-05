@@ -81,7 +81,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject loadSyncNodeConflicts() throws Exception {
         SQLiteDatabase database = getReadableDatabase();
-        return FolioleCompanionGeneratedArrayQueryRunner.load(context, database, FolioleCompanionSyncConflictQueryRules.nodeConflictsQueryName(context));
+        return FolioleCompanionGeneratedQueryRunner.load(context, database, FolioleCompanionSyncConflictQueryRules.nodeConflictsQueryName(context));
     }
 
     JSObject loadSyncObjects(JSONArray objectIds, JSONArray objectTypes) throws Exception {

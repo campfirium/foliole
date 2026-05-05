@@ -14,7 +14,7 @@ final class FolioleCompanionSyncDiagnosticContent {
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
         JSObject content = new JSObject();
         copyBodySummary(content, FolioleCompanionContentBlobStore.summarizeMissingBodies(context, database));
-        copyBodyDetail(content, FolioleCompanionNamedQueryStore.loadLongMetrics(
+        copyBodyDetail(content, FolioleCompanionGeneratedQueryRunner.loadLongMetrics(
             context,
             database,
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "contentBodyMetrics")
@@ -57,7 +57,7 @@ final class FolioleCompanionSyncDiagnosticContent {
     }
 
     private static JSObject loadActiveTopic(Context context, SQLiteDatabase database) throws Exception {
-        JSONObject topic = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject topic = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "activeTopic"),
@@ -68,7 +68,7 @@ final class FolioleCompanionSyncDiagnosticContent {
     }
 
     private static JSArray loadRecentTopics(Context context, SQLiteDatabase database) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadRows(
+        return FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "recentTopics"),

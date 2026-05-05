@@ -12,7 +12,7 @@ final class FolioleCompanionSyncDiagnosticState {
     private FolioleCompanionSyncDiagnosticState() {}
 
     static JSObject load(Context context, SQLiteDatabase database) throws Exception {
-        JSObject state = FolioleCompanionNamedQueryStore.loadLongMetrics(
+        JSObject state = FolioleCompanionGeneratedQueryRunner.loadLongMetrics(
             context,
             database,
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, "stateMetrics")
@@ -34,7 +34,7 @@ final class FolioleCompanionSyncDiagnosticState {
     }
 
     private static JSArray loadRows(Context context, SQLiteDatabase database, String key) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadRows(
+        return FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             FolioleCompanionSyncDiagnosticQueryRules.queryName(context, key),

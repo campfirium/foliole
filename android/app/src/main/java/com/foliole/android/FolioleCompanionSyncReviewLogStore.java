@@ -14,7 +14,7 @@ final class FolioleCompanionSyncReviewLogStore {
     private FolioleCompanionSyncReviewLogStore() {}
 
     static JSObject loadReviewLog(Context context, SQLiteDatabase database, JSONObject cursor, int limit, String deviceId) throws Exception {
-        return FolioleCompanionGeneratedArrayQueryRunner.load(
+        return FolioleCompanionGeneratedQueryRunner.load(
             context,
             database,
             FolioleCompanionSyncStreamQueryRules.reviewLogQueryName(context),

@@ -35,7 +35,7 @@ final class FolioleCompanionContentBlobMissingStore {
         long bytes = 0;
         long failedCount = 0;
         long failedBytes = 0;
-        JSArray blobs = FolioleCompanionNamedQueryStore.loadRows(
+        JSArray blobs = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             FolioleCompanionMissingResourceQueryRules.contentSummaryQueryName(context),

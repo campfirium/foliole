@@ -63,7 +63,7 @@ final class FolioleCompanionNamedMutationStore {
     }
 
     private static ExistingState loadExistingState(Context context, SQLiteDatabase database, String objectType, String objectId) throws Exception {
-        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject row = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             runtimeRule(context, "existingState", "queryName"),
@@ -78,7 +78,7 @@ final class FolioleCompanionNamedMutationStore {
     }
 
     private static long nextStateSeq(Context context, SQLiteDatabase database) throws Exception {
-        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject row = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             runtimeRule(context, "nextStateSeq", "queryName"),

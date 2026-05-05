@@ -13,7 +13,7 @@ final class FolioleCompanionSyncNodeVersionStore {
     private FolioleCompanionSyncNodeVersionStore() {}
 
     static JSObject loadNodeVersions(Context context, SQLiteDatabase database, JSONObject cursor, int limit, String deviceId) throws Exception {
-        JSObject result = FolioleCompanionGeneratedArrayQueryRunner.load(
+        JSObject result = FolioleCompanionGeneratedQueryRunner.load(
             context,
             database,
             FolioleCompanionSyncStreamQueryRules.nodeVersionsQueryName(context),
@@ -37,7 +37,7 @@ final class FolioleCompanionSyncNodeVersionStore {
         JSONArray ancestors = new JSONArray();
         String cursorVersionId = versionId;
         for (int depth = 0; depth < FolioleCompanionSyncStreamQueryRules.nodeVersionAncestorDepthLimit(context); depth += 1) {
-            String parentVersionId = FolioleCompanionNamedQueryStore.loadString(
+            String parentVersionId = FolioleCompanionGeneratedQueryRunner.loadString(
                 context,
                 database,
                 FolioleCompanionSyncStreamQueryRules.nodeVersionParentQueryName(context),

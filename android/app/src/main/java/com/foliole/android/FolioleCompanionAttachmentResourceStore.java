@@ -74,7 +74,7 @@ final class FolioleCompanionAttachmentResourceStore {
 
     static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
-        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject row = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             resourceRule(context, "resolveQueryName"),

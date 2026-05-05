@@ -30,7 +30,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         JSONArray trashedNodeIds = new JSONArray();
         String firstActiveNodeId = null;
 
-        JSONArray nodes = FolioleCompanionNamedQueryStore.loadRows(
+        JSONArray nodes = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             snapshotRule(context, "nodesQueryName"),
@@ -105,7 +105,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
 
     private static JSONArray loadOrderedNodeIds(Context context, SQLiteDatabase database) throws Exception {
         JSONArray result = new JSONArray();
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(
+        JSONArray rows = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             snapshotRule(context, "orderedNodeIdsQueryName"),
@@ -141,7 +141,7 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
     }
 
     private static String loadWorkspaceMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {
-        String value = FolioleCompanionNamedQueryStore.loadString(
+        String value = FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,
             snapshotRule(context, "metaValueQueryName"),

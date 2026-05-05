@@ -22,10 +22,10 @@ const ALLOWED_SQL_LITERALS = [
     literal: '"PRAGMA table_info("'
   }
 ];
-const ALLOWED_DIRECT_LOAD_ARRAY = [
+const ALLOWED_DIRECT_NAMED_QUERY = [
   {
-    file: 'FolioleCompanionGeneratedArrayQueryRunner.java',
-    text: 'return FolioleCompanionNamedQueryStore.loadArray(context, database, queryName'
+    file: 'FolioleCompanionGeneratedQueryRunner.java',
+    text: 'FolioleCompanionNamedQueryStore.'
   }
 ];
 
@@ -61,13 +61,13 @@ function interestingAccessLines(filePath) {
     .filter((entry) => /\bdatabase\.(?:rawQuery|query)\(|\.compileStatement\(/.test(entry.text));
 }
 
-function directLoadArrayLines(filePath) {
+function directNamedQueryLines(filePath) {
   return fs
     .readFileSync(filePath, 'utf8')
     .split(/\r?\n/)
     .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
     .filter((entry) => entry.file !== 'FolioleCompanionNamedQueryStore.java')
-    .filter((entry) => entry.text.includes('FolioleCompanionNamedQueryStore.loadArray(context, database'));
+    .filter((entry) => entry.text.includes('FolioleCompanionNamedQueryStore.'));
 }
 
 function isAllowedAccessLine(entry) {
@@ -80,8 +80,8 @@ function isAllowedAccessLine(entry) {
   return entry.file === 'FolioleCompanionSqliteRuntime.java';
 }
 
-function isAllowedDirectLoadArray(entry) {
-  return ALLOWED_DIRECT_LOAD_ARRAY.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
+function isAllowedDirectNamedQuery(entry) {
+  return ALLOWED_DIRECT_NAMED_QUERY.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
 }
 
 describe('Android Java SQL surface', () => {
@@ -89,10 +89,10 @@ describe('Android Java SQL surface', () => {
     const files = collectJavaFiles(JAVA_ROOT);
     const unexpectedLiterals = files.flatMap(sqlLiterals).filter((entry) => !isAllowedSqlLiteral(entry));
     const unexpectedAccess = files.flatMap(interestingAccessLines).filter((entry) => !isAllowedAccessLine(entry));
-    const unexpectedDirectLoadArray = files.flatMap(directLoadArrayLines).filter((entry) => !isAllowedDirectLoadArray(entry));
+    const unexpectedDirectNamedQuery = files.flatMap(directNamedQueryLines).filter((entry) => !isAllowedDirectNamedQuery(entry));
 
     expect(unexpectedLiterals).toEqual([]);
     expect(unexpectedAccess).toEqual([]);
-    expect(unexpectedDirectLoadArray).toEqual([]);
+    expect(unexpectedDirectNamedQuery).toEqual([]);
   });
 });

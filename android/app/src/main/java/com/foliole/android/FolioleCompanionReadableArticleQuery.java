@@ -21,7 +21,7 @@ final class FolioleCompanionReadableArticleQuery {
             }
         }
 
-        JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject article = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             stringRule(context, "firstNodeQueryName"),
@@ -35,12 +35,12 @@ final class FolioleCompanionReadableArticleQuery {
     }
 
     private static String loadActiveNodeId(Context context, SQLiteDatabase database) throws Exception {
-        String value = FolioleCompanionNamedQueryStore.loadString(context, database, stringRule(context, "activeNodeIdQueryName"), null);
+        String value = FolioleCompanionGeneratedQueryRunner.loadString(context, database, stringRule(context, "activeNodeIdQueryName"), null);
         return value == null || value.trim().isEmpty() ? null : value;
     }
 
     private static JSObject loadArticleByNodeId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
-        JSONObject article = FolioleCompanionNamedQueryStore.loadFirstRow(
+        JSONObject article = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
             stringRule(context, "byNodeIdQueryName"),
@@ -54,7 +54,7 @@ final class FolioleCompanionReadableArticleQuery {
     }
 
     private static String loadReferencePdfAttachmentId(Context context, SQLiteDatabase database, String nodeId) throws Exception {
-        return FolioleCompanionNamedQueryStore.loadString(
+        return FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,
             stringRule(context, "referencePdfAttachmentQueryName"),
@@ -67,7 +67,7 @@ final class FolioleCompanionReadableArticleQuery {
             return null;
         }
         StringBuilder builder = new StringBuilder();
-        JSArray pages = FolioleCompanionNamedQueryStore.loadRows(
+        JSArray pages = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             stringRule(context, "pdfPagesQueryName"),

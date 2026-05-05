@@ -15,7 +15,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     static JSObject loadMissingResources(Context context, SQLiteDatabase database, int limit) throws Exception {
         JSArray resources = new JSArray();
-        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
+        JSArray rows = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             FolioleCompanionMissingResourceQueryRules.attachmentRowsQueryName(context),
@@ -34,7 +34,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) throws Exception {
         MissingAttachmentSummary summary = new MissingAttachmentSummary();
-        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
+        JSArray rows = FolioleCompanionGeneratedQueryRunner.loadRows(
             context,
             database,
             FolioleCompanionMissingResourceQueryRules.attachmentSummaryQueryName(context),
