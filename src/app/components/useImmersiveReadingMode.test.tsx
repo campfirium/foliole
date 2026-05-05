@@ -198,6 +198,8 @@ it('shows a paragraph marker when moving with space', () => {
   });
 
   expect(onRevealDocumentSelection).not.toHaveBeenCalled();
+  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 7, to: 7 });
+  expect(adapter.setSelection).not.toHaveBeenCalledWith({ from: 7, to: 11 });
   expect(adapter.setParagraphMarker).toHaveBeenCalledWith({ from: 7, to: 11 });
   expect(adapter.revealSelection).not.toHaveBeenCalled();
   expect(adapter.revealSelectionAtViewportRatio).not.toHaveBeenCalled();

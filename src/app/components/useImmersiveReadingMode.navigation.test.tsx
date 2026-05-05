@@ -116,7 +116,7 @@ it('reveals the next paragraph only after it leaves the immersive safe band', ()
 
   expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledTimes(1);
   expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
-    { from: 7, to: 11 },
+    { from: 7, to: 7 },
     IMMERSIVE_READING_FORWARD_REVEAL_RATIO
   );
 });
@@ -135,7 +135,7 @@ it('repositions upward navigation near the bottom of the safe band when needed',
   });
 
   expect(adapter.revealSelectionAtViewportRatio).toHaveBeenCalledWith(
-    { from: 0, to: 5 },
+    { from: 0, to: 0 },
     IMMERSIVE_READING_BACKWARD_REVEAL_RATIO
   );
 });

@@ -51,8 +51,9 @@ function selectParagraph(args: {
     direction: args.direction
   });
   if (nextSelection) {
-    args.setReadingSelection({ from: nextSelection.from, to: nextSelection.from }, 'immersive-keydown');
-    editor.setSelection(nextSelection);
+    const positionSelection = { from: nextSelection.from, to: nextSelection.from };
+    args.setReadingSelection(positionSelection, 'immersive-keydown');
+    editor.setSelection(positionSelection);
     editor.setParagraphMarker?.(nextSelection);
     if (shouldRevealSelectionInImmersiveBand({
       direction: args.direction,
@@ -63,7 +64,7 @@ function selectParagraph(args: {
       revealSelectionForImmersiveBand({
         direction: args.direction,
         props: args.props,
-        selection: nextSelection
+        selection: positionSelection
       });
     }
     return true;

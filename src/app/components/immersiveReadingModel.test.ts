@@ -51,6 +51,22 @@ it('treats a standalone markdown image line as its own reading block', () => {
   expect(resolveCurrentParagraphSelection(content, { from: 10, to: 10 })).toEqual({ from: 7, to: 35 });
 });
 
+it('skips thematic breaks when navigating reading blocks', () => {
+  const content = 'Alpha\n\n---\n\nBeta';
+
+  expect(getParagraphSelections(content)).toEqual([
+    { from: 0, to: 5 },
+    { from: 12, to: 16 }
+  ]);
+  expect(
+    resolveParagraphSelection({
+      content,
+      currentSelection: { from: 0, to: 5 },
+      direction: 'forward'
+    })
+  ).toEqual({ from: 12, to: 16 });
+});
+
 it('selects the current paragraph before advancing when given only a point', () => {
   const content = 'Alpha line\nstill alpha\n\nBeta\n\nGamma';
 

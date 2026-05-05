@@ -1,6 +1,9 @@
 import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { collectMarkdownLineClassRanges } from '../../features/editor/model/markdownBlockProjection';
+import {
+  collectMarkdownLineClassRanges,
+  collectMarkdownThematicBreakRanges
+} from '../../features/editor/model/markdownBlockProjection';
 import { collectMarkdownCodeFenceProjection } from '../../features/editor/model/markdownCodeFenceProjection';
 
 function buildLineRanges(content: string) {
@@ -91,9 +94,15 @@ function visitParagraphLine(
   line: ReturnType<typeof buildLineRanges>[number],
   codeLineFroms: ReadonlySet<number>,
   fenceLineFroms: ReadonlySet<number>,
-  markdownLineClasses: ReadonlyMap<number, string>
+  markdownLineClasses: ReadonlyMap<number, string>,
+  thematicBreakLineFroms: ReadonlySet<number>
 ) {
   if (line.blank) {
+    flushTable(state);
+    flushParagraph(state);
+    return;
+  }
+  if (thematicBreakLineFroms.has(line.start)) {
     flushTable(state);
     flushParagraph(state);
     return;
@@ -133,6 +142,7 @@ function visitParagraphLine(
 export function getParagraphSelections(content: string): EditorSelection[] {
   const codeFenceProjection = collectMarkdownCodeFenceProjection(content);
   const markdownLineClasses = new Map(collectMarkdownLineClassRanges(content).map((range) => [range.from, range.className]));
+  const thematicBreakLineFroms = new Set(collectMarkdownThematicBreakRanges(content).map((range) => range.from));
   const state: ParagraphSelectionState = {
     paragraphEnd: 0,
     paragraphStart: null,
@@ -142,7 +152,14 @@ export function getParagraphSelections(content: string): EditorSelection[] {
   };
 
   buildLineRanges(content).forEach((line) => {
-    visitParagraphLine(state, line, codeFenceProjection.codeLineFroms, codeFenceProjection.fenceLineFroms, markdownLineClasses);
+    visitParagraphLine(
+      state,
+      line,
+      codeFenceProjection.codeLineFroms,
+      codeFenceProjection.fenceLineFroms,
+      markdownLineClasses,
+      thematicBreakLineFroms
+    );
   });
 
   flushTable(state);
