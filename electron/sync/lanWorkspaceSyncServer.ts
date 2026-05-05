@@ -16,6 +16,10 @@ import {
   WORKSPACE_SNAPSHOT_PATH,
   WORKSPACE_VERSION_PATH
 } from './companionLanRequestHandler.js';
+import {
+  startCompanionMdnsAdvertisement,
+  stopCompanionMdnsAdvertisement
+} from './companionMdnsAdvertisement.js';
 import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
 import { countPairedCompanionDevices } from './companionPairingStore.js';
 
@@ -79,13 +83,8 @@ export function setLanWorkspaceSyncPairRequestHandler(handler: (() => void) | nu
   activePairRequestHandler = handler;
 }
 
-export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
-  if (activeServer) {
-    return activeStatus;
-  }
-
-  const port = resolveSyncPort();
-  const server = http.createServer(
+function createWorkspaceSyncHttpServer(args: { appVersion: string; peerId: string }) {
+  return http.createServer(
     createLanWorkspaceSyncRequestHandler({
       appVersion: args.appVersion,
       onPairRequestCreated: activePairRequestHandler,
@@ -95,37 +94,62 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
       }
     })
   );
+}
 
+async function listenOnSyncPort(server: http.Server, port: number) {
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '0.0.0.0', () => resolve());
+  });
+}
+
+function buildRunningStatus(port: number): LanWorkspaceSyncServerStatus {
+  return {
+    advertised_urls: collectAdvertisedUrls(port),
+    last_error: null,
+    ...resolveLatestPairingStatus(),
+    port,
+    state: 'running'
+  };
+}
+
+function logRunningStatus() {
+  console.info('[companion-sync] lan workspace sync server started', {
+    endpointPaths: [
+      DISCOVERY_ENDPOINT_PATH,
+      PAIR_REQUESTS_ENDPOINT_PATH,
+      PAIR_ENDPOINT_PATH,
+      SYNC_STATE_PATH,
+      SYNC_NODE_VERSIONS_PATH,
+      SYNC_REVIEW_LOG_PATH,
+      SYNC_INDEX_PATH,
+      SYNC_OBJECTS_PATH,
+      SYNC_PACK_PATH,
+      ATTACHMENT_RESOURCE_PATH,
+      WORKSPACE_VERSION_PATH,
+      WORKSPACE_SNAPSHOT_PATH
+    ],
+    ...activeStatus
+  });
+}
+
+export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
+  if (activeServer) {
+    return activeStatus;
+  }
+
+  const port = resolveSyncPort();
+  const server = createWorkspaceSyncHttpServer(args);
   try {
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(port, '0.0.0.0', () => resolve());
+    await listenOnSyncPort(server, port);
+    startCompanionMdnsAdvertisement({
+      appVersion: args.appVersion,
+      peerId: args.peerId,
+      port
     });
     activeServer = server;
-    activeStatus = {
-      advertised_urls: collectAdvertisedUrls(port),
-      last_error: null,
-      ...resolveLatestPairingStatus(),
-      port,
-      state: 'running'
-    };
-    console.info('[companion-sync] lan workspace sync server started', {
-      endpointPaths: [
-        DISCOVERY_ENDPOINT_PATH,
-        PAIR_REQUESTS_ENDPOINT_PATH,
-        PAIR_ENDPOINT_PATH,
-        SYNC_STATE_PATH,
-        SYNC_NODE_VERSIONS_PATH,
-        SYNC_REVIEW_LOG_PATH,
-        SYNC_INDEX_PATH,
-        SYNC_OBJECTS_PATH,
-        SYNC_PACK_PATH,
-        ATTACHMENT_RESOURCE_PATH,
-        WORKSPACE_VERSION_PATH,
-        WORKSPACE_SNAPSHOT_PATH
-      ],
-      ...activeStatus
-    });
+    activeStatus = buildRunningStatus(port);
+    logRunningStatus();
     return activeStatus;
   } catch (error) {
     server.close();
@@ -157,6 +181,7 @@ export async function stopLanWorkspaceSyncServer() {
 
   const server = activeServer;
   activeServer = null;
+  stopCompanionMdnsAdvertisement();
   await new Promise<void>((resolve, reject) => {
     server.close((error) => {
       if (error) {

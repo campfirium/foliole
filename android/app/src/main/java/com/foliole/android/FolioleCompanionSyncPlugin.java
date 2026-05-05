@@ -1,11 +1,5 @@
 package com.foliole.android;
 
-import android.net.ConnectivityManager;
-import android.net.LinkAddress;
-import android.net.LinkProperties;
-import android.net.Network;
-import android.net.RouteInfo;
-
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -163,54 +157,22 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod
     public void loadDiscoveryCandidates(PluginCall call) {
-        try {
-            JSArray endpointUrls = new JSArray();
-            addEndpoint(endpointUrls, "10.0.2.2");
-            ConnectivityManager connectivityManager = (ConnectivityManager) getContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null) {
-                Network network = connectivityManager.getActiveNetwork();
-                LinkProperties linkProperties = network == null ? null : connectivityManager.getLinkProperties(network);
-                if (linkProperties != null) {
-                    addGatewayEndpoints(endpointUrls, linkProperties);
-                    addSubnetEndpoints(endpointUrls, linkProperties);
+        new Thread(() -> {
+            try {
+                JSArray endpointUrls = new JSArray();
+                addEndpoint(endpointUrls, "10.0.2.2");
+                for (String endpointUrl : FolioleCompanionNsdDiscovery.discoverEndpointUrls(getContext())) {
+                    endpointUrls.put(endpointUrl);
                 }
+                JSObject result = new JSObject();
+                result.put("endpoint_urls", endpointUrls);
+                call.resolve(result);
+            } catch (Exception exception) {
+                call.reject("Failed to load companion discovery candidates.", exception);
             }
-            JSObject result = new JSObject();
-            result.put("endpoint_urls", endpointUrls);
-            call.resolve(result);
-        } catch (Exception exception) {
-            call.reject("Failed to load companion discovery candidates.", exception);
-        }
+        }).start();
     }
 
-
-    private void addGatewayEndpoints(JSArray endpointUrls, LinkProperties linkProperties) {
-        for (RouteInfo route : linkProperties.getRoutes()) {
-            if (!route.hasGateway() || route.getGateway() == null) {
-                continue;
-            }
-            String hostAddress = route.getGateway().getHostAddress();
-            if (hostAddress != null && hostAddress.indexOf(':') < 0) {
-                addEndpoint(endpointUrls, hostAddress);
-            }
-        }
-    }
-
-    private void addSubnetEndpoints(JSArray endpointUrls, LinkProperties linkProperties) {
-        for (LinkAddress address : linkProperties.getLinkAddresses()) {
-            String hostAddress = address.getAddress().getHostAddress();
-            if (hostAddress == null || hostAddress.indexOf(':') >= 0) {
-                continue;
-            }
-            String prefix = hostAddress.substring(0, hostAddress.lastIndexOf('.') + 1);
-            for (int index = 1; index <= 254; index += 1) {
-                String candidateAddress = prefix + index;
-                if (!candidateAddress.equals(hostAddress)) {
-                    addEndpoint(endpointUrls, candidateAddress);
-                }
-            }
-        }
-    }
 
     private void addEndpoint(JSArray endpointUrls, String hostAddress) {
         endpointUrls.put("http://" + hostAddress + ":38641");

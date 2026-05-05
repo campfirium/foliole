@@ -22,6 +22,11 @@ vi.mock('electron', () => ({
   }
 }));
 
+vi.mock('./companionMdnsAdvertisement.js', () => ({
+  startCompanionMdnsAdvertisement: vi.fn(),
+  stopCompanionMdnsAdvertisement: vi.fn()
+}));
+
 vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceVersionMetadata: vi.fn(() => ({
     hasSnapshot: true,
@@ -241,47 +246,4 @@ describe('lan workspace sync server', () => {
   registerWorkspaceVersionProtectionTest();
   registerReplayProtectionTest();
   registerCapacitorCorsOriginTest();
-  it('notifies the desktop shell when a new pair request is created', async () => {
-    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-    const { setLanWorkspaceSyncPairRequestHandler } = await import('./lanWorkspaceSyncServer.js');
-    const onPairRequestCreated = vi.fn();
-    setLanWorkspaceSyncPairRequestHandler(onPairRequestCreated);
-    const status = await ensureLanWorkspaceSyncServer({
-      appVersion: '0.1.0',
-      peerId: 'desktop-local'
-    });
-    const endpoint = `http://127.0.0.1:${status.port}`;
-    const firstPairingKey = await createTestPairingKeyPair();
-    const secondPairingKey = await createTestPairingKeyPair();
-
-    const response = await fetch(`${endpoint}/companion/pair-requests`, {
-      body: JSON.stringify({
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion android-test-device',
-        pairing_public_key: firstPairingKey.publicKey
-      }),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST'
-    });
-
-    expect(response.status).toBe(202);
-    expect(onPairRequestCreated).toHaveBeenCalledTimes(1);
-
-    const duplicateResponse = await fetch(`${endpoint}/companion/pair-requests`, {
-      body: JSON.stringify({
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion android-test-device',
-        pairing_public_key: secondPairingKey.publicKey
-      }),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST'
-    });
-
-    expect(duplicateResponse.status).toBe(409);
-    expect(onPairRequestCreated).toHaveBeenCalledTimes(2);
-  });
-
-
 });

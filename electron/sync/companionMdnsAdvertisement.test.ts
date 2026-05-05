@@ -1,0 +1,71 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const bonjourMock = vi.hoisted(() => ({
+  destroy: vi.fn(),
+  publish: vi.fn(),
+  stop: vi.fn()
+}));
+
+vi.mock('bonjour-service', () => {
+  class MockBonjour {
+    publish(opts: unknown) {
+      bonjourMock.publish(opts);
+      return { stop: bonjourMock.stop };
+    }
+
+    destroy() {
+      bonjourMock.destroy();
+    }
+  }
+  return {
+    Bonjour: MockBonjour
+  };
+});
+
+describe('companion mDNS advertisement', () => {
+  beforeEach(async () => {
+    const { stopCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
+    stopCompanionMdnsAdvertisement();
+    bonjourMock.destroy.mockClear();
+    bonjourMock.publish.mockClear();
+    bonjourMock.stop.mockClear();
+  });
+
+  it('publishes the Foliole sync service with peer metadata', async () => {
+    const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
+
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test',
+      peerId: 'desktop-local',
+      port: 38683
+    });
+
+    expect(bonjourMock.publish).toHaveBeenCalledWith({
+      name: 'Foliole Desktop',
+      port: 38683,
+      protocol: 'tcp',
+      txt: {
+        app_version: '0.1.0-test',
+        peer_id: 'desktop-local',
+        protocol_version: '1'
+      },
+      type: 'foliole-sync'
+    });
+  });
+
+  it('stops the advertised service and destroys the responder', async () => {
+    const { startCompanionMdnsAdvertisement, stopCompanionMdnsAdvertisement } = await import(
+      './companionMdnsAdvertisement.js'
+    );
+
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test',
+      peerId: 'desktop-local',
+      port: 38683
+    });
+    stopCompanionMdnsAdvertisement();
+
+    expect(bonjourMock.stop).toHaveBeenCalledTimes(1);
+    expect(bonjourMock.destroy).toHaveBeenCalledTimes(1);
+  });
+});
