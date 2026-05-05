@@ -3,6 +3,7 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -58,7 +59,7 @@ it('returns a unified attachment resource URL when the record and file both exis
   expect(resolveAttachmentResource('attachment-1', mockedAppDataDir)).toEqual({
     status: 'ready',
     mime_type: 'image/png',
-    resource_url: 'attachment://attachment-1'
+    resource_url: pathToFileURL(storedFilePath).toString()
   });
 });
 

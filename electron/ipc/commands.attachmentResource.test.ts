@@ -82,7 +82,7 @@ it('routes attachment resource requests through the unified runtime entry', asyn
   resolveAttachmentResource.mockReturnValue({
     status: 'ready',
     mime_type: 'image/png',
-    resource_url: 'attachment://attachment-1'
+    resource_url: 'file:///tmp/attachment-1.png'
   });
 
   await expect(
@@ -93,7 +93,7 @@ it('routes attachment resource requests through the unified runtime entry', asyn
   ).resolves.toEqual({
     status: 'ready',
     mime_type: 'image/png',
-    resource_url: 'attachment://attachment-1'
+    resource_url: 'file:///tmp/attachment-1.png'
   });
   expect(resolveAttachmentResource).toHaveBeenCalledWith('attachment-1');
 });

@@ -1,19 +1,14 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
+import { collectImageMatches, createMarkdownImageWidgetDom, type MarkdownImageMatch } from './liveMarkdownImages';
 import { addMark, addReplace } from './liveMarkdownPrimitives';
 
-const INLINE_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
 const INLINE_LINK_PATTERN = /(?<!!)\[([^\]\n]*)\]\(([^)\n]*)\)/g;
 
 export interface RangeBounds {
   from: number;
   to: number;
-}
-
-interface MarkdownImageMatch extends RangeBounds {
-  alt: string;
-  source: string;
 }
 
 export interface InlineCodeMatch extends RangeBounds {
@@ -43,43 +38,11 @@ class MarkdownImageWidget extends WidgetType {
   }
 
   toDOM() {
-    const wrapper = document.createElement('span');
-    wrapper.className = 'cm-md-image-widget';
-    const image = document.createElement('img');
-    image.alt = this.alt || 'Markdown image';
-    image.src = this.source;
-    image.loading = 'lazy';
-    image.referrerPolicy = 'no-referrer';
-    image.decoding = 'async';
-    image.className = 'cm-md-image-element';
-    wrapper.append(image);
-    return wrapper;
+    return createMarkdownImageWidgetDom(this.alt, this.source);
   }
 }
 
-function isSafeImageSource(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-export function collectImageMatches(from: number, text: string): MarkdownImageMatch[] {
-  const matches: MarkdownImageMatch[] = [];
-  let match = INLINE_IMAGE_PATTERN.exec(text);
-  while (match) {
-    const source = match[2] ?? '';
-    if (isSafeImageSource(source)) {
-      const start = from + match.index;
-      matches.push({ from: start, to: start + match[0].length, alt: match[1] ?? '', source });
-    }
-    match = INLINE_IMAGE_PATTERN.exec(text);
-  }
-  INLINE_IMAGE_PATTERN.lastIndex = 0;
-  return matches;
-}
+export { collectImageMatches };
 
 export function addImageDecorations(ranges: Range<Decoration>[], imageMatches: ReadonlyArray<MarkdownImageMatch>) {
   for (const imageMatch of imageMatches) {

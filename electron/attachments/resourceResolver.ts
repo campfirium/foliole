@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeAttachmentResourceResolution } from '../../lib/platform/nativeUtilityContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
-const ATTACHMENT_RESOURCE_SCHEME = 'attachment://';
 const ATTACHMENTS_DIRECTORY_NAME = 'attachments';
 
 interface AttachmentLookupRow extends DatabaseRow {
@@ -14,8 +14,8 @@ interface AttachmentLookupRow extends DatabaseRow {
   mime_type: string | null;
 }
 
-function buildAttachmentResourceUrl(attachmentId: string) {
-  return `${ATTACHMENT_RESOURCE_SCHEME}${encodeURIComponent(attachmentId)}`;
+function buildAttachmentResourceUrl(resolvedPath: string) {
+  return pathToFileURL(resolvedPath).toString();
 }
 
 export function resolveAttachmentStoragePath(hash: string, appDataDir = resolveAppPaths().app_data_dir) {
@@ -68,6 +68,6 @@ export function resolveAttachmentResource(
   return {
     status: 'ready',
     mime_type: row.mime_type,
-    resource_url: buildAttachmentResourceUrl(normalizedAttachmentId)
+    resource_url: buildAttachmentResourceUrl(resolvedPath)
   };
 }

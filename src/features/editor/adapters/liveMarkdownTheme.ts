@@ -57,6 +57,18 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: '#a0a5ad', fontWeight: '500', opacity: '0.95' },
   '.cm-md-image-widget': { display: 'block', marginBottom: '0.24rem', marginTop: '0.24rem', maxWidth: '100%' },
   '.cm-md-image-element': { border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)', borderRadius: '0.45rem', display: 'block', height: 'auto', maxWidth: '100%', width: 'auto', objectFit: 'contain' },
+  '.cm-md-image-status': {
+    alignItems: 'center',
+    backgroundColor: 'color-mix(in srgb, var(--color-bg-muted) 88%, transparent)',
+    border: '1px dashed color-mix(in srgb, var(--color-border-strong) 40%, transparent)',
+    borderRadius: '0.45rem',
+    color: 'var(--color-text-secondary)',
+    display: 'flex',
+    fontSize: '0.9rem',
+    justifyContent: 'center',
+    minHeight: '5rem',
+    padding: '0.75rem'
+  },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
     backgroundColor: 'rgba(var(--app-accent-color-rgb), 0.26)'
