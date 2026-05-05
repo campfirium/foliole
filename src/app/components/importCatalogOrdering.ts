@@ -4,15 +4,15 @@ import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
 
 export const IMPORT_CATALOG_SORT_OPTIONS: ImportCatalogSortOption[] = [
   { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateLastOpened', label: 'Date last opened' },
-  { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateSaved', label: 'Date saved' },
+  { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateImported', label: 'Import time' },
   { ascLabel: 'A -> Z', descLabel: 'Z -> A', key: 'title', label: 'Title' }
 ];
 
-export type ImportCatalogSortKey = 'dateLastOpened' | 'dateSaved' | 'title';
+export type ImportCatalogSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'title';
 
 type SortableImportItem = {
+  sortImported: string;
   sortLastOpened: string | null;
-  sortSaved: string;
   sortTitle: string;
 };
 
@@ -33,8 +33,12 @@ function compareLastOpenedDesc(left: string | null, right: string | null) {
   return right.localeCompare(left);
 }
 
-function compareSavedDesc(left: string, right: string) {
+function compareImportedDesc(left: string, right: string) {
   return right.localeCompare(left);
+}
+
+function normalizeImportCatalogSortKey(sortKey: ImportCatalogSortKey) {
+  return sortKey === 'dateSaved' ? 'dateImported' : sortKey;
 }
 
 export function resolveImportLastOpened(nodeId: string | null | undefined, nodeViewById: Record<string, NodeViewState | undefined>) {
@@ -50,21 +54,22 @@ export function sortImportCatalogItems<T extends SortableImportItem>(
   sortKey: ImportCatalogSortKey,
   sortDirection: 'asc' | 'desc'
 ) {
+  const normalizedSortKey = normalizeImportCatalogSortKey(sortKey);
   const directionMultiplier = sortDirection === 'asc' ? -1 : 1;
 
   return [...items].sort((left, right) => {
-    if (sortKey === 'title') {
+    if (normalizedSortKey === 'title') {
       const titleResult = compareText(left.sortTitle, right.sortTitle) * (sortDirection === 'asc' ? 1 : -1);
       if (titleResult !== 0) {
         return titleResult;
       }
-      return compareSavedDesc(left.sortSaved, right.sortSaved);
+      return compareImportedDesc(left.sortImported, right.sortImported);
     }
 
-    if (sortKey === 'dateSaved') {
-      const savedResult = compareSavedDesc(left.sortSaved, right.sortSaved) * directionMultiplier;
-      if (savedResult !== 0) {
-        return savedResult;
+    if (normalizedSortKey === 'dateImported') {
+      const importedResult = compareImportedDesc(left.sortImported, right.sortImported) * directionMultiplier;
+      if (importedResult !== 0) {
+        return importedResult;
       }
       return compareText(left.sortTitle, right.sortTitle);
     }
@@ -74,9 +79,9 @@ export function sortImportCatalogItems<T extends SortableImportItem>(
       return lastOpenedResult;
     }
 
-    const savedResult = compareSavedDesc(left.sortSaved, right.sortSaved);
-    if (savedResult !== 0) {
-      return savedResult;
+    const importedResult = compareImportedDesc(left.sortImported, right.sortImported);
+    if (importedResult !== 0) {
+      return importedResult;
     }
 
     return compareText(left.sortTitle, right.sortTitle);

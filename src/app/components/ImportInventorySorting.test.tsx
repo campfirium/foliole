@@ -78,9 +78,9 @@ it('filters and sorts PDFs for the PDF panel', () => {
 it('sorts the combined imports data by title when requested', () => {
   const sorted = sortOverviewItems(
     [
-      { sortLastOpened: null, sortSaved: '2026-04-03T10:00:00.000Z', sortTitle: 'Zebra Book' },
-      { sortLastOpened: null, sortSaved: '2026-04-04T01:00:00.000Z', sortTitle: 'Alpha PDF' },
-      { sortLastOpened: null, sortSaved: '2026-04-05T01:00:00.000Z', sortTitle: 'Essay note' }
+      { sortImported: '2026-04-03T10:00:00.000Z', sortLastOpened: null, sortTitle: 'Zebra Book' },
+      { sortImported: '2026-04-04T01:00:00.000Z', sortLastOpened: null, sortTitle: 'Alpha PDF' },
+      { sortImported: '2026-04-05T01:00:00.000Z', sortLastOpened: null, sortTitle: 'Essay note' }
     ],
     'title',
     'asc'

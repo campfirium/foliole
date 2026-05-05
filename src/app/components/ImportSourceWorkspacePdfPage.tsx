@@ -77,8 +77,8 @@ export function sortPdfItems(
   return sortImportCatalogItems(
     items.map((item) => ({
       item,
+      sortImported: item.lastImportedAt,
       sortLastOpened: resolveImportLastOpened(item.latestNodeId, nodeViewById),
-      sortSaved: item.lastImportedAt,
       sortTitle: item.sourceName
     })),
     sortKey,
@@ -95,7 +95,7 @@ export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<PdfSortKey>('dateSaved');
+  const [sortKey, setSortKey] = useState<PdfSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredInventory = filterPdfInventory(query, pdfInventory);
   const filteredItems = useMemo(

@@ -10,29 +10,29 @@ function formatDateLabel(value: string) {
 
 type SortedInboxNodeItem = {
   entry: Parameters<typeof InboxImportedNodeRow>[0]['entry'];
+  sortImported: string;
   sortLastOpened: string | null;
-  sortSaved: string;
   sortTitle: string;
 };
 
 type SortedInboxRunItem = {
   entry: Parameters<typeof InboxRecentRunRow>[0]['entry'];
+  sortImported: string;
   sortLastOpened: string | null;
-  sortSaved: string;
   sortTitle: string;
 };
 
 type SortedBookItem = {
   book: RuntimeReadwiseBooksInventory['books'][number];
+  sortImported: string;
   sortLastOpened: string | null;
-  sortSaved: string;
   sortTitle: string;
 };
 
 type SortedPdfItem = {
   item: Parameters<typeof PdfInventoryItem>[0]['item'];
+  sortImported: string;
   sortLastOpened: string | null;
-  sortSaved: string;
   sortTitle: string;
 };
 
