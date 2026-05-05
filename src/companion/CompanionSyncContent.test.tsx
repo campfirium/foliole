@@ -136,8 +136,8 @@ describe('CompanionSyncContent paired flow', () => {
     expect(screen.getByText('Last sync')).toBeInTheDocument();
     expect(screen.getByText('Android Emulator')).toBeInTheDocument();
     expect(screen.getByText('Activity')).toBeInTheDocument();
-    expect(screen.getByText('All sync stages completed')).toBeInTheDocument();
-    expect(screen.getByText(/^Fully synced \d/)).toBeInTheDocument();
+    expect(screen.getByText('Everything was up to date.')).toBeInTheDocument();
+    expect(screen.getByText(/^Synced \d/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 

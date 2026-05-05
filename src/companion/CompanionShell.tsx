@@ -5,11 +5,8 @@ import type { CompanionExternalDirectory } from '../shared/platform/companionExt
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
-import { renderCompanionShellContent } from './CompanionShellContent';
-import { CompanionShellOverlays } from './CompanionShellOverlays';
-import { CompanionSyncInlineStatus } from './CompanionSyncInlineStatus';
+import { CompanionShellView } from './CompanionShellView';
 import type { CompanionSecondaryDestinationId } from './CompanionTabsConfig';
-import { CompanionTopBar } from './CompanionTopBar';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
@@ -65,9 +62,7 @@ function resolveActiveSecondaryDestination(args: {
 }): CompanionSecondaryDestinationId | null {
   if (args.activeAction === 'recent' && args.isBrowseDirectoryOpen) return 'directory';
   if (args.activeAction === 'review' && args.isOnlyReviewOpen) return 'onlyReview';
-  if (args.activeAction === 'more' && args.settingsPage !== 'list') {
-    return args.settingsPage as CompanionSecondaryDestinationId;
-  }
+  if (args.activeAction === 'more' && args.settingsPage !== 'list') return args.settingsPage as CompanionSecondaryDestinationId;
   return null;
 }
 
@@ -212,62 +207,10 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   };
 }
 
+export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;
+
 export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
   const model = useCompanionShellModel(props.bootstrapState);
 
-  return (
-    <>
-      <main className="h-dvh bg-companion-base text-foreground">
-        <div
-          className="h-dvh overflow-y-auto"
-          data-testid="companion-scroll-container"
-          onClick={model.handleContentTap}
-          onScroll={model.handleContainerScroll}
-          onTouchEnd={model.floatingBar.handleTouchEnd}
-          onTouchMove={model.floatingBar.handleTouchMove}
-          onTouchStart={model.floatingBar.handleTouchStart}
-        >
-          <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
-            <CompanionTopBar {...model.topBarProps} visible />
-            <CompanionSyncInlineStatus workspaceSync={model.workspaceSync} />
-            {renderCompanionShellContent(
-              {
-                hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
-                companionTabConfig: model.companionTabs.config,
-                directorySelection: model.directorySelection,
-                onBackDirectorySelection: model.topBarProps.onBack ?? (() => undefined),
-                onBackToSettingsList: () => model.setSettingsPage('list'),
-                onChangeDirectorySelection: model.setDirectorySelection,
-                onCompanionTabConfigChange: model.companionTabs.setConfig,
-                isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
-                isOnlyReviewOpen: model.isOnlyReviewOpen,
-                onOpenSyncSettingsPage: model.setSettingsPage,
-                onOpenSyncSettings: () => model.setSettingsPage('sync'),
-                onOpenTabsSettings: () => model.setSettingsPage('tabs'),
-                onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
-                onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
-                reviewBreadcrumbItems: model.reviewBreadcrumbItems,
-                settingsPage: model.settingsPage,
-                surface: model.surface,
-                workspaceError: model.workspaceSync.error,
-                workspaceSync: model.workspaceSync
-              }
-            )}
-          </div>
-        </div>
-      </main>
-      <CompanionShellOverlays
-        activeSecondaryDestinationId={model.activeSecondaryDestinationId}
-        companionTabConfig={model.companionTabs.config}
-        isBottomBarDisabled={model.isBottomBarDisabled}
-        isCaptureSheetOpen={model.isCaptureSheetOpen}
-        isNavigationVisible={model.isNavigationVisible}
-        onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
-        onNavigationAction={model.handleNavigationAction}
-        onSecondaryDestination={model.handleSecondaryDestination}
-        surface={model.surface}
-        syncProgress={model.workspaceSync.syncProgress}
-      />
-    </>
-  );
+  return <CompanionShellView model={model} />;
 }

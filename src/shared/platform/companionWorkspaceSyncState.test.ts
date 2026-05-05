@@ -27,20 +27,20 @@ describe('normalizeWorkspaceSyncState', () => {
     expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
   });
 
-  it('does not use legacy completed batch events as full sync metadata', () => {
+  it('uses a completed sync check when no changes were applied', () => {
     const state = normalizeWorkspaceSyncState({
       endpoint_url: 'http://10.0.2.2:38641',
       sync_events: [
         {
           endpoint_url: 'http://10.0.2.2:38641',
           id: 'event-2',
-          message: 'Auto sync completed.',
+          message: 'Sync checked',
           occurred_at: '2026-04-29T02:18:00.000Z',
-          status: 'completed'
+          status: 'skipped'
         }
       ]
     });
 
-    expect(state.last_synced_at).toBeNull();
+    expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
   });
 });

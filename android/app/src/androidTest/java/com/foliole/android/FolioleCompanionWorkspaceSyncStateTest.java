@@ -50,6 +50,6 @@ public class FolioleCompanionWorkspaceSyncStateTest {
         );
 
         assertEquals("2026-05-01T02:00:00.000Z", completed.getString("last_synced_at"));
-        assertEquals("2026-05-01T02:00:00.000Z", checked.getString("last_synced_at"));
+        assertEquals("2026-05-01T02:01:00.000Z", checked.getString("last_synced_at"));
     }
 }

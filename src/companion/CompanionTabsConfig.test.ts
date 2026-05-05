@@ -24,7 +24,6 @@ describe('CompanionTabsConfig', () => {
       'tabs',
       'syncActivity',
       'syncConnection',
-      'syncDiagnostics',
       'syncHandoff'
     ]);
     expect(DEFAULT_COMPANION_TAB_CONFIG.shortcut.enabled).toBe(false);

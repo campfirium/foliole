@@ -7,7 +7,6 @@ import {
   Search,
   Settings,
   SlidersHorizontal,
-  Stethoscope,
   Unplug
 } from 'lucide-react';
 import type { ComponentType } from 'react';
@@ -21,7 +20,6 @@ export type CompanionSecondaryDestinationId =
   | 'tabs'
   | 'syncActivity'
   | 'syncConnection'
-  | 'syncDiagnostics'
   | 'syncHandoff';
 
 export type CompanionTabSlotId = CompanionPrimaryTabId | 'shortcut';
@@ -71,7 +69,6 @@ export const COMPANION_SECONDARY_DESTINATIONS: CompanionSecondaryDestination[] =
   { icon: SlidersHorizontal, id: 'tabs', label: 'Tabs', parentTab: 'settings' },
   { icon: Activity, id: 'syncActivity', label: 'Sync Activity', parentTab: 'settings' },
   { icon: Unplug, id: 'syncConnection', label: 'Sync Connection', parentTab: 'settings' },
-  { icon: Stethoscope, id: 'syncDiagnostics', label: 'Sync Diagnostics', parentTab: 'settings' },
   { icon: Activity, id: 'syncHandoff', label: 'Handoff reminders', parentTab: 'settings' }
 ];
 

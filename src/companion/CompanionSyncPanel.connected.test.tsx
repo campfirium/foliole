@@ -84,6 +84,8 @@ function testShowsPairedState() {
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
   expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
+  expect(screen.queryByText('Topics on this device')).not.toBeInTheDocument();
+  expect(screen.queryByText('Sync check')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
 }
 
@@ -126,7 +128,7 @@ function testManualPassIsNotAutomatic() {
     />
   );
 
-  expect(screen.getByText('All sync stages completed')).toBeInTheDocument();
+  expect(screen.getByText('Everything was up to date.')).toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
 }
 
@@ -139,11 +141,11 @@ function testOlderFailuresAreNeutralAfterCompletedPass() {
     />
   );
 
-  expect(screen.getByText('Earlier sync check finished')).toBeInTheDocument();
-  const oldFailure = screen.getByText('Earlier sync attempt did not complete');
+  expect(screen.getByText('No changes to sync.')).toBeInTheDocument();
+  const oldFailure = screen.getByText('Earlier issue: Desktop sync timed out while fetching content blobs.');
   expect(oldFailure).toBeInTheDocument();
   expect(oldFailure.className).not.toContain('text-error');
-  expect(screen.getByText('Earlier sync check finished').className).not.toContain('text-companion-accent');
+  expect(screen.getByText('No changes to sync.').className).not.toContain('text-companion-accent');
 }
 
 function testHealthyBacklogPassAvoidsStrictCompletion() {
@@ -151,7 +153,7 @@ function testHealthyBacklogPassAvoidsStrictCompletion() {
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
   expect(screen.getByText('Some topic bodies are still downloading.')).toBeInTheDocument();
-  expect(screen.queryByText('No finished sync yet')).not.toBeInTheDocument();
+  expect(screen.queryByText('No sync check yet')).not.toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
 }
 
@@ -165,7 +167,7 @@ function testOlderFailuresAreNeutralAfterBacklogPass() {
   );
 
   expect(screen.getByText('Some topic bodies are still downloading.')).toBeInTheDocument();
-  const oldFailure = screen.getByText('Earlier sync attempt did not complete');
+  const oldFailure = screen.getByText('Earlier issue: Desktop sync timed out while fetching content blobs.');
   expect(oldFailure).toBeInTheDocument();
   expect(oldFailure.className).not.toContain('text-error');
 }

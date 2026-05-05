@@ -24,23 +24,24 @@ describe('CompanionSyncInlineStatus visibility', () => {
   it('stays hidden while idle even when a sync endpoint is remembered', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
-    render(<CompanionSyncInlineStatus workspaceSync={createWorkspaceSync() as never} />);
+    render(<CompanionSyncInlineStatus onOpenSyncSettings={vi.fn()} workspaceSync={createWorkspaceSync() as never} />);
 
-    expect(screen.queryByLabelText('Sync status')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Sync in progress')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 
-  it('shows foreground sync progress without offering a manual sync action', async () => {
+  it('shows top bar sync progress as an icon-only entry', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
     render(
       <CompanionSyncInlineStatus
+        onOpenSyncSettings={vi.fn()}
         workspaceSync={createWorkspaceSync({ status: 'syncing' }) as never}
       />
     );
 
-    expect(screen.getByLabelText('Sync status')).toBeInTheDocument();
-    expect(screen.getByText('Syncing topics')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync in progress' })).toBeInTheDocument();
+    expect(screen.queryByText('Syncing topics')).not.toBeInTheDocument();
     expect(screen.queryByText('Bringing the latest desktop content onto this device.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
@@ -50,13 +51,13 @@ describe('CompanionSyncInlineStatus visibility', () => {
 
     render(
       <CompanionSyncInlineStatus
+        onOpenSyncSettings={vi.fn()}
         workspaceSync={createWorkspaceSync({ error: 'Desktop sync failed.' }) as never}
       />
     );
 
-    expect(screen.queryByText('Sync needs attention')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync needs attention' })).toBeInTheDocument();
     expect(screen.queryByText('Desktop sync failed.')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Sync status')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
 });

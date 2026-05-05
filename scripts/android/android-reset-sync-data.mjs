@@ -1,17 +1,16 @@
 /* global console, process */
 
 import Database from 'better-sqlite3';
-import { Buffer } from 'node:buffer';
-import { execFile, spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { URL } from 'node:url';
-import { promisify } from 'node:util';
 
-const execFileAsync = promisify(execFile);
+import { resolveSerial, runAdb, spawnAdb } from './android-adb-command.mjs';
+
 const DEFAULT_APP_ID = 'com.foliole.android';
 const DEVICE_DB_PATH = 'databases/foliole-companion.db';
+const RESET_CONFIRM_ENV = 'FOLIOLE_ANDROID_ALLOW_SYNC_DATA_RESET';
 const PRESERVED_COMPANION_META_KEYS = [
   'device_id',
   'workspace_sync_endpoint_url',
@@ -77,68 +76,8 @@ Resets Android companion sync data for a cold resync test without unpairing:
 - removes files/attachments
 - optionally rewrites emulator 10.0.2.2 endpoints to 127.0.0.1 with --prefer-adb-reverse
 
-No database backup is written; this is a repeatable test reset tool.`);
-}
-
-function adbCandidates(adbPath) {
-  if (adbPath !== 'adb') return [adbPath];
-  const candidates = ['adb', 'adb.exe'];
-  for (const sdkRoot of [process.env.ANDROID_SDK_ROOT, process.env.ANDROID_HOME]) {
-    if (sdkRoot) candidates.push(path.join(sdkRoot, 'platform-tools', 'adb'));
-  }
-  candidates.push(path.join('/mnt/c/Users', os.userInfo().username, 'AppData/Local/Android/Sdk/platform-tools/adb.exe'));
-  return [...new Set(candidates)];
-}
-
-async function runAdb(options, args, execOptions = {}) {
-  const adbArgs = options.serial ? ['-s', options.serial, ...args] : args;
-  let lastError = null;
-  for (const adbPath of adbCandidates(options.adb)) {
-    try {
-      return await execFileAsync(adbPath, adbArgs, { maxBuffer: 1024 * 1024 * 80, ...execOptions });
-    } catch (error) {
-      lastError = error;
-      if (error.code !== 'ENOENT') throw error;
-    }
-  }
-  throw lastError;
-}
-
-async function spawnAdb(options, args, input) {
-  const adbArgs = options.serial ? ['-s', options.serial, ...args] : args;
-  let lastError = null;
-  for (const adbPath of adbCandidates(options.adb)) {
-    try {
-      await spawnWithInput(adbPath, adbArgs, input);
-      return;
-    } catch (error) {
-      lastError = error;
-      if (error.code !== 'ENOENT') throw error;
-    }
-  }
-  throw lastError;
-}
-
-function spawnWithInput(command, args, input) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });
-    const stderr = [];
-    child.stderr.on('data', (chunk) => stderr.push(chunk));
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${command} ${args.join(' ')} exited ${code}: ${Buffer.concat(stderr).toString('utf8')}`));
-    });
-    child.stdin.end(input);
-  });
-}
-
-async function resolveSerial(options) {
-  if (options.serial) return options.serial;
-  const { stdout } = await runAdb({ ...options, serial: '' }, ['devices'], { encoding: 'utf8' });
-  const line = stdout.split(/\r?\n/).find((entry) => /\bdevice$/.test(entry.trim()));
-  if (!line) throw new Error('No ready Android emulator/device found.');
-  return line.trim().split(/\s+/)[0];
+No database backup is written; this is a repeatable test reset tool.
+Set ${RESET_CONFIRM_ENV}=1 to run it against a connected device.`);
 }
 
 export function inspectSyncDataCounts(databasePath) {
@@ -272,6 +211,11 @@ async function run(options) {
     printHelp();
     return;
   }
+  if (!isResetConfirmed(process.env)) {
+    console.error(`[android-reset-sync-data] refused: this command clears synced Android app data for ${options.appId}.`);
+    console.error(`[android-reset-sync-data] set ${RESET_CONFIRM_ENV}=1 after backing up or using a disposable emulator.`);
+    process.exit(2);
+  }
   const serial = await resolveSerial(options);
   const resolved = { ...options, serial };
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-android-reset-sync-data-'));
@@ -287,6 +231,10 @@ async function run(options) {
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
+}
+
+export function isResetConfirmed(env) {
+  return env[RESET_CONFIRM_ENV] === '1';
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

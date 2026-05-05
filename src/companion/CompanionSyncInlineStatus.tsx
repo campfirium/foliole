@@ -1,27 +1,34 @@
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
 export function CompanionSyncInlineStatus(props: {
+  onOpenSyncSettings(): void;
   workspaceSync: WorkspaceSyncApi;
 }) {
   const { workspaceSync } = props;
   const isSyncing = workspaceSync.status === 'syncing';
-  if (!isSyncing) {
+  const needsAttention = !isSyncing && Boolean(workspaceSync.error);
+  if (!isSyncing && !needsAttention) {
     return null;
   }
+  const Icon = isSyncing ? Loader2 : AlertCircle;
+  const label = isSyncing ? 'Sync in progress' : 'Sync needs attention';
 
   return (
-    <section
-      aria-label="Sync status"
-      className="pointer-events-none fixed left-1/2 top-16 z-30 flex w-full max-w-[760px] -translate-x-1/2 justify-center px-6 sm:px-7"
+    <button
+      aria-label={label}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground"
+      onClick={props.onOpenSyncSettings}
+      type="button"
     >
-      <div className="inline-flex items-center gap-2 rounded-md bg-companion-base/90 px-2 py-1 text-sm font-medium leading-6 text-companion-text-secondary shadow-sm backdrop-blur">
-        <Loader2 aria-hidden="true" className="size-4 shrink-0 animate-spin text-accent" strokeWidth={1.8} />
-        <span>Syncing topics</span>
-      </div>
-    </section>
+      <Icon
+        aria-hidden="true"
+        className={`h-5 w-5 ${isSyncing ? 'animate-spin text-accent' : 'text-error'}`}
+        strokeWidth={1.8}
+      />
+    </button>
   );
 }

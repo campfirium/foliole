@@ -43,6 +43,18 @@ async function writeExecutable(rootDir, name, content) {
 }
 
 describe('windows-deploy-app.sh', () => {
+  it('refuses direct deploy without explicit data-risk confirmation', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-refuse-'));
+    try {
+      const result = await runDeploy(tempRoot);
+
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain('direct deploy can replace the active Android app package');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('returns after the Windows deploy script reports the app opened', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-'));
     try {
@@ -53,7 +65,8 @@ describe('windows-deploy-app.sh', () => {
       );
 
       const result = await runDeploy(tempRoot, {
-        ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test'
+        ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
+        FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY: '1'
       });
 
       expect(result.code).toBe(0);
@@ -72,7 +85,9 @@ describe('windows-deploy-app.sh', () => {
         '#!/usr/bin/env bash\necho "[android-deploy] failed before open"\nexit 42\n'
       );
 
-      const result = await runDeploy(tempRoot);
+      const result = await runDeploy(tempRoot, {
+        FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY: '1'
+      });
 
       expect(result.code).toBe(42);
       expect(result.stdout).toContain('[android-deploy] failed before open');

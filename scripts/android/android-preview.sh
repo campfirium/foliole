@@ -111,7 +111,7 @@ if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
     DEPLOY_STEP=5
   fi
   echo "[android-preview] step ${DEPLOY_STEP}/${PREVIEW_TOTAL_STEPS}: deploy app"
-  if ! run_timed_preview_step "android-deploy" "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
+  if ! run_timed_preview_step "android-deploy" "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" FOLIOLE_ANDROID_PREVIEW_DEPLOY=1 bash "${ANDROID_DEPLOY_SCRIPT}"; then
     echo "[android-preview] failed at: app deploy"
     echo "[android-preview] status: FAILED"
     exit 1

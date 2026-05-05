@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { resetSyncDataInDatabase } from './android-reset-sync-data.mjs';
+import { isResetConfirmed, resetSyncDataInDatabase } from './android-reset-sync-data.mjs';
 
 let tempDir;
 
@@ -14,6 +14,12 @@ afterEach(async () => {
 });
 
 describe('android-reset-sync-data', () => {
+  it('requires an explicit device reset confirmation', () => {
+    expect(isResetConfirmed({})).toBe(false);
+    expect(isResetConfirmed({ FOLIOLE_ANDROID_ALLOW_SYNC_DATA_RESET: '0' })).toBe(false);
+    expect(isResetConfirmed({ FOLIOLE_ANDROID_ALLOW_SYNC_DATA_RESET: '1' })).toBe(true);
+  });
+
   it('clears synced data while preserving pairing connection metadata', async () => {
     const databasePath = await createDatabase();
     seedDatabase(databasePath);

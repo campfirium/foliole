@@ -603,7 +603,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
             nextEvents.put(events.get(index));
         }
         saveMetaValue(database, WORKSPACE_SYNC_EVENTS_KEY, nextEvents.toString(), Instant.now().toString());
-        if ("completed".equals(normalizedStatus) && FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message"))) {
+        if ("skipped".equals(normalizedStatus) || ("completed".equals(normalizedStatus) && FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message")))) {
             saveMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, normalizedOccurredAt, normalizedOccurredAt);
         }
     }

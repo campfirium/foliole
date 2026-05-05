@@ -27,10 +27,11 @@ export function CompanionTopBar(props: {
   onBack?: () => void;
   rightAction?: TopBarAction;
   rightSlot?: ReactNode;
+  statusSlot?: ReactNode;
   title?: string;
   visible: boolean;
 }) {
-  const hasTitleRow = Boolean(props.leftAction || props.rightAction || props.rightSlot || props.title);
+  const hasTitleRow = Boolean(props.leftAction || props.rightAction || props.rightSlot || props.statusSlot || props.title);
   const hasChrome = Boolean(props.onBack || hasTitleRow);
   if (!props.visible || !hasChrome) {
     return null;
@@ -58,7 +59,8 @@ export function CompanionTopBar(props: {
           ) : (
             <div className="min-w-0 flex-1" />
           )}
-          <div className="flex min-w-10 justify-end">
+          <div className="flex min-w-10 justify-end gap-1">
+            {props.statusSlot}
             {props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null)}
           </div>
         </div>

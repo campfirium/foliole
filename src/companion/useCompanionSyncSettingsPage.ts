@@ -9,7 +9,6 @@ export type CompanionSettingsPage =
   | 'tabs'
   | 'syncActivity'
   | 'syncConnection'
-  | 'syncDiagnostics'
   | 'syncHandoff';
 
 export function useCompanionSyncSettingsPage(args: {

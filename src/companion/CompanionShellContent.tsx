@@ -181,9 +181,6 @@ export function resolveCompanionTopBarProps(
     if (settingsPage === 'syncConnection') {
       return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Connection' };
     }
-    if (settingsPage === 'syncDiagnostics') {
-      return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Sync diagnostic' };
-    }
     if (settingsPage === 'syncHandoff') {
       return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Handoff reminders' };
     }

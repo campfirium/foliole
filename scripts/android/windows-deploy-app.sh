@@ -5,14 +5,28 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/android-windows-workdir.sh"
 WINDOWS_SCRIPT_PATH="${WINDOWS_SCRIPT_PATH:-${SCRIPT_DIR}/windows-deploy-app.ps1}"
 ANDROID_GRADLE_STOP_AFTER_DEPLOY="${ANDROID_GRADLE_STOP_AFTER_DEPLOY:-0}"
+FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY="${FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY:-}"
+FOLIOLE_ANDROID_PREVIEW_DEPLOY="${FOLIOLE_ANDROID_PREVIEW_DEPLOY:-}"
 
 if [[ "${1:-}" == "--help" ]]; then
   cat <<'EOF'
 Usage: bash scripts/android/windows-deploy-app.sh
 
 Build, install, and launch the Android debug app on the active emulator/device.
+Direct deploy can replace the active app package. Prefer android:preview, which
+backs up and checks app data. To run this script directly, set
+FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY=1.
 EOF
   exit 0
+fi
+
+if [[ "${FOLIOLE_ANDROID_PREVIEW_DEPLOY}" != "1" && "${FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY}" != "1" ]]; then
+  cat >&2 <<'EOF'
+[android-deploy] refused: direct deploy can replace the active Android app package without data protection.
+[android-deploy] use android:preview for data-protected deploy and launch.
+[android-deploy] to run direct deploy anyway, set FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY=1.
+EOF
+  exit 2
 fi
 
 POWERSHELL_ARGS=(

@@ -96,7 +96,7 @@ describe('android-preview.sh', () => {
       const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-target:${WINDOWS_MIRROR_DIR}\necho preserve-android-generated:${WINDOWS_SYNC_PRESERVE_ANDROID_GENERATED-unset}\n');
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho android-workdir:${ANDROID_WINDOWS_WORKDIR}\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ready\n');
-      const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-workdir:${ANDROID_WINDOWS_WORKDIR}\n');
+      const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-workdir:${ANDROID_WINDOWS_WORKDIR}\necho preview-deploy:${FOLIOLE_ANDROID_PREVIEW_DEPLOY-unset}\n');
 
       const result = await runAndroidPreview(tempRoot, {
         WINDOWS_SYNC_SCRIPT: windowsSync,
@@ -116,6 +116,7 @@ describe('android-preview.sh', () => {
       expect(result.stdout).toContain('preserve-android-generated:unset');
       expect(result.stdout).toContain('android-workdir:C:\\dev\\foliole-test');
       expect(result.stdout).toContain('deploy-workdir:C:\\dev\\foliole-test');
+      expect(result.stdout).toContain('preview-deploy:1');
       expect(result.stdout).toContain('[android-preview] done: windows-sync');
       expect(result.stdout).toContain('[android-preview] android-cap-sync timeout: 600s');
       expect(result.stdout).toContain('[android-preview] begin: android-cap-sync');
