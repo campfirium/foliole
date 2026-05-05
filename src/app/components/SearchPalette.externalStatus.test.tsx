@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 vi.mock('../../shared/platform/bridge', () => ({
   getRuntimeInvoke: vi.fn()
 }));
-vi.mock('../../shared/platform/nodeSourceBridge', () => ({
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails: vi.fn().mockResolvedValue(null)
 }));
 vi.mock('../../shared/platform/externalSearchBridge', () => ({

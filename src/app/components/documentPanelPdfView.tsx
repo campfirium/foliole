@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
-import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { AppEmptyState } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
-import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { appFloatingMetaBadgeClassName } from '../../shared/ui';
 
 import type { WorkspaceSearchResult } from './workspaceSearch';

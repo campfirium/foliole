@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { onManagedInboxUpdated } from '../../shared/platform/bridge';
-import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceBridge';
+import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 interface NodeSourceUpdatePreviewState {
   isLoading: boolean;

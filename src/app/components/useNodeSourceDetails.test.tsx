@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 
@@ -9,7 +9,7 @@ const { loadRuntimeNodeSourceDetails } = vi.hoisted(() => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
 
-vi.mock('../../shared/platform/nodeSourceBridge', () => ({
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails
 }));
 

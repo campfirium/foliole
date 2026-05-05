@@ -13,7 +13,7 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump: vi.fn()
 }));
 
-vi.mock('../../shared/platform/nodeSourceBridge', () => ({
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails
 }));
 

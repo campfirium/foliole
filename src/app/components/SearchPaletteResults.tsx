@@ -1,5 +1,5 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import {
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   loadRuntimeNodeSourceDetails,
   type RuntimeNodeSourceDetails
-} from '../../shared/platform/nodeSourceBridge';
+} from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import type { WorkspaceSearchResult } from './workspaceSearch';
 

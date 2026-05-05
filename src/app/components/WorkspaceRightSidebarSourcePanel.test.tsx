@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RuntimeTextImportResult } from '../../shared/platform/importBridge';
-import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import { WorkspaceRightSidebarSourcePanel } from './WorkspaceRightSidebarSourcePanel';
 
@@ -10,7 +10,7 @@ const { loadRuntimeNodeSourceDetails } = vi.hoisted(() => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
 
-vi.mock('../../shared/platform/nodeSourceBridge', () => ({
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
   loadRuntimeNodeSourceDetails
 }));
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { collectBacklinks, type BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksBridge';
+import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
 
 function collectLocalBacklinks(args: {
   nodeOrder: string[];

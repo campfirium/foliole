@@ -58,7 +58,7 @@ const nodeBacklinksBridgeMocks = vi.hoisted(() => ({
 }));
 export const loadRuntimeNodeBacklinks = nodeBacklinksBridgeMocks.loadRuntimeNodeBacklinks;
 
-vi.mock('../../shared/platform/nodeBacklinksBridge', () => ({
+vi.mock('../../shared/platform/nodeBacklinksRuntimeRepository', () => ({
   loadRuntimeNodeBacklinks: nodeBacklinksBridgeMocks.loadRuntimeNodeBacklinks
 }));
 

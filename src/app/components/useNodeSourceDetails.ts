@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
+import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { updateSourceDetailsCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 
 interface NodeSourceDetailsState {
