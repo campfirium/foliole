@@ -62,6 +62,17 @@ function createWindowOptions(): BrowserWindowConstructorOptions {
   };
 }
 
+function focusFirstWindow() {
+  const [firstWindow] = BrowserWindow.getAllWindows();
+  if (!firstWindow) {
+    return;
+  }
+  if (firstWindow.isMinimized()) {
+    firstWindow.restore();
+  }
+  firstWindow.focus();
+}
+
 function wait(ms: number) {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, ms);
@@ -171,6 +182,16 @@ function installInvokeHandler() {
     handleInvokeRequest(request, { sender: event.sender })
   );
 }
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+  process.exit(0);
+}
+
+app.on('second-instance', () => {
+  focusFirstWindow();
+});
 
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
