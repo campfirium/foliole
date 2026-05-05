@@ -279,7 +279,7 @@ describe('CompanionShell review surfaces', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Shortcut tab target' }), { target: { value: 'directory' } });
 
     expect(screen.getByRole('button', { name: 'Directory' })).toBeInTheDocument();
-    fireEvent.dragStart(screen.getByTestId('tab-slot-shortcut'));
+    fireEvent.dragStart(screen.getByTestId('tab-slot-shortcut-handle'));
     fireEvent.drop(screen.getByTestId('tab-slot-browse'));
     fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
     expect(surface.handleTabAction).toHaveBeenCalledWith('recent');

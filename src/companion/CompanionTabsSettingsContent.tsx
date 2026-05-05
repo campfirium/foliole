@@ -55,6 +55,26 @@ function TabTargetSelect(props: {
   );
 }
 
+function TabDragHandle(props: {
+  tabId: CompanionTabSlotId;
+  onDragStart(tabId: CompanionTabSlotId): void;
+  onDragEnd(): void;
+}) {
+  return (
+    <button
+      aria-label={`Drag ${TAB_LABELS[props.tabId]}`}
+      className="flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-md text-companion-text-secondary hover:bg-companion-surface-subtle active:cursor-grabbing"
+      data-testid={`tab-slot-${props.tabId}-handle`}
+      draggable
+      onDragEnd={props.onDragEnd}
+      onDragStart={() => props.onDragStart(props.tabId)}
+      type="button"
+    >
+      <GripVertical className="h-5 w-5" />
+    </button>
+  );
+}
+
 export function CompanionTabsSettingsContent(props: {
   config: CompanionTabConfig;
   onConfigChange(config: CompanionTabConfig): void;
@@ -71,10 +91,8 @@ export function CompanionTabsSettingsContent(props: {
           <div
             className="flex items-center gap-3 py-3"
             data-testid={`tab-slot-${tabId}`}
-            draggable
             key={tabId}
             onDragOver={(event) => event.preventDefault()}
-            onDragStart={() => setDraggedTabId(tabId)}
             onDrop={() => {
               if (!draggedTabId) return;
               setDraggedTabId(null);
@@ -84,9 +102,11 @@ export function CompanionTabsSettingsContent(props: {
               });
             }}
           >
-            <span aria-label={`Drag ${TAB_LABELS[tabId]}`} className="cursor-grab text-companion-text-secondary">
-              <GripVertical className="h-5 w-5" />
-            </span>
+            <TabDragHandle
+              onDragEnd={() => setDraggedTabId(null)}
+              onDragStart={setDraggedTabId}
+              tabId={tabId}
+            />
             {tabId === 'shortcut' ? (
               <TabTargetSelect config={props.config} onConfigChange={props.onConfigChange} />
             ) : (
