@@ -54,11 +54,6 @@ function useAppearanceSectionState() {
   });
   return {
     appearance,
-    baseColorOptions: [
-      { label: 'Light', value: 'light' },
-      { label: 'Dark', value: 'dark' },
-      { label: 'Follow system', value: 'system' }
-    ],
     fontOptions,
     safeAccentColor: ensureAccentHex(appearance.accentColorPreset),
     safeFontColor: ensureFontHex(appearance.fontColorPreset),
@@ -109,21 +104,46 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
         safeClozeColor={safeClozeColor}
         setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
       />
-    </SettingsSection>
-  );
-}
-
-function BaseColorSection(props: ReturnType<typeof useAppearanceSectionState>) {
-  const { appearance, baseColorOptions } = props;
-  return (
-    <SettingsSection ariaLabel="Base color section" title="Base color">
       <SettingsSelectRow
-        description={`Set the foundation color mode. Currently editing ${appearance.resolvedBaseColorMode} settings.`}
-        label="Mode"
-        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
-        options={baseColorOptions}
-        value={appearance.baseColorMode}
+        description="Choose how PDF pages render in the reader. Original keeps the source page, inverted uses a softer dark reading preset, and warm keeps a paper-like tone."
+        label="PDF reading mode"
+        onChange={(value) => appearance.setPdfReadingMode(value as typeof appearance.pdfReadingMode)}
+        options={[
+          { label: 'Original', value: 'original' },
+          { label: 'Inverted', value: 'inverted' },
+          { label: 'Warm', value: 'warm' }
+        ]}
+        value={appearance.pdfReadingMode}
       />
+      <label className="flex min-h-[78px] items-start justify-between gap-5 py-5 max-[1080px]:flex-col max-[1080px]:items-start" data-settings-row>
+        <span className="min-w-0 flex-1">
+          <span className="text-[0.95rem] font-semibold text-foreground">Dim images in dark mode</span>
+          <span className="mt-0.5 block text-sm text-foreground/65">Apply a gentle dimming filter to regular document images when the app is in dark mode.</span>
+        </span>
+        <span className="inline-flex max-w-full flex-[0_0_360px] items-center justify-end gap-3 max-[1080px]:w-full max-[1080px]:flex-auto">
+          <button
+            aria-checked={appearance.dimImagesInDarkMode}
+            aria-label="Dim images in dark mode"
+            className={`relative inline-flex h-10 w-[72px] shrink-0 items-center rounded-full border transition-colors ${
+              appearance.dimImagesInDarkMode
+                ? 'border-border-strong bg-foreground/[0.12]'
+                : 'border-border bg-bg-elevated'
+            }`}
+            onClick={() => appearance.setDimImagesInDarkMode(!appearance.dimImagesInDarkMode)}
+            role="switch"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              className={`absolute h-8 w-8 rounded-full transition-transform ${
+                appearance.dimImagesInDarkMode
+                  ? 'translate-x-[34px] bg-foreground'
+                  : 'translate-x-[4px] bg-bg-panel'
+              }`}
+            />
+          </button>
+        </span>
+      </label>
     </SettingsSection>
   );
 }
@@ -166,7 +186,6 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
   const state = useAppearanceSectionState();
   return (
     <>
-      <BaseColorSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <AppearanceColorSection {...state} />
       <AppearanceSupportingSections {...state} />

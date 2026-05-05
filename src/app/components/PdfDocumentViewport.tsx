@@ -15,6 +15,7 @@ interface PdfDocumentViewportProps {
   onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   loadError: string | null;
   maxPage: number;
+  onPdfReadingModeChange: (value: 'original' | 'inverted' | 'warm') => void;
   onNextPage: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
@@ -36,6 +37,7 @@ interface PdfDocumentViewportProps {
   pageJumpRequest: PdfJumpRequest | null;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
+  pdfReadingMode: 'original' | 'inverted' | 'warm';
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
   rotation: number;

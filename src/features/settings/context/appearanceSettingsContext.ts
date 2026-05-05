@@ -8,6 +8,7 @@ import type {
   FontColorPreset,
   HighlightColorPreset,
   InterfaceFontPreset,
+  PdfReadingMode,
   SelectionColorPreset,
   MonospaceFontPreset,
   WorkspaceSurfaceAssignments,
@@ -19,6 +20,7 @@ export interface AppearanceSettingsContextValue {
   accentColorPreset: AccentColorPreset;
   autoLocalizeRemoteImages: boolean;
   baseColorMode: BaseColorMode;
+  dimImagesInDarkMode: boolean;
   resolvedBaseColorMode: ResolvedBaseColorMode;
   customInterfaceFont: string;
   customMonospaceFont: string;
@@ -26,6 +28,7 @@ export interface AppearanceSettingsContextValue {
   editorAppearanceKey: string;
   editorDisplayMode: EditorDisplayMode;
   clozeColorPreset: ClozeColorPreset;
+  pdfReadingMode: PdfReadingMode;
   fontColorPreset: FontColorPreset;
   selectionColorPreset: SelectionColorPreset;
   highlightColorPreset: HighlightColorPreset;
@@ -47,6 +50,7 @@ export interface AppearanceSettingsContextValue {
   setAutoLocalizeRemoteImages: (value: boolean) => void;
   setBaseColorMode: (value: BaseColorMode) => void;
   setClozeColorPreset: (value: ClozeColorPreset) => void;
+  setDimImagesInDarkMode: (value: boolean) => void;
   setFontColorPreset: (value: FontColorPreset) => void;
   setHighlightColorPreset: (value: HighlightColorPreset) => void;
   setSelectionColorPreset: (value: SelectionColorPreset) => void;
@@ -57,6 +61,7 @@ export interface AppearanceSettingsContextValue {
   setInterfaceFontSize: (value: number) => void;
   setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => void;
   setMonospaceFontPreset: (value: MonospaceFontPreset) => void;
+  setPdfReadingMode: (value: PdfReadingMode) => void;
   setUiFontPreset: (value: InterfaceFontPreset) => void;
   setWorkspaceSurfaceAssignments: (value: WorkspaceSurfaceAssignments) => void;
   setWorkspaceSurfacePalette: (value: WorkspaceSurfacePalette) => void;

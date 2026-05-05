@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
+import { useAppearanceSettings } from '../context/AppearanceSettingsProvider';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import {
   getInitialSettingsCategory,
@@ -160,6 +161,25 @@ function createSettingsCategoryProps(
   };
 }
 
+function AppearanceHeaderModeControl() {
+  const appearance = useAppearanceSettings();
+
+  return (
+    <div className="w-full max-w-[720px] rounded-2xl border border-settings-outline bg-settings-group px-5 py-5 shadow-settings">
+      <select
+        aria-label="Mode"
+        className="w-full rounded-xl border border-settings-divider bg-settings-shell px-5 py-4 text-[1.05rem] text-foreground outline-none transition-colors focus:border-foreground/35"
+        onChange={(event) => appearance.setBaseColorMode(event.target.value as typeof appearance.baseColorMode)}
+        value={appearance.baseColorMode}
+      >
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="system">Follow system</option>
+      </select>
+    </div>
+  );
+}
+
 function SettingsPanelDialog(props: {
   categoryProps: SettingsPanelCategoryProps;
   hotkeys: ReturnType<typeof useHotkeySettings>;
@@ -178,10 +198,13 @@ function SettingsPanelDialog(props: {
         <AppDialogContent aria-label="Settings dialog" aria-describedby={undefined} className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-2xl border-settings-outline bg-settings-shell shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}>
           <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
           <div className="app-scrollbar overflow-auto bg-settings-shell px-7 pb-7 pt-6">
-            <header className="mb-3 min-h-[48px] border-b border-settings-divider px-1 pb-5">
+            <header className="mb-3 grid min-h-[48px] gap-5 border-b border-settings-divider px-1 pb-5 md:grid-cols-[minmax(0,1fr)_minmax(320px,720px)] md:items-end">
               <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
-              <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>
-              <p className="mt-2 max-w-[720px] text-[0.96rem] text-foreground/62">{props.description}</p>
+              <div className="min-w-0">
+                <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>
+                <p className="mt-2 max-w-[720px] text-[0.96rem] text-foreground/62">{props.description}</p>
+              </div>
+              {props.activeCategory === 'appearance' ? <AppearanceHeaderModeControl /> : null}
             </header>
             <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
           </div>

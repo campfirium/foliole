@@ -24,7 +24,9 @@ import {
   INTERFACE_FONT_SIZE_DEFAULT,
   type InterfaceFontPreset,
   type MonospaceFontPreset,
+  type PdfReadingMode,
   type SelectionColorPreset,
+  setDimImagesInDarkMode,
   setAccentColorPreset,
   setBaseColorMode,
   setClozeColorPreset,
@@ -36,6 +38,7 @@ import {
   setInterfaceFontPreset,
   setInterfaceFontSize,
   setMonospaceFontPreset,
+  setPdfReadingMode,
   setSelectionColorPreset,
   setUiFontPreset,
   setWorkspaceSurfaceAssignments,
@@ -55,6 +58,7 @@ type AppearanceState = {
   customInterfaceFontState: string;
   customMonospaceFontState: string;
   customUiFontState: string;
+  dimImagesInDarkModeState: boolean;
   editorDisplayModeState: EditorDisplayMode;
   fontColorPresetState: FontColorPreset;
   highlightColorPresetState: HighlightColorPreset;
@@ -62,6 +66,7 @@ type AppearanceState = {
   interfaceFontSizeState: number;
   markdownSyntaxVisibilityState: MarkdownSyntaxVisibility;
   monospaceFontPresetState: MonospaceFontPreset;
+  pdfReadingModeState: PdfReadingMode;
   selectionColorPresetState: SelectionColorPreset;
   uiFontPresetState: InterfaceFontPreset;
   workspaceSurfaceAssignmentsState: AppearanceSettingsContextValue['workspaceSurfaceAssignments'];
@@ -73,6 +78,7 @@ type AppearanceState = {
   setCustomInterfaceFontState: Setter<string>;
   setCustomMonospaceFontState: Setter<string>;
   setCustomUiFontState: Setter<string>;
+  setDimImagesInDarkModeState: Setter<boolean>;
   setEditorDisplayModeState: Setter<EditorDisplayMode>;
   setFontColorPresetState: Setter<FontColorPreset>;
   setHighlightColorPresetState: Setter<HighlightColorPreset>;
@@ -80,6 +86,7 @@ type AppearanceState = {
   setInterfaceFontSizeState: Setter<number>;
   setMarkdownSyntaxVisibilityState: Setter<MarkdownSyntaxVisibility>;
   setMonospaceFontPresetState: Setter<MonospaceFontPreset>;
+  setPdfReadingModeState: Setter<PdfReadingMode>;
   setSelectionColorPresetState: Setter<SelectionColorPreset>;
   setUiFontPresetState: Setter<InterfaceFontPreset>;
   setWorkspaceSurfaceAssignmentsState: Setter<AppearanceSettingsContextValue['workspaceSurfaceAssignments']>;
@@ -160,12 +167,14 @@ type AppearanceActions = Pick<
   | 'setCustomInterfaceFont'
   | 'setCustomMonospaceFont'
   | 'setCustomUiFont'
+  | 'setDimImagesInDarkMode'
   | 'setFontColorPreset'
   | 'setHighlightColorPreset'
   | 'setInterfaceFontPreset'
   | 'setInterfaceFontSize'
   | 'setMarkdownSyntaxVisibility'
   | 'setMonospaceFontPreset'
+  | 'setPdfReadingMode'
   | 'setSelectionColorPreset'
   | 'setUiFontPreset'
   | 'setWorkspaceSurfaceAssignments'
@@ -216,10 +225,12 @@ function createGeneralAppearanceActions(state: AppearanceState) {
     setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
     setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
     setCustomUiFont: (value: string) => (setCustomUiFont(value), state.setCustomUiFontState(value)),
+    setDimImagesInDarkMode: (value: boolean) => (setDimImagesInDarkMode(value), state.setDimImagesInDarkModeState(value)),
     setInterfaceFontPreset: (value: InterfaceFontPreset) => (setInterfaceFontPreset(value), state.setInterfaceFontPresetState(value)),
     setInterfaceFontSize: (value: number) => (setInterfaceFontSize(value), state.setInterfaceFontSizeState(value)),
     setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
     setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
+    setPdfReadingMode: (value: PdfReadingMode) => (setPdfReadingMode(value), state.setPdfReadingModeState(value)),
     setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
     toggleEditorDisplayMode: () => {
       const next = state.editorDisplayModeState === 'preview' ? 'source' : 'preview';

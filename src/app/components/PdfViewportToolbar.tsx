@@ -5,6 +5,7 @@ interface PdfViewportToolbarProps {
   displayPage: number;
   isVisible: boolean;
   maxPage: number;
+  onPdfReadingModeChange: (value: 'original' | 'inverted' | 'warm') => void;
   onClearSearch: () => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
@@ -20,6 +21,7 @@ interface PdfViewportToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
+  pdfReadingMode: 'original' | 'inverted' | 'warm';
   searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
@@ -33,6 +35,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       displayPage={props.displayPage}
       isVisible={props.isVisible}
       maxPage={props.maxPage}
+      onPdfReadingModeChange={props.onPdfReadingModeChange}
       onClearSearch={props.onClearSearch}
       onFindNext={() => props.onSearchRequest('next')}
       onFindPrevious={() => props.onSearchRequest('previous')}
@@ -49,6 +52,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
       onToolbarInteraction={props.onToolbarInteraction}
       onZoomIn={props.onZoomIn}
       onZoomOut={props.onZoomOut}
+      pdfReadingMode={props.pdfReadingMode}
       searchQuery={props.searchQuery}
       searchStatus={props.searchStatus}
       zoomMode={props.zoomMode}

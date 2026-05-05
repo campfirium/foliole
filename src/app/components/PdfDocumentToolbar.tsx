@@ -5,6 +5,7 @@ interface PdfDocumentToolbarProps {
   displayPage: number;
   isVisible: boolean;
   maxPage: number;
+  onPdfReadingModeChange: (value: 'original' | 'inverted' | 'warm') => void;
   onClearSearch: () => void;
   onFindNext: () => void;
   onFindPrevious: () => void;
@@ -20,6 +21,7 @@ interface PdfDocumentToolbarProps {
   onToolbarInteraction: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  pdfReadingMode: 'original' | 'inverted' | 'warm';
   searchIndexingHint: string | null;
   searchQuery: string;
   searchStatus: PdfSearchStatus;
@@ -55,12 +57,14 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         onMouseLeave={() => props.onToolbarActiveChange(false)}
       >
         <PdfZoomControls
+          onPdfReadingModeChange={props.onPdfReadingModeChange}
           onRotateClockwise={props.onRotateClockwise}
           onSetFitWidth={props.onSetFitWidth}
           onSetZoom={props.onSetZoom}
           onToolbarInteraction={props.onToolbarInteraction}
           onZoomIn={props.onZoomIn}
           onZoomOut={props.onZoomOut}
+          pdfReadingMode={props.pdfReadingMode}
           zoomMode={props.zoomMode}
           zoom={props.zoom}
         />

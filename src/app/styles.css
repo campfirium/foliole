@@ -54,6 +54,10 @@
   --app-inspector-section-bg: #fbfbfb;
   --app-inspector-section-elevated-bg: #ffffff;
   --app-inspector-section-shadow-color: rgb(15 23 42 / 0.03);
+  --pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background)) 58%, rgb(var(--color-bg-panel)) 42%);
+  --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(var(--color-background)) 68%, rgb(var(--color-canvas)) 32%);
+  --pdf-reading-warm-surface-color: color-mix(in srgb, rgb(var(--color-canvas)) 84%, rgb(var(--app-cloze-color-rgb)) 16%);
+  --pdf-reading-warm-text-layer-color: color-mix(in srgb, rgb(var(--color-canvas)) 78%, rgb(var(--app-cloze-color-rgb)) 22%);
   --font-family-interface:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
@@ -795,6 +799,43 @@ body {
   background: var(--app-selection-surface-color);
   color: transparent;
   -webkit-text-fill-color: transparent;
+}
+
+:root[data-pdf-reading-mode='original'] .pdf-document-surface {
+  background: rgb(var(--color-canvas));
+}
+
+:root[data-pdf-reading-mode='original'] .pdf-document-surface .react-pdf__Page {
+  background: rgb(var(--color-canvas));
+}
+
+:root[data-pdf-reading-mode='inverted'] .pdf-document-surface {
+  background: var(--pdf-reading-inverted-surface-color);
+}
+
+:root[data-pdf-reading-mode='inverted'] .pdf-document-surface .react-pdf__Page {
+  background: var(--pdf-reading-inverted-page-color);
+  filter: invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92);
+}
+
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface {
+  background: var(--pdf-reading-warm-surface-color);
+}
+
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface .react-pdf__Page {
+  background: var(--pdf-reading-warm-surface-color);
+}
+
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface .react-pdf__Page canvas {
+  filter: sepia(0.18) saturate(0.82) brightness(0.97);
+}
+
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface .react-pdf__Page .textLayer {
+  background: var(--pdf-reading-warm-text-layer-color);
+}
+
+:root[data-resolved-base-color='dark'][data-dim-images-in-dark-mode='true'] .markdown-editor-host .cm-md-image-element {
+  filter: brightness(0.86) contrast(0.94) saturate(0.92);
 }
 
 .cloze-answer-zone .answer-editor-host .cm-content {

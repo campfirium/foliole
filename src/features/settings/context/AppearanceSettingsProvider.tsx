@@ -11,10 +11,12 @@ import {
   getCustomInterfaceFont,
   getCustomMonospaceFont,
   getCustomUiFont,
+  getDimImagesInDarkMode,
   getInterfaceFontPreset,
   getInterfaceFontSize,
   getFontColorPreset,
   getHighlightColorPreset,
+  getPdfReadingMode,
   getSelectionColorPreset,
   getMonospaceFontPreset,
   getUiFontPreset,
@@ -65,7 +67,9 @@ function useAppearanceStateValues() {
   const [markdownSyntaxVisibilityState, setMarkdownSyntaxVisibilityState] = useState(() => getMarkdownSyntaxVisibility());
   const [editorDisplayModeState, setEditorDisplayModeState] = useState(() => getEditorDisplayMode());
   const [baseColorModeState, setBaseColorModeState] = useState(() => initialModeState.baseColorMode);
+  const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
+  const [pdfReadingModeState, setPdfReadingModeState] = useState(() => getPdfReadingMode());
   const [uiFontPresetState, setUiFontPresetState] = useState(() => getUiFontPreset());
   const [customUiFontState, setCustomUiFontState] = useState(() => getCustomUiFont());
   const [interfaceFontPresetState, setInterfaceFontPresetState] = useState(() => getInterfaceFontPreset());
@@ -78,6 +82,7 @@ function useAppearanceStateValues() {
     ...modeScoped,
     autoLocalizeRemoteImagesState,
     baseColorModeState,
+    dimImagesInDarkModeState,
     customInterfaceFontState,
     customMonospaceFontState,
     customUiFontState,
@@ -86,9 +91,11 @@ function useAppearanceStateValues() {
     interfaceFontSizeState,
     markdownSyntaxVisibilityState,
     monospaceFontPresetState,
+    pdfReadingModeState,
     resolvedBaseColorModeState,
     setAutoLocalizeRemoteImagesState,
     setBaseColorModeState,
+    setDimImagesInDarkModeState,
     setCustomInterfaceFontState,
     setCustomMonospaceFontState,
     setCustomUiFontState,
@@ -97,6 +104,7 @@ function useAppearanceStateValues() {
     setInterfaceFontSizeState,
     setMarkdownSyntaxVisibilityState,
     setMonospaceFontPresetState,
+    setPdfReadingModeState,
     setResolvedBaseColorModeState,
     setUiFontPresetState,
     uiFontPresetState
@@ -156,6 +164,8 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       accentColor: state.accentColorPresetState,
       baseColor: state.baseColorModeState,
       resolvedBaseColor: state.resolvedBaseColorModeState,
+      dimImagesInDarkMode: state.dimImagesInDarkModeState,
+      pdfReadingMode: state.pdfReadingModeState,
       clozeColor: state.clozeColorPresetState,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
@@ -177,11 +187,13 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.customInterfaceFontState,
     state.customMonospaceFontState,
     state.customUiFontState,
+    state.dimImagesInDarkModeState,
     state.fontColorPresetState,
     state.highlightColorPresetState,
     state.interfaceFontPresetState,
     state.interfaceFontSizeState,
     state.monospaceFontPresetState,
+    state.pdfReadingModeState,
     state.selectionColorPresetState,
     state.resolvedBaseColorModeState,
     state.uiFontPresetState,
@@ -205,6 +217,7 @@ function useAppearanceSettingsState() {
       accentColorPreset: state.accentColorPresetState,
       autoLocalizeRemoteImages: state.autoLocalizeRemoteImagesState,
       baseColorMode: state.baseColorModeState,
+      dimImagesInDarkMode: state.dimImagesInDarkModeState,
       resolvedBaseColorMode: state.resolvedBaseColorModeState,
       clozeColorPreset: state.clozeColorPresetState,
       customInterfaceFont: state.customInterfaceFontState,
@@ -219,6 +232,7 @@ function useAppearanceSettingsState() {
       interfaceFontSize: state.interfaceFontSizeState,
       markdownSyntaxVisibility: state.markdownSyntaxVisibilityState,
       monospaceFontPreset: state.monospaceFontPresetState,
+      pdfReadingMode: state.pdfReadingModeState,
       uiFontPreset: state.uiFontPresetState,
       workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
       workspaceSurfacePalette: state.workspaceSurfacePaletteState,
@@ -228,6 +242,7 @@ function useAppearanceSettingsState() {
       state.accentColorPresetState,
       state.autoLocalizeRemoteImagesState,
       state.baseColorModeState,
+      state.dimImagesInDarkModeState,
       state.clozeColorPresetState,
       state.customInterfaceFontState,
       state.customMonospaceFontState,
@@ -241,6 +256,7 @@ function useAppearanceSettingsState() {
       state.interfaceFontSizeState,
       state.markdownSyntaxVisibilityState,
       state.monospaceFontPresetState,
+      state.pdfReadingModeState,
       state.uiFontPresetState,
       state.workspaceSurfaceAssignmentsState,
       state.workspaceSurfacePaletteState

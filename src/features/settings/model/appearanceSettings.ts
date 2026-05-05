@@ -88,17 +88,23 @@ export {
 };
 export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
+export const PDF_READING_MODE_OPTIONS = ['original', 'inverted', 'warm'] as const;
 export type InterfaceFontPreset = (typeof INTERFACE_FONT_OPTIONS)[number];
 export type MonospaceFontPreset = (typeof MONOSPACE_FONT_OPTIONS)[number];
+export type PdfReadingMode = (typeof PDF_READING_MODE_OPTIONS)[number];
 export const INTERFACE_FONT_SIZE_MIN = 12;
 export const INTERFACE_FONT_SIZE_MAX = 36;
 export const INTERFACE_FONT_SIZE_DEFAULT = 17;
+export const DEFAULT_PDF_READING_MODE: PdfReadingMode = 'inverted';
+export const DEFAULT_DIM_IMAGES_IN_DARK_MODE = false;
 const STORAGE_KEYS = {
   uiFont: APP_SETTINGS_STORAGE_KEYS.uiFont,
   customUiFont: APP_SETTINGS_STORAGE_KEYS.customUiFont,
   interfaceFont: APP_SETTINGS_STORAGE_KEYS.interfaceFont,
   monospaceFont: APP_SETTINGS_STORAGE_KEYS.monospaceFont,
   baseColor: APP_SETTINGS_STORAGE_KEYS.baseColor,
+  pdfReadingMode: APP_SETTINGS_STORAGE_KEYS.pdfReadingMode,
+  dimImagesInDarkMode: APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode,
   interfaceFontSize: APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
   customInterfaceFont: APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
   customMonospaceFont: APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
@@ -110,6 +116,10 @@ function isInterfaceFontPreset(value: string): value is InterfaceFontPreset {
 
 function isMonospaceFontPreset(value: string): value is MonospaceFontPreset {
   return MONOSPACE_FONT_OPTIONS.includes(value as MonospaceFontPreset);
+}
+
+function isPdfReadingMode(value: string): value is PdfReadingMode {
+  return PDF_READING_MODE_OPTIONS.includes(value as PdfReadingMode);
 }
 
 function clampFontSize(value: number) {
@@ -185,6 +195,24 @@ export function setBaseColorMode(value: BaseColorMode) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.baseColor, value);
 }
 
+export function getPdfReadingMode(): PdfReadingMode {
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.pdfReadingMode);
+  return raw && isPdfReadingMode(raw) ? raw : DEFAULT_PDF_READING_MODE;
+}
+
+export function setPdfReadingMode(value: PdfReadingMode) {
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.pdfReadingMode, value);
+}
+
+export function getDimImagesInDarkMode() {
+  const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.dimImagesInDarkMode);
+  return raw === null ? DEFAULT_DIM_IMAGES_IN_DARK_MODE : raw === 'true';
+}
+
+export function setDimImagesInDarkMode(value: boolean) {
+  setWhitelistedLocalStorageItem(STORAGE_KEYS.dimImagesInDarkMode, String(value));
+}
+
 export function getInterfaceFontSize() {
   const raw = getWhitelistedLocalStorageItem(STORAGE_KEYS.interfaceFontSize);
   const parsed = Number(raw);
@@ -198,6 +226,8 @@ export function setInterfaceFontSize(value: number) {
 interface ApplyAppearanceSettingsInput {
   baseColor: BaseColorMode;
   resolvedBaseColor: ResolvedBaseColorMode;
+  pdfReadingMode: PdfReadingMode;
+  dimImagesInDarkMode: boolean;
   accentColor: AccentColorPreset;
   fontColor: FontColorPreset;
   selectionColor: SelectionColorPreset;
@@ -217,6 +247,8 @@ interface ApplyAppearanceSettingsInput {
 export function applyAppearanceSettings({
   baseColor,
   resolvedBaseColor,
+  pdfReadingMode,
+  dimImagesInDarkMode,
   accentColor,
   fontColor,
   selectionColor,
@@ -241,6 +273,8 @@ export function applyAppearanceSettings({
   const monospaceFontValue = resolveMonospaceFontFamily(monospaceFont, sanitizeFontFamily(customMonospaceFont));
   const root = document.documentElement;
   root.dataset.baseColor = baseColor;
+  root.dataset.dimImagesInDarkMode = dimImagesInDarkMode ? 'true' : 'false';
+  root.dataset.pdfReadingMode = pdfReadingMode;
   root.dataset.resolvedBaseColor = resolvedBaseColor;
   applyAppearanceColorSettings(root, {
     accentColor,
