@@ -25,7 +25,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         int maxResources = FolioleCompanionMissingResourceQueryRules.attachmentLimit(context, limit);
         for (int index = 0; index < rows.length() && resources.length() < maxResources; index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            if (!isMissingResource(context, row.getString(rowKey(context, "availability")), nullableString(row, rowKey(context, "storageKey")))) continue;
+            if (!isMissingResource(context, rowString(context, row, "availability"), rowNullableString(context, row, "storageKey"))) continue;
             resources.put(toResource(context, row));
         }
         JSObject result = new JSObject();
@@ -43,14 +43,14 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         );
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
-            if (!isMissingResource(context, row.getString(rowKey(context, "availability")), nullableString(row, rowKey(context, "storageKey")))) continue;
+            if (!isMissingResource(context, rowString(context, row, "availability"), rowNullableString(context, row, "storageKey"))) continue;
             summary.add(
                 context,
-                row.getString(rowKey(context, "availability")),
-                row.getLong(rowKey(context, "sizeBytes")),
-                row.getString(rowKey(context, "mimeType")),
-                row.getLong(rowKey(context, "dueReview")) > 0,
-                row.getLong(rowKey(context, "activeTopic")) > 0
+                rowString(context, row, "availability"),
+                rowLong(context, row, "sizeBytes"),
+                rowString(context, row, "mimeType"),
+                rowLong(context, row, "dueReview") > 0,
+                rowLong(context, row, "activeTopic") > 0
             );
         }
         return summary.toJson(context);
@@ -77,7 +77,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         JSONObject row = rows.getJSONObject(0);
         result.put(
             FolioleCompanionMissingResourceQueryRules.attachmentEmptyResultKey(context),
-            isMissingResource(context, row.getString(rowKey(context, "availability")), nullableString(row, rowKey(context, "storageKey"))) ? toResource(context, row) : null
+            isMissingResource(context, rowString(context, row, "availability"), rowNullableString(context, row, "storageKey")) ? toResource(context, row) : null
         );
         return result;
     }
@@ -87,18 +87,13 @@ final class FolioleCompanionAttachmentResourceMissingStore {
         JSONArray resourceFields = FolioleCompanionMissingResourceQueryRules.attachmentArray(context, "resourceFields");
         for (int index = 0; index < resourceFields.length(); index += 1) {
             JSONObject field = resourceFields.getJSONObject(index);
-            String rowKey = rowKey(context, fieldRowKey(context, field));
             String type = fieldTypeKey(context, field);
             resource.put(
                 fieldOutputKey(context, field),
-                fieldType(context, "long").equals(type) ? row.getLong(rowKey) : row.getString(rowKey)
+                fieldType(context, "long").equals(type) ? fieldRowLong(context, row, field) : fieldRowString(context, row, field)
             );
         }
         return resource;
-    }
-
-    private static String nullableString(JSONObject row, String key) {
-        return row.isNull(key) ? null : row.optString(key, null);
     }
 
     private static boolean isMissingResource(Context context, String availability, String storageKey) throws Exception {
@@ -172,6 +167,27 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     private static String rowKey(Context context, String key) throws Exception {
         return FolioleCompanionMissingResourceQueryRules.attachmentRowKey(context, key);
+    }
+
+    private static long rowLong(Context context, JSONObject row, String key) throws Exception {
+        return row.getLong(rowKey(context, key));
+    }
+
+    private static String rowNullableString(Context context, JSONObject row, String key) throws Exception {
+        String rowKey = rowKey(context, key);
+        return row.isNull(rowKey) ? null : row.optString(rowKey, null);
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(rowKey(context, key));
+    }
+
+    private static long fieldRowLong(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getLong(rowKey(context, fieldRowKey(context, field)));
+    }
+
+    private static String fieldRowString(Context context, JSONObject row, JSONObject field) throws Exception {
+        return row.getString(rowKey(context, fieldRowKey(context, field)));
     }
 
     private static String fieldOutputKey(Context context, JSONObject field) throws Exception {

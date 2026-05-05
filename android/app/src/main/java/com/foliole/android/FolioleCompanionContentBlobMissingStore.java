@@ -20,9 +20,9 @@ final class FolioleCompanionContentBlobMissingStore {
                 FolioleCompanionMissingResourceQueryRules.contentHashesQueryName(context),
                 FolioleCompanionMissingResourceQueryRules.contentResultKey(context),
                 new String[] { String.valueOf(FolioleCompanionMissingResourceQueryRules.contentLimit(context, limit)) }
-            );
+        );
         for (int index = 0; index < blobs.length(); index += 1) {
-            hashes.put(blobs.getJSONObject(index).getString(FolioleCompanionMissingResourceQueryRules.contentHashKey(context)));
+            hashes.put(hashString(context, blobs.getJSONObject(index)));
         }
         JSObject result = new JSObject();
         result.put(FolioleCompanionMissingResourceQueryRules.contentHashesResultKey(context), hashes);
@@ -44,9 +44,9 @@ final class FolioleCompanionContentBlobMissingStore {
         for (int index = 0; index < blobs.length(); index += 1) {
             JSONObject blob = blobs.getJSONObject(index);
             count++;
-            long sizeBytes = blob.getLong(rowKey(context, "sizeBytes"));
+            long sizeBytes = rowLong(context, blob, "sizeBytes");
             bytes += sizeBytes;
-            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(blob.getString(rowKey(context, "availability")))) {
+            if (FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "failed").equals(rowString(context, blob, "availability"))) {
                 failedCount++;
                 failedBytes += sizeBytes;
             }
@@ -61,6 +61,18 @@ final class FolioleCompanionContentBlobMissingStore {
 
     private static String rowKey(Context context, String key) throws Exception {
         return FolioleCompanionMissingResourceQueryRules.contentRowKey(context, key);
+    }
+
+    private static String hashString(Context context, JSONObject row) throws Exception {
+        return row.getString(FolioleCompanionMissingResourceQueryRules.contentHashKey(context));
+    }
+
+    private static long rowLong(Context context, JSONObject row, String key) throws Exception {
+        return row.getLong(rowKey(context, key));
+    }
+
+    private static String rowString(Context context, JSONObject row, String key) throws Exception {
+        return row.getString(rowKey(context, key));
     }
 
     private static String summaryKey(Context context, String key) throws Exception {

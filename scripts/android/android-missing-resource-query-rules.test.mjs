@@ -65,6 +65,9 @@ describe('Android missing resource query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.attachmentSummaryKey(context, "count")');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentRowKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionMissingResourceQueryRules.contentSummaryKey(context, key)');
+    expect(combinedStoreSource).toContain('rowString(context, row, "availability")');
+    expect(combinedStoreSource).toContain('rowLong(context, row, "sizeBytes")');
+    expect(combinedStoreSource).toContain('fieldRowString(context, row, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldTypeKey(context, field)');
@@ -76,6 +79,10 @@ describe('Android missing resource query rules', () => {
     expect(combinedStoreSource).not.toContain('rowKeys.getString("availability")');
     expect(combinedStoreSource).not.toContain('keys.getString("count")');
     expect(combinedStoreSource).not.toContain('categories.getString("imagePrefix")');
+    expect(combinedStoreSource).not.toContain('row.getString(rowKey(context, "availability"))');
+    expect(combinedStoreSource).not.toContain('row.getLong(rowKey(context, "sizeBytes"))');
+    expect(combinedStoreSource).not.toContain('blob.getString(rowKey(context, "availability"))');
+    expect(combinedStoreSource).not.toContain('blob.getLong(rowKey(context, "sizeBytes"))');
     expect(combinedStoreSource).not.toContain('"attachmentResourceMissingRows"');
     expect(combinedStoreSource).not.toContain('"contentBlobMissingHashes"');
     expect(combinedStoreSource).not.toContain('"missing_attachment_resource_count"');
