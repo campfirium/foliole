@@ -24,8 +24,12 @@ vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
 const attachmentSyncMock = vi.hoisted(() => ({
   syncCompanionAttachmentResourceFromDesktop: vi.fn(async () => ({ attachmentId: 'inline-att-1', status: 'cached' }))
 }));
+const syncObjectMock = vi.hoisted(() => ({
+  saveCompanionSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' }))
+}));
 
 vi.mock('@/shared/platform/companionDesktopAttachmentResources', () => attachmentSyncMock);
+vi.mock('@/shared/platform/companionSyncObjects', () => syncObjectMock);
 
 function createPdfReadableSurface() {
   return {
@@ -43,6 +47,21 @@ function createPdfReadableSurface() {
     },
     recentArticles: [],
     selectedBrowseNodeId: 'topic-1'
+  };
+}
+
+function createSecondPdfReadableSurface() {
+  return {
+    ...createPdfReadableSurface(),
+    readableArticle: {
+      content: '# Second PDF text\n\nReadable body',
+      hideTitleHeading: false,
+      nodeId: 'topic-2',
+      pdfAttachmentId: 'pdf-attachment-2',
+      textAnchorDecorations: [],
+      title: 'Second PDF text'
+    },
+    selectedBrowseNodeId: 'topic-2'
   };
 }
 
@@ -91,8 +110,8 @@ function createFailedBodySurface() {
   };
 }
 
-function renderSurface(surface: unknown, workspaceSync: unknown = {}) {
-  render(renderCompanionShellContent({
+function renderSurfaceElement(surface: unknown, workspaceSync: unknown = {}) {
+  return renderCompanionShellContent({
     hasSnapshot: true,
     onBackToSettingsList: vi.fn(),
     onOpenSyncSettingsPage: vi.fn(),
@@ -103,7 +122,11 @@ function renderSurface(surface: unknown, workspaceSync: unknown = {}) {
     surface: surface as never,
     workspaceError: null,
     workspaceSync: workspaceSync as never
-  }));
+  });
+}
+
+function renderSurface(surface: unknown, workspaceSync: unknown = {}) {
+  return render(renderSurfaceElement(surface, workspaceSync));
 }
 
 function testPrimaryPdfReadingSurface() {
@@ -131,11 +154,29 @@ async function testInlineAttachmentSync() {
 
   fireEvent.click(screen.getByRole('button', { name: 'Load inline attachment' }));
 
+  await waitFor(() => expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('topic-1'));
   expect(attachmentSyncMock.syncCompanionAttachmentResourceFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641',
     'inline-att-1'
   );
   await waitFor(() => expect(pullFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641'));
+}
+
+async function testInlineAttachmentSyncUsesLatestTopic() {
+  const workspaceSync = {
+    pullFromDesktop: vi.fn(async () => undefined),
+    status: 'idle',
+    state: {
+      endpoint_url: 'http://10.0.2.2:38641',
+      remembered_targets: []
+    }
+  };
+  const { rerender } = renderSurface(createPdfReadableSurface(), workspaceSync);
+  rerender(renderSurfaceElement(createSecondPdfReadableSurface(), workspaceSync));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load inline attachment' }));
+
+  await waitFor(() => expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('topic-2'));
 }
 
 function testMissingBodyState() {
@@ -162,6 +203,7 @@ function testFailedBodyState() {
 describe('CompanionShellContent PDF articles', () => {
   it('keeps extracted PDF text as the primary mobile reading surface', testPrimaryPdfReadingSurface);
   it('syncs a missing inline attachment from the current topic surface', testInlineAttachmentSync);
+  it('syncs a missing inline attachment against the latest topic after switching', testInlineAttachmentSyncUsesLatestTopic);
   it('shows a syncing state when the topic body blob is not local yet', testMissingBodyState);
   it('shows an empty state when the selected topic has no body', testEmptyBodyState);
   it('shows a retryable failed state when body blob sync fails validation', testFailedBodyState);

@@ -16,6 +16,7 @@ import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
 import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
 import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
+import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
 import { AppButton } from '@/shared/ui';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
@@ -65,11 +66,12 @@ export function ReadableArticleDocument(props: {
     if (!props.syncEndpointUrl) {
       return;
     }
+    await saveCompanionSyncActiveViewState(props.readableArticle.nodeId).catch(() => undefined);
     const result = await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
     if (result.status === 'cached') {
       props.onAttachmentResourceSynced?.();
     }
-  }, [props.onAttachmentResourceSynced, props.syncEndpointUrl]);
+  }, [props.onAttachmentResourceSynced, props.readableArticle.nodeId, props.syncEndpointUrl]);
 
   if (pdfAttachmentId && isViewingPdfOriginal) {
     return (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { syncCompanionContentBlobFromDesktop } from '../shared/platform/companionDesktopSyncObjects';
+import { saveCompanionSyncActiveViewState } from '../shared/platform/companionSyncObjects';
 
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -35,12 +36,15 @@ export function useCompanionMissingBodySync(args: {
     if (!article?.bodyBlobHash || !endpointUrl) return;
     if (article.bodyStatus !== 'missing' && article.bodyStatus !== 'failed') return;
 
-    const syncKey = `${article.nodeId}:${article.bodyBlobHash}:${article.bodyStatus}`;
+    const bodyBlobHash = article.bodyBlobHash;
+    const syncKey = `${article.nodeId}:${bodyBlobHash}:${article.bodyStatus}`;
     if (attemptedBodySyncKeysRef.current.has(syncKey)) return;
     attemptedBodySyncKeysRef.current.add(syncKey);
     setFetchingBodyKey(syncKey);
 
-    void syncCompanionContentBlobFromDesktop(endpointUrl, article.bodyBlobHash)
+    void saveCompanionSyncActiveViewState(article.nodeId)
+      .catch(() => undefined)
+      .then(() => syncCompanionContentBlobFromDesktop(endpointUrl, bodyBlobHash))
       .then(async (result) => {
         if (currentArticleNodeIdRef.current === article.nodeId) {
           await args.workspaceSync.refreshFromDevice();
