@@ -1,18 +1,18 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const bridgeMocks = vi.hoisted(() => ({
+const runtimeRepositoryMocks = vi.hoisted(() => ({
   loadDesktopCompanionPairingOverview: vi.fn(),
   onDesktopCompanionPairingRequestsChanged: vi.fn()
 }));
 
-vi.mock('./desktopCompanionPairingBridge', () => ({
+vi.mock('./desktopCompanionPairingRuntimeRepository', () => ({
   approveDesktopCompanionPairRequest: vi.fn(),
   clearDesktopCompanionPairedDevices: vi.fn(),
   disableDesktopCompanionSync: vi.fn(),
   enableDesktopCompanionSync: vi.fn(),
-  loadDesktopCompanionPairingOverview: bridgeMocks.loadDesktopCompanionPairingOverview,
-  onDesktopCompanionPairingRequestsChanged: bridgeMocks.onDesktopCompanionPairingRequestsChanged,
+  loadDesktopCompanionPairingOverview: runtimeRepositoryMocks.loadDesktopCompanionPairingOverview,
+  onDesktopCompanionPairingRequestsChanged: runtimeRepositoryMocks.onDesktopCompanionPairingRequestsChanged,
   removeDesktopCompanionPairedDevice: vi.fn(),
   rejectDesktopCompanionPairRequest: vi.fn()
 }));
@@ -56,8 +56,8 @@ describe('useDesktopCompanionPairingRequests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    bridgeMocks.loadDesktopCompanionPairingOverview.mockResolvedValue(createOverview(0));
-    bridgeMocks.onDesktopCompanionPairingRequestsChanged.mockReturnValue(() => undefined);
+    runtimeRepositoryMocks.loadDesktopCompanionPairingOverview.mockResolvedValue(createOverview(0));
+    runtimeRepositoryMocks.onDesktopCompanionPairingRequestsChanged.mockReturnValue(() => undefined);
   });
 
   afterEach(() => {
@@ -69,7 +69,7 @@ describe('useDesktopCompanionPairingRequests', () => {
       configurable: true,
       value: 'hidden'
     });
-    bridgeMocks.loadDesktopCompanionPairingOverview
+    runtimeRepositoryMocks.loadDesktopCompanionPairingOverview
       .mockResolvedValueOnce(createOverview(0))
       .mockResolvedValueOnce(createOverview(1));
 
@@ -78,25 +78,25 @@ describe('useDesktopCompanionPairingRequests', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(bridgeMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(1);
+    expect(runtimeRepositoryMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
     });
 
-    expect(bridgeMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(2);
+    expect(runtimeRepositoryMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(2);
     expect(result.current.overview.pending_requests).toHaveLength(1);
   });
 
   it('refreshes immediately when native pairing requests change', async () => {
     let listener: (() => void) | null = null;
-    bridgeMocks.onDesktopCompanionPairingRequestsChanged.mockImplementation((nextListener: () => void) => {
+    runtimeRepositoryMocks.onDesktopCompanionPairingRequestsChanged.mockImplementation((nextListener: () => void) => {
       listener = nextListener;
       return () => {
         listener = null;
       };
     });
-    bridgeMocks.loadDesktopCompanionPairingOverview
+    runtimeRepositoryMocks.loadDesktopCompanionPairingOverview
       .mockResolvedValueOnce(createOverview(0))
       .mockResolvedValueOnce(createOverview(1));
 
@@ -112,7 +112,7 @@ describe('useDesktopCompanionPairingRequests', () => {
       await Promise.resolve();
     });
 
-    expect(bridgeMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(2);
+    expect(runtimeRepositoryMocks.loadDesktopCompanionPairingOverview).toHaveBeenCalledTimes(2);
     expect(result.current.overview.pending_requests).toHaveLength(1);
   });
 });

@@ -11,7 +11,7 @@ import {
   onDesktopCompanionPairingRequestsChanged,
   removeDesktopCompanionPairedDevice,
   rejectDesktopCompanionPairRequest
-} from './desktopCompanionPairingBridge';
+} from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 
 const EMPTY_OVERVIEW: DesktopCompanionPairingOverviewPayload = {
