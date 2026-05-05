@@ -10,7 +10,7 @@ const SQL_LITERAL_PATTERN = /"[^"\n]*(?:SELECT|PRAGMA|sqlite_master)[^"\n]*"/g;
 
 const ALLOWED_SQL_LITERALS = [
   {
-    file: 'FolioleCompanionDatabaseBackup.java',
+    file: 'FolioleCompanionSqliteRuntime.java',
     literal: '"PRAGMA wal_checkpoint(FULL)"'
   },
   {
@@ -67,10 +67,7 @@ function isAllowedAccessLine(entry) {
       entry.text.includes('database.rawQuery(sql, args)')
     );
   }
-  return [
-    'FolioleCompanionDatabaseBackup.java',
-    'FolioleCompanionSqliteRuntime.java'
-  ].includes(entry.file);
+  return entry.file === 'FolioleCompanionSqliteRuntime.java';
 }
 
 describe('Android Java SQL surface', () => {

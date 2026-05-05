@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.io.File;
@@ -19,7 +18,7 @@ final class FolioleCompanionDatabaseBackup {
     private FolioleCompanionDatabaseBackup() {}
 
     static File createPreSyncBackup(Context context, SQLiteDatabase database, String reason) throws IOException {
-        checkpointWal(database);
+        FolioleCompanionSqliteRuntime.checkpointWal(database);
         File source = new File(database.getPath());
         if (!source.isFile()) {
             throw new IOException("Companion database file is missing.");
@@ -40,14 +39,6 @@ final class FolioleCompanionDatabaseBackup {
         String safeReason = reason == null ? "sync" : reason.replaceAll("[^A-Za-z0-9._-]+", "-");
         String timestamp = Instant.now().toString().replace(':', '-').replace('.', '-');
         return "sync-pre-" + safeReason + "-" + timestamp + ".db";
-    }
-
-    private static void checkpointWal(SQLiteDatabase database) {
-        try (Cursor ignored = database.rawQuery("PRAGMA wal_checkpoint(FULL)", null)) {
-            if (ignored.moveToFirst()) {
-                ignored.getInt(0);
-            }
-        }
     }
 
     private static void copyFile(File source, File target) throws IOException {

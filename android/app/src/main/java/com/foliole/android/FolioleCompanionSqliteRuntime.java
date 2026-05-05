@@ -25,4 +25,12 @@ final class FolioleCompanionSqliteRuntime {
         }
         return false;
     }
+
+    static void checkpointWal(SQLiteDatabase database) {
+        try (Cursor ignored = database.rawQuery("PRAGMA wal_checkpoint(FULL)", null)) {
+            if (ignored.moveToFirst()) {
+                ignored.getInt(0);
+            }
+        }
+    }
 }
