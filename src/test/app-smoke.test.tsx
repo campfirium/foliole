@@ -35,6 +35,11 @@ const mockEditorAdapter: EditorAdapter = {
   },
   getScrollTop: () => 0,
   setScrollTop: () => undefined,
+  getScrollMetrics: () => ({
+    clientHeight: 1,
+    scrollHeight: 1,
+    scrollTop: 0
+  }),
   replaceSelection: (content: string) => {
     const from = Math.min(mockEditorState.selectionFrom, mockEditorState.selectionTo);
     const to = Math.max(mockEditorState.selectionFrom, mockEditorState.selectionTo);
@@ -43,7 +48,8 @@ const mockEditorAdapter: EditorAdapter = {
     mockEditorState.selectionFrom = nextCursor;
     mockEditorState.selectionTo = nextCursor;
   },
-  onContentChange: () => () => undefined
+  onContentChange: () => () => undefined,
+  onScroll: () => () => undefined
 };
 
 vi.mock('../features/editor/components/MarkdownEditor', () => ({

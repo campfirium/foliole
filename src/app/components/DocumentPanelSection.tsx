@@ -110,45 +110,43 @@ export function DocumentPanelSection({
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 p-4 max-[1080px]:p-2">
-          <div className="flex h-full min-h-0 w-full gap-2" data-resizing={isDocumentResizing}>
+        <div className="flex min-h-0 flex-1 pl-4 pr-0 pt-4 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0">
+          <div className="relative flex h-full min-h-0 w-full" data-resizing={isDocumentResizing}>
+            <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+              <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
+                <MarkdownEditor
+                  ariaLabel="Prompt editor"
+                  className="prompt-editor-host"
+                  debugId="prompt-editor"
+                  nodeId={editorNodeId}
+                  nodeViewState={editorNodeViewState}
+                  onChange={onEditorChange}
+                  onReady={onEditorReady}
+                  value={editorContent}
+                />
+              </div>
+              {hasAnswerSection ? (
+                <section
+                  aria-label="Cloze answer section"
+                  className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3"
+                >
+                  <MarkdownEditor
+                    ariaLabel="Answer editor"
+                    className="answer-editor-host min-h-0"
+                    debugId="answer-editor"
+                    nodeId={editorNodeId}
+                    onChange={onAnswerChange}
+                    value={reveal}
+                  />
+                </section>
+              ) : null}
+            </div>
             <DocumentWidthHandle
               ariaLabel="Resize document width from left"
               onPointerDown={(event) => onStartDocumentResize('left', event)}
               onResetLayout={onResetLayout}
               side="left"
             />
-            <div className="mx-auto flex h-full min-h-0 w-full [width:min(100%,var(--document-max-width))]">
-              <div className="flex h-full min-h-0 w-full flex-1 flex-col">
-                <div className="min-h-0 w-full flex-1" onContextMenu={onEditorContextMenu}>
-                  <MarkdownEditor
-                    ariaLabel="Prompt editor"
-                    className="prompt-editor-host"
-                    debugId="prompt-editor"
-                    nodeId={editorNodeId}
-                    nodeViewState={editorNodeViewState}
-                    onChange={onEditorChange}
-                    onReady={onEditorReady}
-                    value={editorContent}
-                  />
-                </div>
-                {hasAnswerSection ? (
-                  <section
-                    aria-label="Cloze answer section"
-                    className="flex min-h-0 flex-[0_0_calc(30dvh+60px)] overflow-hidden border-t border-border pt-3"
-                  >
-                    <MarkdownEditor
-                      ariaLabel="Answer editor"
-                      className="answer-editor-host min-h-0"
-                      debugId="answer-editor"
-                      nodeId={editorNodeId}
-                      onChange={onAnswerChange}
-                      value={reveal}
-                    />
-                  </section>
-                ) : null}
-              </div>
-            </div>
             <DocumentWidthHandle
               ariaLabel="Resize document width from right"
               onPointerDown={(event) => onStartDocumentResize('right', event)}
@@ -199,14 +197,19 @@ interface DocumentWidthHandleProps {
 }
 
 function DocumentWidthHandle({ ariaLabel, onPointerDown, onResetLayout, side }: DocumentWidthHandleProps) {
+  const style =
+    side === 'left'
+      ? { left: 'max(0px, calc((100% - min(100%, var(--document-max-width))) / 2 - 5px))' }
+      : { right: 'max(0px, calc((100% - min(100%, var(--document-max-width))) / 2 - 5px))' };
+
   return (
-    <div className="relative min-w-0 flex-1 max-[1080px]:hidden" data-side={side}>
+    <div className="pointer-events-none absolute top-0 h-full w-3 max-[1080px]:hidden" data-side={side} style={style}>
       <div
         aria-label={ariaLabel}
         aria-orientation="vertical"
         className={cn(
-          'absolute top-0 h-full w-2.5 cursor-col-resize before:absolute before:h-full before:border-l before:border-transparent before:transition-colors hover:before:border-border-strong focus-visible:before:border-border-strong',
-          side === 'left' ? 'right-0 before:right-0' : 'left-0 before:left-0'
+          'pointer-events-auto absolute top-0 h-full w-2.5 cursor-col-resize before:absolute before:h-full before:border-l before:border-transparent before:transition-colors hover:before:border-border-strong focus-visible:before:border-border-strong',
+          side === 'left' ? 'left-0 before:right-0' : 'right-0 before:left-0'
         )}
         onDoubleClick={onResetLayout}
         onMouseDown={onPointerDown}

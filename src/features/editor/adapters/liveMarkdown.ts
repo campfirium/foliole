@@ -378,9 +378,13 @@ const liveMarkdownTheme = EditorView.theme({
     lineHeight: '1.72'
   },
   '.cm-content': {
+    boxSizing: 'border-box',
     fontFamily: 'var(--font-family-sans)',
     fontSize: '1.0625rem',
-    padding: '0.72rem 1.1rem 2rem'
+    margin: '0 auto',
+    maxWidth: 'min(100%, var(--document-max-width, 860px))',
+    padding: '0.72rem 1.5rem 0.6rem',
+    width: '100%'
   },
   '.cm-widgetBuffer': {
     width: '0px'

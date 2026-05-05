@@ -6,7 +6,7 @@ import { EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
-import type { EditorAdapter, EditorSelection } from './EditorAdapter';
+import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 import { liveMarkdown } from './liveMarkdown';
 
 interface CodeMirrorEditorAdapterOptions {
@@ -134,6 +134,15 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.view.scrollDOM.scrollTop = Math.max(0, scrollTop);
   }
 
+  getScrollMetrics(): EditorScrollMetrics {
+    const scroller = this.view.scrollDOM;
+    return {
+      clientHeight: scroller.clientHeight,
+      scrollHeight: scroller.scrollHeight,
+      scrollTop: scroller.scrollTop
+    };
+  }
+
   replaceSelection(content: string) {
     const { from, to } = this.view.state.selection.main;
     this.view.dispatch({
@@ -147,6 +156,15 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.onChange = listener;
     return () => {
       this.onChange = undefined;
+    };
+  }
+
+  onScroll(listener: () => void) {
+    const scroller = this.view.scrollDOM;
+    const handleScroll = () => listener();
+    scroller.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener('scroll', handleScroll);
     };
   }
 }
