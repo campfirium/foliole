@@ -227,7 +227,7 @@ describe('FolioleCompanionSyncObjectStore', () => {
       source.indexOf('private static void saveRememberedTargets')
     );
 
-    expect(statusBody).toContain('normalized.equals("accepted")');
-    expect(statusBody).toContain('normalized.equals("pending")');
+    expect(statusBody).toContain('syncOnboardingStatuses(context).contains(normalized)');
+    expect(statusBody).toContain('FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncOnboarding", "statuses")');
   });
 });

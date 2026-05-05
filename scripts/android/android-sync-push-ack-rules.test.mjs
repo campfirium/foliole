@@ -54,6 +54,18 @@ const VIEW_STATE_SYNC_STORE = path.join(
   'android',
   'FolioleCompanionViewStateSyncStore.java'
 );
+const SYNC_META_STORE = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncMetaStore.java'
+);
 
 describe('Android sync push ack protocol rules', () => {
   it('loads push ack protocol rules from generated definitions', async () => {
@@ -82,5 +94,26 @@ describe('Android sync push ack protocol rules', () => {
     expect(stateWriteSource).not.toContain('"node_review"');
     expect(stateWriteSource).not.toContain('"setting"');
     expect(viewStateSource).not.toContain('"view_state"');
+  });
+
+  it('loads sync meta status sets from generated definitions', async () => {
+    const source = await readFile(SYNC_META_STORE, 'utf8');
+
+    expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncEvents.statuses).toEqual([
+      'started',
+      'completed',
+      'failed',
+      'skipped'
+    ]);
+    expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncOnboarding.statuses).toEqual([
+      'accepted',
+      'completed',
+      'dismissed',
+      'pending'
+    ]);
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncEvents", "statuses")');
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncOnboarding", "statuses")');
+    expect(source).not.toContain('normalized.equals("started")');
+    expect(source).not.toContain('normalized.equals("accepted")');
   });
 });

@@ -2,10 +2,8 @@ package com.foliole.android;
 
 import android.content.Context;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.HashSet;
 import java.util.Set;
 
 final class FolioleCompanionSyncPushAckRules {
@@ -16,10 +14,10 @@ final class FolioleCompanionSyncPushAckRules {
 
     private FolioleCompanionSyncPushAckRules(JSONObject definitions) throws Exception {
         JSONObject pushAck = definitions.getJSONObject("pushAck");
-        confirmingStatuses = stringSet(pushAck.getJSONArray("confirmingStatuses"));
-        stateSeqOptionalObjectTypes = stringSet(pushAck.getJSONArray("stateSeqOptionalObjectTypes"));
-        stateSeqRejectedObjectTypes = stringSet(pushAck.getJSONArray("stateSeqRejectedObjectTypes"));
-        statuses = stringSet(pushAck.getJSONArray("statuses"));
+        confirmingStatuses = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "confirmingStatuses");
+        stateSeqOptionalObjectTypes = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "stateSeqOptionalObjectTypes");
+        stateSeqRejectedObjectTypes = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "stateSeqRejectedObjectTypes");
+        statuses = FolioleCompanionSyncProtocolDefinitions.stringSet(pushAck, "statuses");
     }
 
     static FolioleCompanionSyncPushAckRules load(Context context) throws Exception {
@@ -46,14 +44,5 @@ final class FolioleCompanionSyncPushAckRules {
 
     private static boolean hasIdentity(String clientOpId, String objectId) {
         return !clientOpId.isEmpty() && !objectId.isEmpty();
-    }
-
-    private static Set<String> stringSet(JSONArray values) throws Exception {
-        Set<String> result = new HashSet<>();
-        for (int index = 0; index < values.length(); index += 1) {
-            String value = values.getString(index).trim();
-            if (!value.isEmpty()) result.add(value);
-        }
-        return result;
     }
 }

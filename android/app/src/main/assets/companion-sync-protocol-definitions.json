@@ -17,6 +17,27 @@
       "rejected"
     ]
   },
+  "syncEvents": {
+    "completedStatus": "completed",
+    "fallbackStatus": "failed",
+    "skippedStatus": "skipped",
+    "statuses": [
+      "started",
+      "completed",
+      "failed",
+      "skipped"
+    ]
+  },
+  "syncOnboarding": {
+    "completedStatus": "completed",
+    "fallbackStatus": "pending",
+    "statuses": [
+      "accepted",
+      "completed",
+      "dismissed",
+      "pending"
+    ]
+  },
   "syncObjectTypes": {
     "nodeReading": "node_reading",
     "nodeReview": "node_review",

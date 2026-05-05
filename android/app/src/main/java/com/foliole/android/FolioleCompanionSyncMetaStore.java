@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 final class FolioleCompanionSyncMetaStore {
@@ -52,7 +53,7 @@ final class FolioleCompanionSyncMetaStore {
     }
 
     static JSObject saveSyncOnboardingStatus(Context context, SQLiteDatabase database, String status) throws Exception {
-        FolioleCompanionMetaRecords.saveValue(context, database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, normalizeSyncOnboardingStatus(status), Instant.now().toString());
+        FolioleCompanionMetaRecords.saveValue(context, database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, normalizeSyncOnboardingStatus(context, status), Instant.now().toString());
         return loadWorkspaceSyncState(context, database);
     }
 
@@ -103,7 +104,7 @@ final class FolioleCompanionSyncMetaStore {
     private static void saveSyncEvent(Context context, SQLiteDatabase database, String endpointUrl, String status, String message, String occurredAt) throws Exception {
         List<JSONObject> events = loadSyncEvents(context, database);
         JSONArray nextEvents = new JSONArray();
-        String normalizedStatus = normalizeSyncEventStatus(status);
+        String normalizedStatus = normalizeSyncEventStatus(context, status);
         String normalizedOccurredAt = occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim();
         JSONObject event = new JSONObject();
         event.put("id", UUID.randomUUID().toString());
@@ -116,20 +117,21 @@ final class FolioleCompanionSyncMetaStore {
             nextEvents.put(events.get(index));
         }
         FolioleCompanionMetaRecords.saveValue(context, database, WORKSPACE_SYNC_EVENTS_KEY, nextEvents.toString(), Instant.now().toString());
-        if ("skipped".equals(normalizedStatus) || ("completed".equals(normalizedStatus) && FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message")))) {
+        if (
+            syncEventSkippedStatus(context).equals(normalizedStatus) ||
+            (syncEventCompletedStatus(context).equals(normalizedStatus) && FULL_SYNC_COMPLETED_MESSAGE.equals(event.optString("message")))
+        ) {
             FolioleCompanionMetaRecords.saveValue(context, database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY, normalizedOccurredAt, normalizedOccurredAt);
         }
     }
 
-    private static String normalizeSyncEventStatus(String status) {
+    private static String normalizeSyncEventStatus(Context context, String status) throws Exception {
+        String fallbackStatus = syncEventFallbackStatus(context);
         if (status == null) {
-            return "failed";
+            return fallbackStatus;
         }
         String normalized = status.trim();
-        if (normalized.equals("started") || normalized.equals("completed") || normalized.equals("failed") || normalized.equals("skipped")) {
-            return normalized;
-        }
-        return "failed";
+        return syncEventStatuses(context).contains(normalized) ? normalized : fallbackStatus;
     }
 
     private static List<String> loadRememberedTargets(Context context, SQLiteDatabase database) throws Exception {
@@ -175,25 +177,50 @@ final class FolioleCompanionSyncMetaStore {
 
     private static String loadSyncOnboardingStatus(Context context, SQLiteDatabase database, String lastSyncedAt, JSObject workspaceSnapshot) throws Exception {
         String status = FolioleCompanionMetaRecords.loadValue(context, database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY);
-        if (isValidSyncOnboardingStatus(status)) {
+        if (isValidSyncOnboardingStatus(context, status)) {
             return status.trim();
         }
-        return lastSyncedAt != null || workspaceSnapshot != null ? "completed" : "pending";
+        return lastSyncedAt != null || workspaceSnapshot != null ? syncOnboardingCompletedStatus(context) : syncOnboardingFallbackStatus(context);
     }
 
-    private static String normalizeSyncOnboardingStatus(String status) {
-        return isValidSyncOnboardingStatus(status) ? status.trim() : "pending";
+    private static String normalizeSyncOnboardingStatus(Context context, String status) throws Exception {
+        return isValidSyncOnboardingStatus(context, status) ? status.trim() : syncOnboardingFallbackStatus(context);
     }
 
-    private static boolean isValidSyncOnboardingStatus(String status) {
+    private static boolean isValidSyncOnboardingStatus(Context context, String status) throws Exception {
         if (status == null) {
             return false;
         }
         String normalized = status.trim();
-        return normalized.equals("accepted") ||
-            normalized.equals("completed") ||
-            normalized.equals("dismissed") ||
-            normalized.equals("pending");
+        return syncOnboardingStatuses(context).contains(normalized);
+    }
+
+    private static Set<String> syncEventStatuses(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncEvents", "statuses");
+    }
+
+    private static String syncEventCompletedStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "completedStatus");
+    }
+
+    private static String syncEventFallbackStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fallbackStatus");
+    }
+
+    private static String syncEventSkippedStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "skippedStatus");
+    }
+
+    private static Set<String> syncOnboardingStatuses(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncOnboarding", "statuses");
+    }
+
+    private static String syncOnboardingCompletedStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncOnboarding", "completedStatus");
+    }
+
+    private static String syncOnboardingFallbackStatus(Context context) throws Exception {
+        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncOnboarding", "fallbackStatus");
     }
 
     private static void saveRememberedTargets(Context context, SQLiteDatabase database, List<String> rememberedTargets, String updatedAt) throws Exception {
