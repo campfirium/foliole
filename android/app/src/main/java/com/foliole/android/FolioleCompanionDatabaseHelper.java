@@ -118,17 +118,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return result;
     }
 
-    JSObject applyDesktopSyncPack(String url, JSONObject headers) throws Exception {
-        File packFile = FolioleCompanionSyncPackTransfer.downloadToCache(context, url, headers);
-        try {
-            return applySyncPack(packFile.getAbsolutePath());
-        } finally {
-            if (packFile.exists() && !packFile.delete()) {
-                packFile.deleteOnExit();
-            }
-        }
-    }
-
     JSObject syncAttachmentResource(String attachmentId, String contentHash, String url, JSONObject headers) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionAttachmentResourceStore.syncResource(context, database, attachmentId, contentHash, url, headers);
