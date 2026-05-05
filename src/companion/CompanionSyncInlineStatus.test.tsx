@@ -14,6 +14,7 @@ function createWorkspaceSync(overrides: Record<string, unknown> = {}) {
     state: {
       endpoint_url: 'http://10.0.2.2:38641',
       last_synced_at: '2026-04-25T09:00:00.000Z',
+      remembered_targets: ['http://10.0.2.2:38641'],
       sync_events: []
     },
     status: 'idle',
@@ -38,6 +39,25 @@ describe('CompanionSyncInlineStatus visibility', () => {
     expect(screen.getByText('2 changes waiting to sync.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
     expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  });
+
+  it('uses a remembered sync target when the active endpoint is missing', async () => {
+    syncObjectsMock.loadCompanionPendingSyncSummary.mockResolvedValue({ pendingCount: 1 });
+    const workspaceSync = createWorkspaceSync({
+      state: {
+        endpoint_url: null,
+        last_synced_at: '2026-04-25T09:00:00.000Z',
+        remembered_targets: ['http://192.168.1.44:38641'],
+        sync_events: []
+      }
+    });
+    const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
+
+    render(<CompanionSyncInlineStatus workspaceSync={workspaceSync as never} />);
+
+    expect(await screen.findByText('Pending sync')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
+    expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://192.168.1.44:38641');
   });
 
   it('stays hidden when there is no pending work or error', async () => {

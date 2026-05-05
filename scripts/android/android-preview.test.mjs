@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -111,6 +111,37 @@ describe('android-preview.sh', () => {
       expect(result.stdout).toContain('[android-preview] status: FAILED');
       expect(result.stdout).not.toContain('should-not-run');
       expect(result.stdout).not.toContain('[android-preview] begin: android-deploy');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('uses a kill-after timeout for hung preview subprocesses', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-kill-after-'));
+    try {
+      const mockBinDir = path.join(tempRoot, 'bin');
+      await mkdir(mockBinDir);
+      await writeExecutable(tempRoot, 'bin/timeout', [
+        '#!/usr/bin/env bash',
+        'echo timeout-args:$*',
+        'exit 124'
+      ].join('\n'));
+      const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\necho should-not-run\nexit 64\n');
+
+      const result = await runAndroidPreview(tempRoot, {
+        PATH: `${mockBinDir}${path.delimiter}${process.env.PATH}`,
+        WINDOWS_SYNC_SCRIPT: failIfCalled,
+        ANDROID_SYNC_SCRIPT: failIfCalled,
+        ANDROID_EMULATOR_SCRIPT: failIfCalled,
+        ANDROID_DEPLOY_SCRIPT: failIfCalled,
+        ANDROID_PREVIEW_AVD: 'Test_AVD',
+        ANDROID_PREVIEW_KILL_AFTER_SECONDS: '3',
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'android-preview-mirror')
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('timeout-args:--kill-after=3 600');
+      expect(result.stdout).toContain('[android-preview] failed at: windows sync');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

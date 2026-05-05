@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { loadCompanionPendingSyncSummary } from '../shared/platform/companionSyncObjects';
 
+import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
@@ -35,7 +36,7 @@ export function CompanionSyncInlineStatus(props: {
 }) {
   const { workspaceSync } = props;
   const pendingCount = usePendingSyncCount(workspaceSync);
-  const endpointUrl = workspaceSync.state.endpoint_url;
+  const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state);
   const isSyncing = workspaceSync.status === 'syncing';
 
   if (!isSyncing && !workspaceSync.error && pendingCount <= 0) {

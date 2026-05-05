@@ -14,15 +14,84 @@ const syncObjectsMock = vi.hoisted(() => ({
 vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
 
-function createSyncState(): NativeCompanionWorkspaceSyncState {
+function createSyncState(overrides: Partial<NativeCompanionWorkspaceSyncState> = {}): NativeCompanionWorkspaceSyncState {
   return {
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: '2026-04-25T08:00:00.000Z',
     remembered_targets: ['http://10.0.2.2:38641'],
     sync_events: [],
     sync_onboarding_status: 'completed',
-    workspace_snapshot: null
+    workspace_snapshot: null,
+    ...overrides
   };
+}
+
+async function testUsesStreamSyncDirectly() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setState = vi.fn();
+  const setStatus = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState,
+    setStatus,
+    state: createSyncState()
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Auto sync completed.',
+    status: 'completed'
+  }));
+  expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
+  expect(setStatus).toHaveBeenLastCalledWith('idle');
+}
+
+async function testUsesRememberedSyncTarget() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState({
+      endpoint_url: null,
+      remembered_targets: ['http://192.168.1.44:38641']
+    })
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://192.168.1.44:38641');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    endpointUrl: 'http://192.168.1.44:38641',
+    status: 'started'
+  }));
+}
+
+async function testKeepsUnreachableDesktopQuiet() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue(new Error('Desktop unreachable.'));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const setError = vi.fn();
+  const setStatus = vi.fn();
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError,
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setStatus,
+    state: createSyncState()
+  });
+
+  expect(setError).not.toHaveBeenCalled();
+  expect(setStatus).toHaveBeenLastCalledWith('idle');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Desktop unreachable.',
+    status: 'failed'
+  }));
 }
 
 describe('tryForegroundAutoSync', () => {
@@ -32,49 +101,9 @@ describe('tryForegroundAutoSync', () => {
     syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
   });
 
-  it('uses stream sync directly without pulling the legacy workspace snapshot', async () => {
-    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-    const setState = vi.fn();
-    const setStatus = vi.fn();
+  it('uses stream sync directly without pulling the legacy workspace snapshot', testUsesStreamSyncDirectly);
 
-    await tryForegroundAutoSync({
-      cancelled: () => false,
-      setError: vi.fn(),
-      setReadableArticle: vi.fn(),
-      setState,
-      setStatus,
-      state: createSyncState()
-    });
+  it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
 
-    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
-    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'Auto sync completed.',
-      status: 'completed'
-    }));
-    expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
-    expect(setStatus).toHaveBeenLastCalledWith('idle');
-  });
-
-  it('does not surface unreachable desktop as a foreground error prompt', async () => {
-    syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue(new Error('Desktop unreachable.'));
-    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-    const setError = vi.fn();
-    const setStatus = vi.fn();
-
-    await tryForegroundAutoSync({
-      cancelled: () => false,
-      setError,
-      setReadableArticle: vi.fn(),
-      setState: vi.fn(),
-      setStatus,
-      state: createSyncState()
-    });
-
-    expect(setError).not.toHaveBeenCalled();
-    expect(setStatus).toHaveBeenLastCalledWith('idle');
-    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'Desktop unreachable.',
-      status: 'failed'
-    }));
-  });
+  it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 });

@@ -6,6 +6,8 @@ import {
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
 
+import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
+
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
@@ -41,7 +43,7 @@ export async function tryForegroundAutoSync(args: {
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
 }) {
-  const endpointUrl = args.state.endpoint_url;
+  const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!endpointUrl) return;
   args.setStatus('syncing');
   try {

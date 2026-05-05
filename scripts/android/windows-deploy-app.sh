@@ -26,4 +26,33 @@ if [[ "${ANDROID_GRADLE_STOP_AFTER_DEPLOY}" == "1" ]]; then
   POWERSHELL_ARGS+=(-StopGradleDaemon)
 fi
 
-powershell.exe "${POWERSHELL_ARGS[@]}"
+coproc DEPLOY_PS { powershell.exe "${POWERSHELL_ARGS[@]}" 2>&1; }
+DEPLOY_PS_PROCESS_PID="$!"
+DEPLOY_STATUS_OPENED=0
+
+while IFS= read -r line <&"${DEPLOY_PS[0]}"; do
+  echo "${line}"
+  if [[ "${line}" == *"[android-deploy] status: OPENED"* ]]; then
+    DEPLOY_STATUS_OPENED=1
+    break
+  fi
+done
+
+if [[ "${DEPLOY_STATUS_OPENED}" == "1" ]]; then
+  for _ in {1..50}; do
+    if ! kill -0 "${DEPLOY_PS_PROCESS_PID}" >/dev/null 2>&1; then
+      wait "${DEPLOY_PS_PROCESS_PID}"
+      exit $?
+    fi
+    sleep 0.1
+  done
+  kill "${DEPLOY_PS_PROCESS_PID}" >/dev/null 2>&1 || true
+  wait "${DEPLOY_PS_PROCESS_PID}" >/dev/null 2>&1 || true
+  exit 0
+fi
+
+set +e
+wait "${DEPLOY_PS_PROCESS_PID}"
+DEPLOY_EXIT_CODE=$?
+set -e
+exit "${DEPLOY_EXIT_CODE}"
