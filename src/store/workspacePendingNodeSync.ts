@@ -62,6 +62,7 @@ function toPendingWorkspaceNode(
     desiredRetention: pendingNode.desiredRetention ?? null,
     title: pendingNode.title,
     isTitleManual: pendingNode.isTitleManual,
+    hideTitleHeading: pendingNode.hideTitleHeading === true,
     content: pendingNode.content,
     reveal: pendingNode.reveal,
     anchorLink: pendingNode.anchorLink,

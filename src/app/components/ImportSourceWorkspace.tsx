@@ -26,6 +26,7 @@ type ImportSourceWorkspaceContentProps = {
   onConfirmKeepPreview: () => void;
   onCopySource: ReturnType<typeof useImportSourceWorkspaceState>['handleCopySource'];
   onDeleteSource: ReturnType<typeof useImportSourceWorkspaceState>['handleDeleteSource'];
+  onChangeTitleStrategy: ReturnType<typeof useImportSourceWorkspaceState>['handleChangeTitleStrategy'];
   onDisableKeepImport: (sourceId: string, scope: 'sources') => void;
   onKeepDisableOpenChange: (open: boolean) => void;
   onKeepPreviewOpenChange: (open: boolean) => void;
@@ -42,6 +43,7 @@ type ImportSourceWorkspaceContentProps = {
   readwiseSources: ReturnType<typeof useImportSourceWorkspaceState>['readwiseSources'];
   setReadwiseConfigDialogOpen: (open: boolean) => void;
   sources: ReturnType<typeof useImportSourceWorkspaceState>['sources'];
+  titleStrategy: ReturnType<typeof useImportSourceWorkspaceState>['titleStrategy'];
 };
 
 function ImportSourceWorkspacePanel(props: ImportSourceWorkspaceContentProps) {
@@ -49,6 +51,7 @@ function ImportSourceWorkspacePanel(props: ImportSourceWorkspaceContentProps) {
     <ImportSourceWorkspaceDetails
       onChange={props.onChange}
       onChangeAction={props.onChangeAction}
+      onChangeTitleStrategy={props.onChangeTitleStrategy}
       onChooseHighlightFolder={(sourceId) => void props.onChooseFolder(sourceId, 'highlightPath')}
       onChoosePrimaryFolder={(sourceId) => void props.onChooseFolder(sourceId, 'primaryPath')}
       onDisableKeepImport={props.onDisableKeepImport}
@@ -61,6 +64,7 @@ function ImportSourceWorkspacePanel(props: ImportSourceWorkspaceContentProps) {
       readwiseReaderConfig={props.readwiseReaderConfig}
       readwiseRootPath={props.readwiseRootPath}
       sources={props.sources}
+      titleStrategy={props.titleStrategy}
     />
   );
 }
@@ -115,6 +119,7 @@ function createImportSourceWorkspaceViewModel(
     keepPreviewDialog: dialogState.keepPreviewDialog,
     onChange: base.handleChangeSource,
     onChangeAction: base.handleChangeAction,
+    onChangeTitleStrategy: base.handleChangeTitleStrategy,
     onChooseFolder: base.handleChooseFolder,
     onConfirmKeepDisable: dialogState.handleConfirmKeepDisable,
     onConfirmKeepPreview: dialogState.handleConfirmKeepPreview,
@@ -133,7 +138,8 @@ function createImportSourceWorkspaceViewModel(
     readwiseRootPath: base.readwiseRootPath,
     readwiseSources: base.readwiseSources,
     setReadwiseConfigDialogOpen,
-    sources: base.sources
+    sources: base.sources,
+    titleStrategy: base.titleStrategy
   };
 }
 

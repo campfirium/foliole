@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import type { PersistedImportRecord } from '../import/contract.js';
-
 import type { DatabaseDriver } from './driver.js';
 
 const INBOX_NODE_ID = 'special-inbox';
@@ -28,9 +26,9 @@ function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
   }
   driver.execute(
     `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual,
+       id, parent_id, priority, desired_retention, title, is_title_manual, hide_title_heading,
        content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, NULL, NULL, 'Inbox', 1, '', NULL, NULL, ?, ?, NULL)`,
+     ) VALUES (?, NULL, NULL, NULL, 'Inbox', 1, 0, '', NULL, NULL, ?, ?, NULL)`,
     [INBOX_NODE_ID, importedAt, importedAt]
   );
 }
@@ -38,18 +36,19 @@ function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
 export function writeNewNode(input: {
   content: string;
   driver: DatabaseDriver;
+  hideTitleHeading: boolean;
   importedAt: string;
   nextInboxTopPosition: number;
-  record: PersistedImportRecord;
+  title: string;
 }) {
   ensureInboxNode(input.driver, input.importedAt);
   const nodeId = `node-${randomUUID()}`;
   input.driver.execute(
     `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual,
-       content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, NULL, NULL, ?, 1, ?, NULL, NULL, ?, ?, NULL)`,
-    [nodeId, INBOX_NODE_ID, input.record.sourceName, input.content, input.importedAt, input.importedAt]
+     id, parent_id, priority, desired_retention, title, is_title_manual, hide_title_heading,
+     content, reveal, anchor_link, created_at, updated_at, deleted_at
+     ) VALUES (?, ?, NULL, NULL, ?, 1, ?, ?, NULL, NULL, ?, ?, NULL)`,
+    [nodeId, INBOX_NODE_ID, input.title, input.hideTitleHeading ? 1 : 0, input.content, input.importedAt, input.importedAt]
   );
   input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, input.nextInboxTopPosition]);
   return nodeId;
@@ -59,15 +58,17 @@ export function updateExistingNode(input: {
   content: string;
   driver: DatabaseDriver;
   existingNode: ExistingNodeRow;
+  hideTitleHeading: boolean;
   nextInboxTopPosition: number;
   nextNodePosition: number;
-  record: PersistedImportRecord;
+  importedAt: string;
+  title: string;
 }) {
   input.driver.execute(
     `UPDATE nodes
-     SET title = ?, is_title_manual = 1, content = ?, updated_at = ?, deleted_at = NULL
+     SET title = ?, is_title_manual = 1, hide_title_heading = ?, content = ?, updated_at = ?, deleted_at = NULL
      WHERE id = ?`,
-    [input.record.sourceName, input.content, input.record.importedAt, input.existingNode.id]
+    [input.title, input.hideTitleHeading ? 1 : 0, input.content, input.importedAt, input.existingNode.id]
   );
   if (input.existingNode.parent_id === INBOX_NODE_ID) {
     if (typeof input.existingNode.position === 'number') {

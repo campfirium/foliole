@@ -1,3 +1,4 @@
+import { Facet } from '@codemirror/state';
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
@@ -39,11 +40,20 @@ import {
 } from './liveMarkdownTextMarks';
 import { liveMarkdownTheme } from './liveMarkdownTheme';
 
+const hideTitleHeadingFacet = Facet.define<boolean, boolean>({
+  combine: (values) => values[0] ?? false
+});
+
+export function createLiveMarkdown(hideTitleHeading = false) {
+  return [hideTitleHeadingFacet.of(hideTitleHeading), liveMarkdownTheme, markdownLinePlugin, markdownInteractionHandlers];
+}
+
 function buildLineDecorations(view: EditorView): DecorationSet {
   if (getEditorDisplayMode() === 'source') return buildSourceModeDecorations(view);
 
   const ranges: Range<Decoration>[] = [];
   const content = view.state.doc.toString();
+  const hideTitleHeading = view.state.facet(hideTitleHeadingFacet);
   addAnchorTagDecorations(ranges, content);
   addFrontmatterDecorations(ranges, view);
   const frontmatterBounds = resolveFrontmatterBounds(content);
@@ -70,6 +80,9 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(line.from, line.text, preservedRanges);
 
     if (lineClass) {
+      if (hideTitleHeading && lineNumber === 1 && lineClass === 'cm-line-h1') {
+        addLine(ranges, line.from, 'cm-line-title-heading-hidden');
+      }
       if (isCodeFenceLine && !showSyntaxOnLine) addLine(ranges, line.from, 'cm-line-code-fence-hidden');
       else addLine(ranges, line.from, lineClass);
     }
@@ -199,5 +212,3 @@ const markdownInteractionHandlers = EditorView.domEventHandlers({
     return true;
   }
 });
-
-export const liveMarkdown = [liveMarkdownTheme, markdownLinePlugin, markdownInteractionHandlers];

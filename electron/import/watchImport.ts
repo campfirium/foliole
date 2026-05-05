@@ -16,6 +16,7 @@ import { resolveAppPaths } from '../ipc/paths.js';
 import { loadAppSettingsState } from '../ipc/storage.js';
 
 import { runDirectoryImportBatch } from './directoryImportBatch.js';
+import { loadImportManagerSettings } from './importManagerSettings.js';
 import {
   loadWatchImportAdapterCursor,
   saveWatchImportAdapterCursor,
@@ -113,7 +114,8 @@ async function runSingleWatchImport(config: WatchImportAdapterConfig): Promise<W
           highlightPolicy: config.highlightPolicy ?? 'reference_only',
           rootPath,
           sourceAdapter,
-          sources: pendingSources
+          sources: pendingSources,
+          titleStrategy: loadImportManagerSettings().titleStrategy
         })
       : {
           archive_root_path: null,

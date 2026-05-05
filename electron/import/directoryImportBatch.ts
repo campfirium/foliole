@@ -1,4 +1,5 @@
 import type { PersistedImportRecord, ImportHighlightPolicy } from '../../lib/core/import/contract.js';
+import type { ImportNodeTitleStrategy } from '../../lib/core/import/importedNodeTitle.js';
 import type {
   NativeDirectoryImportConsumePolicy,
   NativeDirectoryImportEntry,
@@ -20,6 +21,7 @@ export interface DirectoryImportBatchOptions {
   rootPath: string;
   sourceAdapter: NativeDirectoryImportSourceAdapter;
   sources: DirectoryImportSourceDescriptor[];
+  titleStrategy: ImportNodeTitleStrategy;
 }
 
 function toNativeDirectoryImportEntry(
@@ -46,25 +48,28 @@ function toNativeDirectoryImportEntry(
 
 async function runSingleDirectoryImport(
   source: DirectoryImportSourceDescriptor,
-  highlightPolicy: ImportHighlightPolicy
+  highlightPolicy: ImportHighlightPolicy,
+  titleStrategy: ImportNodeTitleStrategy
 ) {
   const importedAt = new Date().toISOString();
   try {
-    return toNativeDirectoryImportEntry(source.adapterId, runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt })));
+    return toNativeDirectoryImportEntry(
+      source.adapterId,
+      runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt, titleStrategy }))
+    );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeDirectoryImportEntry(
       source.adapterId,
-      recordPreparedImportFailure(
-        buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt }),
-        failureReason
-      )
+      recordPreparedImportFailure(buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt, titleStrategy }), failureReason)
     );
   }
 }
 
 export async function runDirectoryImportBatch(options: DirectoryImportBatchOptions): Promise<NativeDirectoryImportResult> {
-  const entries = await Promise.all(options.sources.map((source) => runSingleDirectoryImport(source, options.highlightPolicy)));
+  const entries = await Promise.all(
+    options.sources.map((source) => runSingleDirectoryImport(source, options.highlightPolicy, options.titleStrategy))
+  );
 
   let archiveRootPath: string | null = null;
   let consumedCount = 0;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { NativeWorkspaceNodeSnapshot } from '../../lib/platform/nativeStorageContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/bridge';
 import { isDesktopRuntime } from '../shared/platform/runtime';
@@ -28,6 +29,7 @@ function createNodeFixture(): Node {
     desiredRetention: 0.81,
     title: 'Seed',
     isTitleManual: false,
+    hideTitleHeading: true,
     content: '# Seed',
     anchorLink: { id: 'hl-1', kind: 'highlight' },
     reveal: 'Reveal',
@@ -47,11 +49,12 @@ function createNodeFixture(): Node {
   };
 }
 
-function createRuntimeSnapshotNodeFixture() {
+function createRuntimeSnapshotNodeFixture(): NativeWorkspaceNodeSnapshot {
   const node = createNodeFixture();
   return {
     ...node,
     isTitleManual: false,
+    hideTitleHeading: true,
     anchorLink: node.anchorLink ?? null,
     reading: null
   };
@@ -98,6 +101,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
     desiredRetention: 0.81,
     title: 'Seed',
     isTitleManual: false,
+    hideTitleHeading: true,
     content: '# Seed',
     reveal: 'Reveal',
     anchorLink: { id: 'hl-1', kind: 'highlight' },

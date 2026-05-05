@@ -22,6 +22,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': { backgroundColor: 'rgba(15, 23, 42, 0.06)', borderRadius: 0, fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.5rem' },
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
   '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
+  '.cm-line.cm-line-title-heading-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-md-syntax-visible': { color: 'var(--app-accent-color)', opacity: '0.74' },
   '.cm-md-frontmatter-summary': {
     color: 'color-mix(in srgb, var(--color-text-secondary) 82%, transparent)',

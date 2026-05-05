@@ -21,6 +21,7 @@ interface MarkdownEditorProps {
   className?: string;
   contentPaddingBottom?: string;
   debugId?: string;
+  hideTitleHeading?: boolean;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
   readOnly?: boolean;
@@ -36,6 +37,7 @@ function useEditorAdapter(
   onChange: (value: string) => void,
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
+  hideTitleHeading: boolean,
   readOnly: boolean | undefined
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
@@ -53,6 +55,7 @@ function useEditorAdapter(
     }
 
     const adapter = new CodeMirrorEditorAdapter(host, {
+      hideTitleHeading,
       initialContent: initialValueRef.current,
       onChange: (nextValue) => onChangeRef.current(nextValue),
       readOnly
@@ -83,7 +86,8 @@ function useEditorLayoutEffects(
   nodeId: string | null,
   nodeViewState: EditorViewState | undefined,
   syncScrollMetrics: () => void,
-  value: string
+  value: string,
+  hideTitleHeading: boolean
 ) {
   useEffect(() => {
     const adapter = adapterRef.current;
@@ -107,6 +111,10 @@ function useEditorLayoutEffects(
     adapterRef.current?.setContent(value);
     requestAnimationFrame(syncScrollMetrics);
   }, [adapterRef, syncScrollMetrics, value]);
+
+  useEffect(() => {
+    adapterRef.current?.setHideTitleHeading(hideTitleHeading);
+  }, [adapterRef, hideTitleHeading]);
 
   useEffect(() => {
     if (!nodeId || !nodeViewState) {
@@ -167,6 +175,7 @@ export function MarkdownEditor({
   className,
   contentPaddingBottom,
   debugId,
+  hideTitleHeading = false,
   nodeId,
   nodeViewState,
   readOnly,
@@ -177,10 +186,10 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { bindings, settings } = useMouseGestureSettings();
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, readOnly);
+  const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hideTitleHeading, readOnly);
   const { scrollMetrics, syncScrollMetrics } = useEditorScrollbarMetrics(adapterRef);
 
-  useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value);
+  useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, hideTitleHeading);
 
   const scrollbar = useScrollbarState(scrollMetrics);
   const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);

@@ -225,12 +225,9 @@ it('forwards highlight policy configuration to the runtime import bridge', async
     source_name: 'note.md'
   });
   window.electronAPI = createMockElectronApi(invoke);
-
   await runRuntimeTextFileImport('adopt');
-
   expect(invoke).toHaveBeenCalledWith('run_text_file_import', { highlight_policy: 'adopt' });
 });
-
 
 it('returns null when the native import payload is malformed', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

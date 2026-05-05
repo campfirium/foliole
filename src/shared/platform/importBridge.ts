@@ -15,6 +15,7 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
 export type ImportHighlightPolicy = 'adopt' | 'reference_only';
+export type ImportNodeTitleStrategy = 'file_name' | 'heading';
 export type {
   RuntimeDirectoryImportEntry,
   RuntimeDirectoryImportResult,
@@ -51,12 +52,16 @@ export async function selectRuntimeImportDirectory(): Promise<string | null> {
   }
 }
 
-function toImportArgs(highlightPolicy?: ImportHighlightPolicy) {
-  return highlightPolicy ? { highlight_policy: highlightPolicy } : {};
+function toImportArgs(highlightPolicy?: ImportHighlightPolicy, titleStrategy?: ImportNodeTitleStrategy) {
+  return {
+    ...(highlightPolicy ? { highlight_policy: highlightPolicy } : {}),
+    ...(titleStrategy ? { title_strategy: titleStrategy } : {})
+  };
 }
 
 export async function selectRuntimeImportTextFile(
-  highlightPolicy?: ImportHighlightPolicy
+  highlightPolicy?: ImportHighlightPolicy,
+  titleStrategy?: ImportNodeTitleStrategy
 ): Promise<RuntimeImportedTextFile | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -64,7 +69,7 @@ export async function selectRuntimeImportTextFile(
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.selectImportTextFile, toImportArgs(highlightPolicy));
+    const result = await runtimeInvoke(NATIVE_COMMANDS.selectImportTextFile, toImportArgs(highlightPolicy, titleStrategy));
     if (result === null) {
       return null;
     }
@@ -91,7 +96,8 @@ export async function selectRuntimeImportTextFile(
 }
 
 export async function runRuntimeTextFileImport(
-  highlightPolicy?: ImportHighlightPolicy
+  highlightPolicy?: ImportHighlightPolicy,
+  titleStrategy?: ImportNodeTitleStrategy
 ): Promise<RuntimeTextImportResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
@@ -99,7 +105,7 @@ export async function runRuntimeTextFileImport(
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.runTextFileImport, toImportArgs(highlightPolicy));
+    const result = await runtimeInvoke(NATIVE_COMMANDS.runTextFileImport, toImportArgs(highlightPolicy, titleStrategy));
     if (result === null) {
       return null;
     }
@@ -125,14 +131,14 @@ export async function runRuntimeTextFileImport(
   }
 }
 
-export async function runRuntimeDirectoryImport(): Promise<RuntimeDirectoryImportResult | null> {
+export async function runRuntimeDirectoryImport(titleStrategy?: ImportNodeTitleStrategy): Promise<RuntimeDirectoryImportResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
 
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.runDirectoryImport, {});
+    const result = await runtimeInvoke(NATIVE_COMMANDS.runDirectoryImport, toImportArgs(undefined, titleStrategy));
     if (result === null) {
       return null;
     }

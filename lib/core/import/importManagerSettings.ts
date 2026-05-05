@@ -1,3 +1,4 @@
+import type { ImportNodeTitleStrategy } from './importedNodeTitle.js';
 import {
   normalizeImportSourceAction,
   type ImportSourceAction
@@ -34,11 +35,12 @@ export interface ImportManagerSettings {
   readwiseRootPath: string;
   readwiseSources: ImportManagerSourceDraft[];
   sources: ImportManagerSourceDraft[];
+  titleStrategy: ImportNodeTitleStrategy;
   updatedAt: string;
   version: number;
 }
 
-const IMPORT_MANAGER_SETTINGS_VERSION = 3;
+const IMPORT_MANAGER_SETTINGS_VERSION = 4;
 const DEFAULT_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 const READWISE_SOURCE_KINDS: ReadwiseSourceKind[] = ['articles', 'books', 'tweets', 'podcasts'];
 const READWISE_FOLDER_NAMES: Record<ReadwiseSourceKind, string> = {
@@ -93,6 +95,10 @@ function normalizeHighlightMode(value: unknown, fallback: ImportHighlightMode) {
 
 function normalizeKeepImportRuleState(value: unknown, fallback: KeepImportRuleState) {
   return value === 'draft' || value === 'enabled' || value === 'previewed' ? value : fallback;
+}
+
+export function normalizeImportNodeTitleStrategy(value: unknown, fallback: ImportNodeTitleStrategy = 'file_name') {
+  return value === 'heading' ? 'heading' : fallback;
 }
 
 function normalizeSource(
@@ -177,6 +183,7 @@ export function createDefaultImportManagerSettings(): ImportManagerSettings {
     readwiseRootPath: '',
     readwiseSources: createReadwiseImportSources(),
     sources: createDefaultGenericImportSources(),
+    titleStrategy: 'file_name',
     updatedAt: DEFAULT_UPDATED_AT,
     version: IMPORT_MANAGER_SETTINGS_VERSION
   };
@@ -216,6 +223,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
       normalizeSource(readwiseByKind[source.kind as ReadwiseSourceKind], source, source.kind)
     ),
     sources: sources.length > 0 ? sources : defaults.sources,
+    titleStrategy: normalizeImportNodeTitleStrategy(value.titleStrategy, defaults.titleStrategy),
     updatedAt: normalizeString(value.updatedAt, DEFAULT_UPDATED_AT),
     version: IMPORT_MANAGER_SETTINGS_VERSION
   };
@@ -236,3 +244,4 @@ export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
 }
 
 export type { KeepImportPreviewSummary } from './keepImportPreviewSettings.js';
+export type { ImportNodeTitleStrategy } from './importedNodeTitle.js';

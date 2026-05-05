@@ -37,6 +37,7 @@ export interface NativeWorkspaceNodeSnapshot {
   desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
+  hideTitleHeading?: boolean;
   content: string;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
@@ -70,6 +71,7 @@ export interface NativeNodeSnapshotArgs {
   desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
+  hideTitleHeading?: boolean;
   content: string;
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;

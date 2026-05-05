@@ -3,11 +3,13 @@ import { dialog, type BrowserWindow } from 'electron';
 import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
+import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import/importRunLogger.js';
 
 import {
   discoverDirectoryImportSources,
-  resolveImportHighlightPolicy
+  resolveImportHighlightPolicy,
+  resolveImportNodeTitleStrategy
 } from './importSourcePipeline.js';
 import {
   ensureManagedInboxRoot,
@@ -63,6 +65,7 @@ export async function runDirectoryImport(
     }
 
     const highlightPolicy = resolveImportHighlightPolicy(args);
+    const titleStrategy = args?.title_strategy ? resolveImportNodeTitleStrategy(args) : loadImportManagerSettings().titleStrategy;
     const sources = await discoverDirectoryImportSources(
       rootPath,
       sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
@@ -72,7 +75,8 @@ export async function runDirectoryImport(
       highlightPolicy,
       rootPath,
       sourceAdapter,
-      sources
+      sources,
+      titleStrategy
     });
     await logDirectoryImportCompleted(result);
     return result;
@@ -84,12 +88,14 @@ export async function runDirectoryImport(
 
 export async function runManagedInboxImport(rootPath: string) {
   try {
+    const titleStrategy = loadImportManagerSettings().titleStrategy;
     const result = await runDirectoryImportBatch({
       consumePolicy: 'clear',
       highlightPolicy: 'reference_only',
       rootPath,
       sourceAdapter: 'foliole_managed_inbox_folder',
-      sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: ['markdown', 'text'] })
+      sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: ['markdown', 'text'] }),
+      titleStrategy
     });
     await logDirectoryImportCompleted(result);
     return result;

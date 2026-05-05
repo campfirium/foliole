@@ -14,6 +14,11 @@ import {
   type ImportSourceProfile
 } from './controlledContext.js';
 import { applyImportHighlightPolicy } from './highlightPolicy.js';
+import {
+  resolveImportedNodeTitle,
+  shouldHideImportedTitleHeading,
+  type ImportNodeTitleStrategy
+} from './importedNodeTitle.js';
 
 interface CreatePreparedDesktopTextImportInput {
   content: string;
@@ -28,6 +33,7 @@ interface CreatePreparedDesktopTextImportInput {
   sourceIdentity?: string;
   sourceLocator?: string;
   sourceProfile?: ImportSourceProfile;
+  titleStrategy?: ImportNodeTitleStrategy;
 }
 
 function hashFingerprint(...parts: string[]) {
@@ -80,6 +86,12 @@ export function createPreparedDesktopTextImport(
       content: excerpt,
       label: highlight.label?.trim() || null
     })),
+    hideTitleHeading: shouldHideImportedTitleHeading(normalizedContent),
+    nodeTitle: resolveImportedNodeTitle({
+      content: normalizedContent,
+      sourceName: input.fileName,
+      titleStrategy: input.titleStrategy ?? 'file_name'
+    }),
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
     sourceProfile: (input.sourceProfile ?? 'default') as PreparedImportSourceProfile,
     sourceFingerprint: hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.sourceIdentity ?? input.filePath),

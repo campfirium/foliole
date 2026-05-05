@@ -23,6 +23,7 @@ export interface UpsertNodeSnapshotInput {
   desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
+  hideTitleHeading?: boolean;
   content: string;
   reveal: string | null;
   anchorLink: NodeAnchorLinkPayload | null;
@@ -53,15 +54,16 @@ function toAnchorLinkValue(anchorLink: NodeAnchorLinkPayload | null): string | n
 function createUpsertNodeStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO nodes (
-       id, parent_id, priority, desired_retention, title, is_title_manual,
+       id, parent_id, priority, desired_retention, title, is_title_manual, hide_title_heading,
        content, reveal, anchor_link, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
        priority = excluded.priority,
        desired_retention = excluded.desired_retention,
        title = excluded.title,
        is_title_manual = excluded.is_title_manual,
+       hide_title_heading = excluded.hide_title_heading,
        content = excluded.content,
        reveal = excluded.reveal,
        anchor_link = excluded.anchor_link,
@@ -132,6 +134,7 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.desiredRetention ?? null,
       input.title,
       input.isTitleManual ? 1 : 0,
+      input.hideTitleHeading === true ? 1 : 0,
       input.content,
       input.reveal,
       toAnchorLinkValue(input.anchorLink),

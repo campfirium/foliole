@@ -1,16 +1,17 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import { drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
-import { liveMarkdown } from './liveMarkdown';
+import { createLiveMarkdown } from './liveMarkdown';
 import { markdownInputAssist } from './markdownInputAssist';
 
 interface CodeMirrorEditorAdapterOptions {
+  hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
   readOnly?: boolean;
@@ -18,6 +19,7 @@ interface CodeMirrorEditorAdapterOptions {
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private isApplyingExternalContent = false;
+  private liveMarkdownCompartment = new Compartment();
   private onChange?: (content: string) => void;
   private view: EditorView;
 
@@ -38,7 +40,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           EditorView.lineWrapping,
           highlightActiveLine(),
           markdownInputAssist,
-          liveMarkdown,
+          this.liveMarkdownCompartment.of(createLiveMarkdown(options.hideTitleHeading === true)),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
               return;
@@ -92,6 +94,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     } finally {
       this.isApplyingExternalContent = false;
     }
+  }
+
+  setHideTitleHeading(hideTitleHeading: boolean) {
+    this.view.dispatch({
+      effects: this.liveMarkdownCompartment.reconfigure(createLiveMarkdown(hideTitleHeading))
+    });
   }
 
   getSelection(): EditorSelection {

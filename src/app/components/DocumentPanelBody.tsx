@@ -16,6 +16,7 @@ interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
+  editorHideTitleHeading?: boolean;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -100,6 +101,7 @@ function AnswerSection({
         ariaLabel="Answer editor"
         className="answer-editor-host min-h-0"
         debugId={answerEditorDebugId}
+        hideTitleHeading={false}
         key={`answer-${editorAppearanceKey}`}
         nodeId={editorNodeId}
         onChange={onAnswerChange}
@@ -129,6 +131,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         className="prompt-editor-host"
         contentPaddingBottom={props.editorContentPaddingBottom}
         debugId={props.promptEditorDebugId}
+        hideTitleHeading={props.editorHideTitleHeading}
         key={`prompt-${props.editorAppearanceKey}`}
         nodeId={props.editorNodeId}
         nodeViewState={props.editorNodeViewState}
@@ -202,58 +205,18 @@ function renderDocumentBodyLayout(props: DocumentPanelBodyProps) {
 }
 
 export function DocumentPanelBody({
-  documentMaxWidth,
-  editorAppearanceKey,
-  editorContent,
-  editorContentPaddingBottom,
-  emptyContent,
-  promptEditorDebugId = 'prompt-editor',
-  readOnly,
   answerEditorDebugId = 'answer-editor',
-  editorNodeId,
-  editorNodeViewState,
-  emptyState,
-  hasAnswerSection,
-  isDocumentResizing,
-  onAnswerChange,
-  onEditorChange,
-  onEditorContextMenu,
-  onEditorReady,
-  onRevealDocumentSelection,
-  onRevealDocumentPosition,
-  onResolveDocumentPositionAtViewportY,
-  onResetLayout,
-  onStartDocumentResize,
-  reveal,
+  promptEditorDebugId = 'prompt-editor',
   showDocumentOutline = true,
-  showDocumentResizeHandles = true
+  showDocumentResizeHandles = true,
+  ...props
 }: DocumentPanelBodyProps) {
   const bodyProps: DocumentPanelBodyProps = {
     answerEditorDebugId,
-    documentMaxWidth,
-    editorAppearanceKey,
-    editorContent,
-    editorContentPaddingBottom,
-    emptyContent,
     promptEditorDebugId,
-    editorNodeId,
-    editorNodeViewState,
-    emptyState,
-    hasAnswerSection,
-    isDocumentResizing,
-    onAnswerChange,
-    onEditorChange,
-    onEditorContextMenu,
-    onEditorReady,
-    onRevealDocumentSelection,
-    onRevealDocumentPosition,
-    onResolveDocumentPositionAtViewportY,
-    onResetLayout,
-    onStartDocumentResize,
-    readOnly,
-    reveal,
     showDocumentOutline,
-    showDocumentResizeHandles
+    showDocumentResizeHandles,
+    ...props
   };
 
   return (

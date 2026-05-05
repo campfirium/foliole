@@ -5,12 +5,14 @@ import { recordPreparedImportFailure, runPreparedImport } from '../database/impo
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
 import { buildPreparedImportRecord, discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
+import { loadImportManagerSettings } from './importManagerSettings.js';
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
 import {
   loadPreparedKeepImportRecord,
   resolveKeepImportSourceSignature,
   shouldKeepImportReadwiseSource
 } from './keepImportPreparedRecord.js';
+import { buildKeepImportPreviewResult } from './keepImportPreviewResult.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import { createBlockedRecord, persistKeepImportState } from './keepImportServiceState.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
@@ -115,26 +117,6 @@ async function classifySource(
   }
 }
 
-function buildPreviewResult(rootPath: string, previewedAt: string, entries: KeepImportPreviewEntry[]): NativeKeepImportPreviewResult {
-  return {
-    blocked_count: entries.filter((entry) => entry.status === 'blocked_deleted').length,
-    discovered_count: entries.length,
-    entries: entries.map((entry) => ({
-      detail: entry.detail,
-      detected_highlight_count: entry.detectedHighlightCount,
-      highlight_samples: entry.highlightSamples,
-      source_path: entry.sourcePath,
-      status: entry.status
-    })),
-    failed_count: entries.filter((entry) => entry.status === 'failed').length,
-    new_count: entries.filter((entry) => entry.status === 'new').length,
-    previewed_at: previewedAt,
-    root_path: rootPath,
-    unchanged_count: entries.filter((entry) => entry.status === 'unchanged').length,
-    updated_count: entries.filter((entry) => entry.status === 'updated').length
-  };
-}
-
 export async function previewKeepImportRule(config: KeepImportRuleConfig): Promise<NativeKeepImportPreviewResult> {
   const previewedAt = new Date().toISOString();
   const discoveredSources = await discoverDirectoryImportSources(config.directoryPath);
@@ -144,7 +126,7 @@ export async function previewKeepImportRule(config: KeepImportRuleConfig): Promi
     )
   ).filter((source): source is DirectoryImportSourceDescriptor => source !== null);
   const entries = await Promise.all(importableSources.map((source) => classifySource(config, source)));
-  return buildPreviewResult(config.directoryPath, previewedAt, entries);
+  return buildKeepImportPreviewResult(config.directoryPath, previewedAt, entries);
 }
 
 async function runKeepImportSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
@@ -186,7 +168,12 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown keep import failure';
     const record = recordPreparedImportFailure(
-      buildPreparedImportRecord(source, { content: '', highlightPolicy: config.highlightPolicy, importedAt }),
+      buildPreparedImportRecord(source, {
+        content: '',
+        highlightPolicy: config.highlightPolicy,
+        importedAt,
+        titleStrategy: loadImportManagerSettings().titleStrategy
+      }),
       failureReason
     );
     persistKeepImportState(config, source, sourceSignature, record, 'failed');

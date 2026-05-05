@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  mockCompartmentReconfigure,
   mockDrawSelection,
   mockScrollIntoView,
   mockLineWrapping,
@@ -12,6 +13,7 @@ const {
   mockReadOnlyOf,
   mockEditableOf
 } = vi.hoisted(() => ({
+  mockCompartmentReconfigure: vi.fn((value: unknown) => value),
   mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
   mockScrollIntoView: vi.fn(() => 'scroll-into-view-effect'),
   mockLineWrapping: Symbol('lineWrapping'),
@@ -35,6 +37,14 @@ vi.mock('@codemirror/lang-markdown', () => ({
 }));
 
 vi.mock('@codemirror/state', () => ({
+  Compartment: class {
+    of(value: unknown) {
+      return value;
+    }
+    reconfigure(value: unknown) {
+      return mockCompartmentReconfigure(value);
+    }
+  },
   EditorState: {
     create: mockEditorStateCreate,
     readOnly: {
@@ -77,7 +87,7 @@ vi.mock('./anchorStructureGuard', () => ({
 }));
 
 vi.mock('./liveMarkdown', () => ({
-  liveMarkdown: 'live-markdown-extension'
+  createLiveMarkdown: vi.fn(() => 'live-markdown-extension')
 }));
 
 vi.mock('./markdownInputAssist', () => ({
@@ -89,6 +99,7 @@ import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 describe('CodeMirrorEditorAdapter', () => {
   beforeEach(() => {
     mockDrawSelection.mockClear();
+    mockCompartmentReconfigure.mockClear();
     mockScrollIntoView.mockClear();
     mockEditorStateCreate.mockClear();
     mockEditorView.mockClear();

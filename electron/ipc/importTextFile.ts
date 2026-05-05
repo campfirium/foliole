@@ -14,6 +14,7 @@ import {
   buildPreparedImportRecord,
   loadPreparedImportRecord,
   resolveImportHighlightPolicy,
+  resolveImportNodeTitleStrategy,
   resolveSingleFileImportSource
 } from './importSourcePipeline.js';
 
@@ -62,16 +63,16 @@ async function runImportForFilePath(filePath: string, args?: NativeTextImportArg
   const source = resolveSingleFileImportSource(filePath);
   const importedAt = new Date().toISOString();
   const highlightPolicy = resolveImportHighlightPolicy(args);
+  const titleStrategy = resolveImportNodeTitleStrategy(args);
 
   try {
-    return toNativeTextImportResult(runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt })));
+    return toNativeTextImportResult(
+      runPreparedImport(await loadPreparedImportRecord(source, { highlightPolicy, importedAt, titleStrategy }))
+    );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeTextImportResult(
-      recordPreparedImportFailure(
-        buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt }),
-        failureReason
-      )
+      recordPreparedImportFailure(buildPreparedImportRecord(source, { content: '', highlightPolicy, importedAt, titleStrategy }), failureReason)
     );
   }
 }
@@ -87,7 +88,8 @@ export async function selectImportTextFile(
   const source = resolveSingleFileImportSource(filePath);
   const prepared = await loadPreparedImportRecord(source, {
     highlightPolicy: resolveImportHighlightPolicy(args),
-    importedAt: new Date().toISOString()
+    importedAt: new Date().toISOString(),
+    titleStrategy: resolveImportNodeTitleStrategy(args)
   });
 
   return {

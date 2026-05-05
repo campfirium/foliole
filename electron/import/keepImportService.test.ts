@@ -91,7 +91,7 @@ it('blocks keep auto recreation after the imported node is deleted', async () =>
     ruleId: 'draft-import-source-101'
   });
 
-  const nodeCount = connection.sqlite.prepare(`SELECT COUNT(*) AS count FROM nodes WHERE title = 'entry.md'`).get() as { count: number };
+  const nodeCount = connection.sqlite.prepare(`SELECT COUNT(*) AS count FROM nodes WHERE title = 'entry'`).get() as { count: number };
   const keepItem = connection.sqlite
     .prepare(
       `SELECT last_status, last_node_id
@@ -260,7 +260,7 @@ it('adopts inline markdown highlights for generic merged keep imports', async ()
     .prepare(
       `SELECT id, content
        FROM nodes
-       WHERE title = 'entry.md'
+       WHERE title = 'entry'
        ORDER BY created_at DESC
        LIMIT 1`
     )

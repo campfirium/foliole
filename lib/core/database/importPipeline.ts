@@ -87,9 +87,11 @@ function updateExistingReadwiseNode(
     content: readwiseUpdate.content,
     driver,
     existingNode,
+    hideTitleHeading: prepared.hideTitleHeading,
+    importedAt: record.importedAt,
     nextInboxTopPosition: readInboxTopPosition(driver, existingNode.id),
     nextNodePosition: readNextNodePosition(driver),
-    record
+    title: prepared.nodeTitle
   });
   if (readwiseUpdate.highlights.length > 0) {
     insertImportedHighlightNodes({
@@ -171,17 +173,20 @@ function resolvePreparedNodeId(input: {
       content: input.anchoredContent,
       driver: input.driver,
       existingNode: input.existingNode,
+      hideTitleHeading: input.prepared.hideTitleHeading,
+      importedAt: input.baseRecord.importedAt,
       nextInboxTopPosition: readInboxTopPosition(input.driver, input.existingNode.id),
       nextNodePosition: readNextNodePosition(input.driver),
-      record: input.baseRecord
+      title: input.prepared.nodeTitle
     });
   }
   return writeNewNode({
     content: input.anchoredContent,
     driver: input.driver,
+    hideTitleHeading: input.prepared.hideTitleHeading,
     importedAt: input.baseRecord.importedAt,
     nextInboxTopPosition: readInboxTopPosition(input.driver),
-    record: input.baseRecord
+    title: input.prepared.nodeTitle
   });
 }
 

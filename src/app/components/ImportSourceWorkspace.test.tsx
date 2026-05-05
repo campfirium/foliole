@@ -103,6 +103,26 @@ it('shows the generic handling selector without restoring trigger controls', asy
   expect(screen.queryByText('Status')).not.toBeInTheDocument();
   expect(screen.queryByText('Actions')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Preview draft-import-source-101' })).toBeDisabled();
+  expect(screen.getByLabelText('Imported title source')).toHaveValue('file_name');
+});
+
+it('persists the imported title source setting', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.change(screen.getByLabelText('Imported title source'), { target: { value: 'heading' } });
+
+  await waitFor(() => {
+    const invokeCalls = (
+      window.electronAPI?.invoke as unknown as { mock: { calls: Array<[string, Record<string, unknown>?]> } }
+    ).mock.calls;
+    expect(
+      invokeCalls.some(([command, args]) => {
+        const settings = args?.settings as { titleStrategy?: string } | undefined;
+        return command === 'save_import_manager_settings' && settings?.titleStrategy === 'heading';
+      }
+      )
+    ).toBe(true);
+  });
 });
 
 it('fills readwise folders from the selected root path', () => {

@@ -20,6 +20,8 @@ export interface PreparedImportHighlightRecord {
 export interface PreparedImportRecord {
   provider: ImportProvider;
   sourceName: string;
+  nodeTitle: string;
+  hideTitleHeading: boolean;
   sourceLocator: string;
   sourceKind: ImportSourceKind;
   sourceFingerprint: string;

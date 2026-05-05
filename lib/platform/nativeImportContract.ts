@@ -1,6 +1,7 @@
 import type { NativeReadwiseDetectionSample } from './nativeReadwiseContract.js';
 
 export type NativeImportHighlightPolicy = 'adopt' | 'reference_only';
+export type NativeImportNodeTitleStrategy = 'file_name' | 'heading';
 
 export type NativeDirectoryImportSourceAdapter = 'external_directory' | 'foliole_managed_inbox_folder';
 
@@ -10,6 +11,7 @@ export type NativeDirectoryImportConsumePolicy = 'archive' | 'clear' | 'keep';
 
 export interface NativeTextImportArgs {
   highlight_policy?: NativeImportHighlightPolicy;
+  title_strategy?: NativeImportNodeTitleStrategy;
 }
 
 export interface NativeDirectoryImportArgs extends NativeTextImportArgs {

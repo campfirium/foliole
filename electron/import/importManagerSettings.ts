@@ -12,7 +12,11 @@ function toRecord(value: unknown) {
 }
 
 export function loadImportManagerSettings(): ImportManagerSettings {
-  return normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY));
+  try {
+    return normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY));
+  } catch {
+    return createDefaultImportManagerSettings();
+  }
 }
 
 export function saveImportManagerSettings(settings: unknown): ImportManagerSettings {

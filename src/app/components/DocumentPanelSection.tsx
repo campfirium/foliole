@@ -88,6 +88,7 @@ function getDocumentPanelBodyProps(
     editorAppearanceKey: props.editorAppearanceKey,
     editorContent: props.editorContent,
     editorContentPaddingBottom,
+    editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
     editorNodeId: props.editorNodeId,
     editorNodeViewState: props.editorNodeViewState,
     emptyState,

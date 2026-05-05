@@ -7,6 +7,7 @@ export const nodes = sqliteTable('nodes', {
   desiredRetention: real('desired_retention'),
   title: text('title').notNull(),
   isTitleManual: integer('is_title_manual', { mode: 'boolean' }).notNull().default(false),
+  hideTitleHeading: integer('hide_title_heading', { mode: 'boolean' }).notNull().default(false),
   content: text('content').notNull().default(''),
   reveal: text('reveal'),
   anchorLink: text('anchor_link'),

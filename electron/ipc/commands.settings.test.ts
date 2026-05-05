@@ -47,13 +47,14 @@ vi.mock('../import/importManagerSettings.js', () => ({
     readwiseRootPath: '/tmp/readwise',
     readwiseSources: [],
     sources: [],
+    titleStrategy: 'file_name',
     updatedAt: '2026-03-25T00:00:00.000Z',
-    version: 2
+    version: 4
   }),
   saveImportManagerSettings: vi.fn().mockImplementation((settings) => ({
     ...settings,
     updatedAt: '2026-03-25T00:05:00.000Z',
-    version: 2
+    version: 4
   }))
 }));
 vi.mock('../reviewSchedulerSettings.js', () => ({
@@ -136,7 +137,8 @@ async function expectAppAndImportSettingsCommands() {
           },
           readwiseRootPath: '/tmp/readwise-next',
           readwiseSources: [],
-          sources: []
+          sources: [],
+          titleStrategy: 'heading'
         }
       }
     })
@@ -152,6 +154,7 @@ async function expectAppAndImportSettingsCommands() {
       validatedAt: '2026-03-25T00:02:00.000Z'
     },
     readwiseRootPath: '/tmp/readwise-next',
+    titleStrategy: 'heading',
     updatedAt: '2026-03-25T00:05:00.000Z'
   });
 }

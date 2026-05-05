@@ -123,6 +123,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     desiredRetention: asNullableFiniteNumber(args.desiredRetention, 'desiredRetention'),
     title: asString(args.title, 'title'),
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
+    hideTitleHeading: args.hideTitleHeading === undefined ? false : asBoolean(args.hideTitleHeading, 'hideTitleHeading'),
     content: asString(args.content, 'content'),
     reveal: asNullableString(args.reveal, 'reveal'),
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),

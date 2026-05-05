@@ -34,6 +34,7 @@ function toNodeSnapshotPayload(node: Node, position?: number): NativeNodeSnapsho
     desiredRetention: node.desiredRetention ?? null,
     title: node.title,
     isTitleManual: Boolean(node.isTitleManual),
+    hideTitleHeading: Boolean(node.hideTitleHeading),
     content: node.content,
     reveal: node.reveal,
     anchorLink: node.anchorLink ?? null,

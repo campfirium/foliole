@@ -35,6 +35,7 @@ interface WorkspaceNodeSnapshot {
   desiredRetention?: number | null;
   title: string;
   isTitleManual: boolean;
+  hideTitleHeading: boolean;
   content: string;
   reveal: string | null;
   anchorLink: WorkspaceAnchorLink | null;
@@ -58,6 +59,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   desired_retention: number | null;
   title: string;
   is_title_manual: number;
+  hide_title_heading: number;
   content: string;
   reveal: string | null;
   anchor_link: string | null;
@@ -150,6 +152,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.desired_retention,
        n.title,
        n.is_title_manual,
+       n.hide_title_heading,
        n.content,
        n.reveal,
        n.anchor_link,
@@ -193,6 +196,7 @@ function buildSnapshotRows(rows: WorkspaceNodeRow[], orderedRows: NodeOrderRow[]
       parentNodeId: row.parent_id,
       title: row.title,
       isTitleManual: row.is_title_manual === 1,
+      hideTitleHeading: row.hide_title_heading === 1,
       content: row.content,
       reveal: row.reveal,
       anchorLink: parseAnchorLink(row.anchor_link),

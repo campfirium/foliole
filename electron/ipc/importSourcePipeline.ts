@@ -13,6 +13,7 @@ import {
   convertHtmlToMarkdownCompatible,
   formatHtmlConversionDegradedReason
 } from '../../lib/core/import/htmlToMarkdownCompatible.js';
+import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
 
 export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
@@ -78,6 +79,10 @@ export function resolveImportHighlightPolicy(args?: Pick<NativeTextImportArgs, '
   return args?.highlight_policy === 'adopt' ? 'adopt' : 'reference_only';
 }
 
+export function resolveImportNodeTitleStrategy(args?: Pick<NativeTextImportArgs, 'title_strategy'>): ImportNodeTitleStrategy {
+  return normalizeImportNodeTitleStrategy(args?.title_strategy);
+}
+
 export function toImportPayload(content: string, kind: ImportSourceKind, sourceName = 'Imported source') {
   const normalizedContent = stripUtf8Bom(content);
   if (kind === 'epub') {
@@ -109,6 +114,7 @@ export function buildPreparedImportRecord(
     sourceIdentity?: string;
     sourceLocator?: string;
     sourceProfile?: ImportSourceProfile;
+    titleStrategy?: ImportNodeTitleStrategy;
   }
 ): PreparedImportRecord {
   return createPreparedDesktopTextImport({
@@ -123,7 +129,8 @@ export function buildPreparedImportRecord(
     kind: source.kind,
     sourceIdentity: input.sourceIdentity,
     sourceLocator: input.sourceLocator,
-    sourceProfile: input.sourceProfile
+    sourceProfile: input.sourceProfile,
+    titleStrategy: input.titleStrategy
   });
 }
 
@@ -135,6 +142,7 @@ export async function loadPreparedImportRecord(
     highlightPolicy?: ImportHighlightPolicy;
     importedAt: string;
     sourceProfile?: ImportSourceProfile;
+    titleStrategy?: ImportNodeTitleStrategy;
   }
 ) {
   const payload =

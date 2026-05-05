@@ -28,6 +28,7 @@ it('keeps the source body intact, returns matched highlights, and appends only u
   );
 
   expect(prepared.content).toContain('# Chapter');
+  expect(prepared.nodeTitle).toBe('chapter');
   expect(prepared.content).not.toContain('## Imported Context');
   expect(prepared.content).toContain('## Unmatched Sidecar Highlights');
   expect(prepared.content).toContain('- Missing: quote that is not present in the body');
@@ -70,6 +71,7 @@ it('recovers list-heavy and flattened highlights from the source body before mar
   );
 
   expect(prepared.content).toContain('| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |');
+  expect(prepared.nodeTitle).toBe('readwise');
   expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
   expect(prepared.matchedHighlights).toEqual([
     {

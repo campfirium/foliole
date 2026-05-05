@@ -94,6 +94,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       const nextNode = {
         ...node,
         content,
+        hideTitleHeading: false,
         title: node.isTitleManual ? node.title : derivedTitle,
         updatedAt: new Date().toISOString()
       };

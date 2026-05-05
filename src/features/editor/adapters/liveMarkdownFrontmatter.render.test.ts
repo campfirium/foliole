@@ -28,4 +28,18 @@ describe('live markdown frontmatter rendering', () => {
 
     adapter.destroy();
   });
+
+  it('hides the lone level-one heading in live preview to avoid a duplicated page title', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      hideTitleHeading: true,
+      initialContent: '# Title\n\nParagraph'
+    });
+
+    expect(host.querySelector('.cm-line.cm-line-title-heading-hidden')).not.toBeNull();
+
+    adapter.destroy();
+  });
 });

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   createDefaultImportManagerSettings,
   type ImportManagerSettings,
+  type ImportNodeTitleStrategy,
   type KeepImportPreviewSummary
 } from '../../../lib/core/import/importManagerSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
@@ -48,7 +49,7 @@ function toKeepPreviewSummary(result: NonNullable<Awaited<ReturnType<typeof prev
 
 function usePersistedImportSourceWorkspaceSettings() {
   const [settings, setSettings] = useState<ImportManagerSettings>(createDefaultImportManagerSettings);
-  const hydratedRef = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
   const localChangesRef = useRef(false);
   const setDirtySettings: typeof setSettings = (updater) => {
     localChangesRef.current = true;
@@ -60,7 +61,7 @@ function usePersistedImportSourceWorkspaceSettings() {
       if (!active) {
         return;
       }
-      hydratedRef.current = true;
+      setHydrated(true);
       if (localChangesRef.current) {
         return;
       }
@@ -72,11 +73,11 @@ function usePersistedImportSourceWorkspaceSettings() {
   }, []);
 
   useEffect(() => {
-    if (!hydratedRef.current || !localChangesRef.current) {
+    if (!hydrated || !localChangesRef.current) {
       return;
     }
     void saveImportSourceWorkspaceSettings(settings);
-  }, [settings]);
+  }, [hydrated, settings]);
   return [settings, setDirtySettings] as const;
 }
 
@@ -236,6 +237,12 @@ function createWorkspaceMetaActions(setSettings: SetSettings) {
         readwiseSources: input.readwiseSources
       }));
     },
+    handleChangeTitleStrategy(titleStrategy: ImportNodeTitleStrategy) {
+      setSettings((current) => ({
+        ...current,
+        titleStrategy
+      }));
+    },
     setDetailsOpen(updater: (current: boolean) => boolean) {
       setSettings((current) => ({
         ...current,
@@ -256,6 +263,7 @@ export function useImportSourceWorkspaceState() {
     readwiseReaderConfig: settings.readwiseReaderConfig,
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSources: settings.readwiseSources,
-    sources: settings.sources
+    sources: settings.sources,
+    titleStrategy: settings.titleStrategy
   };
 }

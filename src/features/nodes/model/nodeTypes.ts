@@ -36,6 +36,7 @@ export interface Node {
   specialKind?: NodeSpecialKind;
   title: string;
   isTitleManual?: boolean;
+  hideTitleHeading?: boolean;
   content: string;
   anchorLink?: NodeAnchorLink | null;
   reveal: string | null;

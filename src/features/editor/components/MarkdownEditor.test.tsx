@@ -15,6 +15,7 @@ const mockDestroy = vi.fn();
 const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 }));
 const mockGetContent = vi.fn(() => '');
 const mockSetContent = vi.fn();
+const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
@@ -38,6 +39,9 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     }
     setContent(content: string) {
       mockSetContent(content);
+    }
+    setHideTitleHeading(value: boolean) {
+      mockSetHideTitleHeading(value);
     }
     getSelection() {
       return { from: 0, to: 0 };
@@ -101,6 +105,7 @@ function resetMocks() {
     mockDestroy.mockClear();
     mockGetContent.mockClear();
     mockSetContent.mockClear();
+    mockSetHideTitleHeading.mockClear();
     mockSetSelection.mockClear();
     mockSetScrollTop.mockClear();
     mockOnScroll.mockClear();
@@ -132,6 +137,18 @@ describe('MarkdownEditor rendering', () => {
     );
 
     expect(container.firstChild).toHaveStyle('--editor-content-padding-bottom: min(68dvh, 36rem)');
+  });
+
+  it('updates title-heading visibility without recreating editor adapter', () => {
+    const onChange = vi.fn();
+    const view = renderWithMouseGestureProvider(<MarkdownEditor hideTitleHeading={false} nodeId="node-1" onChange={onChange} value="a" />);
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+
+    view.rerender(<MarkdownEditor hideTitleHeading={true} nodeId="node-1" onChange={onChange} value="a" />);
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+    expect(mockSetHideTitleHeading).toHaveBeenCalledWith(true);
   });
 });
 

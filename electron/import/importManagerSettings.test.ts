@@ -68,6 +68,7 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
       keepState: 'previewed'
     }
   ],
+  titleStrategy: 'heading',
   sources: [
     {
       actionMode: 'move',
@@ -106,6 +107,7 @@ function expectNormalizedSavedSettings() {
       validatedAt: '2026-03-25T00:02:00.000Z'
     },
     readwiseRootPath: '/tmp/readwise-root',
+    titleStrategy: 'heading',
     readwiseSources: [
       {
         id: 'draft-import-source-1',
@@ -159,6 +161,7 @@ function expectReloadedSettingsAfterRestart() {
       validatedAt: '2026-03-25T00:02:00.000Z'
     },
     readwiseRootPath: '/tmp/readwise-root',
+    titleStrategy: 'heading',
     readwiseSources: [
       {
         id: 'draft-import-source-1',
