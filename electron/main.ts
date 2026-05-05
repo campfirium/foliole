@@ -224,7 +224,10 @@ if (!hasSingleInstanceLock) {
   process.exit(0);
 }
 
-const devRestartIntentWatcher = installDevRestartIntentWatcher({ app });
+const devRestartIntentWatcher = installDevRestartIntentWatcher({
+  app,
+  getWindows: () => BrowserWindow.getAllWindows()
+});
 const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({
   getWindows: () => BrowserWindow.getAllWindows()
 });

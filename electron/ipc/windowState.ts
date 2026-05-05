@@ -60,10 +60,14 @@ function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
   };
 }
 
-export async function saveWindowState(window: BrowserWindow): Promise<void> {
+export function saveWindowStateNow(window: BrowserWindow): void {
   const nextState = toWindowStateFromRuntime(window);
   saveJsonSetting(WINDOW_STATE_KEY, nextState);
   logWindowStateLifecycleEvent('save-window-state', window, {
     persistedState: nextState
   });
+}
+
+export async function saveWindowState(window: BrowserWindow): Promise<void> {
+  saveWindowStateNow(window);
 }

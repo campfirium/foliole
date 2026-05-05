@@ -2,6 +2,14 @@ import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
+const { saveWindowStateNow } = vi.hoisted(() => ({
+  saveWindowStateNow: vi.fn()
+}));
+
+vi.mock('./ipc/windowState.js', () => ({
+  saveWindowStateNow
+}));
+
 import {
   DEV_RESTART_INTENT_KIND,
   DEV_RESTART_INTENT_FILE,
@@ -37,6 +45,7 @@ function createWatcherHarness() {
   let unwatchPath = '';
   let onChange: (() => void) | null = null;
   let intentContent: string | null = null;
+  const windows = [{ isDestroyed: () => false }, { isDestroyed: () => true }];
 
   const watcher = installDevRestartIntentWatcher({
     app: { exit, relaunch },
@@ -63,6 +72,7 @@ function createWatcherHarness() {
         onChange = listener;
       }
     },
+    getWindows: () => windows,
     logger: { error, info }
   });
 
@@ -72,6 +82,7 @@ function createWatcherHarness() {
     info,
     intentPath,
     relaunch,
+    windows,
     setIntentContent(content: string | null) {
       intentContent = content;
     },
@@ -84,9 +95,27 @@ function createWatcherHarness() {
   };
 }
 
+function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHarness>) {
+  expect(harness.relaunch).toHaveBeenCalledTimes(1);
+  expect(harness.exit).toHaveBeenCalledTimes(1);
+  expect(harness.exit).toHaveBeenCalledWith(0);
+  expect(saveWindowStateNow).toHaveBeenCalledTimes(1);
+  expect(saveWindowStateNow).toHaveBeenCalledWith(harness.windows[0]);
+  expect(harness.info).toHaveBeenCalledWith('[electron-main] consumed dev restart intent', {
+    head: 'abc123',
+    intentPath: harness.intentPath,
+    nonce: 7,
+    reason: 'Class B: working tree electron changes detected',
+    requestedAt: '2026-03-15T10:00:00.000Z',
+    requestedBy: 'wsl-windows-preview'
+  });
+  expect(harness.error).not.toHaveBeenCalled();
+}
+
 describe('installDevRestartIntentWatcher', () => {
   it('consumes one dev restart intent exactly once, then relaunches', () => {
     const harness = createWatcherHarness();
+    saveWindowStateNow.mockClear();
 
     expect(harness.watcher?.intentPath).toBe(harness.intentPath);
     expect(harness.watchedPath()).toBe(harness.intentPath);
@@ -97,18 +126,7 @@ describe('installDevRestartIntentWatcher', () => {
     harness.triggerChange();
     harness.triggerChange();
 
-    expect(harness.relaunch).toHaveBeenCalledTimes(1);
-    expect(harness.exit).toHaveBeenCalledTimes(1);
-    expect(harness.exit).toHaveBeenCalledWith(0);
-    expect(harness.info).toHaveBeenCalledWith('[electron-main] consumed dev restart intent', {
-      head: 'abc123',
-      intentPath: harness.intentPath,
-      nonce: 7,
-      reason: 'Class B: working tree electron changes detected',
-      requestedAt: '2026-03-15T10:00:00.000Z',
-      requestedBy: 'wsl-windows-preview'
-    });
-    expect(harness.error).not.toHaveBeenCalled();
+    expectFirstIntentConsumption(harness);
 
     harness.watcher?.close();
     expect(harness.unwatchPath()).toBe(harness.intentPath);
@@ -116,6 +134,7 @@ describe('installDevRestartIntentWatcher', () => {
 
   it('ignores later restart intents after relaunch was already requested', () => {
     const harness = createWatcherHarness();
+    saveWindowStateNow.mockClear();
 
     harness.setIntentContent(createIntentContent());
     harness.triggerChange();
@@ -133,8 +152,7 @@ describe('installDevRestartIntentWatcher', () => {
     );
     harness.triggerChange();
 
-    expect(harness.relaunch).toHaveBeenCalledTimes(1);
-    expect(harness.exit).toHaveBeenCalledTimes(1);
+    expectFirstIntentConsumption(harness);
     expect(harness.info).toHaveBeenCalledTimes(2);
     expect(harness.info).toHaveBeenNthCalledWith(2, '[electron-main] consumed dev restart intent', {
       head: 'abc123',

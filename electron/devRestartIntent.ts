@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { saveWindowStateNow } from './ipc/windowState.js';
+
 export const DEV_RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 export const DEV_RESTART_INTENT_KIND = 'foliole.electron.dev.restart-intent.v1';
 
@@ -17,6 +19,10 @@ interface RestartIntent {
 interface RestartIntentApp {
   exit(code?: number): void;
   relaunch(): void;
+}
+
+interface RestartIntentWindow {
+  isDestroyed?(): boolean;
 }
 
 interface RestartIntentFileSystem {
@@ -116,6 +122,7 @@ function consumeDevRestartIntent(args: {
   content: string;
   consumedNonce: number;
   fileSystem: RestartIntentFileSystem;
+  getWindows: () => RestartIntentWindow[];
   intentPath: string;
   logger: RestartIntentLogger;
   relaunchRequested: boolean;
@@ -151,6 +158,12 @@ function consumeDevRestartIntent(args: {
     requestedAt: intent.requestedAt,
     requestedBy: intent.requestedBy
   });
+  for (const window of args.getWindows()) {
+    if (window.isDestroyed?.()) {
+      continue;
+    }
+    saveWindowStateNow(window as never);
+  }
   args.app.relaunch();
   args.app.exit(0);
   return { consumedNonce: intent.nonce, relaunchRequested: true };
@@ -161,6 +174,7 @@ export function installDevRestartIntentWatcher(options: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   fileSystem?: RestartIntentFileSystem;
+  getWindows?: () => RestartIntentWindow[];
   logger?: RestartIntentLogger;
 }): DevRestartIntentWatcher | null {
   const env = options.env ?? process.env;
@@ -185,6 +199,7 @@ export function installDevRestartIntentWatcher(options: {
       content,
       consumedNonce,
       fileSystem,
+      getWindows: options.getWindows ?? (() => []),
       intentPath,
       logger,
       relaunchRequested
