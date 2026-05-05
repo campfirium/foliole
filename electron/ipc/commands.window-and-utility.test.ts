@@ -31,6 +31,7 @@ const mockWindow = {
   isMaximized: vi.fn(() => false),
   maximize: vi.fn(),
   minimize: vi.fn(),
+  webContents: { toggleDevTools: vi.fn() },
   unmaximize: vi.fn()
 };
 
@@ -104,11 +105,13 @@ it('throws on unsupported command', async () => {
 
 it('handles window commands through invoke channel', async () => {
   await expect(handleInvokeRequest({ command: 'window_minimize' })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'window_toggle_dev_tools' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_toggle_maximize' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_close' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_is_maximized' })).resolves.toBe(false);
 
   expect(mockWindow.minimize).toHaveBeenCalledTimes(1);
+  expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
   expect(mockWindow.close).toHaveBeenCalledTimes(1);
 });

@@ -20,7 +20,8 @@ export const APP_COMMAND_IDS = {
   openNotes: 'workspace.openNotes',
   openTrash: 'workspace.openTrash',
   openSettings: 'workspace.openSettings',
-  toggleList: 'workspace.toggleList'
+  toggleList: 'workspace.toggleList',
+  toggleDevTools: 'workspace.toggleDevTools'
 } as const;
 
 export type AppCommandId = (typeof APP_COMMAND_IDS)[keyof typeof APP_COMMAND_IDS];

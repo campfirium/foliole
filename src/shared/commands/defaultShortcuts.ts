@@ -11,6 +11,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.goBack]: { primary: { key: 'ArrowLeft', altKey: true } },
   [APP_COMMAND_IDS.goForward]: { primary: { key: 'ArrowRight', altKey: true } },
+  [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', ctrlKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: ' ' } },
   [APP_COMMAND_IDS.gradeReviewAgain]: { primary: { key: '1' } },
   [APP_COMMAND_IDS.gradeReviewHard]: { primary: { key: '2' } },

@@ -10,6 +10,7 @@ export const NATIVE_COMMANDS = {
   windowClose: 'window_close',
   windowIsMaximized: 'window_is_maximized',
   windowMinimize: 'window_minimize',
+  windowToggleDevTools: 'window_toggle_dev_tools',
   windowToggleMaximize: 'window_toggle_maximize',
   loadWorkspaceSnapshot: 'load_workspace_snapshot',
   loadAppSettingsState: 'load_app_settings_state',

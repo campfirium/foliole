@@ -1,4 +1,4 @@
-import { Leaf } from 'lucide-react';
+import { Diamond, Hexagon } from 'lucide-react';
 
 import { cn } from '../../../shared/lib/utils';
 
@@ -30,7 +30,6 @@ function resolveCustomIconClassName(state: NodeTreeRowIconState, transformMode: 
 function resolveDefaultIconClassName(state: NodeTreeRowIconState, transformMode: 'none' | 'flip-x' | 'flip-y') {
   return cn(
     'size-3.5',
-    state === 'pending' && '[&_path]:stroke-[2.15] [&_path]:[stroke-dasharray:2.4_1.4] [&_path]:[stroke-linecap:butt]',
     iconTransformClass(transformMode)
   );
 }
@@ -38,12 +37,13 @@ function resolveDefaultIconClassName(state: NodeTreeRowIconState, transformMode:
 export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
   const isReviewCard = kind === 'review';
   const customIcon = resolveNodeTreeRowCustomIcon({ kind, state });
-  const fallbackTransformMode = isReviewCard ? 'flip-y' : 'none';
+  const fallbackTransformMode = 'none';
   const transformMode = customIcon.markup ? customIcon.transformMode : fallbackTransformMode;
-  const iconStyle = state === 'pending' ? { color: '#2563eb' } : undefined;
+  const iconStyle = state === 'scheduled' ? { color: 'var(--app-accent-color)' } : undefined;
   const iconClassName = cn(
     'relative mr-1 inline-flex size-3.5 flex-none items-center justify-center text-foreground/65'
   );
+  const DefaultIcon = isReviewCard ? Diamond : Hexagon;
   return (
     <span
       className={iconClassName}
@@ -63,7 +63,7 @@ export function NodeTreeRowIcon({ kind, state }: NodeTreeRowIconProps) {
           dangerouslySetInnerHTML={{ __html: customIcon.markup }}
         />
       ) : (
-        <Leaf
+        <DefaultIcon
           aria-hidden="true"
           className={resolveDefaultIconClassName(state, transformMode)}
           strokeWidth={2}

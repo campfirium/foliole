@@ -34,6 +34,7 @@ interface RunAppCommandActions {
   readingReviewLater: () => void;
   readingReviewRead: () => void;
   readingReviewDismiss: () => void;
+  toggleDevTools: () => void;
 }
 
 interface ReviewModeToggleActions {
@@ -52,6 +53,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.openNotes, title: 'Open Notes', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
+  { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Workspace', keywords: ['developer', 'inspect'] },
   { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Settings' },
   { id: APP_COMMAND_IDS.closeSettings, title: 'Close Settings', section: 'Settings' },
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
@@ -136,6 +138,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.toggleList]: actions.toggleList,
+    [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
     [APP_COMMAND_IDS.closeSettings]: actions.closeSettings,
     [APP_COMMAND_IDS.goBack]: actions.goBack,

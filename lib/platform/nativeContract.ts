@@ -135,6 +135,10 @@ export type NativeCommandMap = {
     args: undefined;
     result: null;
   };
+  [NATIVE_COMMANDS.windowToggleDevTools]: {
+    args: undefined;
+    result: null;
+  };
   [NATIVE_COMMANDS.windowToggleMaximize]: {
     args: undefined;
     result: null;

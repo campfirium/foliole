@@ -96,8 +96,7 @@ export function resolveNodeTreeRowCustomIcon(args: {
       width: '100%',
       height: '100%',
       'data-node-custom-svg': 'true',
-      'data-node-custom-slot': usesSecondarySvg ? 'secondary' : 'primary',
-      'stroke-dasharray': args.state === 'pending' ? '2.2 1.4' : undefined
+      'data-node-custom-slot': usesSecondarySvg ? 'secondary' : 'primary'
     }),
     slot: usesSecondarySvg ? 'secondary' : 'primary',
     transformMode

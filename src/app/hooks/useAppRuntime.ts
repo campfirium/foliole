@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 
 interface CommandPaletteToggleShortcutEvent {
   altKey: boolean;
@@ -10,6 +11,16 @@ interface CommandPaletteToggleShortcutEvent {
   key: string;
   metaKey: boolean;
   shiftKey: boolean;
+}
+
+export function isDevToolsToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
+  return (
+    event.ctrlKey &&
+    !event.altKey &&
+    !event.metaKey &&
+    event.shiftKey &&
+    event.key.toLowerCase() === 'i'
+  );
 }
 
 export function isCommandPaletteToggleShortcut(event: CommandPaletteToggleShortcutEvent) {
@@ -33,6 +44,11 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   useEffect(
     () =>
       onWindowKeydown((event) => {
+        if (isDevToolsToggleShortcut(event)) {
+          event.preventDefault();
+          void toggleMainWindowDevTools();
+          return;
+        }
         if (isCommandPaletteToggleShortcut(event)) {
           event.preventDefault();
           setIsCommandPaletteOpen((open) => !open);

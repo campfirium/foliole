@@ -50,10 +50,6 @@ body {
   color: rgb(32 33 36 / 0.65);
 }
 
-[data-node-icon='leaf'][data-node-icon-pattern='dash'] {
-  color: rgb(32 33 36 / 0.78);
-}
-
 [data-node-icon='leaf'] svg {
   display: block;
   overflow: visible;
@@ -66,7 +62,7 @@ body {
 }
 
 [data-node-icon='leaf'][data-node-icon-pattern='dash'] svg :is(path, circle, ellipse, line, polygon, polyline, rect) {
-  stroke-dasharray: 2.4 1.4;
+  stroke-dasharray: 1 2;
   stroke-linecap: butt;
 }
 

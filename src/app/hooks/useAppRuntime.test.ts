@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isCommandPaletteToggleShortcut } from './useAppRuntime';
+import { isCommandPaletteToggleShortcut, isDevToolsToggleShortcut } from './useAppRuntime';
 
 describe('isCommandPaletteToggleShortcut', () => {
   it('matches Ctrl/Cmd+P and rejects Ctrl/Cmd+K', () => {
@@ -31,6 +31,40 @@ describe('isCommandPaletteToggleShortcut', () => {
         key: 'k',
         metaKey: false,
         shiftKey: false
+      })
+    ).toBe(false);
+  });
+});
+
+describe('isDevToolsToggleShortcut', () => {
+  it('matches Ctrl+Shift+I and rejects nearby combinations', () => {
+    expect(
+      isDevToolsToggleShortcut({
+        altKey: false,
+        ctrlKey: true,
+        key: 'i',
+        metaKey: false,
+        shiftKey: true
+      })
+    ).toBe(true);
+
+    expect(
+      isDevToolsToggleShortcut({
+        altKey: false,
+        ctrlKey: true,
+        key: 'i',
+        metaKey: false,
+        shiftKey: false
+      })
+    ).toBe(false);
+
+    expect(
+      isDevToolsToggleShortcut({
+        altKey: true,
+        ctrlKey: true,
+        key: 'i',
+        metaKey: false,
+        shiftKey: true
       })
     ).toBe(false);
   });

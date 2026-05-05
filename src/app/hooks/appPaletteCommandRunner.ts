@@ -16,6 +16,7 @@ interface PaletteCommandRunnerArgs {
   isReviewMode: boolean;
   onToggleEditorDisplayMode: () => void;
   onToggleListVisibility: () => void;
+  onToggleDevTools: () => void;
   openTrashView: () => void;
   paletteItems: CommandPaletteItem[];
   recordRecentCommand: (id: string) => void;
@@ -54,6 +55,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       toggleReviewMode,
       toggleEditorDisplayMode: args.onToggleEditorDisplayMode,
       toggleList: args.onToggleListVisibility,
+      toggleDevTools: args.onToggleDevTools,
       gradeReviewAgain: () => args.gradeReviewCard(1),
       gradeReviewHard: () => args.gradeReviewCard(2),
       gradeReviewGood: () => args.gradeReviewCard(3),

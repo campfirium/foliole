@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
-import { buildAppPaletteItems, runReviewModeToggle } from './appCommands';
+import { buildAppPaletteItems, runAppCommand, runReviewModeToggle } from './appCommands';
 
 describe('buildAppPaletteItems', () => {
   it('includes migrated command entries instead of a minimal fallback list', () => {
@@ -21,6 +21,7 @@ describe('buildAppPaletteItems', () => {
 
     expect(items.length).toBeGreaterThanOrEqual(12);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);
+    expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
   });
@@ -40,6 +41,38 @@ describe('buildAppPaletteItems', () => {
     });
     const reviewModeItem = items.find((item) => item.id === APP_COMMAND_IDS.startStudyMode);
     expect(reviewModeItem?.title).toBe('Exit Review Mode');
+  });
+});
+
+describe('runAppCommand', () => {
+  it('runs toggle devtools through the shared command handler', () => {
+    const toggleDevTools = vi.fn();
+
+    expect(
+      runAppCommand(APP_COMMAND_IDS.toggleDevTools, {
+        closeSettings: () => undefined,
+        goBack: () => undefined,
+        goForward: () => undefined,
+        goParent: () => undefined,
+        openNotes: () => undefined,
+        openSettings: () => undefined,
+        openTrash: () => undefined,
+        revealReviewAnswer: () => undefined,
+        toggleReviewMode: () => undefined,
+        toggleEditorDisplayMode: () => undefined,
+        toggleList: () => undefined,
+        gradeReviewAgain: () => undefined,
+        gradeReviewHard: () => undefined,
+        gradeReviewGood: () => undefined,
+        gradeReviewEasy: () => undefined,
+        readingReviewLater: () => undefined,
+        readingReviewRead: () => undefined,
+        readingReviewDismiss: () => undefined,
+        toggleDevTools
+      })
+    ).toBe(true);
+
+    expect(toggleDevTools).toHaveBeenCalledTimes(1);
   });
 });
 
