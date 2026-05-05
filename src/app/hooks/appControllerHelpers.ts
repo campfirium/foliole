@@ -22,11 +22,16 @@ type WorkspaceSelectors = {
   };
 };
 
-export function useCurrentReviewPreview(isStudyMode: boolean, ws: WorkspaceSelectors) {
+export function useCurrentReviewPreview(
+  isStudyMode: boolean,
+  ws: WorkspaceSelectors,
+  previewSeed: string
+) {
   return useReviewPreview({
     currentNodeId: ws.reviewSession.currentNodeId,
     isAnswerRevealed: ws.reviewSession.isAnswerRevealed,
     isStudyMode,
+    previewSeed,
     reviewProfile: ws.reviewSession.currentNodeId
       ? (ws.nodesById[ws.reviewSession.currentNodeId]?.review ?? null)
       : null

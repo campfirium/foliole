@@ -15,6 +15,7 @@ interface HookProps {
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
   isStudyMode: boolean;
+  previewSeed: string;
   reviewProfile: NodeReviewProfile | null;
 }
 
@@ -84,20 +85,20 @@ it('requests preview only after answer reveal and avoids duplicate calls for sam
   vi.mocked(createReviewSchedulerAdapter).mockReturnValue(createAdapter(preview));
 
   const { rerender } = render(
-    <PreviewProbe currentNodeId="node-1" isAnswerRevealed={false} isStudyMode reviewProfile={BASE_PROFILE} />
+    <PreviewProbe currentNodeId="node-1" isAnswerRevealed={false} isStudyMode previewSeed="0.90" reviewProfile={BASE_PROFILE} />
   );
 
   expect(preview).not.toHaveBeenCalled();
   expect(screen.getByTestId('preview-good-days')).toHaveTextContent('none');
 
-  rerender(<PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode reviewProfile={BASE_PROFILE} />);
+  rerender(<PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="0.90" reviewProfile={BASE_PROFILE} />);
 
   await waitFor(() => {
     expect(preview).toHaveBeenCalledTimes(1);
   });
   expect(screen.getByTestId('preview-good-days')).toHaveTextContent('3');
 
-  rerender(<PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode reviewProfile={BASE_PROFILE} />);
+  rerender(<PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="0.90" reviewProfile={BASE_PROFILE} />);
 
   await waitFor(() => {
     expect(preview).toHaveBeenCalledTimes(1);
@@ -112,7 +113,7 @@ it('clears stale preview and keeps fallback state when reveal-time preview reque
   vi.mocked(createReviewSchedulerAdapter).mockReturnValue(createAdapter(preview));
 
   const { rerender } = render(
-    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode reviewProfile={BASE_PROFILE} />
+    <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode previewSeed="0.90" reviewProfile={BASE_PROFILE} />
   );
 
   await waitFor(() => {
@@ -125,6 +126,7 @@ it('clears stale preview and keeps fallback state when reveal-time preview reque
       currentNodeId="node-1"
       isAnswerRevealed
       isStudyMode
+      previewSeed="0.80"
       reviewProfile={{ ...BASE_PROFILE, due: '2026-03-07T00:00:00.000Z' }}
     />
   );

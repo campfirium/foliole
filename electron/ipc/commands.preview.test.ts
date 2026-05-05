@@ -34,6 +34,10 @@ vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn(),
   saveAppSettingsState: vi.fn()
 }));
+vi.mock('../reviewSchedulerSettings.js', () => ({
+  loadReviewSchedulerSettings: vi.fn(),
+  saveReviewSchedulerSettings: vi.fn()
+}));
 vi.mock('./boot.js', () => ({ bootReport: vi.fn() }));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn(),

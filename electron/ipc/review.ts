@@ -1,4 +1,10 @@
-import { Rating, fsrs, type Grade } from 'ts-fsrs';
+import { Rating, fsrs, type FSRS, type Grade } from 'ts-fsrs';
+
+import {
+  createReviewSchedulerParameters,
+  getReviewSchedulerVersion,
+  loadReviewSchedulerSettings
+} from '../reviewSchedulerSettings.js';
 
 interface SchedulerCard {
   due: string;
@@ -90,7 +96,19 @@ function fromTsFsrsCard(card: {
   };
 }
 
-const scheduler = fsrs();
+let schedulerCache: { key: string; scheduler: FSRS } | null = null;
+
+function getReviewScheduler() {
+  const settings = loadReviewSchedulerSettings();
+  const key = getReviewSchedulerVersion(settings);
+  if (!schedulerCache || schedulerCache.key !== key) {
+    schedulerCache = {
+      key,
+      scheduler: fsrs(createReviewSchedulerParameters(settings))
+    };
+  }
+  return schedulerCache.scheduler;
+}
 
 function toSchedulerResult(item: { card: Parameters<typeof fromTsFsrsCard>[0]; log: { review: Date } }): ReviewSchedulerResult {
   return {
@@ -102,13 +120,13 @@ function toSchedulerResult(item: { card: Parameters<typeof fromTsFsrsCard>[0]; l
 export function reviewGrade(payload: ReviewGradeRequest) {
   const reviewAt = new Date(payload.request.now);
   const grade = toRating(payload.request.rating);
-  const next = scheduler.next(toTsFsrsCard(payload.request.card), reviewAt, grade);
+  const next = getReviewScheduler().next(toTsFsrsCard(payload.request.card), reviewAt, grade);
   return toSchedulerResult(next);
 }
 
 export function reviewPreview(payload: ReviewPreviewRequest): ReviewPreviewResult {
   const reviewAt = new Date(payload.request.now);
-  const preview = scheduler.repeat(toTsFsrsCard(payload.request.card), reviewAt);
+  const preview = getReviewScheduler().repeat(toTsFsrsCard(payload.request.card), reviewAt);
   return {
     Again: toSchedulerResult(preview[Rating.Again]),
     Hard: toSchedulerResult(preview[Rating.Hard]),

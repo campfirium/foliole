@@ -16,6 +16,10 @@ import {
   setUiFontPreset
 } from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
+import {
+  type ReviewSchedulerSettings,
+  saveReviewSchedulerSettings
+} from '../../features/settings/model/reviewSchedulerSettings';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
@@ -44,9 +48,15 @@ interface AppearanceLayoutState {
   setUiFontPresetState: (value: WorkspaceLayoutProps['uiFontPreset']) => void;
 }
 
+interface ReviewSettingsLayoutState {
+  reviewSchedulerSettings: ReviewSchedulerSettings;
+  setReviewSchedulerSettingsState: (value: ReviewSchedulerSettings) => void;
+}
+
 interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
   appearance: AppearanceLayoutState;
+  reviewSettings: ReviewSettingsLayoutState;
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
@@ -117,23 +127,18 @@ export function countDueReviewNodes(
   }).length;
 }
 
-export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
-  const sessionActions = {
-    onStartStudyMode: () => {
-      args.startReviewSession();
-      args.startStudyMode();
-    },
-    onToggleReviewSession: () => {
-      if (args.isStudyMode) {
-        args.exitReviewSession();
-        args.exitStudyMode();
-        return;
-      }
-      args.startReviewSession();
-      args.startStudyMode();
-    }
+function createSessionActions(args: BuildLayoutPropsArgs) {
+  return {
+    onStartStudyMode: () => (args.startReviewSession(), args.startStudyMode()),
+    onToggleReviewSession: () =>
+      args.isStudyMode
+        ? (args.exitReviewSession(), args.exitStudyMode())
+        : (args.startReviewSession(), args.startStudyMode())
   };
-  const appearanceActions = {
+}
+
+function createAppearanceActions(args: BuildLayoutPropsArgs) {
+  return {
     onBaseColorModeChange: (value: WorkspaceLayoutProps['baseColorMode']) => (setBaseColorMode(value), args.appearance.setBaseColorModeState(value)),
     onAccentColorPresetChange: (value: WorkspaceLayoutProps['accentColorPreset']) => (setAccentColorPreset(value), args.appearance.setAccentColorPresetState(value)),
     onAccentColorPresetReset: () => (setAccentColorPreset(DEFAULT_ACCENT_COLOR_PRESET), args.appearance.setAccentColorPresetState(DEFAULT_ACCENT_COLOR_PRESET)),
@@ -152,14 +157,41 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
       args.appearance.setEditorDisplayModeState(next);
     }
   };
+}
 
-  const reviewQueueCount = args.reviewSession.queueNodeIds.length;
-  const reviewCompletedCount = Math.max(args.reviewSession.totalNodeCount - reviewQueueCount, 0);
-  const reviewStatus: WorkspaceLayoutProps['reviewStatus'] = args.reviewSession.currentNodeId
-    ? args.reviewSession.isAnswerRevealed
+function createReviewActions(args: BuildLayoutPropsArgs) {
+  return {
+    onDesiredRetentionChange: (value: number) => {
+      const nextValue = Number(value.toFixed(2));
+      args.reviewSettings.setReviewSchedulerSettingsState({
+        ...args.reviewSettings.reviewSchedulerSettings,
+        desiredRetention: nextValue
+      });
+      void saveReviewSchedulerSettings({ desiredRetention: nextValue }).then(
+        args.reviewSettings.setReviewSchedulerSettingsState
+      );
+    }
+  };
+}
+
+function getReviewSessionSummary(reviewSession: WorkspaceState['reviewSession']) {
+  const reviewQueueCount = reviewSession.queueNodeIds.length;
+  const reviewCompletedCount = Math.max(reviewSession.totalNodeCount - reviewQueueCount, 0);
+  const reviewStatus: WorkspaceLayoutProps['reviewStatus'] = reviewSession.currentNodeId
+    ? reviewSession.isAnswerRevealed
       ? 'answer-revealed'
       : 'awaiting-answer'
     : 'completed';
+  return { reviewCompletedCount, reviewQueueCount, reviewStatus };
+}
+
+export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
+  const sessionActions = createSessionActions(args);
+  const appearanceActions = createAppearanceActions(args);
+  const reviewActions = createReviewActions(args);
+  const { reviewCompletedCount, reviewQueueCount, reviewStatus } = getReviewSessionSummary(
+    args.reviewSession
+  );
 
   return {
     activeNodeId: args.activeNodeId, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
@@ -170,11 +202,11 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode,
     onSelectTrashNode: args.onSelectTrashNode, onSplitterKeyDown: args.onSplitterKeyDown, onSplitterPointerDown: args.onSplitterPointerDown, onOpenNotesView: args.onOpenNotesView, onOpenTrashView: args.onOpenTrashView, onToggleListVisibility: args.onToggleListVisibility,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateCloze: args.editorCtx.onCreateCloze,
-    onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions,
+    onStartDocumentResize: args.documentResize.startResize, onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions, ...appearanceActions, ...reviewActions,
     onRevealAnswer: args.revealReviewAnswer, onGradeReview: (grade) => args.updateGrade(grade), onExitReviewMode: sessionActions.onToggleReviewSession, customUiFont: args.appearance.customUiFont,
     customInterfaceFont: args.appearance.customInterfaceFont, customMonospaceFont: args.appearance.customMonospaceFont, baseColorMode: args.appearance.baseColorMode,
     accentColorPreset: args.appearance.accentColorPreset, uiFontPreset: args.appearance.uiFontPreset, interfaceFontPreset: args.appearance.interfaceFontPreset,
-    interfaceFontSize: args.appearance.interfaceFontSize, markdownSyntaxVisibility: args.appearance.markdownSyntaxVisibility, editorDisplayMode: args.appearance.editorDisplayMode,
+    interfaceFontSize: args.appearance.interfaceFontSize, reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, markdownSyntaxVisibility: args.appearance.markdownSyntaxVisibility, editorDisplayMode: args.appearance.editorDisplayMode,
     monospaceFontPreset: args.appearance.monospaceFontPreset, hotkeyItems: args.hotkeyItems, selectedTrashNodeId: args.selectedTrashNodeId, onHotkeyUpdate: args.onHotkeyUpdate, onHotkeyReset: () => undefined, onHotkeyResetAll: () => undefined
   };
 }

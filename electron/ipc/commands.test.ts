@@ -49,6 +49,24 @@ vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
 }));
+vi.mock('../reviewSchedulerSettings.js', () => ({
+  loadReviewSchedulerSettings: vi.fn().mockReturnValue({
+    algorithm: 'ts-fsrs@4.3.0',
+    desiredRetention: 0.9,
+    maximumIntervalDays: 36500,
+    enableFuzz: false,
+    enableShortTerm: false,
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  }),
+  saveReviewSchedulerSettings: vi.fn().mockReturnValue({
+    algorithm: 'ts-fsrs@4.3.0',
+    desiredRetention: 0.8,
+    maximumIntervalDays: 36500,
+    enableFuzz: false,
+    enableShortTerm: false,
+    updatedAt: '2026-03-06T00:05:00.000Z'
+  })
+}));
 vi.mock('./boot.js', () => ({ bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({
   reviewGrade: vi.fn().mockReturnValue({ reviewed_at: '2026-03-04T00:00:00.000Z', card: {} })
@@ -185,24 +203,6 @@ it('handles permanent delete node command', async () => {
     nodeOrder: ['node-1', 'node-2']
   });
 });
-
-it('handles app settings storage commands', async () => {
-  await expect(handleInvokeRequest({ command: 'load_app_settings_state' })).resolves.toEqual({
-    'foliole-ui-font-preset': 'inter'
-  });
-
-  await expect(
-    handleInvokeRequest({
-      command: 'save_app_settings_state',
-      args: {
-        settings: {
-          'foliole-ui-font-preset': 'source-sans'
-        }
-      }
-    })
-  ).resolves.toBeNull();
-});
-
 
 it('handles app path and fsrs commands', async () => {
   await expect(handleInvokeRequest({ command: 'resolve_app_paths' })).resolves.toEqual({

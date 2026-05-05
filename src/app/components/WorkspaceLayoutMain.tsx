@@ -172,6 +172,7 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
       uiFontPreset={props.uiFontPreset}
       interfaceFontPreset={props.interfaceFontPreset}
       interfaceFontSize={props.interfaceFontSize}
+      desiredRetention={props.reviewSchedulerSettings.desiredRetention}
       hotkeyItems={props.hotkeyItems}
       markdownSyntaxVisibility={props.markdownSyntaxVisibility}
       monospaceFontPreset={props.monospaceFontPreset}
@@ -186,6 +187,7 @@ function SettingsOverlay({ props }: { props: WorkspaceLayoutProps }) {
       onCustomMonospaceFontChange={props.onCustomMonospaceFontChange}
       onInterfaceFontSizeChange={props.onInterfaceFontSizeChange}
       onInterfaceFontSizeReset={props.onInterfaceFontSizeReset}
+      onDesiredRetentionChange={props.onDesiredRetentionChange}
       onMarkdownSyntaxVisibilityChange={props.onMarkdownSyntaxVisibilityChange}
       onMonospaceFontPresetChange={props.onMonospaceFontPresetChange}
       onHotkeyUpdate={props.onHotkeyUpdate}

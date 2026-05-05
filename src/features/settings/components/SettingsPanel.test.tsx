@@ -23,43 +23,48 @@ beforeEach(() => {
   window.localStorage.clear();
   window.electronAPI = undefined;
   mockedListAvailableSystemFonts.mockReset();
+  mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
+
+function createProps() {
+  return {
+    accentColorPreset: '#3f8f68' as const,
+    baseColorMode: 'light' as const,
+    customInterfaceFont: '',
+    customMonospaceFont: '',
+    customUiFont: '',
+    desiredRetention: 0.9,
+    hotkeyItems: [],
+    interfaceFontPreset: 'default' as const,
+    interfaceFontSize: 17,
+    markdownSyntaxVisibility: 'visible' as const,
+    monospaceFontPreset: 'default' as const,
+    onAccentColorPresetChange: () => undefined,
+    onAccentColorPresetReset: () => undefined,
+    onBaseColorModeChange: () => undefined,
+    onClose: () => undefined,
+    onCustomInterfaceFontChange: () => undefined,
+    onCustomMonospaceFontChange: () => undefined,
+    onCustomUiFontChange: () => undefined,
+    onDesiredRetentionChange: () => undefined,
+    onHotkeyReset: () => undefined,
+    onHotkeyResetAll: () => undefined,
+    onHotkeyUpdate: () => ({ status: 'blocked' as const }),
+    onInterfaceFontPresetChange: () => undefined,
+    onInterfaceFontSizeChange: () => undefined,
+    onInterfaceFontSizeReset: () => undefined,
+    onMarkdownSyntaxVisibilityChange: () => undefined,
+    onMonospaceFontPresetChange: () => undefined,
+    onUiFontPresetChange: () => undefined,
+    uiFontPreset: 'default' as const
+  };
+}
 
 it('keeps font selects disabled until system fonts are loaded', async () => {
   const deferred = createDeferred<{ fonts: string[]; monospaceFonts: string[] }>();
   mockedListAvailableSystemFonts.mockReturnValue(deferred.promise);
 
-  render(
-    <SettingsPanel
-      accentColorPreset="#3f8f68"
-      baseColorMode="light"
-      customInterfaceFont=""
-      customMonospaceFont=""
-      customUiFont=""
-      hotkeyItems={[]}
-      interfaceFontPreset="default"
-      interfaceFontSize={17}
-      markdownSyntaxVisibility="visible"
-      monospaceFontPreset="default"
-      onAccentColorPresetChange={() => undefined}
-      onAccentColorPresetReset={() => undefined}
-      onBaseColorModeChange={() => undefined}
-      onClose={() => undefined}
-      onCustomInterfaceFontChange={() => undefined}
-      onCustomMonospaceFontChange={() => undefined}
-      onCustomUiFontChange={() => undefined}
-      onHotkeyReset={() => undefined}
-      onHotkeyResetAll={() => undefined}
-      onHotkeyUpdate={() => ({ status: 'blocked' })}
-      onInterfaceFontPresetChange={() => undefined}
-      onInterfaceFontSizeChange={() => undefined}
-      onInterfaceFontSizeReset={() => undefined}
-      onMarkdownSyntaxVisibilityChange={() => undefined}
-      onMonospaceFontPresetChange={() => undefined}
-      onUiFontPresetChange={() => undefined}
-      uiFontPreset="default"
-    />
-  );
+  render(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
@@ -76,5 +81,26 @@ it('keeps font selects disabled until system fonts are loaded', async () => {
     expect(uiSelect).toBeEnabled();
     expect(textSelect).toBeEnabled();
     expect(monoSelect).toBeEnabled();
+  });
+});
+
+it('updates desired retention from review settings slider', async () => {
+  const onDesiredRetentionChange = vi.fn();
+
+  render(
+    <SettingsPanel
+      {...createProps()}
+      onDesiredRetentionChange={onDesiredRetentionChange}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+  fireEvent.change(screen.getByLabelText('Desired retention'), {
+    target: { value: '0.8' }
+  });
+
+  await waitFor(() => {
+    expect(onDesiredRetentionChange).toHaveBeenCalledWith(0.8);
+    expect(screen.getByText('0.90')).toBeInTheDocument();
   });
 });

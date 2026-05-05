@@ -22,6 +22,7 @@ import { HotkeySettingsSection } from './HotkeySettingsSection';
 import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
+import { SettingsReviewSection } from './sections/SettingsReviewSection';
 
 interface SettingsPanelProps {
   baseColorMode: BaseColorMode;
@@ -32,6 +33,7 @@ interface SettingsPanelProps {
   uiFontPreset: InterfaceFontPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
+  desiredRetention: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   hotkeyItems: HotkeySettingItem[];
@@ -46,6 +48,7 @@ interface SettingsPanelProps {
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
+  onDesiredRetentionChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onHotkeyUpdate: (commandId: string, nextLabel: string) => HotkeyUpdateResult;
@@ -137,6 +140,7 @@ function SettingsPanelBody(props: {
   hotkeyItems: HotkeySettingItem[];
   interfaceFontOptions: string[];
   interfaceFontSize: number;
+  desiredRetention: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontOptions: string[];
   onAccentColorPresetChange: (value: AccentColorPreset) => void;
@@ -152,6 +156,7 @@ function SettingsPanelBody(props: {
   onInterfaceFontPresetChange: (value: InterfaceFontPreset) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
+  onDesiredRetentionChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onMonospaceFontPresetChange: (value: MonospaceFontPreset) => void;
   onUiFontPresetChange: (value: InterfaceFontPreset) => void;
@@ -170,6 +175,7 @@ function SettingsPanelBody(props: {
         <div className="settings-content"><header className="settings-content-header"><h2>{props.title}</h2></header>
           {props.activeCategory === 'editor' ? <SettingsEditorSection markdownSyntaxVisibility={props.markdownSyntaxVisibility} onMarkdownSyntaxVisibilityChange={props.onMarkdownSyntaxVisibilityChange} /> : null}
           {props.activeCategory === 'appearance' ? <SettingsAppearanceSection accentColorInputRef={props.accentColorInputRef} areFontOptionsReady={props.areFontOptionsReady} baseColorMode={props.baseColorMode} interfaceFontOptions={props.interfaceFontOptions} interfaceFontSize={props.interfaceFontSize} monospaceFontOptions={props.monospaceFontOptions} onAccentColorPresetChange={props.onAccentColorPresetChange} onAccentColorPresetReset={props.onAccentColorPresetReset} onBaseColorModeChange={props.onBaseColorModeChange} onInterfaceFontSelectionChange={(value) => value.startsWith('preset:') ? props.onInterfaceFontPresetChange(value.slice('preset:'.length) as InterfaceFontPreset) : value.startsWith('font:') && (props.onCustomInterfaceFontChange(value.slice('font:'.length)), props.onInterfaceFontPresetChange('custom'))} onInterfaceFontSizeChange={props.onInterfaceFontSizeChange} onInterfaceFontSizeReset={props.onInterfaceFontSizeReset} onMonospaceFontSelectionChange={(value) => value.startsWith('mono-preset:') ? props.onMonospaceFontPresetChange(value.slice('mono-preset:'.length) as MonospaceFontPreset) : value.startsWith('mono-font:') && (props.onCustomMonospaceFontChange(value.slice('mono-font:'.length)), props.onMonospaceFontPresetChange('custom'))} onOpenAccentColorPicker={() => props.accentColorInputRef.current?.click()} onUiFontSelectionChange={(value) => value.startsWith('ui-preset:') ? props.onUiFontPresetChange(value.slice('ui-preset:'.length) as InterfaceFontPreset) : value.startsWith('ui-font:') && (props.onCustomUiFontChange(value.slice('ui-font:'.length)), props.onUiFontPresetChange('custom'))} safeAccentColor={props.safeAccentColor} selectedInterfaceFontValue={props.selectedInterfaceFontValue} selectedMonospaceFontValue={props.selectedMonospaceFontValue} selectedUiFontValue={props.selectedUiFontValue} uiFontOptions={props.uiFontOptions} /> : null}
+          {props.activeCategory === 'review' ? <SettingsReviewSection desiredRetention={props.desiredRetention} onDesiredRetentionChange={props.onDesiredRetentionChange} /> : null}
           {props.activeCategory === 'about' ? <SettingsAboutSection /> : null}
           {props.activeCategory === 'hotkeys' ? <HotkeySettingsSection items={props.hotkeyItems} onReset={props.onHotkeyReset} onResetAll={props.onHotkeyResetAll} onUpdate={props.onHotkeyUpdate} /> : null}
         </div>

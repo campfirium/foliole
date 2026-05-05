@@ -12,6 +12,7 @@ import type {
   MonospaceFontPreset
 } from '../../features/settings/model/appearanceSettings';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
+import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -90,6 +91,7 @@ export interface WorkspaceLayoutProps {
   onCustomMonospaceFontChange: (value: string) => void;
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
+  onDesiredRetentionChange: (value: number) => void;
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
   onToggleEditorDisplayMode: () => void;
   onRevealAnswer: () => void;
@@ -103,6 +105,7 @@ export interface WorkspaceLayoutProps {
   uiFontPreset: InterfaceFontPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
+  reviewSchedulerSettings: ReviewSchedulerSettings;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   editorDisplayMode: EditorDisplayMode;
   monospaceFontPreset: MonospaceFontPreset;

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { getReviewSchedulerVersion, loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
+
 import { openDatabaseConnection } from './connection.js';
 import { withTransaction } from './transaction.js';
 
@@ -24,7 +26,6 @@ export interface ApplyReviewGradeInput {
 }
 
 const REVIEW_DEVICE_ID = 'desktop-local';
-const REVIEW_SCHEDULER_VERSION = 'ts-fsrs@4';
 const UPSERT_NODE_REVIEW_SQL = `INSERT INTO node_review (
   node_id,
   due,
@@ -79,13 +80,14 @@ function toNodeReviewParams(input: ApplyReviewGradeInput) {
 }
 
 function toReviewLogParams(input: ApplyReviewGradeInput, opId: string, logId: string) {
+  const schedulerVersion = getReviewSchedulerVersion(loadReviewSchedulerSettings());
   return [
     logId,
     opId,
     REVIEW_DEVICE_ID,
     input.nodeId,
     input.grade,
-    REVIEW_SCHEDULER_VERSION,
+    schedulerVersion,
     input.reviewedAt,
     input.cardBefore.due,
     input.cardBefore.stability,

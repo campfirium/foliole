@@ -8,6 +8,7 @@ interface UseReviewPreviewArgs {
   currentNodeId: string | null;
   isAnswerRevealed: boolean;
   isStudyMode: boolean;
+  previewSeed: string;
   reviewProfile: NodeReviewProfile | null;
 }
 
@@ -43,7 +44,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
 
     const now = new Date().toISOString();
     const card = toSchedulerCard(args.reviewProfile, now);
-    const requestKey = `${args.currentNodeId}:${cardSignature}`;
+    const requestKey = `${args.currentNodeId}:${args.previewSeed}:${cardSignature}`;
     if (requestKeyRef.current === requestKey) {
       return;
     }
@@ -67,7 +68,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
     return () => {
       isActive = false;
     };
-  }, [args.currentNodeId, args.isAnswerRevealed, args.isStudyMode, args.reviewProfile, cardSignature, scheduler]);
+  }, [args.currentNodeId, args.isAnswerRevealed, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, scheduler]);
 
   return preview;
 }
