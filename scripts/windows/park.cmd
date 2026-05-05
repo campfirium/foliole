@@ -6,7 +6,8 @@ REM Usage:  park          (create stop signal)
 REM         park clear    (remove stop signal, resume agent)
 REM ---------------------------------------------------------------
 
-set "FLAG=%~dp0..\..\.lab\agent\park.flag"
+set "FLAG=%~dp0..\..\.lab\internal\runtime\park.flag"
+if not exist "%~dp0..\..\.lab\internal\runtime" mkdir "%~dp0..\..\.lab\internal\runtime"
 
 if /i "%~1"=="clear" (
     if exist "%FLAG%" (
@@ -19,6 +20,6 @@ if /i "%~1"=="clear" (
 )
 
 echo PARK> "%FLAG%"
-echo [park] Stop signal written to .lab/agent/park.flag
+echo [park] Stop signal written to .lab/internal/runtime/park.flag
 echo [park] Agent will stop after completing its current task.
 echo [park] To resume: park clear

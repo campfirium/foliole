@@ -12,11 +12,11 @@ if not defined REPO_WSL (
   exit /b 1
 )
 
-set "LOG_PATH=.lab/agent-loop.log"
-set "PID_PATH=.lab/agent-loop.pid"
+set "LOG_PATH=.lab/internal/runtime/agent-loop.log"
+set "PID_PATH=.lab/internal/runtime/agent-loop.pid"
 set "LOOP_ARGS=%*"
 
-wsl.exe bash -lc "cd \"%REPO_WSL%\" && mkdir -p .lab && (nohup bash scripts/codex/run-loop.sh %LOOP_ARGS% > \"%LOG_PATH%\" 2>&1 < /dev/null & echo \$! > \"%PID_PATH%\")"
+wsl.exe bash -lc "cd \"%REPO_WSL%\" && mkdir -p .lab/internal/runtime && (nohup bash scripts/codex/run-loop.sh %LOOP_ARGS% > \"%LOG_PATH%\" 2>&1 < /dev/null & echo \$! > \"%PID_PATH%\")"
 if errorlevel 1 (
   echo [codex-loop] failed to launch background loop.
   exit /b 1

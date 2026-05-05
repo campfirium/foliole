@@ -17,7 +17,7 @@
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增/重写 spec、整理文档结构、拆分长文档时，按需读取 `.lab/specs/_governance/spec-organization.md` 与 `.lab/specs/_governance/doc-organization-expectation.md`。
 - 任务涉及台账、继续/停车协议等执行细则时，读取 `.lab/agent/task-protocol.md`。
-- 仅在判断验证或停车策略时读取 `.lab/agent/windows-preview.flag` 与 `.lab/agent/park.flag`。
+- 仅在判断验证或停车策略时读取 `.lab/internal/runtime/windows-preview.flag` 与 `.lab/internal/runtime/park.flag`。
 
 ## 任务执行主规则
 1. 任务来源优先级：用户当次明确指令 > 当前代码现状 > `.lab/agent/todo.md` 首项。
@@ -39,7 +39,7 @@
 - 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
 - npm 依赖相关复核默认由 AI 直接执行并汇报结果；禁止把“人工检查依赖风险”“人工定期复核”这类空泛表述挂成默认待办。
 - npm 依赖收紧的背景、例外与专项结论统一收口在 `.lab/agent/npm-supply-chain-hardening-plan.md`；主规则只保留可执行入口，不在这里重复展开长篇原则。
-- 当 `.lab/agent/windows-preview.flag` 为 `ON` 时，代码改动在通过本地质量闸后，默认必须继续执行 `npm run windows:preview`；除非用户当次明确豁免。
+- 当 `.lab/internal/runtime/windows-preview.flag` 为 `ON` 时，代码改动在通过本地质量闸后，默认必须继续执行 `npm run windows:preview`；除非用户当次明确豁免。
 - 执行 `windows:preview` 后，汇报中必须包含实际命令与最终状态字段：`status: SYNCED` / `RESTART_REQUESTED` / `STARTED` / 失败原因；不得只汇报“已验证”。
 - Windows 公开验证入口只保留 `npm run windows:preview`；其余 Windows npm 命令不再作为默认或推荐入口。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。
@@ -61,7 +61,7 @@
 - 系统能力优先经 Electron main process 暴露，再由前端通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
 - 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
 - 持久化主路径统一走 Electron main process；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。
-- Windows 预览是否默认执行，只看 `.lab/agent/windows-preview.flag`。
+- Windows 预览是否默认执行，只看 `.lab/internal/runtime/windows-preview.flag`。
 - 桌面窗口已可见但 bridge-backed controls 失效时，默认优先排查 preload/bridge 链路，不得先草率归因为 renderer 未启动。
 
 ## 结构与代码约束
