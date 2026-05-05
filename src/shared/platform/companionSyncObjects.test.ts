@@ -201,7 +201,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     stateSeq: 4,
     status: 'accepted'
   }])).resolves.toEqual(['op-1']);
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(8);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(9);
 }
 
 describe('companion sync objects bridge', () => {

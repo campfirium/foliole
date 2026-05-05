@@ -1,5 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+const writerQueueMock = vi.hoisted(() => ({
+  run: vi.fn(async <T>(task: () => Promise<T>) => task())
+}));
+
+vi.mock('./companionSyncWriterQueue', () => ({
+  runCompanionSyncWriterTask: writerQueueMock.run
+}));
+
 const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
@@ -34,6 +42,7 @@ vi.mock('@capacitor/core', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
   capacitorMock.isNative.mockReturnValue(true);
   capacitorMock.platform.mockReturnValue('android');
 });
@@ -55,4 +64,5 @@ it('bridges native sync cursors and pending summary', async () => {
     { object_id: 'one', object_type: 'setting', state_seq: 1 }
   ]);
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(4);
 });

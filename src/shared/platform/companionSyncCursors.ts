@@ -11,6 +11,7 @@ import {
   writeWebCursor,
   writeWebNumberCursor
 } from './companionSyncWebCursors';
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
@@ -31,7 +32,9 @@ export async function loadCompanionSyncStateCursor() {
 
 export async function saveCompanionSyncStateCursor(cursor: number | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncStateCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncStateCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncPackCursor() {
@@ -41,7 +44,9 @@ export async function loadCompanionSyncPackCursor() {
 
 export async function saveCompanionSyncPackCursor(cursor: number | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncPackCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncPackCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncStatePushCursor() {
@@ -51,7 +56,9 @@ export async function loadCompanionSyncStatePushCursor() {
 
 export async function saveCompanionSyncStatePushCursor(cursor: number | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncStatePushCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncStatePushCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncNodeVersionCursor() {
@@ -61,7 +68,9 @@ export async function loadCompanionSyncNodeVersionCursor() {
 
 export async function saveCompanionSyncNodeVersionCursor(cursor: NativeSyncChangeCursor | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncNodeVersionCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncNodeVersionCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncNodeVersionPushCursor() {
@@ -71,7 +80,9 @@ export async function loadCompanionSyncNodeVersionPushCursor() {
 
 export async function saveCompanionSyncNodeVersionPushCursor(cursor: NativeSyncChangeCursor | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncNodeVersionPushCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncNodeVersionPushCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncReviewLogCursor() {
@@ -81,7 +92,9 @@ export async function loadCompanionSyncReviewLogCursor() {
 
 export async function saveCompanionSyncReviewLogCursor(cursor: NativeSyncChangeCursor | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncReviewLogCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncReviewLogCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncReviewLogPushCursor() {
@@ -91,7 +104,9 @@ export async function loadCompanionSyncReviewLogPushCursor() {
 
 export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncChangeCursor | null) {
   if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
-  return (await FolioleCompanionSync.saveSyncReviewLogPushCursor({ cursor })).cursor;
+  return runCompanionSyncWriterTask(async () => (
+    await FolioleCompanionSync.saveSyncReviewLogPushCursor({ cursor })
+  ).cursor);
 }
 
 export async function loadCompanionSyncNodeVersions(cursor: NativeSyncChangeCursor | null, limit = 500) {

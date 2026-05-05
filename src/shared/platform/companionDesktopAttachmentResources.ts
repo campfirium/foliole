@@ -2,6 +2,7 @@ import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncCon
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
 import { loadCompanionMissingAttachmentResource } from './companionSyncObjects';
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
@@ -110,7 +111,9 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
 async function syncAttachmentResourceRequestBatch(endpoint: string, requests: AttachmentResourceRequest[]) {
   try {
     const resources = await Promise.all(requests.map((request) => buildSignedAttachmentResourceRequest(endpoint, request)));
-    const result = await FolioleCompanionSync.syncAttachmentResources({ resources });
+    const result = await runCompanionSyncWriterTask(() => (
+      FolioleCompanionSync.syncAttachmentResources({ resources })
+    ));
     return result.synced_attachment_ids;
   } catch {
     return syncAttachmentResourceRequestFallback(endpoint, requests);
@@ -124,7 +127,9 @@ async function syncAttachmentResourceRequestFallback(endpoint: string, requests:
 
 async function syncAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
   try {
-    await FolioleCompanionSync.syncAttachmentResource(await buildSignedAttachmentResourceRequest(endpoint, request));
+    await runCompanionSyncWriterTask(async () => (
+      FolioleCompanionSync.syncAttachmentResource(await buildSignedAttachmentResourceRequest(endpoint, request))
+    ));
     return request.attachmentId;
   } catch {
     return null;

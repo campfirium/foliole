@@ -1,3 +1,4 @@
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
@@ -29,7 +30,7 @@ export async function syncCompanionContentBlob(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     return { availability: 'missing', hash: args.hash };
   }
-  return FolioleCompanionSync.syncContentBlob(args);
+  return runCompanionSyncWriterTask(() => FolioleCompanionSync.syncContentBlob(args));
 }
 
 export async function syncCompanionContentBlobs(args: {
@@ -40,5 +41,5 @@ export async function syncCompanionContentBlobs(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     throw new Error('Native content body batch sync is unavailable.');
   }
-  return FolioleCompanionSync.syncContentBlobs(args);
+  return runCompanionSyncWriterTask(() => FolioleCompanionSync.syncContentBlobs(args));
 }
