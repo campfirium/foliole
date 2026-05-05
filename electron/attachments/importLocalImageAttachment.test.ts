@@ -8,12 +8,14 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-image-attachment-import-tests';
+let mockedDocumentsDir = '/tmp/foliole-image-attachment-import-documents';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: mockedAppDataDir,
     app_cache_dir: path.join(mockedAppDataDir, 'cache'),
     app_config_dir: path.join(mockedAppDataDir, 'config'),
+    documents_dir: mockedDocumentsDir,
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
@@ -30,6 +32,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-image-attachment-import-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  mockedDocumentsDir = path.join(tempRoot, 'Documents');
   initializeDatabase();
 });
 
@@ -100,7 +103,9 @@ it('imports a local png into the app attachment directory and links it to the no
     }
   });
 
-  await expect(fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), mockedAppDataDir))).resolves.toEqual(imageBytes);
+  await expect(
+    fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets')))
+  ).resolves.toEqual(imageBytes);
 });
 
 it('reuses the same stored file and attachment record for repeated imports of identical content', async () => {
@@ -159,8 +164,10 @@ it('returns an explicit error when the app cannot persist the image file', async
   const imageBytes = Buffer.from('png-image-bytes');
 
   await fs.writeFile(sourcePath, imageBytes);
-  await fs.mkdir(mockedAppDataDir, { recursive: true });
-  await fs.writeFile(path.join(mockedAppDataDir, 'attachments'), 'not-a-directory');
+  const assetsDir = path.join(mockedDocumentsDir, 'Foliole', 'Assets');
+  await fs.rm(assetsDir, { recursive: true, force: true });
+  await fs.mkdir(path.dirname(assetsDir), { recursive: true });
+  await fs.writeFile(assetsDir, 'not-a-directory');
 
   await expect(importLocalImageAttachment('node-1', sourcePath)).resolves.toEqual({
     status: 'error',

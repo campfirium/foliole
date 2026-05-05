@@ -7,12 +7,14 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-backup-list-tests';
+let mockedDocumentsDir = '/tmp/foliole-backup-list-documents';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: mockedAppDataDir,
     app_config_dir: mockedAppDataDir,
     app_cache_dir: mockedAppDataDir,
+    documents_dir: mockedDocumentsDir,
     app_log_dir: mockedAppDataDir
   })
 }));
@@ -24,6 +26,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-backup-list-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  mockedDocumentsDir = path.join(tempRoot, 'Documents');
 });
 
 afterEach(async () => {
@@ -31,7 +34,7 @@ afterEach(async () => {
 });
 
 it('lists sqlite backups newest first from the managed backup directory', async () => {
-  const backupDirectoryPath = path.join(mockedAppDataDir, 'backups');
+  const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'backups');
   await fs.mkdir(backupDirectoryPath, { recursive: true });
 
   const olderPath = path.join(backupDirectoryPath, 'foliole-older.db');

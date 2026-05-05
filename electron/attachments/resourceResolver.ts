@@ -2,13 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { LIBRARY_ASSETS_DIRNAME } from '../../lib/platform/libraryPaths.js';
 import type { NativeAttachmentResourceResolution } from '../../lib/platform/nativeUtilityContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
-import { resolveAppPaths } from '../ipc/paths.js';
+import { openDatabaseConnection, resolveDatabasePath } from '../database/connection.js';
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
-
-const ATTACHMENTS_DIRECTORY_NAME = 'attachments';
 
 interface AttachmentLookupRow extends DatabaseRow {
   mime_type: string | null;
@@ -38,13 +36,19 @@ function resolveAttachmentLookup(attachmentId: string) {
   return row ?? null;
 }
 
-export function resolveAttachmentStoragePath(attachmentId: string, appDataDir = resolveAppPaths().app_data_dir) {
-  return path.join(appDataDir, ATTACHMENTS_DIRECTORY_NAME, attachmentId);
+export function resolveAttachmentStoragePath(attachmentId: string, assetsDir = resolveAttachmentAssetsDir()) {
+  return path.join(assetsDir, attachmentId);
+}
+
+function resolveAttachmentAssetsDir() {
+  const activeDatabasePath = resolveDatabasePath();
+  const libraryHome = path.dirname(path.dirname(activeDatabasePath));
+  return path.join(libraryHome, LIBRARY_ASSETS_DIRNAME);
 }
 
 export function resolveAttachmentFile(
   attachmentId: string,
-  appDataDir = resolveAppPaths().app_data_dir
+  assetsDir = resolveAttachmentAssetsDir()
 ): ResolvedAttachmentFile {
   const normalizedAttachmentId = attachmentId.trim();
   if (!normalizedAttachmentId) {
@@ -56,7 +60,7 @@ export function resolveAttachmentFile(
     return { status: 'not_found' };
   }
 
-  const resolvedPath = resolveAttachmentStoragePath(normalizedAttachmentId, appDataDir);
+  const resolvedPath = resolveAttachmentStoragePath(normalizedAttachmentId, assetsDir);
   if (!fs.existsSync(resolvedPath)) {
     console.warn('[native] attachment resource file missing', {
       area: 'native',
@@ -77,9 +81,9 @@ export function resolveAttachmentFile(
 
 export function resolveAttachmentResource(
   attachmentId: string,
-  appDataDir = resolveAppPaths().app_data_dir
+  assetsDir = resolveAttachmentAssetsDir()
 ): NativeAttachmentResourceResolution {
-  const resolved = resolveAttachmentFile(attachmentId, appDataDir);
+  const resolved = resolveAttachmentFile(attachmentId, assetsDir);
   if (resolved.status === 'not_found') {
     return {
       status: 'not_found',

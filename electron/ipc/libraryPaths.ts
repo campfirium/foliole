@@ -1,8 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { app } from 'electron';
-
 import {
   createEmptyLibraryPathOverrides,
   isLibraryPathLocation,
@@ -78,8 +76,28 @@ function saveStoredLibraryPathOverrides(overrides: LibraryPathOverrides) {
   fs.writeFileSync(settingsPath, JSON.stringify(overrides, null, 2));
 }
 
+function resolveDocumentsPathFallback() {
+  const appPaths = resolveAppPaths();
+  return normalizeLibraryPath(appPaths.documents_dir) ?? appPaths.app_data_dir;
+}
+
 function toNativeLibraryPaths(overrides: LibraryPathOverrides): NativeLibraryPaths {
-  return resolveLibraryPaths(app.getPath('documents'), overrides);
+  return resolveLibraryPaths(resolveDocumentsPathFallback(), overrides);
+}
+
+function loadStoredLibraryPathOverridesSync() {
+  return normalizeStoredLibraryPathSettings(readStoredLibraryPathSettings(), null);
+}
+
+export function loadLibraryPathSettingsSync(): NativeLibraryPaths {
+  return toNativeLibraryPaths(loadStoredLibraryPathOverridesSync());
+}
+
+export function ensureLibraryPathLayout(paths = loadLibraryPathSettingsSync()) {
+  fs.mkdirSync(paths.data_dir, { recursive: true });
+  fs.mkdirSync(paths.assets_dir, { recursive: true });
+  fs.mkdirSync(paths.inbox, { recursive: true });
+  fs.mkdirSync(paths.mirror, { recursive: true });
 }
 
 function normalizeUpdatedLibraryPath(args: NativeUpdateLibraryPathSettingArgs): string | null {

@@ -7,12 +7,14 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-attachment-resource-tests';
+let mockedDocumentsDir = '/tmp/foliole-attachment-resource-documents';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: mockedAppDataDir,
     app_cache_dir: path.join(mockedAppDataDir, 'cache'),
     app_config_dir: path.join(mockedAppDataDir, 'config'),
+    documents_dir: mockedDocumentsDir,
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
@@ -29,6 +31,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-attachment-resource-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  mockedDocumentsDir = path.join(tempRoot, 'Documents');
   initializeDatabase();
 });
 
@@ -50,12 +53,12 @@ function createImageAttachment() {
 
 it('returns a unified attachment resource URL when the record and file both exist', async () => {
   createImageAttachment();
-  const storedFilePath = resolveAttachmentStoragePath('hash-1', mockedAppDataDir);
+  const storedFilePath = resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'));
 
   await fs.mkdir(path.dirname(storedFilePath), { recursive: true });
   await fs.writeFile(storedFilePath, 'image-bytes');
 
-  expect(resolveAttachmentResource('hash-1', mockedAppDataDir)).toEqual({
+  expect(resolveAttachmentResource('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
     status: 'ready',
     mime_type: 'image/png',
     resource_url: buildAttachmentAssetUrl('hash-1')
@@ -63,7 +66,7 @@ it('returns a unified attachment resource URL when the record and file both exis
 });
 
 it('returns a distinct not-found result for unknown attachment ids', () => {
-  expect(resolveAttachmentResource('missing-id', mockedAppDataDir)).toEqual({
+  expect(resolveAttachmentResource('missing-id', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
     status: 'not_found',
     resource_url: null
   });
@@ -73,7 +76,7 @@ it('returns a distinct missing-file result and logs a warning when the file is g
   createImageAttachment();
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-  expect(resolveAttachmentResource('hash-1', mockedAppDataDir)).toEqual({
+  expect(resolveAttachmentResource('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual({
     status: 'missing_file',
     mime_type: 'image/png',
     resource_url: null
@@ -85,7 +88,7 @@ it('returns a distinct missing-file result and logs a warning when the file is g
       action: 'resolve_attachment_resource',
       attachment_id: 'hash-1',
       fallback: 'return_missing_file',
-      expected_path: resolveAttachmentStoragePath('hash-1', mockedAppDataDir)
+      expected_path: resolveAttachmentStoragePath('hash-1', path.join(mockedDocumentsDir, 'Foliole', 'Assets'))
     })
   );
 });

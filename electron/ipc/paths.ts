@@ -6,6 +6,7 @@ export interface AppPaths {
   app_data_dir: string;
   app_config_dir: string;
   app_cache_dir: string;
+  documents_dir: string;
   app_log_dir: string;
 }
 
@@ -15,6 +16,7 @@ export function resolveAppPaths(): AppPaths {
     app_data_dir: appDataDir,
     app_config_dir: path.join(appDataDir, 'config'),
     app_cache_dir: path.join(appDataDir, 'cache'),
+    documents_dir: app.getPath('documents'),
     app_log_dir: app.getPath('logs')
   };
 }

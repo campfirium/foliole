@@ -12,21 +12,12 @@ const { loadAppSettingsState } = vi.hoisted(() => ({
   loadAppSettingsState: vi.fn()
 }));
 
-vi.mock('electron', () => ({
-  app: {
-    getPath(name: string) {
-      if (name === 'documents') {
-        return mockedDocumentsDir;
-      }
-      return '/unsupported';
-    }
-  }
-}));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({
     app_cache_dir: '/cache',
     app_config_dir: mockedAppConfigDir,
     app_data_dir: '/data',
+    documents_dir: mockedDocumentsDir,
     app_log_dir: '/log'
   })
 }));
