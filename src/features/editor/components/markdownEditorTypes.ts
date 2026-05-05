@@ -9,6 +9,7 @@ import type {
 } from '../adapters/EditorAdapter';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 export interface EditorViewState {
   scrollTop: number;
@@ -45,6 +46,7 @@ export interface MarkdownEditorProps {
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
+  onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
   onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;

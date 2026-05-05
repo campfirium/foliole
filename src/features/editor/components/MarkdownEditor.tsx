@@ -114,6 +114,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.hideTitleHeading ?? false,
     props.onOpenExternalLink,
     props.onOpenNodeLink,
+    props.onPreviewNodeLink,
     props.onPastedAnchors,
     props.readOnly
   );

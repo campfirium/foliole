@@ -6,6 +6,7 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
+import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
 import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -51,6 +52,7 @@ interface DocumentPanelBodyProps {
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onOpenNodeLink?: (title: string) => void;
+  onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;
   onPromptImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;

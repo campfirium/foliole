@@ -4,6 +4,7 @@ import type { EditorView } from '@codemirror/view';
 import type {
   CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
@@ -21,6 +22,7 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
   liveMarkdownCompartment: Compartment;
   liveMarkdownStateCompartment: Compartment;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
   onSetContent: (content: string) => void;
   options: CodeMirrorEditorAdapterOptions;

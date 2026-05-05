@@ -2,6 +2,7 @@ import { Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import {
   applyAdapterTextAnchorDecorations,
@@ -59,6 +60,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private onChange?: (content: string) => void;
   private onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | null = null;
   private onOpenNodeLink: ((title: string) => void) | null = null;
+  private onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | null = null;
   private onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null = null;
   private paragraphMarkerCompartment = new Compartment();
   private readOnlyCompartment = new Compartment();
@@ -76,6 +78,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.onChange = options.onChange;
     this.onOpenExternalLink = options.onOpenExternalLink ?? null;
     this.onOpenNodeLink = options.onOpenNodeLink ?? null;
+    this.onPreviewNodeLink = options.onPreviewNodeLink ?? null;
     this.onPastedAnchors = options.onPastedAnchors ?? null;
     const runtime = createCodeMirrorEditorAdapterRuntime({
       diffDecorationsCompartment: this.diffDecorationsCompartment,
@@ -89,6 +92,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       liveMarkdownCompartment: this.liveMarkdownCompartment,
       liveMarkdownStateCompartment: this.liveMarkdownStateCompartment,
       onOpenNodeLink: this.onOpenNodeLink,
+      onPreviewNodeLink: this.onPreviewNodeLink,
       onPastedAnchors: this.onPastedAnchors,
       onSetContent: (content) => this.setContent(content),
       options,
@@ -248,6 +252,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       nodeId: this.nodeId,
       onOpenExternalLink: this.onOpenExternalLink,
       onOpenNodeLink: this.onOpenNodeLink,
+      onPreviewNodeLink: this.onPreviewNodeLink,
       onPastedAnchors: this.onPastedAnchors,
       view: this.view
     });

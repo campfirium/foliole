@@ -64,6 +64,36 @@ describe('liveMarkdown runtime behavior', () => {
     adapter.destroy();
   });
 
+  it('emits hover preview requests for wiki links and clears them on leave', () => {
+    const host = createHost();
+    const onPreviewNodeLink = vi.fn();
+    const adapter = new CodeMirrorEditorAdapter(host, {
+      initialContent: 'See [[Alpha topic]] next.',
+      onPreviewNodeLink
+    });
+
+    const link = host.querySelector('[data-md-link-node-title="Alpha topic"]');
+    expect(link).not.toBeNull();
+
+    link?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    expect(onPreviewNodeLink).toHaveBeenCalledWith({
+      anchorRect: expect.objectContaining({
+        bottom: expect.any(Number),
+        height: expect.any(Number),
+        left: expect.any(Number),
+        right: expect.any(Number),
+        top: expect.any(Number),
+        width: expect.any(Number)
+      }),
+      title: 'Alpha topic'
+    });
+
+    link?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+    expect(onPreviewNodeLink).toHaveBeenLastCalledWith(null);
+
+    adapter.destroy();
+  });
+
   it('routes markdown links through the in-app link handler', () => {
     const host = createHost();
     const onOpenExternalLink = vi.fn();

@@ -4,6 +4,7 @@ import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalL
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter } from '../adapters/EditorAdapter';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 
@@ -94,6 +95,7 @@ function createEditorAdapter(args: {
   onChange: (value: string) => void;
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
+  onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
   readOnly: boolean | undefined;
   textAnchorDecorations: ReturnType<typeof resolveTextAnchorDecorations>;
@@ -104,6 +106,7 @@ function createEditorAdapter(args: {
     onChange: args.onChange,
     onOpenExternalLink: args.onOpenExternalLink,
     onOpenNodeLink: args.onOpenNodeLink,
+    onPreviewNodeLink: args.onPreviewNodeLink,
     onPastedAnchors: args.onPastedAnchors,
     readOnly: args.readOnly,
     textAnchorDecorations: args.textAnchorDecorations
@@ -120,6 +123,7 @@ function useEditorAdapterInputs(args: {
   onChange: (value: string) => void;
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined;
   onOpenNodeLink: ((title: string) => void) | undefined;
+  onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
   onReady: ((adapter: EditorAdapter | null) => void) | undefined;
   readOnly: boolean | undefined;
@@ -131,6 +135,7 @@ function useEditorAdapterInputs(args: {
     onChange,
     onOpenExternalLink,
     onOpenNodeLink,
+    onPreviewNodeLink,
     onPastedAnchors,
     onReady,
     readOnly,
@@ -140,6 +145,7 @@ function useEditorAdapterInputs(args: {
   const onChangeRef = useRef(onChange);
   const onOpenExternalLinkRef = useRef(onOpenExternalLink);
   const onOpenNodeLinkRef = useRef(onOpenNodeLink);
+  const onPreviewNodeLinkRef = useRef(onPreviewNodeLink);
   const onPastedAnchorsRef = useRef(onPastedAnchors);
   const onReadyRef = useRef(onReady);
   const hideTitleHeadingRef = useRef(hideTitleHeading);
@@ -151,6 +157,7 @@ function useEditorAdapterInputs(args: {
   initialValueRef.current = initialValue;
   onOpenExternalLinkRef.current = onOpenExternalLink;
   onOpenNodeLinkRef.current = onOpenNodeLink;
+  onPreviewNodeLinkRef.current = onPreviewNodeLink;
   onPastedAnchorsRef.current = onPastedAnchors;
   onReadyRef.current = onReady;
   hideTitleHeadingRef.current = hideTitleHeading;
@@ -163,6 +170,7 @@ function useEditorAdapterInputs(args: {
     onChangeRef,
     onOpenExternalLinkRef,
     onOpenNodeLinkRef,
+    onPreviewNodeLinkRef,
     onPastedAnchorsRef,
     onReadyRef,
     readOnlyRef,
@@ -192,6 +200,7 @@ function useEditorAdapterLifecycle(args: {
       onChange: (nextValue) => inputs.onChangeRef.current(nextValue),
       onOpenExternalLink: (href) => inputs.onOpenExternalLinkRef.current?.(href),
       onOpenNodeLink: (title) => inputs.onOpenNodeLinkRef.current?.(title),
+      onPreviewNodeLink: (request) => inputs.onPreviewNodeLinkRef.current?.(request),
       onPastedAnchors: (payload) => inputs.onPastedAnchorsRef.current?.(payload),
       readOnly: inputs.readOnlyRef.current,
       textAnchorDecorations: inputs.textAnchorDecorationsRef.current
@@ -220,6 +229,7 @@ export function useEditorAdapter(
   hideTitleHeading: boolean,
   onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | undefined,
   onOpenNodeLink: ((title: string) => void) | undefined,
+  onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined,
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'],
   readOnly: boolean | undefined
 ) {
@@ -230,6 +240,7 @@ export function useEditorAdapter(
     onChange,
     onOpenExternalLink,
     onOpenNodeLink,
+    onPreviewNodeLink,
     onPastedAnchors,
     onReady,
     readOnly,

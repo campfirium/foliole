@@ -3,6 +3,7 @@ import { Decoration, EditorView } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
@@ -16,6 +17,7 @@ export interface CodeMirrorEditorAdapterOptions {
   onChange?: (content: string) => void;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;
+  onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
   onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   readOnly?: boolean;
 }
@@ -32,6 +34,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
   nodeId: string | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }) {
   return args.compartment.reconfigure(
@@ -42,6 +45,7 @@ export function createLiveMarkdownReconfigureEffect(args: {
       nodeId: args.nodeId,
       onOpenExternalLink: args.onOpenExternalLink ?? null,
       onOpenNodeLink: args.onOpenNodeLink,
+      onPreviewNodeLink: args.onPreviewNodeLink ?? null,
       onPastedAnchors: args.onPastedAnchors ?? null
     })
   );
@@ -67,6 +71,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
   nodeId: string | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
   view: EditorView;
 }) {
@@ -79,6 +84,7 @@ export function dispatchLiveMarkdownReconfigure(args: {
       nodeId: args.nodeId,
       onOpenExternalLink: args.onOpenExternalLink ?? null,
       onOpenNodeLink: args.onOpenNodeLink,
+      onPreviewNodeLink: args.onPreviewNodeLink ?? null,
       onPastedAnchors: args.onPastedAnchors ?? null
     })
   });

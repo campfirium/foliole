@@ -7,6 +7,7 @@ import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
+import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -58,6 +59,7 @@ export interface DocumentPanelBodyLayoutProps {
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onOpenNodeLink?: (title: string) => void;
+  onPreviewNodeLink?: (request: EditorNodeLinkPreviewRequest | null) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;
   onPromptImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
@@ -157,6 +159,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         onImageLoadStateChange={props.onPromptImageLoadStateChange}
         onOpenExternalLink={props.onOpenExternalLink}
         onOpenNodeLink={props.onOpenNodeLink}
+        onPreviewNodeLink={props.onPreviewNodeLink}
         onPastedAnchors={props.onPastedTextAnchors}
         onReady={props.onEditorReady}
         onShouldSuppressSelectionRestore={props.onShouldSuppressSelectionRestore}

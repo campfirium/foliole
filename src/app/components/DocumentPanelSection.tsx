@@ -15,6 +15,7 @@ import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
 import { getDocumentPanelView } from './documentPanelSectionModel';
 import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
+import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
 import {
   buildResolvedDocumentPanelProps,
   buildTopicBacklinks,
@@ -22,6 +23,7 @@ import {
 } from './documentPanelSectionSupport';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
+import { useNodeLinkHoverPreview } from './useNodeLinkHoverPreview';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 import { useNodeBacklinks } from './useNodeBacklinks';
@@ -160,6 +162,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const draftProps = useDocumentPanelDraftProps(props);
   const model = useDocumentPanelSectionModel(draftProps);
   const interactions = useDocumentPanelInteractions(draftProps);
+  const nodeLinkPreview = useNodeLinkHoverPreview(draftProps);
   const resolvedProps = buildResolvedDocumentPanelProps(draftProps);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
   const topicBacklinks = buildTopicBacklinks({
@@ -176,7 +179,8 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onOpenExternalLink: handleOpenExternalLink,
           textAnchorDecorations: model.textAnchorState,
           emptyContent: model.emptyContent,
-          onOpenNodeLink: interactions.handleOpenNodeLink
+          onOpenNodeLink: interactions.handleOpenNodeLink,
+          onPreviewNodeLink: nodeLinkPreview.handlePreviewNodeLink
         }}
         backlinks={topicBacklinks}
         isFolderListView={model.isFolderListView}
@@ -196,6 +200,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         onPreviewDocumentSelection={interactions.handlePreviewDocumentSelection}
         showSourceUpdateAction={Boolean(model.sourceUpdatePreview)}
       />
+      <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />
       <DocumentPanelSectionOverlays
         currentSourceUpdateContent={model.currentSourceUpdateContent}
         handleSourceUpdateDraftChange={model.handleSourceUpdateDraftChange}

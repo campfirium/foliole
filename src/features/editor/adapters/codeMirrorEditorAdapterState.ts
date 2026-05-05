@@ -2,6 +2,7 @@ import type { Compartment } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { applyLiveMarkdownState } from './codeMirrorLiveMarkdownState';
 import { applyEditorTextAnchorDecorations } from './codeMirrorTextAnchorPresentation';
@@ -23,6 +24,7 @@ export function syncEditorLiveMarkdownState(args: {
   nodeId: string | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors?: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
   view: EditorView;
 }) {

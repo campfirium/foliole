@@ -1,23 +1,75 @@
 import { EditorView } from '@codemirror/view';
 
 import { serializeStructuredClipboardPayload } from '../model/anchorClipboardPayload';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { createClipboardExportFromView, FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
-import { activeNodeIdFacet, openExternalLinkFacet, openNodeLinkFacet } from './liveMarkdownState';
+import { activeNodeIdFacet, openExternalLinkFacet, openNodeLinkFacet, previewNodeLinkFacet } from './liveMarkdownState';
+
+const previewKeyByView = new WeakMap<EditorView, string>();
+
+function resolveEditorView(currentTarget: EventTarget | null) {
+  const editorHost = currentTarget instanceof HTMLElement ? currentTarget : null;
+  return editorHost ? EditorView.findFromDOM(editorHost) : null;
+}
+
+function resolveElement(target: EventTarget | null) {
+  if (!(target instanceof Node)) return null;
+  const element = target instanceof HTMLElement ? target : target.parentElement;
+  return element instanceof HTMLElement ? element : null;
+}
+
+function clearNodeLinkPreview(editorView: EditorView | null) {
+  if (!editorView) {
+    return;
+  }
+  const onPreviewNodeLink = editorView.state.facet(previewNodeLinkFacet) ?? null;
+  if (!onPreviewNodeLink || !previewKeyByView.has(editorView)) {
+    return;
+  }
+  previewKeyByView.delete(editorView);
+  onPreviewNodeLink(null);
+}
+
+function buildPreviewRequest(wikiLinkElement: HTMLElement): EditorNodeLinkPreviewRequest | null {
+  const title = wikiLinkElement.dataset.mdLinkNodeTitle;
+  if (!title) {
+    return null;
+  }
+  const rect = wikiLinkElement.getBoundingClientRect();
+  return {
+    anchorRect: {
+      bottom: rect.bottom,
+      height: rect.height,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      width: rect.width
+    },
+    title
+  };
+}
+
+function buildPreviewKey(request: EditorNodeLinkPreviewRequest) {
+  return [
+    request.title,
+    Math.round(request.anchorRect.left),
+    Math.round(request.anchorRect.top),
+    Math.round(request.anchorRect.width),
+    Math.round(request.anchorRect.height)
+  ].join(':');
+}
 
 export const markdownInteractionHandlers = EditorView.domEventHandlers({
   click(event) {
-    const target = event.target;
-    if (!(target instanceof Node)) return false;
-    const element = target instanceof HTMLElement ? target : target.parentElement;
+    const element = resolveElement(event.target);
     if (!(element instanceof HTMLElement)) return false;
 
     const linkElement = element.closest('[data-md-link-url]');
     if (linkElement instanceof HTMLElement) {
       const href = linkElement.dataset.mdLinkUrl;
-      const editorHost = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-      const editorView = editorHost ? EditorView.findFromDOM(editorHost) : null;
+      const editorView = resolveEditorView(event.currentTarget);
       const onOpenExternalLink = editorView?.state.facet(openExternalLinkFacet) ?? null;
       if (!href) return false;
       if (!onOpenExternalLink) return false;
@@ -32,14 +84,52 @@ export const markdownInteractionHandlers = EditorView.domEventHandlers({
     const wikiLinkElement = element.closest('[data-md-link-node-title]');
     if (!(wikiLinkElement instanceof HTMLElement)) return false;
     const title = wikiLinkElement.dataset.mdLinkNodeTitle;
-    const editorHost = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-    const editorView = editorHost ? EditorView.findFromDOM(editorHost) : null;
+    const editorView = resolveEditorView(event.currentTarget);
     const onOpenNodeLink = editorView?.state.facet(openNodeLinkFacet) ?? null;
     if (!title || !onOpenNodeLink) return false;
 
     event.preventDefault();
+    clearNodeLinkPreview(editorView);
     onOpenNodeLink(title);
     return true;
+  },
+  mousemove(event) {
+    const editorView = resolveEditorView(event.currentTarget);
+    const onPreviewNodeLink = editorView?.state.facet(previewNodeLinkFacet) ?? null;
+    if (!editorView || !onPreviewNodeLink) {
+      return false;
+    }
+    const element = resolveElement(event.target);
+    const wikiLinkElement = element?.closest('[data-md-link-node-title]');
+    if (!(wikiLinkElement instanceof HTMLElement)) {
+      clearNodeLinkPreview(editorView);
+      return false;
+    }
+    const request = buildPreviewRequest(wikiLinkElement);
+    if (!request) {
+      clearNodeLinkPreview(editorView);
+      return false;
+    }
+    const previewKey = buildPreviewKey(request);
+    if (previewKeyByView.get(editorView) === previewKey) {
+      return false;
+    }
+    previewKeyByView.set(editorView, previewKey);
+    onPreviewNodeLink(request);
+    return false;
+  },
+  mouseleave(event) {
+    clearNodeLinkPreview(resolveEditorView(event.currentTarget));
+    return false;
+  },
+  mouseout(event) {
+    const currentTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    const relatedTarget = event.relatedTarget;
+    if (currentTarget && relatedTarget instanceof Node && currentTarget.contains(relatedTarget)) {
+      return false;
+    }
+    clearNodeLinkPreview(resolveEditorView(event.currentTarget));
+    return false;
   },
   copy(event, view) {
     const clipboard = event.clipboardData;

@@ -55,6 +55,7 @@ export function createCodeMirrorEditorExtensions(args: {
         nodeId: args.nodeId,
         onOpenExternalLink: args.options.onOpenExternalLink ?? null,
         onOpenNodeLink: args.options.onOpenNodeLink ?? null,
+        onPreviewNodeLink: args.options.onPreviewNodeLink ?? null,
         onPastedAnchors: args.options.onPastedAnchors ?? null
       })
     ),
@@ -81,6 +82,7 @@ export function createLiveMarkdownEffect(args: {
   nodeId: string | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPreviewNodeLink?: ((request: import('../model/nodeLinkPreview').EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors?: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }) {
   return createLiveMarkdownReconfigureEffect(args);

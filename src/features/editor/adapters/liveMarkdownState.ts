@@ -3,6 +3,7 @@ import type { EditorView } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
@@ -39,6 +40,13 @@ export const openExternalLinkFacet = Facet.define<
   combine: (values) => values[0] ?? null
 });
 
+export const previewNodeLinkFacet = Facet.define<
+  ((request: EditorNodeLinkPreviewRequest | null) => void) | null,
+  ((request: EditorNodeLinkPreviewRequest | null) => void) | null
+>({
+  combine: (values) => values[0] ?? null
+});
+
 export const pastedAnchorsFacet = Facet.define<
   ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null,
   ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null
@@ -53,6 +61,7 @@ export function createLiveMarkdownStateExtensions(args: {
   nodeId: string | null;
   onOpenExternalLink?: ((request: ExternalLinkOpenRequest) => void) | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPreviewNodeLink?: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }): Extension[] {
   return [
@@ -62,6 +71,7 @@ export function createLiveMarkdownStateExtensions(args: {
     textAnchorDecorationsFacet.of(args.textAnchorDecorations),
     openExternalLinkFacet.of(args.onOpenExternalLink ?? null),
     openNodeLinkFacet.of(args.onOpenNodeLink),
+    previewNodeLinkFacet.of(args.onPreviewNodeLink ?? null),
     pastedAnchorsFacet.of(args.onPastedAnchors ?? null)
   ];
 }
