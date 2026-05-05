@@ -40,6 +40,26 @@ interface AttachmentNodeLinkRow extends DatabaseRow {
   role: string;
 }
 
+interface AttachmentRecordRow extends DatabaseRow {
+  id: string;
+  hash: string;
+  original_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+}
+
+function toAttachmentRecord(row: AttachmentRecordRow): AttachmentRecord {
+  return {
+    id: row.id,
+    hash: row.hash,
+    originalName: row.original_name,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    createdAt: row.created_at
+  };
+}
+
 export function createAttachmentRecord(input: AttachmentRecordInput): void {
   const connection = openDatabaseConnection();
   connection.driver.execute(
@@ -63,6 +83,18 @@ export function createNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
      ON CONFLICT(node_id, attachment_id, role) DO NOTHING`,
     [input.nodeId, input.attachmentId, input.role]
   );
+}
+
+export function findAttachmentRecordByHash(hash: string): AttachmentRecord | null {
+  const connection = openDatabaseConnection();
+  const row = connection.driver.queryOne<AttachmentRecordRow>(
+    `SELECT id, hash, original_name, mime_type, size_bytes, created_at
+     FROM attachments
+     WHERE hash = ?`,
+    [hash]
+  );
+
+  return row ? toAttachmentRecord(row) : null;
 }
 
 export function listNodeAttachments(nodeId: string): NodeAttachmentRecord[] {

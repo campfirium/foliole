@@ -69,6 +69,37 @@ export interface NativeWorkspaceSearchResult {
   title: string;
 }
 
+export interface NativeImportLocalImageAttachmentArgs {
+  nodeId: string;
+  sourcePath: string;
+}
+
+export type NativeImportLocalImageAttachmentErrorCode =
+  | 'node_not_found'
+  | 'source_not_found'
+  | 'source_read_failed'
+  | 'storage_write_failed'
+  | 'unsupported_format';
+
+export type NativeImportLocalImageAttachmentResult =
+  | {
+      status: 'imported';
+      attachment_id: string;
+      attachment_record: 'created' | 'reused';
+      created_at: string;
+      hash: string;
+      mime_type: string;
+      original_name: string;
+      size_bytes: number;
+      stored_file: 'created' | 'reused';
+    }
+  | {
+      status: 'error';
+      error_code: NativeImportLocalImageAttachmentErrorCode;
+      message: string;
+      source_path: string;
+    };
+
 export interface NativeReviewSchedulerSettings {
   algorithm: string;
   desiredRetention: number;

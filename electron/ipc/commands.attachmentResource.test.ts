@@ -10,6 +10,10 @@ const { resolveAttachmentResource } = vi.hoisted(() => ({
   resolveAttachmentResource: vi.fn()
 }));
 
+const { importLocalImageAttachment } = vi.hoisted(() => ({
+  importLocalImageAttachment: vi.fn()
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -68,6 +72,7 @@ vi.mock('./importTextFile.js', () => ({ runTextFileImport: vi.fn(), selectImport
 vi.mock('./fonts.js', () => ({ listSystemFonts: vi.fn() }));
 vi.mock('./readwiseReaderSetup.js', () => ({ inspectReadwiseReaderSetup: vi.fn() }));
 vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentResource }));
+vi.mock('../attachments/importLocalImageAttachment.js', () => ({ importLocalImageAttachment }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -91,4 +96,36 @@ it('routes attachment resource requests through the unified runtime entry', asyn
     resource_url: 'attachment://attachment-1'
   });
   expect(resolveAttachmentResource).toHaveBeenCalledWith('attachment-1');
+});
+
+it('routes local image attachment imports through the unified runtime entry', async () => {
+  importLocalImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'attachment-1',
+    attachment_record: 'created',
+    created_at: '2026-03-29T00:00:00.000Z',
+    hash: 'hash-1',
+    mime_type: 'image/png',
+    original_name: 'cover.png',
+    size_bytes: 12,
+    stored_file: 'created'
+  });
+
+  await expect(
+    handleInvokeRequest({
+      command: NATIVE_COMMANDS.importLocalImageAttachment,
+      args: { nodeId: 'node-1', sourcePath: '/tmp/cover.png' }
+    })
+  ).resolves.toEqual({
+    status: 'imported',
+    attachment_id: 'attachment-1',
+    attachment_record: 'created',
+    created_at: '2026-03-29T00:00:00.000Z',
+    hash: 'hash-1',
+    mime_type: 'image/png',
+    original_name: 'cover.png',
+    size_bytes: 12,
+    stored_file: 'created'
+  });
+  expect(importLocalImageAttachment).toHaveBeenCalledWith('node-1', '/tmp/cover.png');
 });
