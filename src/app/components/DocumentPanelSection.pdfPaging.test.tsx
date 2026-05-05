@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { expect, it, vi } from 'vitest';
 
@@ -82,21 +82,38 @@ function createPdfSourceDetails(overrides?: { isLoading?: boolean }) {
   };
 }
 
-it('keeps the visible page number stable until the next-page scroll actually settles', () => {
+it('keeps the visible page number stable until the next-page scroll actually settles', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   render(<DocumentPanelSection {...defaultProps} />);
 
+  await waitFor(() => {
+    expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);
+  });
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('1');
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('1');
 });
 
-it('keeps the pdf reading container visible while a linked pdf node source is refreshing', () => {
+it('keeps the pdf reading container visible while a linked pdf node source is refreshing', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({ isLoading: true }) as never);
 
   render(<DocumentPanelSection {...defaultProps} />);
 
+  await waitFor(() => {
+    expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);
+  });
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
   expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
+});
+
+it('reserves shells for every pdf page while only rendering the nearby canvases', async () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+
+  render(<DocumentPanelSection {...defaultProps} />);
+
+  await waitFor(() => {
+    expect(screen.getAllByTestId('pdf-document-page-shell')).toHaveLength(9);
+  });
+  expect(screen.getAllByTestId('pdf-document-page')).toHaveLength(2);
 });
