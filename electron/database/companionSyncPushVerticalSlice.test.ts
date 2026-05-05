@@ -22,7 +22,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
-import { applyCompanionSyncPush } from './companionSyncPushApply.js';
+import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
@@ -140,7 +140,7 @@ function readStoredZipEntries(filePath: string) {
 
 describe('companion sync push vertical slice', () => {
   it('packs accepted node_review and review_log changes for Android pull confirmation', async () => {
-    const push = applyCompanionSyncPush([nodeReviewPush(), reviewLogPush()]);
+    const push = await applyCompanionSyncPushAsync([nodeReviewPush(), reviewLogPush()]);
     const packPath = path.join(tempRoot, 'vertical-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({
