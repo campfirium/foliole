@@ -139,6 +139,26 @@ async function testContinuesContentBatchAfterSingleBodyFailure() {
   expect(fetchMock).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/content-blob/ack', expect.any(Object));
 }
 
+async function testAcknowledgesContentBodyBatchOnce() {
+  const firstHash = '1'.repeat(64);
+  const secondHash = '2'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([
+      { hash: firstHash, size_bytes: 1024 },
+      { hash: secondHash, size_bytes: 2048 }
+    ])
+    .mockResolvedValueOnce([]);
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [firstHash, secondHash], status: 'ok' }), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(result.syncedContentBlobHashes).toEqual([firstHash, secondHash]);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ hashes: [firstHash, secondHash] });
+}
+
 async function testFailsContentStageWhenWholeBodyBatchFails() {
   const failedHash = 'f'.repeat(64);
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValueOnce([{ hash: failedHash, size_bytes: 1024 }]);
@@ -203,6 +223,8 @@ describe('companion desktop sync resources', () => {
   it('pulls topic bodies before attachment resources', testPullsBodiesBeforeAttachments);
 
   it('continues a content body batch after one body fails', testContinuesContentBatchAfterSingleBodyFailure);
+
+  it('acknowledges a content body batch with one desktop request', testAcknowledgesContentBodyBatchOnce);
 
   it('fails the content body stage when a whole batch cannot cache anything', testFailsContentStageWhenWholeBodyBatchFails);
 

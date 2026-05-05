@@ -20,8 +20,9 @@ export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS = 5 * 60_000;
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
 
-async function ackContentBlob(endpointUrl: string, hash: string) {
-  await postDesktopJson(endpointUrl, CONTENT_BLOB_ACK_PATH, { hashes: [hash] });
+async function ackContentBlobs(endpointUrl: string, hashes: string[]) {
+  if (hashes.length === 0) return;
+  await postDesktopJson(endpointUrl, CONTENT_BLOB_ACK_PATH, { hashes });
 }
 
 function normalizeEndpointUrl(endpointUrl: string) {
@@ -80,6 +81,7 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     const hashes = blobs.map((blob) => blob.hash);
     const batch = await pullContentBlobBatch(endpoint, hashes);
     const syncedBatchHashes = batch.syncedContentBlobHashes;
+    await ackContentBlobs(endpoint, syncedBatchHashes);
     syncedContentBlobHashes.push(...syncedBatchHashes);
     const syncedHashSet = new Set(syncedBatchHashes);
     syncedBytes += blobs
@@ -148,12 +150,14 @@ async function pullContentBlob(endpoint: string, hash: string) {
   if (result.availability !== 'cached') {
     return null;
   }
-  await ackContentBlob(endpoint, result.hash);
   return result.hash;
 }
 
 export async function syncCompanionContentBlobFromDesktop(endpointUrl: string, hash: string) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedHash = await pullContentBlob(endpoint, hash);
+  if (syncedHash) {
+    await ackContentBlobs(endpoint, [syncedHash]);
+  }
   return { availability: syncedHash ? 'cached' as const : 'missing' as const, hash };
 }
