@@ -44,7 +44,7 @@ final class FolioleCompanionAppDataStore {
         try (FolioleCompanionDatabaseHelper helper = new FolioleCompanionDatabaseHelper(context)) {
             SQLiteDatabase database = helper.getWritableDatabase();
             String now = Instant.now().toString();
-            FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, now);
+            FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, now);
             database.beginTransaction();
             try {
                 clearTables(database);
@@ -54,7 +54,7 @@ final class FolioleCompanionAppDataStore {
                 database.endTransaction();
             }
             deleteRecursively(new File(context.getFilesDir(), "attachments"));
-            return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(database);
+            return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(context, database);
         }
     }
 

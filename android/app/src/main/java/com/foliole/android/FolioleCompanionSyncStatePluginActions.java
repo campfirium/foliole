@@ -20,6 +20,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncStateCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveNumberCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_STATE_CURSOR_KEY,
             readNullableIntCursor(call)
@@ -32,6 +33,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncPackCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveNumberCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_PACK_CURSOR_KEY,
             readNullableIntCursor(call)
@@ -44,6 +46,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncStatePushCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveNumberCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_STATE_PUSH_CURSOR_KEY,
             readNullableIntCursor(call)
@@ -56,6 +59,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncNodeVersionCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_NODE_VERSION_CURSOR_KEY,
             call.getData().optJSONObject("cursor")
@@ -68,6 +72,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncNodeVersionPushCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_NODE_VERSION_PUSH_CURSOR_KEY,
             call.getData().optJSONObject("cursor")
@@ -80,6 +85,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncReviewLogCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_REVIEW_LOG_CURSOR_KEY,
             call.getData().optJSONObject("cursor")
@@ -92,6 +98,7 @@ final class FolioleCompanionSyncStatePluginActions {
 
     static JSObject saveSyncReviewLogPushCursor(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return FolioleCompanionMetaRecords.saveJsonCursor(
+            databaseHelper.hostContext(),
             databaseHelper.getWritableDatabase(),
             SYNC_REVIEW_LOG_PUSH_CURSOR_KEY,
             call.getData().optJSONObject("cursor")

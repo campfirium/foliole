@@ -23,6 +23,10 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         this.context = context;
     }
 
+    Context hostContext() {
+        return context;
+    }
+
     @Override
     public void onCreate(SQLiteDatabase database) {
         FolioleCompanionDatabaseMigration.create(context, database);
@@ -37,37 +41,37 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         FolioleCompanionDatabaseMigration.upgrade(context, database, oldVersion);
     }
 
-    FolioleCompanionBootstrapState loadBootstrapState(Context context) {
+    FolioleCompanionBootstrapState loadBootstrapState(Context context) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String now = Instant.now().toString();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, now);
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, now);
         File databaseFile = context.getDatabasePath(DATABASE_NAME);
         return new FolioleCompanionBootstrapState(now, databaseFile.getAbsolutePath(), true, deviceId);
     }
 
     JSObject loadWorkspaceSyncState() throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(database);
+        return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(context, database);
     }
 
     JSObject recordWorkspaceSyncEvent(String endpointUrl, String status, String message, String occurredAt) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncMetaStore.recordWorkspaceSyncEvent(database, endpointUrl, status, message, occurredAt);
+        return FolioleCompanionSyncMetaStore.recordWorkspaceSyncEvent(context, database, endpointUrl, status, message, occurredAt);
     }
 
     JSObject saveSyncOnboardingStatus(String status) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncMetaStore.saveSyncOnboardingStatus(database, status);
+        return FolioleCompanionSyncMetaStore.saveSyncOnboardingStatus(context, database, status);
     }
 
     JSObject saveWorkspaceSyncEndpoint(String endpointUrl) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncMetaStore.saveWorkspaceSyncEndpoint(database, endpointUrl);
+        return FolioleCompanionSyncMetaStore.saveWorkspaceSyncEndpoint(context, database, endpointUrl);
     }
 
     JSObject removeWorkspaceSyncRememberedTarget(String endpointUrl) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncMetaStore.removeWorkspaceSyncRememberedTarget(database, endpointUrl);
+        return FolioleCompanionSyncMetaStore.removeWorkspaceSyncRememberedTarget(context, database, endpointUrl);
     }
 
     JSObject loadSyncIndex() throws Exception {
@@ -152,13 +156,13 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject loadSyncNodeVersions(JSONObject cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionSyncNodeVersionStore.loadNodeVersions(context, database, cursor, limit, deviceId);
     }
 
     JSObject loadSyncReviewLog(JSONObject cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionSyncReviewLogStore.loadReviewLog(context, database, cursor, limit, deviceId);
     }
 
@@ -174,31 +178,31 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject saveSyncSettingRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionSyncStateWriteStore.saveSetting(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeReadingRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionSyncStateWriteStore.saveNodeReading(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeReviewRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionSyncStateWriteStore.saveNodeReview(context, database, record, deviceId);
     }
 
     JSObject saveSyncActiveViewState(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionViewStateSyncStore.saveActiveNode(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeViewState(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(database, Instant.now().toString());
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionViewStateSyncStore.saveNodeViewState(context, database, record, deviceId);
     }
 

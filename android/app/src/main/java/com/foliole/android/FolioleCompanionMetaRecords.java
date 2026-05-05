@@ -1,6 +1,6 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -18,13 +18,13 @@ final class FolioleCompanionMetaRecords {
 
     private FolioleCompanionMetaRecords() {}
 
-    static String loadOrCreateDeviceId(SQLiteDatabase database, String now) {
+    static String loadOrCreateDeviceId(Context context, SQLiteDatabase database, String now) throws Exception {
         String deviceId = loadValue(database, DEVICE_ID_KEY);
         if (deviceId != null) {
             return deviceId;
         }
         String nextDeviceId = "android-" + UUID.randomUUID();
-        saveValue(database, DEVICE_ID_KEY, nextDeviceId, now);
+        saveValue(context, database, DEVICE_ID_KEY, nextDeviceId, now);
         return nextDeviceId;
     }
 
@@ -35,8 +35,8 @@ final class FolioleCompanionMetaRecords {
         return result;
     }
 
-    static JSObject saveNumberCursor(SQLiteDatabase database, String key, Integer cursor) throws Exception {
-        saveNumberCursorValue(database, key, cursor == null ? 0 : cursor);
+    static JSObject saveNumberCursor(Context context, SQLiteDatabase database, String key, Integer cursor) throws Exception {
+        saveNumberCursorValue(context, database, key, cursor == null ? 0 : cursor);
         return loadNumberCursor(database, key);
     }
 
@@ -45,11 +45,11 @@ final class FolioleCompanionMetaRecords {
         return stored == null ? 0 : Math.max(0, Integer.parseInt(stored));
     }
 
-    static void saveNumberCursorValue(SQLiteDatabase database, String key, int cursor) {
+    static void saveNumberCursorValue(Context context, SQLiteDatabase database, String key, int cursor) throws Exception {
         if (cursor <= 0) {
-            deleteValue(database, key);
+            deleteValue(context, database, key);
         } else {
-            saveValue(database, key, String.valueOf(cursor), Instant.now().toString());
+            saveValue(context, database, key, String.valueOf(cursor), Instant.now().toString());
         }
     }
 
@@ -60,14 +60,14 @@ final class FolioleCompanionMetaRecords {
         return result;
     }
 
-    static JSObject saveJsonCursor(SQLiteDatabase database, String key, JSONObject cursor) throws Exception {
+    static JSObject saveJsonCursor(Context context, SQLiteDatabase database, String key, JSONObject cursor) throws Exception {
         if (cursor == null || cursor.isNull("created_at") || cursor.isNull("change_id")) {
-            deleteValue(database, key);
+            deleteValue(context, database, key);
         } else {
             JSONObject normalized = new JSONObject();
             normalized.put("created_at", cursor.getString("created_at"));
             normalized.put("change_id", cursor.getString("change_id"));
-            saveValue(database, key, normalized.toString(), Instant.now().toString());
+            saveValue(context, database, key, normalized.toString(), Instant.now().toString());
         }
         return loadJsonCursor(database, key);
     }
@@ -82,15 +82,15 @@ final class FolioleCompanionMetaRecords {
         }
     }
 
-    static void deleteValue(SQLiteDatabase database, String key) {
-        database.delete(META_TABLE, "key = ?", new String[] { key });
+    static void deleteValue(Context context, SQLiteDatabase database, String key) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "companionMetaDeleteByKey", new Object[] { key });
     }
 
-    static void saveValue(SQLiteDatabase database, String key, String value, String updatedAt) {
-        ContentValues values = new ContentValues();
-        values.put("key", key);
-        values.put("value", value);
-        values.put("updated_at", updatedAt);
-        database.insertWithOnConflict(META_TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    static void saveValue(Context context, SQLiteDatabase database, String key, String value, String updatedAt) throws Exception {
+        FolioleCompanionNamedMutationStore.execute(context, database, "companionMetaUpsert", new Object[] {
+            key,
+            value,
+            updatedAt
+        });
     }
 }
