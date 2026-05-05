@@ -1,11 +1,12 @@
 import type { NodeReviewProfile } from '../../nodes/model/nodeTypes';
 
 export type ReviewGrade = 1 | 2 | 3 | 4;
+export type ReviewState = 0 | 1 | 2 | 3;
 
 export interface SchedulerCard {
   due: string;
   last_review: string | null;
-  state: number;
+  state: ReviewState;
   stability: number;
   difficulty: number;
   elapsed_days: number;

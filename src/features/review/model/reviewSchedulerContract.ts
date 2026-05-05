@@ -19,6 +19,12 @@ function assertNonNegativeInteger(value: unknown, field: string): asserts value 
   }
 }
 
+function assertReviewState(value: unknown, field: string): asserts value is 0 | 1 | 2 | 3 {
+  if (value !== 0 && value !== 1 && value !== 2 && value !== 3) {
+    throw new Error(`Invalid scheduler field "${field}": expected 0 | 1 | 2 | 3`);
+  }
+}
+
 function assertNonNegativeNumber(value: unknown, field: string): asserts value is number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
     throw new Error(`Invalid scheduler field "${field}": expected non-negative number`);
@@ -41,7 +47,7 @@ export function assertSchedulerCard(value: unknown, field = 'card'): asserts val
     assertTimestamp(value.last_review, `${field}.last_review`);
   }
 
-  assertNonNegativeInteger(value.state, `${field}.state`);
+  assertReviewState(value.state, `${field}.state`);
   assertNonNegativeNumber(value.stability, `${field}.stability`);
   assertNonNegativeNumber(value.difficulty, `${field}.difficulty`);
   assertNonNegativeInteger(value.elapsed_days, `${field}.elapsed_days`);

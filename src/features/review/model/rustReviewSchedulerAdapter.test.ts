@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createRustReviewSchedulerAdapter } from './rustReviewSchedulerAdapter';
+import type { SchedulerGradeInput } from './reviewTypes';
 
-const BASE_INPUT = {
+const BASE_INPUT: SchedulerGradeInput = {
   card: {
     due: '2026-02-26T00:00:00.000Z',
     last_review: null,

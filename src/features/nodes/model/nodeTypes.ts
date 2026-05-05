@@ -1,7 +1,7 @@
 export interface NodeReviewProfile {
   due: string;
   lastReviewAt: string | null;
-  state: number;
+  state: 0 | 1 | 2 | 3;
   stability: number;
   difficulty: number;
   elapsedDays: number;
