@@ -27,6 +27,8 @@ it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
       canGoBack={false}
       canGoForward={false}
       canGoParent={false}
+      folderListToolbar={null}
+      isFolderListView={false}
       isSourceUpdatePanelOpen={false}
       nodesById={{
         'node-1': {

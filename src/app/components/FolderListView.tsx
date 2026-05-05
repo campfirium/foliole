@@ -5,7 +5,6 @@ import {
   sortFolderListNodes,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
-import { getNodeKindLabel } from '../../features/nodes/model/nodeKindLabel';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   WORKSPACE_LIST_OPENING_FALLBACK,
@@ -13,19 +12,24 @@ import {
   getWorkspaceListNodeDateLabel,
   getWorkspaceListNodeOpening
 } from '../../features/nodes/model/workspaceListNode';
-import { AppButton, AppListItem, AppListSectionHeader, AppListSurface, AppStatusBadge } from '../../shared/ui';
+import { AppEmptyState } from '../../shared/ui';
+
+import { FolderListSortControls } from './FolderListSortControls';
 
 interface FolderListViewProps {
   folderNodeId?: string;
   nodeOrder?: string[];
   nodes?: Node[];
   nodesById: Record<string, Node>;
+  onChangeSortKey?: (sortKey: FolderListSortKey) => void;
   onSelectNode: (nodeId: string) => void;
   emptyState?: {
     description: string;
     title: string;
   };
   regionLabel?: string;
+  showEmbeddedHeader?: boolean;
+  sortKey?: FolderListSortKey;
 }
 
 function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesById: Record<string, Node>) {
@@ -43,59 +47,6 @@ const DEFAULT_EMPTY_STATE = {
   title: 'This folder is empty'
 } as const;
 
-function getFolderListMetaLabel(node: Node, author: string | null) {
-  const kindLabel = getNodeKindLabel(node.kind);
-  if (!author) {
-    return kindLabel;
-  }
-  return `${kindLabel} · ${author}`;
-}
-
-function getFolderListOpeningStatus(node: Node) {
-  return getWorkspaceListNodeOpening(node) === WORKSPACE_LIST_OPENING_FALLBACK ? null : 'Has opening';
-}
-
-function getFolderListAuthorStatus(author: string | null) {
-  return author ? 'Author listed' : 'No author';
-}
-
-function getFolderListAuthorTone(author: string | null) {
-  return author ? ('success' as const) : ('neutral' as const);
-}
-
-function getFolderListOpeningTone(node: Node) {
-  return getWorkspaceListNodeOpening(node) === WORKSPACE_LIST_OPENING_FALLBACK ? ('neutral' as const) : ('info' as const);
-}
-
-const FOLDER_LIST_SORT_OPTIONS: { key: FolderListSortKey; label: string }[] = [
-  { key: 'date', label: 'Date' },
-  { key: 'title', label: 'Title' },
-  { key: 'author', label: 'Author' }
-];
-
-function FolderListSortButton(props: {
-  isActive: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <AppButton
-      active={props.isActive}
-      aria-pressed={props.isActive}
-      className={[
-        'rounded-full border px-3 py-1 text-xs font-medium',
-        props.isActive
-          ? 'border-border-strong bg-bg-elevated text-foreground'
-          : 'border-border bg-transparent text-foreground/72 hover:bg-bg-elevated hover:text-foreground'
-      ].join(' ')}
-      onClick={props.onClick}
-      variant="ghost"
-    >
-      {props.label}
-    </AppButton>
-  );
-}
-
 function FolderListHeader({
   itemCount,
   sortKey,
@@ -106,58 +57,58 @@ function FolderListHeader({
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
 }) {
   return (
-    <AppListSectionHeader
-      countLabel={formatItemCount(itemCount)}
-      description="Browse notes in a denser work list and sort them without leaving the page."
-      title="Content list"
-      toolbar={
-        <>
-          <span className="font-medium text-foreground">Sort</span>
-          {FOLDER_LIST_SORT_OPTIONS.map((option) => (
-            <FolderListSortButton
-              isActive={sortKey === option.key}
-              key={option.key}
-              label={option.label}
-              onClick={() => onChangeSortKey(option.key)}
-            />
-          ))}
-          <span className="text-xs text-foreground/56">Default: latest updated first</span>
-        </>
-      }
-    />
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold text-foreground">Content list</h2>
+        <p className="mt-1 text-sm text-foreground/65">{formatItemCount(itemCount)}</p>
+      </div>
+      <FolderListSortControls onChangeSortKey={onChangeSortKey} sortKey={sortKey} />
+    </div>
   );
 }
 
 function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => void }) {
   const author = getWorkspaceListNodeAuthor(props.node);
   const opening = getWorkspaceListNodeOpening(props.node);
-  const openingStatus = getFolderListOpeningStatus(props.node);
+  const summary = opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : opening;
 
   return (
     <li>
-      <AppListItem
-        actions={
-          <div className="flex items-center justify-start gap-2">
-            <AppStatusBadge label={getNodeKindLabel(props.node.kind)} />
-            <AppStatusBadge label={getFolderListAuthorStatus(author)} tone={getFolderListAuthorTone(author)} />
-            {openingStatus ? <AppStatusBadge label={openingStatus} tone={getFolderListOpeningTone(props.node)} /> : null}
-          </div>
-        }
-        ariaLabel={`Open ${props.node.title}`}
-        meta={<span className="block min-h-4 min-w-0 truncate" data-testid={`folder-list-author-${props.node.id}`}>{getFolderListMetaLabel(props.node, author)}</span>}
+      <button
+        aria-label={`Open ${props.node.title}`}
+        className="flex w-full flex-col gap-2 border-b border-border/45 py-4 text-left transition-colors hover:bg-bg-subtle focus-visible:bg-bg-subtle focus-visible:outline-none last:border-b-0"
         onClick={() => props.onSelectNode(props.node.id)}
-        summary={
-          <span className="block min-h-10 line-clamp-2" data-testid={`folder-list-excerpt-${props.node.id}`}>
-            {opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : opening}
-          </span>
-        }
-        title={
-          <span className="line-clamp-2 block break-words" data-testid={`folder-list-title-${props.node.id}`}>
+        type="button"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <span
+            className="line-clamp-2 block min-w-0 flex-1 break-words text-[15px] font-semibold leading-6 text-foreground"
+            data-testid={`folder-list-title-${props.node.id}`}
+          >
             {props.node.title}
           </span>
-        }
-        trailing={<span data-testid={`folder-list-date-${props.node.id}`}>Updated {getWorkspaceListNodeDateLabel(props.node)}</span>}
-      />
+          <span
+            className="shrink-0 pt-0.5 text-xs leading-5 text-foreground/52"
+            data-testid={`folder-list-date-${props.node.id}`}
+          >
+            {getWorkspaceListNodeDateLabel(props.node)}
+          </span>
+        </div>
+        <span
+          className="block min-h-12 line-clamp-2 text-sm leading-6 text-foreground/74"
+          data-testid={`folder-list-excerpt-${props.node.id}`}
+        >
+          {summary}
+        </span>
+        {author ? (
+          <span
+            className="block min-h-5 min-w-0 truncate text-xs leading-5 text-foreground/52"
+            data-testid={`folder-list-meta-${props.node.id}`}
+          >
+            {author}
+          </span>
+        ) : null}
+      </button>
     </li>
   );
 }
@@ -172,8 +123,26 @@ function resolveListedNodes(props: FolderListViewProps) {
   return getDirectChildNodes(props.folderNodeId, props.nodeOrder, props.nodesById);
 }
 
-export function FolderListView({ emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel }: FolderListViewProps) {
-  const [sortKey, setSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
+export function FolderListView({
+  emptyState,
+  folderNodeId,
+  nodeOrder,
+  nodes,
+  nodesById,
+  onChangeSortKey,
+  onSelectNode,
+  regionLabel,
+  showEmbeddedHeader = true,
+  sortKey: controlledSortKey
+}: FolderListViewProps) {
+  const [uncontrolledSortKey, setUncontrolledSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
+  const sortKey = controlledSortKey ?? uncontrolledSortKey;
+  const handleChangeSortKey = (nextSortKey: FolderListSortKey) => {
+    if (controlledSortKey === undefined) {
+      setUncontrolledSortKey(nextSortKey);
+    }
+    onChangeSortKey?.(nextSortKey);
+  };
   const listedNodes = useMemo(
     () => resolveListedNodes({ emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel }),
     [emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel]
@@ -185,20 +154,23 @@ export function FolderListView({ emptyState, folderNodeId, nodeOrder, nodes, nod
   const resolvedEmptyState = emptyState ?? DEFAULT_EMPTY_STATE;
 
   return (
-    <div className="flex min-h-0 flex-1 px-4 pt-4 pb-4 max-[1080px]:px-2 max-[1080px]:pt-2">
-      <AppListSurface
-        aria-label={regionLabel ?? 'Folder list view'}
-        className="mx-auto w-full max-w-[var(--document-max-width)]"
-        emptyState={resolvedEmptyState}
-        header={<FolderListHeader itemCount={childNodes.length} onChangeSortKey={setSortKey} sortKey={sortKey} />}
-        isEmpty={childNodes.length === 0}
-      >
-        <ul aria-label="Folder contents" className="flex min-h-0 flex-1 flex-col">
-          {childNodes.map((node) => (
-            <FolderListItem key={node.id} node={node} onSelectNode={onSelectNode} />
-          ))}
-        </ul>
-      </AppListSurface>
+    <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4 max-[1080px]:px-2">
+      <section aria-label={regionLabel ?? 'Folder list view'} className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
+        {showEmbeddedHeader ? (
+          <FolderListHeader itemCount={childNodes.length} onChangeSortKey={handleChangeSortKey} sortKey={sortKey} />
+        ) : null}
+        {childNodes.length === 0 ? (
+          <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">
+            <AppEmptyState description={resolvedEmptyState.description} title={resolvedEmptyState.title} />
+          </div>
+        ) : (
+          <ul aria-label="Folder contents" className="flex flex-col">
+            {childNodes.map((node) => (
+              <FolderListItem key={node.id} node={node} onSelectNode={onSelectNode} />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

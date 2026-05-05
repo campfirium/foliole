@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import { ImageClozeCardView } from '../../features/image-cloze/components/ImageClozeCardView';
 import { isLegacyImageClozeNode } from '../../features/image-cloze/model/imageCloze';
 import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
+import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -49,6 +50,7 @@ function renderVirtualContent(
 
 function renderFolderContent(
   activeNodeId: string,
+  folderListSortKey: FolderListSortKey,
   nodeOrder: string[],
   nodesById: Record<string, Node>,
   onSelectNode: (nodeId: string) => void,
@@ -57,7 +59,15 @@ function renderFolderContent(
   return (
     <>
       {pdfCache}
-      <FolderListView folderNodeId={activeNodeId} nodeOrder={nodeOrder} nodesById={nodesById} onSelectNode={onSelectNode} />
+      <FolderListView
+        folderNodeId={activeNodeId}
+        nodeOrder={nodeOrder}
+        nodesById={nodesById}
+        onChangeSortKey={() => undefined}
+        onSelectNode={onSelectNode}
+        showEmbeddedHeader={false}
+        sortKey={folderListSortKey}
+      />
     </>
   );
 }
@@ -120,6 +130,7 @@ export function resolveDocumentPanelContentBody(args: {
   activeNode: Node | undefined;
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  folderListSortKey: FolderListSortKey;
   isActivePdfCachedVisible: boolean;
   isFolderListView: boolean;
   nodeOrder: string[];
@@ -143,7 +154,7 @@ export function resolveDocumentPanelContentBody(args: {
     );
   }
   if (args.isFolderListView && args.activeNodeId) {
-    return renderFolderContent(args.activeNodeId, args.nodeOrder, args.nodesById, args.onSelectNode, args.pdfCache);
+    return renderFolderContent(args.activeNodeId, args.folderListSortKey, args.nodeOrder, args.nodesById, args.onSelectNode, args.pdfCache);
   }
   if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {
     return renderLegacyImageClozeContent(

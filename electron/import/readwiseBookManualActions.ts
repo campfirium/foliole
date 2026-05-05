@@ -3,7 +3,6 @@ import path from 'node:path';
 
 import { dialog, shell, type BrowserWindow } from 'electron';
 
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type {
   NativeReadwiseBookEpubProgressEvent,
   NativeReadwiseBookDownloadResult,

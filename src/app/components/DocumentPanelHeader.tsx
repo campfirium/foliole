@@ -19,6 +19,8 @@ interface DocumentPanelHeaderProps {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
+  folderListToolbar?: JSX.Element | null;
+  isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
   nodesById: Record<string, Node>;
   onGoBack: () => void;
@@ -74,11 +76,70 @@ function SourceUpdateAction({
   );
 }
 
+function renderHeaderActions(args: {
+  editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
+  folderListToolbar?: JSX.Element | null;
+  isFolderListView: boolean;
+  isSourceUpdatePanelOpen: boolean;
+  onToggleSourceUpdatePanel: () => void;
+  showSourceUpdateAction: boolean;
+  toggleEditorDisplayMode: () => void;
+}) {
+  if (args.isFolderListView) {
+    return args.folderListToolbar ? <div className="shrink-0">{args.folderListToolbar}</div> : null;
+  }
+
+  return (
+    <ToolbarActionGroup ariaLabel="Document editor actions">
+      <SourceUpdateAction
+        isOpen={args.isSourceUpdatePanelOpen}
+        onToggle={args.onToggleSourceUpdatePanel}
+        visible={args.showSourceUpdateAction}
+      />
+      <AppDropdownMenu>
+        <AppDropdownMenuTrigger asChild>
+          <AppIconButton
+            className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+            icon={<MoreOptionsIcon />}
+            label="More editor options"
+          />
+        </AppDropdownMenuTrigger>
+        <AppDropdownMenuContent align="end" sideOffset={6}>
+          <AppDropdownMenuItem onSelect={args.toggleEditorDisplayMode}>
+            {args.editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
+          </AppDropdownMenuItem>
+        </AppDropdownMenuContent>
+      </AppDropdownMenu>
+    </ToolbarActionGroup>
+  );
+}
+
+function renderHeaderCenter(args: {
+  activeNodeId: string | null;
+  isFolderListView: boolean;
+  nodesById: ReturnType<typeof toWorkspaceListNodesById>;
+  onSelectBreadcrumbNode: (nodeId: string) => void;
+}) {
+  if (args.isFolderListView) {
+    return <div aria-hidden="true" className="min-h-9 flex-1 border-b border-border/60" />;
+  }
+
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
+        <NodeBreadcrumbs activeNodeId={args.activeNodeId} nodesById={args.nodesById} onSelectNode={args.onSelectBreadcrumbNode} />
+      </div>
+    </div>
+  );
+}
+
 export function DocumentPanelHeader({
   activeNodeId,
   canGoBack,
   canGoForward,
   canGoParent,
+  folderListToolbar,
+  isFolderListView,
   isSourceUpdatePanelOpen,
   nodesById,
   onGoBack,
@@ -94,38 +155,33 @@ export function DocumentPanelHeader({
   return (
     <AppToolbar as="header" className="min-h-[40px] gap-2 px-3">
       <h2 className="sr-only">Content</h2>
-      <ToolbarActionGroup ariaLabel="Document navigation actions">
-        <NavigationButtons
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          canGoParent={canGoParent}
-          onGoBack={onGoBack}
-          onGoForward={onGoForward}
-          onGoParent={onGoParent}
-        />
-      </ToolbarActionGroup>
-      <div className="min-w-0 flex-1">
-        <div className="mx-auto w-full [width:min(100%,var(--document-max-width))]">
-          <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={listNodesById} onSelectNode={onSelectBreadcrumbNode} />
-        </div>
-      </div>
-      <ToolbarActionGroup ariaLabel="Document editor actions">
-        <SourceUpdateAction isOpen={isSourceUpdatePanelOpen} onToggle={onToggleSourceUpdatePanel} visible={showSourceUpdateAction} />
-        <AppDropdownMenu>
-          <AppDropdownMenuTrigger asChild>
-            <AppIconButton
-              className="inline-flex size-8 items-center justify-center rounded-[max(var(--radius-1),var(--radius-full))] text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-              icon={<MoreOptionsIcon />}
-              label="More editor options"
-            />
-          </AppDropdownMenuTrigger>
-          <AppDropdownMenuContent align="end" sideOffset={6}>
-            <AppDropdownMenuItem onSelect={toggleEditorDisplayMode}>
-              {editorDisplayMode === 'preview' ? 'Switch to Source mode' : 'Switch to Live Preview mode'}
-            </AppDropdownMenuItem>
-          </AppDropdownMenuContent>
-        </AppDropdownMenu>
-      </ToolbarActionGroup>
+      {!isFolderListView ? (
+        <ToolbarActionGroup ariaLabel="Document navigation actions">
+          <NavigationButtons
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            canGoParent={canGoParent}
+            onGoBack={onGoBack}
+            onGoForward={onGoForward}
+            onGoParent={onGoParent}
+          />
+        </ToolbarActionGroup>
+      ) : null}
+      {renderHeaderCenter({
+        activeNodeId,
+        isFolderListView,
+        nodesById: listNodesById,
+        onSelectBreadcrumbNode
+      })}
+      {renderHeaderActions({
+        editorDisplayMode,
+        folderListToolbar,
+        isFolderListView,
+        isSourceUpdatePanelOpen,
+        onToggleSourceUpdatePanel,
+        showSourceUpdateAction,
+        toggleEditorDisplayMode
+      })}
     </AppToolbar>
   );
 }

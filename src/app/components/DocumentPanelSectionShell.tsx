@@ -1,6 +1,11 @@
+import { useState } from 'react';
+
+import { DEFAULT_FOLDER_LIST_SORT_KEY, type FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
+
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
+import { FolderListSortControls } from './FolderListSortControls';
 
 interface DocumentPanelShellProps {
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
@@ -19,6 +24,8 @@ export function DocumentPanelSectionShell({
   props,
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
+  const [folderListSortKey, setFolderListSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
+
   return (
     <section aria-label="Document panel" className="flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
       <DocumentPanelHeader
@@ -26,6 +33,10 @@ export function DocumentPanelSectionShell({
         canGoBack={props.canGoBack}
         canGoForward={props.canGoForward}
         canGoParent={props.canGoParent}
+        folderListToolbar={
+          isFolderListView ? <FolderListSortControls onChangeSortKey={setFolderListSortKey} sortKey={folderListSortKey} /> : null
+        }
+        isFolderListView={isFolderListView}
         isSourceUpdatePanelOpen={isSourceUpdatePanelOpen}
         nodesById={props.nodesById}
         onGoBack={props.onGoBack}
@@ -38,6 +49,7 @@ export function DocumentPanelSectionShell({
       <DocumentPanelContent
         activeNodeId={props.activeNodeId}
         bodyProps={bodyProps}
+        folderListSortKey={folderListSortKey}
         isFolderListView={isFolderListView}
         nodeOrder={props.nodeOrder}
         trashedNodeIds={props.trashedNodeIds}

@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 
+import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -18,6 +19,7 @@ import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 interface DocumentPanelContentProps {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
   nodeOrder: string[];
   trashedNodeIds: string[];
@@ -126,13 +128,59 @@ function getDocumentPanelFlags(args: {
       !args.activeNode ||
       (!isVirtualNode(args.activeNode) &&
         !args.isFolderListView &&
-        !args.pdfDocumentSurface)
+      !args.pdfDocumentSurface)
   };
+}
+
+function useDocumentPanelContentState(args: {
+  activeNodeId: string | null;
+  bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  isFolderListView: boolean;
+  nodeOrder: string[];
+  nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
+}) {
+  const activeNode = args.activeNodeId ? args.nodesById[args.activeNodeId] : undefined;
+  const shouldLoadSourceDetails = Boolean(
+    args.activeNodeId && activeNode && !isVirtualNode(activeNode) && !args.isFolderListView
+  );
+  const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? args.activeNodeId : null);
+  const pdfDocumentSurface = resolvePdfDocumentSurface(args.activeNodeId, sourceDetails.isLoading, sourceDetails.value);
+  const pdfHighlightLocators = args.activeNodeId
+    ? collectPdfHighlightLocators(args.activeNodeId, args.nodeOrder, args.nodesById, args.trashedNodeIds)
+    : [];
+  const documentFlags = getDocumentPanelFlags({
+    activeNode,
+    activeNodeId: args.activeNodeId,
+    bodyProps: args.bodyProps,
+    isFolderListView: args.isFolderListView,
+    pdfDocumentSurface,
+    sourceDetails
+  });
+
+  return {
+    activeNode,
+    pdfDocumentSurface,
+    pdfHighlightLocators,
+    ...documentFlags
+  };
+}
+
+function useResetEditorReadyWhenHidden(
+  bodyProps: ComponentProps<typeof DocumentPanelBody>,
+  shouldRenderEditorBody: boolean
+) {
+  useEffect(() => {
+    if (!shouldRenderEditorBody) {
+      bodyProps.onEditorReady?.(null);
+    }
+  }, [bodyProps, shouldRenderEditorBody]);
 }
 
 export function DocumentPanelContent({
   activeNodeId,
   bodyProps,
+  folderListSortKey,
   isFolderListView,
   nodeOrder,
   trashedNodeIds,
@@ -143,27 +191,21 @@ export function DocumentPanelContent({
   onSelectNode
 }: DocumentPanelContentProps) {
   const [isActivePdfCachedVisible, setIsActivePdfCachedVisible] = useState(false);
-  const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
-  const shouldLoadSourceDetails = Boolean(
-    activeNodeId && activeNode && !isVirtualNode(activeNode) && !isFolderListView
-  );
-  const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? activeNodeId : null);
-  const pdfDocumentSurface = resolvePdfDocumentSurface(activeNodeId, sourceDetails.isLoading, sourceDetails.value);
-  const pdfHighlightLocators = activeNodeId ? collectPdfHighlightLocators(activeNodeId, nodeOrder, nodesById, trashedNodeIds) : [];
-  const { shouldHideEditorBodyDuringSourceLoad, shouldRenderEditorBody } = getDocumentPanelFlags({
+  const {
     activeNode,
+    pdfDocumentSurface,
+    pdfHighlightLocators,
+    shouldHideEditorBodyDuringSourceLoad,
+    shouldRenderEditorBody
+  } = useDocumentPanelContentState({
     activeNodeId,
     bodyProps,
     isFolderListView,
-    pdfDocumentSurface,
-    sourceDetails
+    nodeOrder,
+    nodesById,
+    trashedNodeIds
   });
-
-  useEffect(() => {
-    if (!shouldRenderEditorBody) {
-      bodyProps.onEditorReady?.(null);
-    }
-  }, [bodyProps, shouldRenderEditorBody]);
+  useResetEditorReadyWhenHidden(bodyProps, shouldRenderEditorBody);
 
   const pdfCache = createPdfCache({
     activeNodeId,
@@ -179,6 +221,7 @@ export function DocumentPanelContent({
     activeNode,
     activeNodeId,
     bodyProps,
+    folderListSortKey,
     isActivePdfCachedVisible,
     isFolderListView,
     nodeOrder,

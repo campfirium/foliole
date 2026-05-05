@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { FolderListView } from './FolderListView';
@@ -20,16 +21,19 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
   };
 }
 
-function renderFolderList(children: Node[], onSelectNode = vi.fn()) {
+function renderFolderList(children: Node[], options?: { onSelectNode?: ReturnType<typeof vi.fn>; sortKey?: FolderListSortKey }) {
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
+  const onSelectNode = options?.onSelectNode ?? vi.fn();
 
   render(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
       nodesById={nodesById}
+      onChangeSortKey={() => undefined}
       onSelectNode={onSelectNode}
+      sortKey={options?.sortKey}
     />
   );
 
@@ -58,12 +62,11 @@ describe('FolderListView content', () => {
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
       'This is the first useful sentence inside the folder list body.'
     );
-    expect(screen.getByTestId('folder-list-date-node-1')).toHaveTextContent('Updated 2026-04-02');
-    expect(screen.getByText('No author')).toBeInTheDocument();
-    expect(screen.getByText('Has opening')).toBeInTheDocument();
+    expect(screen.getByTestId('folder-list-date-node-1')).toHaveTextContent('2026-04-02');
+    expect(screen.queryByTestId('folder-list-meta-node-1')).not.toBeInTheDocument();
   });
 
-  it('keeps the author slot stable when author data is missing', () => {
+  it('omits the third line when author data is missing', () => {
     renderFolderList([
       createNode({
         id: 'node-2',
@@ -72,11 +75,7 @@ describe('FolderListView content', () => {
       })
     ]);
 
-    const authorSlot = screen.getByTestId('folder-list-author-node-2');
-    expect(authorSlot).toBeInTheDocument();
-    expect(authorSlot).toHaveTextContent('Topic');
-    expect(authorSlot.className).toContain('min-h-4');
-    expect(screen.getByText('No author')).toBeInTheDocument();
+    expect(screen.queryByTestId('folder-list-meta-node-2')).not.toBeInTheDocument();
   });
 });
 
@@ -94,8 +93,8 @@ describe('FolderListView opening metadata', () => {
 
     expect(screen.getByTestId('folder-list-excerpt-node-3')).toHaveTextContent('Useful body text');
     expect(screen.getByTestId('folder-list-excerpt-node-3')).not.toHaveTextContent('author: Ada');
-    expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('Updated 2026-04-03');
-    expect(screen.getByText('Author listed')).toBeInTheDocument();
+    expect(screen.getByTestId('folder-list-date-node-3')).toHaveTextContent('2026-04-03');
+    expect(screen.getByTestId('folder-list-meta-node-3')).toHaveTextContent('Ada');
   });
 
   it('shows the opening from the list snapshot when the node body is not loaded', () => {
@@ -112,7 +111,6 @@ describe('FolderListView opening metadata', () => {
     expect(screen.getByTestId('folder-list-excerpt-node-6')).toHaveTextContent(
       'Tiny changes compound into remarkable results.'
     );
-    expect(screen.getByText('Has opening')).toBeInTheDocument();
   });
 
   it('prefers the stored opening when the loaded body is only a cover marker', () => {
@@ -174,8 +172,8 @@ describe('FolderListView date sorting', () => {
     ]);
 
     expect(getRenderedEntryTitles()).toEqual(['Created fallback', 'Updated value']);
-    expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('Updated 2026-04-03');
-    expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('Updated 2026-04-02');
+    expect(screen.getByTestId('folder-list-date-node-4')).toHaveTextContent('2026-04-03');
+    expect(screen.getByTestId('folder-list-date-node-5')).toHaveTextContent('2026-04-02');
   });
 });
 
@@ -185,9 +183,7 @@ describe('FolderListView secondary sorting', () => {
       createNode({ id: 'node-1', title: 'Beta', updatedAt: '2026-04-01T09:00:00.000Z' }),
       createNode({ id: 'node-2', title: 'Alpha', updatedAt: '2026-04-03T09:00:00.000Z' }),
       createNode({ id: 'node-3', title: 'Alpha', updatedAt: '2026-04-02T09:00:00.000Z' })
-    ]);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Title' }));
+    ], { sortKey: 'title' });
 
     expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Alpha', 'Beta']);
   });
@@ -212,12 +208,10 @@ describe('FolderListView secondary sorting', () => {
         content: 'More body only',
         updatedAt: '2026-04-01T09:00:00.000Z'
       })
-    ]);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Author' }));
+    ], { sortKey: 'author' });
 
     expect(getRenderedEntryTitles()).toEqual(['Named author', 'No author A', 'No author B']);
-    expect(screen.getByTestId('folder-list-author-node-2')).toHaveTextContent('Topic · Zoe');
+    expect(screen.getByTestId('folder-list-meta-node-2')).toHaveTextContent('Zoe');
   });
 });
 
@@ -251,9 +245,9 @@ describe('FolderListView layout', () => {
     expect(screen.getByTestId('folder-list-title-node-4').className).toContain('line-clamp-2');
     expect(screen.getByTestId('folder-list-excerpt-node-4')).toHaveTextContent('');
     expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-10');
+    expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('min-h-12');
     expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-2');
-    expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-10');
-    expect(screen.getAllByText('Topic').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('min-h-12');
+    expect(screen.queryByText('Topic')).not.toBeInTheDocument();
   });
 });
