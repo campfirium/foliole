@@ -89,20 +89,23 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('blocks selected app runtime hooks without blocking unrelated app files', async () => {
+  it('blocks app production code from importing runtime command details', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'src/app/hooks/useAppRuntime.ts', `
       import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
     `);
     await writeFixtureFile(repoRoot, 'src/app/SearchPalette.tsx', `
-      import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
+      import { getRuntimeInvoke } from '../shared/platform/bridge';
     `);
 
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
-    expect(result.violations).toEqual([
-      { file: 'src/app/hooks/useAppRuntime.ts', line: 1, kind: 'runtime-command-import' }
-    ]);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        { file: 'src/app/hooks/useAppRuntime.ts', line: 1, kind: 'runtime-command-import' },
+        { file: 'src/app/SearchPalette.tsx', line: 1, kind: 'runtime-command-import' }
+      ])
+    );
   });
 
   it('blocks core modules from importing native platform contracts', async () => {

@@ -10,21 +10,7 @@ const TEST_FILE_PATTERN = /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/;
 const BANNED_IMPORT_PATTERN =
   /\b(?:import(?:\s+type)?[\s\S]*?\s+from\s+|import\s*\(|require\s*\()\s*['"](?:better-sqlite3|child_process(?:\/[^'"]+)?|electron(?:\/[^'"]+)?|fs(?:\/[^'"]+)?|node:child_process(?:\/[^'"]+)?|node:fs(?:\/[^'"]+)?|node:path(?:\/[^'"]+)?|path(?:\/[^'"]+)?)['"]/;
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
-const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/store/', 'src/features/'];
-const RUNTIME_COMMAND_BOUNDARY_FILES = new Set([
-  'src/app/components/SearchPalette.tsx',
-  'src/app/components/importSourceWorkspaceSettings.ts',
-  'src/app/components/readwiseReaderConfigBridge.ts',
-  'src/app/hooks/appRestartPersistence.ts',
-  'src/app/hooks/useFormalImport.ts',
-  'src/app/hooks/useAppRuntime.ts',
-  'src/app/hooks/usePreparedNodeSelectionActions.ts',
-  'src/app/hooks/useReadingProgressSyncPersistence.ts',
-  'src/app/hooks/useWorkspaceActiveNodeDocument.ts',
-  'src/app/hooks/useWorkspaceNavigationPrefetch.ts',
-  'src/main.tsx',
-  'src/startupViewMode.ts'
-]);
+const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/store/', 'src/features/'];
 const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
 const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)shared\/platform\/(?:bridge|runtimeInvoke)$/;
@@ -75,9 +61,7 @@ function inspectFile(filePath, repoRoot) {
   const lines = contents.split(/\r?\n/);
   const violations = [];
   const checksBottomLayerBoundary = SCAN_DIRS.some((dir) => relativeFile.startsWith(`${dir}/`));
-  const checksRuntimeCommandBoundary =
-    RUNTIME_COMMAND_BOUNDARY_FILES.has(relativeFile) ||
-    RUNTIME_COMMAND_BOUNDARY_DIRS.some((dir) => relativeFile.startsWith(dir));
+  const checksRuntimeCommandBoundary = RUNTIME_COMMAND_BOUNDARY_DIRS.some((dir) => relativeFile.startsWith(dir));
   if (checksBottomLayerBoundary) {
     lines.forEach((line, index) => {
       if (BANNED_IMPORT_PATTERN.test(line)) {
