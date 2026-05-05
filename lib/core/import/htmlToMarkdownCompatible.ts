@@ -1,6 +1,13 @@
 import { parse, parseFragment, type DefaultTreeAdapterTypes } from 'parse5';
 
 import {
+  collectHtmlFootnoteDefinitions,
+  renderFootnoteDefinitionBlock,
+  renderInlineFootnoteReference,
+  renderInlineSuperscriptFootnote,
+  type HtmlFootnoteDefinitions
+} from './htmlToMarkdownCompatibleFootnotes.js';
+import {
   buildEmbedPlaceholder,
   buildImageMarkdown,
   CONTENT_STRIP_TAGS,
@@ -45,7 +52,8 @@ export function formatHtmlConversionDegradedReason(warnings: HtmlConversionWarni
 export function convertHtmlToMarkdownCompatible(html: string): HtmlToMarkdownCompatibleResult {
   const warnings = new Set<HtmlConversionWarning>();
   const rootNodes = selectRootNodes(html.replace(/\r\n?/g, '\n'));
-  const content = normalizeMarkdown(renderBlockNodes(rootNodes, warnings).join('\n\n'));
+  const footnoteDefinitions = collectHtmlFootnoteDefinitions(rootNodes);
+  const content = normalizeMarkdown(renderBlockNodes(rootNodes, warnings, footnoteDefinitions).join('\n\n'));
   return { content, warnings: [...warnings] };
 }
 
@@ -59,18 +67,18 @@ function selectRootNodes(html: string) {
   return parseFragment(html).childNodes;
 }
 
-function renderBlockNodes(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>) {
+function renderBlockNodes(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions) {
   const blocks: string[] = [];
   let inlineNodes: HtmlNode[] = [];
   const flushInline = () => {
-    const inline = normalizeInline(renderInlineNodes(inlineNodes, warnings));
+    const inline = normalizeInline(renderInlineNodes(inlineNodes, warnings, footnoteDefinitions));
     if (inline) blocks.push(inline);
     inlineNodes = [];
   };
   for (const node of nodes) {
     if (isBlockNode(node)) {
       flushInline();
-      blocks.push(...renderBlockNode(node, warnings));
+      blocks.push(...renderBlockNode(node, warnings, footnoteDefinitions));
       continue;
     }
     inlineNodes.push(node);
@@ -79,7 +87,7 @@ function renderBlockNodes(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning
   return blocks.filter(Boolean);
 }
 
-function renderBlockNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>): string[] {
+function renderBlockNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions): string[] {
   if (isTextNode(node)) {
     const text = normalizeInline(node.value);
     return text ? [text] : [];
@@ -96,29 +104,37 @@ function renderBlockNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>): 
   }
   if (node.tagName === 'hr') return ['---'];
   if (node.tagName === 'pre') return [renderCodeFence(node)];
-  if (node.tagName === 'blockquote') return [prefixLines(joinBlocks(node.childNodes, warnings), '> ')];
+  if (node.tagName === 'blockquote') return [prefixLines(joinBlocks(node.childNodes, warnings, footnoteDefinitions), '> ')];
   if (node.tagName === 'table') return [renderDegradedTable(node, warnings)];
-  if (node.tagName === 'ul' || node.tagName === 'ol') return renderList(node, warnings);
+  if (node.tagName === 'ul' || node.tagName === 'ol') return renderList(node, warnings, footnoteDefinitions);
+  const footnoteDefinition = renderFootnoteDefinitionBlock(node);
+  if (footnoteDefinition) return [footnoteDefinition.markdown];
   if (/^h[1-6]$/.test(node.tagName)) {
     const level = Number.parseInt(node.tagName.slice(1), 10);
-    const heading = normalizeInline(renderInlineNodes(node.childNodes, warnings));
+    const heading = normalizeInline(renderInlineNodes(node.childNodes, warnings, footnoteDefinitions));
     return heading ? [`${'#'.repeat(level)} ${heading}`] : [];
   }
   if (node.tagName === 'p') {
-    const paragraph = normalizeInline(renderInlineNodes(node.childNodes, warnings));
+    const paragraph = normalizeInline(renderInlineNodes(node.childNodes, warnings, footnoteDefinitions));
     return paragraph ? [paragraph] : [];
   }
-  return renderBlockNodes(node.childNodes, warnings);
+  return renderBlockNodes(node.childNodes, warnings, footnoteDefinitions);
 }
 
-function renderList(list: HtmlElement, warnings: Set<HtmlConversionWarning>) {
+function renderList(list: HtmlElement, warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions) {
   const items = list.childNodes.filter((node): node is HtmlElement => 'tagName' in node && node.tagName === 'li');
-  return items.map((item, index) => renderListItem(item, list.tagName === 'ol', index, warnings)).filter(Boolean);
+  return items.map((item, index) => renderListItem(item, list.tagName === 'ol', index, warnings, footnoteDefinitions)).filter(Boolean);
 }
 
-function renderListItem(item: HtmlElement, ordered: boolean, index: number, warnings: Set<HtmlConversionWarning>) {
+function renderListItem(
+  item: HtmlElement,
+  ordered: boolean,
+  index: number,
+  warnings: Set<HtmlConversionWarning>,
+  footnoteDefinitions: HtmlFootnoteDefinitions
+) {
   const prefix = ordered ? `${index + 1}. ` : '- ';
-  const blocks = renderBlockNodes(item.childNodes, warnings);
+  const blocks = renderBlockNodes(item.childNodes, warnings, footnoteDefinitions);
   if (blocks.length === 0) return prefix.trimEnd();
   const continuation = ' '.repeat(prefix.length);
   const [firstBlock, ...restBlocks] = blocks;
@@ -128,11 +144,11 @@ function renderListItem(item: HtmlElement, ordered: boolean, index: number, warn
   ].join('\n');
 }
 
-function renderInlineNodes(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>) {
-  return nodes.map((node) => renderInlineNode(node, warnings)).join('');
+function renderInlineNodes(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions) {
+  return nodes.map((node) => renderInlineNode(node, warnings, footnoteDefinitions)).join('');
 }
 
-function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>): string {
+function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions): string {
   if (isTextNode(node)) {
     return normalizeTextNode(node.value);
   }
@@ -142,13 +158,17 @@ function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>):
   if (node.tagName === 'br') return '  \n';
   if (node.tagName === 'code') return wrapCode(normalizeInline(getTextContent(node, true)));
   if (node.tagName === 'img') return buildImageMarkdown(node);
+  const superscriptFootnote = renderInlineSuperscriptFootnote(node);
+  if (superscriptFootnote) return superscriptFootnote;
   if (EMBEDDED_TAGS.has(node.tagName)) {
     warnings.add('embedded_content_replaced');
     return buildEmbedPlaceholder(node);
   }
 
-  const inline = renderInlineNodes(node.childNodes, warnings);
+  const inline = renderInlineNodes(node.childNodes, warnings, footnoteDefinitions);
   if (node.tagName === 'a') {
+    const footnoteReference = renderInlineFootnoteReference(node, footnoteDefinitions);
+    if (footnoteReference) return footnoteReference;
     const href = getAttribute(node, 'href');
     const label = normalizeInline(inline) || href || 'link';
     return href ? `[${label}](${href})` : label;
@@ -195,8 +215,8 @@ function getTextContent(node: HtmlParentNode | HtmlNode, preserveWhitespace = fa
   return node.childNodes.map((child) => getTextContent(child, preserveWhitespace)).join('');
 }
 
-function joinBlocks(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>) {
-  return renderBlockNodes(nodes, warnings).join('\n\n');
+function joinBlocks(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions) {
+  return renderBlockNodes(nodes, warnings, footnoteDefinitions).join('\n\n');
 }
 
 function findDescendantElements(node: HtmlParentNode, tagName: string): HtmlElement[] {

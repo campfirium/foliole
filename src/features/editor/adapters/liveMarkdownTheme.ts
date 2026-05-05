@@ -42,6 +42,36 @@ export const liveMarkdownTheme = EditorView.theme({
   },
   '.cm-md-strong': { fontWeight: '700' },
   '.cm-md-inline-code': { backgroundColor: 'rgba(15, 23, 42, 0.08)', borderRadius: '0.25rem', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.15rem' },
+  '.cm-md-footnote-widget': { display: 'inline-block', lineHeight: '1', marginInline: '0.05em', position: 'relative', verticalAlign: 'super' },
+  '.cm-md-footnote-marker': {
+    borderBottom: '1px dotted color-mix(in srgb, var(--app-accent-color) 60%, transparent)',
+    color: 'var(--app-accent-color)',
+    cursor: 'help',
+    fontSize: '0.72em',
+    fontWeight: '600',
+    outline: 'none'
+  },
+  '.cm-md-footnote-widget[data-md-footnote-status="unresolved"] .cm-md-footnote-marker': {
+    borderBottomStyle: 'dashed',
+    color: 'color-mix(in srgb, var(--app-accent-color) 78%, var(--color-text-secondary))'
+  },
+  '.cm-md-footnote-tooltip': {
+    backgroundColor: 'var(--color-bg-elevated)',
+    border: '1px solid var(--color-border)',
+    borderRadius: '0.75rem',
+    bottom: 'calc(100% + 0.45rem)',
+    boxShadow: 'var(--shadow-popover)',
+    color: 'var(--color-text-primary)',
+    left: '50%',
+    lineHeight: '1.45',
+    maxWidth: 'min(24rem, 60vw)',
+    minWidth: '12rem',
+    padding: '0.6rem 0.75rem',
+    position: 'absolute',
+    transform: 'translateX(-50%)',
+    whiteSpace: 'normal',
+    zIndex: '30'
+  },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },
   '.cm-md-highlight': { backgroundColor: 'rgba(56, 189, 248, 0.28)', borderRadius: '0.25rem' },
   '.cm-md-cloze': { backgroundColor: 'rgba(250, 204, 21, 0.32)', borderRadius: '0.25rem' },

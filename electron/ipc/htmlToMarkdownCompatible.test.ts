@@ -54,4 +54,17 @@ describe('convertHtmlToMarkdownCompatible', () => {
     expect(result.content).toBe('# Chapter One\n\nHello world.');
     expect(result.warnings).toEqual([]);
   });
+
+  it('keeps imported footnotes readable as superscript markers with hover-ready note text', () => {
+    const result = convertHtmlToMarkdownCompatible(`
+      <p>Weight<sup class="calibre8">1</sup> matters.</p>
+      <p>Editors also add <a href="part0010.html#note9">[1]</a> style footnotes.</p>
+      <p><a href="part0010.html#ref9">[1]</a>1 pound is about 0.454 kilograms. — Editor note</p>
+    `);
+
+    expect(result.content).toContain('Weight^[1] matters.');
+    expect(result.content).toContain('Editors also add ^[1]{1 pound is about 0.454 kilograms. — Editor note} style footnotes.');
+    expect(result.content).toContain('^[1] 1 pound is about 0.454 kilograms. — Editor note');
+    expect(result.warnings).toEqual([]);
+  });
 });

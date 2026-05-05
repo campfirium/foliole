@@ -1,5 +1,4 @@
-import { Facet } from '@codemirror/state';
-import type { Range } from '@codemirror/state';
+import { Facet, type Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { openExternalUrl } from '../../../shared/platform/bridge';
@@ -14,15 +13,10 @@ import {
   getCursorLineNumber,
   INLINE_ANCHOR_TAG_PATTERN
 } from './liveMarkdownAnchors';
+import { addFootnoteDecorations } from './liveMarkdownFootnotes';
 import { addFrontmatterDecorations } from './liveMarkdownFrontmatter';
-import {
-  addImageDecorations,
-  addInlineCodeDecorations,
-  addInlineLinkDecorations,
-  collectImageMatches,
-  collectInlineCodeMatches,
-  collectInlineLinkMatches
-} from './liveMarkdownInlineDecorations';
+import { addImageDecorations, addInlineCodeDecorations, addInlineLinkDecorations } from './liveMarkdownInlineDecorations';
+import { collectPreviewLineMatchState, collectSourceLineMatchState } from './liveMarkdownLineMatches';
 import {
   addCodeFenceDecoration,
   addLine,
@@ -36,8 +30,7 @@ import {
   addInlineCodeSyntaxDecorations,
   addInlineTokenDecorations,
   addSemanticMarkDecorations,
-  addStrongTextDecorations,
-  collectClozePlaceholderRanges
+  addStrongTextDecorations
 } from './liveMarkdownTextMarks';
 import { liveMarkdownTheme } from './liveMarkdownTheme';
 import { resolveVisibleLineWindow, shouldRefreshLineDecorations } from './liveMarkdownViewport';
@@ -77,13 +70,8 @@ function buildLineDecorations(view: EditorView): DecorationSet {
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
     const showSyntaxOnLine = showMarkdownSyntax && isCursorLine;
-    const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
-    const imageMatches = collectImageMatches(line.from, line.text);
-    const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(line.from, line.text);
-    const imageRanges = imageMatches.map((imageMatch) => ({ from: imageMatch.from, to: imageMatch.to }));
-    const inlineCodeRanges = inlineCodeMatches.map((match) => ({ from: match.from, to: match.to }));
-    const preservedRanges = clozePlaceholderRanges.concat(imageRanges, inlineCodeRanges);
-    const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(line.from, line.text, preservedRanges);
+    const { clozePlaceholderRanges, footnoteMatches, footnoteRanges, imageMatches, inlineCodeMatches, inlineLinkMatches, preservedRanges } =
+      collectPreviewLineMatchState(line.from, line.text, inCodeBlock);
 
     if (lineClass) {
       if (hideTitleHeading && lineNumber === 1 && lineClass === 'cm-line-h1') {
@@ -98,9 +86,10 @@ function buildLineDecorations(view: EditorView): DecorationSet {
       addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
     }
     addCodeFenceDecoration(ranges, line.from, line.text, showSyntaxOnLine);
+    addFootnoteDecorations(ranges, footnoteMatches);
     addInlineCodeDecorations(ranges, inlineCodeMatches, showSyntaxOnLine);
     addInlineLinkDecorations(ranges, inlineLinkMatches, showSyntaxOnLine);
-    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, preservedRanges);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, showSyntaxOnLine, preservedRanges.concat(footnoteRanges));
     addStrongTextDecorations(ranges, line.from, line.text, inCodeBlock);
     addSemanticMarkDecorations(ranges, line.from, line.text, inCodeBlock);
     addClozePlaceholderDecorations(ranges, clozePlaceholderRanges);
@@ -118,17 +107,15 @@ function buildSourceModeLineDecorations(view: EditorView): DecorationSet {
 
   for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
-    const clozePlaceholderRanges = collectClozePlaceholderRanges(line.from, line.text);
-    const inlineCodeMatches = inCodeBlock ? [] : collectInlineCodeMatches(line.from, line.text);
-    const inlineCodeRanges = inlineCodeMatches.map((match) => ({ from: match.from, to: match.to }));
-    const preservedRanges = clozePlaceholderRanges.concat(inlineCodeRanges);
-    const inlineLinkMatches = inCodeBlock ? [] : collectInlineLinkMatches(line.from, line.text, preservedRanges);
+    const { clozePlaceholderRanges, footnoteMatches, footnoteRanges, inlineCodeMatches, inlineLinkMatches, preservedRanges } =
+      collectSourceLineMatchState(line.from, line.text, inCodeBlock);
 
     addPrefixDecoration(ranges, line.from, line.text, true);
     addCodeFenceDecoration(ranges, line.from, line.text, true);
+    addFootnoteDecorations(ranges, footnoteMatches);
     addInlineCodeSyntaxDecorations(ranges, inlineCodeMatches);
     addInlineLinkDecorations(ranges, inlineLinkMatches, true);
-    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, true, preservedRanges);
+    addInlineTokenDecorations(ranges, line.from, line.text, inCodeBlock, true, preservedRanges.concat(footnoteRanges));
     addClozePlaceholderDecorations(ranges, clozePlaceholderRanges);
 
     if (CODE_FENCE_PATTERN.test(line.text)) inCodeBlock = !inCodeBlock;
