@@ -207,7 +207,8 @@ body {
   font-variant-numeric: tabular-nums;
   line-height: 1;
   pointer-events: none;
-  padding-right: 14px;
+  position: relative;
+  right: 18px;
   user-select: none;
   white-space: nowrap;
 }
@@ -232,7 +233,7 @@ body {
   pointer-events: auto;
   position: absolute;
   top: 50%;
-  transform: translate(calc(-100% - 8px), -50%);
+  transform: translate(calc(-100% - 10px), -50%);
   -webkit-app-region: no-drag;
 }
 

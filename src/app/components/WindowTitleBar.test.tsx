@@ -80,7 +80,7 @@ describe('WindowTitleBar', () => {
       throw new Error('expanded left titlebar zone should exist');
     }
     expect(leftZone).toContainElement(timestamp);
-    expect(timestamp.textContent).toMatch(/^\d{6}$/);
+    expect(timestamp.textContent).toMatch(/^\d{4}$/);
     expect(actions.compareDocumentPosition(timestamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
