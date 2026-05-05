@@ -66,7 +66,7 @@ it('stores font color in the active base color mode', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'dark' } });
+  fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
   fireEvent.change(screen.getByLabelText('Font color picker'), {
     target: { value: '#dde5d8' }
   });
@@ -88,7 +88,7 @@ it('stores appearance colors in the active base color mode', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'dark' } });
+  fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
   fireEvent.change(screen.getByLabelText('Selection color picker'), {
     target: { value: '#224488' }
   });
@@ -99,7 +99,7 @@ it('stores appearance colors in the active base color mode', async () => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColor)).toBeNull();
   });
 
-  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'light' } });
+  fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
   fireEvent.change(screen.getByLabelText('Selection color picker'), {
     target: { value: '#336699' }
   });

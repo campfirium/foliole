@@ -30,13 +30,12 @@ function PushQueueSettingsHarness() {
 
 function expectPushQueueSemanticCopy() {
   expect(screen.getByRole('heading', { level: 4, name: 'Default topic priority' })).toBeInTheDocument();
-  expect(screen.getByText('Dual queue mix ratio')).toBeInTheDocument();
-  expect(screen.getByText('Priority strength (`priorityRatio`)')).toBeInTheDocument();
-  expect(screen.getByText(/global `defaultPriority` fallback/i)).toBeInTheDocument();
-  expect(screen.getByText(/weight multiple of P1 relative to P9/i)).toBeInTheDocument();
-  expect(screen.getByText(/weight ratio, not a percentage scale/i)).toBeInTheDocument();
-  expect(screen.getByText(/default `1:5` means one reading draw is mixed after five FSRS draws/i)).toBeInTheDocument();
-  expect(screen.getByText(/minimum maps to P1, the maximum maps to P9/i)).toBeInTheDocument();
+  expect(screen.getByText('Reading vs review mix')).toBeInTheDocument();
+  expect(screen.getByText('Priority weight')).toBeInTheDocument();
+  expect(screen.getByText(/fallback priority for new topics/i)).toBeInTheDocument();
+  expect(screen.getByText(/default 1:5 means one reading draw after every five review draws/i)).toBeInTheDocument();
+  expect(screen.getByText(/default 5 means a P1 topic is drawn five times as often as a P9 topic/i)).toBeInTheDocument();
+  expect(screen.getByText(/minimum applies to P1 topics, the maximum to P9/i)).toBeInTheDocument();
 }
 
 async function expectUpdatedPushQueueValues() {
@@ -209,10 +208,10 @@ it('updates appearance settings from the dedicated sections and persists them', 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
-  expect(screen.getByRole('switch', { name: 'Auto-localize remote images' }).className).toContain('bg-settings-switch-on');
+  expect(screen.getByRole('switch', { name: 'Save remote images locally' }).className).toContain('bg-settings-switch-on');
   expect(screen.getByRole('radiogroup', { name: 'Markdown syntax visibility' }).className).toContain('bg-settings-control');
   fireEvent.click(screen.getByRole('radio', { name: 'Active line' }));
-  fireEvent.click(screen.getByLabelText('Auto-localize remote images'));
+  fireEvent.click(screen.getByLabelText('Save remote images locally'));
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.change(screen.getByLabelText('Accent color picker'), {
     target: { value: '#ff5500' }

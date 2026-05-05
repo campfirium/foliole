@@ -66,7 +66,7 @@ it('renders compact sync controls', async () => {
 
   expect(screen.getByText(/Turn on desktop sync/)).toBeInTheDocument();
   expect(screen.getByText('Connected devices')).toBeInTheDocument();
-  expect(screen.getByText(/Turn on sync for this desktop/)).toBeInTheDocument();
+  expect(screen.getByText('Enable on this desktop')).toBeInTheDocument();
   expect(screen.getByText('Pixel 9')).toBeInTheDocument();
   expect(screen.getByText('(Android)')).toBeInTheDocument();
   expect(screen.getByText('192.168.1.22')).toBeInTheDocument();
@@ -76,10 +76,10 @@ it('renders compact sync controls', async () => {
   expect(screen.queryByText('Waiting devices')).not.toBeInTheDocument();
   expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: 'Sync' }).className).toContain('bg-settings-switch-on');
-  expect(screen.getByRole('switch', { name: 'Sync' }).parentElement?.className).toContain('flex-[0_0_auto]');
+  expect(screen.getByRole('switch', { name: 'Enable desktop sync' }).className).toContain('bg-settings-switch-on');
+  expect(screen.getByRole('switch', { name: 'Enable desktop sync' }).parentElement?.className).toContain('flex-[0_0_auto]');
 
-  fireEvent.click(screen.getByRole('switch', { name: 'Sync' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Enable desktop sync' }));
 
   const hookState = pairingHookMocks.useDesktopCompanionPairingRequests.mock.results[0]?.value;
   await waitFor(() => {

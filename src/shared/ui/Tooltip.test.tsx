@@ -22,7 +22,7 @@ it('renders tooltip content with shared floating surface baseline', () => {
     throw new Error('Tooltip content wrapper missing');
   }
   expect(tooltip.className).toContain('rounded-lg');
-  expect(tooltip.className).toContain('shadow-popover');
+  expect(tooltip.className).toContain('shadow-none');
   expect(tooltip.className).toContain('border-border');
-  expect(tooltip.className).toContain('bg-bg-elevated');
+  expect(tooltip.className).toContain('bg-[var(--app-floating-surface-bg)]');
 });

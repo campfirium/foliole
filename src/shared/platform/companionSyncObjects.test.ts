@@ -153,6 +153,10 @@ async function testNativePluginBridge() {
   expect(capacitorMock.plugin.searchPdfPageText).toHaveBeenCalledWith({ limit: 5, query: 'pdf' });
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   await expectNativeCursorBridge(api);
+  await expectNativeSaveBridge(api);
+}
+
+async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects')) {
   await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
     .resolves.toEqual({ content_hash: 'hash-setting', object_id: 'setting-1' });
   await expect(api.saveCompanionSyncActiveViewState('node-1'))

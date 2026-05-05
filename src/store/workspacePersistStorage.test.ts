@@ -137,7 +137,7 @@ describe('workspacePersistStorage runtime merge', () => {
         updatedAt: null
       }
     });
-    expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
+    expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', { includePdfOpenings: false });
     expect(invoke).toHaveBeenCalledWith('load_reading_progress');
     expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
   });
@@ -153,7 +153,7 @@ describe('workspacePersistStorage runtime fallback', () => {
 
     expect(value).toBeNull();
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBe('{"state":{"activeNodeId":"node-3"}}');
-    expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot');
+    expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', { includePdfOpenings: false });
   });
 
   it('keeps workspace snapshot active node when reading progress active node is invalid', async () => {

@@ -162,8 +162,8 @@ it('shows Library Home, Assets, Inbox, and Mirror without exposing internal data
 
   expect(screen.getByText(/drop folder for incoming files/i)).toBeInTheDocument();
   expect(screen.getByText(/should stay close to empty/i)).toBeInTheDocument();
-  expect(screen.getByText(/defaults usually need no adjustment/i)).toBeInTheDocument();
-  expect(screen.getByText(/one `.md` per article/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/normally needs no adjustment/i)).toHaveLength(2);
+  expect(screen.getByText(/one .md file per topic/i)).toBeInTheDocument();
   expect(screen.getByText('Mirror maintenance')).toBeInTheDocument();
   expect(screen.getByText(/daily output is incremental/i)).toBeInTheDocument();
   expect(screen.getByText(/folder for attachments and copied media/i)).toBeInTheDocument();
