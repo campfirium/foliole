@@ -1,6 +1,7 @@
 import { RefreshCw, X } from 'lucide-react';
 
 import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchBridge';
+import { resolveExternalSearchStatusLabel } from '../../../../shared/platform/externalSearchStatus';
 import {
   AppButton,
   AppIconButton,
@@ -49,16 +50,14 @@ function statusTone(folder: RuntimeExternalSearchFolder) {
 }
 
 function statusLabel(folder: RuntimeExternalSearchFolder) {
-  if (folder.status === 'ready') return 'Ready';
-  if (folder.status === 'indexing') return 'Indexing';
-  if (folder.status === 'error') return 'Error';
-  return 'Not indexed';
+  return resolveExternalSearchStatusLabel(folder);
 }
 
 function statusMeta(folder: RuntimeExternalSearchFolder) {
   if (folder.status === 'error') return folder.lastError ?? 'Index build failed.';
   if (folder.status === 'ready') return `${folder.documentCount} files indexed`;
-  return 'Waiting for index build';
+  if (folder.status === 'indexing') return 'Updating in the background';
+  return 'Waiting for the next background update';
 }
 
 function excludedFoldersValue(folders: string[]) {

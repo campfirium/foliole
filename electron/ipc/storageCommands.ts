@@ -17,6 +17,7 @@ import {
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
+import { notifyExternalSearchFoldersChanged } from '../externalSearchBackgroundRefreshRuntime.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
@@ -187,6 +188,7 @@ function handleExternalSearchStorageCommand(command: string, args: Record<string
     const folders = Array.isArray(args.folders) ? args.folders : [];
     const savedFolders = saveExternalSearchFolders(folders as Parameters<typeof saveExternalSearchFolders>[0]);
     pruneExternalSearchCache(savedFolders.map((folder) => folder.id));
+    notifyExternalSearchFoldersChanged();
     return savedFolders;
   }
   if (command === NATIVE_COMMANDS.rebuildExternalSearchIndex) {

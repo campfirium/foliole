@@ -23,6 +23,7 @@ export function SearchPaletteEmptyState({ query }: { query: string }) {
 
 export function SearchPaletteList(props: {
   activeIndex: number;
+  externalSectionStatus: string | null;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult) => void;
   query: string;
@@ -36,8 +37,13 @@ export function SearchPaletteList(props: {
       {props.results.map((item, index) => (
         <li key={`${item.id}-${item.kind}-${index}`}>
           {index === 0 || props.results[index - 1]?.kind !== item.kind ? (
-            <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45">
-              {item.kind === 'external' ? 'External folders' : 'Foliole content'}
+            <div className="flex items-center justify-between gap-3 px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/45">
+              <span>{item.kind === 'external' ? 'External folders' : 'Foliole content'}</span>
+              {item.kind === 'external' && props.externalSectionStatus ? (
+                <span className="truncate rounded-full border border-border bg-bg-subtle px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-foreground/60">
+                  {props.externalSectionStatus}
+                </span>
+              ) : null}
             </div>
           ) : null}
           <button

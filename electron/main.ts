@@ -6,9 +6,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
-  type BrowserWindow as ElectronBrowserWindow,
-  type BrowserWindowConstructorOptions,
-  type WebContents
+  type BrowserWindow as ElectronBrowserWindow
 } from 'electron';
 
 import { registerAttachmentProtocol, registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
@@ -17,6 +15,12 @@ import { initializeDatabase } from './database/migrate.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
+import {
+  notifyExternalSearchSecondInstance,
+  notifyExternalSearchUserActivity,
+  startExternalSearchBackgroundRefresh,
+  stopExternalSearchBackgroundRefresh
+} from './externalSearchBackgroundRefreshRuntime.js';
 import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { startManagedInboxMonitor, stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { loadReadwiseBooksInventory } from './import/readwiseBooksInventory.js';
@@ -37,16 +41,23 @@ import { loadWindowState } from './ipc/windowState.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import { bindWindowReadingProgressFlush } from './readingProgressWindowFlush.js';
-import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import {
   collectRuntimeDiagnosticsSnapshot,
   configureRuntimeAppIdentity,
   formatRuntimeDiagnosticsSnapshot
 } from './runtimeIdentity.js';
+import {
+  bindEmbeddedLinkPanelContents,
+  createMainWindowOptions,
+  focusWindow,
+  installMainRuntimeDiagnostics,
+  loadMainWindowRenderer,
+  logWindowStateLifecycleEvent,
+  logWindowStateRestoreDecision
+} from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { runStartupTask } from './startupTasks.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
-import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,58 +80,6 @@ void appendBootEvent('main_process_start', {
 }).catch((error) => {
   console.error('[electron-main] boot log failed: main_process_start', error);
 });
-
-function createWindowOptions(): BrowserWindowConstructorOptions {
-  return {
-    width: 1400,
-    height: 900,
-    minWidth: 960,
-    minHeight: 640,
-    frame: false,
-    backgroundColor: '#fcfcfc',
-    autoHideMenuBar: false,
-    show: false,
-    webPreferences: {
-      preload: runtimeDiagnostics.preloadPath,
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      webviewTag: true
-    }
-  };
-}
-
-
-function focusFirstWindow() {
-  const [firstWindow] = BrowserWindow.getAllWindows();
-  if (!firstWindow) {
-    return;
-  }
-  if (firstWindow.isMinimized()) {
-    firstWindow.restore();
-  }
-  firstWindow.focus();
-}
-
-
-function installRuntimeDiagnostics() {
-  app.on('render-process-gone', (_, webContents, details) => {
-    console.error('[electron-main] render-process-gone', {
-      reason: details.reason,
-      exitCode: details.exitCode,
-      url: webContents.getURL()
-    });
-  });
-  app.on('child-process-gone', (_, details) => {
-    console.error('[electron-main] child-process-gone', details);
-  });
-  process.on('uncaughtException', (error) => {
-    console.error('[electron-main] uncaughtException', error);
-  });
-  process.on('unhandledRejection', (reason) => {
-    console.error('[electron-main] unhandledRejection', reason);
-  });
-}
 
 function bindWindowIpc(window: ElectronBrowserWindow) {
   ipcMain.handle(IPC_WINDOW_MINIMIZE_CHANNEL, () => {
@@ -154,7 +113,7 @@ async function createMainWindow() {
   const restoredWindowState = await loadWindowState();
   await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
-  const options = applyWindowStateToOptions(createWindowOptions(), restoredWindowState);
+  const options = applyWindowStateToOptions(createMainWindowOptions(runtimeDiagnostics.preloadPath), restoredWindowState);
   logWindowStateRestoreDecision('window-options-applied', restoredWindowState, {
     options: {
       fullscreen: options.fullscreen ?? false,
@@ -183,26 +142,16 @@ async function createMainWindow() {
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);
   await appendBootEvent('renderer_load_start');
-  await loadRenderer(window, __dirname);
+  await loadMainWindowRenderer({ runtimeDiagnostics, runtimeDir: __dirname, window });
   await appendBootEvent('renderer_load_complete', {
     url: window.webContents.getURL()
   });
-  logActiveRuntimeDiagnostics(window, __dirname, runtimeDiagnostics);
 }
 
 function installInvokeHandler() {
   ipcMain.handle(IPC_INVOKE_CHANNEL, async (event, request: InvokeRequest) =>
     handleInvokeRequest(request, { sender: event.sender })
   );
-}
-
-function bindEmbeddedLinkPanels(contents: WebContents) {
-  contents.setWindowOpenHandler(({ url }) => {
-    if (contents.getType() === 'webview' && url.trim()) {
-      void contents.loadURL(url);
-    }
-    return { action: 'deny' };
-  });
 }
 
 if (!runtimeMode.allowParallelInstance) {
@@ -222,13 +171,15 @@ const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({
 });
 
 app.on('second-instance', () => {
-  focusFirstWindow();
+  focusWindow(BrowserWindow.getAllWindows()[0]);
+  notifyExternalSearchSecondInstance();
 });
 
 let mirrorFlushed = false;
 app.on('before-quit', (event) => {
   devRestartIntentWatcher?.close();
   devRendererReloadIntentWatcher?.close();
+  stopExternalSearchBackgroundRefresh();
   stopManagedInboxMonitor();
   stopKeepImportMonitor();
   if (!mirrorFlushed) {
@@ -245,10 +196,20 @@ app.on('before-quit', (event) => {
 });
 
 app.whenReady().then(async () => {
-  installRuntimeDiagnostics();
+  installMainRuntimeDiagnostics();
+  app.on('render-process-gone', (_, webContents, details) => {
+    console.error('[electron-main] render-process-gone', {
+      reason: details.reason,
+      exitCode: details.exitCode,
+      url: webContents.getURL()
+    });
+  });
+  app.on('child-process-gone', (_, details) => {
+    console.error('[electron-main] child-process-gone', details);
+  });
   await appendBootEvent('app_when_ready');
   app.on('web-contents-created', (_, contents) => {
-    bindEmbeddedLinkPanels(contents);
+    bindEmbeddedLinkPanelContents(contents);
   });
   await appendBootEvent('database_init_start');
   initializeDatabase();
@@ -266,8 +227,10 @@ app.whenReady().then(async () => {
   void runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
   void runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);
   void runStartupTask('[readwise-books] startup node sync failed', loadReadwiseBooksInventory);
+  startExternalSearchBackgroundRefresh();
 
   app.on('activate', async () => {
+    notifyExternalSearchUserActivity();
     if (BrowserWindow.getAllWindows().length === 0) {
       await createMainWindow();
     }

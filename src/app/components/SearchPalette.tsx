@@ -8,6 +8,7 @@ import { loadRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from '../
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
+import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { openImportedExternalResult } from './searchPaletteImportResult';
 import { SearchPaletteEmptyState, SearchPaletteList } from './SearchPaletteResults';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
@@ -179,6 +180,7 @@ export function SearchPalette(props: SearchPaletteProps) {
   const [externalPreviewPath, setExternalPreviewPath] = useState<string | null>(null);
   const rawResults = useSearchResults(props, query);
   const results = useOrderedSearchResults(rawResults, props.nodesById);
+  const externalSectionStatus = useExternalSectionStatus(props.isOpen);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
   useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setExternalPreviewPath, setQuery);
 
@@ -210,6 +212,7 @@ export function SearchPalette(props: SearchPaletteProps) {
             nodesById={props.nodesById}
             onOpenResult={(result) => openSearchPaletteResult(result, props.onOpenResult, setExternalPreviewPath)}
             query={query}
+            externalSectionStatus={externalSectionStatus}
             results={results}
             sourceDetailsByNodeId={sourceDetailsByNodeId}
           />

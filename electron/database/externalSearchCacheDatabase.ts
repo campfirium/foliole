@@ -1,0 +1,66 @@
+import { createRequire } from 'node:module';
+import path from 'node:path';
+
+import { resolveDatabasePath } from './connection.js';
+
+const require = createRequire(import.meta.url);
+const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
+
+type SqliteDatabase = import('better-sqlite3').Database;
+
+let cachedCacheDb: SqliteDatabase | null = null;
+
+function resolveCacheDbPath() {
+  return path.join(path.dirname(resolveDatabasePath()), 'external-search-cache.db');
+}
+
+export function openExternalSearchCacheDatabase() {
+  if (cachedCacheDb) {
+    return cachedCacheDb;
+  }
+  const dbPath = resolveCacheDbPath();
+  cachedCacheDb = new BetterSqlite3(dbPath);
+  cachedCacheDb.pragma('journal_mode = WAL');
+  cachedCacheDb.exec(`CREATE TABLE IF NOT EXISTS external_search_documents (
+    absolute_path TEXT PRIMARY KEY,
+    folder_id TEXT NOT NULL,
+    folder_path TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    extension TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    modified_at TEXT NOT NULL,
+    modified_ms INTEGER NOT NULL,
+    indexed_at TEXT NOT NULL,
+    is_present INTEGER NOT NULL DEFAULT 1,
+    content TEXT NOT NULL
+  )`);
+  const hasPresenceColumn = cachedCacheDb
+    .prepare(`SELECT COUNT(*) AS count FROM pragma_table_info('external_search_documents') WHERE name = 'is_present'`)
+    .get() as { count: number };
+  if (!hasPresenceColumn.count) {
+    cachedCacheDb.exec('ALTER TABLE external_search_documents ADD COLUMN is_present INTEGER NOT NULL DEFAULT 1');
+  }
+  cachedCacheDb.exec(`CREATE INDEX IF NOT EXISTS idx_external_search_documents_folder_id
+    ON external_search_documents (folder_id)`);
+  cachedCacheDb.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS external_search_fts USING fts5(
+    title,
+    file_name,
+    relative_path,
+    content,
+    absolute_path UNINDEXED,
+    folder_id UNINDEXED,
+    folder_path UNINDEXED,
+    modified_at UNINDEXED,
+    tokenize = 'trigram'
+  )`);
+  return cachedCacheDb;
+}
+
+export function closeExternalSearchCacheDatabase() {
+  if (!cachedCacheDb) {
+    return;
+  }
+  cachedCacheDb.close();
+  cachedCacheDb = null;
+}

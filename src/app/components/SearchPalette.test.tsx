@@ -7,8 +7,12 @@ vi.mock('../../shared/platform/bridge', () => ({
 vi.mock('../../shared/platform/nodeSourceBridge', () => ({
   loadRuntimeNodeSourceDetails: vi.fn()
 }));
+vi.mock('../../shared/platform/externalSearchBridge', () => ({
+  loadRuntimeExternalSearchFolders: vi.fn()
+}));
 
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchBridge';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceBridge';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -163,6 +167,7 @@ it('renders search results as title context and path rows', async () => {
     )
   );
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
   renderSearchPalette();
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
@@ -207,6 +212,7 @@ it('shows a watched source badge on the right for matching results', async () =>
     ] satisfies WorkspaceSearchResult[])
   );
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(createWatchedSourceDetails('pdf-1'));
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
   renderPdfSearchPalette();
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), {
@@ -219,6 +225,7 @@ it('shows a watched source badge on the right for matching results', async () =>
   expect(screen.getByText('Folder A')).toBeInTheDocument();
   expect(screen.getAllByText('测试').some((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
 });
+
 
 it('rehydrates the workspace before opening an imported external result', async () => {
   const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);

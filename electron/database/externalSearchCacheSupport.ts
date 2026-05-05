@@ -25,8 +25,40 @@ export interface ScannedDocument {
   sizeBytes: number;
 }
 
+export interface ScannedDocumentEntry {
+  absolutePath: string;
+  extension: 'md' | 'txt';
+  fileName: string;
+  modifiedAt: string;
+  modifiedMs: number;
+  relativePath: string;
+  sizeBytes: number;
+}
+
+interface ScanRuntime {
+  processedCount: number;
+  yieldEvery: number;
+}
+
 function normalizeSegments(values: string[]) {
   return new Set(values.map((value) => value.trim().replace(/\\/g, '/')).filter(Boolean));
+}
+
+function createScanRuntime() {
+  return {
+    processedCount: 0,
+    yieldEvery: 25
+  } satisfies ScanRuntime;
+}
+
+async function yieldScanWork(runtime: ScanRuntime) {
+  runtime.processedCount += 1;
+  if (runtime.processedCount % runtime.yieldEvery !== 0) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 function shouldSkipDirectory(args: {
@@ -47,13 +79,29 @@ export async function scanFolder(
   defaultExcludedNames: Set<string>,
   items: ScannedDocument[]
 ): Promise<void> {
+  const entries: ScannedDocumentEntry[] = [];
+  await scanFolderEntries(folder, rootPath, currentPath, defaultExcludedNames, entries, createScanRuntime());
+  for (const entry of entries) {
+    items.push(await loadScannedDocument(entry));
+  }
+}
+
+export async function scanFolderEntries(
+  folder: NativeExternalSearchFolder,
+  rootPath: string,
+  currentPath: string,
+  defaultExcludedNames: Set<string>,
+  items: ScannedDocumentEntry[],
+  runtime: ScanRuntime = createScanRuntime()
+): Promise<void> {
   const relativeDirectoryPath = path.relative(rootPath, currentPath);
   if (shouldSkipDirectory({ defaultExcludedNames, folder, relativeDirectoryPath })) return;
   const entries = await fs.readdir(currentPath, { withFileTypes: true });
   for (const entry of entries) {
     const absolutePath = path.join(currentPath, entry.name);
     if (entry.isDirectory()) {
-      await scanFolder(folder, rootPath, absolutePath, defaultExcludedNames, items);
+      await scanFolderEntries(folder, rootPath, absolutePath, defaultExcludedNames, items, runtime);
+      await yieldScanWork(runtime);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -62,7 +110,6 @@ export async function scanFolder(
     const stat = await fs.stat(absolutePath);
     items.push({
       absolutePath,
-      content: await fs.readFile(absolutePath, 'utf8'),
       extension: extension === '.md' ? 'md' : 'txt',
       fileName: entry.name,
       modifiedAt: new Date(stat.mtimeMs).toISOString(),
@@ -70,7 +117,15 @@ export async function scanFolder(
       relativePath: path.relative(rootPath, absolutePath).replace(/\\/g, '/'),
       sizeBytes: stat.size
     });
+    await yieldScanWork(runtime);
   }
+}
+
+export async function loadScannedDocument(entry: ScannedDocumentEntry): Promise<ScannedDocument> {
+  return {
+    ...entry,
+    content: await fs.readFile(entry.absolutePath, 'utf8')
+  };
 }
 
 export function replaceFolderDocuments(
@@ -81,8 +136,8 @@ export function replaceFolderDocuments(
   const deleteDocs = db.prepare('DELETE FROM external_search_documents WHERE folder_id = ?');
   const deleteFts = db.prepare('DELETE FROM external_search_fts WHERE folder_id = ?');
   const insertDoc = db.prepare(`INSERT INTO external_search_documents (
-    absolute_path, folder_id, folder_path, relative_path, file_name, extension, size_bytes, modified_at, modified_ms, indexed_at, content
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    absolute_path, folder_id, folder_path, relative_path, file_name, extension, size_bytes, modified_at, modified_ms, indexed_at, is_present, content
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const insertFts = db.prepare(`INSERT INTO external_search_fts (
     title, file_name, relative_path, content, absolute_path, folder_id, folder_path, modified_at
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
@@ -91,10 +146,63 @@ export function replaceFolderDocuments(
     deleteDocs.run(folder.id);
     deleteFts.run(folder.id);
     documents.forEach((document) => {
-      insertDoc.run(document.absolutePath, folder.id, folder.folder_path, document.relativePath, document.fileName, document.extension, document.sizeBytes, document.modifiedAt, document.modifiedMs, indexedAt, document.content);
+      insertDoc.run(document.absolutePath, folder.id, folder.folder_path, document.relativePath, document.fileName, document.extension, document.sizeBytes, document.modifiedAt, document.modifiedMs, indexedAt, 1, document.content);
       insertFts.run(path.basename(document.fileName, path.extname(document.fileName)).trim() || document.fileName, document.fileName, document.relativePath, document.content, document.absolutePath, folder.id, folder.folder_path, document.modifiedAt);
     });
   })();
+  return indexedAt;
+}
+
+export function applyFolderDocumentChanges(args: {
+  db: import('better-sqlite3').Database;
+  deletedAbsolutePaths: string[];
+  documentsToUpsert: ScannedDocument[];
+  folder: NativeExternalSearchFolder;
+}) {
+  const deleteFts = args.db.prepare('DELETE FROM external_search_fts WHERE absolute_path = ?');
+  const markDocMissing = args.db.prepare('UPDATE external_search_documents SET is_present = 0 WHERE absolute_path = ?');
+  const upsertDoc = args.db.prepare(`INSERT OR REPLACE INTO external_search_documents (
+    absolute_path, folder_id, folder_path, relative_path, file_name, extension, size_bytes, modified_at, modified_ms, indexed_at, is_present, content
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const insertFts = args.db.prepare(`INSERT INTO external_search_fts (
+    title, file_name, relative_path, content, absolute_path, folder_id, folder_path, modified_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  const indexedAt = new Date().toISOString();
+
+  args.db.transaction(() => {
+    args.deletedAbsolutePaths.forEach((absolutePath) => {
+      markDocMissing.run(absolutePath);
+      deleteFts.run(absolutePath);
+    });
+    args.documentsToUpsert.forEach((document) => {
+      deleteFts.run(document.absolutePath);
+      upsertDoc.run(
+        document.absolutePath,
+        args.folder.id,
+        args.folder.folder_path,
+        document.relativePath,
+        document.fileName,
+        document.extension,
+        document.sizeBytes,
+        document.modifiedAt,
+        document.modifiedMs,
+        indexedAt,
+        1,
+        document.content
+      );
+      insertFts.run(
+        path.basename(document.fileName, path.extname(document.fileName)).trim() || document.fileName,
+        document.fileName,
+        document.relativePath,
+        document.content,
+        document.absolutePath,
+        args.folder.id,
+        args.folder.folder_path,
+        document.modifiedAt
+      );
+    });
+  })();
+
   return indexedAt;
 }
 
