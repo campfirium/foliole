@@ -1,6 +1,6 @@
 import { Route, Settings } from 'lucide-react';
 
-import { AppIconButton, AppToolbar } from '../../shared/ui';
+import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 interface WorkspaceSideToolbarProps {
   canStartStudyMode: boolean;
@@ -45,15 +45,21 @@ export function WorkspaceSideToolbar({
           isStudyMode ? ' border-t border-border' : ''
         }`}
       >
-        <AppIconButton
-          className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-          data-active={false}
-          disabled={!canStartStudyMode && !isStudyMode}
-          icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
-          label="Study"
-          onClick={onToggleReviewSession}
-          title={reviewStatusText}
-        />
+        <AppTooltip>
+          <AppTooltipTrigger asChild>
+            <span className="inline-flex">
+              <AppIconButton
+                className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+                data-active={false}
+                disabled={!canStartStudyMode && !isStudyMode}
+                icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
+                label="Study"
+                onClick={onToggleReviewSession}
+              />
+            </span>
+          </AppTooltipTrigger>
+          <AppTooltipContent>{reviewStatusText}</AppTooltipContent>
+        </AppTooltip>
       </div>
     </AppToolbar>
   );

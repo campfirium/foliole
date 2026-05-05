@@ -5,10 +5,10 @@ import type {
   MouseEvent as ReactMouseEvent
 } from 'react';
 
-import { cn } from '../../../shared/lib/utils';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
+import { NodeTreeRowFrame } from './NodeTreeRowFrame';
 import { NodeTreeRowIcon } from './NodeTreeRowIcon';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
 import { NodeTreeRowExpandToggle, renderNodeLabel } from './NodeTreeRowParts';
@@ -54,17 +54,6 @@ function resolveNodeRowStyle(depth: number) {
   return { '--node-depth': depth } as CSSProperties;
 }
 
-function resolveNodeRowFrameClassName(
-  isDropTarget: boolean,
-  dropIntent: NodeTreeRowProps['dropIntent']
-) {
-  return cn(
-    isDropTarget && dropIntent === 'child' && 'border border-border-strong bg-foreground/[0.06]',
-    isDropTarget && dropIntent === 'before' && 'border-t-2 border-border-strong',
-    isDropTarget && dropIntent === 'after' && 'border-b-2 border-border-strong'
-  );
-}
-
 function renderNodeTreeRowButton(props: {
   depth: number;
   hasChildren: boolean;
@@ -88,61 +77,41 @@ function renderNodeTreeRowButton(props: {
   return <NodeTreeRowButton {...props} />;
 }
 
-export function NodeTreeRow({
-  depth,
-  isActive,
-  isCollapsed,
-  isDerived = false,
-  isMuted = false,
-  mutedOpacity = 1,
-  nodeIconKind = 'reading',
-  nodeIconState = 'scheduled',
-  isSelected,
-  hasChildren,
-  isDragDisabled = false,
-  isDropTarget = false,
-  dropIntent = null,
-  label,
-  nodeId,
-  onDragEnd,
-  onDragEnter,
-  onDragOver,
-  onDragStart,
-  onDrop,
-  onContextMenu,
-  onKeyDown,
-  onRename,
-  onSelect,
-  onToggleCollapse
-}: NodeTreeRowProps) {
-  const style = resolveNodeRowStyle(depth);
+export function NodeTreeRow(props: NodeTreeRowProps) {
+  const style = resolveNodeRowStyle(props.depth);
   return (
-    <div
-      className={resolveNodeRowFrameClassName(isDropTarget, dropIntent)}
-      draggable={!isDragDisabled}
-      onDragEnd={onDragEnd}
-      onDragEnter={onDragEnter ? (event) => onDragEnter(nodeId, event) : undefined}
-      onDragOver={onDragOver ? (event) => onDragOver(nodeId, event) : undefined}
-      onDragStart={onDragStart ? (event) => onDragStart(nodeId, event) : undefined}
-      onDrop={onDrop ? (event) => onDrop(nodeId, event) : undefined}
-      title={isDragDisabled ? 'Derived nodes cannot be moved.' : undefined}
+    <NodeTreeRowFrame
+      dropIntent={props.dropIntent ?? null}
+      isDragDisabled={props.isDragDisabled ?? false}
+      isDropTarget={props.isDropTarget ?? false}
+      nodeId={props.nodeId}
+      onDragEnd={props.onDragEnd}
+      onDragEnter={props.onDragEnter}
+      onDragOver={props.onDragOver}
+      onDragStart={props.onDragStart}
+      onDrop={props.onDrop}
     >
       {renderNodeTreeRowButton({
-        depth,
-        hasChildren,
-        isActive,
-        isCollapsed,
-        isDerived,
-        isMuted,
-        mutedOpacity,
-        nodeIconKind,
-        nodeIconState,
-        isSelected,
-        label,
-        nodeId,
-        onContextMenu, onKeyDown, onRename, onSelect, onToggleCollapse, style
+        depth: props.depth,
+        hasChildren: props.hasChildren,
+        isActive: props.isActive,
+        isCollapsed: props.isCollapsed,
+        isDerived: props.isDerived ?? false,
+        isMuted: props.isMuted ?? false,
+        mutedOpacity: props.mutedOpacity ?? 1,
+        nodeIconKind: props.nodeIconKind ?? 'reading',
+        nodeIconState: props.nodeIconState ?? 'scheduled',
+        isSelected: props.isSelected,
+        label: props.label,
+        nodeId: props.nodeId,
+        onContextMenu: props.onContextMenu,
+        onKeyDown: props.onKeyDown,
+        onRename: props.onRename,
+        onSelect: props.onSelect,
+        onToggleCollapse: props.onToggleCollapse,
+        style
       })}
-    </div>
+    </NodeTreeRowFrame>
   );
 }
 interface NodeTreeRowButtonProps {
