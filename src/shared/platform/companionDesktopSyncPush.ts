@@ -11,6 +11,7 @@ import {
   nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
+  settingSyncAdapter,
   type SyncPushAck
 } from './companionSyncPushProtocol';
 
@@ -38,7 +39,8 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
 
 const statePushAdapters = {
   node_reading: nodeReadingSyncAdapter,
-  node_review: nodeReviewSyncAdapter
+  node_review: nodeReviewSyncAdapter,
+  setting: settingSyncAdapter
 } as const;
 
 async function collectLocalPushItems() {

@@ -117,11 +117,28 @@ public class FolioleCompanionSyncPackApplyTest {
 
         JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
 
-        assertEquals(0, result.getInt("applied_object_count"));
+        assertEquals(1, result.getInt("applied_object_count"));
         assertEquals(0, selectInt(
             "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'"
         ));
         assertEquals(0, countRows("sync_push_ack"));
+    }
+
+    @Test
+    public void appliesGenericSettingPayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingSettingRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals("{\"theme\":\"dark\"}", selectString(
+            "SELECT value_json FROM setting_records WHERE key = 'app_settings'"
+        ));
+        assertEquals("setting-hash", selectString(
+            "SELECT content_hash FROM sync_object_state " +
+            "WHERE object_type = 'setting' AND object_id = 'user_space:windows:desktop:*:app_settings'"
+        ));
     }
 
     private void createMainSchema() {
@@ -152,6 +169,11 @@ public class FolioleCompanionSyncPackApplyTest {
         mainDatabase.execSQL("CREATE TABLE sync_push_ack (" +
             "client_op_id TEXT PRIMARY KEY NOT NULL, object_type TEXT NOT NULL, object_id TEXT NOT NULL, " +
             "state_seq INTEGER, status TEXT NOT NULL, acked_at TEXT NOT NULL)");
+        mainDatabase.execSQL("CREATE TABLE setting_records (" +
+            "key TEXT NOT NULL, scope TEXT NOT NULL, platform TEXT NOT NULL DEFAULT '*', " +
+            "form_factor TEXT NOT NULL DEFAULT '*', device_id TEXT NOT NULL DEFAULT '*', " +
+            "value_json TEXT NOT NULL, content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
+            "PRIMARY KEY (key, scope, platform, form_factor, device_id))");
     }
 
     private void createIncomingPack() {
@@ -179,6 +201,10 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("CREATE TABLE sync_object_state (" +
                 "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
                 "content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
+                "PRIMARY KEY (object_type, object_id))");
+            packDatabase.execSQL("CREATE TABLE sync_objects (" +
+                "object_type TEXT NOT NULL, object_id TEXT NOT NULL, content_hash TEXT NOT NULL, " +
+                "payload_json TEXT, updated_at TEXT NOT NULL, deleted_at TEXT, " +
                 "PRIMARY KEY (object_type, object_id))");
             insertIncomingRows(packDatabase);
         } finally {
@@ -227,6 +253,25 @@ public class FolioleCompanionSyncPackApplyTest {
         }
     }
 
+    private void appendIncomingSettingRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:06:00.000Z";
+            String objectId = "user_space:windows:desktop:*:app_settings";
+            String payload = "{\"key\":\"app_settings\",\"scope\":\"user_space\",\"platform\":\"windows\"," +
+                "\"form_factor\":\"desktop\",\"device_id\":\"*\",\"value_json\":\"{\\\"theme\\\":\\\"dark\\\"}\"}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'setting', '" + objectId + "', 'setting-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'setting', '" + objectId + "', 2, 'setting-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
     private void createIncomingStateOnlyPack(String objectType, String objectId, int stateSeq, String contentHash) {
         SQLiteDatabase packDatabase = SQLiteDatabase.openOrCreateDatabase(packFile, null);
         try {
@@ -253,6 +298,10 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("CREATE TABLE sync_object_state (" +
                 "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
                 "content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
+                "PRIMARY KEY (object_type, object_id))");
+            packDatabase.execSQL("CREATE TABLE sync_objects (" +
+                "object_type TEXT NOT NULL, object_id TEXT NOT NULL, content_hash TEXT NOT NULL, " +
+                "payload_json TEXT, updated_at TEXT NOT NULL, deleted_at TEXT, " +
                 "PRIMARY KEY (object_type, object_id))");
             packDatabase.execSQL("INSERT INTO pack_manifest (key, value) VALUES (" +
                 "'manifest_json', '{\"from_state_seq\":4,\"to_state_seq\":" + stateSeq + "}')");

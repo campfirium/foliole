@@ -1,7 +1,13 @@
-export type SyncPackTableName = 'content_blobs' | 'external_documents' | 'nodes' | 'sync_object_state';
+export type SyncPackTableName =
+  | 'content_blobs'
+  | 'external_documents'
+  | 'nodes'
+  | 'sync_object_state'
+  | 'sync_objects';
 
 export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'sync_object_state',
+  'sync_objects',
   'nodes',
   'external_documents',
   'content_blobs'
@@ -18,14 +24,18 @@ export const SYNC_PACK_OBJECT_TYPES = new Set<SyncPackObjectType>(
   Object.keys(SYNC_PACK_OBJECT_TYPE_TABLES) as SyncPackObjectType[]
 );
 
-export const SYNC_PACK_STATE_ONLY_OBJECT_TYPES = new Set(['node_reading', 'node_review']);
+export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set(['node_reading', 'node_review', 'setting']);
 
 export function isSyncPackObjectType(value: string): value is SyncPackObjectType {
   return SYNC_PACK_OBJECT_TYPES.has(value as SyncPackObjectType);
 }
 
 export function isSyncPackStateObjectType(value: string) {
-  return isSyncPackObjectType(value) || SYNC_PACK_STATE_ONLY_OBJECT_TYPES.has(value);
+  return isSyncPackObjectType(value) || SYNC_PACK_PAYLOAD_OBJECT_TYPES.has(value);
+}
+
+export function isSyncPackPayloadObjectType(value: string) {
+  return SYNC_PACK_PAYLOAD_OBJECT_TYPES.has(value);
 }
 
 export interface SyncPackTableManifest {

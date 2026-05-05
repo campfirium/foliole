@@ -13,6 +13,7 @@ import {
 it('builds the pack manifest from the explicit table map', () => {
   expect(SYNC_PACK_TABLE_NAMES).toEqual([
     'sync_object_state',
+    'sync_objects',
     'nodes',
     'external_documents',
     'content_blobs'
@@ -32,7 +33,8 @@ it('builds the pack manifest from the explicit table map', () => {
       content_blobs: [{}],
       external_documents: [],
       nodes: [{}, {}],
-      sync_object_state: [{}, {}, {}]
+      sync_object_state: [{}, {}, {}],
+      sync_objects: [{}]
     },
     toStateSeq: 4
   })).toEqual({
@@ -40,6 +42,7 @@ it('builds the pack manifest from the explicit table map', () => {
     pack_id: 'pack-1',
     tables: [
       { name: 'sync_object_state', row_count: 3 },
+      { name: 'sync_objects', row_count: 1 },
       { name: 'nodes', row_count: 2 },
       { name: 'external_documents', row_count: 0 },
       { name: 'content_blobs', row_count: 1 }

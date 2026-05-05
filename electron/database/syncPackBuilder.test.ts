@@ -59,9 +59,16 @@ function insertNodeSyncState() {
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
   driver.execute(
+    `INSERT INTO setting_records (
+       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+     ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}',
+       'setting-hash', '2026-04-27T00:01:00.000Z')`
+  );
+  driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('setting', 'setting-1', 2, 'setting-hash', 'desktop', '2026-04-27T00:01:00.000Z', 1)`
+     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
+       'desktop', '2026-04-27T00:01:00.000Z', 1)`
   );
 }
 
@@ -79,7 +86,8 @@ function readPackRows(packPath: string) {
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
       manifest,
       nodes: db.prepare('SELECT id, content, body_blob_hash FROM nodes').all(),
-      stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all()
+      stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
+      syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
     };
   } finally {
     db.close();
@@ -118,9 +126,9 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
 
   expect(result).toMatchObject({
     bodyBlobCount: 1,
-    objectCount: 1,
+    objectCount: 2,
     packId: 'pack-1',
-    toStateSeq: 1
+    toStateSeq: 2
   });
   expect(readPackRows(packPath)).toMatchObject({
     blobDataTable: undefined,
@@ -138,7 +146,8 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
       schema_version: expect.any(Number),
       to_peer_id: 'android-fixture',
       tables: [
-        { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_object_state', row_count: 2 },
+        { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 1 }
@@ -149,7 +158,15 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
       content: '',
       id: 'node-1'
     })],
-    stateRows: [{ object_id: 'node-1', object_type: 'node', state_seq: 1 }]
+    stateRows: [
+      { object_id: 'node-1', object_type: 'node', state_seq: 1 },
+      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting', state_seq: 2 }
+    ],
+    syncObjects: [expect.objectContaining({
+      object_id: 'user_space:windows:desktop:*:app_settings',
+      object_type: 'setting',
+      payload_json: expect.stringContaining('theme')
+    })]
   });
 });
 
@@ -204,6 +221,7 @@ it('packs external document structure with body blob manifests but no body bytes
       database_file: 'incoming.db.deflate',
       tables: [
         { name: 'sync_object_state', row_count: 1 },
+        { name: 'sync_objects', row_count: 0 },
         { name: 'nodes', row_count: 0 },
         { name: 'external_documents', row_count: 1 },
         { name: 'content_blobs', row_count: 1 }

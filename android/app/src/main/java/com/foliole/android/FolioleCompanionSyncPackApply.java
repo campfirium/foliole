@@ -42,6 +42,7 @@ final class FolioleCompanionSyncPackApply {
                     appliedBlobs = upsertContentBlobs(database);
                     upsertNodes(database);
                     upsertExternalDocuments(database);
+                    upsertSyncObjects(database);
                     appliedObjects = upsertStateRows(database, deviceId);
                     clearConfirmedPushAcks(database);
                 }
@@ -133,11 +134,33 @@ final class FolioleCompanionSyncPackApply {
         );
     }
 
+    private static void upsertSyncObjects(SQLiteDatabase database) throws Exception {
+        try (Cursor cursor = database.rawQuery(
+            "SELECT object_type, object_id, content_hash, payload_json, updated_at, deleted_at FROM inc.sync_objects incoming " +
+                "WHERE EXISTS (SELECT 1 FROM " + applyableStateRowsSql(null) + " state " +
+                "WHERE state.object_type = incoming.object_type AND state.object_id = incoming.object_id) " +
+                "ORDER BY updated_at ASC, object_type ASC, object_id ASC",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                JSONObject record = new JSONObject();
+                record.put("object_type", cursor.getString(0));
+                record.put("object_id", cursor.getString(1));
+                record.put("content_hash", cursor.getString(2));
+                record.put("payload_json", cursor.isNull(3) ? JSONObject.NULL : cursor.getString(3));
+                record.put("updated_at", cursor.getString(4));
+                record.put("deleted_at", cursor.isNull(5) ? JSONObject.NULL : cursor.getString(5));
+                FolioleCompanionSyncObjectApply.applyPayload(database, record);
+            }
+        }
+    }
+
     private static int upsertStateRows(SQLiteDatabase database, String deviceId) {
         int count = 0;
         try (Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM " +
-                applyableStateRowsSql(null) + " WHERE object_type IN ('node', 'external_document') ORDER BY state_seq ASC",
+                applyableStateRowsSql(null) + " WHERE object_type IN (" +
+                "'node', 'external_document', 'node_reading', 'node_review', 'setting') ORDER BY state_seq ASC",
             null
         )) {
             while (cursor.moveToNext()) {

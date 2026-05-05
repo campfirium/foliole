@@ -46,14 +46,32 @@ it('loads reading and review state as state-only sync pack metadata', () => {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-1', 4, 'reading-hash', 'desktop', '2026-04-27T00:04:00.000Z', 0)`
   );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO setting_records (
+       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+     ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}',
+       'setting-hash', '2026-04-27T00:05:00.000Z')`
+  );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 5, 'setting-hash',
+       'desktop', '2026-04-27T00:05:00.000Z', 0)`
+  );
 
-  expect(loadPackRows(0, 4)).toMatchObject({
+  expect(loadPackRows(0, 5)).toMatchObject({
     contentBlobs: [],
     externalDocuments: [],
     nodes: [],
     stateRows: [
       { object_id: 'node-1', object_type: 'node_review', state_seq: 3 },
-      { object_id: 'node-1', object_type: 'node_reading', state_seq: 4 }
+      { object_id: 'node-1', object_type: 'node_reading', state_seq: 4 },
+      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting', state_seq: 5 }
+    ],
+    syncObjects: [
+      { object_id: 'node-1', object_type: 'node_review' },
+      { object_id: 'node-1', object_type: 'node_reading' },
+      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
     ]
   });
 });

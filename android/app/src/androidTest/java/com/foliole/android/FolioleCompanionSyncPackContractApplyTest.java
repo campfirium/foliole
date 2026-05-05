@@ -51,14 +51,17 @@ public class FolioleCompanionSyncPackContractApplyTest {
 
         JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
 
-        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals(3, result.getInt("applied_object_count"));
         assertEquals(2, result.getInt("applied_blob_count"));
         assertEquals(3, result.getInt("to_state_seq"));
         assertEquals("", selectString("SELECT content FROM nodes WHERE id = 'node-1'"));
         assertEquals("", selectString("SELECT content FROM external_documents WHERE document_id = 'folder-1:doc.md'"));
         assertEquals(2, countRows("content_blobs"));
         assertEquals(0, countRows("content_blob_data"));
-        assertEquals(2, countRows("sync_object_state"));
+        assertEquals(3, countRows("sync_object_state"));
+        assertEquals("{\"theme\":\"dark\"}", selectString(
+            "SELECT value_json FROM setting_records WHERE key = 'app_settings'"
+        ));
     }
 
     @Test
@@ -99,7 +102,7 @@ public class FolioleCompanionSyncPackContractApplyTest {
             JSObject first = helper.applySyncPack(packFile.getAbsolutePath());
             JSObject second = helper.applySyncPack(packFile.getAbsolutePath());
 
-            assertEquals(2, first.getInt("applied_object_count"));
+            assertEquals(3, first.getInt("applied_object_count"));
             assertEquals(0, second.getInt("applied_object_count"));
             assertEquals(3, helper.loadSyncPackCursor().getInt("cursor"));
         } finally {
@@ -135,6 +138,11 @@ public class FolioleCompanionSyncPackContractApplyTest {
         mainDatabase.execSQL("CREATE TABLE sync_push_ack (" +
             "client_op_id TEXT PRIMARY KEY NOT NULL, object_type TEXT NOT NULL, object_id TEXT NOT NULL, " +
             "state_seq INTEGER, status TEXT NOT NULL, acked_at TEXT NOT NULL)");
+        mainDatabase.execSQL("CREATE TABLE setting_records (" +
+            "key TEXT NOT NULL, scope TEXT NOT NULL, platform TEXT NOT NULL DEFAULT '*', " +
+            "form_factor TEXT NOT NULL DEFAULT '*', device_id TEXT NOT NULL DEFAULT '*', " +
+            "value_json TEXT NOT NULL, content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
+            "PRIMARY KEY (key, scope, platform, form_factor, device_id))");
     }
 
     private String selectString(String sql) {

@@ -4,7 +4,6 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
 
@@ -34,7 +33,7 @@ function placeholders(values: unknown[]) {
   return values.map(() => '?').join(', ');
 }
 
-function copyRows<T extends DatabaseRow>(args: {
+function copyRows<T extends object>(args: {
   columns: string[];
   db: import('better-sqlite3').Database;
   rows: T[];
@@ -45,7 +44,9 @@ function copyRows<T extends DatabaseRow>(args: {
   const sql = `INSERT INTO ${args.table} (${args.columns.join(', ')}) VALUES (${placeholders(args.columns)})`;
   const statement = args.db.prepare(sql);
   for (const row of args.rows) {
-    statement.run(...(args.values ? args.values(row) : args.columns.map((column) => row[column])));
+    statement.run(...(args.values
+      ? args.values(row)
+      : args.columns.map((column) => (row as Record<string, unknown>)[column])));
   }
 }
 
@@ -64,7 +65,8 @@ function writePackManifest(
         content_blobs: rows.contentBlobs,
         external_documents: rows.externalDocuments,
         nodes: rows.nodes,
-        sync_object_state: rows.stateRows
+        sync_object_state: rows.stateRows,
+        sync_objects: rows.syncObjects
       },
       toStateSeq
     })
@@ -77,6 +79,12 @@ function writePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPa
     table: 'sync_object_state',
     columns: ['object_type', 'object_id', 'state_seq', 'content_hash', 'updated_at', 'deleted_at'],
     rows: rows.stateRows
+  });
+  copyRows({
+    db,
+    table: 'sync_objects',
+    columns: ['object_type', 'object_id', 'content_hash', 'payload_json', 'updated_at', 'deleted_at'],
+    rows: rows.syncObjects
   });
   copyRows({
     db,
@@ -130,7 +138,8 @@ function buildContainerManifest(args: {
       content_blobs: args.rows.contentBlobs,
       external_documents: args.rows.externalDocuments,
       nodes: args.rows.nodes,
-      sync_object_state: args.rows.stateRows
+      sync_object_state: args.rows.stateRows,
+      sync_objects: args.rows.syncObjects
     },
     toStateSeq: args.toStateSeq
   });

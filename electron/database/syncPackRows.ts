@@ -1,12 +1,15 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
 import {
   isSyncPackObjectType,
+  isSyncPackPayloadObjectType,
   isSyncPackStateObjectType,
   SYNC_PACK_OBJECT_TYPE_TABLES,
   type SyncPackObjectType
 } from './syncPackManifest.js';
+import { loadSyncObjects } from './syncObjects.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
   content_hash: string;
@@ -20,6 +23,8 @@ interface RawSyncStatePackRow extends DatabaseRow {
 export interface SyncStatePackRow extends RawSyncStatePackRow {
   object_type: string;
 }
+
+export type SyncObjectPackRow = NativeSyncObjectRecord;
 
 export interface NodePackRow extends DatabaseRow {
   body_blob_hash: string | null;
@@ -106,6 +111,15 @@ function idsForObjectTable(rows: SyncStatePackRow[], table: 'external_documents'
     .map((row) => row.object_id);
 }
 
+function loadPayloadObjects(rows: SyncStatePackRow[]): SyncObjectPackRow[] {
+  const payloadRows = rows.filter((row) => isSyncPackPayloadObjectType(row.object_type));
+  if (payloadRows.length === 0) return [];
+  return loadSyncObjects(
+    payloadRows.map((row) => row.object_id),
+    [...new Set(payloadRows.map((row) => row.object_type))]
+  );
+}
+
 function isSyncStatePackRow(row: RawSyncStatePackRow): row is SyncStatePackRow {
   return isSyncPackStateObjectType(row.object_type);
 }
@@ -142,7 +156,8 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
     ),
     externalDocuments,
     nodes,
-    stateRows
+    stateRows,
+    syncObjects: loadPayloadObjects(stateRows)
   };
 }
 

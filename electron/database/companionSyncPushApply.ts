@@ -88,13 +88,18 @@ function desktopBase(row: SyncObjectStateRow | undefined): SyncBaseReference | u
   return row ? { baseContentHash: row.content_hash, kind: 'content_hash' } : undefined;
 }
 
-type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review'>;
+type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review' | 'setting'>;
+
+function validStateObjectScope(item: CompanionSyncPushPayload, objectType: StatePushObjectType) {
+  if (objectType !== 'setting') return item.identity.scope === 'workspace';
+  return item.identity.scope === item.identity.objectId.split(':', 1)[0];
+}
 
 function buildStateObjectRecord(
   item: CompanionSyncPushPayload,
   objectType: StatePushObjectType
 ): NativeSyncObjectRecord | null {
-  if (item.identity.objectType !== objectType || item.identity.scope !== 'workspace') return null;
+  if (item.identity.objectType !== objectType || !validStateObjectScope(item, objectType)) return null;
   const contentHash = readString(item.contentHash);
   const updatedAt = readString(item.updatedAt);
   if (!contentHash || !updatedAt) return null;
@@ -264,7 +269,11 @@ function applyReviewLogPush(driver: DatabaseDriver, item: CompanionSyncPushPaylo
 
 function applySinglePushItem(driver: DatabaseDriver, item: CompanionSyncPushPayload): CompanionSyncPushResult {
   try {
-    if (item.identity.objectType === 'node_reading' || item.identity.objectType === 'node_review') {
+    if (
+      item.identity.objectType === 'node_reading'
+      || item.identity.objectType === 'node_review'
+      || item.identity.objectType === 'setting'
+    ) {
       return applyStateObjectPush(driver, item, item.identity.objectType);
     }
     if (item.identity.objectType === 'review_log') {

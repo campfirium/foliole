@@ -46,21 +46,25 @@ function insertNode(nodeId: string) {
   );
 }
 
-function insertBaseState(objectType: 'node_reading' | 'node_review', contentHash: string) {
+function insertBaseState(objectType: 'node_reading' | 'node_review' | 'setting', objectId: string, contentHash: string) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES (?, 'node-1', 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
-    [objectType, contentHash]
+     ) VALUES (?, ?, 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
+    [objectType, objectId, contentHash]
   );
 }
 
 function insertBaseReviewState(contentHash = 'desktop-base') {
-  insertBaseState('node_review', contentHash);
+  insertBaseState('node_review', 'node-1', contentHash);
 }
 
 function insertBaseReadingState(contentHash = 'desktop-reading-base') {
-  insertBaseState('node_reading', contentHash);
+  insertBaseState('node_reading', 'node-1', contentHash);
+}
+
+function insertBaseSettingState(contentHash = 'desktop-setting-base') {
+  insertBaseState('setting', 'device:android:phone:*:app_settings', contentHash);
 }
 
 function createNodeReadingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
@@ -104,6 +108,26 @@ function createNodeReviewPush(overrides: Partial<SyncPushPayload> = {}): SyncPus
       state: 1
     }),
     updatedAt: '2026-04-30T01:00:00.000Z',
+    ...overrides
+  };
+}
+
+function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
+  return {
+    base: { baseContentHash: 'desktop-setting-base', kind: 'content_hash' },
+    clientOpId: 'setting:device:android:phone:*:app_settings:13',
+    contentHash: 'android-setting-next',
+    deletedAt: null,
+    identity: { objectId: 'device:android:phone:*:app_settings', objectType: 'setting', scope: 'device' },
+    payloadJson: JSON.stringify({
+      device_id: '*',
+      form_factor: 'phone',
+      key: 'app_settings',
+      platform: 'android',
+      scope: 'device',
+      value_json: '{"sync":true}'
+    }),
+    updatedAt: '2026-04-30T01:02:00.000Z',
     ...overrides
   };
 }
@@ -160,6 +184,19 @@ describe('companion sync push apply', () => {
       `SELECT reading_position FROM node_reading_device_state
        WHERE node_id = 'node-1' AND device_id = '*'`
     )).toEqual({ reading_position: 42 });
+  });
+
+  it('accepts setting when base content hash matches the setting identity', () => {
+    insertBaseSettingState();
+
+    const result = applyCompanionSyncPush([createSettingPush()]);
+
+    expect(result.appliedObjectIds).toEqual(['setting:device:android:phone:*:app_settings']);
+    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
+      `SELECT value_json FROM setting_records
+       WHERE key = 'app_settings' AND scope = 'device' AND platform = 'android'`
+    )).toEqual({ value_json: '{"sync":true}' });
   });
 
   it('returns conflict for node_review when desktop base has changed', () => {

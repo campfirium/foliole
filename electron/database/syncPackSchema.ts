@@ -12,6 +12,15 @@ export const PACK_SCHEMA = [
     deleted_at TEXT,
     PRIMARY KEY (object_type, object_id)
   )`,
+  `CREATE TABLE sync_objects (
+    object_type TEXT NOT NULL,
+    object_id TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    payload_json TEXT,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    PRIMARY KEY (object_type, object_id)
+  )`,
   `CREATE TABLE nodes (
     id TEXT PRIMARY KEY,
     parent_id TEXT,

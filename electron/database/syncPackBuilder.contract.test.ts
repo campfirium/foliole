@@ -60,9 +60,16 @@ function insertNodeSyncState() {
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
   driver.execute(
+    `INSERT INTO setting_records (
+       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+     ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}',
+       'setting-hash', '2026-04-27T00:01:00.000Z')`
+  );
+  driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('setting', 'setting-1', 2, 'setting-hash', 'desktop', '2026-04-27T00:01:00.000Z', 1)`
+     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
+       'desktop', '2026-04-27T00:01:00.000Z', 1)`
   );
 }
 
@@ -156,7 +163,8 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
     manifest: expect.objectContaining({
       pack_id: 'sync-pack-contract-v1',
       tables: [
-        { name: 'sync_object_state', row_count: 2 },
+        { name: 'sync_object_state', row_count: 3 },
+        { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
         { name: 'external_documents', row_count: 1 },
         { name: 'content_blobs', row_count: 2 }

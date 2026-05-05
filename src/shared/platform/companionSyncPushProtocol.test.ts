@@ -4,6 +4,7 @@ import {
   nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
+  settingSyncAdapter,
   type SyncPushAck,
   type SyncableReviewLogRow,
   type SyncableStateObjectRow
@@ -56,6 +57,20 @@ function createReviewLogRow(overrides: Partial<SyncableReviewLogRow> = {}): Sync
   };
 }
 
+function createSettingRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
+  return {
+    base_content_hash: 'desktop-setting-base',
+    content_hash: 'android-setting-next',
+    deleted_at: null,
+    object_id: 'device:android:phone:*:app_settings',
+    object_type: 'setting',
+    payload_json: '{"key":"app_settings","scope":"device","platform":"android","form_factor":"phone","device_id":"*","value_json":"{}"}',
+    state_seq: 14,
+    updated_at: '2026-04-30T01:06:00.000Z',
+    ...overrides
+  };
+}
+
 function createAck(row: SyncableStateObjectRow, overrides: Partial<SyncPushAck> = {}): SyncPushAck {
   return {
     clientOpId: `node_review:${row.object_id}:${row.state_seq}`,
@@ -92,6 +107,20 @@ describe('companion sync push protocol adapters', () => {
       identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' },
       payloadJson: '{"state":"active","reading_position":42}',
       updatedAt: '2026-04-30T01:05:00.000Z'
+    });
+  });
+
+  it('builds a setting push payload scoped by the setting identity tuple', () => {
+    const row = createSettingRow();
+
+    expect(settingSyncAdapter.buildPushPayload(row)).toMatchObject({
+      base: { baseContentHash: 'desktop-setting-base', kind: 'content_hash' },
+      clientOpId: 'setting:device:android:phone:*:app_settings:14',
+      identity: {
+        objectId: 'device:android:phone:*:app_settings',
+        objectType: 'setting',
+        scope: 'device'
+      }
     });
   });
 
