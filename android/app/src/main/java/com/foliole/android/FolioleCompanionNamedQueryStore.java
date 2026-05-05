@@ -124,7 +124,7 @@ final class FolioleCompanionNamedQueryStore {
 
     private static JSONObject loadQueries(Context context) throws Exception {
         JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
-        JSONObject queries = payload.optJSONObject("queries");
+        JSONObject queries = payload.optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "queries"));
         if (queries == null) {
             throw new IllegalStateException("Companion query definitions asset is missing queries.");
         }

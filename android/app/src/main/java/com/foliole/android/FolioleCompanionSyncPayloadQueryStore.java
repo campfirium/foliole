@@ -203,7 +203,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static JSONObject loadQueries(Context context) throws Exception {
-        JSONObject queries = loadDefinitions(context).optJSONObject("queries");
+        JSONObject queries = loadDefinitions(context).optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "queries"));
         if (queries == null) {
             throw new IllegalStateException("Companion query definitions asset is missing queries.");
         }
@@ -215,7 +215,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static JSONObject syncPayloadRouting(Context context) throws Exception {
-        JSONObject routing = loadDefinitions(context).optJSONObject("syncPayloadRouting");
+        JSONObject routing = loadDefinitions(context).optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "syncPayloadRouting"));
         if (routing == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync payload routing.");
         }

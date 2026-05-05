@@ -97,6 +97,14 @@
       "statementName": "appDataClearWorkspaceMeta"
     }
   ],
+  "assetKeys": {
+    "appDataClearMutations": "appDataClearMutations",
+    "hostSupportMutations": "hostSupportMutations",
+    "resourceMutations": "resourceMutations",
+    "runtimeMutations": "runtimeMutations",
+    "statements": "statements",
+    "syncApplyMutations": "syncApplyMutations"
+  },
   "hostSupportMutations": {
     "appData": {
       "deleteMetaExceptDeviceMutationName": "companionMetaDeleteExceptDeviceId"

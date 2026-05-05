@@ -135,6 +135,15 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'workspace_meta', statementName: 'appDataClearWorkspaceMeta' }
 ] as const;
 
+export const ANDROID_COMPANION_MUTATION_ASSET_KEYS = {
+  appDataClearMutations: 'appDataClearMutations',
+  hostSupportMutations: 'hostSupportMutations',
+  resourceMutations: 'resourceMutations',
+  runtimeMutations: 'runtimeMutations',
+  statements: 'statements',
+  syncApplyMutations: 'syncApplyMutations'
+} as const;
+
 export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
   attachmentResources: {
     markCachedMutationName: 'attachmentResourceMarkCached',

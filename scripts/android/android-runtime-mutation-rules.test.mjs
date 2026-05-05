@@ -17,6 +17,10 @@ describe('Android runtime mutation rules', () => {
   it('generates runtime mutation metadata', async () => {
     const definitions = JSON.parse(await readFile(MUTATION_DEFINITIONS, 'utf8'));
 
+    expect(definitions.assetKeys).toMatchObject({
+      runtimeMutations: 'runtimeMutations',
+      statements: 'statements'
+    });
     expect(definitions.runtimeMutations).toEqual(ANDROID_COMPANION_RUNTIME_MUTATION_RULES);
     expect(definitions.runtimeMutations).toMatchObject({
       syncPushAck: { deleteByObjectMutationName: 'syncPushAckDeleteByObject', tableName: 'sync_push_ack' },
@@ -30,7 +34,8 @@ describe('Android runtime mutation rules', () => {
 
     expect(storeSource).toContain('FolioleCompanionRuntimeMutationRules.syncStateString(context, key)');
     expect(storeSource).toContain('FolioleCompanionRuntimeMutationRules.syncPushAckString(context, key)');
-    expect(rulesSource).toContain('optJSONObject("runtimeMutations")');
+    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.key(context, "runtimeMutations")');
+    expect(rulesSource).not.toContain('optJSONObject("runtimeMutations")');
     expect(storeSource).not.toContain('"syncStateUpsert"');
     expect(storeSource).not.toContain('"syncPushAckDeleteByObject"');
     expect(storeSource).not.toContain('"sync_push_ack"');

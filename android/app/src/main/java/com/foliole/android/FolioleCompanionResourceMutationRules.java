@@ -18,7 +18,8 @@ final class FolioleCompanionResourceMutationRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH)).optJSONObject("resourceMutations");
+        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH))
+            .optJSONObject(FolioleCompanionMutationAssetKeys.key(context, "resourceMutations"));
         if (rules == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing resource mutation rules.");
         }

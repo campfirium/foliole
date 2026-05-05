@@ -42,7 +42,8 @@ describe('Android sync apply mutation rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionSyncApplyMutationRules.string(context, "learning", key)');
     expect(combinedStoreSource).toContain('FolioleCompanionSyncApplyMutationRules.string(context, "viewState", key)');
     expect(combinedStoreSource).toContain('FolioleCompanionSyncApplyMutationRules.string(context, "settings", key)');
-    expect(rulesSource).toContain('optJSONObject("syncApplyMutations")');
+    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.key(context, "syncApplyMutations")');
+    expect(rulesSource).not.toContain('optJSONObject("syncApplyMutations")');
     for (const mutationName of [
       'syncExternalDocumentMarkMissing',
       'syncExternalDocumentUpsert',

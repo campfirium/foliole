@@ -21,12 +21,16 @@ import { ANDROID_COMPANION_DIAGNOSTIC_READ_RULES } from '../../lib/core/database
 import {
   ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
   ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES,
+  ANDROID_COMPANION_MUTATION_ASSET_KEYS,
   ANDROID_COMPANION_MUTATION_DEFINITIONS,
   ANDROID_COMPANION_RESOURCE_MUTATION_RULES,
   ANDROID_COMPANION_RUNTIME_MUTATION_RULES,
   ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
-import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
+import {
+  ANDROID_COMPANION_QUERY_ASSET_KEYS,
+  ANDROID_COMPANION_QUERY_DEFINITIONS
+} from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from '../../lib/core/database/androidCompanionPayloadQueryDefinitions.ts';
 import {
   ANDROID_COMPANION_CONTENT_READ_RULES,
@@ -80,6 +84,7 @@ await fs.writeFile(
   mutationOutputPath,
   `${JSON.stringify({
     appDataClearMutations: ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
+    assetKeys: ANDROID_COMPANION_MUTATION_ASSET_KEYS,
     hostSupportMutations: ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES,
     resourceMutations: ANDROID_COMPANION_RESOURCE_MUTATION_RULES,
     runtimeMutations: ANDROID_COMPANION_RUNTIME_MUTATION_RULES,
@@ -92,6 +97,7 @@ await fs.writeFile(
   queryOutputPath,
   `${JSON.stringify({
     queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
+    assetKeys: ANDROID_COMPANION_QUERY_ASSET_KEYS,
     contentRead: ANDROID_COMPANION_CONTENT_READ_RULES,
     diagnosticRead: ANDROID_COMPANION_DIAGNOSTIC_READ_RULES,
     missingResourceRead: ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES,

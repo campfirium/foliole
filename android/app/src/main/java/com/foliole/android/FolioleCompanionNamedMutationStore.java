@@ -25,7 +25,7 @@ final class FolioleCompanionNamedMutationStore {
 
     static JSONArray appDataClearMutations(Context context) throws Exception {
         JSONObject payload = loadPayload(context);
-        JSONArray mutations = payload.optJSONArray("appDataClearMutations");
+        JSONArray mutations = payload.optJSONArray(FolioleCompanionMutationAssetKeys.key(context, "appDataClearMutations"));
         if (mutations == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing app data clear mutations.");
         }
@@ -90,7 +90,7 @@ final class FolioleCompanionNamedMutationStore {
 
     private static String statement(Context context, String name) throws Exception {
         JSONObject payload = loadPayload(context);
-        JSONObject statements = payload.optJSONObject("statements");
+        JSONObject statements = payload.optJSONObject(FolioleCompanionMutationAssetKeys.key(context, "statements"));
         if (statements == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing statements.");
         }

@@ -1685,6 +1685,10 @@
       ]
     }
   },
+  "assetKeys": {
+    "queries": "queries",
+    "syncPayloadRouting": "syncPayloadRouting"
+  },
   "contentRead": {
     "externalDocuments": {
       "byIdQueryName": "externalDocumentById",

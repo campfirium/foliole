@@ -44,7 +44,8 @@ describe('Android resource mutation rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionResourceMutationRules.contentBlobString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceMutationRules.attachmentString(context, key)');
-    expect(rulesSource).toContain('optJSONObject("resourceMutations")');
+    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.key(context, "resourceMutations")');
+    expect(rulesSource).not.toContain('optJSONObject("resourceMutations")');
     expect(combinedStoreSource).not.toContain('"contentBlobDataReplace"');
     expect(combinedStoreSource).not.toContain('"contentBlobMarkCached"');
     expect(combinedStoreSource).not.toContain('"contentBlobMarkFetching"');

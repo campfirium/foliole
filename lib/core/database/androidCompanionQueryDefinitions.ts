@@ -11,3 +11,8 @@ export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
   ...ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS,
   ...ANDROID_COMPANION_MIGRATION_QUERY_DEFINITIONS
 };
+
+export const ANDROID_COMPANION_QUERY_ASSET_KEYS = {
+  queries: 'queries',
+  syncPayloadRouting: 'syncPayloadRouting'
+} as const;

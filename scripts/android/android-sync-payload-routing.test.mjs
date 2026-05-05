@@ -49,6 +49,10 @@ describe('Android sync payload routing metadata', () => {
   it('generates payload routes and compound view-state object identity rules', async () => {
     const definitions = JSON.parse(await readFile(QUERY_DEFINITIONS, 'utf8'));
 
+    expect(definitions.assetKeys).toMatchObject({
+      queries: 'queries',
+      syncPayloadRouting: 'syncPayloadRouting'
+    });
     expect(definitions.syncPayloadRouting).toMatchObject({
       argModeKey: 'argMode',
       defaultDeviceId: '*',
@@ -110,5 +114,9 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadJson).not.toContain('record.opt("payload_json"');
     expect(payloadStore).not.toContain('route.getString("queryName")');
     expect(payloadStore).not.toContain('Iterator<String> names = queries.keys()');
+    expect(payloadStore).toContain('FolioleCompanionQueryAssetKeys.key(context, "queries")');
+    expect(payloadStore).toContain('FolioleCompanionQueryAssetKeys.key(context, "syncPayloadRouting")');
+    expect(payloadStore).not.toContain('optJSONObject("queries")');
+    expect(payloadStore).not.toContain('optJSONObject("syncPayloadRouting")');
   });
 });

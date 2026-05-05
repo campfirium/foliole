@@ -18,7 +18,8 @@ final class FolioleCompanionRuntimeMutationRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH)).optJSONObject("runtimeMutations");
+        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH))
+            .optJSONObject(FolioleCompanionMutationAssetKeys.key(context, "runtimeMutations"));
         if (rules == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing runtime mutation rules.");
         }

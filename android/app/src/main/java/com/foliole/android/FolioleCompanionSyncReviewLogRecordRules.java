@@ -36,7 +36,8 @@ final class FolioleCompanionSyncReviewLogRecordRules {
     }
 
     private static JSONObject query(Context context, String queryName) throws Exception {
-        JSONObject queries = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("queries");
+        JSONObject queries = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH))
+            .optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "queries"));
         JSONObject query = queries == null ? null : queries.optJSONObject(queryName);
         if (query == null) {
             throw new IllegalStateException("Companion query definitions asset is missing query: " + queryName);

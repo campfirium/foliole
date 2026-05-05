@@ -35,7 +35,8 @@ describe('Android host support mutation rules', () => {
 
     expect(combinedStoreSource).toContain('FolioleCompanionHostSupportMutationRules.companionMetaString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionHostSupportMutationRules.nodeAttachmentString(context, key)');
-    expect(rulesSource).toContain('optJSONObject("hostSupportMutations")');
+    expect(rulesSource).toContain('FolioleCompanionMutationAssetKeys.key(context, "hostSupportMutations")');
+    expect(rulesSource).not.toContain('optJSONObject("hostSupportMutations")');
     for (const mutationName of [
       'companionMetaDeleteByKey',
       'companionMetaDeleteExceptDeviceId',

@@ -30,7 +30,8 @@ final class FolioleCompanionHostSupportMutationRules {
     }
 
     private static JSONObject group(Context context, String groupName) throws Exception {
-        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH)).optJSONObject("hostSupportMutations");
+        JSONObject rules = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH))
+            .optJSONObject(FolioleCompanionMutationAssetKeys.key(context, "hostSupportMutations"));
         if (rules == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing host support mutation rules.");
         }

@@ -22,7 +22,8 @@ final class FolioleCompanionSyncPayloadJson {
     }
 
     private static String payloadJsonKey(Context context) throws Exception {
-        JSONObject routing = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH)).optJSONObject("syncPayloadRouting");
+        JSONObject routing = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH))
+            .optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "syncPayloadRouting"));
         if (routing == null) {
             throw new IllegalStateException("Companion query definitions asset is missing sync payload routing.");
         }
