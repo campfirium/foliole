@@ -22,7 +22,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { createAttachmentRecord } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncNodes } from './syncApply.js';
+import { applySyncNodesAsync } from './syncApply.js';
 
 let tempRoot = '';
 
@@ -131,7 +131,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('applies remote sync nodes into state, version table, and attachment links', () => {
+it('applies remote sync nodes into state, version table, and attachment links', async () => {
   createAttachmentRecord({
     id: 'att-1',
     originalName: 'att-1.pdf',
@@ -140,7 +140,7 @@ it('applies remote sync nodes into state, version table, and attachment links', 
     createdAt: '2026-04-21T09:00:00.000Z'
   });
 
-  expect(applySyncNodes([createRemoteNodeRecord()])).toEqual(['node-1']);
+  await expect(applySyncNodesAsync([createRemoteNodeRecord()])).resolves.toEqual(['node-1']);
 
   const connection = openDatabaseConnection();
   expect(
@@ -190,13 +190,13 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   ).toEqual({ node_id: 'node-1', position: 4 });
 });
 
-it('fast-forwards remote node versions when the local version is an ancestor', () => {
+it('fast-forwards remote node versions when the local version is an ancestor', async () => {
   insertLocalNodeVersion('desktop#1');
   const record = createRemoteNodeRecord();
   record.parent_version_id = 'desktop#1';
   record.ancestor_version_ids = ['desktop#1', 'desktop#0'];
 
-  expect(applySyncNodes([record])).toEqual(['node-1']);
+  await expect(applySyncNodesAsync([record])).resolves.toEqual(['node-1']);
 
   const connection = openDatabaseConnection();
   expect(
@@ -209,13 +209,13 @@ it('fast-forwards remote node versions when the local version is an ancestor', (
   expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
 });
 
-it('records divergent remote node versions without overwriting the local node', () => {
+it('records divergent remote node versions without overwriting the local node', async () => {
   insertLocalNodeVersion('desktop#2');
   const record = createRemoteNodeRecord();
   record.parent_version_id = 'desktop#0';
   record.ancestor_version_ids = ['desktop#0'];
 
-  expect(applySyncNodes([record])).toEqual([]);
+  await expect(applySyncNodesAsync([record])).resolves.toEqual([]);
 
   const connection = openDatabaseConnection();
   expect(
@@ -239,13 +239,13 @@ it('records divergent remote node versions without overwriting the local node', 
   ]);
 });
 
-it('does not let an old active remote version revive a locally deleted node', () => {
+it('does not let an old active remote version revive a locally deleted node', async () => {
   insertDeletedLocalNodeVersion();
   const record = createRemoteNodeRecord();
   record.parent_version_id = 'desktop#0';
   record.ancestor_version_ids = ['desktop#0'];
 
-  expect(applySyncNodes([record])).toEqual([]);
+  await expect(applySyncNodesAsync([record])).resolves.toEqual([]);
 
   const connection = openDatabaseConnection();
   expect(
@@ -258,8 +258,8 @@ it('does not let an old active remote version revive a locally deleted node', ()
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts').get()).toEqual({ count: 0 });
 });
 
-it('can acknowledge already applied node versions for push cursor delivery', () => {
+it('can acknowledge already applied node versions for push cursor delivery', async () => {
   insertLocalNodeVersion('phone#1');
 
-  expect(applySyncNodes([createRemoteNodeRecord()], { includeAlreadyApplied: true })).toEqual(['node-1']);
+  await expect(applySyncNodesAsync([createRemoteNodeRecord()], { includeAlreadyApplied: true })).resolves.toEqual(['node-1']);
 });

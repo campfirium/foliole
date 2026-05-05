@@ -21,7 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { applySyncNodes } from './syncApply.js';
+import { applySyncNodesAsync } from './syncApply.js';
 
 let tempRoot = '';
 
@@ -71,7 +71,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('applies remote tombstone over a dirty active local node', () => {
+it('applies remote tombstone over a dirty active local node', async () => {
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO nodes (
@@ -91,7 +91,7 @@ it('applies remote tombstone over a dirty active local node', () => {
     ]
   );
 
-  expect(applySyncNodes([tombstoneRecord()])).toEqual(['node-1']);
+  await expect(applySyncNodesAsync([tombstoneRecord()])).resolves.toEqual(['node-1']);
 
   expect(
     connection.sqlite.prepare('SELECT current_version_id, sync_dirty, deleted_at FROM nodes WHERE id = ?').get('node-1')
