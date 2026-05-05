@@ -20,6 +20,8 @@ export interface ImportSourceDescriptor {
 
 export interface DirectoryImportSourceDescriptor extends ImportSourceDescriptor {
   adapterId: DirectoryImportAdapterId;
+  mtimeMs: number;
+  sizeBytes: number;
 }
 
 const HTML_EXTENSIONS = new Set(['.htm', '.html']);
@@ -145,10 +147,13 @@ async function collectDirectorySources(
     if (!adapterId) {
       continue;
     }
+    const stats = await fs.stat(filePath);
     collected.push({
       adapterId,
       filePath,
       kind: resolveImportKind(filePath),
+      mtimeMs: stats.mtimeMs,
+      sizeBytes: stats.size,
       sourceName: path.relative(rootDir, filePath)
     });
   }
