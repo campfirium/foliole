@@ -155,7 +155,7 @@ export function SettingsCompanionSyncSection() {
         onDisconnect={(deviceId) => void state.removePairedDevice(deviceId)}
         pendingActionId={state.pendingActionId}
       />
-      {state.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-error">{state.error}</p> : null}
     </SettingsSection>
   );
 }

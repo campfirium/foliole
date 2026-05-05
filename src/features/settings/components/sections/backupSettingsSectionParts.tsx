@@ -96,7 +96,7 @@ export function BackupPathRow(props: {
             path={props.backupPath}
             tooltipPath={props.defaultBackupPath}
           />
-          {props.errorMessage ? <p className="max-w-80 text-right text-sm text-red-700 max-[1080px]:text-left">{props.errorMessage}</p> : null}
+          {props.errorMessage ? <p className="max-w-80 text-right text-sm text-error max-[1080px]:text-left">{props.errorMessage}</p> : null}
         </div>
       </SettingsControlSlot>
     </SettingsRow>

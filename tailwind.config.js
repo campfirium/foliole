@@ -69,6 +69,11 @@ export default {
           strong: 'rgb(var(--color-accent-strong) / <alpha-value>)',
           foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)'
         },
+        error: {
+          DEFAULT: '#b91c1c',
+          subtle: '#fef2f2',
+          foreground: '#7f1d1d'
+        },
         background: 'rgb(var(--color-background) / <alpha-value>)',
         foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
         primary: {

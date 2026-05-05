@@ -48,7 +48,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
           ))}
         </ExternalLibraryTable>
       </div>
-      {props.error ? <p className="text-sm text-red-700">{props.error}</p> : null}
+      {props.error ? <p className="text-sm text-error">{props.error}</p> : null}
     </SettingsSection>
   );
 }

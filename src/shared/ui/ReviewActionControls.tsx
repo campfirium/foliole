@@ -77,7 +77,7 @@ export function ReviewGradeActions({
         />
       </ToolbarActionGroup>
       {errorMessage ? (
-        <p aria-live="assertive" className="text-xs text-red-600">
+        <p aria-live="assertive" className="text-xs text-error">
           {errorMessage}
         </p>
       ) : null}

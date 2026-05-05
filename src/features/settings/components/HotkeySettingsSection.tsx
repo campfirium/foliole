@@ -36,7 +36,7 @@ interface HotkeyRowProps {
 }
 
 function conflictClassName(item: HotkeySettingItem) {
-  if (item.conflictSeverity === 'error') return 'text-red-700';
+  if (item.conflictSeverity === 'error') return 'text-error';
   if (item.conflictSeverity === 'warning') return 'text-amber-700';
   return 'text-foreground/55';
 }
@@ -133,7 +133,7 @@ function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShor
             <CirclePlus aria-hidden="true" size={17} strokeWidth={1.9} />
           </button>
         ) : null}
-        {message ? <p className="max-w-56 text-right text-[0.8rem] text-red-700">{message}</p> : null}
+        {message ? <p className="max-w-56 text-right text-[0.8rem] text-error">{message}</p> : null}
       </div>
     </div>
   );
