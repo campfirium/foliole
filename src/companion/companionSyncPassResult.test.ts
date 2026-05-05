@@ -33,6 +33,19 @@ describe('describeCompanionSyncPassResult', () => {
     });
   });
 
+  it('records downloaded resources when a pass makes progress', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      syncedAttachmentIds: ['att-1'],
+      syncedAttachmentResourceBytes: 2097152,
+      syncedContentBlobBytes: 1048576,
+      syncedContentBlobHashes: ['hash-1', 'hash-2']
+    }))).toEqual({
+      message: 'Sync fully completed; downloaded 2 topic bodies (1.0 MB) and 1 attachment file (2.0 MB) this pass',
+      outcome: 'completed',
+      status: 'completed'
+    });
+  });
+
   it('keeps body and attachment backlog as a skipped download pass', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingAttachmentResourceBytes: 3145728,
@@ -41,6 +54,19 @@ describe('describeCompanionSyncPassResult', () => {
       remainingContentBlobCount: 5
     }))).toEqual({
       message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
+      outcome: 'skipped',
+      status: 'skipped'
+    });
+  });
+
+  it('records progress and remaining backlog together', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      remainingContentBlobBytes: 5242880,
+      remainingContentBlobCount: 5,
+      syncedContentBlobBytes: 1048576,
+      syncedContentBlobHashes: ['hash-1']
+    }))).toEqual({
+      message: 'Sync pass finished; downloaded 1 topic body (1.0 MB) this pass; 5 topic bodies (5.0 MB) still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });

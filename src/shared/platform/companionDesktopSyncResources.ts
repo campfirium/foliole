@@ -94,7 +94,7 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     }
     if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) break;
   }
-  return { syncedContentBlobHashes };
+  return { syncedContentBlobBytes: syncedBytes, syncedContentBlobHashes };
 }
 
 export async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: ProgressHandler) {
@@ -121,7 +121,7 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
     onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt, phase: 'attachment', total, totalBytes });
     if (resources.length < ATTACHMENT_RESOURCE_BATCH_LIMIT || syncedBatchIds.length === 0) break;
   }
-  return { syncedAttachmentIds };
+  return { syncedAttachmentResourceBytes: syncedBytes, syncedAttachmentIds };
 }
 
 async function pullContentBlobBatch(endpoint: string, hashes: string[]) {

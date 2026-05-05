@@ -114,6 +114,32 @@ async function testRecordsBacklogBytes() {
   }));
 }
 
+async function testRecordsDownloadedResourcesForPass() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    remainingContentBlobBytes: 5242880,
+    remainingContentBlobCount: 5,
+    syncedContentBlobBytes: 1048576,
+    syncedContentBlobHashes: ['hash-1']
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('backlog');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync pass finished; downloaded 1 topic body (1.0 MB) this pass; 5 topic bodies (5.0 MB) still downloading.',
+    status: 'skipped'
+  }));
+}
+
 async function testRecordsStructureLagWithoutCompleting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingStructureChangeCount: 4
@@ -261,6 +287,8 @@ describe('tryForegroundAutoSync', () => {
   it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 
   it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
+
+  it('records downloaded resources when a pass makes progress', testRecordsDownloadedResourcesForPass);
 
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 

@@ -153,7 +153,9 @@ function pushErrorMessage(error: unknown) {
 async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   let attachmentResourceError: string | null = null;
   let contentBlobError: string | null = null;
+  let syncedAttachmentResourceBytes = 0;
   let syncedAttachmentIds: string[] = [];
+  let syncedContentBlobBytes = 0;
   let syncedContentBlobHashes: string[] = [];
   try {
     const blobs = await withSyncStepTimeout(
@@ -161,6 +163,7 @@ async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDes
       pullMissingContentBlobs(endpointUrl, onProgress),
       COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
     );
+    syncedContentBlobBytes = blobs.syncedContentBlobBytes;
     syncedContentBlobHashes = blobs.syncedContentBlobHashes;
   } catch (error) {
     contentBlobError = errorMessage(error);
@@ -171,11 +174,19 @@ async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDes
       pullMissingAttachmentResources(endpointUrl, onProgress),
       COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
     );
+    syncedAttachmentResourceBytes = attachments.syncedAttachmentResourceBytes;
     syncedAttachmentIds = attachments.syncedAttachmentIds;
   } catch (error) {
     attachmentResourceError = errorMessage(error);
   }
-  return { attachmentResourceError, contentBlobError, syncedAttachmentIds, syncedContentBlobHashes };
+  return {
+    attachmentResourceError,
+    contentBlobError,
+    syncedAttachmentIds,
+    syncedAttachmentResourceBytes,
+    syncedContentBlobBytes,
+    syncedContentBlobHashes
+  };
 }
 
 async function runCompanionObjectsSync(
@@ -208,6 +219,7 @@ async function runCompanionObjectsSync(
     pushError: pushed.pushError,
     requestedObjectIds: [],
     syncedAttachmentIds: resources.syncedAttachmentIds,
+    syncedAttachmentResourceBytes: resources.syncedAttachmentResourceBytes,
     attachmentResourceError: resources.attachmentResourceError,
     contentBlobError: resources.contentBlobError,
     localDirtyCount: finalSummary.localDirtyCount,
@@ -222,6 +234,7 @@ async function runCompanionObjectsSync(
     remainingContentBlobCount: finalSummary.remainingContentBlobCount,
     remainingStructureChangeCount: finalSummary.remainingStructureChangeCount,
     syncedContentBlobHashes: resources.syncedContentBlobHashes,
+    syncedContentBlobBytes: resources.syncedContentBlobBytes,
     pushRejectedCount: pushed.pushRejectedCount
   };
 }

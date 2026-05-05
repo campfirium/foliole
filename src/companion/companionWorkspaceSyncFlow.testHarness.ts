@@ -43,7 +43,9 @@ export function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncR
     remainingStructureChangeCount: 0,
     requestedObjectIds: [],
     syncedAttachmentIds: [],
+    syncedAttachmentResourceBytes: 0,
     syncedContentBlobHashes: [],
+    syncedContentBlobBytes: 0,
     ...overrides
   };
 }

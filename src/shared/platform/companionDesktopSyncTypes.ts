@@ -43,6 +43,7 @@ export interface CompanionDesktopSyncResult {
   pushError: string | null;
   requestedObjectIds: string[];
   syncedAttachmentIds: string[];
+  syncedAttachmentResourceBytes: number;
   attachmentResourceError: string | null;
   contentBlobError: string | null;
   localDirtyCount: number | null;
@@ -58,4 +59,5 @@ export interface CompanionDesktopSyncResult {
   remainingContentBlobCount: number | null;
   remainingStructureChangeCount: number | null;
   syncedContentBlobHashes: string[];
+  syncedContentBlobBytes: number;
 }
