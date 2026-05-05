@@ -58,7 +58,7 @@ final class FolioleCompanionSyncStateWriteStore {
         String contentHash = FolioleCompanionSyncContentHash.hash(hashPayload);
         database.beginTransaction();
         try {
-            FolioleCompanionLearningSyncPayload.applyReading(database, nodeId, buildRecord("node_reading", nodeId, payload, contentHash, now));
+            FolioleCompanionLearningSyncPayload.applyReading(context, database, nodeId, buildRecord("node_reading", nodeId, payload, contentHash, now));
             upsertTypedObjectState(context, database, "node_reading", nodeId, contentHash, modifiedByDeviceId, now);
             database.setTransactionSuccessful();
         } finally {
@@ -79,7 +79,7 @@ final class FolioleCompanionSyncStateWriteStore {
         String opId = null;
         database.beginTransaction();
         try {
-            FolioleCompanionLearningSyncPayload.applyReview(database, nodeId, buildRecord("node_review", nodeId, payload, contentHash, now));
+            FolioleCompanionLearningSyncPayload.applyReview(context, database, nodeId, buildRecord("node_review", nodeId, payload, contentHash, now));
             if (reviewLog != null) {
                 opId = FolioleCompanionSyncReviewLogStore.saveLocalReviewLog(context, database, nodeId, reviewLog, modifiedByDeviceId);
             }

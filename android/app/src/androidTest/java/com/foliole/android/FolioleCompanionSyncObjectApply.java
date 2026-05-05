@@ -3,6 +3,8 @@ package com.foliole.android;
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 
+import androidx.test.platform.app.InstrumentationRegistry;
+
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncObjectApply {
@@ -21,9 +23,9 @@ final class FolioleCompanionSyncObjectApply {
         } else if (type.equals("external_document")) {
             FolioleCompanionDocumentSyncPayload.apply(database, objectId, record);
         } else if (type.equals("node_reading")) {
-            FolioleCompanionLearningSyncPayload.applyReading(database, objectId, record);
+            FolioleCompanionLearningSyncPayload.applyReading(InstrumentationRegistry.getInstrumentation().getTargetContext(), database, objectId, record);
         } else if (type.equals("node_review")) {
-            FolioleCompanionLearningSyncPayload.applyReview(database, objectId, record);
+            FolioleCompanionLearningSyncPayload.applyReview(InstrumentationRegistry.getInstrumentation().getTargetContext(), database, objectId, record);
         } else if (type.equals("setting")) {
             applySetting(database, objectId, record);
         } else if (type.equals("pdf_page_text")) {
