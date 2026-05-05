@@ -60,13 +60,15 @@ final class FolioleCompanionNamedQueryStore {
 
     static JSObject loadLongMetrics(Context context, SQLiteDatabase database, String queryName) throws Exception {
         JSONObject metricRows = FolioleCompanionSyncDiagnosticQueryRules.object(context, "metricRows");
-        JSONArray metrics = loadArray(context, database, queryName).getJSONArray(metricRows.getString(metricRowKey(context, "resultKey")));
+        JSONArray metrics = loadArray(context, database, queryName).getJSONArray(
+            FolioleCompanionQueryDefinitionShapeKeys.metricRowResultKey(context, metricRows)
+        );
         JSObject result = new JSObject();
         for (int index = 0; index < metrics.length(); index += 1) {
             JSONObject metric = metrics.getJSONObject(index);
             result.put(
-                metric.getString(metricRows.getString(metricRowKey(context, "metricKey"))),
-                metric.getLong(metricRows.getString(metricRowKey(context, "valueKey")))
+                metric.getString(FolioleCompanionQueryDefinitionShapeKeys.metricRowMetricKey(context, metricRows)),
+                metric.getLong(FolioleCompanionQueryDefinitionShapeKeys.metricRowValueKey(context, metricRows))
             );
         }
         return result;
@@ -168,9 +170,5 @@ final class FolioleCompanionNamedQueryStore {
             return;
         }
         record.put(key, cursor.getString(columnIndex));
-    }
-
-    private static String metricRowKey(Context context, String key) throws Exception {
-        return FolioleCompanionQueryDefinitionShapeKeys.metricRowKey(context, key);
     }
 }

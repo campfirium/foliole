@@ -59,12 +59,32 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
         return section(context, "metricRow").getString(key);
     }
 
+    static String metricRowResultKey(Context context, JSONObject metricRows) throws Exception {
+        return metricRows.getString(metricRowKey(context, "resultKey"));
+    }
+
+    static String metricRowMetricKey(Context context, JSONObject metricRows) throws Exception {
+        return metricRows.getString(metricRowKey(context, "metricKey"));
+    }
+
+    static String metricRowValueKey(Context context, JSONObject metricRows) throws Exception {
+        return metricRows.getString(metricRowKey(context, "valueKey"));
+    }
+
     static String queryKey(Context context, String key) throws Exception {
         return section(context, "query").getString(key);
     }
 
     static String diagnosticRowGroupKey(Context context, String key) throws Exception {
         return section(context, "diagnosticRowGroup").getString(key);
+    }
+
+    static String diagnosticRowGroupOutputKey(Context context, JSONObject rowGroup) throws Exception {
+        return rowGroup.getString(diagnosticRowGroupKey(context, "outputKey"));
+    }
+
+    static String diagnosticRowGroupQueryKey(Context context, JSONObject rowGroup) throws Exception {
+        return rowGroup.getString(diagnosticRowGroupKey(context, "queryKey"));
     }
 
     static String routingKey(Context context, String key) throws Exception {

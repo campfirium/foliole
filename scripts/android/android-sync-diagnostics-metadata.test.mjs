@@ -94,8 +94,10 @@ describe('Android sync diagnostics metadata', () => {
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "content", "outputKeys")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "metricRows")');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.array(context, "stateRowGroups")');
-    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowKey(context, key)');
-    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupKey(context, key)');
+    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowResultKey(context, metricRows)');
+    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowMetricKey(context, metricRows)');
+    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupOutputKey(context, rowGroup)');
+    expect(combined).toContain('FolioleCompanionQueryDefinitionShapeKeys.diagnosticRowGroupQueryKey(context, rowGroup)');
     expect(combined).toContain('FolioleCompanionSyncDiagnosticQueryRules.object(context, "verdictMetricKeys")');
     expect(combined).toContain('FolioleCompanionMissingResourceQueryRules.contentObject(context, "summaryKeys")');
     expect(combined).toContain('FolioleCompanionQueryAssetKeys.section(context, "diagnosticRead")');
