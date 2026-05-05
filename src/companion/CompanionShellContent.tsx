@@ -11,6 +11,8 @@ import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { CompanionSearchContent } from './CompanionSearchContent';
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
+import type { CompanionTabConfig } from './CompanionTabsConfig';
+import { CompanionTabsSettingsContent } from './CompanionTabsSettingsContent';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -141,6 +143,9 @@ export function resolveCompanionTopBarProps(
     if (settingsPage === 'sync') {
       return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' };
     }
+    if (settingsPage === 'tabs') {
+      return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Tabs' };
+    }
     if (settingsPage === 'syncActivity') {
       return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Activity' };
     }
@@ -181,8 +186,11 @@ export function renderCompanionShellContent(props: {
   isBrowseDirectoryOpen: boolean;
   isOnlyReviewOpen: boolean;
   onBackToSettingsList: () => void;
+  companionTabConfig: CompanionTabConfig;
+  onCompanionTabConfigChange: (config: CompanionTabConfig) => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
+  onOpenTabsSettings: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
   settingsPage: CompanionSettingsPage;
@@ -191,17 +199,7 @@ export function renderCompanionShellContent(props: {
   workspaceSync: WorkspaceSync;
 }) {
   if (props.surface.activeAction === 'more') {
-    return props.settingsPage !== 'list' ? (
-      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title="Device sync">
-        <CompanionSyncContent
-          page={props.settingsPage}
-          workspaceSync={props.workspaceSync}
-          onOpenSettingsPage={props.onOpenSyncSettingsPage}
-        />
-      </CompanionSettingsDetail>
-    ) : (
-      <CompanionSettingsList onOpenSync={props.onOpenSyncSettings} />
-    );
+    return renderSettingsContent(props);
   }
   if (props.surface.activeAction === 'recent') {
     if (props.isBrowseDirectoryOpen) {
@@ -227,4 +225,29 @@ export function renderCompanionShellContent(props: {
     return <CompanionSearchContent />;
   }
   return <ReadableArticleOrFallback error={props.workspaceError} hasSnapshot={props.hasSnapshot} surface={props.surface} />;
+}
+
+function renderSettingsContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
+  if (props.settingsPage === 'list') {
+    return <CompanionSettingsList onOpenSync={props.onOpenSyncSettings} onOpenTabs={props.onOpenTabsSettings} />;
+  }
+  if (props.settingsPage === 'tabs') {
+    return (
+      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="tabs" title="Tabs">
+        <CompanionTabsSettingsContent
+          config={props.companionTabConfig}
+          onConfigChange={props.onCompanionTabConfigChange}
+        />
+      </CompanionSettingsDetail>
+    );
+  }
+  return (
+    <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title="Device sync">
+      <CompanionSyncContent
+        page={props.settingsPage}
+        workspaceSync={props.workspaceSync}
+        onOpenSettingsPage={props.onOpenSyncSettingsPage}
+      />
+    </CompanionSettingsDetail>
+  );
 }

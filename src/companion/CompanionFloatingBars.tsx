@@ -1,19 +1,15 @@
-import { BookOpenText, GraduationCap, Search, Settings } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-export type CompanionTabAction = 'review' | 'recent' | 'search' | 'more';
-export type BottomBarGrade = 1 | 2 | 3 | 4;
+import {
+  resolveCompanionTabs,
+  type CompanionResolvedTab,
+  type CompanionSecondaryDestinationId,
+  type CompanionTabAction,
+  type CompanionTabConfig
+} from './CompanionTabsConfig';
 
-const COMPANION_TABS: Array<{
-  action: CompanionTabAction;
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-}> = [
-  { action: 'recent', icon: BookOpenText, label: 'Browse' },
-  { action: 'review', icon: GraduationCap, label: 'Learn' },
-  { action: 'search', icon: Search, label: 'Search' },
-  { action: 'more', icon: Settings, label: 'Settings' }
-];
+export type { CompanionTabAction } from './CompanionTabsConfig';
+export type BottomBarGrade = 1 | 2 | 3 | 4;
 
 function TabButton(props: {
   active?: boolean;
@@ -40,7 +36,10 @@ function TabButton(props: {
 
 export function CompanionBottomTabBar(props: {
   activeAction: CompanionTabAction;
+  activeSecondaryDestinationId: CompanionSecondaryDestinationId | null;
+  config: CompanionTabConfig;
   onAction(action: CompanionTabAction): void;
+  onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
   visible: boolean;
 }) {
   if (!props.visible) {
@@ -53,16 +52,47 @@ export function CompanionBottomTabBar(props: {
       data-testid="companion-bottom-tab-bar"
     >
       <div className="mx-auto flex w-full max-w-[760px] items-center gap-1">
-        {COMPANION_TABS.map((tab) => (
-          <TabButton
-            active={props.activeAction === tab.action}
-            icon={tab.icon}
-            key={tab.action}
-            label={tab.label}
-            onClick={() => props.onAction(tab.action)}
-          />
-        ))}
+        {renderTabButtons(resolveCompanionTabs(props.config), props)}
       </div>
     </footer>
+  );
+}
+
+function renderTabButtons(
+  tabs: CompanionResolvedTab[],
+  props: Pick<
+    Parameters<typeof CompanionBottomTabBar>[0],
+    'activeAction' | 'activeSecondaryDestinationId' | 'onAction' | 'onSecondaryDestination'
+  >
+) {
+  const isShortcutActive = tabs.some(
+    (tab) => tab.id === 'shortcut' && tab.destinationId === props.activeSecondaryDestinationId
+  );
+  return tabs.map((tab) => renderTabButton(tab, props, isShortcutActive));
+}
+
+function renderTabButton(
+  tab: CompanionResolvedTab,
+  props: Pick<
+    Parameters<typeof CompanionBottomTabBar>[0],
+    'activeAction' | 'activeSecondaryDestinationId' | 'onAction' | 'onSecondaryDestination'
+  >,
+  isShortcutActive: boolean
+) {
+  const isShortcut = tab.id === 'shortcut' && Boolean(tab.destinationId);
+  const isActive = isShortcut
+    ? props.activeSecondaryDestinationId === tab.destinationId
+    : props.activeAction === tab.action && !isShortcutActive;
+  return (
+    <TabButton
+      active={isActive}
+      icon={tab.icon}
+      key={tab.id}
+      label={tab.label}
+      onClick={() => {
+        if (tab.destinationId) props.onSecondaryDestination(tab.destinationId);
+        else if (tab.action) props.onAction(tab.action);
+      }}
+    />
   );
 }

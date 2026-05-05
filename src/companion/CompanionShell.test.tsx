@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
@@ -33,6 +33,10 @@ vi.mock('./CompanionReviewCard', () => ({
 vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
   SimplePdfDocument: () => <div>PDF original viewer</div>
 }));
+
+afterEach(() => {
+  window.localStorage.clear();
+});
 
 type MockSurface = Record<string, unknown>;
 
@@ -264,6 +268,22 @@ describe('CompanionShell review surfaces', () => {
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
     expect(settingsButtons).toHaveLength(2);
     expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);
+  });
+
+  it('opens Tabs settings and enables the fifth shortcut tab', async () => {
+    const surface = { ...createReviewEmptySurface(), activeAction: 'more' };
+    await renderShellWithSurface(surface);
+
+    fireEvent.click(screen.getByRole('button', { name: /Choose bottom tabs/ }));
+    expect(screen.getByTestId('tab-slot-shortcut')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Shortcut tab target' }), { target: { value: 'directory' } });
+
+    expect(screen.getByRole('button', { name: 'Directory' })).toBeInTheDocument();
+    fireEvent.dragStart(screen.getByTestId('tab-slot-shortcut'));
+    fireEvent.drop(screen.getByTestId('tab-slot-browse'));
+    fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
+    expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
+    expect(JSON.parse(window.localStorage.getItem('foliole-companion-tabs-config') ?? '{}').orderedTabIds[0]).toBe('shortcut');
   });
 
 });
