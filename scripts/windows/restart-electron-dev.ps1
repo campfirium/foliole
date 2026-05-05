@@ -19,7 +19,7 @@ function Write-Info {
 function Get-HealthCheckSeconds {
   $raw = $env:FOLIOLE_ELECTRON_HEALTHCHECK_SECONDS
   if ([string]::IsNullOrWhiteSpace($raw)) {
-    return 30
+    return 90
   }
   try {
     $value = [int]$raw
@@ -28,7 +28,7 @@ function Get-HealthCheckSeconds {
     }
     return $value
   } catch {
-    return 30
+    return 90
   }
 }
 
@@ -639,6 +639,10 @@ function Stop-StaleFolioleDevProcesses {
   param([string]$WorkDir)
 
   $escapedWorkDir = [regex]::Escape($WorkDir)
+  Stop-MatchingProcesses -NamePattern '^cmd(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm\.cmd"\s+run\s+electron:dev')
+  Stop-MatchingProcesses -NamePattern '^cmd(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm\.cmd"\s+run\s+dev')
+  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm-cli\.js"\s+run\s+electron:dev')
+  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npx-cli\.js"\s+electron\s+electron-dist[\\/]+electron[\\/]+main\.js')
   Stop-MatchingProcesses -NamePattern '^electron(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*electron-dist[\\/]+main\.js')
   Stop-MatchingProcesses -NamePattern '^foliole-tauri-core(?:\.exe)?$' -CommandPattern ''
   Stop-MatchingProcesses -NamePattern '^cargo(?:\.exe)?$' -CommandPattern $escapedWorkDir

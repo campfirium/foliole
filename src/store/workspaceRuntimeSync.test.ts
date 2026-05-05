@@ -33,7 +33,15 @@ function createNodeFixture(): Node {
     isTitleManual: false,
     hideTitleHeading: true,
     content: '# Seed',
-    anchorLink: { id: 'hl-1', kind: 'highlight' },
+    anchorLink: {
+      id: 'hl-1',
+      kind: 'highlight',
+      locator: {
+        from: 2,
+        to: 6,
+        originalText: 'Seed'
+      }
+    },
     imageRegions: null,
     reveal: 'Reveal',
     reading: {
@@ -110,7 +118,15 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
     content: '# Seed',
     virtualFilter: null,
     reveal: 'Reveal',
-    anchorLink: { id: 'hl-1', kind: 'highlight' },
+    anchorLink: {
+      id: 'hl-1',
+      kind: 'highlight',
+      locator: {
+        from: 2,
+        to: 6,
+        originalText: 'Seed'
+      }
+    },
     imageRegions: null,
     reading: {
       intervalDurationMs: 0,

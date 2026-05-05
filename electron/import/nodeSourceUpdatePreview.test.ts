@@ -26,8 +26,10 @@ vi.mock('./managedInboxEvents.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
+import { saveImportManagerSettings } from './importManagerSettings.js';
 import { saveReadwiseKeepImportSettings, seedReadwiseArticleFixture } from './keepImportReadwiseTestSupport.js';
 import { runKeepImportRule } from './keepImportService.js';
+import { createGenericKeepImportConfig } from './keepImportService.test-support.js';
 import { loadNodeSourceUpdatePreview } from './nodeSourceUpdatePreview.js';
 
 let tempRoot = '';
@@ -79,8 +81,68 @@ it('returns source update content after the readwise body changes upstream', asy
 
   await expect(loadNodeSourceUpdatePreview(importedNode.latest_node_id)).resolves.toEqual({
     checked_at: expect.any(String),
+    current_highlight_count: expect.any(Number),
     current_content: expect.stringContaining('This is the highlighted sentence.'),
     source_node_id: importedNode.latest_node_id,
+    updated_highlight_count: expect.any(Number),
     updated_content: expect.stringContaining('Completely different upstream body.')
   });
+});
+
+it('returns plain markdown updates for generic adopt imports after the source changes', async () => {
+  await fs.writeFile(path.join(tempRoot, 'entry.md'), 'Before ==important== after', 'utf8');
+  saveImportManagerSettings({
+    sources: [
+      {
+        actionMode: 'keep',
+        archivePath: '',
+        id: 'draft-import-source-201',
+        highlightMode: 'merged',
+        highlightPath: '',
+        keepPreview: null,
+        keepState: 'enabled',
+        primaryPath: tempRoot
+      }
+    ]
+  });
+
+  await runKeepImportRule(createGenericKeepImportConfig(tempRoot, 'draft-import-source-201', 'adopt'));
+  await fs.writeFile(path.join(tempRoot, 'entry.md'), 'Before ==important== after again', 'utf8');
+  await runKeepImportRule(createGenericKeepImportConfig(tempRoot, 'draft-import-source-201', 'adopt'));
+
+  const importedNode = openDatabaseConnection().sqlite
+    .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'entry.md'`)
+    .get() as { latest_node_id: string };
+
+  await expect(loadNodeSourceUpdatePreview(importedNode.latest_node_id)).resolves.toEqual({
+    checked_at: expect.any(String),
+    current_highlight_count: 1,
+    current_content: 'Before important after',
+    source_node_id: importedNode.latest_node_id,
+    updated_highlight_count: 1,
+    updated_content: 'Before important after again'
+  });
+});
+
+it('treats legacy inline tags as equivalent to plain markdown during update preview comparison', async () => {
+  await fs.writeFile(path.join(tempRoot, 'entry.md'), 'Before ==important== after', 'utf8');
+
+  await runKeepImportRule(createGenericKeepImportConfig(tempRoot, 'draft-import-source-202', 'adopt'));
+
+  const connection = openDatabaseConnection().sqlite;
+  const importedNode = connection
+    .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'entry.md'`)
+    .get() as { latest_node_id: string };
+
+  connection.prepare('UPDATE nodes SET content = ? WHERE id = ?').run(
+    'Before <highlight id="legacy-1">important</highlight id="legacy-1"> after',
+    importedNode.latest_node_id
+  );
+  connection.prepare(
+    `UPDATE keep_import_items
+     SET has_source_update = 1
+     WHERE rule_id = 'draft-import-source-202' AND source_path = 'entry.md'`
+  ).run();
+
+  await expect(loadNodeSourceUpdatePreview(importedNode.latest_node_id)).resolves.toBeNull();
 });

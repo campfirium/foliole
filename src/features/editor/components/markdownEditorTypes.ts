@@ -1,7 +1,8 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import type { EditorAdapter, EditorDiffDecorations } from '../adapters/EditorAdapter';
+import type { EditorAdapter, EditorDiffDecorations, EditorTextAnchorPresentation } from '../adapters/EditorAdapter';
 import type { EditorSelection } from '../adapters/EditorAdapter';
+import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 
 export interface EditorViewState {
   scrollTop: number;
@@ -17,7 +18,7 @@ export interface MarkdownEditorProps {
   className?: string;
   contentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
-  hiddenTextAnchorKeys?: readonly string[];
+  textAnchorPresentation?: EditorTextAnchorPresentation;
   debugId?: string;
   hideTitleHeading?: boolean;
   hideScrollbar?: boolean;
@@ -34,6 +35,7 @@ export interface MarkdownEditorProps {
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onOpenNodeLink?: (title: string) => void;
+  onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;
   readOnly?: boolean;

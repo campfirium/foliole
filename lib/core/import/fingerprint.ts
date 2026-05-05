@@ -93,18 +93,17 @@ function mergeNormalizedImportedBodyContent(input: {
   return input.finalContent;
 }
 
-export function createPreparedDesktopTextImport(
-  input: CreatePreparedDesktopTextImportInput
-): PreparedImportRecord {
+function resolvePreparedImportContent(input: CreatePreparedDesktopTextImportInput) {
   const normalizedInputContent = normalizeImportedContent(input.content);
   const epubDegradedContent =
     input.kind === 'epub' || input.sourceProfile === 'epub'
       ? degradeUnmanagedEpubImages(normalizedInputContent, new Set(input.managedEpubImageDestinations ?? []))
       : { content: normalizedInputContent, degradedReason: null };
-  const highlightedContent = applyImportHighlightPolicy(
+  const highlightPolicyResult = applyImportHighlightPolicy(
     epubDegradedContent.content,
     input.highlightPolicy ?? 'reference_only'
   );
+  const highlightedContent = highlightPolicyResult.content;
   const normalizedBodyContent = normalizeImportedMarkdownHeadings(highlightedContent);
   const contextResult = applyControlledImportContext({
     content: highlightedContent,
@@ -115,31 +114,52 @@ export function createPreparedDesktopTextImport(
     sourceName: input.fileName,
     sourceProfile: input.sourceProfile
   });
-  const normalizedContent = normalizeImportedContent(
-    mergeNormalizedImportedBodyContent({
-      finalContent: contextResult.content,
-      normalizedBodyContent,
-      originalContent: highlightedContent
-    })
-  );
   return {
-    content: normalizedContent,
+    contextResult,
+    highlightedContent,
+    highlightPolicyResult,
+    normalizedContent: normalizeImportedContent(
+      mergeNormalizedImportedBodyContent({
+        finalContent: contextResult.content,
+        normalizedBodyContent,
+        originalContent: highlightedContent
+      })
+    )
+  };
+}
+
+function collectPreparedMatchedHighlights(input: {
+  contextResult: ReturnType<typeof applyControlledImportContext>;
+  highlightPolicyResult: ReturnType<typeof applyImportHighlightPolicy>;
+}) {
+  return [
+    ...input.highlightPolicyResult.highlights,
+    ...input.contextResult.matchedHighlights.map(({ excerpt, highlight }) => ({
+      content: excerpt,
+      label: highlight.label?.trim() || null
+    }))
+  ];
+}
+
+export function createPreparedDesktopTextImport(
+  input: CreatePreparedDesktopTextImportInput
+): PreparedImportRecord {
+  const preparedContent = resolvePreparedImportContent(input);
+  return {
+    content: preparedContent.normalizedContent,
     contentFingerprint: hashFingerprint(
       'content',
       IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
       input.kind,
-      normalizedContent,
+      preparedContent.normalizedContent,
       serializeHighlightSidecar(input.highlightSidecar)
     ),
-    degradedReason: contextResult.degradedReason,
+    degradedReason: preparedContent.contextResult.degradedReason,
     importedAt: input.importedAt,
-    matchedHighlights: contextResult.matchedHighlights.map(({ excerpt, highlight }) => ({
-      content: excerpt,
-      label: highlight.label?.trim() || null
-    })),
-    hideTitleHeading: shouldHideImportedTitleHeading(highlightedContent),
+    matchedHighlights: collectPreparedMatchedHighlights(preparedContent),
+    hideTitleHeading: shouldHideImportedTitleHeading(preparedContent.highlightedContent),
     nodeTitle: resolveImportedNodeTitle({
-      content: highlightedContent,
+      content: preparedContent.highlightedContent,
       sourceName: input.fileName,
       titleStrategy: input.titleStrategy ?? 'file_name'
     }),

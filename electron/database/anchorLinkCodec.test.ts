@@ -3,6 +3,28 @@ import { describe, expect, it } from 'vitest';
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 
 describe('parseStoredAnchorLink', () => {
+  it('keeps text locators when payload contains editor range anchors', () => {
+    const value = JSON.stringify({
+      id: 'text-1',
+      kind: 'highlight',
+      locator: {
+        from: 7,
+        to: 12,
+        originalText: 'Alpha'
+      }
+    });
+
+    expect(parseStoredAnchorLink(value)).toEqual({
+      id: 'text-1',
+      kind: 'highlight',
+      locator: {
+        from: 7,
+        to: 12,
+        originalText: 'Alpha'
+      }
+    });
+  });
+
   it('keeps locator rects when payload contains normalized highlight areas', () => {
     const value = JSON.stringify({
       id: 'pdf-1',
@@ -24,6 +46,22 @@ describe('parseStoredAnchorLink', () => {
         x: 0.4,
         y: 0.34
       }
+    });
+  });
+
+  it('drops malformed text locators instead of trusting partial payloads', () => {
+    const value = JSON.stringify({
+      id: 'text-2',
+      kind: 'cloze',
+      locator: {
+        from: 9,
+        originalText: 'Beta'
+      }
+    });
+
+    expect(parseStoredAnchorLink(value)).toEqual({
+      id: 'text-2',
+      kind: 'cloze'
     });
   });
 });

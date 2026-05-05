@@ -1,6 +1,7 @@
+import { stripAnchorBlocks } from '../../../src/features/editor/model/anchorBlocks.js';
+
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
 const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 
 export const NODE_OPENING_PREVIEW_FALLBACK = 'No opening yet.';
 export const PDF_READER_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
@@ -77,8 +78,9 @@ function stripMarkdownInline(value: string) {
 
 function getNormalizedParagraphs(content: string) {
   return stripLeadingTitleHeading(stripLeadingFrontmatter(content))
-    .replace(ANCHOR_TAG_PATTERN, '')
-    .split(/\r?\n\r?\n/)
+    .replaceAll('\r\n', '\n')
+    .split(/\n{2,}/)
+    .map((paragraph) => stripAnchorBlocks(paragraph))
     .map((paragraph) =>
       stripMarkdownInline(
         paragraph

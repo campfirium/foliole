@@ -9,7 +9,9 @@ export interface NativeWorkspaceAnchorLink {
   kind: 'highlight' | 'cloze';
   locator?: {
     attachmentId?: string;
+    from?: number;
     height?: number;
+    originalText?: string;
     page?: number;
     rects?: Array<{
       x: number;
@@ -17,9 +19,14 @@ export interface NativeWorkspaceAnchorLink {
       width: number;
       height: number;
     }>;
+    to?: number;
     width?: number;
     x: number;
     y: number;
+  } | {
+    from: number;
+    originalText: string;
+    to: number;
   };
 }
 

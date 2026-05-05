@@ -77,7 +77,8 @@ export interface WorkspaceState {
     parentNodeId: string,
     promptContent: string,
     answerContent: string,
-    anchorId?: string
+    anchorId?: string,
+    anchorLink?: NodeAnchorLink
   ) => string | null;
   createImageClozeNodes: (
     parentNodeId: string,

@@ -1,5 +1,5 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { createLineClass } from '../../features/editor/adapters/liveMarkdownPrimitives';
+import { createLineClass } from '../../features/editor/model/markdownLineSyntax';
 
 function buildLineRanges(content: string) {
   const lines: Array<{ blank: boolean; end: number; start: number; text: string }> = [];

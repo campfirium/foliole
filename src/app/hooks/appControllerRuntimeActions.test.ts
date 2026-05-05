@@ -55,6 +55,50 @@ function createRevealDocumentPositionArgs(args: {
   };
 }
 
+function createZeroWidthAnchorRevealArgs(args: {
+  content: string;
+  getScrollTop: () => number;
+  revealSelection: ReturnType<typeof vi.fn>;
+  setNodeViewState: ReturnType<typeof vi.fn>;
+}) {
+  return {
+    runtime: {
+      editorRef: {
+        current: {
+          getScrollTop: args.getScrollTop,
+          revealSelection: args.revealSelection
+        }
+      },
+      ...createRuntimeState(),
+      isViewingTrashNode: false
+    },
+    ws: {
+      activeNodeId: 'node-1',
+      nodeViewById: {
+        'node-1': {
+          scrollTop: 12,
+          selection: { from: 1, to: 1 }
+        }
+      },
+      nodesById: {
+        'node-1': {
+          id: 'node-1',
+          parentNodeId: null,
+          kind: 'topic',
+          title: 'Parent',
+          content: args.content,
+          anchorLink: null,
+          reveal: null,
+          review: null,
+          createdAt: '2026-04-05T00:00:00.000Z',
+          updatedAt: '2026-04-05T00:00:00.000Z'
+        }
+      },
+      setNodeViewState: args.setNodeViewState
+    }
+  };
+}
+
 describe('createRevealDocumentPosition', () => {
   it('stores the revealed document position as the new reading anchor', () => {
     const revealPosition = vi.fn();
@@ -142,6 +186,25 @@ describe('createRevealAnchorInDocument', () => {
 
     expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(1, 'node-pdf-parent', { page: 7, x: 0.2, y: 0.2 });
     expect(requestPdfAnchorJump).toHaveBeenNthCalledWith(2, 'node-pdf-parent', { page: 7, x: 0.9, y: 0.8 });
+  });
+
+  it('reveals zero-width text anchors instead of dropping the jump', () => {
+    const revealSelection = vi.fn();
+    const getScrollTop = vi.fn(() => 88);
+    const setNodeViewState = vi.fn();
+    const content = 'A<highlight id="anchor-1"></highlight id="anchor-1">D';
+    const anchorPosition = content.indexOf('</highlight id="anchor-1">');
+    const revealAnchorInDocument = createRevealAnchorInDocument(
+      createZeroWidthAnchorRevealArgs({ content, getScrollTop, revealSelection, setNodeViewState }) as never
+    );
+
+    revealAnchorInDocument({ id: 'anchor-1', kind: 'highlight' });
+
+    expect(revealSelection).toHaveBeenCalledWith({ from: anchorPosition, to: anchorPosition });
+    expect(setNodeViewState).toHaveBeenCalledWith('node-1', {
+      scrollTop: 88,
+      selection: { from: anchorPosition, to: anchorPosition }
+    });
   });
 });
 

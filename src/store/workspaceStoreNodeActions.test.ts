@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { syncCreateNodeToRuntime, syncNodeContentToRuntime, syncNodeOrderToRuntime, syncNodeRevealToRuntime } from './workspaceRuntimeSync';
-import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import {
+  createWorkspaceNodeActionsFixture,
+  createWorkspaceNodeActionsSetStateHarness
+} from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
@@ -15,79 +17,13 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
-type WorkspaceSetInput =
-  | WorkspaceState
-  | Partial<WorkspaceState>
-  | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
-
-function createWorkspaceFixture(): WorkspaceState {
-  const initial = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
-  return {
-    ...initial,
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
-    resetLayout: () => undefined,
-    setNodeViewState: () => undefined,
-    setDocumentMaxWidth: () => undefined,
-    setListWidth: () => undefined,
-    setListCollapsed: () => undefined,
-    setRightSidebarWidth: () => undefined,
-    setRightSidebarCollapsed: () => undefined,
-    setActiveNode: () => undefined,
-    updateNodeTitle: () => undefined,
-    updateNodeContent: () => undefined,
-    updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: () => undefined,
-    updateNodePriority: () => undefined,
-    updateNodeDesiredRetention: () => undefined,
-    dismissNode: () => false,
-    relearnNode: () => false,
-    startReviewSession: () => false,
-    revealReviewAnswer: () => undefined,
-    gradeReviewCard: async () => false,
-    completeReviewItem: () => false,
-    deferReviewItem: () => false,
-    dismissReviewItem: () => false,
-    exitReviewSession: () => undefined,
-    deleteNode: () => undefined,
-    deleteImageClozeRegion: () => undefined,
-    deleteNodes: () => undefined,
-    restoreNode: () => undefined,
-    deleteNodePermanently: () => undefined,
-    deleteNodesPermanently: () => undefined,
-    createRootNode: () => 'unused',
-    createChildNode: () => 'unused',
-    createVirtualNode: () => 'unused',
-    createHighlightNodeFromSelection: () => null,
-    createQANodeFromSelection: () => null,
-    createImageClozeNodes: () => [],
-    moveNode: () => false,
-    moveNodes: () => false
-  };
-}
-
-function createSetStateHarness(initialState: WorkspaceState) {
-  let state = initialState;
-  const setState = (partial: WorkspaceSetInput) => {
-    const next = typeof partial === 'function' ? partial(state) : partial;
-    state = { ...state, ...next };
-  };
-  return {
-    setState,
-    getState: () => state
-  };
-}
-
 describe('createWorkspaceNodeActions content/title sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('syncs updateNodeContent through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     actions.updateNodeContent('node-1', '# Updated title\n\nBody');
@@ -103,7 +39,7 @@ describe('createWorkspaceNodeActions content/title sync', () => {
   });
 
   it('syncs updateNodeTitle through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     actions.updateNodeTitle('node-1', '  Manual title  ');
@@ -119,7 +55,7 @@ describe('createWorkspaceNodeActions content/title sync', () => {
   });
 
   it('does not sync when target node does not exist', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     actions.updateNodeContent('missing-node', 'ignored');
@@ -134,7 +70,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
   });
 
   it('syncs createRootNode through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     const createdNodeId = actions.createRootNode('# Root node');
@@ -154,8 +90,8 @@ describe('createWorkspaceNodeActions root creation sync', () => {
   });
 
   it('syncs incremented Untitled title for repeated empty root node creation', () => {
-    const harness = createSetStateHarness({
-      ...createWorkspaceFixture(),
+    const harness = createWorkspaceNodeActionsSetStateHarness({
+      ...createWorkspaceNodeActionsFixture(),
       activeNodeId: null,
       nodeOrder: [],
       nodesById: {}
@@ -180,7 +116,7 @@ describe('createWorkspaceNodeActions reveal sync', () => {
   });
 
   it('syncs updateNodeReveal through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const state = harness.getState();
     const node = state.nodesById['node-1'];
@@ -215,7 +151,7 @@ describe('createWorkspaceNodeActions create sync', () => {
   });
 
   it('syncs createChildNode through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
     const childNodeId = actions.createChildNode('node-1', 'Child body');
@@ -233,25 +169,6 @@ describe('createWorkspaceNodeActions create sync', () => {
     );
   });
 
-  it('syncs createHighlightNodeFromSelection through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
-
-    const nodeId = actions.createHighlightNodeFromSelection('node-1', 'Highlighted', 'hl-1');
-
-    expect(nodeId).not.toBeNull();
-    expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: nodeId,
-        parentNodeId: 'node-1',
-        content: 'Highlighted',
-        anchorLink: { id: 'hl-1', kind: 'highlight' }
-      })
-    );
-  });
-
 });
 
 describe('createWorkspaceNodeActions dismiss', () => {
@@ -260,7 +177,7 @@ describe('createWorkspaceNodeActions dismiss', () => {
   });
 
   it('marks pending reading nodes as dismissed from the node menu', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const state = harness.getState();
     const node = state.nodesById['node-1'];

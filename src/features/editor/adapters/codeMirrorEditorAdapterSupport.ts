@@ -1,17 +1,20 @@
 import { Compartment, EditorState, type StateEffect } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
+import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
-import { createLiveMarkdown } from './liveMarkdown';
+import type { EditorTextAnchorPresentation } from './EditorAdapter';
+import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 
 export interface CodeMirrorEditorAdapterOptions {
-  hiddenTextAnchorKeys?: readonly string[];
+  textAnchorPresentation?: import('./EditorAdapter').EditorTextAnchorPresentation;
   hideTitleHeading?: boolean;
   initialContent: string;
   onChange?: (content: string) => void;
   onOpenNodeLink?: (title: string) => void;
+  onPastedAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   readOnly?: boolean;
 }
 
@@ -21,20 +24,22 @@ export interface EditorDocumentChangeMeta {
 
 export function createLiveMarkdownReconfigureEffect(args: {
   compartment: Compartment;
-  hiddenTextAnchorKeys: readonly string[];
+  textAnchorPresentation: EditorTextAnchorPresentation;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }) {
   return args.compartment.reconfigure(
-    createLiveMarkdown(
-      args.hideTitleHeading,
-      args.nodeId,
-      args.imageClozePresentationVersion,
-      args.hiddenTextAnchorKeys,
-      args.onOpenNodeLink
-    )
+    createLiveMarkdownStateExtensions({
+      textAnchorPresentation: args.textAnchorPresentation,
+      hideTitleHeading: args.hideTitleHeading,
+      imageClozePresentationVersion: args.imageClozePresentationVersion,
+      nodeId: args.nodeId,
+      onOpenNodeLink: args.onOpenNodeLink,
+      onPastedAnchors: args.onPastedAnchors ?? null
+    })
   );
 }
 
@@ -52,21 +57,23 @@ export function createReadOnlyExtensions(readOnly: boolean) {
 
 export function dispatchLiveMarkdownReconfigure(args: {
   compartment: Compartment;
-  hiddenTextAnchorKeys: readonly string[];
+  textAnchorPresentation: EditorTextAnchorPresentation;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPastedAnchors?: ((payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
   view: EditorView;
 }) {
   args.view.dispatch({
     effects: createLiveMarkdownReconfigureEffect({
       compartment: args.compartment,
-      hiddenTextAnchorKeys: args.hiddenTextAnchorKeys,
+      textAnchorPresentation: args.textAnchorPresentation,
       hideTitleHeading: args.hideTitleHeading,
       imageClozePresentationVersion: args.imageClozePresentationVersion,
       nodeId: args.nodeId,
-      onOpenNodeLink: args.onOpenNodeLink
+      onOpenNodeLink: args.onOpenNodeLink,
+      onPastedAnchors: args.onPastedAnchors ?? null
     })
   });
 }

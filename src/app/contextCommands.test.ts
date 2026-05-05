@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { applySelectionMarkup, getSelectionCommandPayload } from './contextCommands';
+import { getSelectionCommandPayload } from './contextCommands';
 
 function createAdapter(content: string, selections: Array<{ from: number; to: number }>) {
   return {
@@ -11,25 +11,47 @@ function createAdapter(content: string, selections: Array<{ from: number; to: nu
   };
 }
 
-describe('contextCommands', () => {
+function expectSelectionPayloadMatches(
+  content: string,
+  selection: { from: number; to: number },
+  expected: {
+    clozeContent: string;
+    selectionText: string;
+  }
+) {
+  const payload = getSelectionCommandPayload('node-1', createAdapter(content, [selection]) as never);
+
+  expect(payload).toMatchObject({
+    clozeContent: expected.clozeContent,
+    entries: [
+      {
+        clozeContent: expected.clozeContent,
+        locator: {
+          from: selection.from,
+          originalText: expected.selectionText,
+          to: selection.to
+        },
+        selectionText: expected.selectionText
+      }
+    ]
+  });
+}
+
+describe('getSelectionCommandPayload', () => {
   it('preserves line breaks when building cloze content from selection', () => {
     const content = '# Title\n\nFirst line\nSecond line';
     const from = content.indexOf('First');
     const to = from + 'First line'.length;
-    const payload = getSelectionCommandPayload('node-1', createAdapter(content, [{ from, to }]) as never);
-
-    expect(payload).toMatchObject({
+    expectSelectionPayloadMatches(content, { from, to }, {
       clozeContent: '# Title\n\n[...]\nSecond line',
-      entries: [
-        {
-          clozeContent: '# Title\n\n[...]\nSecond line',
-          selectionText: 'First line'
-        }
-      ]
+      selectionText: 'First line'
     });
   });
 
   it('builds one payload entry per selected range', () => {
+    vi.spyOn(crypto, 'randomUUID')
+      .mockReturnValueOnce('11111111-1111-1111-1111-111111111111')
+      .mockReturnValueOnce('22222222-2222-2222-2222-222222222222');
     const content = 'Alpha Beta Gamma Delta';
     const alphaFrom = content.indexOf('Alpha');
     const betaFrom = content.indexOf('Gamma');
@@ -42,28 +64,20 @@ describe('contextCommands', () => {
     );
 
     expect(payload?.entries).toEqual([
-      expect.objectContaining({ anchorId: '1', selectionText: 'Alpha' }),
-      expect.objectContaining({ anchorId: '2', selectionText: 'Gamma' })
+      expect.objectContaining({ anchorId: 'anchor-11111111-1111-1111-1111-111111111111', selectionText: 'Alpha' }),
+      expect.objectContaining({ anchorId: 'anchor-22222222-2222-2222-2222-222222222222', selectionText: 'Gamma' })
     ]);
     expect(payload?.selectionText).toBe('Alpha\nGamma');
     expect(payload?.clozeContent).toBe('[...] Beta [...] Delta');
   });
 
-  it('applies markup to every selected range from the end of the document', () => {
-    const content = 'Alpha Beta Gamma';
-    const replaceRange = vi.fn();
-    const adapter = {
-      getContent: () => content,
-      replaceRange
-    };
-
-    const applied = applySelectionMarkup(adapter as never, 'cloze', [
-      { anchorId: '1', clozeContent: '', range: { from: 0, to: 5 }, selectionText: 'Alpha' },
-      { anchorId: '2', clozeContent: '', range: { from: 11, to: 16 }, selectionText: 'Gamma' }
-    ]);
-
-    expect(applied).toBe(true);
-    expect(replaceRange).toHaveBeenNthCalledWith(1, 11, 16, '<cloze id="2">Gamma</cloze id="2">');
-    expect(replaceRange).toHaveBeenNthCalledWith(2, 0, 5, '<cloze id="1">Alpha</cloze id="1">');
+  it('strips opaque anchor tags when building selection payload text', () => {
+    const content = 'Before <highlight id="anchor-1">Alpha</highlight id="anchor-1"> After';
+    const from = content.indexOf('<highlight');
+    const to = content.indexOf(' After');
+    expectSelectionPayloadMatches(content, { from, to }, {
+      clozeContent: 'Before [...] After',
+      selectionText: 'Alpha'
+    });
   });
 });

@@ -18,6 +18,10 @@ function formatEntryDetail(detail: string | null) {
   return detail?.trim() || 'Ready to process when enabled.';
 }
 
+function formatContentPreview(contentPreview: string | null) {
+  return contentPreview?.trim() || null;
+}
+
 function formatHighlightSummary(count: number, sampleCount: number) {
   if (count <= 0) {
     return null;
@@ -30,6 +34,12 @@ function KeepImportPreviewEntryCard(props: { sample: KeepImportPreviewSummary['s
     <div className="rounded-lg border border-border/60 bg-bg-elevated px-3 py-2">
       <p className="truncate text-sm font-medium text-foreground">{props.sample.sourcePath}</p>
       <p className="mt-1 text-xs text-foreground/58">{formatEntryDetail(props.sample.detail)}</p>
+      {formatContentPreview(props.sample.contentPreview) ? (
+        <div className="mt-3 rounded-md bg-bg-panel px-3 py-2">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-foreground/45">Result preview</p>
+          <p className="mt-1 text-sm text-foreground/78">{formatContentPreview(props.sample.contentPreview)}</p>
+        </div>
+      ) : null}
       {props.sample.highlightSamples.length > 0 ? (
         <div className="mt-3">
           <p className="mb-2 text-xs text-foreground/58">

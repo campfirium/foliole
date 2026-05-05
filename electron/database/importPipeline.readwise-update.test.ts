@@ -52,7 +52,7 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
   const childRows = nodeId
     ? connection.sqlite
         .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-        .all(nodeId)
+        .all(nodeId) as Array<{ anchor_link: string; content: string; parent_id: string; title: string }>
     : [];
 
   return { childRows, nodeRow, runRows };
@@ -70,6 +70,64 @@ function createReadwiseImport(content: string, highlights: string[], importedAt:
   });
 }
 
+function parseAnchorLink(value: string) {
+  return JSON.parse(value) as {
+    id: string;
+    kind: string;
+    locator?: { from: number; originalText: string; to: number };
+  };
+}
+
+function expectUpdatedReadwiseParentBody(nodeRow: unknown) {
+  expect(nodeRow).toEqual({
+    content: [
+      '# Article',
+      '',
+      'Alpha sentence.',
+      '',
+      'Beta sentence.',
+      '',
+      '## Unmatched Sidecar Highlights',
+      '',
+      '- Highlight 1: Gamma missing.'
+    ].join('\n'),
+    parent_id: 'special-inbox',
+    title: 'readwise'
+  });
+}
+
+function expectUpdatedReadwiseChildren(childRows: Array<{ anchor_link: string; content: string; parent_id: string; title: string }>, nodeId: string | null) {
+  const firstAnchorLink = parseAnchorLink(childRows[0]!.anchor_link);
+  const secondAnchorLink = parseAnchorLink(childRows[1]!.anchor_link);
+  expect(childRows.map((row) => ({
+    anchorLink: parseAnchorLink(row.anchor_link),
+    content: row.content,
+    parent_id: row.parent_id,
+    title: row.title
+  }))).toEqual([
+    {
+      anchorLink: expect.objectContaining({
+        id: firstAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'Alpha sentence.' })
+      }),
+      content: 'Alpha sentence.',
+      parent_id: nodeId,
+      title: 'Alpha sentence.'
+    },
+    {
+      anchorLink: expect.objectContaining({
+        id: secondAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'Beta sentence.' })
+      }),
+      content: 'Beta sentence.',
+      parent_id: nodeId,
+      title: 'Beta sentence.'
+    }
+  ]);
+}
+
 it('preserves the existing readwise parent body while appending only newly anchored highlights on update', () => {
   const first = runPreparedImport(
     createReadwiseImport(['# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'), ['Alpha sentence.'], '2026-03-26T02:00:00.000Z')
@@ -84,35 +142,8 @@ it('preserves the existing readwise parent body while appending only newly ancho
   const { childRows, nodeRow, runRows } = readPersistedImportState(updated.sourceFingerprint, updated.nodeId);
 
   expect(updated.nodeId).toBe(first.nodeId);
-  expect(nodeRow).toEqual({
-    content: [
-      '# Article',
-      '',
-      '<highlight id="1">Alpha sentence.</highlight id="1">',
-      '',
-      '<highlight id="2">Beta sentence.</highlight id="2">',
-      '',
-      '## Unmatched Sidecar Highlights',
-      '',
-      '- Highlight 1: Gamma missing.'
-    ].join('\n'),
-    parent_id: 'special-inbox',
-    title: 'readwise'
-  });
-  expect(childRows).toEqual([
-    {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
-      content: 'Alpha sentence.',
-      parent_id: updated.nodeId,
-      title: 'Alpha sentence.'
-    },
-    {
-      anchor_link: JSON.stringify({ id: '2', kind: 'highlight' }),
-      content: 'Beta sentence.',
-      parent_id: updated.nodeId,
-      title: 'Beta sentence.'
-    }
-  ]);
+  expectUpdatedReadwiseParentBody(nodeRow);
+  expectUpdatedReadwiseChildren(childRows, updated.nodeId);
   expect(runRows).toEqual([
     {
       degraded_reason: null,

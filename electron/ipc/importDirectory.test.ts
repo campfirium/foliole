@@ -118,8 +118,9 @@ function expectGenericPreparedImports() {
     expect.arrayContaining([
       [
         expect.objectContaining({
-          content: 'Use <highlight id="1">important</highlight id="1"> text',
+          content: 'Use important text',
           degradedReason: null,
+          matchedHighlights: [{ content: 'important', label: null }],
           sourceKind: 'markdown',
           sourceName: 'a-note.md'
         })

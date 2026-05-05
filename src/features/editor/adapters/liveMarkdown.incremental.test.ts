@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const spies = vi.hoisted(() => ({
-  addAnchorTagDecorations: vi.fn(),
+  buildPreviewAnchorDecorationPlan: vi.fn(),
   buildFrontmatterDecorationState: vi.fn()
 }));
 
@@ -14,13 +14,16 @@ vi.mock('../../../shared/platform/bridge', () => ({
   openExternalUrl
 }));
 
-vi.mock('./liveMarkdownAnchors', async () => {
-  const actual = await vi.importActual<typeof import('./liveMarkdownAnchors')>('./liveMarkdownAnchors');
+vi.mock('../model/anchorDecorationPlans', async () => {
+  const actual = await vi.importActual<typeof import('../model/anchorDecorationPlans')>('../model/anchorDecorationPlans');
   return {
     ...actual,
-    addAnchorTagDecorations: (ranges: Parameters<typeof actual.addAnchorTagDecorations>[0], content: string) => {
-      spies.addAnchorTagDecorations(content);
-      actual.addAnchorTagDecorations(ranges, content);
+    buildPreviewAnchorDecorationPlan: (
+      content: Parameters<typeof actual.buildPreviewAnchorDecorationPlan>[0],
+      hiddenAnchorKeys?: Parameters<typeof actual.buildPreviewAnchorDecorationPlan>[1]
+    ) => {
+      spies.buildPreviewAnchorDecorationPlan(content);
+      return actual.buildPreviewAnchorDecorationPlan(content, hiddenAnchorKeys);
     }
   };
 });
@@ -60,7 +63,7 @@ function createAdapter(content: string) {
 afterEach(() => {
   document.body.innerHTML = '';
   setMarkdownSyntaxVisibility('hidden');
-  spies.addAnchorTagDecorations.mockClear();
+  spies.buildPreviewAnchorDecorationPlan.mockClear();
   spies.buildFrontmatterDecorationState.mockClear();
 });
 
@@ -70,11 +73,11 @@ describe('liveMarkdown anchor decorations', () => {
     const host = createHost();
     const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
 
-    spies.addAnchorTagDecorations.mockClear();
+    spies.buildPreviewAnchorDecorationPlan.mockClear();
     const from = content.indexOf('world');
     adapter.replaceRange(from, from + 'world'.length, 'planet');
 
-    expect(spies.addAnchorTagDecorations).not.toHaveBeenCalled();
+    expect(spies.buildPreviewAnchorDecorationPlan).not.toHaveBeenCalled();
     expect(host.textContent).toContain('hello planet');
     expect(host.textContent).not.toContain('<highlight');
 
@@ -85,11 +88,11 @@ describe('liveMarkdown anchor decorations', () => {
     const content = '<highlight id="1">hello</highlight id="1"> world';
     const adapter = createAdapter(content);
 
-    spies.addAnchorTagDecorations.mockClear();
+    spies.buildPreviewAnchorDecorationPlan.mockClear();
     const from = content.indexOf('highlight');
     adapter.replaceRange(from, from + 'highlight'.length, 'cloze');
 
-    expect(spies.addAnchorTagDecorations).toHaveBeenCalledTimes(1);
+    expect(spies.buildPreviewAnchorDecorationPlan).toHaveBeenCalledTimes(1);
 
     adapter.destroy();
   });

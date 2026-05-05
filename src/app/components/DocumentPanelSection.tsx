@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useMemo } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
+import { collectDocumentTextAnchorPresentation } from '../../features/editor/model/documentTextAnchorDecorations';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
@@ -23,7 +25,6 @@ import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
 import {
   buildResolvedDocumentPanelProps,
   buildTopicBacklinks,
-  collectHiddenTextAnchorKeys,
   useDocumentPanelInteractions
 } from './documentPanelSectionSupport';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
@@ -65,6 +66,7 @@ export interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
   onCreateHighlight: () => void;
+  onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onCreateCloze: () => void;
   onCutImage: () => void;
@@ -91,6 +93,19 @@ export interface DocumentPanelSectionProps {
   nodesById: Record<string, Node>;
 }
 
+function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
+  return useMemo(
+    () =>
+      collectDocumentTextAnchorPresentation({
+        activeNodeId: props.activeNodeId,
+        nodesById: props.nodesById,
+        parentContent: props.editorContent,
+        trashedNodeIds: props.trashedNodeIds
+      }),
+    [props.activeNodeId, props.editorContent, props.nodesById, props.trashedNodeIds]
+  );
+}
+
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
@@ -100,15 +115,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   );
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
-  const hiddenTextAnchorKeys = useMemo(
-    () =>
-      collectHiddenTextAnchorKeys({
-        activeNodeId: props.activeNodeId,
-        nodesById: props.nodesById,
-        trashedNodeIds: props.trashedNodeIds
-      }),
-    [props.activeNodeId, props.nodesById, props.trashedNodeIds]
-  );
+  const textAnchorPresentation = useDocumentPanelTextAnchorState(props);
   const {
     currentSourceUpdateContent,
     handleSourceUpdateDraftChange,
@@ -136,7 +143,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     bodyProps,
     documentLayoutStyle,
     emptyContent,
-    hiddenTextAnchorKeys,
+    textAnchorPresentation,
     isFolderListView,
     isSourceUpdatePanelOpen,
     currentSourceUpdateContent,
@@ -190,7 +197,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         bodyProps={{
           ...model.bodyProps,
           onEditorReady: interactions.handleEditorReady,
-          hiddenTextAnchorKeys: model.hiddenTextAnchorKeys,
+          textAnchorPresentation: model.textAnchorPresentation,
           emptyContent: model.emptyContent,
           onOpenNodeLink: interactions.handleOpenNodeLink
         }}

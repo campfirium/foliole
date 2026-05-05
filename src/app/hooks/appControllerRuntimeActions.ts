@@ -1,6 +1,6 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
@@ -51,7 +51,7 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     if (!activeNode) {
       return;
     }
-    if (!adapter && anchor.kind === 'highlight' && anchor.locator) {
+    if (!adapter && anchor.kind === 'highlight' && isPdfAnchorLocator(anchor.locator)) {
       requestPdfAnchorJump(args.ws.activeNodeId, anchor.locator);
       return;
     }

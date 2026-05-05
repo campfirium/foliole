@@ -21,26 +21,41 @@ import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
 import { useMarkdownImagePreview } from './useMarkdownImagePreview';
 
+const EMPTY_TEXT_ANCHOR_PRESENTATION = {
+  inlineAnchorCompatibility: {
+    hiddenKeys: []
+  },
+  textAnchorDecorations: []
+} as const;
+
+function resolveTextAnchorPresentation(textAnchorPresentation: MarkdownEditorProps['textAnchorPresentation']) {
+  return textAnchorPresentation ?? EMPTY_TEXT_ANCHOR_PRESENTATION;
+}
+
 function useEditorAdapter(
   hostRef: MutableRefObject<HTMLDivElement | null>,
   debugId: string | undefined,
   onChange: (value: string) => void,
   onReady: ((adapter: EditorAdapter | null) => void) | undefined,
   initialValue: string,
-  hiddenTextAnchorKeys: readonly string[] | undefined,
+  textAnchorPresentation: MarkdownEditorProps['textAnchorPresentation'],
   hideTitleHeading: boolean,
   onOpenNodeLink: ((title: string) => void) | undefined,
+  onPastedAnchors: MarkdownEditorProps['onPastedAnchors'],
   readOnly: boolean | undefined
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const initialValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
   const onOpenNodeLinkRef = useRef(onOpenNodeLink);
+  const onPastedAnchorsRef = useRef(onPastedAnchors);
   const onReadyRef = useRef(onReady);
+  const resolvedTextAnchorPresentation = resolveTextAnchorPresentation(textAnchorPresentation);
 
   onChangeRef.current = onChange;
   initialValueRef.current = initialValue;
   onOpenNodeLinkRef.current = onOpenNodeLink;
+  onPastedAnchorsRef.current = onPastedAnchors;
   onReadyRef.current = onReady;
 
   useLayoutEffect(() => {
@@ -50,12 +65,13 @@ function useEditorAdapter(
     }
 
     const adapter = new CodeMirrorEditorAdapter(host, {
-      hiddenTextAnchorKeys,
       hideTitleHeading,
       initialContent: initialValueRef.current,
       onChange: (nextValue) => onChangeRef.current(nextValue),
       onOpenNodeLink: (title) => onOpenNodeLinkRef.current?.(title),
-      readOnly
+      onPastedAnchors: (payload) => onPastedAnchorsRef.current?.(payload),
+      readOnly,
+      textAnchorPresentation: resolvedTextAnchorPresentation
     });
 
     adapterRef.current = adapter;
@@ -75,8 +91,8 @@ function useEditorAdapter(
   }, [debugId, hostRef]);
 
   useLayoutEffect(() => {
-    adapterRef.current?.setHiddenTextAnchorKeys?.(hiddenTextAnchorKeys ?? []);
-  }, [hiddenTextAnchorKeys]);
+    adapterRef.current?.setTextAnchorPresentation?.(resolvedTextAnchorPresentation);
+  }, [resolvedTextAnchorPresentation]);
 
   useLayoutEffect(() => {
     adapterRef.current?.setReadOnly?.(readOnly === true);
@@ -175,9 +191,10 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onChange,
     props.onReady,
     props.value,
-    props.hiddenTextAnchorKeys,
+    props.textAnchorPresentation,
     props.hideTitleHeading ?? false,
     props.onOpenNodeLink,
+    props.onPastedAnchors,
     props.readOnly
   );
   const syncScrollMetrics = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;

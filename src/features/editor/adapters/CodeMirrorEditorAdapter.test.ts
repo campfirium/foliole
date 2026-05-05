@@ -15,7 +15,8 @@ const {
   mockReadOnlyOf,
   mockEditableOf,
   mockAllowMultipleSelectionsOf,
-  mockRangeSetBuilder
+  mockRangeSetBuilder,
+  mockFacetDefine
 } = vi.hoisted(() => ({
   mockCompartmentReconfigure: vi.fn((value: unknown) => value),
   mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
@@ -31,6 +32,10 @@ const {
   mockReadOnlyOf: vi.fn(() => 'read-only-extension'),
   mockEditableOf: vi.fn(() => 'editable-extension'),
   mockAllowMultipleSelectionsOf: vi.fn(() => 'allow-multiple-selections-extension'),
+  mockFacetDefine: vi.fn(() => ({
+    facet: 'mock-facet',
+    of: vi.fn((value) => value)
+  })),
   mockRangeSetBuilder: vi.fn().mockImplementation(() => ({
     add: vi.fn(),
     finish: vi.fn(() => 'paragraph-marker-decorations')
@@ -55,6 +60,9 @@ vi.mock('@codemirror/state', () => ({
     reconfigure(value: unknown) {
       return mockCompartmentReconfigure(value);
     }
+  },
+  Facet: {
+    define: mockFacetDefine
   },
   EditorState: {
     create: mockEditorStateCreate,
@@ -104,13 +112,8 @@ vi.mock('@codemirror/view', () => ({
   }
 }));
 
-vi.mock('./anchorStructureGuard', () => ({
-  anchorStructureGuard: 'anchor-structure-guard',
-  bypassAnchorStructureGuard: { of: () => 'bypass-anchor-structure-guard' }
-}));
-
 vi.mock('./liveMarkdown', () => ({
-  createLiveMarkdown: vi.fn(() => 'live-markdown-extension')
+  createLiveMarkdownExtensions: vi.fn(() => 'live-markdown-extension')
 }));
 
 vi.mock('./lineDiffDecorations', () => ({

@@ -16,7 +16,9 @@ interface AnchorLinkPayload {
   kind: 'highlight' | 'cloze';
   locator?: {
     attachmentId?: string;
+    from?: number;
     height?: number;
+    originalText?: string;
     page?: number;
     rects?: Array<{
       height: number;
@@ -24,9 +26,14 @@ interface AnchorLinkPayload {
       x: number;
       y: number;
     }>;
+    to?: number;
     width?: number;
     x: number;
     y: number;
+  } | {
+    from: number;
+    originalText: string;
+    to: number;
   };
 }
 
@@ -56,12 +63,32 @@ interface ImageRegionGroupPayload {
 
 interface RawAnchorLocator {
   attachmentId?: unknown;
+  from?: unknown;
   height?: unknown;
+  originalText?: unknown;
   page?: unknown;
   rects?: unknown;
+  to?: unknown;
   width?: unknown;
-  x: number;
-  y: number;
+  x?: unknown;
+  y?: unknown;
+}
+
+function parseTextAnchorLocator(locator: RawAnchorLocator, field: string) {
+  if (typeof locator.from !== 'number' || !Number.isInteger(locator.from) || locator.from < 0) {
+    throw new Error(`invalid argument: ${field}.locator.from`);
+  }
+  if (typeof locator.to !== 'number' || !Number.isInteger(locator.to) || locator.to < locator.from) {
+    throw new Error(`invalid argument: ${field}.locator.to`);
+  }
+  if (typeof locator.originalText !== 'string') {
+    throw new Error(`invalid argument: ${field}.locator.originalText`);
+  }
+  return {
+    from: locator.from,
+    originalText: locator.originalText,
+    to: locator.to
+  };
 }
 
 function parseImageAnchorLocator(locator: RawAnchorLocator, field: string) {
@@ -75,8 +102,8 @@ function parseImageAnchorLocator(locator: RawAnchorLocator, field: string) {
     attachmentId: locator.attachmentId as string,
     height: Math.max(0, Math.min(1, locator.height)),
     width: Math.max(0, Math.min(1, locator.width)),
-    x: Math.max(0, Math.min(1, locator.x)),
-    y: Math.max(0, Math.min(1, locator.y))
+    x: Math.max(0, Math.min(1, locator.x as number)),
+    y: Math.max(0, Math.min(1, locator.y as number))
   };
 }
 
@@ -87,8 +114,8 @@ function parsePdfAnchorLocator(locator: RawAnchorLocator, field: string) {
   return {
     page: locator.page,
     rects: parseAnchorLinkLocatorRects(locator.rects, `${field}.locator.rects`),
-    x: Math.max(0, Math.min(1, locator.x)),
-    y: Math.max(0, Math.min(1, locator.y))
+    x: Math.max(0, Math.min(1, locator.x as number)),
+    y: Math.max(0, Math.min(1, locator.y as number))
   };
 }
 
@@ -117,6 +144,14 @@ function asAnchorLink(value: unknown, field: string): AnchorLinkPayload | null {
   const locator = payload.locator;
   if (!locator || typeof locator !== 'object' || Array.isArray(locator)) {
     throw new Error(`invalid argument: ${field}.locator`);
+  }
+  if (
+    typeof locator.from === 'number' ||
+    typeof locator.to === 'number' ||
+    typeof locator.originalText === 'string'
+  ) {
+    anchorLink.locator = parseTextAnchorLocator(locator, field);
+    return anchorLink;
   }
   if (typeof locator.x !== 'number' || !Number.isFinite(locator.x)) {
     throw new Error(`invalid argument: ${field}.locator.x`);

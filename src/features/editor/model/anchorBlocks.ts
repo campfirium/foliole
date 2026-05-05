@@ -48,7 +48,8 @@ interface CloseAnchorToken extends AnchorToken {
 }
 
 const TOKEN_PATTERN = /<(\/?)(highlight|cloze)(?:\s+id="([^"]+)")?\s*>/g;
-const ID_PATTERN = /^[1-9]\d*$/;
+const ANCHOR_MARKUP_PATTERN = /<\/?(?:highlight|cloze)\b/;
+const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
 function isAnchorKind(value: string): value is AnchorKind {
   return value === 'highlight' || value === 'cloze';
@@ -122,6 +123,16 @@ function tokenize(content: string): AnchorToken[] {
 export function serializeAnchorBlock(payload: AnchorBlockPayload): string {
   const normalized = normalizePayload(payload);
   return `<${normalized.kind} id="${normalized.id}"></${normalized.kind} id="${normalized.id}">`;
+}
+
+export function serializeAnchorTag(payload: AnchorBlockPayload, slash: boolean): string {
+  const normalized = normalizePayload(payload);
+  return `<${slash ? '/' : ''}${normalized.kind} id="${normalized.id}">`;
+}
+
+export function wrapAnchorText(content: string, payload: AnchorBlockPayload): string {
+  const normalized = normalizePayload(payload);
+  return `${serializeAnchorTag(normalized, false)}${content}${serializeAnchorTag(normalized, true)}`;
 }
 
 export function parseAnchorBlock(value: string): AnchorBlockPayload | null {
@@ -203,6 +214,10 @@ export function parseAnchorBlocks(content: string): ParsedAnchorBlocksResult {
 
 export function extractAnchorBlocks(content: string): ParsedAnchorBlock[] {
   return parseAnchorBlocks(content).blocks;
+}
+
+export function hasInlineAnchorMarkup(content: string): boolean {
+  return ANCHOR_MARKUP_PATTERN.test(content);
 }
 
 export function stripAnchorBlocks(content: string): string {

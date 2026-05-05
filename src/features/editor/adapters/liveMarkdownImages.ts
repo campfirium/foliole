@@ -1,30 +1,8 @@
-import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
-import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { MarkdownImageMatch } from '../model/markdownImageMatches';
+import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
 
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
-
-export interface MarkdownImageMatch {
-  attachmentId: string | null;
-  from: number;
-  to: number;
-  alt: string;
-  display: 'block' | 'inline';
-  source: string;
-}
-
-function isRemoteImageSource(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-function isInternalImageSource(value: string) {
-  return value.startsWith(ASSET_MARKDOWN_SCHEME);
-}
 
 function parseImageRange(value: number) {
   return Number.isInteger(value) && value >= 0 ? String(value) : '';
@@ -91,17 +69,8 @@ function createImageStatusElement(status: 'loading' | 'unavailable', display: Ma
   return element;
 }
 
-function buildAttachmentProtocolUrl(attachmentId: string) {
-  return `foliole-asset://attachment/${encodeURIComponent(attachmentId)}`;
-}
-
-function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
-  const before = text.slice(0, matchIndex).trim();
-  const after = text.slice(matchIndex + raw.length).trim();
-  return before.length === 0 && after.length === 0 ? 'block' : 'inline';
-}
-
 export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, editorNodeId: string | null = null) {
+  const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const wrapper = document.createElement('span');
   wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
   wrapper.dataset.mdImageAlt = imageMatch.alt;
@@ -111,42 +80,28 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, edi
   wrapper.dataset.mdImageSource = imageMatch.source;
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
-  if (isRemoteImageSource(imageMatch.source)) {
-    wrapper.append(createImageSurface(imageMatch, imageMatch.source, editorNodeId));
+  if (renderPlan.isRemote && renderPlan.imageSrc) {
+    wrapper.append(createImageSurface(imageMatch, renderPlan.imageSrc, editorNodeId));
     return wrapper;
   }
 
-  if (!imageMatch.attachmentId) {
-    wrapper.append(createImageStatusElement('unavailable', imageMatch.display));
+  if (renderPlan.fallbackStatus) {
+    wrapper.append(createImageStatusElement(renderPlan.fallbackStatus, renderPlan.display));
+    return wrapper;
+  }
+
+  const attachmentSrc = renderPlan.attachmentProtocolSrc;
+  if (!attachmentSrc) {
+    wrapper.append(createImageStatusElement('unavailable', renderPlan.display));
     return wrapper;
   }
 
   wrapper.append(
-    createImageSurface(imageMatch, buildAttachmentProtocolUrl(imageMatch.attachmentId), editorNodeId, {
+    createImageSurface(imageMatch, attachmentSrc, editorNodeId, {
       onError: () => {
-        wrapper.replaceChildren(createImageStatusElement('unavailable', imageMatch.display));
+        wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
       }
     })
   );
   return wrapper;
-}
-
-export function collectImageMatches(from: number, text: string): MarkdownImageMatch[] {
-  const matches: MarkdownImageMatch[] = [];
-  for (const match of collectMarkdownImageReferences(text)) {
-    const target = parseMarkdownImageTarget(match.rawTarget);
-    const source = target?.destination ?? null;
-    if (source && (isRemoteImageSource(source) || isInternalImageSource(source))) {
-      const start = from + match.start;
-      matches.push({
-        attachmentId: isInternalImageSource(source) ? parseAssetMarkdownUrl(source) : null,
-        display: resolveImageDisplay(text, match.start, match.fullMatch),
-        from: start,
-        to: start + match.fullMatch.length,
-        alt: match.altText,
-        source
-      });
-    }
-  }
-  return matches;
 }

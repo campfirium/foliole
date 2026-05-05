@@ -61,9 +61,12 @@ function saveNode(nodeId: string, parentNodeId: string | null, content: string, 
 }
 
 function seedArticles() {
-  saveNode('node-article', null, 'Keep <highlight id="1">bright text</highlight id="1"> here.\n\nStudy <cloze id="2">answer</cloze id="2"> today.', '2026-03-30T00:00:00.000Z', { title: 'Mirror Demo' });
-  saveNode('node-highlight', 'node-article', 'bright text', '2026-03-30T00:00:00.000Z', { anchorLink: { id: '1', kind: 'highlight' }, position: 1 });
-  saveNode('node-cloze', 'node-article', 'Keep bright text here.\n\nStudy [...] today.', '2026-03-30T00:00:00.000Z', { anchorLink: { id: '2', kind: 'cloze' }, position: 2, reveal: 'answer' });
+  const content = 'Keep bright text here.\n\nStudy answer today.';
+  const highlightText = 'bright text';
+  const clozeText = 'answer';
+  saveNode('node-article', null, content, '2026-03-30T00:00:00.000Z', { title: 'Mirror Demo' });
+  saveNode('node-highlight', 'node-article', 'bright text', '2026-03-30T00:00:00.000Z', { anchorLink: { id: '1', kind: 'highlight', locator: { from: content.indexOf(highlightText), to: content.indexOf(highlightText) + highlightText.length, originalText: highlightText } }, position: 1 });
+  saveNode('node-cloze', 'node-article', 'Keep bright text here.\n\nStudy [...] today.', '2026-03-30T00:00:00.000Z', { anchorLink: { id: '2', kind: 'cloze', locator: { from: content.indexOf(clozeText), to: content.indexOf(clozeText) + clozeText.length, originalText: clozeText } }, position: 2, reveal: 'answer' });
   saveNode('node-second', null, 'Plain body.', '2026-03-30T00:00:00.000Z', { title: 'Second Demo', position: 3 });
 }
 
@@ -82,10 +85,20 @@ it('updates the same article mirror when article body changes and removes legacy
   await fs.writeFile(mirrorPath('Clozes.md'), 'old', 'utf8');
   await fs.mkdir(path.join(tempRoot, 'Library', 'Mirror', 'Mirror Demo'), { recursive: true });
 
-  saveNode('node-article', null, 'Keep <highlight id="1">bright text</highlight id="1"> here.\n\nUpdated body.', '2030-03-30T00:10:00.000Z', { title: 'Mirror Demo' });
+  const updatedContent = 'Keep bright text here.\n\nUpdated body keeps answer.';
+  saveNode('node-article', null, updatedContent, '2030-03-30T00:10:00.000Z', { title: 'Mirror Demo' });
+  saveNode('node-highlight', 'node-article', 'bright text', '2030-03-30T00:10:00.000Z', {
+    anchorLink: { id: '1', kind: 'highlight', locator: { from: updatedContent.indexOf('bright text'), to: updatedContent.indexOf('bright text') + 'bright text'.length, originalText: 'bright text' } },
+    position: 1
+  });
+  saveNode('node-cloze', 'node-article', 'Keep bright text here.\n\nUpdated body keeps [...] .', '2030-03-30T00:10:00.000Z', {
+    anchorLink: { id: '2', kind: 'cloze', locator: { from: updatedContent.indexOf('answer'), to: updatedContent.indexOf('answer') + 'answer'.length, originalText: 'answer' } },
+    position: 2,
+    reveal: 'answer'
+  });
 
   await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
-  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Updated body.');
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Updated body keeps <u>answer</u>.');
   await expect(fs.access(mirrorPath('Highlights.md'))).rejects.toThrow();
   await expect(fs.access(mirrorPath('Clozes.md'))).rejects.toThrow();
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Mirror Demo'))).rejects.toThrow();
@@ -96,7 +109,7 @@ it('updates the same article mirror when highlight content changes', async () =>
   await rebuildMirrorOutput();
 
   saveNode('node-highlight', 'node-article', 'gold text', '2030-03-30T00:11:00.000Z', {
-    anchorLink: { id: '1', kind: 'highlight' },
+    anchorLink: { id: '1', kind: 'highlight', locator: { from: 'Keep bright text here.\n\nStudy answer today.'.indexOf('bright text'), to: 'Keep bright text here.\n\nStudy answer today.'.indexOf('bright text') + 'bright text'.length, originalText: 'bright text' } },
     position: 1
   });
 
@@ -109,7 +122,7 @@ it('updates the same article mirror when cloze content changes', async () => {
   await rebuildMirrorOutput();
 
   saveNode('node-cloze', 'node-article', 'Keep bright text here.\n\nCustom prompt [...] today.', '2030-03-30T00:12:00.000Z', {
-    anchorLink: { id: '2', kind: 'cloze' },
+    anchorLink: { id: '2', kind: 'cloze', locator: { from: 'Keep bright text here.\n\nStudy answer today.'.indexOf('answer'), to: 'Keep bright text here.\n\nStudy answer today.'.indexOf('answer') + 'answer'.length, originalText: 'answer' } },
     position: 2,
     reveal: 'final answer'
   });
@@ -144,7 +157,7 @@ it('startup backfill only recreates missing article files without refreshing exi
   seedArticles();
   await rebuildMirrorOutput();
 
-  saveNode('node-article', null, 'Keep <highlight id="1">bright text</highlight id="1"> here.\n\nShould stay stale on startup.', '2030-03-30T00:13:00.000Z', { title: 'Mirror Demo' });
+  saveNode('node-article', null, 'Keep bright text here.\n\nShould stay stale on startup.', '2030-03-30T00:13:00.000Z', { title: 'Mirror Demo' });
   await fs.rm(mirrorPath('Second Demo.md'));
 
   await expect(backfillMissingMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
@@ -156,10 +169,20 @@ it('manual rebuild fully refreshes all article mirrors', async () => {
   seedArticles();
   await rebuildMirrorOutput();
 
-  saveNode('node-article', null, 'Keep <highlight id="1">bright text</highlight id="1"> here.\n\nManual rebuild refresh.', '2030-03-30T00:14:00.000Z', { title: 'Mirror Demo' });
+  const rebuiltContent = 'Keep bright text here.\n\nManual rebuild refresh answer.';
+  saveNode('node-article', null, rebuiltContent, '2030-03-30T00:14:00.000Z', { title: 'Mirror Demo' });
+  saveNode('node-highlight', 'node-article', 'bright text', '2030-03-30T00:14:00.000Z', {
+    anchorLink: { id: '1', kind: 'highlight', locator: { from: rebuiltContent.indexOf('bright text'), to: rebuiltContent.indexOf('bright text') + 'bright text'.length, originalText: 'bright text' } },
+    position: 1
+  });
+  saveNode('node-cloze', 'node-article', 'Keep bright text here.\n\nManual rebuild refresh [...].', '2030-03-30T00:14:00.000Z', {
+    anchorLink: { id: '2', kind: 'cloze', locator: { from: rebuiltContent.indexOf('answer'), to: rebuiltContent.indexOf('answer') + 'answer'.length, originalText: 'answer' } },
+    position: 2,
+    reveal: 'answer'
+  });
 
   await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2, queued_article_count: 2 });
-  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Manual rebuild refresh.');
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Manual rebuild refresh <u>answer</u>.');
   await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body.');
 });
 

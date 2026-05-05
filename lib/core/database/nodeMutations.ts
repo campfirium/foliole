@@ -18,11 +18,18 @@ interface NodeAnchorLinkPayload {
   kind: 'highlight' | 'cloze';
   locator?: {
     attachmentId?: string;
+    from?: number;
     height?: number;
+    originalText?: string;
     page?: number;
+    to?: number;
     width?: number;
     x: number;
     y: number;
+  } | {
+    from: number;
+    originalText: string;
+    to: number;
   };
 }
 

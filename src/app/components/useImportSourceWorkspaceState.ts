@@ -36,6 +36,7 @@ function toKeepPreviewSummary(result: NonNullable<Awaited<ReturnType<typeof prev
     newCount: result.newCount,
     previewedAt: result.previewedAt,
     samples: result.entries.slice(0, 6).map((entry) => ({
+      contentPreview: entry.contentPreview,
       detail: entry.detail,
       detectedHighlightCount: entry.detectedHighlightCount,
       highlightSamples: entry.highlightSamples,

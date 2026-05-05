@@ -18,8 +18,10 @@ interface SourceNodeRow {
 
 export interface NodeSourceUpdatePreview {
   checked_at: string;
+  current_highlight_count: number;
   current_content: string;
   source_node_id: string;
+  updated_highlight_count: number;
   updated_content: string;
 }
 
@@ -35,18 +37,37 @@ function readSourceNode(nodeId: string) {
   );
 }
 
+function countCurrentHighlights(nodeId: string) {
+  const row = openDatabaseConnection().sqlite
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM nodes
+       WHERE parent_id = ?
+         AND anchor_link IS NOT NULL
+         AND deleted_at IS NULL`
+    )
+    .get(nodeId) as { count: number } | undefined;
+  return row?.count ?? 0;
+}
+
 function stripImportedAnchorTags(content: string) {
   return content.replace(/<\/?(?:highlight|cloze)\s+id="[^"]+">/g, '');
 }
 
-function normalizeComparableContent(content: string, sourceProfile?: string) {
-  const normalized = stripImportedAnchorTags(content).replace(/\r\n?/g, '\n').trim();
-  if (sourceProfile !== 'body_with_highlight_sidecar') {
-    return normalized;
-  }
+function hasImportedAnchorTags(content: string) {
+  return /<\/?(?:highlight|cloze)\s+id="[^"]+">/.test(content);
+}
+
+function stripUnmatchedSidecarAppendix(content: string) {
   const marker = '\n\n## Unmatched Sidecar Highlights\n\n';
-  const markerIndex = normalized.indexOf(marker);
-  return (markerIndex >= 0 ? normalized.slice(0, markerIndex) : normalized).trim();
+  const markerIndex = content.indexOf(marker);
+  return (markerIndex >= 0 ? content.slice(0, markerIndex) : content).trim();
+}
+
+function normalizeComparableContent(content: string, sourceProfile?: string) {
+  const normalized = content.replace(/\r\n?/g, '\n').trim();
+  const comparable = hasImportedAnchorTags(normalized) ? stripImportedAnchorTags(normalized).trim() : normalized;
+  return sourceProfile === 'body_with_highlight_sidecar' ? stripUnmatchedSidecarAppendix(comparable) : comparable;
 }
 
 function resolveRuleConfig(ruleId: string) {
@@ -183,8 +204,10 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
 
   return {
     checked_at: checkedAt,
+    current_highlight_count: countCurrentHighlights(sourceNode.id),
     current_content: sourceNode.content,
     source_node_id: sourceNode.id,
+    updated_highlight_count: prepared.matchedHighlights?.length ?? 0,
     updated_content: prepared.content
   };
 }

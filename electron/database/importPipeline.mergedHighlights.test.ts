@@ -44,9 +44,17 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
   const childRows = nodeId
     ? connection.sqlite
         .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-        .all(nodeId)
+        .all(nodeId) as Array<{ anchor_link: string; content: string; parent_id: string; title: string }>
     : [];
   return { childRows, nodeRow, sourceFingerprint };
+}
+
+function parseAnchorLink(value: string) {
+  return JSON.parse(value) as {
+    id: string;
+    kind: string;
+    locator?: { from: number; originalText: string; to: number };
+  };
 }
 
 it('refreshes imported highlight child nodes when a generic merged import changes', () => {
@@ -73,15 +81,25 @@ it('refreshes imported highlight child nodes when a generic merged import change
   );
 
   const { childRows, nodeRow } = readPersistedImportState(first.sourceFingerprint, updated.nodeId);
+  const importedAnchorLink = parseAnchorLink(childRows[0]!.anchor_link);
 
   expect(nodeRow).toEqual({
-    content: '# Imported\nUse <highlight id="1">different</highlight id="1"> text',
+    content: '# Imported\nUse different text',
     parent_id: 'special-inbox',
     title: 'note'
   });
-  expect(childRows).toEqual([
+  expect(childRows.map((row) => ({
+    anchorLink: parseAnchorLink(row.anchor_link),
+    content: row.content,
+    parent_id: row.parent_id,
+    title: row.title
+  }))).toEqual([
     {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      anchorLink: expect.objectContaining({
+        id: importedAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'different' })
+      }),
       content: 'different',
       parent_id: updated.nodeId,
       title: 'different'

@@ -24,21 +24,15 @@ vi.mock('../../../shared/platform/performanceDiagnosticsProbe', () => ({
   markNodePositionRequested: (...args: unknown[]) => mockMarkNodePositionRequested(...args)
 }));
 
-vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
-  CodeMirrorEditorAdapter: class {
+function createMockCodeMirrorEditorAdapterClass() {
+  return class {
     destroy() {
       mockDestroy();
     }
     focus() {}
-    getContent() {
-      return '';
-    }
-    getDocumentPositionAtViewportY() {
-      return 0;
-    }
-    getLineBlockHeight() {
-      return 24;
-    }
+    getContent() { return ''; }
+    getDocumentPositionAtViewportY() { return 0; }
+    getLineBlockHeight() { return 24; }
     setContent(content: string) {
       mockSetContent(content);
     }
@@ -48,6 +42,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setSearchDecorations(searchDecorations: unknown) {
       mockSetSearchDecorations(searchDecorations);
     }
+    setTextAnchorPresentation() {}
     setHideTitleHeading(value: boolean) {
       mockSetHideTitleHeading(value);
     }
@@ -82,7 +77,11 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     onScroll() {
       return mockOnScroll();
     }
-  }
+  };
+}
+
+vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
+  CodeMirrorEditorAdapter: createMockCodeMirrorEditorAdapterClass()
 }));
 
 import { MarkdownEditor } from './MarkdownEditor';

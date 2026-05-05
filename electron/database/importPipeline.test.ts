@@ -22,6 +22,7 @@ import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerpri
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { runPreparedImport } from './importPipeline.js';
+import { parseAnchorLink, readInboxChildTitlesByOrder, readPersistedImportState } from './importPipeline.test-support.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -58,47 +59,6 @@ function createUntrackedImport(content: string, importedAt: string) {
     kind: 'markdown',
     sourceTrackingMode: 'untracked'
   });
-}
-
-function readPersistedImportState(sourceFingerprint: string, nodeId: string | null) {
-  const connection = openDatabaseConnection();
-  const sourceRow = connection.sqlite
-    .prepare(
-      `SELECT provider, source_kind, source_name, source_locator, latest_node_id
-       FROM import_sources
-       WHERE source_fingerprint = ?`
-    )
-    .get(sourceFingerprint);
-  const runRows = connection.sqlite
-    .prepare(
-      `SELECT duplicate_semantic, result_status, node_id, degraded_reason
-       FROM import_runs
-       WHERE source_fingerprint = ?
-       ORDER BY imported_at ASC`
-    )
-    .all(sourceFingerprint);
-  const nodeRow = nodeId
-    ? connection.sqlite.prepare('SELECT parent_id, title, hide_title_heading, content, opening_text FROM nodes WHERE id = ?').get(nodeId)
-    : undefined;
-  const childRows = nodeId
-    ? connection.sqlite
-        .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-        .all(nodeId)
-    : [];
-
-  return { childRows, nodeRow, runRows, sourceRow };
-}
-
-function readInboxChildTitlesByOrder() {
-  return openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT n.title
-       FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
-       WHERE n.parent_id = 'special-inbox'
-       ORDER BY o.position ASC`
-    )
-    .all() as Array<{ title: string }>;
 }
 
 it('persists new, duplicate, updated and degraded import semantics with traceability', () => {
@@ -211,17 +171,27 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
   );
 
   const { childRows, nodeRow } = readPersistedImportState(adopted.sourceFingerprint, adopted.nodeId);
+  const importedAnchorLink = parseAnchorLink(childRows[0]!.anchor_link);
 
   expect(nodeRow).toEqual({
-    content: '# Imported\nUse <highlight id="1">important</highlight id="1"> text',
+    content: '# Imported\nUse important text',
     hide_title_heading: 1,
     opening_text: 'Use important text',
     parent_id: 'special-inbox',
     title: 'note'
   });
-  expect(childRows).toEqual([
+  expect(childRows.map((row) => ({
+    anchorLink: parseAnchorLink(row.anchor_link),
+    content: row.content,
+    parent_id: row.parent_id,
+    title: row.title
+  }))).toEqual([
     {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      anchorLink: expect.objectContaining({
+        id: importedAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'important' })
+      }),
       content: 'important',
       parent_id: adopted.nodeId,
       title: 'important'

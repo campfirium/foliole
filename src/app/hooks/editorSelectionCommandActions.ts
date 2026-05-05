@@ -1,32 +1,39 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import { applySelectionMarkup, type CommandMarkupType, type SelectionCommandPayload } from '../contextCommands';
+import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type { SelectionCommandPayload } from '../contextCommands';
 
 export function runSelectionCommandFromPayload(args: {
   closeContextMenu?: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   onApplied: (payload: SelectionCommandPayload) => string | null;
   payload: SelectionCommandPayload;
-  syncActiveNodeContentFromEditor: () => void;
-  type: CommandMarkupType;
 }) {
-  const applied = applySelectionMarkup(args.editorRef.current, args.type, args.payload.entries);
-  if (!applied) {
+  if (!args.editorRef.current || args.payload.entries.length === 0) {
     args.closeContextMenu?.();
     return null;
   }
-  args.syncActiveNodeContentFromEditor();
   const createdNodeId = args.onApplied(args.payload);
   args.closeContextMenu?.();
   return createdNodeId;
 }
 
 function createHighlightFactory(
-  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => string | null
+  createHighlightNodeFromSelection: (
+    parentNodeId: string,
+    selectionText: string,
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
+  ) => string | null
 ) {
   return (payload: SelectionCommandPayload) =>
-    createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText, payload.anchorId) ?? null;
+    createHighlightNodeFromSelection(
+      payload.parentNodeId,
+      payload.selectionText,
+      payload.anchorId,
+      createTextAnchorLink(payload, 'highlight')
+    ) ?? null;
 }
 
 function createNoteFromPayloadHandler(args: {
@@ -52,29 +59,40 @@ function createClozeHandlers(args: {
     parentNodeId: string,
     clozeContent: string,
     answer: string,
-    anchorId: string
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
   ) => string | null;
   runSelectionCommand: (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => void;
   runSelectionCommandFromPayloadHandler: (args: {
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
-    type: CommandMarkupType;
   }) => string | null;
 }) {
   return {
     handleCreateCloze() {
       args.runSelectionCommand((payload) => {
-        args.createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
+        args.createQANodeFromSelection(
+          payload.parentNodeId,
+          payload.clozeContent,
+          payload.selectionText,
+          payload.anchorId,
+          createTextAnchorLink(payload, 'cloze')
+        );
       }, 'cloze');
     },
     handleCreateClozeFromPayload(payload: SelectionCommandPayload) {
       return args.runSelectionCommandFromPayloadHandler({
         onApplied: () => {
-          args.createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
+          args.createQANodeFromSelection(
+            payload.parentNodeId,
+            payload.clozeContent,
+            payload.selectionText,
+            payload.anchorId,
+            createTextAnchorLink(payload, 'cloze')
+          );
           return null;
         },
-        payload,
-        type: 'cloze'
+        payload
       });
     }
   };
@@ -82,13 +100,17 @@ function createClozeHandlers(args: {
 
 function createHighlightHandlers(args: {
   createChildNode: (parentNodeId: string, content?: string) => string;
-  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => string | null;
+  createHighlightNodeFromSelection: (
+    parentNodeId: string,
+    selectionText: string,
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
+  ) => string | null;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
   runSelectionCommandFromPayloadHandler: (args: {
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
-    type: CommandMarkupType;
   }) => string | null;
 }) {
   const createHighlight = createHighlightFactory(args.createHighlightNodeFromSelection);
@@ -103,15 +125,13 @@ function createHighlightHandlers(args: {
     handleCreateHighlightFromPayload(payload: SelectionCommandPayload) {
       return args.runSelectionCommandFromPayloadHandler({
         onApplied: createHighlight,
-        payload,
-        type: 'highlight'
+        payload
       });
     },
     handleCreateNoteFromPayload(payload: SelectionCommandPayload) {
       return args.runSelectionCommandFromPayloadHandler({
         onApplied: createNoteFromPayload,
-        payload,
-        type: 'highlight'
+        payload
       });
     }
   };
@@ -119,12 +139,18 @@ function createHighlightHandlers(args: {
 
 export function createSelectionHandlers(args: {
   createChildNode: (parentNodeId: string, content?: string) => string;
-  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => string | null;
+  createHighlightNodeFromSelection: (
+    parentNodeId: string,
+    selectionText: string,
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
+  ) => string | null;
   createQANodeFromSelection: (
     parentNodeId: string,
     clozeContent: string,
     answer: string,
-    anchorId: string
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
   ) => string | null;
   onExitImmersiveMode: () => void;
   onSelectNode: (nodeId: string) => void;
@@ -132,7 +158,6 @@ export function createSelectionHandlers(args: {
   runSelectionCommandFromPayloadHandler: (args: {
     onApplied: (payload: SelectionCommandPayload) => string | null;
     payload: SelectionCommandPayload;
-    type: CommandMarkupType;
   }) => string | null;
 }) {
   const clozeHandlers = createClozeHandlers(args);
@@ -147,5 +172,20 @@ export function createSelectionHandlers(args: {
     },
     handleCreateHighlightFromPayload: highlightHandlers.handleCreateHighlightFromPayload,
     handleCreateNoteFromPayload: highlightHandlers.handleCreateNoteFromPayload
+  };
+}
+
+function createTextAnchorLink(payload: SelectionCommandPayload, kind: 'highlight' | 'cloze'): NodeAnchorLink | undefined {
+  if (payload.entries.length !== 1) {
+    return undefined;
+  }
+  const locator = payload.entries[0]?.locator;
+  if (!locator) {
+    return undefined;
+  }
+  return {
+    id: payload.anchorId,
+    kind,
+    locator
   };
 }

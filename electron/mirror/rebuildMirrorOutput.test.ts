@@ -65,7 +65,7 @@ function seedMirrorArticleFixture(articleContent: string) {
     isTitleManual: true,
     content: 'bright text',
     reveal: null,
-    anchorLink: { id: '1', kind: 'highlight' },
+    anchorLink: { id: '1', kind: 'highlight', locator: { from: 5, to: 16, originalText: 'bright text' } },
     position: 1,
     createdAt: '2026-03-30T00:00:00.000Z',
     updatedAt: '2026-03-30T00:00:00.000Z'
@@ -78,7 +78,7 @@ function seedMirrorArticleFixture(articleContent: string) {
     isTitleManual: true,
     content: '# Mirror Demo\n\nKeep bright text here.\n\nStudy [...] today.\n\nEdited guess later.',
     reveal: 'answer',
-    anchorLink: { id: '2', kind: 'cloze' },
+    anchorLink: { id: '2', kind: 'cloze', locator: { from: articleContent.indexOf('answer'), to: articleContent.indexOf('answer') + 'answer'.length, originalText: 'answer' } },
     position: 2,
     createdAt: '2026-03-30T00:00:00.000Z',
     updatedAt: '2026-03-30T00:00:00.000Z'
@@ -91,7 +91,7 @@ function seedMirrorArticleFixture(articleContent: string) {
     isTitleManual: true,
     content: 'Custom prompt [...] only',
     reveal: 'real answer',
-    anchorLink: { id: '3', kind: 'cloze' },
+    anchorLink: { id: '3', kind: 'cloze', locator: { from: articleContent.indexOf('guess'), to: articleContent.indexOf('guess') + 'guess'.length, originalText: 'guess' } },
     position: 3,
     createdAt: '2026-03-30T00:00:00.000Z',
     updatedAt: '2026-03-30T00:00:00.000Z'
@@ -100,9 +100,9 @@ function seedMirrorArticleFixture(articleContent: string) {
 
 it('writes one readable article .md with inline highlights, inline clozes, and snowflake notes only for extra changes', async () => {
   const articleContent = [
-    'Keep <highlight id="1">bright text</highlight id="1"> here.',
-    'Study <cloze id="2">answer</cloze id="2"> today.',
-    'Edited <cloze id="3">guess</cloze id="3"> later.'
+    'Keep bright text here.',
+    'Study answer today.',
+    'Edited guess later.'
   ].join('\n\n');
 
   seedMirrorArticleFixture(articleContent);

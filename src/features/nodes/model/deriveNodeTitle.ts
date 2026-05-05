@@ -1,7 +1,7 @@
 import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
+import { stripAnchorBlocks } from '../../editor/model/anchorBlocks';
 
 export const UNTITLED_NODE_TITLE = 'Untitled';
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 const MARKDOWN_HEADING_PATTERN = /^\s{0,3}#{1,6}\s+(.+)$/;
 const UNTITLED_NODE_TITLE_PATTERN = /^Untitled(?: (\d+))?$/;
 
@@ -26,7 +26,7 @@ function stripMarkdownInline(value: string) {
 }
 
 function normalizeMarkdownContent(content: string) {
-  const noAnchorTags = content.replace(ANCHOR_TAG_PATTERN, '');
+  const noAnchorTags = stripAnchorBlocks(content);
   const normalized = noAnchorTags
     .split(/\r?\n/)
     .map((line) => stripMarkdownPrefixes(line))
@@ -35,7 +35,7 @@ function normalizeMarkdownContent(content: string) {
 }
 
 function pickHeadingTitle(content: string) {
-  const noAnchorTags = content.replace(ANCHOR_TAG_PATTERN, '');
+  const noAnchorTags = stripAnchorBlocks(content);
   for (const line of noAnchorTags.split(/\r?\n/)) {
     const match = line.match(MARKDOWN_HEADING_PATTERN);
     if (!match) {

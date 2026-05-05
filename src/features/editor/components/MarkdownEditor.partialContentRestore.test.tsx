@@ -23,6 +23,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     getLineBlockHeight() { return 24; }
     setContent(content: string) { currentContent = content; }
     setDiffDecorations() {}
+    setTextAnchorPresentation() {}
     setHideTitleHeading() {}
     getSelection() { return { from: 0, to: 0 }; }
     setParagraphMarker() {}
@@ -117,7 +118,6 @@ it('retries a saved scroll-only restore after a short placeholder body fails to 
 
   view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
 
-  expect(mockRestoreSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
   });

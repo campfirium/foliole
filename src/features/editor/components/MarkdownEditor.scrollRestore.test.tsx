@@ -15,6 +15,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     getLineBlockHeight() { return 24; }
     setContent() {}
     setDiffDecorations() {}
+    setTextAnchorPresentation() {}
     setHideTitleHeading() {}
     getSelection() { return { from: 0, to: 0 }; }
     setParagraphMarker() {}

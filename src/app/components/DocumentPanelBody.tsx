@@ -3,6 +3,8 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorTextAnchorPresentation } from '../../features/editor/adapters/EditorAdapter';
+import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { cn } from '../../shared/lib/utils';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
@@ -21,7 +23,7 @@ interface DocumentPanelBodyProps {
   editorContent: string;
   editorContentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
-  hiddenTextAnchorKeys?: readonly string[];
+  textAnchorPresentation?: EditorTextAnchorPresentation;
   editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideScrollbar?: boolean;
   editorHideTitleHeading?: boolean;
@@ -42,6 +44,7 @@ interface DocumentPanelBodyProps {
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;

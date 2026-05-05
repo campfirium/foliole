@@ -10,7 +10,7 @@ import {
   type ImageClozeCreateEventDetail,
   type ImageClozeDeleteEventDetail
 } from '../../features/image-cloze/model/imageClozeEvents';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 
 import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
 import { createToggleSelectionHighlightFromPayloadHandler } from './selectionHighlightToggle';
@@ -27,7 +27,12 @@ interface UseEditorContextCommandsParams {
   activeNode?: Node;
   activeNodeId: string | null;
   createChildNode: (parentNodeId: string, content?: string) => string;
-  createHighlightNodeFromSelection: (parentNodeId: string, selectionText: string, anchorId: string) => string | null;
+  createHighlightNodeFromSelection: (
+    parentNodeId: string,
+    selectionText: string,
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
+  ) => string | null;
   createImageClozeNodes?: (
     parentNodeId: string,
     attachmentId: string,
@@ -38,7 +43,8 @@ interface UseEditorContextCommandsParams {
     parentNodeId: string,
     clozeContent: string,
     answer: string,
-    anchorId: string
+    anchorId: string,
+    anchorLink?: NodeAnchorLink
   ) => string | null;
   deleteNodePermanently: (nodeId: string) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
@@ -130,10 +136,9 @@ export function useEditorContextCommands({
   const runSelectionCommand = createSelectionCommandRunner(
     contextMenu?.kind === 'selection' ? contextMenu : null,
     editorRef,
-    closeContextMenu,
-    syncActiveNodeContentFromEditor
+    closeContextMenu
   );
-  const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef, syncActiveNodeContentFromEditor);
+  const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef);
   const selectionHandlers = createSelectionHandlers({
     createChildNode,
     createHighlightNodeFromSelection,
@@ -159,25 +164,20 @@ export function useEditorContextCommands({
 
 function createPayloadSelectionRunner(
   closeContextMenu: () => void,
-  editorRef: MutableRefObject<EditorAdapter | null>,
-  syncActiveNodeContentFromEditor: () => void
+  editorRef: MutableRefObject<EditorAdapter | null>
 ) {
   return ({
     onApplied,
-    payload,
-    type
+    payload
   }: {
     onApplied: (payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload']) => string | null;
     payload: Parameters<typeof runSelectionCommandFromPayload>[0]['payload'];
-    type: Parameters<typeof runSelectionCommandFromPayload>[0]['type'];
   }) =>
     runSelectionCommandFromPayload({
       closeContextMenu,
       editorRef,
       onApplied,
-      payload,
-      syncActiveNodeContentFromEditor,
-      type
+      payload
     });
 }
 

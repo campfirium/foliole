@@ -1,42 +1,34 @@
+import { isTextAnchorLocator } from '../../nodes/model/nodeTypes';
+import type { NodeAnchorLink } from '../../nodes/model/nodeTypes';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 
-import { collectAnchorTagTokens } from './anchorTagSegments';
+import { hasInlineAnchorMarkup } from './anchorBlocks';
+import { findAnchorRecord, getAnchorContentRange } from './anchorRecords';
+import { resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
 
-export interface AnchorNavigationTarget {
-  id: string;
-  kind: 'highlight' | 'cloze';
+export type AnchorNavigationTarget = Pick<NodeAnchorLink, 'id' | 'kind' | 'locator'>;
+
+function resolveTextAnchorSelection(
+  content: string,
+  locator: NonNullable<NodeAnchorLink['locator']>
+): EditorSelection | null {
+  if (!isTextAnchorLocator(locator)) {
+    return null;
+  }
+  return resolveTextAnchorLocatorSelection(content, locator);
 }
 
 export function findAnchorSelection(content: string, anchor: AnchorNavigationTarget): EditorSelection | null {
-  const tokens = collectAnchorTagTokens(content);
-  let cursor = 0;
-  let isActive = false;
-  let from: number | null = null;
-  let to = -1;
-
-  for (const token of tokens) {
-    if (token.from > cursor && isActive) {
-      from = from ?? cursor;
-      to = token.from;
-    }
-
-    const isTargetToken = token.kind === anchor.kind && token.id === anchor.id;
-    if (isTargetToken) {
-      isActive = !token.slash;
-    }
-    cursor = token.to;
+  const locatorSelection = anchor.locator ? resolveTextAnchorSelection(content, anchor.locator) : null;
+  if (locatorSelection) {
+    return locatorSelection;
   }
-
-  if (cursor < content.length && isActive) {
-    from = from ?? cursor;
-    to = content.length;
-  }
-
-  if (from === null || to <= from) {
+  if (!hasInlineAnchorMarkup(content)) {
     return null;
   }
-  return {
-    from,
-    to
-  };
+  const record = findAnchorRecord(content, anchor);
+  if (!record) {
+    return null;
+  }
+  return getAnchorContentRange(record);
 }

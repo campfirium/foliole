@@ -1,4 +1,4 @@
-import { parseAnchorBlocks } from '../features/editor/model/anchorBlocks';
+import { removeInlineAnchorMarkup } from '../features/editor/model/anchorInlineCleanup';
 import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
@@ -22,17 +22,6 @@ export interface DeleteNodeMutationResult {
     WorkspaceState,
     'activeNodeId' | 'navigation' | 'nodeOrder' | 'nodesById' | 'reviewSession' | 'trashedNodeIds'
   >;
-}
-
-function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
-  const matchedBlock = parseAnchorBlocks(content).blocks.find((block) => block.id === anchor.id && block.kind === anchor.kind);
-  if (!matchedBlock) {
-    return content;
-  }
-  const before = content.slice(0, matchedBlock.openTagFrom);
-  const inner = content.slice(matchedBlock.openTagTo, matchedBlock.closeTagFrom);
-  const after = content.slice(matchedBlock.closeTagTo);
-  return `${before}${inner}${after}`;
 }
 
 function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, deletedAt: string) {
@@ -86,7 +75,7 @@ function updateDeletedAnchorParent(args: {
   }
   const shouldRemoveTextAnchor =
     args.mode === 'permanent' && !anchorLink.locator && isNodeDocumentLoaded(parentNode);
-  const cleanedContent = shouldRemoveTextAnchor ? removeAnchorTagsForLink(parentNode.content, anchorLink) : parentNode.content;
+  const cleanedContent = shouldRemoveTextAnchor ? removeInlineAnchorMarkup(parentNode.content, anchorLink) : parentNode.content;
   const parentWithRemovedRegion = removeImageRegionFromParent(parentNode, args.deletedNode, args.deletedAt);
   if (cleanedContent === parentNode.content && parentWithRemovedRegion === parentNode) {
     return null;

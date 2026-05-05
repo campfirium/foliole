@@ -8,12 +8,39 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+function createTextAnchorLink(id: string, originalText: string, from = 0) {
+  return {
+    id,
+    kind: 'highlight' as const,
+    locator: {
+      from,
+      originalText,
+      to: from + originalText.length
+    }
+  };
+}
+
+function createTextClozeAnchorLink(id: string, originalText: string, from = 0) {
+  return {
+    id,
+    kind: 'cloze' as const,
+    locator: {
+      from,
+      originalText,
+      to: from + originalText.length
+    }
+  };
+}
+
 it('creates highlight node without leaving current node', () => {
   render(<App />);
   let createdNodeId: string | null = null;
   act(() => {
-    createdNodeId = useWorkspaceStore.getState().createHighlightNodeFromSelection('node-1', 'Welcome');
+    createdNodeId = useWorkspaceStore
+      .getState()
+      .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
+  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBe('node-1');
@@ -30,7 +57,7 @@ it('creates highlight node without leaving current node', () => {
   );
   expect(screen.getByRole('treeitem', { name: 'Welcome' })).toHaveAttribute(
     'data-node-derived',
-    'false'
+    'true'
   );
 });
 
@@ -38,17 +65,20 @@ it('keeps derived node icons at normal tone while lowering row emphasis', () => 
   render(<App />);
   let createdNodeId: string | null = null;
   act(() => {
-    createdNodeId = useWorkspaceStore.getState().createHighlightNodeFromSelection('node-1', 'Welcome');
+    createdNodeId = useWorkspaceStore
+      .getState()
+      .createHighlightNodeFromSelection('node-1', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
+  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
 
   const regularRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
   const derivedRow = screen.getByRole('treeitem', { name: 'Welcome' });
 
   expect(regularRow).toHaveAttribute('data-node-emphasis', 'primary');
   expect(createdNodeId).toBeTruthy();
-  expect(derivedRow).toHaveAttribute('data-node-emphasis', 'primary');
+  expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
   expect(regularRow.className).toContain('font-bold');
-  expect(derivedRow.className).toContain('font-bold');
+  expect(derivedRow.className).toContain('font-normal');
   expect(regularRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-tone',
     'normal'
@@ -63,7 +93,9 @@ it('creates cloze node without leaving current node', () => {
   render(<App />);
   let createdNodeId: string | null = null;
   act(() => {
-    createdNodeId = useWorkspaceStore.getState().createQANodeFromSelection('node-1', '[...] to Foliole', 'Welcome');
+    createdNodeId = useWorkspaceStore
+      .getState()
+      .createQANodeFromSelection('node-1', '[...] to Foliole', 'Welcome', 'cloze-1', createTextClozeAnchorLink('cloze-1', 'Welcome'));
   });
 
   const workspace = useWorkspaceStore.getState();
@@ -84,7 +116,9 @@ it('creates cloze child content without inheriting anchor tags from parent', () 
   render(<App />);
   let createdNodeId: string | null = null;
   act(() => {
-    createdNodeId = useWorkspaceStore.getState().createQANodeFromSelection('node-1', '# A B [...]', 'C');
+    createdNodeId = useWorkspaceStore
+      .getState()
+      .createQANodeFromSelection('node-1', '# A B [...]', 'C', 'cloze-2', createTextClozeAnchorLink('cloze-2', 'C', 6));
   });
 
   const workspace = useWorkspaceStore.getState();
@@ -190,7 +224,9 @@ it('hides import actions on derived node context menus', () => {
   }));
   render(<App />);
   act(() => {
-    useWorkspaceStore.getState().createHighlightNodeFromSelection('node-article', 'Welcome', 'hl-1');
+    useWorkspaceStore
+      .getState()
+      .createHighlightNodeFromSelection('node-article', 'Welcome', 'hl-1', createTextAnchorLink('hl-1', 'Welcome'));
   });
 
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });

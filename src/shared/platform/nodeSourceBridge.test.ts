@@ -134,16 +134,20 @@ it('normalizes node source details from the runtime bridge', async () => {
 it('normalizes node source update previews from the runtime bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
     checked_at: '2026-03-28T04:00:00.000Z',
+    current_highlight_count: 2,
     current_content: 'Current content',
     source_node_id: 'node-1',
+    updated_highlight_count: 3,
     updated_content: 'Updated content'
   });
   window.electronAPI = createMockElectronApi(invoke);
 
   await expect(loadRuntimeNodeSourceUpdatePreview('node-1')).resolves.toEqual({
     checkedAt: '2026-03-28T04:00:00.000Z',
+    currentHighlightCount: 2,
     currentContent: 'Current content',
     sourceNodeId: 'node-1',
+    updatedHighlightCount: 3,
     updatedContent: 'Updated content'
   });
   expect(invoke).toHaveBeenCalledWith('load_node_source_update_preview', { node_id: 'node-1' });

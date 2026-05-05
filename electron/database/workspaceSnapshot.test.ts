@@ -163,3 +163,40 @@ it('loads persisted Untitled sequence state from sqlite snapshot', () => {
     __root__: 7
   });
 });
+
+it('preserves text anchor locators after sqlite reload', () => {
+  seedNode('node-parent', 0);
+  upsertNodeSnapshot({
+    nodeId: 'node-highlight',
+    parentNodeId: 'node-parent',
+    kind: 'topic',
+    title: 'Selected text',
+    isTitleManual: true,
+    content: 'Alpha',
+    reveal: null,
+    anchorLink: {
+      id: 'anchor-1',
+      kind: 'highlight',
+      locator: {
+        from: 3,
+        to: 8,
+        originalText: 'Alpha'
+      }
+    },
+    position: 1,
+    createdAt: '2026-03-18T00:00:00.000Z',
+    updatedAt: '2026-03-18T00:00:00.000Z'
+  });
+
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot?.nodesById['node-highlight']?.anchorLink).toEqual({
+    id: 'anchor-1',
+    kind: 'highlight',
+    locator: {
+      from: 3,
+      to: 8,
+      originalText: 'Alpha'
+    }
+  });
+});

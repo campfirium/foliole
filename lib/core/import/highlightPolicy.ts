@@ -1,27 +1,32 @@
 import type { ImportHighlightPolicy } from './contract.js';
 
 const IMPORTED_HIGHLIGHT_PATTERN = /==(.+?)==/g;
-const ANCHOR_TAG_PATTERN = /<(?:highlight|cloze)\s+id="([1-9]\d*)"\s*>/g;
 
-function readNextAnchorId(content: string) {
-  let maxAnchorId = 0;
-  for (const match of content.matchAll(ANCHOR_TAG_PATTERN)) {
-    const anchorId = Number(match[1]);
-    if (Number.isInteger(anchorId) && anchorId > maxAnchorId) {
-      maxAnchorId = anchorId;
-    }
-  }
-  return maxAnchorId + 1;
+export interface ImportedInlineHighlight {
+  content: string;
+  label: null;
 }
 
-export function applyImportHighlightPolicy(content: string, policy: ImportHighlightPolicy): string {
+export function applyImportHighlightPolicy(content: string, policy: ImportHighlightPolicy) {
   if (policy === 'reference_only') {
-    return content;
+    return {
+      content,
+      highlights: [] satisfies ImportedInlineHighlight[]
+    };
   }
-  let nextAnchorId = readNextAnchorId(content);
-  return content.replace(IMPORTED_HIGHLIGHT_PATTERN, (_, highlightedText: string) => {
-    const anchorId = String(nextAnchorId);
-    nextAnchorId += 1;
-    return `<highlight id="${anchorId}">${highlightedText}</highlight id="${anchorId}">`;
+
+  const highlights: ImportedInlineHighlight[] = [];
+  const nextContent = content.replace(IMPORTED_HIGHLIGHT_PATTERN, (_match, highlightedText: string) => {
+    const normalized = highlightedText.trim();
+    if (!normalized) {
+      return highlightedText;
+    }
+    highlights.push({ content: normalized, label: null });
+    return normalized;
   });
+
+  return {
+    content: nextContent,
+    highlights
+  };
 }

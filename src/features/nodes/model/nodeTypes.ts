@@ -44,6 +44,12 @@ export interface ImageAnchorLocator {
   y: number;
 }
 
+export interface TextAnchorLocator {
+  from: number;
+  originalText: string;
+  to: number;
+}
+
 export interface NodeImageRegion {
   id: string;
   height: number;
@@ -60,7 +66,7 @@ export interface NodeImageRegionGroup {
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze';
-  locator?: PdfAnchorLocator | ImageAnchorLocator;
+  locator?: PdfAnchorLocator | ImageAnchorLocator | TextAnchorLocator;
 }
 
 export type NodeSpecialKind = 'inbox' | 'virtual-root' | 'virtual';
@@ -91,6 +97,21 @@ export interface Node {
 
 export function isPdfAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is PdfAnchorLocator {
   return Boolean(locator && 'page' in locator && typeof locator.page === 'number' && Number.isInteger(locator.page) && locator.page > 0);
+}
+
+export function isTextAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocator {
+  return Boolean(
+    locator &&
+      'from' in locator &&
+      'to' in locator &&
+      typeof locator.from === 'number' &&
+      Number.isInteger(locator.from) &&
+      locator.from >= 0 &&
+      typeof locator.to === 'number' &&
+      Number.isInteger(locator.to) &&
+      locator.to >= locator.from &&
+      typeof locator.originalText === 'string'
+  );
 }
 
 export function hasNodeContent(node: Pick<Node, 'content' | 'hasContent'> | null | undefined) {

@@ -5,13 +5,16 @@ import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 import { SourceUpdateOverviewRuler } from './SourceUpdateOverviewRuler';
+import { SourceUpdateSummaryBar } from './SourceUpdateSummaryBar';
 
 interface DocumentSourceUpdatePanelLayoutProps {
   currentContent: string;
+  currentHighlightCount: number;
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
   onCurrentContentChange: (content: string) => void;
+  updatedHighlightCount: number;
   updatedContent: string;
 }
 
@@ -133,36 +136,42 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
   const updatedPaneProps = buildUpdatedPaneProps(props);
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <PanelColumnLabel
-        description="This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines."
-        title="Current"
+    <>
+      <SourceUpdateSummaryBar
+        currentHighlightCount={props.props.currentHighlightCount}
+        updatedHighlightCount={props.props.updatedHighlightCount}
       />
-      <div className="border-l border-border bg-bg-panel/40">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
         <PanelColumnLabel
-        description="This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines."
-        title="Updated Source"
+          description="This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines."
+          title="Current"
         />
+        <div className="border-l border-border bg-bg-panel/40">
+          <PanelColumnLabel
+            description="This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines."
+            title="Updated Source"
+          />
+        </div>
+        <div aria-hidden="true" className="border-b border-l border-border bg-bg-panel/40" />
+        <SourceUpdatePaneBody
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-bg-elevated"
+          paneProps={currentPaneProps}
+        />
+        <SourceUpdatePaneBody
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40"
+          paneProps={updatedPaneProps}
+        />
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
+          <SourceUpdateOverviewRuler
+            currentContent={props.props.currentContent}
+            currentEditor={props.currentEditor}
+            overviewSegments={props.overviewSegments}
+            totalRows={props.totalRows}
+            updatedContent={props.props.updatedContent}
+            updatedEditor={props.updatedEditor}
+          />
+        </section>
       </div>
-      <div aria-hidden="true" className="border-b border-l border-border bg-bg-panel/40" />
-      <SourceUpdatePaneBody
-        className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-bg-elevated"
-        paneProps={currentPaneProps}
-      />
-      <SourceUpdatePaneBody
-        className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40"
-        paneProps={updatedPaneProps}
-      />
-      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
-        <SourceUpdateOverviewRuler
-          currentContent={props.props.currentContent}
-          currentEditor={props.currentEditor}
-          overviewSegments={props.overviewSegments}
-          totalRows={props.totalRows}
-          updatedContent={props.props.updatedContent}
-          updatedEditor={props.updatedEditor}
-        />
-      </section>
-    </div>
+    </>
   );
 }

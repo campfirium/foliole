@@ -1,6 +1,7 @@
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeImportContract.js';
 
 interface KeepImportPreviewEntryLike {
+  contentPreview: string | null;
   detectedHighlightCount: number;
   detail: string | null;
   highlightSamples: NativeKeepImportPreviewResult['entries'][number]['highlight_samples'];
@@ -17,6 +18,7 @@ export function buildKeepImportPreviewResult(
     blocked_count: entries.filter((entry) => entry.status === 'blocked_deleted').length,
     discovered_count: entries.length,
     entries: entries.map((entry) => ({
+      content_preview: entry.contentPreview,
       detail: entry.detail,
       detected_highlight_count: entry.detectedHighlightCount,
       highlight_samples: entry.highlightSamples,

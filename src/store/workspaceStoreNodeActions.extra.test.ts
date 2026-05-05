@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { syncNodeContentToRuntime, syncNodeOrderToRuntime } from './workspaceRuntimeSync';
-import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import {
+  createWorkspaceNodeActionsFixture,
+  createWorkspaceNodeActionsSetStateHarness
+} from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
   syncCreateNodeToRuntime: vi.fn(),
@@ -15,76 +17,13 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
-type WorkspaceSetInput =
-  | WorkspaceState
-  | Partial<WorkspaceState>
-  | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
-
-function createWorkspaceFixture(): WorkspaceState {
-  const initial = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
-  return {
-    ...initial,
-    goBack: () => null,
-    goForward: () => null,
-    goToParent: () => null,
-    jumpToAncestorNode: () => null,
-    openNode: () => null,
-    resetLayout: () => undefined,
-    setNodeViewState: () => undefined,
-    setDocumentMaxWidth: () => undefined,
-    setListWidth: () => undefined,
-    setListCollapsed: () => undefined,
-    setRightSidebarWidth: () => undefined,
-    setRightSidebarCollapsed: () => undefined,
-    setActiveNode: () => undefined,
-    updateNodeTitle: () => undefined,
-    updateNodeContent: () => undefined,
-    updateVirtualNodeFilter: () => undefined,
-    updateNodeReveal: () => undefined,
-    updateNodePriority: () => undefined,
-    updateNodeDesiredRetention: () => undefined,
-    dismissNode: () => false,
-    relearnNode: () => false,
-    startReviewSession: () => false,
-    revealReviewAnswer: () => undefined,
-    gradeReviewCard: async () => false,
-    completeReviewItem: () => false,
-    deferReviewItem: () => false,
-    dismissReviewItem: () => false,
-    exitReviewSession: () => undefined,
-    deleteNode: () => undefined,
-    deleteImageClozeRegion: () => undefined,
-    deleteNodes: () => undefined,
-    restoreNode: () => undefined,
-    deleteNodePermanently: () => undefined,
-    deleteNodesPermanently: () => undefined,
-    createRootNode: () => 'unused',
-    createChildNode: () => 'unused',
-    createVirtualNode: () => 'unused',
-    createHighlightNodeFromSelection: () => null,
-    createQANodeFromSelection: () => null,
-    createImageClozeNodes: () => [],
-    moveNode: () => false,
-    moveNodes: () => false
-  };
-}
-
-function createSetStateHarness(initialState: WorkspaceState) {
-  let state = initialState;
-  const setState = (partial: WorkspaceSetInput) => {
-    const next = typeof partial === 'function' ? partial(state) : partial;
-    state = { ...state, ...next };
-  };
-  return { getState: () => state, setState };
-}
-
 describe('workspaceStoreNodeActions extra sync coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('clears imported title-heading hiding after manual content edits', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const node = harness.getState().nodesById['node-1'];
     if (!node) throw new Error('missing seed node');
     harness.setState({
@@ -107,7 +46,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
   });
 
   it('ignores content edits until the node document is fully loaded', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const node = harness.getState().nodesById['node-1'];
     if (!node) throw new Error('missing seed node');
     harness.setState({
@@ -142,10 +81,18 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
   });
 
   it('syncs create qa nodes through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
-    const nodeId = actions.createQANodeFromSelection('node-1', 'Prompt', 'Answer', 'cloze-1');
+    const nodeId = actions.createQANodeFromSelection('node-1', 'Prompt', 'Answer', 'cloze-1', {
+      id: 'cloze-1',
+      kind: 'cloze',
+      locator: {
+        from: 0,
+        originalText: 'Answer',
+        to: 6
+      }
+    });
 
     expect(nodeId).not.toBeNull();
     expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
@@ -156,13 +103,21 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
         parentNodeId: 'node-1',
         content: 'Prompt',
         reveal: 'Answer',
-        anchorLink: { id: 'cloze-1', kind: 'cloze' }
+        anchorLink: {
+          id: 'cloze-1',
+          kind: 'cloze',
+          locator: {
+            from: 0,
+            originalText: 'Answer',
+            to: 6
+          }
+        }
       })
     );
   });
 
   it('syncs moved root nodes through runtime command bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const rootNodeId = actions.createRootNode('Root B');
 

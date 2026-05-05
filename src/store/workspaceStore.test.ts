@@ -10,6 +10,7 @@ import {
   RIGHT_SIDEBAR_WIDTH_DEFAULT,
   useWorkspaceStore
 } from './workspaceStore';
+import { createClozeLocator, createHighlightLocator } from './workspaceStoreNodeActions.test-support';
 
 function resetWorkspaceStore() {
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
@@ -59,7 +60,9 @@ it('updates node content and title', () => {
 
 it('updates reveal only for qa nodes', () => {
   const seedNodeId = getSeedNodeId();
-  useWorkspaceStore.getState().createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer');
+  useWorkspaceStore
+    .getState()
+    .createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer', 'cloze-1', createClozeLocator('cloze-1', 'answer'));
   const qaNodeId = useWorkspaceStore
     .getState()
     .nodeOrder.find((nodeId) => nodeId !== seedNodeId && nodeId !== INBOX_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID);
@@ -160,7 +163,7 @@ it('creates QA node from selected content', () => {
   const seedNodeId = getSeedNodeId();
   const createdId = useWorkspaceStore
     .getState()
-    .createQANodeFromSelection(seedNodeId, 'What is [...]?', 'quoted text');
+    .createQANodeFromSelection(seedNodeId, 'What is [...]?', 'quoted text', 'cloze-2', createClozeLocator('cloze-2', 'quoted text'));
 
   expect(createdId).toBeTruthy();
   if (!createdId) {
@@ -180,7 +183,7 @@ it('creates highlight node from selected content', () => {
   const seedNodeId = getSeedNodeId();
   const createdId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection(seedNodeId, 'selected text');
+    .createHighlightNodeFromSelection(seedNodeId, 'selected text', 'hl-1', createHighlightLocator('hl-1', 'selected text'));
 
   expect(createdId).toBeTruthy();
   if (!createdId) {
@@ -254,7 +257,7 @@ it('deletes node and switches active node', () => {
   const seedNodeId = getSeedNodeId();
   const createdId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection(seedNodeId, 'selected text');
+    .createHighlightNodeFromSelection(seedNodeId, 'selected text', 'hl-2', createHighlightLocator('hl-2', 'selected text'));
 
   expect(createdId).toBeTruthy();
   if (!createdId) {
@@ -277,7 +280,7 @@ it('keeps linked anchor tags in parent content during soft delete', () => {
 
   const createdId = useWorkspaceStore
     .getState()
-    .createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer', '1');
+    .createQANodeFromSelection(seedNodeId, 'Prompt [...]', 'answer', '1', { id: '1', kind: 'cloze' });
   expect(createdId).toBeTruthy();
   if (!createdId) {
     throw new Error('expected QA node');
@@ -295,7 +298,7 @@ it('keeps parent content unchanged when deleting unlinked child node', () => {
 
   const createdId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection(seedNodeId, 'text');
+    .createHighlightNodeFromSelection(seedNodeId, 'text', 'hl-3', createHighlightLocator('hl-3', 'text'));
   expect(createdId).toBeTruthy();
   if (!createdId) {
     throw new Error('expected highlight node');

@@ -5,7 +5,28 @@ import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/spe
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 function resetWorkspaceStore() {
-  useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
+  const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
+  useWorkspaceStore.setState({
+    ...initial,
+    activeNodeId: 'node-1',
+    nodeOrder: [...initial.nodeOrder, 'node-1'],
+    nodesById: {
+      ...initial.nodesById,
+      'node-1': {
+        id: 'node-1',
+        parentNodeId: null,
+        kind: 'topic',
+        title: 'Seed',
+        content: 'Seed',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null,
+        createdAt: '2026-02-25T00:00:00.000Z',
+        updatedAt: '2026-02-25T00:00:00.000Z'
+      }
+    }
+  });
 }
 
 beforeEach(() => {
@@ -50,7 +71,15 @@ it('moves regular node under new parent and reorders subtree block', () => {
 it('blocks moving derived nodes and cycle reparenting', () => {
   const derivedId = useWorkspaceStore
     .getState()
-    .createHighlightNodeFromSelection('node-1', 'selection text', 'a-1');
+    .createHighlightNodeFromSelection('node-1', 'selection text', 'a-1', {
+      id: 'a-1',
+      kind: 'highlight',
+      locator: {
+        from: 0,
+        originalText: 'selection text',
+        to: 'selection text'.length
+      }
+    });
   const folderId = useWorkspaceStore.getState().createRootNode('Folder');
   const childId = useWorkspaceStore.getState().createChildNode('node-1', 'child');
 

@@ -129,6 +129,7 @@ async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
   expect(revealSelection).not.toHaveBeenCalled();
 }
 
+
 async function runSavePositionBeforeNodeSelectionTest() {
   const callOrder: string[] = [];
   const openNode = vi.fn(() => {

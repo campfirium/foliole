@@ -10,6 +10,7 @@ import type { NodeViewState, ReviewSessionState } from '../../store/workspaceSto
 import type { useCurrentReviewPreview } from './appControllerHelpers';
 import { createLayoutEditorCtx, isVirtualEditorNode, resolveEditorBindingArgs } from './appControllerLayoutContext';
 import { createLayoutNav, createSelectTrashNodeHandler } from './appControllerNavHandlers';
+import { createPastedTextAnchorsHandler } from './appControllerPastedTextAnchors';
 import { createReadingPositionHandlers } from './appControllerReadingPosition';
 import {
   createPersistPdfViewState,
@@ -165,8 +166,23 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
   };
 }
 
+function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) {
+  return (answer: string) => {
+    if (args.ws.activeNodeId && !args.runtime.isViewingTrashNode) {
+      args.ws.updateNodeReveal(args.ws.activeNodeId, answer);
+    }
+  };
+}
+
+function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
+  return (adapter: EditorAdapter | null) => {
+    args.runtime.editorRef.current = adapter;
+  };
+}
+
 function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   const openNotesView = createOpenNotesView(args);
+  const pastedTextAnchors = createPastedTextAnchorsHandler(args);
   const persistPdfViewState = createPersistPdfViewState(args);
   const revealAnchorInDocument = createRevealAnchorInDocument(args);
   const revealDocumentPosition = createRevealDocumentPosition(args);
@@ -174,19 +190,14 @@ function createLayoutHandlerArgs(args: BuildControllerLayoutPropsArgs) {
   const resolveDocumentPositionAtViewportY = createResolveDocumentPositionAtViewportY(args);
 
   return {
-    onAnswerChange: (answer: string) => {
-      if (args.ws.activeNodeId && !args.runtime.isViewingTrashNode) {
-        args.ws.updateNodeReveal(args.ws.activeNodeId, answer);
-      }
-    },
+    onAnswerChange: createAnswerChangeHandler(args),
     onEditorChange: createEditorChangeHandler(args),
     onEnterPriorityQuickSet: () => {
       args.priorityQuickSet.enter();
     },
     onNodeContentChange: createNodeContentChangeHandler(args),
-    onEditorReady: (adapter: EditorAdapter | null) => {
-      args.runtime.editorRef.current = adapter;
-    },
+    onEditorReady: createEditorReadyHandler(args),
+    onPastedTextAnchors: pastedTextAnchors,
     onRevealAnchorInDocument: revealAnchorInDocument,
     onPersistPdfViewState: persistPdfViewState,
     onRevealDocumentPosition: revealDocumentPosition,

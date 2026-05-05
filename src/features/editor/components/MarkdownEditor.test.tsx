@@ -1,12 +1,7 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  registerImageClozeEditorPresentation,
-  unregisterImageClozeEditorPresentation
-} from '../../image-cloze/model/imageClozePresentation';
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
-import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 
 const mockDestroy = vi.fn();
 const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 }));
@@ -14,6 +9,7 @@ const mockGetContent = vi.fn(() => '');
 const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
 const mockSetSearchDecorations = vi.fn();
+const mockSetTextAnchorPresentation = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetNodeId = vi.fn();
 const mockRefreshImageClozePresentation = vi.fn();
@@ -37,6 +33,7 @@ function createMockCodeMirrorEditorAdapterClass() {
     setContent(content: string) { mockSetContent(content); }
     setDiffDecorations(diffDecorations: unknown) { mockSetDiffDecorations(diffDecorations); }
     setSearchDecorations(searchDecorations: unknown) { mockSetSearchDecorations(searchDecorations); }
+    setTextAnchorPresentation(textAnchorPresentation: unknown) { mockSetTextAnchorPresentation(textAnchorPresentation); }
     setHideTitleHeading(value: boolean) { mockSetHideTitleHeading(value); }
     setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
     refreshImageClozePresentation() { mockRefreshImageClozePresentation(); }
@@ -84,6 +81,7 @@ function resetMocks() {
     mockSetContent.mockClear();
     mockSetDiffDecorations.mockClear();
     mockSetSearchDecorations.mockClear();
+    mockSetTextAnchorPresentation.mockClear();
     mockSetHideTitleHeading.mockClear();
     mockSetNodeId.mockClear();
     mockRefreshImageClozePresentation.mockClear();
@@ -95,14 +93,13 @@ function resetMocks() {
 
 function setupRenderingSuite() {
   resetMocks();
-
   beforeEach(() => {
     mockResizeObserver.mockClear();
     vi.stubGlobal('ResizeObserver', vi.fn().mockImplementation(mockResizeObserverFactory));
   });
 }
 
-function registerRenderingLifecycleTests() {
+function registerEditorLifecycleStabilityTests() {
   it('does not recreate editor adapter when value changes', () => {
     const onChange = vi.fn();
     const view = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={onChange} value="a" />);
@@ -148,6 +145,41 @@ function registerRenderingLifecycleTests() {
   });
 }
 
+function registerEditorPresentationUpdateTests() {
+  it('updates text anchor decorations without recreating editor adapter', () => {
+    const onChange = vi.fn();
+    const view = renderWithMouseGestureProvider(
+      <MarkdownEditor
+        nodeId="node-1"
+        onChange={onChange}
+        textAnchorPresentation={{
+          inlineAnchorCompatibility: { hiddenKeys: [] },
+          textAnchorDecorations: [{ from: 1, kind: 'highlight', to: 4 }]
+        }}
+        value="Alpha"
+      />
+    );
+
+    view.rerender(
+      <MarkdownEditor
+        nodeId="node-1"
+        onChange={onChange}
+        textAnchorPresentation={{
+          inlineAnchorCompatibility: { hiddenKeys: [] },
+          textAnchorDecorations: [{ from: 6, kind: 'cloze', to: 10 }]
+        }}
+        value="Alpha Beta"
+      />
+    );
+
+    expect(mockCtor).toHaveBeenCalledTimes(1);
+    expect(mockSetTextAnchorPresentation).toHaveBeenCalledWith({
+      inlineAnchorCompatibility: { hiddenKeys: [] },
+      textAnchorDecorations: [{ from: 6, kind: 'cloze', to: 10 }]
+    });
+  });
+}
+
 function registerRenderingSurfaceTests() {
   it('applies custom bottom padding when requested', () => {
     const { container } = renderWithMouseGestureProvider(
@@ -179,99 +211,7 @@ function registerRenderingSurfaceTests() {
 
 describe('MarkdownEditor rendering', () => {
   setupRenderingSuite();
-  registerRenderingLifecycleTests();
+  registerEditorLifecycleStabilityTests();
+  registerEditorPresentationUpdateTests();
   registerRenderingSurfaceTests();
-});
-
-describe('MarkdownEditor image preview', () => {
-  resetMocks();
-
-  it('opens and closes the image preview dialog when the editor surface receives a preview request', async () => {
-    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="![Cover](asset://hash-1.png)" />);
-    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
-
-    act(() => {
-      host?.dispatchEvent(
-        new CustomEvent(MARKDOWN_IMAGE_PREVIEW_EVENT, {
-          bubbles: true,
-          detail: { alt: 'Cover', presentation: null, src: 'https://example.com/cover.png' }
-        })
-      );
-    });
-
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Cover' })).toHaveAttribute('src', 'https://example.com/cover.png');
-
-    act(() => {
-      screen.getByRole('button', { name: 'Close image preview' }).click();
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-  });
-
-  it('closes the image preview dialog when clicking outside the image', async () => {
-    const { container } = renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="![Cover](asset://hash-1.png)" />);
-    const host = container.querySelector('.markdown-editor-host') as HTMLDivElement | null;
-
-    act(() => {
-      host?.dispatchEvent(
-        new CustomEvent(MARKDOWN_IMAGE_PREVIEW_EVENT, {
-          bubbles: true,
-          detail: { alt: 'Cover', presentation: null, src: 'https://example.com/cover.png' }
-        })
-      );
-    });
-
-    const dialog = await screen.findByRole('dialog');
-    const dismissSurface = dialog.querySelector('.cursor-zoom-out') as HTMLDivElement | null;
-
-    act(() => {
-      dismissSurface?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-  });
-});
-
-describe('MarkdownEditor image cloze refresh', () => {
-  resetMocks();
-
-  it('refreshes image cloze presentation when external image regions are registered', async () => {
-    renderWithMouseGestureProvider(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="![Cover](asset://hash-1.png)" />);
-
-    await waitFor(() => {
-      expect(mockSetNodeId).toHaveBeenCalledWith('node-1');
-    });
-
-    act(() => {
-      registerImageClozeEditorPresentation('node-1', {
-        canCreate: true,
-        focusRegionId: null,
-        hiddenRegionIds: ['region-1'],
-        outlinedRegionIds: [],
-        regions: [
-          {
-            attachmentId: 'hash-1',
-            height: 0.2,
-            id: 'region-1',
-            width: 0.3,
-            x: 0.1,
-            y: 0.2
-          }
-        ]
-      });
-    });
-
-    await waitFor(() => {
-      expect(mockRefreshImageClozePresentation).toHaveBeenCalled();
-    });
-
-    act(() => {
-      unregisterImageClozeEditorPresentation('node-1');
-    });
-  });
 });

@@ -18,6 +18,24 @@ function deriveImportedHighlightTitle(content: string) {
   return firstLine.replace(/\s+/g, ' ').slice(0, 120);
 }
 
+function toImportedAnchorLink(highlight: PreparedImportHighlightRecord | AnchoredImportedHighlightRecord) {
+  if (!('anchorId' in highlight)) {
+    return null;
+  }
+  if (typeof highlight.from !== 'number' || typeof highlight.to !== 'number') {
+    return JSON.stringify({ id: highlight.anchorId, kind: 'highlight' });
+  }
+  return JSON.stringify({
+    id: highlight.anchorId,
+    kind: 'highlight',
+    locator: {
+      from: highlight.from,
+      to: highlight.to,
+      originalText: highlight.content
+    }
+  });
+}
+
 export function insertImportedHighlightNodes(input: {
   driver: DatabaseDriver;
   highlights: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord> | undefined;
@@ -45,7 +63,7 @@ export function insertImportedHighlightNodes(input: {
       deriveImportedHighlightTitle(highlight.content),
       highlight.content,
       resolveNodeOpeningText(highlight.content, deriveImportedHighlightTitle(highlight.content)),
-      'anchorId' in highlight ? JSON.stringify({ id: highlight.anchorId, kind: 'highlight' }) : null,
+      toImportedAnchorLink(highlight),
       input.importedAt,
       input.importedAt
     ]);

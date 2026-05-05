@@ -1,9 +1,15 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { ParsedAnchorBlock } from '../../features/editor/model/anchorBlocks';
-import { parseAnchorBlocks, stripAnchorBlocks } from '../../features/editor/model/anchorBlocks';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { hasInlineAnchorMarkup, stripAnchorBlocks } from '../../features/editor/model/anchorBlocks';
+import {
+  findOverlappingAnchorRecords,
+  findAnchorRecord,
+  getAnchorContentRange,
+  getAnchorWrappedRange,
+  type AnchorRecord
+} from '../../features/editor/model/anchorRecords';
+import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 function normalizeSelectionText(value: string) {
@@ -51,28 +57,110 @@ function resolveSelection(editorRef: MutableRefObject<EditorAdapter | null>) {
   return editorRef.current?.getSelectionRanges().map(normalizeSelection).find((range) => range.from < range.to) ?? null;
 }
 
-function resolveHighlightSelection(block: ParsedAnchorBlock) {
+function resolveHighlightSelection(block: AnchorRecord) {
+  const wrappedRange = getAnchorWrappedRange(block);
+  const contentRange = getAnchorContentRange(block);
   return {
-    from: block.from,
-    to: block.from + (block.contentTo - block.contentFrom)
+    from: wrappedRange.from,
+    to: wrappedRange.from + (contentRange.to - contentRange.from)
   };
 }
 
 function removeHighlightMarkup(
   editorRef: MutableRefObject<EditorAdapter | null>,
-  block: ParsedAnchorBlock
+  block: AnchorRecord
 ) {
   const editor = editorRef.current;
   if (!editor) {
     return false;
   }
   const content = editor.getContent();
-  const nextContent = content.slice(block.contentFrom, block.contentTo);
-  editor.replaceRange(block.from, block.to, nextContent);
+  const contentRange = getAnchorContentRange(block);
+  const wrappedRange = getAnchorWrappedRange(block);
+  const nextContent = content.slice(contentRange.from, contentRange.to);
+  editor.replaceRange(wrappedRange.from, wrappedRange.to, nextContent);
   const nextSelection = resolveHighlightSelection(block);
   editor.setSelection(nextSelection);
   editor.setSelectionRanges([nextSelection]);
   return true;
+}
+
+function findOverlappingHighlightBlock(content: string, selection: { from: number; to: number }, selectedText: string) {
+  const overlappingHighlightBlocks = findOverlappingAnchorRecords(content, selection, 'highlight');
+
+  return overlappingHighlightBlocks.find(
+    (entry) => selectedText && normalizeSelectionText(entry.text) === selectedText
+  ) ?? (selectedText ? undefined : overlappingHighlightBlocks.length === 1 ? overlappingHighlightBlocks[0] : undefined);
+}
+
+function findFallbackHighlightBlock(
+  activeNodeId: string,
+  content: string,
+  nodesById: Record<string, Node>,
+  selectedText: string,
+  trashedNodeIds: string[]
+) {
+  const matchingNodeIds = findMatchingHighlightNodeIds(activeNodeId, nodesById, selectedText, trashedNodeIds);
+  if (matchingNodeIds.length !== 1) {
+    return null;
+  }
+  const fallbackNode = nodesById[matchingNodeIds[0] ?? ''];
+  if (!fallbackNode?.anchorLink || fallbackNode.anchorLink.kind !== 'highlight') {
+    return null;
+  }
+  const fallbackBlock = findAnchorRecord(content, fallbackNode.anchorLink);
+  return fallbackBlock
+    ? {
+        block: fallbackBlock,
+        nodeId: fallbackNode.id
+      }
+    : null;
+}
+
+function findFallbackLocatorHighlight(
+  activeNodeId: string,
+  nodesById: Record<string, Node>,
+  selection: { from: number; to: number },
+  selectedText: string,
+  trashedNodeIds: string[]
+) {
+  const trashedNodeIdSet = new Set(trashedNodeIds);
+  const matchingNode = Object.values(nodesById).find((node) => {
+    if (
+      node.parentNodeId !== activeNodeId ||
+      trashedNodeIdSet.has(node.id) ||
+      node.anchorLink?.kind !== 'highlight' ||
+      !isTextAnchorLocator(node.anchorLink.locator)
+    ) {
+      return false;
+    }
+    const locator = node.anchorLink.locator;
+    return (
+      locator.from === selection.from &&
+      locator.to === selection.to &&
+      locator.originalText === selectedText
+    );
+  });
+  return matchingNode ? { nodeId: matchingNode.id } : null;
+}
+
+function resolveLocatorFirstHighlightMatch(
+  activeNodeId: string,
+  nodesById: Record<string, Node>,
+  selection: { from: number; to: number },
+  selectedText: string,
+  trashedNodeIds: string[]
+) {
+  if (!selectedText) {
+    return null;
+  }
+  return findFallbackLocatorHighlight(activeNodeId, nodesById, selection, selectedText, trashedNodeIds);
+}
+
+function hasOpaqueHighlightBlock(
+  match: { nodeId: string } | { block: AnchorRecord; nodeId: string }
+): match is { block: AnchorRecord; nodeId: string } {
+  return 'block' in match;
 }
 
 function resolveExistingHighlightMatch(
@@ -91,35 +179,28 @@ function resolveExistingHighlightMatch(
   }
   const content = editorRef.current.getContent();
   const selectedText = resolveSelectedText(content, selection, payload);
-  const overlappingHighlightBlocks = parseAnchorBlocks(content).blocks.filter(
-    (entry) => entry.kind === 'highlight' && selection.from < entry.to && selection.to > entry.from
+  const locatorMatch = resolveLocatorFirstHighlightMatch(
+    activeNodeId,
+    nodesById,
+    selection,
+    selectedText,
+    trashedNodeIds
   );
-  const block =
-    overlappingHighlightBlocks.find(
-      (entry) => selectedText && normalizeSelectionText(content.slice(entry.contentFrom, entry.contentTo)) === selectedText
-    ) ??
-    (selectedText ? undefined : overlappingHighlightBlocks.length === 1 ? overlappingHighlightBlocks[0] : undefined);
+  if (locatorMatch) {
+    return locatorMatch;
+  }
+  if (!hasInlineAnchorMarkup(content)) {
+    return null;
+  }
+  const block = findOverlappingHighlightBlock(content, selection, selectedText);
   if (!block) {
     if (!selectedText) {
       return null;
     }
-    const matchingNodeIds = findMatchingHighlightNodeIds(activeNodeId, nodesById, selectedText, trashedNodeIds);
-    if (matchingNodeIds.length !== 1) {
-      return null;
-    }
-    const fallbackNode = nodesById[matchingNodeIds[0] ?? ''];
-    if (!fallbackNode?.anchorLink || fallbackNode.anchorLink.kind !== 'highlight') {
-      return null;
-    }
-    const fallbackBlock = parseAnchorBlocks(content).blocks.find(
-      (entry) => entry.kind === 'highlight' && entry.id === fallbackNode.anchorLink?.id
+    return (
+      findFallbackHighlightBlock(activeNodeId, content, nodesById, selectedText, trashedNodeIds) ??
+      null
     );
-    return fallbackBlock
-      ? {
-          block: fallbackBlock,
-          nodeId: fallbackNode.id
-        }
-      : null;
   }
   const matchingNode = Object.values(nodesById).find(
       (node) =>
@@ -154,10 +235,12 @@ export function createToggleSelectionHighlightFromPayloadHandler(args: {
       args.trashedNodeIds
     );
     if (existingHighlightMatch) {
-      if (!removeHighlightMarkup(args.editorRef, existingHighlightMatch.block)) {
-        return null;
+      if (hasOpaqueHighlightBlock(existingHighlightMatch)) {
+        if (!removeHighlightMarkup(args.editorRef, existingHighlightMatch.block)) {
+          return null;
+        }
+        args.syncActiveNodeContentFromEditor();
       }
-      args.syncActiveNodeContentFromEditor();
       args.deleteNodePermanently(existingHighlightMatch.nodeId);
       return 'deleted' as const;
     }

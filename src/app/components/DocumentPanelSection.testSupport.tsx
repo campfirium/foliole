@@ -147,8 +147,10 @@ export function mockSourceUpdatePreview() {
     isLoading: false,
     value: {
       checkedAt: '2026-03-28T04:00:00.000Z',
+      currentHighlightCount: 1,
       currentContent: 'Current content',
       sourceNodeId: 'node-1',
+      updatedHighlightCount: 2,
       updatedContent: 'Updated content'
     }
   } as never);

@@ -8,8 +8,10 @@ const { useNodeSourceUpdatePreviewMock } = vi.hoisted(() => ({
     isLoading: false,
     value: {
       checkedAt: '2026-03-28T04:00:00.000Z',
+      currentHighlightCount: 1,
       currentContent: '# Welcome to Foliole\n\nStart writing markdown here.',
       sourceNodeId: 'node-1',
+      updatedHighlightCount: 2,
       updatedContent: '# Welcome to Foliole\n\nUpdated upstream content.'
     }
   }))

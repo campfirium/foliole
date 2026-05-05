@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appendAnchorBlock,
   extractAnchorBlocks,
+  hasInlineAnchorMarkup,
   parseAnchorBlock,
   parseAnchorBlocks,
   serializeAnchorBlock,
@@ -12,19 +13,19 @@ import {
 describe('anchorBlocks parse', () => {
   it('serializes and parses compact anchor block pairs', () => {
     const block = serializeAnchorBlock({
-      id: '12',
+      id: 'anchor-12',
       kind: 'highlight'
     });
 
-    expect(block).toBe('<highlight id="12"></highlight id="12">');
+    expect(block).toBe('<highlight id="anchor-12"></highlight id="anchor-12">');
     expect(parseAnchorBlock(block)).toEqual({
-      id: '12',
+      id: 'anchor-12',
       kind: 'highlight'
     });
   });
 
   it('rejects malformed ids or malformed tag shapes', () => {
-    expect(parseAnchorBlock('<highlight id="001"></highlight id="001">')).toBeNull();
+    expect(parseAnchorBlock('<highlight id="bad id"></highlight id="bad id">')).toBeNull();
     expect(parseAnchorBlock('<highlight></highlight id="1">')).toBeNull();
     expect(parseAnchorBlock('<highlight id="2"></cloze id="2">')).toBeNull();
     expect(parseAnchorBlock('<cloze id="2">x</cloze id="2">')).toBeNull();
@@ -68,6 +69,12 @@ describe('anchorBlocks parse', () => {
     const duplicateOpen = '<highlight id="1">a<highlight id="1">b</highlight id="1">';
     const duplicateResult = parseAnchorBlocks(duplicateOpen);
     expect(duplicateResult.invalidTokens.some((token) => token.reason === 'duplicate-open')).toBe(true);
+  });
+
+  it('detects whether content still contains inline anchor markup', () => {
+    expect(hasInlineAnchorMarkup('plain markdown')).toBe(false);
+    expect(hasInlineAnchorMarkup('A <highlight id="1">B</highlight id="1"> C')).toBe(true);
+    expect(hasInlineAnchorMarkup('A <cloze id="1">B</cloze id="1"> C')).toBe(true);
   });
 
 });

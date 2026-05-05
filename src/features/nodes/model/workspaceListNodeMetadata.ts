@@ -1,4 +1,5 @@
 import { extractNodeOpeningPreview, NODE_OPENING_PREVIEW_FALLBACK } from '../../../../lib/core/nodes/nodeOpeningPreview';
+import { stripAnchorBlocks } from '../../editor/model/anchorBlocks';
 
 import type { Node } from './nodeTypes';
 
@@ -6,7 +7,6 @@ const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
 const FRONTMATTER_KEY_VALUE_PATTERN = /^([^:#\s][^:]*?)(\s*:\s*)(.*)$/;
 const FRONTMATTER_LIST_ITEM_PATTERN = /^(\s*)-\s+(.*)$/;
 const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 
 export const WORKSPACE_LIST_SUMMARY_FALLBACK = 'No summary yet.';
 export const WORKSPACE_LIST_OPENING_FALLBACK = NODE_OPENING_PREVIEW_FALLBACK;
@@ -106,7 +106,10 @@ function stripMarkdownInline(value: string) {
 function normalizePreviewText(content: string) {
   return stripMarkdownInline(
     stripLeadingFrontmatter(content)
-      .replace(ANCHOR_TAG_PATTERN, '')
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((line) => stripAnchorBlocks(line))
+      .join('\n')
       .split(/\r?\n/)
       .map((line) => stripMarkdownLinePrefix(line))
       .join(' ')

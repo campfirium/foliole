@@ -131,7 +131,21 @@ export function resetAppSmokeState() {
   localStorage.clear();
   resetPerformanceDiagnosticsProbe();
   resetWorkspaceNodeDocumentPrefetchForTest();
-  useWorkspaceStore.setState({ ...createInitialWorkspaceState(new Date(FIXED_TIMESTAMP)), isHydrated: true });
+  const initial = createInitialWorkspaceState(new Date(FIXED_TIMESTAMP));
+  useWorkspaceStore.setState({
+    ...initial,
+    activeNodeId: 'node-1',
+    isHydrated: true,
+    nodeOrder: [...initial.nodeOrder, 'node-1'],
+    nodesById: {
+      ...initial.nodesById,
+      'node-1': createNode({
+        id: 'node-1',
+        title: 'Welcome to Foliole',
+        content: '# Welcome to Foliole\n\nStart writing markdown here.'
+      })
+    }
+  });
   mockEditorState.content = '# Welcome to Foliole\n\nStart writing markdown here.';
   mockEditorState.selectionFrom = 0;
   mockEditorState.selectionTo = 0;

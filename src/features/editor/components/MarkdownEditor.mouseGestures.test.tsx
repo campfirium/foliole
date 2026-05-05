@@ -38,6 +38,7 @@ function createMockCodeMirrorEditorAdapterClass() {
     setContent(content: string) { mockSetContent(content); }
     setDiffDecorations(diffDecorations: unknown) { mockSetDiffDecorations(diffDecorations); }
     setSearchDecorations(searchDecorations: unknown) { mockSetSearchDecorations(searchDecorations); }
+    setTextAnchorPresentation() {}
     setHideTitleHeading(value: boolean) { mockSetHideTitleHeading(value); }
     setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
     refreshImageClozePresentation() { mockRefreshImageClozePresentation(); }

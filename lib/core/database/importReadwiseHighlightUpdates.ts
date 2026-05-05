@@ -1,3 +1,4 @@
+import { stripAnchorBlocks } from '../../../src/features/editor/model/anchorBlocks.js';
 import type { PreparedImportRecord } from '../import/contract.js';
 
 import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
@@ -48,7 +49,7 @@ export function resolveReadwiseHighlightUpdate(input: {
       return normalized.length > 0 && !existingHighlightContentSet.has(normalized);
     }) ?? [];
   const anchoredImport = applyImportedHighlightAnchors({
-    content: existingContent.body,
+    content: stripAnchorBlocks(existingContent.body),
     highlights: newMatchedHighlights
   });
   const nextUnmatchedHighlights = [

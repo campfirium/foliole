@@ -27,6 +27,7 @@ type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 function createQANodeRecord(args: {
   anchorId?: string;
+  anchorLink?: NodeAnchorLink;
   answerContent: string;
   nodeId: string;
   parentNodeId: string;
@@ -41,7 +42,7 @@ function createQANodeRecord(args: {
     title: args.title,
     hasContent: args.promptContent.length > 0,
     content: args.promptContent,
-    anchorLink: args.anchorId ? { id: args.anchorId, kind: 'cloze' as const } : null,
+    anchorLink: resolveClozeAnchorLink(args.anchorId, args.anchorLink),
     hasReveal: true,
     reveal: args.answerContent,
     review: createDefaultReviewProfile(args.timestamp),
@@ -175,9 +176,6 @@ function resolveHighlightAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLi
   if (anchorLink && anchorLink.kind === 'highlight' && typeof anchorLink.id === 'string' && anchorLink.id.trim().length > 0) {
     return anchorLink;
   }
-  if (anchorId) {
-    return { id: anchorId, kind: 'highlight' };
-  }
   return null;
 }
 
@@ -185,7 +183,7 @@ export function createQAFromSelectionAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
 ): WorkspaceState['createQANodeFromSelection'] {
-  return (parentNodeId, promptContent, answerContent, anchorId) => {
+  return (parentNodeId, promptContent, answerContent, anchorId, anchorLink) => {
     const normalizedPrompt = promptContent.trim();
     const normalizedAnswer = answerContent.trim();
     if (!normalizedPrompt || !normalizedAnswer) {
@@ -209,6 +207,7 @@ export function createQAFromSelectionAction(
       );
       const nextNode = createQANodeRecord({
         anchorId,
+        anchorLink,
         answerContent: normalizedAnswer,
         nodeId: childNodeId,
         parentNodeId,
@@ -240,4 +239,11 @@ export function createQAFromSelectionAction(
     }
     return childNodeId;
   };
+}
+
+function resolveClozeAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLink): NodeAnchorLink | null {
+  if (anchorLink && anchorLink.kind === 'cloze' && typeof anchorLink.id === 'string' && anchorLink.id.trim().length > 0) {
+    return anchorLink;
+  }
+  return null;
 }

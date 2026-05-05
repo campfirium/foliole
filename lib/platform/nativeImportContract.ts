@@ -28,6 +28,7 @@ export interface NativeKeepImportPreviewArgs {
 }
 
 export interface NativeKeepImportPreviewEntry {
+  content_preview?: string | null;
   detail: string | null;
   detected_highlight_count?: number;
   highlight_samples?: NativeReadwiseDetectionSample[];
@@ -153,7 +154,9 @@ export interface NativeNodeSourceDetails {
 
 export interface NativeNodeSourceUpdatePreview {
   checked_at: string;
+  current_highlight_count: number;
   current_content: string;
   source_node_id: string;
+  updated_highlight_count: number;
   updated_content: string;
 }

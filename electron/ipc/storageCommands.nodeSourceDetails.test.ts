@@ -197,15 +197,19 @@ it('serializes node source details with keep-import metadata', async () => {
 it('returns node source update preview payloads', async () => {
   loadNodeSourceUpdatePreview.mockResolvedValue({
     checked_at: '2026-03-28T04:00:00.000Z',
+    current_highlight_count: 2,
     current_content: 'Current content',
     source_node_id: 'node-1',
+    updated_highlight_count: 3,
     updated_content: 'Updated content'
   });
 
   await expect(handleStorageCommand('load_node_source_update_preview', { node_id: 'node-1' })).resolves.toEqual({
     checked_at: '2026-03-28T04:00:00.000Z',
+    current_highlight_count: 2,
     current_content: 'Current content',
     source_node_id: 'node-1',
+    updated_highlight_count: 3,
     updated_content: 'Updated content'
   });
 });

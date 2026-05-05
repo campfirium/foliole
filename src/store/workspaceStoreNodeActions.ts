@@ -39,6 +39,7 @@ import {
 } from './workspaceStoreTreeActions';
 import { createVirtualNodeAction } from './workspaceStoreVirtualNodeActions';
 import { createUpdateVirtualNodeFilterAction } from './workspaceStoreVirtualNodeFilterActions';
+import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLocatorSync';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
@@ -102,6 +103,7 @@ function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['u
 function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeContent'] {
   return (nodeId, content) => {
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
+    let locatorUpdatedNodesForSync: WorkspaceState['nodesById'][string][] = [];
     set((state) => {
       const node = state.nodesById[nodeId];
       if (
@@ -109,9 +111,10 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
         !isNodeDocumentLoaded(node) ||
         isProtectedRootNode(node) ||
         isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))
-      ) {
+        ) {
         return state;
       }
+      const timestamp = new Date().toISOString();
       const derivedTitle = deriveNodeTitleFromContent(content);
       const nextNode = {
         ...node,
@@ -119,20 +122,32 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
         hasContent: content.trim().length > 0,
         hideTitleHeading: false,
         title: node.isTitleManual ? node.title : derivedTitle,
-        updatedAt: new Date().toISOString()
+        updatedAt: timestamp
       };
+      const nextNodesByIdWithParent = {
+        ...state.nodesById,
+        [nodeId]: nextNode
+      };
+      const locatorSync = syncTextAnchorLocatorsForParentContent({
+        nextContent: content,
+        nodesById: nextNodesByIdWithParent,
+        parentNodeId: nodeId,
+        timestamp
+      });
       nextNodeForSync = nextNode;
+      locatorUpdatedNodesForSync = locatorSync.updatedNodes;
       return {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
+        nodesById: locatorSync.nextNodesById
       };
     });
     if (nextNodeForSync) {
       syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
       syncNodeContentToRuntime(nextNodeForSync);
     }
+    locatorUpdatedNodesForSync.forEach((updatedNode) => {
+      syncWorkspaceNodeDocumentCacheFromNode(updatedNode);
+      syncNodeContentToRuntime(updatedNode);
+    });
   };
 }
 

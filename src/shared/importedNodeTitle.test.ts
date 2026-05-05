@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractUniqueLevelOneHeading, resolveImportedNodeTitle } from './importedNodeTitle.js';
+import { extractUniqueLevelOneHeading, resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle';
 
 describe('importedNodeTitle', () => {
   it('falls back to the source name without extension', () => {
@@ -32,5 +32,15 @@ describe('importedNodeTitle', () => {
         titleStrategy: 'heading'
       })
     ).toBe('note');
+  });
+
+  it('extracts an opaque-id wrapped heading when heading mode is enabled', () => {
+    expect(
+      resolveImportedNodeTitle({
+        content: '<highlight id="anchor-1"># Imported title</highlight id="anchor-1">\n\nBody',
+        sourceName: 'note.md',
+        titleStrategy: 'heading'
+      })
+    ).toBe('Imported title');
   });
 });

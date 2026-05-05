@@ -1,10 +1,11 @@
 import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
-
-export type CommandMarkupType = 'cloze' | 'highlight';
+import { stripAnchorBlocks } from '../features/editor/model/anchorBlocks';
+import type { TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 
 export interface SelectionCommandEntry {
   anchorId: string;
   clozeContent: string;
+  locator: TextAnchorLocator;
   range: EditorSelection;
   selectionText: string;
 }
@@ -18,7 +19,10 @@ export interface SelectionCommandPayload {
 }
 
 const CLOZE_PLACEHOLDER = '[...]';
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
+
+function createAnchorId() {
+  return `anchor-${crypto.randomUUID()}`;
+}
 
 export function normalizeContextMenuPosition(left: number, top: number) {
   const menuWidth = 200;
@@ -52,6 +56,14 @@ export function getSelectionCommandPayloadForRanges(
   return buildSelectionCommandPayload(parentNodeId, adapter.getContent(), normalizeSelectionRanges(ranges, adapter.getContent().length));
 }
 
+export function getSelectionCommandPayloadForContentRanges(
+  parentNodeId: string,
+  content: string,
+  ranges: EditorSelection[]
+): SelectionCommandPayload | null {
+  return buildSelectionCommandPayload(parentNodeId, content, normalizeSelectionRanges(ranges, content.length));
+}
+
 function buildSelectionCommandPayload(
   parentNodeId: string,
   content: string,
@@ -60,7 +72,6 @@ function buildSelectionCommandPayload(
   if (selections.length === 0) {
     return null;
   }
-  let nextAnchorId = getNextAnchorNumericId(content);
   const entries = selections
     .map((range): SelectionCommandEntry | null => {
       const selectionText = stripAnchorTags(content.slice(range.from, range.to)).trim();
@@ -72,12 +83,16 @@ function buildSelectionCommandPayload(
       const clozeRawContent = `${prefix}${CLOZE_PLACEHOLDER}${suffix}`;
       const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
       const entry = {
-        anchorId: String(nextAnchorId),
+        anchorId: createAnchorId(),
         clozeContent,
+        locator: {
+          from: range.from,
+          originalText: selectionText,
+          to: range.to
+        },
         range,
         selectionText
       };
-      nextAnchorId += 1;
       return entry;
     })
     .filter((entry): entry is SelectionCommandEntry => entry !== null);
@@ -88,7 +103,7 @@ function buildSelectionCommandPayload(
   const selectionText = entries.map((entry) => entry.selectionText).join('\n');
 
   return {
-    anchorId: entries[0]?.anchorId ?? String(nextAnchorId),
+    anchorId: entries[0]?.anchorId ?? createAnchorId(),
     clozeContent,
     entries,
     parentNodeId,
@@ -96,37 +111,7 @@ function buildSelectionCommandPayload(
   };
 }
 
-function stripAnchorTags(value: string) {
-  return value.replace(ANCHOR_TAG_PATTERN, '');
-}
-
-export function applySelectionMarkup(
-  adapter: EditorAdapter | null,
-  markupType: CommandMarkupType,
-  entries: SelectionCommandEntry[]
-) {
-  if (!adapter || entries.length === 0) {
-    return false;
-  }
-  const content = adapter.getContent();
-  const tagName = markupType === 'highlight' ? 'highlight' : 'cloze';
-  let applied = false;
-  [...entries]
-    .sort((left, right) => right.range.from - left.range.from)
-    .forEach((entry) => {
-      const selectedText = content.slice(entry.range.from, entry.range.to);
-      if (!selectedText.trim()) {
-        return;
-      }
-      adapter.replaceRange(
-        entry.range.from,
-        entry.range.to,
-        `<${tagName} id="${entry.anchorId}">${selectedText}</${tagName} id="${entry.anchorId}">`
-      );
-      applied = true;
-    });
-  return applied;
-}
+function stripAnchorTags(value: string) { return stripAnchorBlocks(value); }
 
 function getNormalizedSelectionRanges(adapter: EditorAdapter, max: number) {
   return normalizeSelectionRanges(adapter.getSelectionRanges(), max);
@@ -155,15 +140,4 @@ function buildCombinedClozeContent(content: string, entries: SelectionCommandEnt
       content
     );
   return stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
-}
-
-function getNextAnchorNumericId(content: string): number {
-  let maxId = 0;
-  for (const match of content.matchAll(/<(?:highlight|cloze)\s+id="([1-9]\d*)"\s*>/g)) {
-    const id = Number.parseInt(match[1] ?? '', 10);
-    if (Number.isFinite(id) && id > maxId) {
-      maxId = id;
-    }
-  }
-  return maxId + 1;
 }

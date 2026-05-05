@@ -1,5 +1,7 @@
 import type { NativeReadwiseDetectionSample } from '../../platform/nativeReadwiseContract.js';
 
+import type { PreparedImportHighlightRecord } from './contract.js';
+
 interface ParsedHighlightBlock {
   anchorId: string;
   from: number;
@@ -15,7 +17,7 @@ function selectPreviewHighlights<T>(items: T[]) {
 }
 
 function collectAnchoredHighlightBlocks(content: string) {
-  const tokenPattern = /<(\/?)highlight\s+id="([1-9]\d*)"\s*>/g;
+  const tokenPattern = /<(\/?)highlight\s+id="([^"]+)"\s*>/g;
   const plainParts: string[] = [];
   const active = new Map<string, { start: number }>();
   const blocks: ParsedHighlightBlock[] = [];
@@ -66,6 +68,12 @@ function collectAnchoredHighlightBlocks(content: string) {
 
 export function buildImportedHighlightPreview(input: { content: string; sourceName: string }) {
   const { blocks, plainText } = collectAnchoredHighlightBlocks(input.content);
+  if (blocks.length === 0 && input.content.indexOf('<highlight id=') < 0) {
+    return {
+      detectedHighlightCount: 0,
+      samples: [] as NativeReadwiseDetectionSample[]
+    };
+  }
   const samples: NativeReadwiseDetectionSample[] = selectPreviewHighlights(blocks).map((block) => ({
     excerpt: plainText.slice(Math.max(0, block.from - 40), Math.min(plainText.length, block.to + 40)),
     highlightText: block.text,
@@ -77,4 +85,24 @@ export function buildImportedHighlightPreview(input: { content: string; sourceNa
     detectedHighlightCount: blocks.length,
     samples
   };
+}
+
+export function buildImportedHighlightPreviewFromMatches(input: {
+  content: string;
+  matchedHighlights?: PreparedImportHighlightRecord[];
+  sourceName: string;
+}) {
+  if ((input.matchedHighlights?.length ?? 0) > 0) {
+    const samples: NativeReadwiseDetectionSample[] = selectPreviewHighlights(input.matchedHighlights ?? []).map((highlight) => ({
+      excerpt: input.content.slice(0, 120),
+      highlightText: highlight.content,
+      matched: true,
+      sourceName: input.sourceName
+    }));
+    return {
+      detectedHighlightCount: input.matchedHighlights?.length ?? 0,
+      samples
+    };
+  }
+  return buildImportedHighlightPreview(input);
 }

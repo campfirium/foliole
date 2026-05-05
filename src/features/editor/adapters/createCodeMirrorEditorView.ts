@@ -9,11 +9,12 @@ import {
 
 export function createCodeMirrorEditorView(args: {
   diffDecorationsCompartment: Compartment;
-  hiddenTextAnchorKeys: readonly string[];
+  textAnchorPresentation: import('./EditorAdapter').EditorTextAnchorPresentation;
   hideTitleHeading: boolean;
   host: HTMLElement;
   imageClozePresentationVersion: number;
   liveMarkdownCompartment: Compartment;
+  liveMarkdownStateCompartment: Compartment;
   nodeId: string | null;
   onCompositionEnd: () => void;
   onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
@@ -21,6 +22,7 @@ export function createCodeMirrorEditorView(args: {
   paragraphMarkerCompartment: Compartment;
   readOnlyCompartment: Compartment;
   searchDecorationsCompartment: Compartment;
+  textAnchorDecorationsCompartment: Compartment;
 }) {
   return new EditorView({
     parent: args.host,
@@ -28,17 +30,19 @@ export function createCodeMirrorEditorView(args: {
       doc: args.options.initialContent,
       extensions: createCodeMirrorEditorExtensions({
         diffDecorationsCompartment: args.diffDecorationsCompartment,
-        hiddenTextAnchorKeys: args.hiddenTextAnchorKeys,
+        textAnchorPresentation: args.textAnchorPresentation,
         hideTitleHeading: args.hideTitleHeading,
         imageClozePresentationVersion: args.imageClozePresentationVersion,
         liveMarkdownCompartment: args.liveMarkdownCompartment,
+        liveMarkdownStateCompartment: args.liveMarkdownStateCompartment,
         nodeId: args.nodeId,
         onCompositionEnd: args.onCompositionEnd,
         onDocChanged: args.onDocChanged,
         options: args.options,
         paragraphMarkerCompartment: args.paragraphMarkerCompartment,
         readOnlyCompartment: args.readOnlyCompartment,
-        searchDecorationsCompartment: args.searchDecorationsCompartment
+        searchDecorationsCompartment: args.searchDecorationsCompartment,
+        textAnchorDecorationsCompartment: args.textAnchorDecorationsCompartment
       })
     })
   });

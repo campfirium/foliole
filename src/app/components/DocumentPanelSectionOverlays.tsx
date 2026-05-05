@@ -8,7 +8,7 @@ interface DocumentPanelSectionOverlaysProps {
   handleSourceUpdatePanelOpenChange: (open: boolean) => void;
   isSourceUpdatePanelOpen: boolean;
   props: DocumentPanelSectionProps;
-  sourceUpdatePreview: { updatedContent: string } | null;
+  sourceUpdatePreview: { currentHighlightCount: number; updatedContent: string; updatedHighlightCount: number } | null;
 }
 
 export function DocumentPanelSectionOverlays({
@@ -24,12 +24,14 @@ export function DocumentPanelSectionOverlays({
       {sourceUpdatePreview ? (
         <DocumentPanelSourceUpdatePanel
           currentContent={currentSourceUpdateContent}
+          currentHighlightCount={sourceUpdatePreview.currentHighlightCount}
           documentMaxWidth={props.documentMaxWidth}
           editorAppearanceKey={props.editorAppearanceKey}
           editorNodeId={props.editorNodeId}
           onCurrentContentChange={handleSourceUpdateDraftChange}
           onOpenChange={handleSourceUpdatePanelOpenChange}
           open={isSourceUpdatePanelOpen}
+          updatedHighlightCount={sourceUpdatePreview.updatedHighlightCount}
           updatedContent={sourceUpdatePreview.updatedContent}
         />
       ) : null}

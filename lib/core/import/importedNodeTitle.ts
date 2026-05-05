@@ -1,8 +1,9 @@
 import path from 'node:path';
 
+import { stripAnchorBlocks } from '../../../src/features/editor/model/anchorBlocks.js';
+
 export type ImportNodeTitleStrategy = 'file_name' | 'heading';
 
-const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
 const FENCE_PATTERN = /^\s{0,3}(```|~~~)/;
 const LEVEL_ONE_HEADING_PATTERN = /^\s{0,3}#\s+(.+?)\s*#*\s*$/;
 
@@ -41,7 +42,7 @@ export function extractUniqueLevelOneHeading(content: string) {
       continue;
     }
 
-    const match = line.replace(ANCHOR_TAG_PATTERN, '').match(LEVEL_ONE_HEADING_PATTERN);
+    const match = stripAnchorBlocks(line).match(LEVEL_ONE_HEADING_PATTERN);
     if (!match) {
       continue;
     }

@@ -3,7 +3,9 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorTextAnchorPresentation } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
+import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { cn } from '../../shared/lib/utils';
 import { AppEmptyState } from '../../shared/ui';
@@ -41,7 +43,7 @@ export interface DocumentPanelBodyLayoutProps {
     title: string;
   };
   fitBlockImagesToViewport?: boolean;
-  hiddenTextAnchorKeys?: readonly string[];
+  textAnchorPresentation?: EditorTextAnchorPresentation;
   hasAnswerSection: boolean;
   isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
@@ -49,6 +51,7 @@ export interface DocumentPanelBodyLayoutProps {
   onEditorChange: (content: string) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEditorDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onOpenNodeLink?: (title: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onShouldSuppressSelectionRestore?: () => boolean;
@@ -95,6 +98,7 @@ function AnswerSection(props: DocumentPanelBodyLayoutProps) {
         onChange={props.onAnswerChange}
         onFitBlockImageMetricsChange={props.onAnswerImageMetricsChange}
         onImageLoadStateChange={props.onAnswerImageLoadStateChange}
+        onPastedAnchors={props.onPastedTextAnchors}
         readOnly={props.readOnly}
         value={props.reveal}
       />
@@ -126,7 +130,6 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         contentPaddingBottom={props.editorContentPaddingBottom}
         debugId={props.promptEditorDebugId}
         fitBlockImagesToViewport={props.fitBlockImagesToViewport}
-        hiddenTextAnchorKeys={props.hiddenTextAnchorKeys}
         hideScrollbar={props.editorHideScrollbar}
         hideTitleHeading={props.editorHideTitleHeading}
         immersiveEditing={props.immersiveEditing}
@@ -143,10 +146,12 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         onFitBlockImageMetricsChange={props.onPromptImageMetricsChange}
         onImageLoadStateChange={props.onPromptImageLoadStateChange}
         onOpenNodeLink={props.onOpenNodeLink}
+        onPastedAnchors={props.onPastedTextAnchors}
         onReady={props.onEditorReady}
         onShouldSuppressSelectionRestore={props.onShouldSuppressSelectionRestore}
         readOnly={props.readOnly}
         onSetReadingPositionSelection={props.onSetReadingPositionSelection}
+        textAnchorPresentation={props.textAnchorPresentation}
         value={props.editorContent}
       />
     </div>

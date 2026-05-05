@@ -1,4 +1,4 @@
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { isPdfAnchorLocator, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
@@ -106,7 +106,7 @@ function renderHighlightsPanel(
             return;
           }
           props.onSelectNode(highlightNode.parentNodeId);
-          if (highlightNode.anchorLink.locator) {
+          if (isPdfAnchorLocator(highlightNode.anchorLink.locator)) {
             requestPdfAnchorJump(highlightNode.parentNodeId, highlightNode.anchorLink.locator);
           }
           return;

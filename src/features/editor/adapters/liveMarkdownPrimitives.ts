@@ -1,7 +1,8 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 
-export const CODE_FENCE_PATTERN = /^\s*`{3,}/;
+import { CODE_FENCE_PATTERN } from '../model/markdownLineSyntax';
+
 const HEADING_PREFIX_PATTERN = /^\s*#{1,6}(?:\s+|$)/;
 const QUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const UNORDERED_LIST_PREFIX_PATTERN = /^(\s*[-*+]\s+)/;
@@ -14,18 +15,6 @@ interface PrefixWidgetMatch {
   to: number;
   kind: PrefixWidgetKind;
   markerText: string;
-}
-
-export function createLineClass(text: string, inCodeBlock: boolean) {
-  if (CODE_FENCE_PATTERN.test(text)) return 'cm-line-code-fence';
-  if (inCodeBlock) return 'cm-line-code';
-  if (/^#{3}\s*/.test(text)) return 'cm-line-h3';
-  if (/^#{2}\s*/.test(text)) return 'cm-line-h2';
-  if (/^#{1}\s*/.test(text)) return 'cm-line-h1';
-  if (/^\s*(?:>\s*)+/.test(text)) return 'cm-line-quote';
-  if (/^\s*[-*+]\s+/.test(text)) return 'cm-line-list-unordered';
-  if (/^\s*\d+[.)]\s+/.test(text)) return 'cm-line-list';
-  return null;
 }
 
 export function addReplace(ranges: Range<Decoration>[], from: number, to: number) {

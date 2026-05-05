@@ -48,12 +48,14 @@ function renderPanel(currentContent: string, updatedContent: string) {
   render(
     <DocumentSourceUpdatePanel
       currentContent={currentContent}
+      currentHighlightCount={1}
       currentNodeId="node-1"
       documentMaxWidth={760}
       editorAppearanceKey="appearance-1"
       onCurrentContentChange={() => undefined}
       onOpenChange={() => undefined}
       open
+      updatedHighlightCount={2}
       updatedContent={updatedContent}
     />
   );
@@ -121,6 +123,8 @@ describe('DocumentSourceUpdatePanel rendering', () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Comparison overview ruler')).toBeInTheDocument();
+    expect(screen.getByText('1 highlights')).toBeInTheDocument();
+    expect(screen.getByText('Highlights grow from 1 to 2')).toBeInTheDocument();
   });
 
 });

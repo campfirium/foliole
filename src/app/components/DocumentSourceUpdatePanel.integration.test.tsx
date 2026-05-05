@@ -15,19 +15,21 @@ describe('DocumentSourceUpdatePanel integration', () => {
       <MouseGestureSettingsProvider>
         <DocumentSourceUpdatePanel
           currentContent={'# Title\n\nSame\nLeft only\nEnd'}
+          currentHighlightCount={1}
           currentNodeId="node-1"
           documentMaxWidth={760}
           editorAppearanceKey="appearance-1"
           onCurrentContentChange={() => undefined}
           onOpenChange={() => undefined}
           open
+          updatedHighlightCount={2}
           updatedContent={'# Title\n\nSame\nRight only\nEnd'}
         />
       </MouseGestureSettingsProvider>
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getAllByText('Current').length).toBeGreaterThan(0);
     expect(screen.getByText('Updated Source')).toBeInTheDocument();
     expect(screen.getAllByTestId('source-update-pane')).toHaveLength(2);
   });

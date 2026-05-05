@@ -245,15 +245,25 @@ it('creates a linked note from an explicit reading selection payload', () => {
     result.current.handleCreateNoteFromPayload({
       anchorId: '1',
       clozeContent: '[...]\n\nBeta',
-      entries: [{ anchorId: '1', clozeContent: '[...]\n\nBeta', range: { from: 0, to: 5 }, selectionText: 'Alpha' }],
+      entries: [{
+        anchorId: '1',
+        clozeContent: '[...]\n\nBeta',
+        locator: { from: 0, originalText: 'Alpha', to: 5 },
+        range: { from: 0, to: 5 },
+        selectionText: 'Alpha'
+      }],
       parentNodeId: 'node-1',
       selectionText: 'Alpha'
     });
   });
 
-  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha', '1');
+  expect(createHighlightNodeFromSelection).toHaveBeenCalledWith('node-1', 'Alpha', '1', {
+    id: '1',
+    kind: 'highlight',
+    locator: { from: 0, originalText: 'Alpha', to: 5 }
+  });
   expect(createChildNode).toHaveBeenCalledWith('highlight-1', '');
   expect(onExitImmersiveMode).toHaveBeenCalledTimes(1);
   expect(onSelectNode).toHaveBeenCalledWith('note-1');
-  expect(updateNodeContent).toHaveBeenCalledWith('node-1', '<highlight id="1">Alpha</highlight id="1">\n\nBeta');
+  expect(updateNodeContent).not.toHaveBeenCalled();
 });

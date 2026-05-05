@@ -1,7 +1,7 @@
 import type { Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 
-import { createLineClass } from './liveMarkdownPrimitives';
+import { createLineClass } from '../model/markdownLineSyntax';
 
 export type EditorDiffLineKind = 'added' | 'removed';
 

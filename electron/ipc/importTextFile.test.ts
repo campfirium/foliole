@@ -159,7 +159,8 @@ it('supports adopting markdown highlight markers during import', async () => {
 
   expect(runPreparedImport).toHaveBeenCalledWith(
     expect.objectContaining({
-      content: 'Use <highlight id="1">important</highlight id="1"> text'
+      content: 'Use important text',
+      matchedHighlights: [{ content: 'important', label: null }]
     })
   );
 });

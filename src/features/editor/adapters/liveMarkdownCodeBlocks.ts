@@ -1,6 +1,6 @@
 import { StateField, type ChangeDesc, type EditorState, type Text } from '@codemirror/state';
 
-import { CODE_FENCE_PATTERN } from './liveMarkdownPrimitives';
+import { CODE_FENCE_PATTERN } from '../model/markdownLineSyntax';
 
 export const codeFenceLineNumbersField = StateField.define<readonly number[]>({
   create(state) {

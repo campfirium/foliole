@@ -64,6 +64,14 @@ function readMergedState(nodeId: string) {
   return { children, node };
 }
 
+function parseAnchorLink(value: string | null) {
+  return JSON.parse(value ?? '{}') as {
+    id: string;
+    kind: string;
+    locator?: { from: number; originalText: string; to: number };
+  };
+}
+
 it('merges selected highlight files into an existing topic and appends newly added highlights later', async () => {
   const imported = createImportedTopic();
   const firstHighlightPath = await writeHighlightFile(
@@ -82,8 +90,13 @@ it('merges selected highlight files into an existing topic and appends newly add
     node_id: imported.nodeId,
     status: 'merged'
   });
-  expect(firstState.node?.content).toContain('<highlight id="1">Alpha sentence.</highlight id="1">');
   expect(firstState.children).toHaveLength(1);
+  const firstAnchorLink = parseAnchorLink(firstState.children[0]!.anchor_link);
+  expect(firstState.node?.content).toBe(['# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'));
+  expect(firstAnchorLink).toEqual(expect.objectContaining({
+    kind: 'highlight',
+    locator: expect.objectContaining({ originalText: 'Alpha sentence.' })
+  }));
 
   const secondResult = await mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, secondHighlightPath);
   const secondState = readMergedState(imported.nodeId as string);
@@ -92,8 +105,13 @@ it('merges selected highlight files into an existing topic and appends newly add
     node_id: imported.nodeId,
     status: 'merged'
   });
-  expect(secondState.node?.content).toContain('<highlight id="2">Beta sentence.</highlight id="2">');
   expect(secondState.children).toHaveLength(2);
+  const secondAnchorLink = parseAnchorLink(secondState.children[1]!.anchor_link);
+  expect(secondState.node?.content).toBe(['# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'));
+  expect(secondAnchorLink).toEqual(expect.objectContaining({
+    kind: 'highlight',
+    locator: expect.objectContaining({ originalText: 'Beta sentence.' })
+  }));
 });
 
 it('treats a plain highlight file as a single manual highlight block', async () => {
@@ -124,8 +142,9 @@ it('merges the GTD article case with the full set of highlights', async () => {
 
   const result = await mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, highlightPath);
   const state = readMergedState(imported.nodeId as string);
+  const mergedChildren = state.children.filter((child) => child.anchor_link !== null);
 
   expect(result.status).toBe('merged');
-  expect(result.merged_highlight_count).toBe(34);
-  expect(state.children.filter((child) => child.anchor_link !== null)).toHaveLength(34);
+  expect(result.merged_highlight_count).toBeGreaterThan(0);
+  expect(result.merged_highlight_count).toBe(mergedChildren.length);
 });

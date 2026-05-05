@@ -1,6 +1,7 @@
 import type { NativeReadwiseDetectionSample } from '../../../lib/platform/nativeReadwiseContract';
 
 export interface RuntimeKeepImportPreviewEntry {
+  contentPreview: string | null;
   detail: string | null;
   detectedHighlightCount: number;
   highlightSamples: NativeReadwiseDetectionSample[];
@@ -78,11 +79,13 @@ export function toRuntimeKeepImportPreviewResult(value: unknown): RuntimeKeepImp
     if (
       typeof record.source_path !== 'string' ||
       !isKeepImportStatus(record.status) ||
+      (record.content_preview !== null && record.content_preview !== undefined && typeof record.content_preview !== 'string') ||
       (record.detail !== null && typeof record.detail !== 'string')
     ) {
       return null;
     }
     return {
+      contentPreview: typeof record.content_preview === 'string' ? record.content_preview : null,
       detail: record.detail,
       detectedHighlightCount: typeof record.detected_highlight_count === 'number' ? record.detected_highlight_count : 0,
       highlightSamples: toRuntimeHighlightSamples(record.highlight_samples),

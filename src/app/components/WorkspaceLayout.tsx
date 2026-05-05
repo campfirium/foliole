@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
@@ -123,6 +124,7 @@ export interface WorkspaceLayoutProps {
   onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
+  onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   onCreateSelectionNote: (payload: SelectionCommandPayload) => string | null;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;

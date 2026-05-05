@@ -2,6 +2,8 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 
 export interface AnchoredImportedHighlightRecord extends PreparedImportHighlightRecord {
   anchorId: string;
+  from?: number;
+  to?: number;
 }
 
 function normalizeLineEndings(value: string) {
@@ -37,7 +39,7 @@ function normalizeLooseWhitespaceWithMap(value: string) {
 }
 
 export function collectAnchoredImportedHighlights(content: string) {
-  const pattern = /<highlight id="([1-9]\d*)">([\s\S]*?)<\/highlight id="\1">/g;
+  const pattern = /<highlight id="([^"]+)">([\s\S]*?)<\/highlight id="\1">/g;
   return [...content.matchAll(pattern)]
     .map<AnchoredImportedHighlightRecord | null>((match) => {
       const anchorId = match[1] ?? '';
@@ -52,17 +54,6 @@ export function collectAnchoredImportedHighlights(content: string) {
       };
     })
     .filter((highlight): highlight is AnchoredImportedHighlightRecord => highlight !== null);
-}
-
-function findNextAnchorNumericId(content: string) {
-  let maxId = 0;
-  for (const match of content.matchAll(/<(?:highlight|cloze)\s+id="([1-9]\d*)"\s*>/g)) {
-    const id = Number.parseInt(match[1] ?? '', 10);
-    if (Number.isFinite(id) && id > maxId) {
-      maxId = id;
-    }
-  }
-  return maxId + 1;
 }
 
 function findAvailableOccurrence(
@@ -126,10 +117,9 @@ export function applyImportedHighlightAnchors(input: {
     return { content: input.content, highlights: [] satisfies AnchoredImportedHighlightRecord[] };
   }
 
-  let nextAnchorId = findNextAnchorNumericId(input.content);
   let searchFrom = 0;
   const occupiedRanges: Array<{ from: number; to: number }> = [];
-  const locatedHighlights: Array<AnchoredImportedHighlightRecord & { from: number; to: number }> = [];
+  const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
 
   input.highlights.forEach((highlight) => {
     const excerpt = highlight.content.trim();
@@ -140,25 +130,14 @@ export function applyImportedHighlightAnchors(input: {
     if (!range) {
       return;
     }
-    const anchorId = String(nextAnchorId);
-    nextAnchorId += 1;
+    const anchorId = `imported-highlight-${crypto.randomUUID()}`;
     searchFrom = range.to;
     occupiedRanges.push(range);
     locatedHighlights.push({ ...highlight, anchorId, ...range });
   });
 
-  let anchoredContent = input.content;
-  [...locatedHighlights]
-    .sort((left, right) => right.from - left.from)
-    .forEach((highlight) => {
-      anchoredContent =
-        `${anchoredContent.slice(0, highlight.from)}<highlight id="${highlight.anchorId}">` +
-        `${anchoredContent.slice(highlight.from, highlight.to)}` +
-        `</highlight id="${highlight.anchorId}">${anchoredContent.slice(highlight.to)}`;
-    });
-
   return {
-    content: anchoredContent,
-    highlights: locatedHighlights.map(({ anchorId, content, label }) => ({ anchorId, content, label }))
+    content: input.content,
+    highlights: locatedHighlights
   };
 }

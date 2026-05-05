@@ -17,6 +17,7 @@ import { SourceUpdatePanelColumns } from './SourceUpdatePanelColumns';
 
 interface DocumentSourceUpdatePanelProps {
   currentContent: string;
+  currentHighlightCount: number;
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
@@ -25,6 +26,7 @@ interface DocumentSourceUpdatePanelProps {
   onOpenChange: (open: boolean) => void;
   open: boolean;
   onUpdatedEditorReady?: (adapter: EditorAdapter | null) => void;
+  updatedHighlightCount: number;
   updatedContent: string;
 }
 

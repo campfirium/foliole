@@ -1,0 +1,113 @@
+// @vitest-environment node
+
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+let mockedAppDataDir = '/tmp/foliole-export-article-mirror-app-data';
+let mockedDocumentsDir = '/tmp/foliole-export-article-mirror-documents';
+
+vi.mock('../ipc/paths.js', () => ({
+  resolveAppPaths: () => ({
+    app_data_dir: mockedAppDataDir,
+    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
+    app_config_dir: path.join(mockedAppDataDir, 'config'),
+    documents_dir: mockedDocumentsDir,
+    app_log_dir: path.join(mockedAppDataDir, 'logs')
+  })
+}));
+
+import { closeDatabaseConnection } from '../database/connection.js';
+import { initializeDatabase } from '../database/migrate.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
+
+import {
+  exportArticleToMirror,
+  loadArticleNode,
+  renderArticleMirrorMarkdown,
+  resolveArticleIdFromNodeId
+} from './exportArticleMirror.js';
+
+let tempRoot = '';
+
+beforeEach(async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-export-article-mirror-'));
+  mockedAppDataDir = path.join(tempRoot, 'app-data');
+  mockedDocumentsDir = path.join(tempRoot, 'Documents');
+  initializeDatabase();
+  await updateLibraryPathSetting({ location: 'library_home', path: path.join(tempRoot, 'Library') });
+});
+
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+function seedArticleWithLocatorHighlight() {
+  upsertNodeSnapshot({
+    nodeId: 'node-article',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Mirror Export Demo',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: 'Keep bright text here.',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  });
+  upsertNodeSnapshot({
+    nodeId: 'node-highlight',
+    parentNodeId: 'node-article',
+    kind: 'topic',
+    title: 'bright text',
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: 'bright text',
+    reveal: null,
+    anchorLink: {
+      id: 'hl-1',
+      kind: 'highlight',
+      locator: {
+        from: 5,
+        to: 16,
+        originalText: 'bright text'
+      }
+    },
+    position: 1,
+    createdAt: '2026-04-14T00:00:00.000Z',
+    updatedAt: '2026-04-14T00:00:00.000Z'
+  });
+}
+
+it('renders article markdown when derived children use text locator payloads', () => {
+  seedArticleWithLocatorHighlight();
+
+  const articleRow = loadArticleNode('node-article');
+  expect(articleRow).not.toBeNull();
+  if (!articleRow) {
+    throw new Error('expected article row');
+  }
+
+  expect(renderArticleMirrorMarkdown(articleRow)).toContain('Keep ==bright text== here.');
+});
+
+it('resolves article ownership from derived nodes with text locator payloads', () => {
+  seedArticleWithLocatorHighlight();
+
+  expect(resolveArticleIdFromNodeId('node-highlight')).toBe('node-article');
+});
+
+it('exports article files when database rows contain text locator payloads', async () => {
+  seedArticleWithLocatorHighlight();
+
+  await expect(exportArticleToMirror('node-article')).resolves.toBe(true);
+
+  const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Mirror Export Demo.md');
+  await expect(fs.readFile(outputPath, 'utf8')).resolves.toContain('Keep ==bright text== here.');
+});

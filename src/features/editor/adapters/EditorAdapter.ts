@@ -8,6 +8,28 @@ export interface EditorSearchDecorations {
   matches: EditorSelection[];
 }
 
+export interface EditorTextAnchorDecoration {
+  from: number;
+  kind: 'cloze' | 'highlight';
+  to: number;
+}
+
+export interface EditorInlineAnchorCompatibility {
+  hiddenKeys: readonly string[];
+}
+
+export interface EditorTextAnchorPresentation {
+  inlineAnchorCompatibility: EditorInlineAnchorCompatibility;
+  textAnchorDecorations: readonly EditorTextAnchorDecoration[];
+}
+
+export const EMPTY_EDITOR_TEXT_ANCHOR_PRESENTATION: EditorTextAnchorPresentation = {
+  inlineAnchorCompatibility: {
+    hiddenKeys: []
+  },
+  textAnchorDecorations: []
+};
+
 export interface EditorScrollMetrics {
   clientHeight: number;
   scrollHeight: number;
@@ -40,7 +62,7 @@ export interface EditorAdapter {
   getScrollMetrics(): EditorScrollMetrics;
   replaceRange(from: number, to: number, content: string): void;
   replaceSelection(content: string): void;
-  setHiddenTextAnchorKeys?(hiddenTextAnchorKeys: readonly string[]): void;
+  setTextAnchorPresentation?(textAnchorPresentation: EditorTextAnchorPresentation): void;
   setReadOnly?(readOnly: boolean): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;

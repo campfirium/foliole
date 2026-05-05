@@ -1,3 +1,4 @@
+import { removeInlineAnchorMarkup } from '../../../src/features/editor/model/anchorInlineCleanup.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
@@ -17,18 +18,19 @@ interface NodeAnchorLinkPayload {
   kind: 'highlight' | 'cloze';
   locator?: {
     attachmentId?: string;
+    from?: number;
     height?: number;
+    originalText?: string;
     page?: number;
+    to?: number;
     width?: number;
     x: number;
     y: number;
+  } | {
+    from: number;
+    originalText: string;
+    to: number;
   };
-}
-
-function removeAnchorTagsForLink(content: string, anchor: { id: string; kind: 'highlight' | 'cloze' }) {
-  return content
-    .replaceAll(`<${anchor.kind} id="${anchor.id}">`, '')
-    .replaceAll(`</${anchor.kind} id="${anchor.id}">`, '');
 }
 
 function parseAnchorLinkPayload(value: string | null) {
@@ -68,7 +70,7 @@ export function cleanupDeletedTextAnchors(driver: DatabaseDriver, nodeIds: strin
     if (!parentRow) {
       continue;
     }
-    const cleanedContent = removeAnchorTagsForLink(parentRow.content, anchorLink);
+    const cleanedContent = removeInlineAnchorMarkup(parentRow.content, anchorLink);
     if (cleanedContent === parentRow.content) {
       continue;
     }

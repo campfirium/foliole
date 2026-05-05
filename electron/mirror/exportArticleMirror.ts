@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
@@ -107,24 +108,6 @@ function loadAncestorChain(parentId: string): AncestorRow[] {
   ).all(parentId) as AncestorRow[];
 }
 
-function parseAnchorLink(value: string | null): { id: string; kind: 'highlight' | 'cloze' } | null {
-  if (!value) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(value) as { id?: unknown; kind?: unknown };
-    if (typeof parsed.id !== 'string') {
-      return null;
-    }
-    if (parsed.kind !== 'highlight' && parsed.kind !== 'cloze') {
-      return null;
-    }
-    return { id: parsed.id, kind: parsed.kind };
-  } catch {
-    return null;
-  }
-}
-
 interface ArticleNodeView {
   id: string;
   parentNodeId: string | null;
@@ -133,7 +116,7 @@ interface ArticleNodeView {
   hideTitleHeading: boolean;
   content: string;
   reveal: string | null;
-  anchorLink: { id: string; kind: 'highlight' | 'cloze' } | null;
+  anchorLink: StoredAnchorLink | null;
   updatedAt: string;
 }
 
@@ -146,7 +129,7 @@ function toNodeView(row: MirrorNodeRow): ArticleNodeView {
     hideTitleHeading: row.hide_title_heading === 1,
     content: row.content,
     reveal: row.reveal,
-    anchorLink: parseAnchorLink(row.anchor_link),
+    anchorLink: parseStoredAnchorLink(row.anchor_link),
     updatedAt: row.updated_at
   };
 }

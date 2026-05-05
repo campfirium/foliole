@@ -51,6 +51,15 @@ it('extracts summary from body content, skips frontmatter, and truncates long te
   expect(summary.length).toBeLessThanOrEqual(161);
 });
 
+it('strips opaque anchor tags when building the list summary', () => {
+  const summary = getWorkspaceListNodeSummary({
+    content: '<highlight id="anchor-1">Atlas</highlight id="anchor-1">: useful detail',
+    title: 'Atlas'
+  });
+
+  expect(summary).toBe('useful detail');
+});
+
 it('falls back to the empty summary copy when no usable content remains', () => {
   expect(
     getWorkspaceListNodeSummary({

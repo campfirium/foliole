@@ -5,7 +5,6 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../../shared/platform/attachmentImageActions';
 import type { WorkspaceEditorContextMenu } from '../components/WorkspaceLayout';
 import {
-  applySelectionMarkup,
   getSelectionCommandPayload,
   normalizeContextMenuPosition,
   type SelectionCommandPayload
@@ -58,20 +57,14 @@ function refreshSelectionHighlight(adapter: EditorAdapter | null) {
 export function createSelectionCommandRunner(
   contextMenu: SelectionContextMenuState | null,
   editorRef: MutableRefObject<EditorAdapter | null>,
-  closeContextMenu: () => void,
-  syncActiveNodeContentFromEditor: () => void
+  closeContextMenu: () => void
 ) {
   return (onApplied: (payload: SelectionCommandPayload) => void, anchorKind: 'highlight' | 'cloze') => {
+    void anchorKind;
     const payload = contextMenu?.payload;
-    if (!payload) {
+    if (!payload || !editorRef.current || payload.entries.length === 0) {
       return;
     }
-    const applied = applySelectionMarkup(editorRef.current, anchorKind, payload.entries);
-    if (!applied) {
-      closeContextMenu();
-      return;
-    }
-    syncActiveNodeContentFromEditor();
     onApplied(payload);
     closeContextMenu();
   };

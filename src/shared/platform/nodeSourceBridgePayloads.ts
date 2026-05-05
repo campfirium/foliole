@@ -47,8 +47,10 @@ export interface RuntimeNodeSourceDetails {
 
 export interface RuntimeNodeSourceUpdatePreview {
   checkedAt: string;
+  currentHighlightCount: number;
   currentContent: string;
   sourceNodeId: string;
+  updatedHighlightCount: number;
   updatedContent: string;
 }
 
@@ -209,16 +211,20 @@ export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSou
   const payload = value as Record<string, unknown>;
   if (
     typeof payload.checked_at !== 'string' ||
+    typeof payload.current_highlight_count !== 'number' ||
     typeof payload.current_content !== 'string' ||
     typeof payload.source_node_id !== 'string' ||
+    typeof payload.updated_highlight_count !== 'number' ||
     typeof payload.updated_content !== 'string'
   ) {
     return null;
   }
   return {
     checkedAt: payload.checked_at,
+    currentHighlightCount: payload.current_highlight_count,
     currentContent: payload.current_content,
     sourceNodeId: payload.source_node_id,
+    updatedHighlightCount: payload.updated_highlight_count,
     updatedContent: payload.updated_content
   };
 }

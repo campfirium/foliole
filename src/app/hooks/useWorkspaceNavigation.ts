@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
-import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
@@ -63,7 +63,7 @@ function usePendingAnchorNavigation(
     if (!activeNodeId || !pendingAnchorNodeId || !pendingAnchor || pendingAnchorNodeId !== activeNodeId) {
       return;
     }
-    if (pendingAnchor.kind === 'highlight' && pendingAnchor.locator) {
+    if (pendingAnchor.kind === 'highlight' && isPdfAnchorLocator(pendingAnchor.locator)) {
       requestPdfAnchorJump(activeNodeId, pendingAnchor.locator);
       clearPendingAnchor();
       return;

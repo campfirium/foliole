@@ -115,9 +115,11 @@ function persistImportedHighlightNodes(input: {
   matchedAnchoredHighlights: ReturnType<typeof applyImportedHighlightAnchors>['highlights'];
 }) {
   if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar') {
+    const genericHighlights =
+      input.matchedAnchoredHighlights.length > 0 ? input.matchedAnchoredHighlights : input.anchoredHighlights;
     replaceImportedHighlightNodes({
       driver: input.driver,
-      highlights: input.anchoredHighlights,
+      highlights: genericHighlights,
       importedAt: input.importedAt,
       parentNodeId: input.nodeId,
       startPosition: readNextNodePosition(input.driver)

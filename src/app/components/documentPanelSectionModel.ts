@@ -98,6 +98,7 @@ function getDocumentPanelBodyProps(
     onEditorChange: props.onEditorChange,
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorDoubleClick: props.isImmersiveMode && !props.isImmersiveEditing ? props.onEnterImmersiveEdit : undefined,
+    onPastedTextAnchors: props.onPastedTextAnchors,
     onEditorReady: props.onEditorReady,
     onShouldSuppressSelectionRestore: props.onShouldSuppressSelectionRestore,
     onSetReadingPositionSelection: props.onSetReadingPositionSelection,

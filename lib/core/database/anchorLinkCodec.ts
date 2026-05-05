@@ -3,7 +3,9 @@ export interface StoredAnchorLink {
   kind: 'highlight' | 'cloze';
   locator?: {
     attachmentId?: string;
+    from?: number;
     height?: number;
+    originalText?: string;
     page?: number;
     rects?: Array<{
       x: number;
@@ -11,9 +13,14 @@ export interface StoredAnchorLink {
       width: number;
       height: number;
     }>;
+    to?: number;
     width?: number;
     x: number;
     y: number;
+  } | {
+    from: number;
+    originalText: string;
+    to: number;
   };
 }
 
@@ -51,6 +58,81 @@ function asRectArray(value: unknown) {
   return rects.length > 0 ? rects : undefined;
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function parseTextLocator(
+  locator:
+    | {
+        from?: unknown;
+        originalText?: unknown;
+        to?: unknown;
+      }
+    | undefined
+) {
+  if (
+    !locator ||
+    !isFiniteNumber(locator.from) ||
+    !Number.isInteger(locator.from) ||
+    locator.from < 0 ||
+    !isFiniteNumber(locator.to) ||
+    !Number.isInteger(locator.to) ||
+    locator.to < locator.from ||
+    typeof locator.originalText !== 'string'
+  ) {
+    return undefined;
+  }
+  return {
+    from: locator.from,
+    originalText: locator.originalText,
+    to: locator.to
+  };
+}
+
+function parseVisualLocator(
+  locator:
+    | {
+        attachmentId?: unknown;
+        height?: unknown;
+        page?: unknown;
+        rects?: unknown;
+        width?: unknown;
+        x?: unknown;
+        y?: unknown;
+      }
+    | undefined
+) {
+  if (!locator || !isFiniteNumber(locator.x) || !isFiniteNumber(locator.y)) {
+    return undefined;
+  }
+  if (
+    typeof locator.attachmentId === 'string' &&
+    locator.attachmentId.trim().length > 0 &&
+    isFiniteNumber(locator.width) &&
+    locator.width > 0 &&
+    isFiniteNumber(locator.height) &&
+    locator.height > 0
+  ) {
+    return {
+      attachmentId: locator.attachmentId,
+      height: clampRatio(locator.height),
+      width: clampRatio(locator.width),
+      x: clampRatio(locator.x),
+      y: clampRatio(locator.y)
+    };
+  }
+  if (isFiniteNumber(locator.page) && Number.isInteger(locator.page) && locator.page > 0) {
+    return {
+      page: locator.page,
+      rects: asRectArray(locator.rects),
+      x: clampRatio(locator.x),
+      y: clampRatio(locator.y)
+    };
+  }
+  return undefined;
+}
+
 export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | null {
   if (!value) {
     return null;
@@ -61,9 +143,12 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
       kind?: unknown;
       locator?: {
         attachmentId?: unknown;
+        from?: unknown;
         height?: unknown;
+        originalText?: unknown;
         page?: unknown;
         rects?: unknown;
+        to?: unknown;
         width?: unknown;
         x?: unknown;
         y?: unknown;
@@ -77,32 +162,14 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     }
     const base: StoredAnchorLink = { id: parsed.id, kind: parsed.kind };
     const locator = parsed.locator;
-    if (locator && typeof locator.x === 'number' && Number.isFinite(locator.x) && typeof locator.y === 'number' && Number.isFinite(locator.y)) {
-      if (
-        typeof locator.attachmentId === 'string' &&
-        locator.attachmentId.trim().length > 0 &&
-        typeof locator.width === 'number' &&
-        Number.isFinite(locator.width) &&
-        locator.width > 0 &&
-        typeof locator.height === 'number' &&
-        Number.isFinite(locator.height) &&
-        locator.height > 0
-      ) {
-        base.locator = {
-          attachmentId: locator.attachmentId,
-          height: clampRatio(locator.height),
-          width: clampRatio(locator.width),
-          x: clampRatio(locator.x),
-          y: clampRatio(locator.y)
-        };
-      } else if (typeof locator.page === 'number' && Number.isInteger(locator.page) && locator.page > 0) {
-        base.locator = {
-          page: locator.page,
-          rects: asRectArray(locator.rects),
-          x: clampRatio(locator.x),
-          y: clampRatio(locator.y)
-        };
-      }
+    const textLocator = parseTextLocator(locator);
+    if (textLocator) {
+      base.locator = textLocator;
+      return base;
+    }
+    const visualLocator = parseVisualLocator(locator);
+    if (visualLocator) {
+      base.locator = visualLocator;
     }
     return base;
   } catch {

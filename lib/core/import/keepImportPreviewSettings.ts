@@ -1,6 +1,7 @@
 import type { NativeReadwiseDetectionSample } from '../../platform/nativeReadwiseContract.js';
 
 export interface KeepImportPreviewSample {
+  contentPreview: string | null;
   detail: string | null;
   detectedHighlightCount: number;
   highlightSamples: NativeReadwiseDetectionSample[];
@@ -56,6 +57,7 @@ function normalizeKeepImportPreviewSample(value: unknown): KeepImportPreviewSamp
   }
   if (
     typeof value.sourcePath !== 'string' ||
+    typeof value.contentPreview !== 'string' && value.contentPreview !== null ||
     typeof value.detail !== 'string' && value.detail !== null ||
     (value.status !== 'new' &&
       value.status !== 'updated' &&
@@ -66,6 +68,7 @@ function normalizeKeepImportPreviewSample(value: unknown): KeepImportPreviewSamp
     return null;
   }
   return {
+    contentPreview: value.contentPreview,
     detail: value.detail,
     detectedHighlightCount: typeof value.detectedHighlightCount === 'number' ? value.detectedHighlightCount : 0,
     highlightSamples: normalizeHighlightSamples(value.highlightSamples),

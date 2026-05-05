@@ -3,22 +3,23 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
-import { anchorStructureGuard } from './anchorStructureGuard';
 import {
   type CodeMirrorEditorAdapterOptions,
   type EditorDocumentChangeMeta,
   createReadOnlyExtensions,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
-import { createLiveMarkdown } from './liveMarkdown';
+import { createLiveMarkdownExtensions } from './liveMarkdown';
+import { createLiveMarkdownStateExtensions } from './liveMarkdownState';
 import { markdownInputAssist } from './markdownInputAssist';
 
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
-  hiddenTextAnchorKeys: readonly string[];
+  textAnchorPresentation: import('./EditorAdapter').EditorTextAnchorPresentation;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   liveMarkdownCompartment: import('@codemirror/state').Compartment;
+  liveMarkdownStateCompartment: import('@codemirror/state').Compartment;
   nodeId: string | null;
   onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
   onCompositionEnd: () => void;
@@ -26,10 +27,10 @@ export function createCodeMirrorEditorExtensions(args: {
   paragraphMarkerCompartment: import('@codemirror/state').Compartment;
   readOnlyCompartment: import('@codemirror/state').Compartment;
   searchDecorationsCompartment: import('@codemirror/state').Compartment;
+  textAnchorDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
   return [
     markdown(),
-    anchorStructureGuard,
     history(),
     EditorState.allowMultipleSelections.of(true),
     keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -41,14 +42,17 @@ export function createCodeMirrorEditorExtensions(args: {
     args.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.paragraphMarkerCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
-    args.liveMarkdownCompartment.of(
-      createLiveMarkdown(
-        args.hideTitleHeading,
-        args.nodeId,
-        args.imageClozePresentationVersion,
-        args.hiddenTextAnchorKeys,
-        args.options.onOpenNodeLink ?? null
-      )
+    args.textAnchorDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
+    args.liveMarkdownCompartment.of(createLiveMarkdownExtensions()),
+    args.liveMarkdownStateCompartment.of(
+      createLiveMarkdownStateExtensions({
+        textAnchorPresentation: args.textAnchorPresentation,
+        hideTitleHeading: args.hideTitleHeading,
+        imageClozePresentationVersion: args.imageClozePresentationVersion,
+        nodeId: args.nodeId,
+        onOpenNodeLink: args.options.onOpenNodeLink ?? null,
+        onPastedAnchors: args.options.onPastedAnchors ?? null
+      })
     ),
     EditorView.domEventHandlers({
       compositionend: () => {
@@ -67,11 +71,12 @@ export function createCodeMirrorEditorExtensions(args: {
 
 export function createLiveMarkdownEffect(args: {
   compartment: import('@codemirror/state').Compartment;
-  hiddenTextAnchorKeys: readonly string[];
+  textAnchorPresentation: import('./EditorAdapter').EditorTextAnchorPresentation;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   nodeId: string | null;
   onOpenNodeLink: ((title: string) => void) | null;
+  onPastedAnchors?: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
 }) {
   return createLiveMarkdownReconfigureEffect(args);
 }

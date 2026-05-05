@@ -1,4 +1,4 @@
-import { createLineClass } from '../../features/editor/adapters/liveMarkdownPrimitives';
+import { createLineClass } from '../../features/editor/model/markdownLineSyntax';
 
 export interface SourceUpdateAlignedRow {
   currentLine: string | null;

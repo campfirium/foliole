@@ -130,7 +130,15 @@ function readImportedBook(rootNodeId: string) {
   return { chapters, connection, derivedRootChildren };
 }
 
-it('anchors readwise book highlights under the matched imported chapters', async () => {
+function parseAnchorLink(value: string) {
+  return JSON.parse(value) as {
+    id: string;
+    kind: string;
+    locator?: { from: number; originalText: string; to: number };
+  };
+}
+
+async function importManualReadwiseBook() {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
   const selectedEpubPath = await createMultiChapterBookEpub('selected-book-multi.epub');
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
@@ -143,7 +151,6 @@ it('anchors readwise book highlights under the matched imported chapters', async
   const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
 
   expect(nodeId).toBeTruthy();
-
   await loadReadwiseBookEpub(nodeId!);
 
   const importedNodeId = (
@@ -157,13 +164,15 @@ it('anchors readwise book highlights under the matched imported chapters', async
       )
       .get() as { latest_node_id: string }
   ).latest_node_id;
-  const { chapters, connection, derivedRootChildren } = readImportedBook(importedNodeId);
+  return readImportedBook(importedNodeId);
+}
+
+it('anchors readwise book highlights under the matched imported chapters', async () => {
+  const { chapters, connection, derivedRootChildren } = await importManualReadwiseBook();
   const chapterOne = chapters.find((row) => row.title === 'Chapter 1');
   const chapterTwo = chapters.find((row) => row.title === 'Chapter 2');
 
   expect(derivedRootChildren).toEqual([]);
-  expect(chapterOne?.content).toContain('<highlight id="1">early remembered quote</highlight id="1">');
-  expect(chapterTwo?.content).toContain('<highlight id="1">later insight</highlight id="1">');
 
   const chapterOneDerived = connection
     .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
@@ -171,17 +180,38 @@ it('anchors readwise book highlights under the matched imported chapters', async
   const chapterTwoDerived = connection
     .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
     .all(chapterTwo?.id) as Array<{ anchor_link: string; content: string; title: string }>;
+  const chapterOneAnchorLink = parseAnchorLink(chapterOneDerived[0]!.anchor_link);
+  const chapterTwoAnchorLink = parseAnchorLink(chapterTwoDerived[0]!.anchor_link);
 
-  expect(chapterOneDerived).toEqual([
+  expect(chapterOne?.content).toContain('First chapter keeps the early remembered quote in place.');
+  expect(chapterTwo?.content).toContain('Second chapter saves the later insight for a different section.');
+
+  expect(chapterOneDerived.map((row) => ({
+    anchorLink: parseAnchorLink(row.anchor_link),
+    content: row.content,
+    title: row.title
+  }))).toEqual([
     {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      anchorLink: expect.objectContaining({
+        id: chapterOneAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'early remembered quote' })
+      }),
       content: 'early remembered quote',
       title: 'early remembered quote'
     }
   ]);
-  expect(chapterTwoDerived).toEqual([
+  expect(chapterTwoDerived.map((row) => ({
+    anchorLink: parseAnchorLink(row.anchor_link),
+    content: row.content,
+    title: row.title
+  }))).toEqual([
     {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+      anchorLink: expect.objectContaining({
+        id: chapterTwoAnchorLink.id,
+        kind: 'highlight',
+        locator: expect.objectContaining({ originalText: 'later insight' })
+      }),
       content: 'later insight',
       title: 'later insight'
     }

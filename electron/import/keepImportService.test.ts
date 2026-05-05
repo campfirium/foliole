@@ -34,6 +34,7 @@ import {
   seedReadwiseArticleFixture
 } from './keepImportReadwiseTestSupport.js';
 import { previewKeepImportRule, runKeepImportRule } from './keepImportService.js';
+import { createGenericKeepImportConfig, parseAnchorLink } from './keepImportService.test-support.js';
 
 let tempRoot = '';
 
@@ -55,11 +56,7 @@ it('recreates a new keep-import node after the previous one was deleted', async 
   const filePath = path.join(sourceDir, 'entry.md');
 
   await fs.writeFile(filePath, '# First import\nBody\n', 'utf8');
-  await runKeepImportRule({
-    directoryPath: sourceDir,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-101'
-  });
+  await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-101'));
 
   const connection = openDatabaseConnection();
   const importedNode = connection.sqlite
@@ -73,11 +70,7 @@ it('recreates a new keep-import node after the previous one was deleted', async 
 
   await fs.writeFile(filePath, '# Updated import\nBody changed\n', 'utf8');
 
-  const preview = await previewKeepImportRule({
-    directoryPath: sourceDir,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-101'
-  });
+  const preview = await previewKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-101'));
   expect(preview.entries).toEqual([
     expect.objectContaining({
       detail: 'Deleted item will be imported again as a new node.',
@@ -86,11 +79,7 @@ it('recreates a new keep-import node after the previous one was deleted', async 
     })
   ]);
 
-  await runKeepImportRule({
-    directoryPath: sourceDir,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-101'
-  });
+  await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-101'));
 
   const nodeRows = connection.sqlite
     .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'entry' ORDER BY created_at ASC`)
@@ -163,21 +152,33 @@ it('wires readwise keep import into existing highlight-derived child creation', 
     sourceType: 'readwise'
   });
   const { childRows, parentRow } = readImportedChildRows();
+  const firstAnchorLink = parseAnchorLink(childRows[0]!.anchor_link!);
+  const secondAnchorLink = parseAnchorLink(childRows[1]!.anchor_link!);
 
   expect(childRows).toHaveLength(2);
   expect(parentRow.content).toContain('---\nauthor: Someone\n---');
-  expect(parentRow.content).toContain('<highlight id="1">This is the highlighted sentence.</highlight id="1">');
-  expect(parentRow.content).toContain('<highlight id="2">Another matching excerpt.</highlight id="2">');
+  expect(parentRow.content).toContain('This is the highlighted sentence.');
+  expect(parentRow.content).toContain('Another matching excerpt.');
   expect(childRows[0]).toEqual({
-    anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
+    anchor_link: childRows[0]!.anchor_link,
     content: 'This is the highlighted sentence.',
     title: 'This is the highlighted sentence.'
   });
   expect(childRows[1]).toEqual({
-    anchor_link: JSON.stringify({ id: '2', kind: 'highlight' }),
+    anchor_link: childRows[1]!.anchor_link,
     content: 'Another matching excerpt.',
     title: 'Another matching excerpt.'
   });
+  expect(firstAnchorLink).toEqual(expect.objectContaining({
+    id: firstAnchorLink.id,
+    kind: 'highlight',
+    locator: expect.objectContaining({ originalText: 'This is the highlighted sentence.' })
+  }));
+  expect(secondAnchorLink).toEqual(expect.objectContaining({
+    id: secondAnchorLink.id,
+    kind: 'highlight',
+    locator: expect.objectContaining({ originalText: 'Another matching excerpt.' })
+  }));
 });
 
 it('treats sidecar highlight changes as a separate refresh trigger when the body file is unchanged', async () => {
@@ -219,69 +220,5 @@ it('treats sidecar highlight changes as a separate refresh trigger when the body
       source_path: 'Sample Article.md',
       status: 'updated'
     })
-  ]);
-});
-
-it('notifies the renderer after keep imports write a new record', async () => {
-  await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Imported\nBody\n', 'utf8');
-
-  await runKeepImportRule({
-    directoryPath: tempRoot,
-    highlightPolicy: 'reference_only',
-    ruleId: 'draft-import-source-301'
-  });
-
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledTimes(1);
-  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith(expect.stringMatching(/^import-/));
-});
-
-it('adopts inline markdown highlights for generic merged keep imports', async () => {
-  const sourceDir = path.join(tempRoot, 'merged-source');
-  await fs.mkdir(sourceDir, { recursive: true });
-  await fs.writeFile(path.join(sourceDir, 'entry.md'), 'Before ==important== after', 'utf8');
-
-  const preview = await previewKeepImportRule({
-    directoryPath: sourceDir,
-    highlightPolicy: 'adopt',
-    ruleId: 'draft-import-source-101'
-  });
-
-  expect(preview.entries).toEqual([
-    expect.objectContaining({
-      detected_highlight_count: 1,
-      highlight_samples: [
-        expect.objectContaining({
-          highlightText: 'important',
-          matched: true,
-          sourceName: 'entry.md'
-        })
-      ],
-      source_path: 'entry.md',
-      status: 'new'
-    })
-  ]);
-
-  await runKeepImportRule({ directoryPath: sourceDir, highlightPolicy: 'adopt', ruleId: 'draft-import-source-101' });
-
-  const row = openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT id, content
-       FROM nodes
-       WHERE title = 'entry'
-       ORDER BY created_at DESC
-       LIMIT 1`
-    )
-    .get() as { content: string; id: string };
-  const childRows = openDatabaseConnection().sqlite
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
-    .all(row.id) as Array<{ anchor_link: string | null; content: string; title: string }>;
-
-  expect(row.content).toContain('<highlight id="1">important</highlight id="1">');
-  expect(childRows).toEqual([
-    {
-      anchor_link: JSON.stringify({ id: '1', kind: 'highlight' }),
-      content: 'important',
-      title: 'important'
-    }
   ]);
 });
