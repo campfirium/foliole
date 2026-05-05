@@ -6,7 +6,13 @@ import ReactDOM from 'react-dom/client';
 import { App } from './app/App';
 import './app/styles.css';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
-import { getRuntimeInvoke, reportRuntimeAppReady, reportRuntimeBootStage } from './shared/platform/bridge';
+import {
+  getRuntimeInvoke,
+  reportRuntimeAppReady,
+  reportRuntimeBootStage,
+  reportRuntimeBridgeReady,
+  resolveRuntimeAppPaths
+} from './shared/platform/bridge';
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 
 const ROOT_ID = 'root';
@@ -110,10 +116,27 @@ function mountApp() {
   registerAppReadySignals(signalAppReady);
 }
 
+async function reportDesktopBridgeReady() {
+  const appPaths = await resolveRuntimeAppPaths();
+  if (!appPaths) {
+    return;
+  }
+  reportRuntimeBridgeReady({
+    appDataDir: appPaths.appDataDir,
+    appCacheDir: appPaths.appCacheDir,
+    appConfigDir: appPaths.appConfigDir,
+    appLogDir: appPaths.appLogDir,
+    bridgeAvailable: true,
+    href: window.location.href,
+    readyState: document.readyState
+  });
+}
+
 async function bootstrap() {
   try {
     reportRuntimeBootStage('boot_start');
     await syncAppSettingsWithRuntime();
+    await reportDesktopBridgeReady();
     mountApp();
   } catch (error) {
     console.error('[startup] fatal bootstrap error', error);

@@ -253,6 +253,43 @@ describe('windows-preview script', () => {
     }
   });
 
+  it('treats bridge-missing status as an untrusted visible window and forces a clean start path', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: STOPPED reason=bridge-ready-missing shell_pid=400 runtime_pid=401 marker_pid=401"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  echo "[windows-restart-client] discarded untrusted runtime pid=401 reason=bridge-ready-missing marker_pid=401"',
+          '  echo "[windows-restart-client] status: STARTED shell_pid=500 runtime_pid=501"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('reason: Class C: no trusted running client');
+      expect(result.stdout).toContain('selected action: fallback-start');
+      expect(result.stdout).toContain('status: STARTED');
+      expect(await readActions(actionLog)).toEqual(['status', 'start']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('does not treat stale RUNNING during fallback-start as a successful start', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {

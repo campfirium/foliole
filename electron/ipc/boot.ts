@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson');
 const READY_MARKER_FILE = '.windows-native-boot-ready.json';
+const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
 
 function resolveRepoRoot() {
   const envRoot = process.env.FOLIOLE_WORKDIR;
@@ -26,6 +27,7 @@ export async function bootReport(stage: string, payload: unknown = null) {
   const repoRoot = resolveRepoRoot();
   const eventLogPath = path.join(repoRoot, BOOT_EVENT_LOG);
   const readyMarkerPath = path.join(repoRoot, READY_MARKER_FILE);
+  const bridgeReadyMarkerPath = path.join(repoRoot, BRIDGE_READY_MARKER_FILE);
 
   const event = {
     timestamp: new Date().toISOString(),
@@ -45,5 +47,8 @@ export async function bootReport(stage: string, payload: unknown = null) {
   await appendJsonLine(eventLogPath, event);
   if (stage === 'app_ready') {
     await writeJson(readyMarkerPath, event);
+  }
+  if (stage === 'bridge_ready') {
+    await writeJson(bridgeReadyMarkerPath, event);
   }
 }

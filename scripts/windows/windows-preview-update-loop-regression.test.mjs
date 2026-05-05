@@ -36,6 +36,7 @@ function runScript(env) {
 async function createMockScripts(root, clientBody) {
   const syncScript = path.join(root, 'mock-sync.sh');
   const clientScript = path.join(root, 'mock-client.sh');
+  const freshnessScript = path.join(root, 'mock-freshness.mjs');
   const actionLog = path.join(root, 'actions.log');
 
   await writeFile(
@@ -53,9 +54,10 @@ async function createMockScripts(root, clientBody) {
     ].join('\n'),
     'utf8'
   );
+  await writeFile(freshnessScript, 'process.stdout.write("[check-electron-dist-fresh] status: FRESH\\n");\n', 'utf8');
   await writeFile(actionLog, '', 'utf8');
 
-  return { actionLog, clientScript, syncScript };
+  return { actionLog, clientScript, freshnessScript, syncScript };
 }
 
 async function readActions(actionLog) {
@@ -73,7 +75,7 @@ describe('windows-preview update loop regressions', () => {
   it('classifies mixed renderer and electron changes as Class B restart-intent', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -86,6 +88,7 @@ describe('windows-preview update loop regressions', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
@@ -112,7 +115,7 @@ describe('windows-preview update loop regressions', () => {
   it('chooses fallback-start when the client is stopped even with electron changes', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-regression-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -129,6 +132,7 @@ describe('windows-preview update loop regressions', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,

@@ -7,6 +7,7 @@ import {
   onNativeMenuCommand,
   openExternalUrl,
   reportRuntimeAppReady,
+  reportRuntimeBridgeReady,
   reportRuntimeBootStage,
   resolveRuntimeAppPaths
 } from './bridge';
@@ -24,6 +25,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
   window.electronAPI = undefined;
   window.__FOLIOLE_APP_READY_REPORTED__ = undefined;
+  window.__FOLIOLE_BRIDGE_READY_REPORTED__ = undefined;
 });
 
 it('returns null runtime invoke outside desktop runtime', () => {
@@ -135,6 +137,21 @@ it('only reports runtime app ready once per window lifecycle', async () => {
   expect(invoke).toHaveBeenCalledWith('boot_report', {
     stage: 'app_ready',
     payload: { first: true }
+  });
+});
+
+it('only reports runtime bridge ready once per window lifecycle', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  reportRuntimeBridgeReady({ bridgeAvailable: true });
+  reportRuntimeBridgeReady({ bridgeAvailable: true, second: true });
+  await Promise.resolve();
+
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(invoke).toHaveBeenCalledWith('boot_report', {
+    stage: 'bridge_ready',
+    payload: { bridgeAvailable: true }
   });
 });
 

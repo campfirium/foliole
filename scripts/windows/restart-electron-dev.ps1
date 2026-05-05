@@ -262,6 +262,33 @@ function Get-AppReadyEvent {
   }
 }
 
+function Resolve-BridgeReadyMarkerPath {
+  param([string]$WorkDir)
+  return Join-Path $WorkDir ".windows-native-bridge-ready.json"
+}
+
+function Get-BridgeReadyEvent {
+  param([string]$WorkDir)
+
+  $markerPath = Resolve-BridgeReadyMarkerPath -WorkDir $WorkDir
+  if (!(Test-Path -Path $markerPath)) {
+    return $null
+  }
+
+  try {
+    $event = Get-Content -Path $markerPath -Raw | ConvertFrom-Json
+    if ($null -eq $event) {
+      return $null
+    }
+    if ("$($event.stage)".Trim() -ne "bridge_ready") {
+      return $null
+    }
+    return $event
+  } catch {
+    return $null
+  }
+}
+
 function Test-RuntimeAppReady {
   param(
     [string]$WorkDir,
@@ -300,6 +327,89 @@ function Test-RuntimeAppReady {
   return @{ ok = $true; markerPid = $markerPid; markerSession = $markerSession }
 }
 
+function Test-RuntimeBridgeReady {
+  param(
+    [string]$WorkDir,
+    [int]$RuntimePid,
+    [string]$ExpectedSession = ""
+  )
+
+  if ($RuntimePid -le 0) {
+    return @{ ok = $false; reason = "runtime-missing" }
+  }
+
+  $event = Get-BridgeReadyEvent -WorkDir $WorkDir
+  if ($null -eq $event) {
+    return @{ ok = $false; reason = "bridge-ready-missing" }
+  }
+
+  $bridgeMarkerPid = 0
+  try {
+    $bridgeMarkerPid = [int]$event.pid
+  } catch {
+    $bridgeMarkerPid = 0
+  }
+
+  $bridgeMarkerSession = ""
+  if ($null -ne $event.session) {
+    $bridgeMarkerSession = "$($event.session)".Trim()
+  }
+
+  if ($bridgeMarkerPid -ne $RuntimePid) {
+    return @{ ok = $false; reason = "bridge-ready-pid-mismatch"; bridgeMarkerPid = $bridgeMarkerPid; bridgeMarkerSession = $bridgeMarkerSession }
+  }
+  if (-not [string]::IsNullOrWhiteSpace($ExpectedSession) -and $bridgeMarkerSession -ne $ExpectedSession) {
+    return @{ ok = $false; reason = "bridge-ready-session-mismatch"; bridgeMarkerPid = $bridgeMarkerPid; bridgeMarkerSession = $bridgeMarkerSession }
+  }
+
+  $bridgeAvailable = $false
+  try {
+    if ($null -ne $event.payload) {
+      $bridgeAvailable = [bool]$event.payload.bridgeAvailable
+    }
+  } catch {
+    $bridgeAvailable = $false
+  }
+  if (-not $bridgeAvailable) {
+    return @{ ok = $false; reason = "bridge-unavailable"; bridgeMarkerPid = $bridgeMarkerPid; bridgeMarkerSession = $bridgeMarkerSession }
+  }
+
+  return @{ ok = $true; bridgeMarkerPid = $bridgeMarkerPid; bridgeMarkerSession = $bridgeMarkerSession }
+}
+
+function Test-RuntimeTrusted {
+  param(
+    [string]$WorkDir,
+    [int]$RuntimePid,
+    [string]$ExpectedSession = ""
+  )
+
+  $appReady = Test-RuntimeAppReady -WorkDir $WorkDir -RuntimePid $RuntimePid -ExpectedSession $ExpectedSession
+  if (-not $appReady.ok) {
+    return $appReady
+  }
+
+  $bridgeReady = Test-RuntimeBridgeReady -WorkDir $WorkDir -RuntimePid $RuntimePid -ExpectedSession $ExpectedSession
+  if (-not $bridgeReady.ok) {
+    return @{
+      ok = $false
+      reason = $bridgeReady.reason
+      markerPid = $appReady.markerPid
+      markerSession = $appReady.markerSession
+      bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
+      bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+    }
+  }
+
+  return @{
+    ok = $true
+    markerPid = $appReady.markerPid
+    markerSession = $appReady.markerSession
+    bridgeMarkerPid = $bridgeReady.bridgeMarkerPid
+    bridgeMarkerSession = $bridgeReady.bridgeMarkerSession
+  }
+}
+
 function Format-AppReadyDetails {
   param($ReadyState)
 
@@ -313,6 +423,12 @@ function Format-AppReadyDetails {
   }
   if ($ReadyState.ContainsKey('markerSession') -and -not [string]::IsNullOrWhiteSpace($ReadyState.markerSession)) {
     $details += " marker_session=$($ReadyState.markerSession)"
+  }
+  if ($ReadyState.ContainsKey('bridgeMarkerPid') -and $ReadyState.bridgeMarkerPid -gt 0) {
+    $details += " bridge_marker_pid=$($ReadyState.bridgeMarkerPid)"
+  }
+  if ($ReadyState.ContainsKey('bridgeMarkerSession') -and -not [string]::IsNullOrWhiteSpace($ReadyState.bridgeMarkerSession)) {
+    $details += " bridge_marker_session=$($ReadyState.bridgeMarkerSession)"
   }
   return $details
 }
@@ -508,6 +624,10 @@ function Start-ElectronWithHealthCheck {
   if (-not $ready.ok) {
     throw "startup health check failed: $($ready.reason)"
   }
+  $bridgeReady = Wait-BridgeReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $bridgeReady.ok) {
+    throw "startup health check failed: $($bridgeReady.reason)"
+  }
 
   Save-TrackedRuntimeSession -Session $bootSession
 
@@ -595,6 +715,8 @@ function Reset-ReadyMarker {
   param([string]$WorkDir)
   $markerPath = Resolve-ReadyMarkerPath -WorkDir $WorkDir
   Remove-Item -Path $markerPath -Force -ErrorAction SilentlyContinue
+  $bridgeMarkerPath = Resolve-BridgeReadyMarkerPath -WorkDir $WorkDir
+  Remove-Item -Path $bridgeMarkerPath -Force -ErrorAction SilentlyContinue
 }
 
 function Wait-AppReadyMarker {
@@ -623,6 +745,34 @@ function Wait-AppReadyMarker {
     Start-Sleep -Seconds 1
   }
   return @{ ok = $false; reason = "app-ready-timeout" }
+}
+
+function Wait-BridgeReadyMarker {
+  param(
+    [string]$WorkDir,
+    [int]$RuntimePid,
+    [string]$ExpectedSession = "",
+    [int]$MaxSeconds = 10
+  )
+
+  $markerPath = Resolve-BridgeReadyMarkerPath -WorkDir $WorkDir
+  for ($second = 0; $second -lt $MaxSeconds; $second += 1) {
+    $runtime = Get-ProcessById -ProcessId $RuntimePid
+    if ($null -eq $runtime) {
+      return @{ ok = $false; reason = "runtime-exited-before-bridge-ready" }
+    }
+    if (Test-Path -Path $markerPath) {
+      $readyState = Test-RuntimeBridgeReady -WorkDir $WorkDir -RuntimePid $RuntimePid -ExpectedSession $ExpectedSession
+      if ($readyState.ok) {
+        return @{ ok = $true; runtimePid = $RuntimePid; bridgeMarkerSession = $readyState.bridgeMarkerSession }
+      }
+      if ($readyState.reason -ne "bridge-ready-missing") {
+        return $readyState
+      }
+    }
+    Start-Sleep -Seconds 1
+  }
+  return @{ ok = $false; reason = "bridge-ready-timeout" }
 }
 
 function Wait-ProcessExit {
@@ -713,6 +863,10 @@ function Restart-ElectronRuntimeOnly {
   if (-not $ready.ok) {
     return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
+  $bridgeReady = Wait-BridgeReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $bridgeReady.ok) {
+    return @{ ok = $false; reason = $bridgeReady.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
+  }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
   Save-TrackedRuntimeSession -Session $bootSession
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
@@ -777,6 +931,10 @@ function Start-ElectronRuntimeOnly {
   if (-not $ready.ok) {
     return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
+  $bridgeReady = Wait-BridgeReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $bridgeReady.ok) {
+    return @{ ok = $false; reason = $bridgeReady.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
+  }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
   Save-TrackedRuntimeSession -Session $bootSession
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
@@ -812,6 +970,7 @@ function Stop-Electron {
   Remove-TrackedRuntimePid
   Remove-TrackedRuntimeSession
   Remove-TrackedRuntimeHead
+  Reset-ReadyMarker -WorkDir $WindowsWorkDir
   Write-Info "status: STOPPED"
 }
 
@@ -821,15 +980,15 @@ if ($Action -eq "status") {
   $runtimeSession = Get-TrackedRuntimeSession
   $runtimeHead = Get-TrackedRuntimeHead
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
-  $runtimeReady = $null
+  $runtimeTrust = $null
   if ($null -ne $runtime) {
-    $runtimeReady = Test-RuntimeAppReady -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+    $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
   }
   if ($null -ne $tracked) {
     if ($staleRuntimes.Count -gt 0) {
       Write-Info "status: STOPPED reason=stale-runtime-detected shell_pid=$($tracked.Id) runtime_pid=$($staleRuntimes[0].Id)"
-    } elseif ($null -ne $runtime -and -not $runtimeReady.ok) {
-      Write-Info "status: STOPPED reason=$($runtimeReady.reason) shell_pid=$($tracked.Id) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
+    } elseif ($null -ne $runtime -and -not $runtimeTrust.ok) {
+      Write-Info "status: STOPPED reason=$($runtimeTrust.reason) shell_pid=$($tracked.Id) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     } elseif ($null -ne $runtime) {
       $headInfo = ""
       if ($null -ne $runtimeHead) {
@@ -847,8 +1006,8 @@ if ($Action -eq "status") {
     exit 0
   }
 
-  if ($null -ne $runtime -and -not $runtimeReady.ok) {
-    Write-Info "status: STOPPED reason=$($runtimeReady.reason) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
+  if ($null -ne $runtime -and -not $runtimeTrust.ok) {
+    Write-Info "status: STOPPED reason=$($runtimeTrust.reason) runtime_pid=$($runtime.Id)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     exit 0
   }
 
@@ -876,47 +1035,47 @@ if ($Action -eq "start") {
     $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
     $runtimeSession = Get-TrackedRuntimeSession
     $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
-    $runtimeReady = $null
+    $runtimeTrust = $null
     if ($staleRuntimes.Count -gt 0) {
       foreach ($staleRuntime in $staleRuntimes) {
         Stop-ProcessTree -ProcessId $staleRuntime.Id
       }
     }
     if ($null -ne $runtime) {
-      $runtimeReady = Test-RuntimeAppReady -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+      $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
     }
     if ($null -ne $runtime) {
-      if ($runtimeReady.ok) {
+      if ($runtimeTrust.ok) {
         Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
         exit 0
       }
-      Stop-ProcessTree -ProcessId $runtime.Id
-      Remove-TrackedRuntimePid
-      Remove-TrackedRuntimeSession
-      Remove-TrackedRuntimeHead
-      Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeReady.reason)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
+      Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
     }
-    $startedOnly = Start-ElectronRuntimeOnly -WorkDir $WindowsWorkDir
-    if (-not $startedOnly.ok) {
-      Write-Info "status: START_FAILED mode=runtime-only reason=$($startedOnly.reason) shell_pid=$($tracked.Id) stdout_log=$($startedOnly.stdoutLog) stderr_log=$($startedOnly.stderrLog)"
+    Stop-Electron
+    try {
+      $started = Start-ElectronWithHealthCheck -WorkDir $WindowsWorkDir
+    } catch {
+      Write-Info "status: START_FAILED reason=$($_.Exception.Message)"
       exit 1
     }
-    Write-Info "status: STARTED mode=runtime-start-only runtime_pid=$($startedOnly.runtimePid) renderer_url=$($startedOnly.rendererUrl) shell_pid=$($tracked.Id)"
+    Save-TrackedRuntimePid -ProcessId $started.runtimePid
+    Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WindowsWorkDir)
+    Write-Info "status: STARTED shell_pid=$($started.shellPid) runtime_pid=$($started.runtimePid)"
     exit 0
   }
 
   $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeSession = Get-TrackedRuntimeSession
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
-  $runtimeReady = $null
+  $runtimeTrust = $null
   if ($staleRuntimes.Count -gt 0) {
     Stop-StaleFolioleDevProcesses -WorkDir $WindowsWorkDir
   }
   if ($null -ne $runtime) {
-    $runtimeReady = Test-RuntimeAppReady -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+    $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
   }
   if ($null -ne $runtime) {
-    if ($runtimeReady.ok) {
+    if ($runtimeTrust.ok) {
       Write-Info "status: RUNNING runtime_pid=$($runtime.Id)"
       exit 0
     }
@@ -924,7 +1083,7 @@ if ($Action -eq "start") {
     Remove-TrackedRuntimePid
     Remove-TrackedRuntimeSession
     Remove-TrackedRuntimeHead
-    Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeReady.reason)$(Format-AppReadyDetails -ReadyState $runtimeReady)"
+    Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
   }
 
   try {
@@ -942,24 +1101,36 @@ if ($Action -eq "start") {
 if ($Action -eq "restart") {
   $tracked = Get-TrackedProcess
   $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $runtimeSession = Get-TrackedRuntimeSession
+  $runtimeTrust = $null
   $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
   if ($staleRuntimes.Count -gt 0) {
     foreach ($staleRuntime in $staleRuntimes) {
       Stop-ProcessTree -ProcessId $staleRuntime.Id
     }
   }
-  if ($null -eq $runtime) {
-    if ($null -eq $tracked) {
-      Write-Info "status: STOPPED"
+  if ($null -ne $runtime) {
+    $runtimeTrust = Test-RuntimeTrusted -WorkDir $WindowsWorkDir -RuntimePid $runtime.Id -ExpectedSession $runtimeSession
+  }
+  if (($null -eq $runtime -and $null -ne $tracked) -or ($null -ne $runtime -and -not $runtimeTrust.ok)) {
+    if ($null -ne $runtime -and -not $runtimeTrust.ok) {
+      Write-Info "discarded untrusted runtime pid=$($runtime.Id) reason=$($runtimeTrust.reason)$(Format-AppReadyDetails -ReadyState $runtimeTrust)"
+    }
+    Stop-Electron
+    try {
+      $started = Start-ElectronWithHealthCheck -WorkDir $WindowsWorkDir
+    } catch {
+      Write-Info "status: RESTART_FAILED reason=$($_.Exception.Message)"
       exit 1
     }
-    $startedOnly = Start-ElectronRuntimeOnly -WorkDir $WindowsWorkDir
-    if (-not $startedOnly.ok) {
-      Write-Info "status: RESTART_FAILED mode=runtime-only reason=$($startedOnly.reason) shell_pid=$($tracked.Id) stdout_log=$($startedOnly.stdoutLog) stderr_log=$($startedOnly.stderrLog)"
-      exit 1
-    }
-    Write-Info "status: RESTARTED mode=runtime-start-only runtime_pid=$($startedOnly.runtimePid) renderer_url=$($startedOnly.rendererUrl) shell_pid=$($tracked.Id)"
+    Save-TrackedRuntimePid -ProcessId $started.runtimePid
+    Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WindowsWorkDir)
+    Write-Info "status: RESTARTED mode=full-restart shell_pid=$($started.shellPid) runtime_pid=$($started.runtimePid)"
     exit 0
+  }
+  if ($null -eq $runtime) {
+    Write-Info "status: STOPPED"
+    exit 1
   }
 
   $restarted = Restart-ElectronRuntimeOnly -WorkDir $WindowsWorkDir -RuntimeProcess $runtime

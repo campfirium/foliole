@@ -23,6 +23,7 @@ interface BootPayload {
 declare global {
   interface Window {
     __FOLIOLE_APP_READY_REPORTED__?: boolean;
+    __FOLIOLE_BRIDGE_READY_REPORTED__?: boolean;
   }
 }
 
@@ -147,6 +148,17 @@ export function reportRuntimeAppReady(payload?: BootPayload) {
   }
   window.__FOLIOLE_APP_READY_REPORTED__ = true;
   reportRuntimeBootStage('app_ready', payload);
+}
+
+export function reportRuntimeBridgeReady(payload?: BootPayload) {
+  if (typeof window === 'undefined' || window.__FOLIOLE_BRIDGE_READY_REPORTED__) {
+    return;
+  }
+  if (!getRuntimeInvoke()) {
+    return;
+  }
+  window.__FOLIOLE_BRIDGE_READY_REPORTED__ = true;
+  reportRuntimeBootStage('bridge_ready', payload);
 }
 
 export async function onNativeMenuCommand(handler: (commandId: string) => void): Promise<NativeMenuUnlisten> {
