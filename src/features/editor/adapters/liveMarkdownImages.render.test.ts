@@ -4,14 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { registerImageClozeEditorPresentation, unregisterImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
-const resolveRuntimeAttachmentResource = vi.fn();
-
 vi.mock('../../../shared/platform/bridge', () => ({
   openExternalUrl: vi.fn()
-}));
-
-vi.mock('../../../shared/platform/attachmentResources', () => ({
-  resolveRuntimeAttachmentResource: (resourceUrl: string) => resolveRuntimeAttachmentResource(resourceUrl)
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
@@ -20,7 +14,7 @@ async function expectInternalImageRendered(host: HTMLElement) {
   await waitFor(() => {
     const image = host.querySelector('.cm-md-image-element');
     expect(image).not.toBeNull();
-    expect(image?.getAttribute('src')).toBe('file:///tmp/cover.png');
+    expect(image?.getAttribute('src')).toBe('foliole-asset://attachment/hash-1');
   });
   const widget = host.querySelector('.cm-md-image-widget');
   expect(widget).toHaveAttribute('data-md-image-attachment-id', 'hash-1');
@@ -41,7 +35,6 @@ function expectRemoteImageRendered(host: HTMLElement, source: string) {
 
   expect(image).not.toBeNull();
   expect(image?.getAttribute('src')).toBe(source);
-  expect(resolveRuntimeAttachmentResource).not.toHaveBeenCalled();
 }
 
 async function expectUnavailableInternalImage(host: HTMLElement) {
@@ -98,7 +91,6 @@ async function expectOutlinedRegionRendered(host: HTMLElement) {
 
 describe('live markdown image rendering basics', () => {
   beforeEach(() => {
-    resolveRuntimeAttachmentResource.mockReset();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -107,28 +99,17 @@ describe('live markdown image rendering basics', () => {
   });
 
   it('renders internal attachment images through the unified resource entry', async () => {
-    resolveRuntimeAttachmentResource.mockResolvedValue({
-      status: 'ready',
-      mime_type: 'image/png',
-      resource_url: 'file:///tmp/cover.png'
-    });
-
     const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
 
     await expectInternalImageRendered(host);
-    expect(resolveRuntimeAttachmentResource).toHaveBeenCalledWith('asset://hash-1.png');
 
     adapter.destroy();
   });
 
-  it('shows an unavailable placeholder when an internal attachment is missing', async () => {
-    resolveRuntimeAttachmentResource.mockResolvedValue({
-      status: 'missing_file',
-      mime_type: 'image/png',
-      resource_url: null
-    });
-
+  it('shows an unavailable placeholder when an internal attachment image fails to load', async () => {
     const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
+    const image = host.querySelector('.cm-md-image-element');
+    image?.dispatchEvent(new Event('error'));
 
     await expectUnavailableInternalImage(host);
 
@@ -177,7 +158,6 @@ describe('live markdown image rendering basics', () => {
 
 describe('live markdown image rendering image cloze presentation', () => {
   beforeEach(() => {
-    resolveRuntimeAttachmentResource.mockReset();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
@@ -186,12 +166,6 @@ describe('live markdown image rendering image cloze presentation', () => {
   });
 
   it('shows outlined image cloze regions immediately after presentation refresh without requiring focus interaction', async () => {
-    resolveRuntimeAttachmentResource.mockResolvedValue({
-      status: 'ready',
-      mime_type: 'image/png',
-      resource_url: 'file:///tmp/cover.png'
-    });
-
     const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
 
     adapter.setNodeId('node-1');

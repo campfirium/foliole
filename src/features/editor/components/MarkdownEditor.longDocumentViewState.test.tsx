@@ -1,8 +1,10 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
+const mockMarkNodePositionRequested = vi.fn();
+const mockMarkNodePositionReady = vi.fn();
 const mockDestroy = vi.fn();
 const mockSetContent = vi.fn();
 const mockSetDiffDecorations = vi.fn();
@@ -10,6 +12,13 @@ const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockRevealSelection = vi.fn();
 const mockOnScroll = vi.fn(() => () => undefined);
+
+vi.mock('../../../shared/platform/performanceDiagnosticsProbe', () => ({
+  markEditorContentSyncCompleted: vi.fn(),
+  markEditorContentSyncStarted: vi.fn(),
+  markNodePositionReady: (...args: unknown[]) => mockMarkNodePositionReady(...args),
+  markNodePositionRequested: (...args: unknown[]) => mockMarkNodePositionRequested(...args)
+}));
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
@@ -75,6 +84,8 @@ function createLongDocument() {
 }
 
 beforeEach(() => {
+  mockMarkNodePositionRequested.mockClear();
+  mockMarkNodePositionReady.mockClear();
   mockDestroy.mockClear();
   mockSetContent.mockClear();
   mockSetDiffDecorations.mockClear();
@@ -84,7 +95,7 @@ beforeEach(() => {
   mockOnScroll.mockClear();
 });
 
-it('restores mid-document selection and scroll when reopening a long document', () => {
+it('restores mid-document selection and scroll when reopening a long document', async () => {
   const longDocument = createLongDocument();
   const nodeViewState = {
     scrollTop: 5_400,
@@ -102,9 +113,13 @@ it('restores mid-document selection and scroll when reopening a long document', 
 
   expect(mockSetSelection).not.toHaveBeenCalled();
   expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
+  await waitFor(() => {
+    expect(mockMarkNodePositionReady).toHaveBeenLastCalledWith('node-1');
+  });
 });
 
-it('waits for on-demand content to load before restoring a saved mid-document position', () => {
+it('waits for on-demand content to load before restoring a saved mid-document position', async () => {
   const longDocument = createLongDocument();
   const nodeViewState = {
     scrollTop: 5_400,
@@ -125,9 +140,13 @@ it('waits for on-demand content to load before restoring a saved mid-document po
 
   expect(mockSetSelection).not.toHaveBeenCalled();
   expect(mockRevealSelection).toHaveBeenLastCalledWith(nodeViewState.selection);
+  expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
+  await waitFor(() => {
+    expect(mockMarkNodePositionReady).toHaveBeenLastCalledWith('node-1');
+  });
 });
 
-it('does not reapply a saved selection while typing in the same node', () => {
+it('does not reapply a saved selection while typing in the same node', async () => {
   const longDocument = createLongDocument();
   const nodeViewState = {
     scrollTop: 5_400,
@@ -138,6 +157,10 @@ it('does not reapply a saved selection while typing in the same node', () => {
   );
 
   expect(mockRevealSelection).toHaveBeenCalledTimes(1);
+  expect(mockMarkNodePositionRequested).toHaveBeenCalledTimes(1);
+  await waitFor(() => {
+    expect(mockMarkNodePositionReady).toHaveBeenCalledTimes(1);
+  });
 
   view.rerender(
     <MarkdownEditor
@@ -149,4 +172,6 @@ it('does not reapply a saved selection while typing in the same node', () => {
   );
 
   expect(mockRevealSelection).toHaveBeenCalledTimes(1);
+  expect(mockMarkNodePositionRequested).toHaveBeenCalledTimes(1);
+  expect(mockMarkNodePositionReady).toHaveBeenCalledTimes(1);
 });

@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
 import { NodeListTreeContent } from './NodeListTreeContent';
 import {
@@ -71,7 +73,7 @@ function buildNodeListTreeContentProps(args: {
   };
 }
 
-export function NodeListTree({
+function NodeListTreeImpl({
   activeNodeId,
   isTrashViewOpen,
   isVirtualViewOpen,
@@ -127,3 +129,5 @@ export function NodeListTree({
 
   return <NodeListTreeContent {...contentProps} />;
 }
+
+export const NodeListTree = memo(NodeListTreeImpl);

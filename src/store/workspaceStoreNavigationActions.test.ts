@@ -61,3 +61,42 @@ it('re-syncs review session when re-opening the already active queued node', () 
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
   expect(state.reviewSession.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
 });
+
+it('keeps the previous document warm when opening another node through navigation', () => {
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': {
+        ...seedNode,
+        id: 'node-1',
+        title: 'Node 1',
+        content: 'First node body',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null
+      },
+      'node-2': {
+        ...seedNode,
+        id: 'node-2',
+        title: 'Node 2',
+        content: 'Second node body',
+        hasContent: true,
+        reveal: null,
+        hasReveal: false,
+        review: null
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.getState().openNode('node-2');
+
+  const state = useWorkspaceStore.getState();
+  expect(state.activeNodeId).toBe('node-2');
+  expect(state.nodesById['node-1']).toMatchObject({ content: 'First node body', reveal: null });
+  expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
+});

@@ -17,7 +17,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
-it('keeps only the current node document loaded in renderer state', async () => {
+it('keeps the previous node document warm after switching once', async () => {
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
     if (command === 'load_node_document') {
       if (args?.nodeId === 'node-2') {
@@ -69,8 +69,9 @@ it('keeps only the current node document loaded in renderer state', async () => 
     expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('Loaded node 2 body');
   });
   await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');
+    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Loaded node 1 body');
   });
   expect(useWorkspaceStore.getState().nodesById['node-1']?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().rendererBoundaryKeepNodeIds).toEqual(['node-1']);
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
 });

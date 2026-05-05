@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { updatePdfSurfaceCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
@@ -94,7 +94,7 @@ export function PdfDocumentSurfaceCache(props: {
     updatePdfSurfaceCacheStats({ entries: renderEntries.length });
   }, [renderEntries.length]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const visible = renderEntries.some((entry) =>
       shouldDisplayCachedSurface(props.activeNodeId, entry.nodeId, props.activePdfState)
     );

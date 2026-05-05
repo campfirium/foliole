@@ -1,6 +1,5 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
@@ -31,18 +30,32 @@ function parseImageRange(value: number) {
   return Number.isInteger(value) && value >= 0 ? String(value) : '';
 }
 
-function createImageElement(alt: string, source: string, display: MarkdownImageMatch['display']) {
+function createImageElement(args: {
+  alt: string;
+  display: MarkdownImageMatch['display'];
+  onError?: (() => void) | null;
+  source: string;
+}) {
   const image = document.createElement('img');
-  image.alt = alt || 'Markdown image';
-  image.src = source;
+  image.alt = args.alt || 'Markdown image';
+  image.src = args.source;
   image.loading = 'lazy';
   image.referrerPolicy = 'no-referrer';
   image.decoding = 'async';
-  image.className = display === 'inline' ? 'cm-md-image-element cm-md-image-element-inline' : 'cm-md-image-element cm-md-image-element-block';
+  image.className =
+    args.display === 'inline' ? 'cm-md-image-element cm-md-image-element-inline' : 'cm-md-image-element cm-md-image-element-block';
+  if (args.onError) {
+    image.addEventListener('error', args.onError, { once: true });
+  }
   return image;
 }
 
-function createImageSurface(imageMatch: MarkdownImageMatch, source: string, editorNodeId: string | null = null) {
+function createImageSurface(
+  imageMatch: MarkdownImageMatch,
+  source: string,
+  editorNodeId: string | null = null,
+  imageOptions: { onError?: (() => void) | null } = {}
+) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
   return createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
@@ -55,7 +68,13 @@ function createImageSurface(imageMatch: MarkdownImageMatch, source: string, edit
             regions: presentation.regions.filter((region) => region.attachmentId === imageMatch.attachmentId)
           }
         : null,
-    renderImage: () => createImageElement(imageMatch.alt, source, imageMatch.display),
+    renderImage: () =>
+      createImageElement({
+        alt: imageMatch.alt,
+        display: imageMatch.display,
+        onError: imageOptions.onError ?? null,
+        source
+      }),
     to: imageMatch.to
   });
 }
@@ -68,13 +87,8 @@ function createImageStatusElement(status: 'loading' | 'unavailable', display: Ma
   return element;
 }
 
-async function renderInternalImage(wrapper: HTMLElement, imageMatch: MarkdownImageMatch, editorNodeId: string | null) {
-  const resolution = await resolveRuntimeAttachmentResource(imageMatch.source);
-  if (resolution?.status === 'ready' && resolution.resource_url) {
-    wrapper.replaceChildren(createImageSurface(imageMatch, resolution.resource_url, editorNodeId));
-    return;
-  }
-  wrapper.replaceChildren(createImageStatusElement('unavailable', imageMatch.display));
+function buildAttachmentProtocolUrl(attachmentId: string) {
+  return `foliole-asset://attachment/${encodeURIComponent(attachmentId)}`;
 }
 
 function resolveImageDisplay(text: string, matchIndex: number, raw: string) {
@@ -98,8 +112,18 @@ export function createMarkdownImageWidgetDom(imageMatch: MarkdownImageMatch, edi
     return wrapper;
   }
 
-  wrapper.append(createImageStatusElement('loading', imageMatch.display));
-  void renderInternalImage(wrapper, imageMatch, editorNodeId);
+  if (!imageMatch.attachmentId) {
+    wrapper.append(createImageStatusElement('unavailable', imageMatch.display));
+    return wrapper;
+  }
+
+  wrapper.append(
+    createImageSurface(imageMatch, buildAttachmentProtocolUrl(imageMatch.attachmentId), editorNodeId, {
+      onError: () => {
+        wrapper.replaceChildren(createImageStatusElement('unavailable', imageMatch.display));
+      }
+    })
+  );
   return wrapper;
 }
 

@@ -17,29 +17,37 @@ import {
 } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+function trimStaleWarmInactiveNode(nodeId: string | null, nextActiveNodeId: string | null, previousActiveNodeId: string | null) {
+  if (!nodeId || nodeId === nextActiveNodeId || nodeId === previousActiveNodeId || hasPendingNodeSync(nodeId)) {
+    return;
+  }
+
+  useWorkspaceStore.setState((state) => {
+    const previousNode = state.nodesById[nodeId];
+    if (!previousNode || !isNodeDocumentLoaded(previousNode)) {
+      return state;
+    }
+    markPreviousNodeTrimmed(nodeId);
+    return {
+      nodesById: {
+        ...state.nodesById,
+        [nodeId]: toRendererBoundaryNode(previousNode, false)
+      }
+    };
+  });
+}
+
 export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
   const previousActiveNodeIdRef = useRef<string | null>(activeNodeId);
+  const warmInactiveNodeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const runtimeInvoke = getRuntimeInvoke();
     const previousActiveNodeId = previousActiveNodeIdRef.current;
     previousActiveNodeIdRef.current = activeNodeId;
-
-    if (previousActiveNodeId && previousActiveNodeId !== activeNodeId && !hasPendingNodeSync(previousActiveNodeId)) {
-      markPreviousNodeTrimmed(previousActiveNodeId);
-      useWorkspaceStore.setState((state) => {
-        const previousNode = state.nodesById[previousActiveNodeId];
-        if (!previousNode) {
-          return state;
-        }
-        return {
-          nodesById: {
-            ...state.nodesById,
-            [previousActiveNodeId]: toRendererBoundaryNode(previousNode, false)
-          }
-        };
-      });
-    }
+    trimStaleWarmInactiveNode(warmInactiveNodeIdRef.current, activeNodeId, previousActiveNodeId);
+    warmInactiveNodeIdRef.current =
+      previousActiveNodeId && previousActiveNodeId !== activeNodeId ? previousActiveNodeId : null;
 
     if (!runtimeInvoke || !activeNodeId) {
       return;

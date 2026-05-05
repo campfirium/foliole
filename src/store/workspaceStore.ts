@@ -9,15 +9,16 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import { loadListCollapsedPreference, loadRightSidebarCollapsedPreference } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, type NodeNavigationResult, type WorkspaceNavigationState } from './workspaceNavigation';
-import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { workspacePersistStorage } from './workspacePersistStorage';
-import { enforceWorkspaceRendererBoundary, trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
+import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
+import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
 import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createInitialWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 
 export interface WorkspaceState {
@@ -27,6 +28,7 @@ export interface WorkspaceState {
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  rendererBoundaryKeepNodeIds: string[];
   reviewSession: ReviewSessionState;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
@@ -145,6 +147,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'navigation'
   | 'nodeOrder'
   | 'nodesById'
+  | 'rendererBoundaryKeepNodeIds'
   | 'nodeViewById'
   | 'reviewSession'
   | 'trashedNodeIds'
@@ -157,6 +160,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
       isRightSidebarCollapsed: loadRightSidebarCollapsedPreference()
     }),
     navigation: { ...INITIAL_WORKSPACE_NAVIGATION_STATE },
+    rendererBoundaryKeepNodeIds: [],
     reviewSession: {
       currentNodeId: null,
       isAnswerRevealed: false,
@@ -169,10 +173,6 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 
 const initialState = createInitialWorkspaceState();
 
-function withRendererBoundary(state: WorkspaceState | Partial<WorkspaceState>, currentState: WorkspaceState) {
-  return enforceWorkspaceRendererBoundary(state, currentState, new Set(listPendingNodeSyncNodeIds()));
-}
-
 const workspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => {
@@ -182,7 +182,7 @@ const workspaceStore = create<WorkspaceState>()(
           if (nextState === currentState) {
             return currentState;
           }
-          return withRendererBoundary(nextState, currentState);
+          return withWorkspaceRendererBoundary(nextState, currentState);
         });
       };
 
@@ -216,7 +216,7 @@ const workspaceStore = create<WorkspaceState>()(
         nodesById: trimWorkspaceNodesForRendererBoundary(
           state.activeNodeId,
           state.nodesById,
-          new Set(listPendingNodeSyncNodeIds())
+          collectRendererBoundaryKeepNodeIds(state, state)
         ),
         trashedNodeIds: state.trashedNodeIds,
         untitledSequenceByParent: state.untitledSequenceByParent
@@ -234,7 +234,7 @@ const workspaceStore = create<WorkspaceState>()(
           untitledSequenceByParent:
             persisted.untitledSequenceByParent ?? currentState.untitledSequenceByParent
         };
-        return withRendererBoundary({
+        return withWorkspaceRendererBoundary({
           ...nextState,
           ...ensureInboxNodeInSnapshot({
             activeNodeId: nextState.activeNodeId,
@@ -257,7 +257,7 @@ workspaceStore.setState = ((partial, replace) =>
       if (nextState === currentState) {
         return currentState;
       }
-      return withRendererBoundary(
+      return withWorkspaceRendererBoundary(
         'activeNodeId' in nextState || !('nodesById' in nextState)
           ? nextState
           : { ...nextState, activeNodeId: currentState.activeNodeId },

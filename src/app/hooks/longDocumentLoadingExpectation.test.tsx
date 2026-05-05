@@ -100,6 +100,9 @@ function createDocumentLoader(longDocument: string) {
     if (payload.nodeId === 'node-2') {
       return Promise.resolve({ nodeId: 'node-2', content: 'Loaded node 2 body', hideTitleHeading: false, reveal: null });
     }
+    if (payload.nodeId === 'node-3') {
+      return Promise.resolve({ nodeId: 'node-3', content: 'Loaded node 3 body', hideTitleHeading: false, reveal: null });
+    }
     return Promise.resolve(null);
   });
 }
@@ -109,11 +112,12 @@ function seedTrimmedWorkspaceState() {
   useWorkspaceStore.setState({
     ...initial,
     activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2'],
+    nodeOrder: ['node-1', 'node-2', 'node-3'],
     nodesById: {
       ...initial.nodesById,
       'node-1': { ...initial.nodesById['node-1'], id: 'node-1', title: 'Node 1', content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-2': { ...initial.nodesById['node-1'], id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: false }
+      'node-2': { ...initial.nodesById['node-1'], id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-3': { ...initial.nodesById['node-1'], id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: false }
     },
     trashedNodeIds: []
   });
@@ -160,7 +164,7 @@ it('allows first open of a long document to read the full body from local persis
   expect(nodesById?.['node-2']?.content).toBe('');
 });
 
-it('reopens the same long document stably after switching away', async () => {
+it('reopens the same long document from the warm cache after switching away once', async () => {
   const longDocument = createLongDocument();
   const invoke = createDocumentLoader(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -170,8 +174,8 @@ it('reopens the same long document stably after switching away', async () => {
 
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
-  await expectTrimmedNode('node-1');
   await expectNodeDocument('node-2', 'Loaded node 2 body');
+  expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({ content: longDocument, reveal: null });
 
   useWorkspaceStore.getState().setActiveNode('node-1');
   view.rerender(<HookHarness activeNodeId="node-1" />);
@@ -179,12 +183,11 @@ it('reopens the same long document stably after switching away', async () => {
 
   expect(invoke.mock.calls).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
-    ['load_node_document', { nodeId: 'node-2' }],
-    ['load_node_document', { nodeId: 'node-1' }]
+    ['load_node_document', { nodeId: 'node-2' }]
   ]);
 });
 
-it('restores a mid-document reading position after content was trimmed from memory', async () => {
+it('restores a mid-document reading position after the warm cache is eventually trimmed', async () => {
   const longDocument = createLongDocument();
   const invoke = createDocumentLoader(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -195,6 +198,12 @@ it('restores a mid-document reading position after content was trimmed from memo
   useWorkspaceStore.getState().setNodeViewState('node-1', { scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } });
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
+  await expectNodeDocument('node-2', 'Loaded node 2 body');
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(longDocument);
+
+  useWorkspaceStore.getState().setActiveNode('node-3');
+  view.rerender(<HookHarness activeNodeId="node-3" />);
+  await expectNodeDocument('node-3', 'Loaded node 3 body');
   await expectTrimmedNode('node-1');
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');

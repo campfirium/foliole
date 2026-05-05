@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { expect, it, vi } from 'vitest';
 
@@ -122,7 +122,7 @@ function createSourceDetails(sourceKind: 'pdf' | 'markdown', sourceLocator: stri
   };
 }
 
-it('keeps a cached pdf view visible when revisiting the same node during source refresh', async () => {
+it('keeps a cached pdf view visible when revisiting the same node during source refresh', () => {
   const sourceDetailsByNodeId: Record<string, { isLoading: boolean; value: unknown | null }> = {
     'node-1': createSourceDetails('pdf', '/tmp/sample.pdf'),
     'node-2': createSourceDetails('markdown', '/tmp/sample.md')
@@ -144,8 +144,7 @@ it('keeps a cached pdf view visible when revisiting the same node during source 
   sourceDetailsByNodeId['node-1'] = { isLoading: true, value: null };
   rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-1" editorNodeId="node-1" />);
 
-  await waitFor(() => {
-    expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
-    expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
-  });
+  expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
+  expect(screen.queryByTestId('pdf-document-loading-shell')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
 });

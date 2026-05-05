@@ -44,7 +44,7 @@ beforeEach(() => {
   resetWorkspaceStore();
 });
 
-it('trims inactive node documents from direct store patches', () => {
+it('keeps the previous active node warm on direct active-node patches', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -55,9 +55,9 @@ it('trims inactive node documents from direct store patches', () => {
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
   expect(state.nodesById['node-1']).toMatchObject({
-    content: '',
+    content: 'First node body',
     hasContent: true,
-    reveal: null,
+    reveal: 'First answer',
     hasReveal: true
   });
   expect(state.nodesById['node-2']).toMatchObject({
@@ -66,9 +66,10 @@ it('trims inactive node documents from direct store patches', () => {
     reveal: 'Second answer',
     hasReveal: true
   });
+  expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
 });
 
-it('trims inactive node documents on active switch before hydrate replay restores them', async () => {
+it('keeps the previously active node warm when navigation opens another node', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(() => new Promise(() => undefined)));
 
   useWorkspaceStore.setState({
@@ -97,14 +98,15 @@ it('trims inactive node documents on active switch before hydrate replay restore
     hasContent: true
   });
   expect(state.nodesById['node-2']).toMatchObject({
-    content: '',
+    content: 'Second node body',
     hasContent: true,
-    reveal: null,
+    reveal: 'Second answer',
     hasReveal: true
   });
+  expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-2']);
 });
 
-it('trims direct nodesById patches to the active node document', () => {
+it('preserves the warm inactive document across direct nodesById patches', () => {
   useWorkspaceStore.setState({
     activeNodeId: 'node-2',
     nodeOrder: ['node-1', 'node-2'],
@@ -132,9 +134,9 @@ it('trims direct nodesById patches to the active node document', () => {
 
   const state = useWorkspaceStore.getState();
   expect(state.nodesById['node-1']).toMatchObject({
-    content: '',
+    content: 'First node body',
     hasContent: true,
-    reveal: null,
+    reveal: 'First answer',
     hasReveal: true
   });
   expect(state.nodesById['node-2']).toMatchObject({

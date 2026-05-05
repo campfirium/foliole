@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react
 
 import {
   markEditorContentSyncCompleted,
-  markEditorContentSyncStarted
+  markEditorContentSyncStarted,
+  markNodePositionReady,
+  markNodePositionRequested
 } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
@@ -67,7 +69,7 @@ function useEditorSelectionRestore(
 ) {
   const lastRestoredSelectionKeyRef = useRef<string | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!nodeId || !nodeViewState) {
       lastRestoredSelectionKeyRef.current = null;
       return;
@@ -84,8 +86,12 @@ function useEditorSelectionRestore(
     if (lastRestoredSelectionKeyRef.current === selectionKey) {
       return;
     }
+    markNodePositionRequested(nodeId);
     adapter.revealSelection(nodeViewState.selection);
     lastRestoredSelectionKeyRef.current = selectionKey;
+    requestAnimationFrame(() => {
+      markNodePositionReady(nodeId);
+    });
     requestAnimationFrame(syncScrollMetrics);
   }, [adapterRef, nodeId, nodeViewState, syncScrollMetrics, value]);
 }
