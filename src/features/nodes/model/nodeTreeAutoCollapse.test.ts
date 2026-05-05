@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildNodeTree } from './nodeTree';
 import {
-  buildAutoCollapsedNodeIds,
-  resolveNodeListFocusContextId
+  buildDefaultCollapsedNodeIds,
+  collectAutoExpandedNodeIds
 } from './nodeTreeAutoCollapse';
 import type { Node } from './nodeTypes';
 
@@ -26,66 +26,30 @@ function createNode(
   };
 }
 
-describe('buildAutoCollapsedNodeIds', () => {
-  it('collapses article nodes when there is no active focus', () => {
-    const nodeOrder = ['folder', 'article-a', 'highlight-a', 'article-b', 'highlight-b'];
+describe('buildDefaultCollapsedNodeIds', () => {
+  it('collapses only branches whose direct children are all derived nodes', () => {
+    const nodeOrder = ['folder', 'article-a', 'highlight-a', 'article-b', 'child-b', 'highlight-b'];
     const nodesById: Record<string, Node> = {
       folder: createNode('folder', 'Folder', null),
       'article-a': createNode('article-a', 'Article A', 'folder'),
       'highlight-a': createNode('highlight-a', 'Highlight A', 'article-a', { derived: true }),
       'article-b': createNode('article-b', 'Article B', 'folder'),
+      'child-b': createNode('child-b', 'Child B', 'article-b'),
       'highlight-b': createNode('highlight-b', 'Highlight B', 'article-b', { derived: true })
     };
     const tree = buildNodeTree(nodeOrder, nodesById);
 
     expect(
-      [...buildAutoCollapsedNodeIds({
-        activeNodeId: null,
+      [...buildDefaultCollapsedNodeIds({
         nodesById,
-        parentById: tree.parentById,
         rows: tree.rows
       })]
-    ).toEqual(['article-a', 'article-b']);
-  });
-
-  it('keeps only the active path and current article expanded', () => {
-    const nodeOrder = [
-      'folder-a',
-      'article-a',
-      'highlight-a1',
-      'highlight-a2',
-      'article-b',
-      'highlight-b1',
-      'folder-b',
-      'article-c',
-      'highlight-c1'
-    ];
-    const nodesById: Record<string, Node> = {
-      'folder-a': createNode('folder-a', 'Folder A', null),
-      'article-a': createNode('article-a', 'Article A', 'folder-a'),
-      'highlight-a1': createNode('highlight-a1', 'Highlight A1', 'article-a', { derived: true }),
-      'highlight-a2': createNode('highlight-a2', 'Highlight A2', 'article-a', { derived: true }),
-      'article-b': createNode('article-b', 'Article B', 'folder-a'),
-      'highlight-b1': createNode('highlight-b1', 'Highlight B1', 'article-b', { derived: true }),
-      'folder-b': createNode('folder-b', 'Folder B', null),
-      'article-c': createNode('article-c', 'Article C', 'folder-b'),
-      'highlight-c1': createNode('highlight-c1', 'Highlight C1', 'article-c', { derived: true })
-    };
-    const tree = buildNodeTree(nodeOrder, nodesById);
-
-    expect(
-      [...buildAutoCollapsedNodeIds({
-        activeNodeId: 'highlight-a2',
-        nodesById,
-        parentById: tree.parentById,
-        rows: tree.rows
-      })]
-    ).toEqual(['article-b', 'folder-b', 'article-c']);
+    ).toEqual(['article-a']);
   });
 });
 
-describe('resolveNodeListFocusContextId', () => {
-  it('uses the parent article as focus context for derived nodes', () => {
+describe('collectAutoExpandedNodeIds', () => {
+  it('expands non-derived ancestors so the current derived node stays visible', () => {
     const nodeOrder = ['folder', 'article', 'highlight'];
     const nodesById: Record<string, Node> = {
       folder: createNode('folder', 'Folder', null),
@@ -94,6 +58,42 @@ describe('resolveNodeListFocusContextId', () => {
     };
     const tree = buildNodeTree(nodeOrder, nodesById);
 
-    expect(resolveNodeListFocusContextId('highlight', nodesById, tree.parentById)).toBe('article');
+    expect(
+      [...collectAutoExpandedNodeIds({
+        activeNodeId: 'highlight',
+        nodesById,
+        parentById: tree.parentById,
+        rows: tree.rows
+      })]
+    ).toEqual(['article', 'folder']);
+  });
+
+  it('expands the selected node only when it has non-derived children', () => {
+    const nodeOrder = ['folder', 'section', 'child', 'article', 'highlight'];
+    const nodesById: Record<string, Node> = {
+      folder: createNode('folder', 'Folder', null),
+      section: createNode('section', 'Section', 'folder'),
+      child: createNode('child', 'Child', 'section'),
+      article: createNode('article', 'Article', 'folder'),
+      highlight: createNode('highlight', 'Highlight', 'article', { derived: true })
+    };
+    const tree = buildNodeTree(nodeOrder, nodesById);
+
+    expect(
+      [...collectAutoExpandedNodeIds({
+        activeNodeId: 'section',
+        nodesById,
+        parentById: tree.parentById,
+        rows: tree.rows
+      })]
+    ).toEqual(['folder', 'section']);
+    expect(
+      [...collectAutoExpandedNodeIds({
+        activeNodeId: 'article',
+        nodesById,
+        parentById: tree.parentById,
+        rows: tree.rows
+      })]
+    ).toEqual(['folder']);
   });
 });

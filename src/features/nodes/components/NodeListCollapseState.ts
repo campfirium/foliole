@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../model/nodeTree';
-import { buildAutoCollapsedNodeIds, resolveNodeListFocusContextId } from '../model/nodeTreeAutoCollapse';
+import {
+  buildDefaultCollapsedNodeIds,
+  collectAutoExpandedNodeIds
+} from '../model/nodeTreeAutoCollapse';
 import type { Node } from '../model/nodeTypes';
 
 export interface CollapsedNodeState {
@@ -29,7 +32,40 @@ export function useCollapsedNodeState({
   trashRowsAll
 }: UseCollapsedNodeStateInput): CollapsedNodeState {
   const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useState<string[]>([]);
-  const focusContextId = resolveNodeListFocusContextId(activeNodeId, nodesById, noteParentById);
+  const noteState = useNoteCollapsedState({
+    activeNodeId,
+    nodesById,
+    noteParentById,
+    noteRowsAll
+  });
+  const collapsedTrashNodeIds = useMemo(
+    () => new Set(collapsedTrashNodeIdList),
+    [collapsedTrashNodeIdList]
+  );
+  usePruneTrashCollapseState(trashRowsAll, setCollapsedTrashNodeIdList);
+
+  return {
+    collapsedNoteNodeIds: noteState.collapsedNoteNodeIds,
+    collapsedTrashNodeIds,
+    setCollapsedTrashNodeIdList,
+    toggleNoteCollapse: (nodeId: string) =>
+      toggleManualCollapseNode(
+        nodeId,
+        noteState.collapsedNoteNodeIds,
+        noteState.setManualCollapsedNoteNodeIdList,
+        noteState.setManualExpandedNoteNodeIdList
+      ),
+    collapseAllNotes: noteState.collapseAllNotes,
+    expandAllNotes: noteState.expandAllNotes
+  };
+}
+
+function useNoteCollapsedState({
+  activeNodeId,
+  nodesById,
+  noteParentById,
+  noteRowsAll
+}: Omit<UseCollapsedNodeStateInput, 'trashRowsAll'>) {
   const noteCollapsibleNodeIds = useMemo(
     () => new Set(noteRowsAll.filter((row) => row.hasChildren).map((row) => row.node.id)),
     [noteRowsAll]
@@ -41,65 +77,45 @@ export function useCollapsedNodeState({
     manualExpandedNoteNodeIdList,
     setManualCollapsedNoteNodeIdList,
     setManualExpandedNoteNodeIdList
-  } = useNoteManualCollapseState(focusContextId, noteCollapsibleNodeIds);
-  const autoCollapsedNoteNodeIds = useMemo(
+  } = useNoteManualCollapseState(noteCollapsibleNodeIds);
+  const defaultCollapsedNoteNodeIds = useMemo(
     () =>
-      buildAutoCollapsedNodeIds({
-        activeNodeId,
+      buildDefaultCollapsedNodeIds({
         nodesById,
-        parentById: noteParentById,
         rows: noteRowsAll
       }),
-    [activeNodeId, nodesById, noteParentById, noteRowsAll]
+    [nodesById, noteRowsAll]
+  );
+  useAutoExpandActiveNodePath(
+    activeNodeId,
+    nodesById,
+    noteParentById,
+    noteRowsAll,
+    setManualCollapsedNoteNodeIdList,
+    setManualExpandedNoteNodeIdList
   );
   const collapsedNoteNodeIds = useMemo(
     () =>
       mergeCollapsedNodeIds(
-        autoCollapsedNoteNodeIds,
+        defaultCollapsedNoteNodeIds,
         manualCollapsedNoteNodeIdList,
         manualExpandedNoteNodeIdList
       ),
-    [autoCollapsedNoteNodeIds, manualCollapsedNoteNodeIdList, manualExpandedNoteNodeIdList]
+    [defaultCollapsedNoteNodeIds, manualCollapsedNoteNodeIdList, manualExpandedNoteNodeIdList]
   );
-  const collapsedTrashNodeIds = useMemo(
-    () => new Set(collapsedTrashNodeIdList),
-    [collapsedTrashNodeIdList]
-  );
-  usePruneTrashCollapseState(trashRowsAll, setCollapsedTrashNodeIdList);
 
   return {
-    collapsedNoteNodeIds,
-    collapsedTrashNodeIds,
-    setCollapsedTrashNodeIdList,
-    toggleNoteCollapse: (nodeId: string) =>
-      toggleManualCollapseNode(
-        nodeId,
-        collapsedNoteNodeIds,
-        setManualCollapsedNoteNodeIdList,
-        setManualExpandedNoteNodeIdList
-      ),
     collapseAllNotes,
-    expandAllNotes
+    collapsedNoteNodeIds,
+    expandAllNotes,
+    setManualCollapsedNoteNodeIdList,
+    setManualExpandedNoteNodeIdList
   };
 }
 
-function useNoteManualCollapseState(
-  focusContextId: string | null,
-  noteCollapsibleNodeIds: ReadonlySet<string>
-) {
+function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>) {
   const [manualCollapsedNoteNodeIdList, setManualCollapsedNoteNodeIdList] = useState<string[]>([]);
   const [manualExpandedNoteNodeIdList, setManualExpandedNoteNodeIdList] = useState<string[]>([]);
-  const previousFocusContextIdRef = useRef<string | null>(focusContextId);
-
-  useEffect(() => {
-    if (previousFocusContextIdRef.current === focusContextId) {
-      return;
-    }
-
-    previousFocusContextIdRef.current = focusContextId;
-    setManualCollapsedNoteNodeIdList([]);
-    setManualExpandedNoteNodeIdList([]);
-  }, [focusContextId]);
 
   useEffect(() => {
     setManualCollapsedNoteNodeIdList((prev) => prev.filter((id) => noteCollapsibleNodeIds.has(id)));
@@ -128,6 +144,37 @@ function useNoteManualCollapseState(
   };
 }
 
+function useAutoExpandActiveNodePath(
+  activeNodeId: string | null,
+  nodesById: Record<string, Node>,
+  noteParentById: Record<string, string | null>,
+  noteRowsAll: NodeTreeRow[],
+  setManualCollapsedNoteNodeIdList: Dispatch<SetStateAction<string[]>>,
+  setManualExpandedNoteNodeIdList: Dispatch<SetStateAction<string[]>>
+) {
+  const autoExpandedNodeIds = useMemo(
+    () =>
+      collectAutoExpandedNodeIds({
+        activeNodeId,
+        nodesById,
+        parentById: noteParentById,
+        rows: noteRowsAll
+      }),
+    [activeNodeId, nodesById, noteParentById, noteRowsAll]
+  );
+
+  useEffect(() => {
+    if (autoExpandedNodeIds.size === 0) {
+      return;
+    }
+
+    setManualCollapsedNoteNodeIdList((prev) =>
+      prev.filter((nodeId) => !autoExpandedNodeIds.has(nodeId))
+    );
+    setManualExpandedNoteNodeIdList((prev) => appendUniqueList(prev, autoExpandedNodeIds));
+  }, [autoExpandedNodeIds, setManualCollapsedNoteNodeIdList, setManualExpandedNoteNodeIdList]);
+}
+
 function usePruneTrashCollapseState(
   trashRowsAll: NodeTreeRow[],
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>
@@ -142,6 +189,14 @@ function usePruneTrashCollapseState(
 
 function appendUnique(values: string[], nodeId: string) {
   return values.includes(nodeId) ? values : [...values, nodeId];
+}
+
+function appendUniqueList(values: string[], nodeIds: ReadonlySet<string>) {
+  let next = values;
+  for (const nodeId of nodeIds) {
+    next = appendUnique(next, nodeId);
+  }
+  return next;
 }
 
 function toggleManualCollapseNode(

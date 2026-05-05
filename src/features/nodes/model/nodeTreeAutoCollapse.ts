@@ -1,66 +1,49 @@
 import { collectNodeAncestorIds, type NodeTreeRow } from './nodeTree';
 import type { Node } from './nodeTypes';
 
-interface AutoCollapsedNodeIdsInput {
+interface DefaultCollapsedNodeIdsInput {
+  nodesById: Record<string, Node>;
+  rows: NodeTreeRow[];
+}
+
+interface AutoExpandedNodeIdsInput {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
   parentById: Record<string, string | null>;
   rows: NodeTreeRow[];
 }
 
-export function buildAutoCollapsedNodeIds({
+export function buildDefaultCollapsedNodeIds({
+  nodesById,
+  rows
+}: DefaultCollapsedNodeIdsInput): Set<string> {
+  return new Set(
+    rows
+      .filter((row) => row.hasChildren)
+      .map((row) => row.node.id)
+      .filter(
+        (nodeId) =>
+          hasDerivedChildren(nodeId, rows, nodesById) &&
+          !hasNonDerivedChildren(nodeId, rows, nodesById)
+      )
+  );
+}
+
+export function collectAutoExpandedNodeIds({
   activeNodeId,
   nodesById,
   parentById,
   rows
-}: AutoCollapsedNodeIdsInput): Set<string> {
-  const collapsibleNodeIds = rows.filter((row) => row.hasChildren).map((row) => row.node.id);
+}: AutoExpandedNodeIdsInput): Set<string> {
   if (!activeNodeId || !nodesById[activeNodeId]) {
-    return new Set(
-      collapsibleNodeIds.filter((nodeId) => hasDerivedChildren(nodeId, rows, nodesById))
-    );
+    return new Set();
   }
 
-  const expandedNodeIds = collectExpandedNodeIds(activeNodeId, nodesById, parentById);
-  return new Set(collapsibleNodeIds.filter((nodeId) => !expandedNodeIds.has(nodeId)));
-}
-
-export function resolveNodeListFocusContextId(
-  activeNodeId: string | null,
-  nodesById: Record<string, Node>,
-  parentById: Record<string, string | null>
-): string | null {
-  if (!activeNodeId || !nodesById[activeNodeId]) {
-    return null;
-  }
-
-  let currentNodeId: string | null = activeNodeId;
-  while (currentNodeId) {
-    const currentNode = nodesById[currentNodeId];
-    if (!currentNode?.anchorLink) {
-      return currentNodeId;
-    }
-    currentNodeId = parentById[currentNodeId] ?? null;
-  }
-
-  return activeNodeId;
-}
-
-function collectExpandedNodeIds(
-  activeNodeId: string,
-  nodesById: Record<string, Node>,
-  parentById: Record<string, string | null>
-) {
-  const expandedNodeIds = new Set(collectNodeAncestorIds(activeNodeId, parentById));
-  let currentNodeId: string | null = activeNodeId;
-
-  while (currentNodeId) {
-    const currentNode = nodesById[currentNodeId];
-    if (!currentNode?.anchorLink) {
-      expandedNodeIds.add(currentNodeId);
-      break;
-    }
-    currentNodeId = parentById[currentNodeId] ?? null;
+  const expandedNodeIds = new Set(
+    collectNodeAncestorIds(activeNodeId, parentById).filter((nodeId) => !nodesById[nodeId]?.anchorLink)
+  );
+  if (hasNonDerivedChildren(activeNodeId, rows, nodesById)) {
+    expandedNodeIds.add(activeNodeId);
   }
 
   return expandedNodeIds;
@@ -76,5 +59,18 @@ function hasDerivedChildren(
       return false;
     }
     return Boolean(nodesById[row.node.id]?.anchorLink);
+  });
+}
+
+function hasNonDerivedChildren(
+  nodeId: string,
+  rows: NodeTreeRow[],
+  nodesById: Record<string, Node>
+) {
+  return rows.some((row) => {
+    if (row.node.parentNodeId !== nodeId) {
+      return false;
+    }
+    return !nodesById[row.node.id]?.anchorLink;
   });
 }

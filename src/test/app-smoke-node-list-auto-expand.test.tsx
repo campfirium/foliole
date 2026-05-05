@@ -84,7 +84,7 @@ function seedAutoExpandState(includeSecondFolder = false) {
   }));
 }
 
-it('shows only the active article branch while keeping sibling articles collapsed', () => {
+it('keeps derived branches collapsed by default while still showing the active path', () => {
   seedAutoExpandState(true);
 
   render(<App />);
@@ -97,10 +97,11 @@ it('shows only the active article branch while keeping sibling articles collapse
   expect(within(listPanel).getByRole('treeitem', { name: 'Article B' })).toBeInTheDocument();
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder B' })).toBeInTheDocument();
-  expect(within(listPanel).queryByRole('treeitem', { name: 'Article C' })).not.toBeInTheDocument();
+  expect(within(listPanel).getByRole('treeitem', { name: 'Article C' })).toBeInTheDocument();
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight C1' })).not.toBeInTheDocument();
 });
 
-it('resets temporary manual collapse when focus moves to another article', () => {
+it('keeps manual collapse and does not auto-expand another derived branch after focus moves', () => {
   seedAutoExpandState();
 
   render(<App />);
@@ -113,5 +114,5 @@ it('resets temporary manual collapse when focus moves to another article', () =>
   fireEvent.click(within(listPanel).getByRole('treeitem', { name: 'Article B' }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('article-b');
   expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight A1' })).not.toBeInTheDocument();
-  expect(within(listPanel).getByRole('treeitem', { name: 'Highlight B1' })).toBeInTheDocument();
+  expect(within(listPanel).queryByRole('treeitem', { name: 'Highlight B1' })).not.toBeInTheDocument();
 });
