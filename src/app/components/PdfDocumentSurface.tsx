@@ -213,7 +213,12 @@ export function PdfDocumentSurface({ nodeViewState, onCreateHighlightFromSelecti
   };
 
   return (
-    <section aria-label="PDF reader panel" className="relative flex min-h-0 flex-1 flex-col bg-bg-canvas" data-testid="pdf-document-surface" ref={surfaceRef}>
+    <section
+      aria-label="PDF reader panel"
+      className="pdf-document-surface relative flex min-h-0 flex-1 flex-col bg-bg-canvas"
+      data-testid="pdf-document-surface"
+      ref={surfaceRef}
+    >
       <div className="relative flex min-h-0 flex-1 flex-col">
         <PdfDocumentViewport
           loadError={loadError}

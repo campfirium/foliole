@@ -374,6 +374,12 @@ body {
   cursor: grabbing;
 }
 
+.pdf-document-surface .textLayer :is(span, br)::selection {
+  background: rgba(56, 118, 255, 0.7);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
 .cloze-answer-zone .answer-editor-host .cm-content {
   padding-top: 1.2rem;
 }

@@ -107,6 +107,16 @@ export function useViewportTransformAnchor(
   }, [rotation, scrollContainerRef, zoom]);
 }
 
+function stripTextLayerInlineFonts(page: HTMLDivElement | null) {
+  if (!page) {
+    return;
+  }
+  const spans = page.querySelectorAll<HTMLSpanElement>('.textLayer span');
+  for (const span of spans) {
+    span.style.fontFamily = '';
+  }
+}
+
 function PdfDocumentPages({ pageElementsRef, rotation, totalPages, zoom }: { pageElementsRef: PdfPageElementsRef; rotation: number; totalPages: number | null; zoom: number }) {
   if (!totalPages) {
     return null;
@@ -125,6 +135,7 @@ function PdfDocumentPages({ pageElementsRef, rotation, totalPages, zoom }: { pag
         <Page
           className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-sm"
           data-testid="pdf-document-page"
+          onRenderTextLayerSuccess={() => stripTextLayerInlineFonts(pageElementsRef.current[pageNumber])}
           pageNumber={pageNumber}
           renderAnnotationLayer
           renderTextLayer
