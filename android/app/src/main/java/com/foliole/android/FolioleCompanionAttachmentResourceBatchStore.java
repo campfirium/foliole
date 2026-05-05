@@ -1,10 +1,8 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteStatement;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -35,9 +33,9 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         }
         DownloadResult result = downloadResources(context, resources);
         for (String attachmentId : result.failedIds) {
-            markFailed(database, attachmentId);
+            markFailed(context, database, attachmentId);
         }
-        markCached(database, result.syncedIds);
+        markCached(context, database, result.syncedIds);
         JSArray syncedAttachmentIds = new JSArray();
         for (String attachmentId : result.syncedIds) {
             syncedAttachmentIds.put(attachmentId);
@@ -99,7 +97,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         );
     }
 
-    private static void markCached(SQLiteDatabase database, List<String> attachmentIds) {
+    private static void markCached(Context context, SQLiteDatabase database, List<String> attachmentIds) throws Exception {
         if (attachmentIds.isEmpty()) {
             return;
         }
@@ -107,21 +105,17 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         Map<String, String> contentHashes = loadContentHashes(database, attachmentIds);
         database.beginTransaction();
         try {
-            SQLiteStatement updateCached = database.compileStatement(
-                "UPDATE attachment_blobs SET storage_key = ?, availability = 'cached', cached_at = ?, last_verified_at = ? " +
-                    "WHERE attachment_id = ?"
-            );
             for (String attachmentId : attachmentIds) {
                 String contentHash = contentHashes.get(attachmentId);
                 if (contentHash == null) {
                     throw new IllegalStateException("Attachment manifest is missing.");
                 }
-                updateCached.clearBindings();
-                updateCached.bindString(1, contentHash);
-                updateCached.bindString(2, now);
-                updateCached.bindString(3, now);
-                updateCached.bindString(4, attachmentId);
-                int updated = updateCached.executeUpdateDelete();
+                int updated = FolioleCompanionNamedMutationStore.executeChanged(
+                    context,
+                    database,
+                    "attachmentResourceMarkCached",
+                    new Object[] { contentHash, now, now, attachmentId }
+                );
                 if (updated <= 0) {
                     throw new IllegalStateException("Attachment manifest is missing.");
                 }
@@ -152,10 +146,13 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         return hashes;
     }
 
-    private static void markFailed(SQLiteDatabase database, String attachmentId) {
-        ContentValues values = new ContentValues();
-        values.put("availability", "failed");
-        database.update("attachment_blobs", values, "attachment_id = ?", new String[] { attachmentId });
+    private static void markFailed(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
+        FolioleCompanionNamedMutationStore.executeChanged(
+            context,
+            database,
+            "attachmentResourceMarkFailed",
+            new Object[] { attachmentId }
+        );
     }
 
     private static File attachmentFile(Context context, String storageKey) {
