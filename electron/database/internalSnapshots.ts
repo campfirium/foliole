@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { ensureManagedBackupDirectory, resolveManagedBackupDirectory } from './backupSettings.js';
 import type { SqliteDatabase } from './connection.js';
 
-export const INTERNAL_DATABASE_SNAPSHOT_DIRECTORY_NAME = 'snapshots';
 export const INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT = 5;
 
 export type InternalDatabaseSnapshotReason = 'pre-migration' | 'pre-restore';
@@ -23,8 +23,8 @@ export interface CreateInternalDatabaseSnapshotOptions {
 }
 
 export function resolveInternalDatabaseSnapshotDirectory(sourcePath: string) {
-  const databasePath = path.resolve(sourcePath);
-  return path.join(path.dirname(databasePath), INTERNAL_DATABASE_SNAPSHOT_DIRECTORY_NAME);
+  void sourcePath;
+  return resolveManagedBackupDirectory();
 }
 
 export function createInternalDatabaseSnapshot({
@@ -41,7 +41,7 @@ export function createInternalDatabaseSnapshot({
   );
 
   try {
-    fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+    ensureManagedBackupDirectory();
     sourceDatabase.exec(`VACUUM INTO ${toSqliteStringLiteral(destinationPath)}`);
     pruneInternalDatabaseSnapshots(resolvedSourcePath, retentionLimit);
   } catch (error) {
@@ -61,18 +61,15 @@ export function pruneInternalDatabaseSnapshots(sourcePath: string, retentionLimi
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(sourcePath);
   const snapshotEntries = fs
     .readdirSync(snapshotDirectory)
+    .filter((fileName) => fileName.endsWith('.db') && /^pre-(?:migration|restore)-/.test(fileName))
     .map((fileName) => {
       const filePath = path.join(snapshotDirectory, fileName);
       const stats = fs.statSync(filePath);
-      if (!stats.isFile() || !fileName.endsWith('.db')) {
-        return null;
-      }
       return {
         filePath,
         updatedAtMs: stats.mtimeMs
       };
     })
-    .filter((entry): entry is { filePath: string; updatedAtMs: number } => entry !== null)
     .sort((left, right) => right.updatedAtMs - left.updatedAtMs);
 
   for (const entry of snapshotEntries.slice(Math.max(1, retentionLimit))) {

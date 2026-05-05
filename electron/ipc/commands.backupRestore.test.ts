@@ -11,22 +11,23 @@ const {
 } = vi.hoisted(() => ({
   createApplicationDatabaseBackup: vi.fn().mockResolvedValue({
     sourcePath: '/app/foliole.db',
-    destinationPath: '/app/backups/foliole.db',
+    destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
     totalPages: 3,
     remainingPages: 0
   }),
   listApplicationDatabaseBackups: vi.fn().mockResolvedValue([
     {
-      fileName: 'foliole-2026-03-14_10-00-00-000.db',
-      filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
-      kind: 'backup',
+      autoFrequency: null,
+      fileName: 'manual-2026-03-14_10-00-00-000.db',
+      filePath: '/app/Backups/manual-2026-03-14_10-00-00-000.db',
+      kind: 'manual',
       snapshotReason: null,
       sizeBytes: 4096,
       updatedAt: '2026-03-14T10:00:00.000Z'
     }
   ]),
   restoreApplicationDatabaseBackup: vi.fn().mockResolvedValue({
-    sourcePath: '/app/backups/foliole.db',
+    sourcePath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
     targetPath: '/app/foliole.db',
     totalPages: 3,
     remainingPages: 0
@@ -74,7 +75,7 @@ it('dispatches sqlite backup command through invoke handler', async () => {
     })
   ).resolves.toEqual({
     sourcePath: '/app/foliole.db',
-    destinationPath: '/app/backups/foliole.db',
+    destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
     totalPages: 3,
     remainingPages: 0
   });
@@ -90,7 +91,7 @@ it('dispatches sqlite backup command without destination path override', async (
     })
   ).resolves.toEqual({
     sourcePath: '/app/foliole.db',
-    destinationPath: '/app/backups/foliole.db',
+    destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
     totalPages: 3,
     remainingPages: 0
   });
@@ -105,9 +106,10 @@ it('dispatches sqlite backup listing command through invoke handler', async () =
     })
   ).resolves.toEqual([
     {
-      fileName: 'foliole-2026-03-14_10-00-00-000.db',
-      filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
-      kind: 'backup',
+      autoFrequency: null,
+      fileName: 'manual-2026-03-14_10-00-00-000.db',
+      filePath: '/app/Backups/manual-2026-03-14_10-00-00-000.db',
+      kind: 'manual',
       snapshotReason: null,
       sizeBytes: 4096,
       updatedAt: '2026-03-14T10:00:00.000Z'
@@ -124,7 +126,7 @@ it('dispatches sqlite restore command through invoke handler', async () => {
       args: { sourcePath: '/tmp/backup.db' }
     })
   ).resolves.toEqual({
-    sourcePath: '/app/backups/foliole.db',
+    sourcePath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
     targetPath: '/app/foliole.db',
     totalPages: 3,
     remainingPages: 0

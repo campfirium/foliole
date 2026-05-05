@@ -1,5 +1,6 @@
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
+  NativeBackupSettings,
   NativeCopyAttachmentImageResult,
   NativeExportAttachmentImageResult,
   NativeExportCurrentArticleMirrorResult,
@@ -35,6 +36,10 @@ export type NativeUtilityCommandMap = {
     args: undefined;
     result: NativeLibraryPaths;
   };
+  [NATIVE_COMMANDS.loadBackupSettings]: {
+    args: undefined;
+    result: NativeBackupSettings;
+  };
   [NATIVE_COMMANDS.listSqliteBackups]: {
     args: undefined;
     result: NativeSqliteBackupEntry[];
@@ -58,5 +63,9 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.updateLibraryPathSetting]: {
     args: NativeUpdateLibraryPathSettingArgs;
     result: NativeLibraryPaths;
+  };
+  [NATIVE_COMMANDS.saveBackupSettings]: {
+    args: { settings: NativeBackupSettings };
+    result: NativeBackupSettings;
   };
 };

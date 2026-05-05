@@ -34,14 +34,12 @@ afterEach(async () => {
 });
 
 it('lists sqlite backups newest first from the managed backup directory', async () => {
-  const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'backups');
-  const snapshotDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'snapshots');
+  const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Backups');
   await fs.mkdir(backupDirectoryPath, { recursive: true });
-  await fs.mkdir(snapshotDirectoryPath, { recursive: true });
 
-  const olderPath = path.join(backupDirectoryPath, 'foliole-older.db');
-  const newerPath = path.join(backupDirectoryPath, 'foliole-newer.db');
-  const snapshotPath = path.join(snapshotDirectoryPath, 'pre-restore-2026-03-14_10-30-00-000.db');
+  const olderPath = path.join(backupDirectoryPath, 'manual-2026-03-14_10-00-00-000.db');
+  const newerPath = path.join(backupDirectoryPath, 'manual-2026-03-14_11-00-00-000.db');
+  const snapshotPath = path.join(backupDirectoryPath, 'pre-restore-2026-03-14_10-30-00-000.db');
   await fs.writeFile(olderPath, 'older-backup');
   await fs.writeFile(newerPath, 'newer-backup');
   await fs.writeFile(snapshotPath, 'snapshot');
@@ -51,14 +49,16 @@ it('lists sqlite backups newest first from the managed backup directory', async 
 
   await expect(listApplicationDatabaseBackups()).resolves.toEqual([
     {
-      fileName: 'foliole-newer.db',
+      autoFrequency: null,
+      fileName: 'manual-2026-03-14_11-00-00-000.db',
       filePath: newerPath,
-      kind: 'backup',
+      kind: 'manual',
       snapshotReason: null,
       sizeBytes: 12,
       updatedAt: '2026-03-14T11:00:00.000Z'
     },
     {
+      autoFrequency: null,
       fileName: 'pre-restore-2026-03-14_10-30-00-000.db',
       filePath: snapshotPath,
       kind: 'snapshot',
@@ -67,9 +67,10 @@ it('lists sqlite backups newest first from the managed backup directory', async 
       updatedAt: '2026-03-14T10:30:00.000Z'
     },
     {
-      fileName: 'foliole-older.db',
+      autoFrequency: null,
+      fileName: 'manual-2026-03-14_10-00-00-000.db',
       filePath: olderPath,
-      kind: 'backup',
+      kind: 'manual',
       snapshotReason: null,
       sizeBytes: 12,
       updatedAt: '2026-03-14T10:00:00.000Z'

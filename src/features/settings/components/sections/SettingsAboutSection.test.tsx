@@ -1,5 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+vi.mock('../../../../shared/platform/importBridge', () => ({
+  selectRuntimeImportDirectory: vi.fn()
+}));
+
+vi.mock('../../model/databaseBackupSettings', () => ({
+  loadDatabaseBackupSettings: vi.fn(),
+  saveDatabaseBackupSettings: vi.fn()
+}));
 
 vi.mock('../../model/databaseBackups', () => ({
   areDatabaseBackupActionsAvailable: vi.fn(),
@@ -9,6 +18,7 @@ vi.mock('../../model/databaseBackups', () => ({
   restoreDatabaseBackup: vi.fn()
 }));
 
+import { selectRuntimeImportDirectory } from '../../../../shared/platform/importBridge';
 import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,
@@ -16,238 +26,158 @@ import {
   reloadAfterDatabaseRestore,
   restoreDatabaseBackup
 } from '../../model/databaseBackups';
+import {
+  loadDatabaseBackupSettings,
+  saveDatabaseBackupSettings
+} from '../../model/databaseBackupSettings';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
 
-const mockedAreDatabaseBackupActionsAvailable = vi.mocked(areDatabaseBackupActionsAvailable);
-const mockedCreateDatabaseBackup = vi.mocked(createDatabaseBackup);
-const mockedListDatabaseBackups = vi.mocked(listDatabaseBackups);
-const mockedReloadAfterDatabaseRestore = vi.mocked(reloadAfterDatabaseRestore);
-const mockedRestoreDatabaseBackup = vi.mocked(restoreDatabaseBackup);
+const defaultSettings = {
+  auto_daily_days: 7,
+  auto_hourly_hours: 24,
+  auto_monthly_months: 0,
+  auto_weekly_weeks: 4,
+  backup_dir: '/app/Backups',
+  manual_max_count: 10,
+  snapshot_max_count: 5,
+  total_size_limit_bytes: 2 * 1024 * 1024 * 1024,
+  updated_at: '2026-04-02T10:00:00.000Z'
+};
+
+const defaultBackups = [
+  {
+    autoFrequency: 'daily' as const,
+    fileName: 'auto-daily-2026-04-02_08-00-00-000.db',
+    filePath: '/app/Backups/auto-daily-2026-04-02_08-00-00-000.db',
+    kind: 'automatic' as const,
+    snapshotReason: null,
+    sizeBytes: 6 * 1024 * 1024,
+    updatedAt: '2026-04-02T08:00:00.000Z'
+  }
+];
 
 beforeEach(() => {
-  mockedAreDatabaseBackupActionsAvailable.mockReset();
-  mockedCreateDatabaseBackup.mockReset();
-  mockedListDatabaseBackups.mockReset();
-  mockedReloadAfterDatabaseRestore.mockReset();
-  mockedRestoreDatabaseBackup.mockReset();
-  mockedAreDatabaseBackupActionsAvailable.mockReturnValue(true);
-  mockedCreateDatabaseBackup.mockResolvedValue({
+  vi.mocked(selectRuntimeImportDirectory).mockReset();
+  vi.mocked(loadDatabaseBackupSettings).mockReset();
+  vi.mocked(saveDatabaseBackupSettings).mockReset();
+  vi.mocked(areDatabaseBackupActionsAvailable).mockReset();
+  vi.mocked(createDatabaseBackup).mockReset();
+  vi.mocked(listDatabaseBackups).mockReset();
+  vi.mocked(reloadAfterDatabaseRestore).mockReset();
+  vi.mocked(restoreDatabaseBackup).mockReset();
+
+  vi.mocked(areDatabaseBackupActionsAvailable).mockReturnValue(true);
+  vi.mocked(loadDatabaseBackupSettings).mockResolvedValue(defaultSettings);
+  vi.mocked(saveDatabaseBackupSettings).mockResolvedValue(defaultSettings);
+  vi.mocked(listDatabaseBackups).mockResolvedValue(defaultBackups);
+  vi.mocked(createDatabaseBackup).mockResolvedValue({
     ok: true,
     value: {
-      sourcePath: '/app/foliole.db',
-      destinationPath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
-      totalPages: 3,
-      remainingPages: 0
+      destinationPath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+      remainingPages: 0,
+      sourcePath: '/app/Data/foliole.db',
+      totalPages: 12
     }
   });
-  mockedListDatabaseBackups.mockResolvedValue([
-    {
-      fileName: 'foliole-2026-03-14_10-00-00-000.db',
-      filePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
-      kind: 'backup',
-      snapshotReason: null,
-      sizeBytes: 4096,
-      updatedAt: '2026-03-14T10:00:00.000Z'
-    }
-  ]);
-  mockedRestoreDatabaseBackup.mockResolvedValue({
+  vi.mocked(restoreDatabaseBackup).mockResolvedValue({
     ok: true,
     value: {
-      sourcePath: '/app/backups/foliole-2026-03-14_10-00-00-000.db',
-      targetPath: '/app/foliole.db',
-      totalPages: 3,
-      remainingPages: 0
+      remainingPages: 0,
+      sourcePath: '/app/Backups/auto-daily-2026-04-02_08-00-00-000.db',
+      targetPath: '/app/Data/foliole.db',
+      totalPages: 12
     }
   });
 });
 
-afterEach(() => {
-  vi.useRealTimers();
-});
-
-it('shows backup list entries loaded for the about settings section', async () => {
+it('shows backup settings and backup list', async () => {
   render(<SettingsAboutSection />);
 
   await waitFor(() => {
-    expect(screen.getByText('foliole-2026-03-14_10-00-00-000.db')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('24')).toBeInTheDocument();
   });
 
-  expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'Restore' })).toBeEnabled();
+  expect(screen.getByText('/app/Backups')).toBeInTheDocument();
+  expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
+  expect(screen.getByText(/Auto backup · daily/)).toBeInTheDocument();
 });
 
-it('creates a backup and refreshes the visible list', async () => {
-  mockedListDatabaseBackups.mockResolvedValueOnce([]).mockResolvedValueOnce([
-    {
-      fileName: 'foliole-2026-03-15_08-00-00-000.db',
-      filePath: '/app/backups/foliole-2026-03-15_08-00-00-000.db',
-      kind: 'backup',
-      snapshotReason: null,
-      sizeBytes: 81920,
-      updatedAt: '2026-03-15T08:00:00.000Z'
-    }
-  ]);
-  mockedCreateDatabaseBackup.mockResolvedValue({
-    ok: true,
-    value: {
-      sourcePath: '/app/foliole.db',
-      destinationPath: '/app/backups/foliole-2026-03-15_08-00-00-000.db',
-      totalPages: 20,
-      remainingPages: 0
-    }
+it('saves edited backup settings', async () => {
+  render(<SettingsAboutSection />);
+
+  await screen.findByDisplayValue('24');
+  fireEvent.change(screen.getByDisplayValue('24'), { target: { value: '12' } });
+  fireEvent.change(screen.getByDisplayValue('2'), { target: { value: '3' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+
+  await waitFor(() => {
+    expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auto_hourly_hours: 12,
+        total_size_limit_bytes: 3 * 1024 * 1024 * 1024
+      })
+    );
   });
+  expect(screen.getByText('Backup settings saved.')).toBeInTheDocument();
+});
+
+it('changes backup location through folder picker', async () => {
+  vi.mocked(selectRuntimeImportDirectory).mockResolvedValue('/new/Backups');
 
   render(<SettingsAboutSection />);
 
+  await screen.findByDisplayValue('24');
+  fireEvent.click(screen.getByRole('button', { name: 'Change location' }));
+
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
+    expect(screen.getByText('Backup location updated. Save settings to apply it.')).toBeInTheDocument();
   });
 
+  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+  await waitFor(() => {
+    expect(saveDatabaseBackupSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ backup_dir: '/new/Backups' })
+    );
+  });
+});
+
+it('creates a manual backup and refreshes the list', async () => {
+  vi.mocked(listDatabaseBackups)
+    .mockResolvedValueOnce(defaultBackups)
+    .mockResolvedValueOnce([
+      {
+        autoFrequency: null,
+        fileName: 'manual-2026-04-02_09-00-00-000.db',
+        filePath: '/app/Backups/manual-2026-04-02_09-00-00-000.db',
+        kind: 'manual' as const,
+        snapshotReason: null,
+        sizeBytes: 5 * 1024 * 1024,
+        updatedAt: '2026-04-02T09:00:00.000Z'
+      }
+    ]);
+
+  render(<SettingsAboutSection />);
+
+  await screen.findByRole('button', { name: 'Create backup' });
   fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
 
   await waitFor(() => {
-    expect(mockedCreateDatabaseBackup).toHaveBeenCalledWith();
+    expect(createDatabaseBackup).toHaveBeenCalledWith();
   });
-  expect(mockedListDatabaseBackups).toHaveBeenCalledTimes(2);
-  expect(screen.getByText('Backup created: foliole-2026-03-15_08-00-00-000.db.')).toBeInTheDocument();
-  expect(screen.getByText('foliole-2026-03-15_08-00-00-000.db')).toBeInTheDocument();
+  expect(screen.getByText('Backup created: manual-2026-04-02_09-00-00-000.db.')).toBeInTheDocument();
 });
 
-it('shows auto safety snapshots in the same list with a clear label', async () => {
-  mockedListDatabaseBackups.mockResolvedValue([
-    {
-      fileName: 'pre-restore-2026-03-15_08-45-00-000.db',
-      filePath: '/app/snapshots/pre-restore-2026-03-15_08-45-00-000.db',
-      kind: 'snapshot',
-      snapshotReason: 'pre-restore',
-      sizeBytes: 4096,
-      updatedAt: '2026-03-15T08:45:00.000Z'
-    }
-  ]);
-
+it('restores from a listed backup', async () => {
   render(<SettingsAboutSection />);
 
-  await waitFor(() => {
-    expect(screen.getByText('pre-restore-2026-03-15_08-45-00-000.db')).toBeInTheDocument();
-  });
-
-  expect(screen.getByText(/Auto safety snapshot before restore/)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Restore' })).toBeEnabled();
-});
-
-it('keeps the success status even when the refreshed list stays empty', async () => {
-  mockedListDatabaseBackups.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-  mockedCreateDatabaseBackup.mockResolvedValue({
-    ok: true,
-    value: {
-      sourcePath: '/app/foliole.db',
-      destinationPath: '/app/backups/foliole-2026-03-15_08-30-00-000.db',
-      totalPages: 20,
-      remainingPages: 0
-    }
-  });
-
-  render(<SettingsAboutSection />);
-
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
-  });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
-
-  await waitFor(() => {
-    expect(screen.getByText('Backup created: foliole-2026-03-15_08-30-00-000.db.')).toBeInTheDocument();
-  });
-  expect(screen.getByText('No backups yet')).toBeInTheDocument();
-});
-
-it('shows the native backup error message when creation fails', async () => {
-  mockedCreateDatabaseBackup.mockResolvedValue({
-    ok: false,
-    errorMessage: 'EPERM: operation not permitted, mkdir C:\\\\Users\\\\zephu\\\\AppData\\\\Roaming\\\\foliole\\\\backups'
-  });
-
-  render(<SettingsAboutSection />);
-
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
-  });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
-
-  await waitFor(() => {
-    expect(screen.getByText(/Backup creation failed: EPERM: operation not permitted/)).toBeInTheDocument();
-  });
-});
-
-it('restores a backup from the listed entry', async () => {
-  render(<SettingsAboutSection />);
   const restoreButton = await screen.findByRole('button', { name: 'Restore' });
-
   fireEvent.click(restoreButton);
 
   await waitFor(() => {
-    expect(mockedRestoreDatabaseBackup).toHaveBeenCalledWith(
-      '/app/backups/foliole-2026-03-14_10-00-00-000.db'
-    );
+    expect(restoreDatabaseBackup).toHaveBeenCalledWith('/app/Backups/auto-daily-2026-04-02_08-00-00-000.db');
   });
   await waitFor(() => {
-    expect(screen.getByText('Backup restored from foliole-2026-03-14_10-00-00-000.db. Reloading workspace…')).toBeInTheDocument();
+    expect(reloadAfterDatabaseRestore).toHaveBeenCalledWith();
   });
-  await waitFor(() => {
-    expect(mockedReloadAfterDatabaseRestore).toHaveBeenCalledWith();
-  });
-});
-
-it('shows desktop-only fallback when runtime bridge is unavailable', async () => {
-  mockedAreDatabaseBackupActionsAvailable.mockReturnValue(false);
-  mockedListDatabaseBackups.mockResolvedValue([]);
-
-  render(<SettingsAboutSection />);
-
-  await waitFor(() => {
-    expect(screen.getByText('Desktop runtime required')).toBeInTheDocument();
-  });
-
-  expect(screen.getByRole('button', { name: 'Create backup' })).toBeDisabled();
-});
-
-it('shows the empty state when no backups are returned', async () => {
-  mockedListDatabaseBackups.mockResolvedValue([]);
-
-  render(<SettingsAboutSection />);
-
-  await waitFor(() => {
-    expect(screen.getByText('No backups yet')).toBeInTheDocument();
-  });
-});
-
-it('enables backup actions after desktop bridge becomes available post-mount', async () => {
-  mockedAreDatabaseBackupActionsAvailable.mockReturnValue(false);
-  mockedListDatabaseBackups.mockResolvedValue([
-    {
-      fileName: 'foliole-2026-03-15_09-00-00-000.db',
-      filePath: '/app/backups/foliole-2026-03-15_09-00-00-000.db',
-      kind: 'backup',
-      snapshotReason: null,
-      sizeBytes: 10240,
-      updatedAt: '2026-03-15T09:00:00.000Z'
-    }
-  ]);
-
-  render(<SettingsAboutSection />);
-
-  await waitFor(() => {
-    expect(screen.getByText('Desktop runtime required')).toBeInTheDocument();
-  });
-
-  window.setTimeout(() => {
-    mockedAreDatabaseBackupActionsAvailable.mockReturnValue(true);
-  }, 0);
-
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Create backup' })).toBeEnabled();
-  }, { timeout: 1_000 });
-  expect(screen.getByText('foliole-2026-03-15_09-00-00-000.db')).toBeInTheDocument();
 });

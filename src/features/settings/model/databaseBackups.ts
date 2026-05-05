@@ -5,7 +5,8 @@ import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 export interface DatabaseBackupEntry {
   fileName: string;
   filePath: string;
-  kind: 'backup' | 'snapshot';
+  kind: 'manual' | 'automatic' | 'snapshot';
+  autoFrequency: 'hourly' | 'daily' | 'weekly' | 'monthly' | null;
   snapshotReason: 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
@@ -50,7 +51,17 @@ function normalizeDatabaseBackupEntry(value: unknown): DatabaseBackupEntry | nul
   const payload = value as Record<string, unknown>;
   const fileName = readString(payload.fileName);
   const filePath = readString(payload.filePath);
-  const kind = payload.kind === 'snapshot' ? 'snapshot' : payload.kind === 'backup' ? 'backup' : null;
+  const kind =
+    payload.kind === 'snapshot' || payload.kind === 'automatic' || payload.kind === 'manual'
+      ? payload.kind
+      : null;
+  const autoFrequency =
+    payload.autoFrequency === 'hourly' ||
+    payload.autoFrequency === 'daily' ||
+    payload.autoFrequency === 'weekly' ||
+    payload.autoFrequency === 'monthly'
+      ? payload.autoFrequency
+      : null;
   const snapshotReason = payload.snapshotReason === 'pre-migration' || payload.snapshotReason === 'pre-restore'
     ? payload.snapshotReason
     : payload.snapshotReason === null || payload.snapshotReason === undefined
@@ -61,7 +72,7 @@ function normalizeDatabaseBackupEntry(value: unknown): DatabaseBackupEntry | nul
   if (!fileName || !filePath || !kind || sizeBytes === null || !updatedAt) {
     return null;
   }
-  return { fileName, filePath, kind, snapshotReason, sizeBytes, updatedAt };
+  return { autoFrequency, fileName, filePath, kind, snapshotReason, sizeBytes, updatedAt };
 }
 
 function normalizeSqliteBackupResult(value: unknown): NativeSqliteBackupResult | null {

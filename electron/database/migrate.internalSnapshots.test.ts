@@ -40,7 +40,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('creates a pre-migration snapshot inside Data/snapshots before upgrading the library database', async () => {
+it('creates a pre-migration snapshot inside Backups before upgrading the library database', async () => {
   const databasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
   await fs.mkdir(path.dirname(databasePath), { recursive: true });
   createVersionTwelveDatabase(databasePath);

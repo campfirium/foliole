@@ -11,6 +11,7 @@ import {
 } from 'electron';
 
 import { registerAttachmentProtocol, registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
+import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
 import { initializeDatabase } from './database/migrate.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
@@ -209,6 +210,11 @@ app.on('before-quit', (event) => {
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
   initializeDatabase();
+  try {
+    await reconcileAutomaticDatabaseBackups();
+  } catch (error) {
+    console.error('[backup] automatic backup reconcile failed', error);
+  }
   try {
     await backfillMissingMirrorOutput();
   } catch (error) {

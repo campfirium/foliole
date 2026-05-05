@@ -4,6 +4,7 @@ import {
   listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
 } from '../database/backupRestore.js';
+import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
 import {
   resetImportData
 } from '../database/importMaintenance.js';
@@ -14,12 +15,7 @@ import {
   softDeleteNodes,
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
-import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
-import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
-import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
-import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
-import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
@@ -37,10 +33,8 @@ import {
   asNullableString,
   asString,
   asStringArray,
-  asTimestamp,
   parseNodeCreationArgs,
-  parseNodeSnapshotArgs,
-  parseNodeViewStatePayloadArray
+  parseNodeSnapshotArgs
 } from './commandParsers.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
@@ -50,9 +44,9 @@ import {
   parseSoftDeleteNodesArgs
 } from './nodeCommandArgs.js';
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
-import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
+import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 
 function readSettingsObject(settings: unknown) {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
@@ -60,7 +54,6 @@ function readSettingsObject(settings: unknown) {
   }
   return settings as Record<string, unknown>;
 }
-
 function handleSqliteMaintenanceCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.listSqliteBackups) {
     return listApplicationDatabaseBackups();
@@ -77,7 +70,6 @@ function handleSqliteMaintenanceCommand(command: string, args: Record<string, un
   }
   return undefined;
 }
-
 function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
     const parsed = parseNodeCreationArgs(args, 'folder');
@@ -127,7 +119,6 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   }
   return undefined;
 }
-
 async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -146,6 +137,9 @@ async function handleSettingsStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) {
     return loadLibraryPathSettings();
+  }
+  if (command === NATIVE_COMMANDS.loadBackupSettings) {
+    return loadBackupSettings();
   }
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) {
     return rebuildMirrorOutput();
@@ -168,6 +162,9 @@ async function handleSettingsStorageCommand(
     await refreshManagedInboxMonitorFromSettings();
     return result;
   }
+  if (command === NATIVE_COMMANDS.saveBackupSettings) {
+    return saveBackupSettings(readSettingsObject(args.settings));
+  }
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
     const result = saveImportManagerSettings(readSettingsObject(args.settings));
     await refreshKeepImportMonitorFromSettings();
@@ -181,30 +178,6 @@ async function handleSettingsStorageCommand(
   }
   return undefined;
 }
-
-function handleReadingAndReviewCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.loadReadingProgress) {
-    return loadReadingProgress();
-  }
-  if (command === NATIVE_COMMANDS.saveReadingProgress) {
-    saveReadingProgress({
-      activeNodeId: asNullableString(args.activeNodeId, 'activeNodeId'),
-      nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
-      updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
-    });
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.applyReviewGrade) {
-    applyReviewGrade(parseApplyReviewGradeArgs(args));
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.relearnNode) {
-    resetNodeReviewState(asString(args.nodeId, 'nodeId'));
-    return null;
-  }
-  return undefined;
-}
-
 export async function handleStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -218,14 +191,9 @@ export async function handleStorageCommand(
   if (sqliteMaintenanceResult !== undefined) {
     return sqliteMaintenanceResult;
   }
-  if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
-    return loadWorkspaceSnapshot();
-  }
-  if (command === NATIVE_COMMANDS.loadWorkspaceListSnapshot) {
-    return loadWorkspaceListSnapshot();
-  }
-  if (command === NATIVE_COMMANDS.loadNodeDocument) {
-    return loadWorkspaceNodeDocument(asString(args.nodeId, 'nodeId'));
+  const workspaceReadResult = handleWorkspaceReadCommand(command, args);
+  if (workspaceReadResult !== undefined) {
+    return workspaceReadResult;
   }
   const attachmentResult = handleStorageAttachmentCommand(command, args, window);
   if (attachmentResult !== undefined) {

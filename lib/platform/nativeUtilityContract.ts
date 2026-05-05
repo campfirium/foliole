@@ -140,10 +140,23 @@ export interface NativeSqliteBackupResult {
   remainingPages: number;
 }
 
+export interface NativeBackupSettings {
+  auto_daily_days: number;
+  auto_hourly_hours: number;
+  auto_monthly_months: number;
+  auto_weekly_weeks: number;
+  backup_dir: string;
+  manual_max_count: number;
+  snapshot_max_count: number;
+  total_size_limit_bytes: number;
+  updated_at: string;
+}
+
 export interface NativeSqliteBackupEntry {
   fileName: string;
   filePath: string;
-  kind: 'backup' | 'snapshot';
+  kind: 'manual' | 'automatic' | 'snapshot';
+  autoFrequency: 'hourly' | 'daily' | 'weekly' | 'monthly' | null;
   snapshotReason: 'pre-migration' | 'pre-restore' | null;
   sizeBytes: number;
   updatedAt: string;
