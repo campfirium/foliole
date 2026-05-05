@@ -20,6 +20,7 @@ import {
   applySyncPackMetadataObjectsWithDbPort,
   applySyncPackSettingObjectsWithDbPort
 } from './syncPackSyncObjectsExecutor.js';
+import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObjectsExecutor.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
@@ -52,6 +53,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     await applySyncPackMetadataObjectsWithDbPort(port, options);
     await applySyncPackLearningObjectsWithDbPort(port, options);
     await applySyncPackAttachmentObjectsWithDbPort(port, options);
+    await applySyncPackViewStateObjectsWithDbPort(port, options);
     appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
       ...options,
@@ -64,7 +66,8 @@ export async function applySyncPackNodeSurfaceWithDbPort(
         'node_reading',
         'node_review',
         'attachment',
-        'pdf_page_text'
+        'pdf_page_text',
+        'view_state'
       ]
     });
   }
