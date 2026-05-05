@@ -62,12 +62,14 @@ it('keeps selected rows in the calm list selection style', () => {
   const row = screen.getByRole('treeitem', { name: 'Study prompt' });
   expect(row).toHaveAttribute('aria-selected', 'true');
   expect(row).toHaveAttribute('data-active', 'false');
-  expect(row.className).toContain('bg-foreground/[0.05]');
+  expect(row.className).toContain('before:top-0.5');
+  expect(row.className).toContain('before:bottom-0.5');
+  expect(row.className).toContain('before:bg-foreground/[0.05]');
   expect(row.className).not.toContain('border-border-strong');
   expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
 });
 
-it('condenses bulk-selected rows without using the active button style', () => {
+it('keeps bulk-selected rows in place without using the active button style', () => {
   render(
     <NodeTreeRow
       depth={0}
@@ -87,8 +89,8 @@ it('condenses bulk-selected rows without using the active button style', () => {
   const row = screen.getByRole('treeitem', { name: 'Study prompt' });
   expect(row).toHaveAttribute('data-active', 'false');
   expect(row).toHaveAttribute('data-node-bulk-selected', 'true');
-  expect(row.className).toContain('my-0.5');
-  expect(row).toHaveStyle({ paddingTop: '1px', paddingBottom: '1px' });
+  expect(row.className).not.toContain('my-0.5');
+  expect(row).toHaveStyle({ paddingTop: '0px', paddingBottom: '0px' });
   expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
 });
 

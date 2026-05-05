@@ -40,7 +40,8 @@ function useWorkspaceTopicTreeState(
     () => sortWorkspaceContentNodeIds(itemIds, nodesById, contentSort, nodeViewById),
     [contentSort, itemIds, nodeViewById, nodesById]
   );
-  return useMemo(() => buildNodeTree(sortedItemIds, nodesById), [nodesById, sortedItemIds]);
+  const tree = useMemo(() => buildNodeTree(sortedItemIds, nodesById), [nodesById, sortedItemIds]);
+  return { sortedItemIds, tree };
 }
 
 function useWorkspaceTopicTreeActions() {
@@ -114,7 +115,7 @@ function useWorkspaceTopicTreeInteraction(args: {
 export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const tree = useWorkspaceTopicTreeState(props.itemIds, props.nodesById, contentSort.sort, nodeViewById);
+  const { sortedItemIds, tree } = useWorkspaceTopicTreeState(props.itemIds, props.nodesById, contentSort.sort, nodeViewById);
   const { collapsedNodeIds, setCollapsedNodeIds } = useWorkspaceTopicTreeCollapse(
     props.activeFolderId,
     props.activeNodeId,
@@ -130,7 +131,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     activeFolderId: props.activeFolderId,
     activeNodeId: props.activeNodeId,
     collapsedNodeIds,
-    itemIds: props.itemIds,
+    itemIds: sortedItemIds,
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
     onSelectNode: props.onSelectNode
@@ -207,7 +208,6 @@ function renderWorkspaceTopicTreeHeader(args: {
         args.setCollapsedNodeIds(args.hasCollapsedNodes ? new Set() : new Set(args.collapsibleNodeIds))
       }
       searchQuery={args.searchQuery}
-      selectedCount={args.interaction.topicTreeState.selectedNodeIds.length}
       sortDirection={args.contentSort.sort.direction}
       sortKey={args.contentSort.sort.key}
     />

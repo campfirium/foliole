@@ -47,11 +47,14 @@ describe('resolveNodeRowButtonClassName', () => {
       isSelected: true
     });
 
-    expect(className).toContain('bg-foreground/[0.05]');
+    expect(className).toContain('before:top-0.5');
+    expect(className).toContain('before:bottom-0.5');
+    expect(className).toContain('before:bg-foreground/[0.05]');
+    expect(className).not.toContain(' bg-foreground/[0.05]');
     expect(className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
   });
 
-  it('adds row separation only while bulk selection is active', () => {
+  it('keeps bulk selection from changing row spacing', () => {
     const className = resolveNodeRowButtonClassName({
       depth: 0,
       isBulkSelectionActive: true,
@@ -59,7 +62,7 @@ describe('resolveNodeRowButtonClassName', () => {
       isSelected: true
     });
 
-    expect(className).toContain('my-0.5');
+    expect(className).not.toContain('my-0.5');
     expect(className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
   });
 });

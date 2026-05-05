@@ -86,7 +86,7 @@ it('shows every ctrl-selected row as selected', () => {
 
   const selectedRows = within(listPanel).getAllByRole('treeitem', { selected: true });
   expect(selectedRows).toHaveLength(2);
-  expect(within(listPanel).getByText('2 selected')).toBeInTheDocument();
+  expect(within(listPanel).queryByText('2 selected')).toBeNull();
   expect(within(listPanel).getByRole('treeitem', { name: 'Article A' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(within(listPanel).getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('data-active', 'false');

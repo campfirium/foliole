@@ -54,12 +54,11 @@ interface NodeTreeRowProps {
   onToggleCollapse: (nodeId: string) => void;
 }
 
-function resolveNodeRowStyle(depth: number, rowSpacing: number, isCondensedSelected: boolean) {
-  const verticalPadding = isCondensedSelected ? Math.max(1, rowSpacing - 5) : rowSpacing;
+function resolveNodeRowStyle(depth: number, rowSpacing: number) {
   return {
     '--node-depth': depth,
-    paddingBottom: `${verticalPadding}px`,
-    paddingTop: `${verticalPadding}px`
+    paddingBottom: `${rowSpacing}px`,
+    paddingTop: `${rowSpacing}px`
   } as CSSProperties;
 }
 
@@ -101,8 +100,7 @@ function renderNodeTreeRowButton(props: {
 
 function NodeTreeRowImpl(props: NodeTreeRowProps) {
   recordNodeListRowRender(props.nodeId);
-  const isCondensedSelected = Boolean(props.isSelected && props.isBulkSelectionActive);
-  const style = resolveNodeRowStyle(props.depth, props.rowSpacing, isCondensedSelected);
+  const style = resolveNodeRowStyle(props.depth, props.rowSpacing);
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
