@@ -223,17 +223,11 @@ it('treats untracked imports from the same path as separate inbox items', () => 
   const first = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:00:00.000Z'));
   const second = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:05:00.000Z'));
 
-  const connection = openDatabaseConnection();
-  const nodeRows = connection.sqlite
-    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'note' ORDER BY created_at ASC`)
-    .all() as Array<{ deleted_at: string | null; id: string }>;
-
   expect(first.duplicateSemantic).toBe('new');
   expect(second.duplicateSemantic).toBe('new');
   expect(second.nodeId).not.toBe(first.nodeId);
   expect(second.sourceFingerprint).not.toBe(first.sourceFingerprint);
-  expect(nodeRows).toHaveLength(2);
-  expect(nodeRows.every((row) => row.deleted_at === null)).toBe(true);
+  expect(readInboxChildTitlesByOrder()).toEqual([{ title: 'note 2' }, { title: 'note' }]);
 });
 
 it('lets untracked imports re-enter after the earlier inbox item was deleted', () => {

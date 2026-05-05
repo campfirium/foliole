@@ -21,6 +21,31 @@ interface ExistingNodeRow {
   position: number | null;
 }
 
+function escapeLikePattern(value: string) {
+  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
+}
+
+function resolveNextImportedTitle(driver: DatabaseDriver, desiredTitle: string) {
+  const trimmedTitle = desiredTitle.trim() || 'Untitled';
+  const duplicateRows = driver.queryAll<{ title: string }>(
+    `SELECT title
+     FROM nodes
+     WHERE deleted_at IS NULL
+       AND (title = ? OR title LIKE ? ESCAPE '\\')`,
+    [trimmedTitle, `${escapeLikePattern(trimmedTitle)} %`]
+  );
+  const occupiedTitles = new Set(duplicateRows.map((row) => row.title));
+  if (!occupiedTitles.has(trimmedTitle)) {
+    return trimmedTitle;
+  }
+
+  let suffix = 2;
+  while (occupiedTitles.has(`${trimmedTitle} ${suffix}`)) {
+    suffix += 1;
+  }
+  return `${trimmedTitle} ${suffix}`;
+}
+
 function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
   const existingInbox = driver.queryOne<ExistingInboxRow>('SELECT id FROM nodes WHERE id = ?', [INBOX_NODE_ID]);
   if (existingInbox) {
@@ -45,13 +70,23 @@ export function writeNewNode(input: {
 }) {
   ensureInboxNode(input.driver, input.importedAt);
   const nodeId = `node-${randomUUID()}`;
-  const openingText = resolveNodeOpeningText(input.content, input.title);
+  const resolvedTitle = resolveNextImportedTitle(input.driver, input.title);
+  const openingText = resolveNodeOpeningText(input.content, resolvedTitle);
   input.driver.execute(
     `INSERT INTO nodes (
      id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
      content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
      ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, ?, ?, ?, NULL, NULL, ?, ?, NULL)`,
-    [nodeId, INBOX_NODE_ID, input.title, input.hideTitleHeading ? 1 : 0, input.content, openingText, input.importedAt, input.importedAt]
+    [
+      nodeId,
+      INBOX_NODE_ID,
+      resolvedTitle,
+      input.hideTitleHeading ? 1 : 0,
+      input.content,
+      openingText,
+      input.importedAt,
+      input.importedAt
+    ]
   );
   input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, input.nextInboxTopPosition]);
   return nodeId;
