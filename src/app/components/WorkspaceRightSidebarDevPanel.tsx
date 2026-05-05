@@ -7,6 +7,7 @@ import {
   type ResolvedNodeSetting
 } from '../../features/nodes/model/nodeReviewSettings';
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
+import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 
 interface WorkspaceRightSidebarDevPanelProps {
@@ -215,7 +216,7 @@ function DevPanelContent({ data }: { data: DevPanelResolvedData }) {
         <DevInfoRow label="Parent" value={node.parentNodeId ?? 'Root'} mono={node.parentNodeId !== null} />
         <DevInfoRow label="Created" value={formatDateTime(node.createdAt)} />
         <DevInfoRow label="Updated" value={formatDateTime(node.updatedAt)} />
-        <DevInfoRow label="Kind" value={node.reveal === null ? 'Reading' : 'Review'} />
+        <DevInfoRow label="Kind" value={isFsrsReviewItemNode(node) ? 'Review' : 'Reading'} />
         <DevInfoRow label="Anchor kind" value={node.anchorLink?.kind ?? 'None'} />
         <DevInfoRow label="Content size" value={`${node.content.length} chars`} />
       </DevInfoSection>

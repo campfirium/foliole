@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
+  createClozeReviewNode,
   createReadingNode,
   createQaNode,
   createSchedulerGradeMock,
@@ -78,6 +79,32 @@ it('ends session when grading the last review node', async () => {
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([]);
   expect(harness.getState().reviewSession.isAnswerRevealed).toBe(false);
   expect(harness.getState().activeNodeId).toBe('qa-1');
+});
+
+it('treats cloze review nodes as gradable review cards', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const harness = createSetStateHarness(
+    createWorkspaceFixture([createClozeReviewNode('cloze-1', due), createQaNode('qa-2', due)])
+  );
+  const grade = createSchedulerGradeMock();
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
+
+  const started = actions.startReviewSession(due);
+  expect(started).toBe(true);
+  expect(harness.getState().reviewSession.currentNodeId).toBe('cloze-1');
+
+  actions.revealReviewAnswer();
+  const graded = await actions.gradeReviewCard(3, due);
+
+  expect(graded).toBe(true);
+  expect(grade).toHaveBeenCalledTimes(1);
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(
+    expect.objectContaining({
+      nodeId: 'cloze-1',
+      grade: 3
+    })
+  );
+  expect(harness.getState().reviewSession.currentNodeId).toBe('qa-2');
 });
 
 it('persists runtime sync and advances review state in one grading action', async () => {

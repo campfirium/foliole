@@ -173,6 +173,7 @@ export function useAppController(): AppControllerResult {
     listResize: controller.listResize,
     mapPaletteItemsToHotkeyItems: (items) => mapPaletteItemsToHotkeyItems(items, hotkeys.overrides),
     nav: controller.nav,
+    nowIso,
     reviewDueCount,
     reviewPreview,
     reviewSettings,

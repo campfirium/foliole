@@ -65,6 +65,23 @@ function createReadingNode(
   };
 }
 
+function createClozeReviewNode(id: string, due: string, overrides: Partial<NodeReviewProfile> = {}): Node {
+  return {
+    id,
+    parentNodeId: null,
+    title: id,
+    content: id,
+    anchorLink: {
+      id: `${id}-anchor`,
+      kind: 'cloze'
+    },
+    reveal: null,
+    review: createReviewProfile(due, overrides),
+    createdAt: due,
+    updatedAt: due
+  };
+}
+
 const priorityParentNode: Node = {
   id: 'priority-parent',
   parentNodeId: null,
@@ -199,6 +216,38 @@ it('keeps empty structure-only nodes out of the reading queue', () => {
 
   expect(plan.readingQueueNodeIds).toEqual(['reading-1']);
   expect(plan.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
+});
+
+it('queues cloze review nodes in the FSRS lane even when reveal is empty', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const nodes = [
+    createClozeReviewNode('cloze-1', '2026-03-01T08:00:00.000Z', { reps: 1, state: 1 }),
+    createReadingNode('reading-1', '2026-03-02T08:00:00.000Z')
+  ];
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.fsrsQueueNodeIds).toEqual(['cloze-1']);
+  expect(plan.readingQueueNodeIds).toEqual(['reading-1']);
+  expect(plan.queueNodeIds).toEqual(['cloze-1', 'reading-1']);
+});
+
+it('can build the whole queue including scheduled review items for queue inspection', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const nodes = [
+    createClozeReviewNode('cloze-scheduled', '2026-03-19T08:00:00.000Z', { reps: 10, state: 2 }),
+    createReadingNode('reading-due', '2026-03-02T08:00:00.000Z')
+  ];
+  const nodeOrder = nodes.map((node) => node.id);
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({ includeScheduled: true, nodeOrder, nodesById, now, trashedNodeIds: [] });
+
+  expect(plan.fsrsQueueNodeIds).toEqual(['cloze-scheduled']);
+  expect(plan.readingQueueNodeIds).toEqual(['reading-due']);
+  expect(plan.queueNodeIds).toEqual(['cloze-scheduled', 'reading-due']);
 });
 
 it('replaces legacy due and createdAt ordering with inherited priority, FSRS retrievability, and reading nextAt', () => {

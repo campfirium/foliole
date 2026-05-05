@@ -188,6 +188,29 @@ interface NodeListTreeContentProps {
   state: NodeListState;
 }
 
+function confirmRelearnNodeReset(targetCount: number) {
+  return window.confirm(
+    targetCount > 1
+      ? 'Reset review state and requeue the selected nodes?'
+      : 'Reset review state and requeue this node?'
+  );
+}
+
+function createRelearnNodeAction(
+  contextTargets: string[],
+  relearnNode: (nodeId: string, now?: string) => boolean,
+  closeContextMenu: () => void
+) {
+  return () => {
+    if (!confirmRelearnNodeReset(contextTargets.length)) {
+      closeContextMenu();
+      return;
+    }
+    contextTargets.forEach((id) => relearnNode(id));
+    closeContextMenu();
+  };
+}
+
 export function NodeListTreeContent(props: NodeListTreeContentProps) {
   const contextTargets = props.contextMenu.getContextTargets();
   return (
@@ -234,7 +257,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
             contextTargets.forEach((id) => props.deleteNodePermanently(id)),
             props.contextMenu.closeContextMenu()
           )}
-          onRelearnNode={() => (contextTargets.forEach((id) => props.relearnNode(id)), props.contextMenu.closeContextMenu())}
+          onRelearnNode={createRelearnNodeAction(contextTargets, props.relearnNode, props.contextMenu.closeContextMenu)}
           onRestoreNode={() => (
             contextTargets.forEach((id) => props.restoreNode(id)),
             props.contextMenu.closeContextMenu()

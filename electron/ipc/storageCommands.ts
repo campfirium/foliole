@@ -12,7 +12,7 @@ import {
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
-import { applyReviewGrade } from '../database/reviewMutations.js';
+import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import {
   loadReviewSchedulerSettings,
@@ -124,6 +124,10 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.applyReviewGrade) {
     applyReviewGrade(parseApplyReviewGradeArgs(args));
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.relearnNode) {
+    resetNodeReviewState(asString(args.nodeId, 'nodeId'));
     return null;
   }
   return undefined;

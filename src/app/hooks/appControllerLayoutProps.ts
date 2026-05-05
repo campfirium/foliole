@@ -60,6 +60,7 @@ interface BuildControllerLayoutPropsArgs {
   isStudyMode: boolean;
   listResize: ReturnType<typeof useListResizer>;
   nav: ReturnType<typeof useWorkspaceNavigation>;
+  nowIso: string;
   reviewDueCount: number;
   reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettingsState>;
@@ -92,6 +93,7 @@ interface BuildControllerLayoutPropsArgs {
     setRightSidebarCollapsed: (collapsed: boolean) => void;
     setRightSidebarWidth: (width: number) => void;
     startReviewSession: (now?: string) => boolean;
+    trashedNodeIds: string[];
     updateNodeContent: (nodeId: string, content: string) => void;
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;
@@ -159,6 +161,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     isTrashViewOpen: args.trash.isTrashViewOpen,
     isViewingTrashNode: args.runtime.isViewingTrashNode,
     listWidth: args.ws.listWidth,
+    nowIso: args.nowIso,
     rightSidebarWidth: args.ws.rightSidebarWidth,
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
@@ -167,6 +170,7 @@ function createLayoutDataArgs(args: BuildControllerLayoutPropsArgs) {
     reviewSession: args.ws.reviewSession,
     showAnswerSection: !args.isStudyMode || args.ws.reviewSession.isAnswerRevealed,
     selectedTrashNodeId: args.trash.selectedTrashNodeId,
+    trashedNodeIds: args.ws.trashedNodeIds,
     startStudyMode: args.startStudyMode,
     startReviewSession: args.ws.startReviewSession,
     exitReviewSession: args.ws.exitReviewSession,

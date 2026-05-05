@@ -94,3 +94,7 @@ export interface NativeApplyReviewGradeArgs {
   cardBefore: NativeSchedulerCard;
   cardAfter: NativeSchedulerCard;
 }
+
+export interface NativeRelearnNodeArgs {
+  nodeId: string;
+}

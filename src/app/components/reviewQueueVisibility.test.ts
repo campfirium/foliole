@@ -88,3 +88,39 @@ it('builds queue visibility from the live review queue and saved mix ratio', () 
     queueMixRatioReading: 2
   });
 });
+
+it('counts cloze review nodes as FSRS items in queue visibility', () => {
+  const visibility = buildReviewQueueVisibility({
+    currentNodeId: 'fsrs-cloze',
+    nodesById: {
+      ...createVisibilityTestNodes(),
+      'fsrs-cloze': createNode('fsrs-cloze', {
+        anchorLink: {
+          id: 'anchor-1',
+          kind: 'cloze'
+        },
+        review: {
+          due: '2026-03-10T08:00:00.000Z',
+          lastReviewAt: null,
+          state: 2,
+          stability: 5,
+          difficulty: 4,
+          elapsedDays: 2,
+          scheduledDays: 4,
+          reps: 2,
+          lapses: 0
+        }
+      })
+    },
+    queueNodeIds: ['fsrs-cloze', 'reading-1'],
+    reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
+  });
+
+  expect(visibility).toEqual({
+    currentQueueLabel: 'FSRS queue',
+    fsrsQueueCount: 1,
+    readingQueueCount: 1,
+    queueMixRatioFsrs: DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue.queueMixRatio.fsrs,
+    queueMixRatioReading: DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue.queueMixRatio.reading
+  });
+});

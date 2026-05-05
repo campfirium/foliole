@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 
 export interface ReviewQueueVisibility {
@@ -7,10 +8,6 @@ export interface ReviewQueueVisibility {
   readingQueueCount: number;
   queueMixRatioFsrs: number;
   queueMixRatioReading: number;
-}
-
-function isFsrsQueueNode(node: Node | undefined) {
-  return Boolean(node && node.reveal !== null);
 }
 
 export function buildReviewQueueVisibility(args: {
@@ -31,7 +28,7 @@ export function buildReviewQueueVisibility(args: {
     if (!node) {
       return;
     }
-    if (isFsrsQueueNode(node)) {
+    if (isFsrsReviewItemNode(node)) {
       fsrsQueueCount += 1;
       return;
     }
@@ -39,7 +36,7 @@ export function buildReviewQueueVisibility(args: {
   });
 
   return {
-    currentQueueLabel: isFsrsQueueNode(currentNode) ? 'FSRS queue' : 'Reading queue',
+    currentQueueLabel: isFsrsReviewItemNode(currentNode) ? 'FSRS queue' : 'Reading queue',
     fsrsQueueCount,
     readingQueueCount,
     queueMixRatioFsrs: args.reviewSchedulerSettings.pushQueue.queueMixRatio.fsrs,

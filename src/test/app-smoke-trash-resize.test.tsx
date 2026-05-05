@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -99,6 +99,7 @@ it('relearns reading nodes from the node context menu', () => {
   }));
 
   render(<App />);
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Reading node' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
@@ -110,6 +111,50 @@ it('relearns reading nodes from the node context menu', () => {
       nodeOrder: workspace.nodeOrder,
       nodesById: workspace.nodesById,
       now: '2026-02-25T00:00:00.000Z',
+      trashedNodeIds: workspace.trashedNodeIds
+    }).queueNodeIds
+  ).toContain('node-2');
+});
+
+it('relearns review cards from the node context menu after confirmation', () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      ...state.nodesById,
+      'node-2': createNode({
+        id: 'node-2',
+        title: 'Review node',
+        content: 'Prompt [...]',
+        reveal: 'Answer',
+        review: {
+          due: '2026-03-19T11:09:42.000Z',
+          lastReviewAt: '2026-03-17T11:09:42.000Z',
+          state: 2,
+          stability: 0.21,
+          difficulty: 9.49,
+          elapsedDays: 3,
+          scheduledDays: 2,
+          reps: 10,
+          lapses: 2
+        }
+      })
+    }
+  }));
+
+  render(<App />);
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Review node' }), { clientX: 56, clientY: 64 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
+
+  const workspace = useWorkspaceStore.getState();
+  expect(workspace.nodesById['node-2']?.review).toBeNull();
+  expect(
+    buildReviewQueuePlan({
+      nodeOrder: workspace.nodeOrder,
+      nodesById: workspace.nodesById,
+      now: '2026-03-18T00:00:00.000Z',
       trashedNodeIds: workspace.trashedNodeIds
     }).queueNodeIds
   ).toContain('node-2');

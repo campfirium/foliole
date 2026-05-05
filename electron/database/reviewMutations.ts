@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import {
   applyReviewGrade as applyReviewGradeViaDriver,
+  resetNodeReviewState as resetNodeReviewStateViaDriver,
   type ApplyReviewGradeInput
 } from '../../lib/core/database/reviewMutations.js';
 import { getReviewSchedulerVersion, loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
@@ -18,4 +19,8 @@ export function applyReviewGrade(input: ApplyReviewGradeInput): void {
     schedulerVersion: getReviewSchedulerVersion(loadReviewSchedulerSettings()),
     createId: randomUUID
   });
+}
+
+export function resetNodeReviewState(nodeId: string): void {
+  resetNodeReviewStateViaDriver(openDatabaseConnection().driver, nodeId);
 }

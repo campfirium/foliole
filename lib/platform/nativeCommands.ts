@@ -23,6 +23,7 @@ export const NATIVE_COMMANDS = {
   restoreSqliteDatabase: 'restore_sqlite_database',
   updateNodeContent: 'update_node_content',
   updateNodeReveal: 'update_node_reveal',
+  relearnNode: 'relearn_node',
   replaceNodeOrder: 'replace_node_order',
   softDeleteNodes: 'soft_delete_nodes',
   restoreNodes: 'restore_nodes',

@@ -1,6 +1,7 @@
 import { forgetting_curve } from 'ts-fsrs';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { toSchedulerCard } from '../features/review/model/reviewTypes';
 import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
 import {
@@ -42,7 +43,7 @@ function createSeededRandom(seedInput: string) {
 }
 
 function isQueueableReadingNode(node: Node | undefined, now: string) {
-  if (!node || node.reveal !== null || node.content.trim().length === 0) {
+  if (!node || isFsrsReviewItemNode(node) || node.content.trim().length === 0) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {
@@ -51,11 +52,25 @@ function isQueueableReadingNode(node: Node | undefined, now: string) {
   return parseTimestamp(resolveReadingNextAt(node)) <= parseTimestamp(now);
 }
 
+function isSchedulableReadingNode(node: Node | undefined) {
+  if (!node || isFsrsReviewItemNode(node) || node.content.trim().length === 0) {
+    return false;
+  }
+  if (node.reading && node.reading.state !== 'active') {
+    return false;
+  }
+  return true;
+}
+
 function isDueFsrsNode(node: Node | undefined, now: string) {
-  if (!node || node.reveal === null) {
+  if (!node || !isFsrsReviewItemNode(node)) {
     return false;
   }
   return parseTimestamp(node.review?.due ?? now) <= parseTimestamp(now);
+}
+
+function isSchedulableFsrsNode(node: Node | undefined) {
+  return Boolean(node && isFsrsReviewItemNode(node));
 }
 
 function resolveReadingNextAt(node: Node) {
@@ -160,6 +175,7 @@ function mixUnifiedPushQueues(args: {
 }
 
 export function buildReviewQueuePlan(args: {
+  includeScheduled?: boolean;
   limit?: number;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
@@ -169,6 +185,7 @@ export function buildReviewQueuePlan(args: {
 }): ReviewQueuePlan {
   const fsrsCandidates: Node[] = [];
   const readingCandidates: Node[] = [];
+  const includeScheduled = args.includeScheduled ?? false;
   const pushQueueRules = args.pushQueueRules ?? getCurrentReviewSchedulerSettings().pushQueue;
   const trashedNodeIds = new Set(args.trashedNodeIds);
 
@@ -178,12 +195,12 @@ export function buildReviewQueuePlan(args: {
     }
 
     const node = args.nodesById[nodeId];
-    if (isQueueableReadingNode(node, args.now)) {
+    if (includeScheduled ? isSchedulableReadingNode(node) : isQueueableReadingNode(node, args.now)) {
       readingCandidates.push(node);
       return;
     }
 
-    if (isDueFsrsNode(node, args.now)) {
+    if (includeScheduled ? isSchedulableFsrsNode(node) : isDueFsrsNode(node, args.now)) {
       fsrsCandidates.push(node);
     }
   });

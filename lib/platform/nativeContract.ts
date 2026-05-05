@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
 import type {
   NativeApplyReviewGradeArgs,
+  NativeRelearnNodeArgs,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
   NativeReviewSchedulerSettings,
@@ -9,6 +10,7 @@ import type {
 } from './nativeStorageContract.js';
 export type {
   NativeApplyReviewGradeArgs,
+  NativeRelearnNodeArgs,
   NativeNodeSnapshotArgs,
   NativeReadingProgressSnapshot,
   NativeReviewSchedulerSettings,
@@ -179,6 +181,10 @@ export type NativeCommandMap = {
   };
   [NATIVE_COMMANDS.updateNodeReveal]: {
     args: NativeNodeSnapshotArgs;
+    result: null;
+  };
+  [NATIVE_COMMANDS.relearnNode]: {
+    args: NativeRelearnNodeArgs;
     result: null;
   };
   [NATIVE_COMMANDS.replaceNodeOrder]: {

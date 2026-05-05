@@ -1,10 +1,12 @@
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import {
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncNodeRevealToRuntime,
+  syncRelearnNodeToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -158,23 +160,32 @@ function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceNodeActions['
 function createRelearnNodeAction(set: WorkspaceSet): WorkspaceNodeActions['relearnNode'] {
   return (nodeId, now = new Date().toISOString()) => {
     let relearned = false;
+    let shouldSyncReviewReset = false;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || node.reveal !== null || node.content.trim().length === 0) {
+      if (!node || node.content.trim().length === 0) {
+        return state;
+      }
+      if (!isFsrsReviewItemNode(node) && node.reading === null) {
         return state;
       }
       relearned = true;
+      shouldSyncReviewReset = isFsrsReviewItemNode(node);
       return {
         nodesById: {
           ...state.nodesById,
           [nodeId]: {
             ...node,
+            review: shouldSyncReviewReset ? null : node.review,
             reading: null,
             updatedAt: now
           }
         }
       };
     });
+    if (shouldSyncReviewReset) {
+      syncRelearnNodeToRuntime({ nodeId });
+    }
     return relearned;
   };
 }

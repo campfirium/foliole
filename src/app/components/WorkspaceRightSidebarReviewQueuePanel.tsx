@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isFsrsReviewItemNode } from '../../features/review/model/reviewItemKind';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
@@ -7,7 +8,7 @@ interface WorkspaceRightSidebarReviewQueuePanelProps {
 }
 
 function getQueueItemKindLabel(node: Node | undefined) {
-  return node?.reveal === null ? 'Reading' : 'FSRS';
+  return isFsrsReviewItemNode(node) ? 'FSRS' : 'Reading';
 }
 
 function getQueueItemTitle(node: Node | undefined) {
@@ -25,10 +26,42 @@ function getQueueItemTitle(node: Node | undefined) {
   return firstLine ?? 'Untitled node';
 }
 
+function formatShortDateTime(value: string | null | undefined) {
+  if (!value) {
+    return 'Unknown';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('zh-CN', {
+    hour12: false,
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function getQueueItemScheduleLabel(node: Node | undefined) {
+  if (!node) {
+    return 'Missing schedule';
+  }
+  if (isFsrsReviewItemNode(node)) {
+    const due = node.review?.due;
+    if (!due) {
+      return 'Review · Unscheduled';
+    }
+    const isDue = Date.parse(due) <= Date.now();
+    return `${isDue ? 'Due' : 'Scheduled'} · ${formatShortDateTime(due)}`;
+  }
+  return `Next · ${formatShortDateTime(node.reading?.nextAt ?? node.createdAt)}`;
+}
+
 function QueueSummary({ fsrsCount, readingCount, totalCount }: { fsrsCount: number; readingCount: number; totalCount: number }) {
   return (
     <section className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-      <h3 className="text-sm font-semibold text-foreground">Current queue</h3>
+      <h3 className="text-sm font-semibold text-foreground">Whole queue</h3>
       <dl className="mt-3 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-md bg-[#f5f1e8] px-2 py-2">
           <dt className="text-[11px] uppercase tracking-[0.12em] text-foreground/45">Total</dt>
@@ -51,7 +84,7 @@ function EmptyQueueState() {
   return (
     <section className="rounded-lg border border-border bg-white/90 p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
       <h3 className="text-sm font-semibold text-foreground">Review queue</h3>
-      <p className="mt-2 text-sm text-foreground/70">No review items are queued right now.</p>
+      <p className="mt-2 text-sm text-foreground/70">No scheduled review items are available right now.</p>
     </section>
   );
 }
@@ -61,7 +94,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
     return <EmptyQueueState />;
   }
 
-  const fsrsCount = props.queueNodeIds.filter((nodeId) => props.nodesById[nodeId]?.reveal !== null).length;
+  const fsrsCount = props.queueNodeIds.filter((nodeId) => isFsrsReviewItemNode(props.nodesById[nodeId])).length;
   const readingCount = props.queueNodeIds.length - fsrsCount;
 
   return (
@@ -84,6 +117,7 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{index + 1}. {getQueueItemTitle(node)}</p>
                     <p className="mt-1 text-[12px] text-foreground/60">{getQueueItemKindLabel(node)} queue</p>
+                    <p className="mt-1 text-[12px] text-foreground/45">{getQueueItemScheduleLabel(node)}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
                     {isCurrent ? 'Current' : 'Queued'}

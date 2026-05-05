@@ -17,3 +17,11 @@ export function getReviewItemKind(node: Node | null | undefined): ReviewItemKind
   }
   return 'reading';
 }
+
+export function isFsrsReviewItemNode(node: Node | null | undefined) {
+  return getReviewItemKind(node) === 'fsrs';
+}
+
+export function isReadingReviewItemNode(node: Node | null | undefined) {
+  return getReviewItemKind(node) === 'reading';
+}

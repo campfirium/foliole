@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  syncDeleteNodesPermanentlyToRuntime,
-  syncNodeContentToRuntime,
-  syncRestoreNodesToRuntime,
-  syncSoftDeleteNodesToRuntime
-} from './workspaceRuntimeSync';
+import { syncRelearnNodeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createInitialWorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
@@ -79,72 +74,44 @@ function createSetStateHarness(initialState: WorkspaceState) {
   };
 }
 
-describe('createWorkspaceNodeActions trash sync', () => {
+describe('createWorkspaceNodeActions relearn sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('syncs soft delete command and parent cleanup through runtime bridge', () => {
+  it('resets review cards to an uninitialized state and syncs runtime reset', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-
-    actions.updateNodeContent('node-1', 'before <cloze id="1">answer</cloze id="1"> after');
-    const nodeId = actions.createQANodeFromSelection('node-1', 'Prompt [...]', 'answer', '1');
-    if (!nodeId) {
-      throw new Error('expected QA node id');
+    const state = harness.getState();
+    const node = state.nodesById['node-1'];
+    if (!node) {
+      throw new Error('missing seed node');
     }
-
-    vi.clearAllMocks();
-    actions.deleteNode(nodeId);
-
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'node-1',
-        content: 'before answer after'
-      })
-    );
-    expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledWith({
-      nodeIds: [nodeId],
-      deletedAt: expect.any(String)
+    harness.setState({
+      nodesById: {
+        ...state.nodesById,
+        'node-1': {
+          ...node,
+          reveal: 'Answer',
+          review: {
+            due: '2026-03-10T00:00:00.000Z',
+            lastReviewAt: '2026-03-06T00:00:00.000Z',
+            state: 2,
+            stability: 7,
+            difficulty: 4,
+            elapsedDays: 2,
+            scheduledDays: 4,
+            reps: 5,
+            lapses: 1
+          }
+        }
+      }
     });
-  });
 
-  it('syncs restore command through runtime bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
-    const nodeId = actions.createChildNode('node-1', 'child');
+    const relearned = actions.relearnNode('node-1', '2026-03-18T00:00:00.000Z');
 
-    actions.deleteNode(nodeId);
-    vi.clearAllMocks();
-    actions.restoreNode(nodeId);
-
-    expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [nodeId] });
-  });
-
-  it('syncs permanent delete command with next node order through runtime bridge', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
-    const nodeId = actions.createRootNode('root 2');
-
-    vi.clearAllMocks();
-    actions.deleteNodePermanently(nodeId);
-
-    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
-      nodeIds: [nodeId],
-      nodeOrder: ['node-1']
-    });
-  });
-
-  it('does not sync when deleting a missing node', () => {
-    const harness = createSetStateHarness(createWorkspaceFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
-
-    actions.deleteNode('missing-node');
-
-    expect(syncSoftDeleteNodesToRuntime).not.toHaveBeenCalled();
-    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+    expect(relearned).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.review).toBeNull();
+    expect(syncRelearnNodeToRuntime).toHaveBeenCalledWith({ nodeId: 'node-1' });
   });
 });

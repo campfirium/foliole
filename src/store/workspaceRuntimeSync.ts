@@ -3,6 +3,7 @@ import type {
   NativeCommandArgs,
   NativeCommandName,
   NativeApplyReviewGradeArgs,
+  NativeRelearnNodeArgs,
   NativeNodeSnapshotArgs,
   NativeSaveReadingProgressArgs
 } from '../../lib/platform/nativeContract';
@@ -15,6 +16,7 @@ type FireAndForgetRuntimeCommand = Extract<
   NativeCommandName,
   | typeof NATIVE_COMMANDS.updateNodeContent
   | typeof NATIVE_COMMANDS.updateNodeReveal
+  | typeof NATIVE_COMMANDS.relearnNode
   | typeof NATIVE_COMMANDS.replaceNodeOrder
   | typeof NATIVE_COMMANDS.softDeleteNodes
   | typeof NATIVE_COMMANDS.restoreNodes
@@ -99,6 +101,10 @@ export async function syncReviewGradeToRuntime(payload: NativeApplyReviewGradeAr
     });
     throw error;
   }
+}
+
+export function syncRelearnNodeToRuntime(payload: NativeRelearnNodeArgs) {
+  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.relearnNode, payload, 'sync_relearn_node');
 }
 
 export function syncSoftDeleteNodesToRuntime(payload: { nodeIds: string[]; deletedAt: string }) {

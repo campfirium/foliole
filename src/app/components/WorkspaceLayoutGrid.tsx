@@ -201,7 +201,7 @@ export function WorkspaceLayoutGrid({
               activeNodeId={documentNodeId}
               nodesById={props.nodesById}
               reviewCurrentNodeId={props.reviewCurrentNodeId}
-              reviewQueueNodeIds={props.reviewQueueNodeIds}
+              reviewQueueNodeIds={props.reviewPanelQueueNodeIds}
               reviewSchedulerSettings={props.reviewSchedulerSettings}
             />
           ) : null}

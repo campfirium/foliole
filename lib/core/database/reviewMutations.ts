@@ -113,3 +113,7 @@ export function applyReviewGrade(
     insertReviewLogStatement.run(toReviewLogParams(input, context, opId, logId));
   });
 }
+
+export function resetNodeReviewState(driver: DatabaseDriver, nodeId: string): void {
+  driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
+}

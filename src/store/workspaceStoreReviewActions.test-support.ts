@@ -39,6 +39,23 @@ export function createQaNode(id: string, due: string): Node {
   };
 }
 
+export function createClozeReviewNode(id: string, due: string): Node {
+  return {
+    id,
+    parentNodeId: null,
+    title: id,
+    content: `${id}-content`,
+    anchorLink: {
+      id: `${id}-anchor`,
+      kind: 'cloze'
+    },
+    reveal: null,
+    review: createReviewProfile(due),
+    createdAt: due,
+    updatedAt: due
+  };
+}
+
 function createReadingProfile(nextAt: string): NodeReadingProfile {
   return {
     intervalDurationMs: 24 * 60 * 60 * 1000,

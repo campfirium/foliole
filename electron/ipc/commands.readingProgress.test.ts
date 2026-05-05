@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
+import { resetNodeReviewState } from '../database/reviewMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -36,7 +37,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn()
 }));
-vi.mock('../database/reviewMutations.js', () => ({ applyReviewGrade: vi.fn() }));
+vi.mock('../database/reviewMutations.js', () => ({ applyReviewGrade: vi.fn(), resetNodeReviewState: vi.fn() }));
 vi.mock('../database/workspaceSnapshot.js', () => ({ loadWorkspaceSnapshot: vi.fn().mockReturnValue(null) }));
 vi.mock('../database/readingProgress.js', () => ({
   loadReadingProgress: vi.fn().mockReturnValue({
@@ -118,4 +119,17 @@ it('rejects invalid reading progress payload', async () => {
       }
     })
   ).rejects.toThrow('invalid argument: nodeViewStates[0].scrollTop');
+});
+
+it('handles relearn node storage command', async () => {
+  await expect(
+    handleInvokeRequest({
+      command: 'relearn_node',
+      args: {
+        nodeId: 'node-2'
+      }
+    })
+  ).resolves.toBeNull();
+
+  expect(resetNodeReviewState).toHaveBeenCalledWith('node-2');
 });
