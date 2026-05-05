@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const layoutMocks = vi.hoisted(() => ({
@@ -69,5 +69,11 @@ describe('DocumentPanelBody', () => {
         sharedBlockImageMaxHeight: 321
       })
     );
+  });
+
+  it('keeps the document body top gap compact below the header chrome', () => {
+    render(<DocumentPanelBody {...baseProps} fitBlockImagesToViewport={false} />);
+
+    expect(screen.getByTestId('document-panel-layout').parentElement).toHaveClass('pt-2');
   });
 });

@@ -4,10 +4,12 @@ import { expect, it, vi } from 'vitest';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
-  MarkdownEditor: (props: { onOpenExternalLink?: (request: { href: string }) => void }) => (
-    <button onClick={() => props.onOpenExternalLink?.({ href: 'https://example.com/docs' })} type="button">
-      Open external link
-    </button>
+  MarkdownEditor: (props: { className?: string; onOpenExternalLink?: (request: { href: string }) => void }) => (
+    <div className={props.className} data-testid="external-preview-editor">
+      <button onClick={() => props.onOpenExternalLink?.({ href: 'https://example.com/docs' })} type="button">
+        Open external link
+      </button>
+    </div>
   )
 }));
 
@@ -49,7 +51,9 @@ it('opens the link panel when an external document preview link is clicked', () 
 
   expect(screen.getByText('to sync')).toBeInTheDocument();
   expect(screen.getByText('folder')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toBeInTheDocument();
+  expect(screen.getByTestId('external-preview-editor').parentElement).toHaveClass('pl-4', 'pt-2');
+  expect(screen.getByTestId('document-header-content-rail')).toHaveClass('px-[var(--document-content-inline-padding)]');
+  expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveClass('translate-x-[calc(100%+theme(spacing.3))]');
   expect(screen.queryByText('/library/to sync/folder/topic.md')).not.toBeInTheDocument();
   expect(screen.getByTestId('link-panel-count')).toHaveTextContent('0');
 

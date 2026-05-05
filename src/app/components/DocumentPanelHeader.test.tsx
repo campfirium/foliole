@@ -120,6 +120,7 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
   );
 
   const rail = screen.getByTestId('document-header-content-rail');
+  expect(rail.closest('header')).toHaveClass('min-h-8');
   expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
   expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
   expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));

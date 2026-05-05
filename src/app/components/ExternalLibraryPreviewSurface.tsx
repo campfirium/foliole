@@ -44,7 +44,10 @@ export function ExternalLibraryPreviewSurface(args: {
         onOpenSelection={args.onOpenSelection}
         preview={args.preview}
       />
-      <div className="relative flex min-h-0 flex-1 flex-col" ref={contentAreaRef}>
+      <div
+        className="relative flex min-h-0 flex-1 flex-col pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0"
+        ref={contentAreaRef}
+      >
         <ExternalImportAction
           isImporting={args.isImporting}
           onHandleImport={args.onHandleImport}
@@ -80,7 +83,7 @@ function ExternalPreviewHeader(args: {
 }) {
   const breadcrumbModel = buildExternalBreadcrumbModel(args.preview);
   return (
-    <div style={{ '--document-content-inline-padding': '0px' } as CSSProperties}>
+    <div>
       <DocumentPanelHeader
         activeNodeId={breadcrumbModel.activeNodeId}
         backlinks={[]}
@@ -116,13 +119,13 @@ function ExternalImportAction(args: {
   onHandleImport: () => void;
 }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-5 z-[2]">
-      <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end">
+    <div className="pointer-events-none absolute inset-x-0 top-5 z-[2] overflow-visible">
+      <div className="mx-auto flex w-full max-w-[var(--document-max-width)] justify-end px-[var(--document-content-inline-padding)]">
         <AppTooltip>
           <AppTooltipTrigger asChild>
             <button
               aria-label="Import to Foliole"
-              className="pointer-events-auto inline-flex h-10 min-w-20 items-center justify-center rounded-md border border-transparent bg-[var(--app-accent-color)] px-4 text-sm font-medium text-accent-foreground shadow-sm transition-colors hover:bg-[rgb(var(--app-accent-color-rgb)/0.88)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+              className="pointer-events-auto inline-flex h-10 min-w-20 translate-x-[calc(100%+theme(spacing.3))] items-center justify-center rounded-md border border-transparent bg-[var(--app-accent-color)] px-4 text-sm font-medium text-accent-foreground shadow-sm transition-colors hover:bg-[rgb(var(--app-accent-color-rgb)/0.88)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 max-[1280px]:translate-x-0"
               disabled={args.isImporting}
               onClick={args.onHandleImport}
               type="button"
