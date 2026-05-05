@@ -5,7 +5,7 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import { NodeBreadcrumbs } from '../../features/nodes/components/NodeBreadcrumbs';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { cn } from '../../lib/utils';
-import { AppPanel } from '../../shared/ui';
+import { AppIconButton, AppPanel } from '../../shared/ui';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
@@ -14,6 +14,9 @@ import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelSectionProps {
   activeNodeId: string | null;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  canGoParent: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
   documentMaxWidth: number;
   editorContent: string;
@@ -28,6 +31,9 @@ interface DocumentPanelSectionProps {
   onCloseContextMenu: () => void;
   onCreateHighlight: () => void;
   onCreateCloze: () => void;
+  onGoBack: () => void;
+  onGoForward: () => void;
+  onGoParent: () => void;
   onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onStartDocumentResize: (
@@ -39,6 +45,9 @@ interface DocumentPanelSectionProps {
 
 export function DocumentPanelSection({
   activeNodeId,
+  canGoBack,
+  canGoForward,
+  canGoParent,
   contextMenu,
   documentMaxWidth,
   editorContent,
@@ -53,6 +62,9 @@ export function DocumentPanelSection({
   onCloseContextMenu,
   onCreateHighlight,
   onCreateCloze,
+  onGoBack,
+  onGoForward,
+  onGoParent,
   onResetLayout,
   onSelectNode,
   onStartDocumentResize,
@@ -71,7 +83,34 @@ export function DocumentPanelSection({
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col">
       <AppPanel
         ariaLabel="Document panel"
-        center={<NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />}
+        center={
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1">
+              <AppIconButton
+                className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+                disabled={!canGoBack}
+                icon="←"
+                label="Go back"
+                onClick={onGoBack}
+              />
+              <AppIconButton
+                className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+                disabled={!canGoForward}
+                icon="→"
+                label="Go forward"
+                onClick={onGoForward}
+              />
+              <AppIconButton
+                className="size-7 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+                disabled={!canGoParent}
+                icon="↑"
+                label="Go to parent node"
+                onClick={onGoParent}
+              />
+            </div>
+            <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
+          </div>
+        }
         bodyClassName="flex min-h-0 flex-1 p-4 max-[1080px]:p-2"
         className="h-full min-h-0 flex-1"
         surfaceClassName="bg-bg-elevated"

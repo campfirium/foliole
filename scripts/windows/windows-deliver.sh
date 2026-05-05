@@ -46,17 +46,21 @@ if grep -q "status: RUNNING" "${status_log}"; then
   client_running="true"
 fi
 
-if [[ "${needs_restart}" == "true" ]]; then
+if [[ "${WINDOWS_RESTART_CLIENT_MODE}" == "never" ]]; then
+  echo "[windows-deliver] restart: SKIPPED (mode=never)"
+elif [[ "${WINDOWS_RESTART_CLIENT_MODE}" == "always" || "${needs_restart}" == "true" ]]; then
   if [[ "${client_running}" == "true" ]]; then
-    WINDOWS_CLIENT_ACTION=stop bash scripts/windows/windows-restart-client.sh
-    echo "[windows-deliver] restart: STOPPED (manual start required in original console)"
+    WINDOWS_CLIENT_ACTION=restart bash scripts/windows/windows-restart-client.sh
+    echo "[windows-deliver] restart: RESTARTED"
   else
-    echo "[windows-deliver] restart: SKIPPED (client already stopped; manual start required in original console)"
+    WINDOWS_CLIENT_ACTION=start bash scripts/windows/windows-restart-client.sh
+    echo "[windows-deliver] restart: STARTED (client was stopped)"
   fi
 elif [[ "${client_running}" != "true" ]]; then
-  echo "[windows-deliver] restart: SKIPPED (client stopped; manual start required in original console)"
+  WINDOWS_CLIENT_ACTION=start bash scripts/windows/windows-restart-client.sh
+  echo "[windows-deliver] restart: STARTED (client was stopped)"
 else
-  echo "[windows-deliver] restart: SKIPPED"
+  echo "[windows-deliver] restart: SKIPPED (client already running)"
 fi
 
 echo "[windows-deliver] status: DELIVERED"

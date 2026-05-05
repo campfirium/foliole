@@ -15,7 +15,6 @@ interface NodeListTreeProps {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
-  onOpenTrashView: () => void;
   onSelectNode: (nodeId: string) => void;
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
@@ -28,7 +27,6 @@ export function NodeListTree({
   nodeOrder,
   nodesById,
   onOpenNotesView,
-  onOpenTrashView,
   onSelectNode,
   onSelectTrashNode,
   selectedTrashNodeId
@@ -252,7 +250,6 @@ export function NodeListTree({
 
         <NodeTrashSection
           isOpen={isTrashViewOpen}
-          onOpen={onOpenTrashView}
           onContextMenu={openContextMenu}
           onEmptyTrash={handleEmptyTrash}
           onSelect={handleSelectNode}

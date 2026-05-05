@@ -151,11 +151,7 @@ export function App() {
     resetStudyMode();
     exitReviewSession();
     setIsViewingTrashNode(false);
-    if (isTrashViewOpen) {
-      closeTrashView();
-    } else {
-      openTrashView();
-    }
+    closeTrashView();
     closeContextMenu();
   };
 

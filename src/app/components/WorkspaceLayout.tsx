@@ -11,7 +11,8 @@ import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { WindowTitleBar } from './WindowTitleBar';
-import { WorkspaceToolbar } from './WorkspaceToolbar';
+import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
+import { WorkspaceTopToolbar } from './WorkspaceTopToolbar';
 
 export interface WorkspaceEditorContextMenu {
   canRunCommands: boolean;
@@ -121,69 +122,85 @@ export function WorkspaceLayout({
   return (
     <main aria-label="Foliole workspace" className="flex h-dvh flex-col overflow-hidden p-0">
       <WindowTitleBar />
-      <WorkspaceToolbar
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
-        canGoParent={canGoParent}
-        listWidth={listWidth}
-        onGoBack={onGoBack}
-        onGoForward={onGoForward}
-        onGoParent={onGoParent}
-      />
       <div
-        className="grid min-h-0 flex-1 gap-0 overflow-hidden px-3 pb-3 pt-2 max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
-        data-resizing={isResizingList}
-        style={{ ...workspaceGridStyle, gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 4px minmax(0, 1fr)' }}
+        className="grid min-h-0 flex-1 overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
+        style={{ gridTemplateColumns: '50px minmax(0, 1fr)', gridTemplateRows: '38px minmax(0, 1fr)' }}
       >
-        <NodeListTree
-          activeNodeId={activeNodeId}
-          isTrashViewOpen={isTrashViewOpen}
-          nodeOrder={nodeOrder}
-          nodesById={nodesById}
-          onOpenNotesView={onOpenNotesView}
-          onOpenTrashView={onOpenTrashView}
-          onSelectNode={onSelectNode}
-          onSelectTrashNode={onSelectTrashNode}
-          selectedTrashNodeId={selectedTrashNodeId}
-        />
-        <ListSplitter
-          isResizingList={isResizingList}
-          listWidth={listWidth}
-          onResetLayout={onResetLayout}
-          onSplitterKeyDown={onSplitterKeyDown}
-          onSplitterPointerDown={onSplitterPointerDown}
-        />
-        <section aria-label="Document and review area" className="flex min-h-0 flex-1 flex-col gap-0">
-          <DocumentPanelSection
-            activeNodeId={documentNodeId}
-            contextMenu={contextMenu}
-            documentMaxWidth={documentMaxWidth}
-            editorContent={editorContent}
-            editorNodeId={editorNodeId}
-            editorNodeViewState={editorNodeViewState}
-            isDocumentResizing={isDocumentResizing}
-            nodesById={nodesById}
-            onAnswerChange={onAnswerChange}
-            onCloseContextMenu={onCloseContextMenu}
-            onCreateCloze={onCreateCloze}
-            onCreateHighlight={onCreateHighlight}
-            onEditorChange={onEditorChange}
-            onEditorContextMenu={onEditorContextMenu}
-            onEditorReady={onEditorReady}
-            onResetLayout={onResetLayout}
-            onSelectNode={onSelectBreadcrumbNode}
-            onStartDocumentResize={onStartDocumentResize}
-            showAnswerSection={showAnswerSection}
-          />
-          <ReviewModeToolbar
+        <div className="row-span-2 border-b border-border max-[1080px]:hidden">
+          <WorkspaceSideToolbar
             canStartStudyMode={canStartStudyMode}
-            isAnswerRevealed={isAnswerRevealed}
             isStudyMode={isStudyMode}
-            onGrade={onGradeReview}
-            onRevealAnswer={onRevealAnswer}
+            isTrashViewOpen={isTrashViewOpen}
+            onOpenNotesView={onOpenNotesView}
+            onOpenTrashView={onOpenTrashView}
             onStartStudyMode={onStartStudyMode}
           />
-        </section>
+        </div>
+        <div className="col-start-2 row-start-1 min-w-0 max-[1080px]:col-start-1">
+          <WorkspaceTopToolbar listWidth={listWidth} />
+        </div>
+        <div className="col-start-2 row-start-2 min-h-0 min-w-0 overflow-hidden max-[1080px]:col-start-1">
+          <div
+            className="grid h-full min-h-0 gap-0 overflow-hidden max-[1080px]:grid-cols-1 max-[1080px]:grid-rows-[minmax(0,38dvh)_minmax(0,1fr)]"
+            data-resizing={isResizingList}
+            style={{ ...workspaceGridStyle, gridTemplateColumns: 'minmax(0, var(--workspace-list-width, 300px)) 4px minmax(0, 1fr)' }}
+          >
+            <NodeListTree
+              activeNodeId={activeNodeId}
+              isTrashViewOpen={isTrashViewOpen}
+              nodeOrder={nodeOrder}
+              nodesById={nodesById}
+              onOpenNotesView={onOpenNotesView}
+              onSelectNode={onSelectNode}
+              onSelectTrashNode={onSelectTrashNode}
+              selectedTrashNodeId={selectedTrashNodeId}
+            />
+            <ListSplitter
+              isResizingList={isResizingList}
+              listWidth={listWidth}
+              onResetLayout={onResetLayout}
+              onSplitterKeyDown={onSplitterKeyDown}
+              onSplitterPointerDown={onSplitterPointerDown}
+            />
+            <section aria-label="Document and review area" className="flex min-h-0 flex-1 flex-col gap-0">
+              <DocumentPanelSection
+                activeNodeId={documentNodeId}
+                canGoBack={canGoBack}
+                canGoForward={canGoForward}
+                canGoParent={canGoParent}
+                contextMenu={contextMenu}
+                documentMaxWidth={documentMaxWidth}
+                editorContent={editorContent}
+                editorNodeId={editorNodeId}
+                editorNodeViewState={editorNodeViewState}
+                isDocumentResizing={isDocumentResizing}
+                nodesById={nodesById}
+                onAnswerChange={onAnswerChange}
+                onCloseContextMenu={onCloseContextMenu}
+                onCreateCloze={onCreateCloze}
+                onCreateHighlight={onCreateHighlight}
+                onEditorChange={onEditorChange}
+                onEditorContextMenu={onEditorContextMenu}
+                onEditorReady={onEditorReady}
+                onGoBack={onGoBack}
+                onGoForward={onGoForward}
+                onGoParent={onGoParent}
+                onResetLayout={onResetLayout}
+                onSelectNode={onSelectBreadcrumbNode}
+                onStartDocumentResize={onStartDocumentResize}
+                showAnswerSection={showAnswerSection}
+              />
+              <ReviewModeToolbar
+                canStartStudyMode={canStartStudyMode}
+                isAnswerRevealed={isAnswerRevealed}
+                isStudyMode={isStudyMode}
+                onGrade={onGradeReview}
+                onRevealAnswer={onRevealAnswer}
+                onStartStudyMode={onStartStudyMode}
+              />
+            </section>
+          </div>
+        </div>
       </div>
     </main>
   );

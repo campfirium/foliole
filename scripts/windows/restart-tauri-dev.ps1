@@ -61,11 +61,12 @@ function Get-TauriDevShell {
       $null -ne $cmd -and $cmd -match 'npm(\.cmd)?\s+run\s+tauri:dev'
     }
 
-  if ($null -eq $candidates -or $candidates.Count -eq 0) {
+  $candidateList = @($candidates)
+  if ($candidateList.Count -eq 0) {
     return $null
   }
 
-  return $candidates | Select-Object -First 1
+  return $candidateList | Select-Object -First 1
 }
 
 function Save-TrackedPid {
@@ -105,11 +106,9 @@ function Start-Client {
   }
 
   $command = "cd /d `"$WindowsWorkDir`" && npm run tauri:dev"
-  $process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', $command -WorkingDirectory $WindowsWorkDir -NoNewWindow -PassThru
+  $process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', $command -WorkingDirectory $WindowsWorkDir -PassThru
   Save-TrackedPid -ProcessId $process.Id
-  Write-Info "status: STARTED pid=$($process.Id) (same console)"
-  Wait-Process -Id $process.Id
-  Remove-Item -Path $PidFile -Force -ErrorAction SilentlyContinue
+  Write-Info "status: STARTED pid=$($process.Id) (detached)"
 }
 
 function Stop-Client {

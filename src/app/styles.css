@@ -41,10 +41,10 @@ body {
 .window-titlebar {
   align-items: center;
   background: #fcfcfc;
-  border-bottom: 0;
+  border-bottom: 1px solid #d9d9d6;
   display: flex;
   flex: 0 0 auto;
-  min-height: 34px;
+  min-height: 38px;
   padding-inline: 12px 0;
   user-select: none;
 }
@@ -76,9 +76,9 @@ body {
   color: #5f6368;
   cursor: pointer;
   display: inline-flex;
-  height: 34px;
+  height: 38px;
   justify-content: center;
-  min-width: 46px;
+  min-width: 48px;
   transition: background-color 140ms, color 140ms;
 }
 

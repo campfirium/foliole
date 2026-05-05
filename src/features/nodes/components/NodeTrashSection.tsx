@@ -7,7 +7,6 @@ import { NodeTreeRow } from './NodeTreeRow';
 
 interface NodeTrashSectionProps {
   isOpen: boolean;
-  onOpen: () => void;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onEmptyTrash: () => void;
   onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -17,22 +16,12 @@ interface NodeTrashSectionProps {
 
 export function NodeTrashSection({
   isOpen,
-  onOpen,
   onContextMenu,
   onEmptyTrash,
   onSelect,
   rows,
   selectedNodeIds
 }: NodeTrashSectionProps) {
-  const handleToggleTrash = () => {
-    onOpen();
-  };
-
-  const handleToggleTrashButton = (event: ReactMouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    onOpen();
-  };
-
   const handleEmptyTrash = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     onEmptyTrash();
@@ -40,26 +29,14 @@ export function NodeTrashSection({
 
   return (
     <section aria-label="Trash section" className="-mx-4 mt-auto flex flex-none flex-col data-[open=true]:mt-0" data-open={isOpen}>
-      <header
-        className="flex min-h-[52px] cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-foreground/[0.03]"
-        data-open={isOpen}
-        onClick={handleToggleTrash}
-      >
-        <button
-          aria-label="Trash"
-          aria-pressed={isOpen}
-          className="min-h-7 border-0 bg-transparent p-0 text-left text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70 hover:text-foreground aria-[pressed=true]:text-foreground"
-          onClick={handleToggleTrashButton}
-          type="button"
-        >
-          Trash
-        </button>
-        {isOpen ? (
+      {isOpen ? (
+        <div className="flex min-h-[48px] items-center justify-between px-4 pt-2">
+          <span className="text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70">Trash</span>
           <AppButton aria-label="Empty" disabled={rows.length === 0} onClick={handleEmptyTrash} size="sm" variant="subtle">
             Empty
           </AppButton>
-        ) : null}
-      </header>
+        </div>
+      ) : null}
       <div
         aria-hidden={!isOpen}
         className="pointer-events-none flex max-h-0 flex-col gap-2 overflow-hidden px-4 pt-0 opacity-0 transition-all duration-200 data-[open=true]:pointer-events-auto data-[open=true]:max-h-[52dvh] data-[open=true]:pt-2 data-[open=true]:opacity-100"
