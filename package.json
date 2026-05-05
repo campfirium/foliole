@@ -26,6 +26,7 @@
     "test:android": "vitest run --pool=threads --maxWorkers=2 src/companion src/shared/platform src/shared/ui src/shared/lib src/shared/commands scripts/android scripts/quality-gate-target.test.mjs scripts/quality-gate-fast.test.mjs",
     "test:shared": "vitest run --pool=threads --maxWorkers=2 src/shared src/features src/store scripts/vite-config.test.mjs scripts/quality-gate-target.test.mjs scripts/quality-gate-fast.test.mjs",
     "test:full": "vitest run --pool=threads --maxWorkers=2",
+    "test:changed": "vitest run --changed HEAD",
     "windows:preview": "bash scripts/windows/windows-preview.sh",
     "desktop:spike:electron": "node scripts/windows/playwright-electron-spike.mjs",
     "desktop:inspect:renders": "WINDOWS_DESKTOP_TEST_SKIP_BUILD=1 WINDOWS_DESKTOP_TEST_CONFIG=playwright.render-diagnostics.config.ts bash scripts/windows/windows-desktop-test.sh",
@@ -66,7 +67,6 @@
     "quality:release": "bash scripts/quality-gate-target.sh release",
     "lint": "eslint .",
     "typecheck": "npm run typecheck:desktop",
-    "test": "vitest run --pool=threads --maxWorkers=2",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui"
