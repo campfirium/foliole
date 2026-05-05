@@ -116,6 +116,34 @@ function testBlocksStalePendingAck() {
   ]));
 }
 
+function testDoesNotDoubleCountPendingAckAsReadyDirty() {
+  const report = buildSyncConvergenceReport(result({
+    android: {
+      ...result().android!,
+      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync completed.', occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }],
+      sync_state: {
+        ...result().android!.sync_state,
+        local_dirty_count: 1,
+        pending_ack_count: 1,
+        ready_dirty_count: 0
+      }
+    }
+  }));
+
+  expect(report.status).toBe('blocked');
+  expect(report.checks).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      code: 'completed_event_with_local_work',
+      detail: 'A finished sync check was recorded while 0 device changes, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files, 0 topic list changes were still present.'
+    }),
+    expect.objectContaining({
+      code: 'pending_ack_not_confirmed',
+      severity: 'warning'
+    })
+  ]));
+  expect(report.checks.map((item) => item.code)).not.toContain('local_dirty_not_converged');
+}
+
 function testBlocksPushConflicts() {
   const report = buildSyncConvergenceReport(result({
     android: {
@@ -214,6 +242,7 @@ describe('buildSyncConvergenceReport', () => {
   it('blocks error diagnostic verdicts', testBlocksErrorDiagnosticVerdicts);
   it('deduplicates merged error diagnostic verdicts', testDeduplicatesMergedErrorVerdicts);
   it('blocks pending acks that survive a later finished sync pass', testBlocksStalePendingAck);
+  it('does not double count pending acks as ready dirty changes', testDoesNotDoubleCountPendingAckAsReadyDirty);
   it('blocks skipped passes that ended with push conflicts or rejections', testBlocksPushConflicts);
   it('blocks persisted push conflicts or rejections', testBlocksPersistedPushIssues);
   it('blocks finished sync passes that still have structure or resource backlog', testBlocksFinishedPassWithResourceBacklog);

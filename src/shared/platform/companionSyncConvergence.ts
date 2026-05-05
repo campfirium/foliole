@@ -95,7 +95,7 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
 }
 
 function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
-  const dirtyCount = result.android?.sync_state.local_dirty_count ?? 0;
+  const dirtyCount = result.android?.sync_state.ready_dirty_count ?? result.android?.sync_state.local_dirty_count ?? 0;
   const pendingAckCount = result.android?.sync_state.pending_ack_count ?? 0;
   const pushIssueCount = result.android?.sync_state.push_issue_count ?? 0;
   const checks: SyncConvergenceCheck[] = [];
@@ -219,13 +219,14 @@ function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
 function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   const latest = latestEvent(result.android?.events ?? []);
   if (latest?.status !== 'completed') return [];
-  const dirtyCount = result.android?.sync_state.local_dirty_count ?? 0;
+  const totalDirtyCount = result.android?.sync_state.local_dirty_count ?? 0;
+  const dirtyCount = result.android?.sync_state.ready_dirty_count ?? totalDirtyCount;
   const pendingAckCount = result.android?.sync_state.pending_ack_count ?? 0;
   const pushIssueCount = result.android?.sync_state.push_issue_count ?? 0;
   const missingBodies = result.android?.content.missing_content_blob_count ?? 0;
   const missingAttachments = result.android?.content.missing_attachment_resource_count ?? 0;
   const lag = structureLag(result) ?? 0;
-  if (dirtyCount === 0 && pendingAckCount === 0 && pushIssueCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
+  if (totalDirtyCount === 0 && pendingAckCount === 0 && pushIssueCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
   return [check(
     'completed_event_with_local_work',
     'error',
