@@ -19,7 +19,10 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { applySyncPackNodesWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import {
+  applySyncPackNodesWithDbPort,
+  applySyncPackNodeSurfaceWithDbPort
+} from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -63,10 +66,33 @@ it('applies nodes and node attachments from an attached sync pack', async () => 
   }]);
 });
 
+it('applies pack nodes only when the attached pack cursor is contiguous', async () => {
+  const connection = openDatabaseConnection();
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-surface-test' });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 0 })).resolves.toMatchObject({
+      applied: true,
+      fromStateSeq: 0,
+      toStateSeq: 1
+    });
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 1 })).resolves.toMatchObject({
+      applied: false,
+      toStateSeq: 1
+    });
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+});
+
 function createIncomingPack(filePath: string) {
   const db = new Database(filePath);
   try {
     for (const statement of PACK_SCHEMA) db.exec(statement);
+    db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run(
+      'manifest_json',
+      JSON.stringify({ from_state_seq: 0, to_state_seq: 1 })
+    );
     db.prepare(
       `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
        VALUES ('node', 'node-1', 1, 'hash-node-1', '2026-05-04T01:00:00.000Z', NULL)`
