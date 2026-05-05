@@ -41,7 +41,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             syncedAttachmentIds.put(attachmentId);
         }
         JSObject response = new JSObject();
-        response.put("synced_attachment_ids", syncedAttachmentIds);
+        response.put(resourceObject(context, "batchResponseKeys").getString("syncedAttachmentIds"), syncedAttachmentIds);
         return response;
     }
 
@@ -73,7 +73,8 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private static Callable<SingleDownloadResult> downloadTask(Context context, JSONObject resource) {
         return () -> {
-            String attachmentId = requireText(resource.optString("attachment_id", null), "attachment_id");
+            JSONObject requestKeys = resourceObject(context, "syncRequestKeys");
+            String attachmentId = requireText(resource.optString(requestKeys.getString("attachmentId"), null), requestKeys.getString("attachmentId"));
             try {
                 syncResourceFile(context, attachmentId, resource);
                 return new SingleDownloadResult(attachmentId, true);
@@ -84,15 +85,16 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     }
 
     private static void syncResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
-        String contentHash = requireText(resource.optString("content_hash", null), "content_hash");
+        JSONObject requestKeys = resourceObject(context, "syncRequestKeys");
+        String contentHash = requireText(resource.optString(requestKeys.getString("contentHash"), null), requestKeys.getString("contentHash"));
         File outputFile = attachmentFile(context, contentHash);
         File parent = outputFile.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IllegalStateException("Failed to create attachment directory.");
         }
         FolioleCompanionDesktopHttpClient.downloadToFile(
-            requireText(resource.optString("url", null), "url"),
-            resource.optJSONObject("headers"),
+            requireText(resource.optString(requestKeys.getString("url"), null), requestKeys.getString("url")),
+            resource.optJSONObject(requestKeys.getString("headers")),
             outputFile
         );
     }
@@ -179,6 +181,10 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
+    }
+
+    private static JSONObject resourceObject(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentObject(context, key);
     }
 
     private static final class DownloadResult {

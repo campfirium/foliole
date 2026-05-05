@@ -31,16 +31,40 @@ describe('Android resource read query rules', () => {
 
     expect(definitions.resourceRead).toEqual(ANDROID_COMPANION_RESOURCE_READ_RULES);
     expect(definitions.resourceRead.contentBlobs).toMatchObject({
+      batchResponseKeys: {
+        syncedHashes: 'synced_hashes',
+        totalElapsedMs: 'total_elapsed_ms'
+      },
       dataTableName: 'content_blob_data',
       existingQueryName: 'contentBlobDataExisting',
       manifestTableName: 'content_blobs',
       manifestQueryName: 'contentBlobManifestByHash',
-      resultKey: 'blobs'
+      resultKey: 'blobs',
+      syncResponseKeys: {
+        availability: 'availability',
+        hash: 'hash'
+      }
     });
     expect(definitions.resourceRead.attachmentResources).toMatchObject({
+      batchResponseKeys: {
+        syncedAttachmentIds: 'synced_attachment_ids'
+      },
       directoryName: 'attachments',
+      resolveResponseKeys: {
+        resourceUrl: 'resource_url',
+        status: 'status'
+      },
       resolveQueryName: 'attachmentResourceResolve',
-      resultKey: 'resources'
+      resultKey: 'resources',
+      syncRequestKeys: {
+        attachmentId: 'attachment_id',
+        contentHash: 'content_hash',
+        url: 'url'
+      },
+      syncResponseKeys: {
+        attachmentId: 'attachment_id',
+        availability: 'availability'
+      }
     });
     expect(definitions.resourceRead.pdfPageText).toMatchObject({
       defaultSearchLimit: 20,
@@ -89,9 +113,12 @@ describe('Android resource read query rules', () => {
     const rulesSource = await readFile(RESOURCE_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobObject(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentObject(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key)');
     expect(rulesSource).toContain('optJSONObject("resourceRead")');
+    expect(rulesSource).toContain('getJSONObject(key)');
     expect(combinedStoreSource).not.toContain('"contentBlobManifestByHash"');
     expect(combinedStoreSource).not.toContain('"contentBlobDataExisting"');
     expect(combinedStoreSource).not.toContain('"attachmentResourceResolve"');
@@ -100,6 +127,12 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).not.toContain('"content_blobs"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextPages"');
     expect(combinedStoreSource).not.toContain('"pdfPageTextSearch"');
+    expect(combinedStoreSource).not.toContain('put("synced_attachment_ids"');
+    expect(combinedStoreSource).not.toContain('put("synced_hashes"');
+    expect(combinedStoreSource).not.toContain('put("resource_url"');
+    expect(combinedStoreSource).not.toContain('put("availability"');
+    expect(combinedStoreSource).not.toContain('optString("attachment_id"');
+    expect(combinedStoreSource).not.toContain('optString("content_hash"');
     expect(combinedStoreSource).not.toContain('DEFAULT_SEARCH_LIMIT');
     expect(combinedStoreSource).not.toContain('EXCERPT_RADIUS');
   });

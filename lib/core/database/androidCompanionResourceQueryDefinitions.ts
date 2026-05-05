@@ -37,18 +37,52 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     contentHashesReplacement: '__ATTACHMENT_ID_FILTER__',
     directoryName: 'attachments',
     mimeTypeKey: 'mime_type',
+    batchResponseKeys: {
+      syncedAttachmentIds: 'synced_attachment_ids'
+    },
+    resolveResponseKeys: {
+      mimeType: 'mime_type',
+      resourceUrl: 'resource_url',
+      status: 'status'
+    },
+    resolveStatuses: {
+      missingFile: 'missing_file',
+      notFound: 'not_found',
+      readyStatusKey: 'ready'
+    },
     resolveQueryName: 'attachmentResourceResolve',
     resultKey: 'resources',
-    storageKey: 'storage_key'
+    storageKey: 'storage_key',
+    syncRequestKeys: {
+      attachmentId: 'attachment_id',
+      contentHash: 'content_hash',
+      headers: 'headers',
+      url: 'url'
+    },
+    syncResponseKeys: {
+      attachmentId: 'attachment_id',
+      availability: 'availability'
+    }
   },
   contentBlobs: {
     compressionKey: 'compression',
     dataTableName: 'content_blob_data',
     existingQueryName: 'contentBlobDataExisting',
+    batchResponseKeys: {
+      databaseElapsedMs: 'db_elapsed_ms',
+      httpElapsedMs: 'http_elapsed_ms',
+      parseElapsedMs: 'parse_elapsed_ms',
+      syncedHashes: 'synced_hashes',
+      totalElapsedMs: 'total_elapsed_ms'
+    },
     manifestTableName: 'content_blobs',
     manifestQueryName: 'contentBlobManifestByHash',
     originalSha256Key: 'original_sha256',
     originalSizeBytesKey: 'original_size_bytes',
+    syncResponseKeys: {
+      availability: 'availability',
+      hash: 'hash'
+    },
     resultKey: 'blobs',
     storedSha256Key: 'stored_sha256',
     storedSizeBytesKey: 'stored_size_bytes'

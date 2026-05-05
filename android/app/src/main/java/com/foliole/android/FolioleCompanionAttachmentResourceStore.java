@@ -34,15 +34,16 @@ final class FolioleCompanionAttachmentResourceStore {
         String url,
         JSONObject headers
     ) throws Exception {
-        String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
-        String normalizedContentHash = requireText(contentHash, "content_hash");
+        JSONObject requestKeys = resourceObject(context, "syncRequestKeys");
+        String normalizedAttachmentId = requireText(attachmentId, requestKeys.getString("attachmentId"));
+        String normalizedContentHash = requireText(contentHash, requestKeys.getString("contentHash"));
         try {
             File outputFile = attachmentFile(context, normalizedContentHash);
             File parent = outputFile.getParentFile();
             if (parent != null && !parent.exists() && !parent.mkdirs()) {
                 throw new IllegalStateException("Failed to create attachment directory.");
             }
-            FolioleCompanionDesktopHttpClient.downloadToFile(requireText(url, "url"), headers, outputFile);
+            FolioleCompanionDesktopHttpClient.downloadToFile(requireText(url, requestKeys.getString("url")), headers, outputFile);
             String now = Instant.now().toString();
             int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
                 context,
@@ -58,8 +59,9 @@ final class FolioleCompanionAttachmentResourceStore {
             throw error;
         }
         JSObject result = new JSObject();
-        result.put("attachment_id", normalizedAttachmentId);
-        result.put("availability", FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
+        JSONObject responseKeys = resourceObject(context, "syncResponseKeys");
+        result.put(responseKeys.getString("attachmentId"), normalizedAttachmentId);
+        result.put(responseKeys.getString("availability"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "cached"));
         return result;
     }
 
@@ -73,7 +75,7 @@ final class FolioleCompanionAttachmentResourceStore {
     }
 
     static JSObject resolveResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
-        String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
+        String normalizedAttachmentId = requireText(attachmentId, resourceObject(context, "syncRequestKeys").getString("attachmentId"));
         JSONObject row = FolioleCompanionGeneratedQueryRunner.loadFirstRow(
             context,
             database,
@@ -82,36 +84,40 @@ final class FolioleCompanionAttachmentResourceStore {
             new String[] { normalizedAttachmentId }
         );
         if (row == null) {
-            return notFound();
+            return notFound(context);
         }
         String storageKey = nullableString(row, resourceRule(context, "storageKey"));
         String mimeType = nullableString(row, resourceRule(context, "mimeTypeKey"));
         if (storageKey == null || storageKey.trim().isEmpty()) {
-            return missingFile(mimeType);
+            return missingFile(context, mimeType);
         }
         File file = attachmentFile(context, storageKey.trim());
         if (!file.exists() || !file.isFile()) {
-            return missingFile(mimeType);
+            return missingFile(context, mimeType);
         }
         JSObject result = new JSObject();
-        result.put("status", FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, "ready"));
-        result.put("mime_type", mimeType);
-        result.put("resource_url", Uri.fromFile(file).toString());
+        JSONObject responseKeys = resourceObject(context, "resolveResponseKeys");
+        JSONObject statuses = resourceObject(context, "resolveStatuses");
+        result.put(responseKeys.getString("status"), FolioleCompanionSyncProtocolDefinitions.resourceStatus(context, statuses.getString("readyStatusKey")));
+        result.put(responseKeys.getString("mimeType"), mimeType);
+        result.put(responseKeys.getString("resourceUrl"), Uri.fromFile(file).toString());
         return result;
     }
 
-    private static JSObject missingFile(String mimeType) {
+    private static JSObject missingFile(Context context, String mimeType) throws Exception {
         JSObject result = new JSObject();
-        result.put("status", "missing_file");
-        result.put("mime_type", mimeType);
-        result.put("resource_url", null);
+        JSONObject responseKeys = resourceObject(context, "resolveResponseKeys");
+        result.put(responseKeys.getString("status"), resourceObject(context, "resolveStatuses").getString("missingFile"));
+        result.put(responseKeys.getString("mimeType"), mimeType);
+        result.put(responseKeys.getString("resourceUrl"), null);
         return result;
     }
 
-    private static JSObject notFound() {
+    private static JSObject notFound(Context context) throws Exception {
         JSObject result = new JSObject();
-        result.put("status", "not_found");
-        result.put("resource_url", null);
+        JSONObject responseKeys = resourceObject(context, "resolveResponseKeys");
+        result.put(responseKeys.getString("status"), resourceObject(context, "resolveStatuses").getString("notFound"));
+        result.put(responseKeys.getString("resourceUrl"), null);
         return result;
     }
 
@@ -125,6 +131,10 @@ final class FolioleCompanionAttachmentResourceStore {
 
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
+    }
+
+    private static JSONObject resourceObject(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentObject(context, key);
     }
 
     private static String mutationRule(Context context, String key) throws Exception {

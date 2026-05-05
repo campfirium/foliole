@@ -17,8 +17,16 @@ final class FolioleCompanionResourceReadQueryRules {
         return group(context, "attachmentResources").getString(key);
     }
 
+    static JSONObject attachmentObject(Context context, String key) throws Exception {
+        return group(context, "attachmentResources").getJSONObject(key);
+    }
+
     static String contentBlobString(Context context, String key) throws Exception {
         return group(context, "contentBlobs").getString(key);
+    }
+
+    static JSONObject contentBlobObject(Context context, String key) throws Exception {
+        return group(context, "contentBlobs").getJSONObject(key);
     }
 
     static int pdfPageTextInt(Context context, String key) throws Exception {
