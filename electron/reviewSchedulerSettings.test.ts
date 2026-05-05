@@ -128,8 +128,10 @@ it('restores push queue settings after save and database restart', () => {
   saveReviewSchedulerSettings({
     desiredRetention: 0.82,
     pushQueue: {
+      defaultPriority: 3,
       priorityRatio: 8,
       queueMixRatio: { reading: 3, fsrs: 5 },
+      readingInitialIntervalMs: 2 * 24 * 60 * 60 * 1000,
       readingIntervalGrowthFactorRange: { min: 1.07, max: 1.39 }
     },
     updatedAt: '2026-03-14T02:00:00.000Z'
@@ -141,8 +143,10 @@ it('restores push queue settings after save and database restart', () => {
   expect(loadReviewSchedulerSettings()).toMatchObject({
     desiredRetention: 0.82,
     pushQueue: {
+      defaultPriority: 3,
       priorityRatio: 8,
       queueMixRatio: { reading: 3, fsrs: 5 },
+      readingInitialIntervalMs: 2 * 24 * 60 * 60 * 1000,
       readingIntervalGrowthFactorRange: { min: 1.07, max: 1.39 }
     },
     updatedAt: '2026-03-14T02:00:00.000Z'

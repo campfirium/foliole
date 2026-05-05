@@ -4,6 +4,8 @@ import { getRuntimeInvoke } from '../../../shared/platform/bridge';
 
 import {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  PUSH_QUEUE_SETTINGS_SCOPE,
+  getCurrentReviewSchedulerSettings,
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
 } from './reviewSchedulerSettings';
@@ -68,6 +70,39 @@ it('loads defaults when runtime invoke is unavailable', async () => {
   await expect(loadReviewSchedulerSettings()).resolves.toEqual(
     DEFAULT_REVIEW_SCHEDULER_SETTINGS
   );
+  expect(getCurrentReviewSchedulerSettings()).toEqual(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
+});
+
+it('hydrates the current settings snapshot with persisted push queue rules', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(
+    createInvokeSequence({
+      pushQueue: {
+        ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
+        defaultPriority: 6,
+        priorityRatio: 7,
+        queueMixRatio: { reading: 2, fsrs: 4 },
+        readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+      }
+    })
+  );
+
+  await loadReviewSchedulerSettings();
+
+  expect(getCurrentReviewSchedulerSettings().pushQueue).toEqual({
+    ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
+    defaultPriority: 6,
+    priorityRatio: 7,
+    queueMixRatio: { reading: 2, fsrs: 4 },
+    readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
+  });
+  expect(PUSH_QUEUE_SETTINGS_SCOPE).toEqual({
+    priority: 'node-inherited',
+    defaultPriority: 'global-fallback',
+    priorityRatio: 'global',
+    queueMixRatio: 'global',
+    readingInitialIntervalMs: 'global',
+    readingIntervalGrowthFactorRange: 'global'
+  });
 });
 
 it('saves the full scheduler settings payload through the native command', async () => {

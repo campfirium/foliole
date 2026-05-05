@@ -25,6 +25,15 @@ export interface ReviewSchedulerSettingsSavePatch {
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
 
+export const PUSH_QUEUE_SETTINGS_SCOPE = Object.freeze({
+  priority: 'node-inherited',
+  defaultPriority: 'global-fallback',
+  priorityRatio: 'global',
+  queueMixRatio: 'global',
+  readingInitialIntervalMs: 'global',
+  readingIntervalGrowthFactorRange: 'global'
+});
+
 export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   algorithm: 'ts-fsrs@4.3.0',
   desiredRetention: 0.9,
@@ -34,6 +43,8 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
+
+let currentReviewSchedulerSettings = DEFAULT_REVIEW_SCHEDULER_SETTINGS;
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -117,15 +128,26 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
   ].join('|');
 }
 
+export function getCurrentReviewSchedulerSettings() {
+  return currentReviewSchedulerSettings;
+}
+
+function syncCurrentReviewSchedulerSettings(settings: ReviewSchedulerSettings) {
+  currentReviewSchedulerSettings = settings;
+  return settings;
+}
+
 export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSettings> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
-    return DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+    return syncCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   }
   try {
-    return normalizeReviewSchedulerSettings(await runtimeInvoke(NATIVE_COMMANDS.loadReviewSchedulerSettings));
+    return syncCurrentReviewSchedulerSettings(
+      normalizeReviewSchedulerSettings(await runtimeInvoke(NATIVE_COMMANDS.loadReviewSchedulerSettings))
+    );
   } catch {
-    return DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+    return syncCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   }
 }
 
@@ -141,16 +163,19 @@ export async function saveReviewSchedulerSettings(
     ...settings,
     pushQueue: mergePushQueueSettings(baseSettings.pushQueue, settings.pushQueue)
   });
+  syncCurrentReviewSchedulerSettings(payload);
   if (!runtimeInvoke) {
     return payload;
   }
   try {
-    return normalizeReviewSchedulerSettings(
-      await runtimeInvoke(NATIVE_COMMANDS.saveReviewSchedulerSettings, {
-        settings: payload
-      })
+    return syncCurrentReviewSchedulerSettings(
+      normalizeReviewSchedulerSettings(
+        await runtimeInvoke(NATIVE_COMMANDS.saveReviewSchedulerSettings, {
+          settings: payload
+        })
+      )
     );
   } catch {
-    return normalizeReviewSchedulerSettings(payload);
+    return syncCurrentReviewSchedulerSettings(normalizeReviewSchedulerSettings(payload));
   }
 }

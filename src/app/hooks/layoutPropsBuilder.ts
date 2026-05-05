@@ -2,6 +2,7 @@ import { setEditorDisplayMode } from '../../features/editor/model/editorDisplayM
 import { setMarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
+import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedPushQueueRules';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
   INTERFACE_FONT_SIZE_DEFAULT,
@@ -113,12 +114,14 @@ export function countDueReviewNodes(
   nodeOrder: string[],
   nodesById: Record<string, Node>,
   trashedNodeIds: string[],
-  now: string
+  now: string,
+  pushQueueRules?: UnifiedPushQueueRules
 ) {
   return buildReviewQueuePlan({
     nodeOrder,
     nodesById,
     now,
+    pushQueueRules,
     trashedNodeIds
   }).queueNodeIds.length;
 }

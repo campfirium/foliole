@@ -217,7 +217,7 @@ export function useAppController(): AppControllerResult {
     getReviewSchedulerSettingsSignature(reviewSettings.reviewSchedulerSettings)
   );
   const isReviewEditing = useReviewKeyboardShortcuts({ isStudyMode, isCommandPaletteOpen: runtime.isCommandPaletteOpen, isSettingsOpen: runtime.isSettingsOpen, reviewCurrentNodeId: ws.reviewSession.currentNodeId, isAnswerRevealed: ws.reviewSession.isAnswerRevealed, revealReviewAnswer: ws.revealReviewAnswer, gradeReviewCard: ws.gradeReviewCard });
-  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso), [nowIso, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
+  const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
   const hasReviewCard = Boolean(ws.reviewSession.currentNodeId);
   const paletteItems = useMemo<CommandPaletteItem[]>(
     () =>

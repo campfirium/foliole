@@ -6,8 +6,10 @@ import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/rev
 import {
   buildQueueMixCycle,
   normalizePushQueuePriority,
-  resolveInheritedPushQueuePriority
+  resolveInheritedPushQueuePriority,
+  type UnifiedPushQueueRules
 } from '../features/review/model/unifiedPushQueueRules';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 export interface ReviewQueuePlan {
   fsrsCandidateCount: number;
@@ -60,7 +62,7 @@ function resolveReadingNextAt(node: Node) {
   return node.reading?.nextAt ?? node.createdAt;
 }
 
-function resolveNodePriority(node: Node, nodesById: Record<string, Node>) {
+function resolveNodePriority(node: Node, nodesById: Record<string, Node>, defaultPriority: UnifiedPushQueueRules['defaultPriority']) {
   const priorityChain: unknown[] = [];
   const visitedNodeIds = new Set<string>();
   let currentNode: Node | undefined = node;
@@ -71,12 +73,12 @@ function resolveNodePriority(node: Node, nodesById: Record<string, Node>) {
     currentNode = currentNode.parentNodeId ? nodesById[currentNode.parentNodeId] : undefined;
   }
 
-  const inheritedPriority = resolveInheritedPushQueuePriority(priorityChain);
+  const inheritedPriority = resolveInheritedPushQueuePriority(priorityChain, defaultPriority);
   if (priorityChain.some((candidate) => candidate !== null && candidate !== undefined)) {
     return inheritedPriority;
   }
 
-  return normalizePushQueuePriority(node.reading?.priority);
+  return normalizePushQueuePriority(node.reading?.priority, defaultPriority);
 }
 
 function resolveFsrsRetrievability(node: Node, now: string) {
@@ -94,15 +96,16 @@ function resolveFsrsQueueNodeIds(args: {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   now: string;
+  pushQueueRules: UnifiedPushQueueRules;
 }) {
   const random = createSeededRandom(`fsrs|${args.nodeOrder.join('|')}`);
   return assembleFsrsPushQueue(
     args.candidates.map((node) => ({
       id: node.id,
-      priority: resolveNodePriority(node, args.nodesById),
+      priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
       retrievability: resolveFsrsRetrievability(node, args.now)
     })),
-    { random }
+    { priorityRatio: args.pushQueueRules.priorityRatio, random }
   ).map((entry) => entry.id);
 }
 
@@ -110,26 +113,28 @@ function resolveReadingQueueNodeIds(args: {
   candidates: Node[];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  pushQueueRules: UnifiedPushQueueRules;
 }) {
   const random = createSeededRandom(`reading|${args.nodeOrder.join('|')}`);
   return assembleReadingPushQueue(
     args.candidates.map((node) => ({
       id: node.id,
-      priority: resolveNodePriority(node, args.nodesById),
+      priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
       nextAt: resolveReadingNextAt(node)
     })),
-    { random }
+    { priorityRatio: args.pushQueueRules.priorityRatio, random }
   ).map((entry) => entry.id);
 }
 
 function mixUnifiedPushQueues(args: {
   fsrsQueueNodeIds: string[];
   limit?: number;
+  pushQueueRules: UnifiedPushQueueRules;
   readingQueueNodeIds: string[];
 }) {
   const queueNodeIds: string[] = [];
   const limit = args.limit ?? Number.POSITIVE_INFINITY;
-  const cycle = buildQueueMixCycle();
+  const cycle = buildQueueMixCycle(args.pushQueueRules.queueMixRatio);
   let fsrsIndex = 0;
   let readingIndex = 0;
   let cycleIndex = 0;
@@ -159,10 +164,12 @@ export function buildReviewQueuePlan(args: {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   now: string;
+  pushQueueRules?: UnifiedPushQueueRules;
   trashedNodeIds: string[];
 }): ReviewQueuePlan {
   const fsrsCandidates: Node[] = [];
   const readingCandidates: Node[] = [];
+  const pushQueueRules = args.pushQueueRules ?? getCurrentReviewSchedulerSettings().pushQueue;
   const trashedNodeIds = new Set(args.trashedNodeIds);
 
   args.nodeOrder.forEach((nodeId) => {
@@ -185,16 +192,19 @@ export function buildReviewQueuePlan(args: {
     candidates: fsrsCandidates,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
-    now: args.now
+    now: args.now,
+    pushQueueRules
   });
   const readingQueueNodeIds = resolveReadingQueueNodeIds({
     candidates: readingCandidates,
     nodeOrder: args.nodeOrder,
-    nodesById: args.nodesById
+    nodesById: args.nodesById,
+    pushQueueRules
   });
   const queueNodeIds = mixUnifiedPushQueues({
     fsrsQueueNodeIds,
     limit: args.limit,
+    pushQueueRules,
     readingQueueNodeIds
   });
 
