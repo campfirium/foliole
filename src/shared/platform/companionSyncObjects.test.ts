@@ -13,6 +13,7 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
     loadSyncStateCursor: vi.fn(async () => ({ cursor: 2 })),
+    loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
     loadSyncStatePushCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersionCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersionPushCursor: vi.fn(async () => ({ cursor: null })),
@@ -41,6 +42,7 @@ const capacitorMock = vi.hoisted(() => ({
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
     saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
     saveSyncStateCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncPackCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncStatePushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncNodeVersionCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
@@ -65,6 +67,7 @@ function expectNativePluginCalls(cursor: { change_id: string; created_at: string
     object_types: ['setting']
   });
   expect(capacitorMock.plugin.saveSyncStateCursor).toHaveBeenCalledWith({ cursor: 3 });
+  expect(capacitorMock.plugin.saveSyncPackCursor).toHaveBeenCalledWith({ cursor: 5 });
   expect(capacitorMock.plugin.saveSyncStatePushCursor).toHaveBeenCalledWith({ cursor: 3 });
   expect(capacitorMock.plugin.saveSyncNodeVersionCursor).toHaveBeenCalledWith({ cursor });
   expect(capacitorMock.plugin.saveSyncNodeVersionPushCursor).toHaveBeenCalledWith({ cursor });
@@ -102,12 +105,14 @@ function createReviewProfile() {
 async function expectNativeCursorBridge(api: typeof import('./companionSyncObjects')) {
   const cursor = { change_id: 'change-2', created_at: '2026-04-25T00:01:00.000Z' };
   await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
+  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(4);
   await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
   await expect(api.saveCompanionSyncStateCursor(3)).resolves.toBe(3);
+  await expect(api.saveCompanionSyncPackCursor(5)).resolves.toBe(5);
   await expect(api.saveCompanionSyncStatePushCursor(3)).resolves.toBe(3);
   await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);
@@ -119,12 +124,14 @@ async function expectNativeCursorBridge(api: typeof import('./companionSyncObjec
 async function expectWebCursorFallback(api: typeof import('./companionSyncObjects')) {
   const cursor = { change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' };
   await expect(api.loadCompanionSyncStateCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncPackCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
   await expect(api.saveCompanionSyncStateCursor(7)).resolves.toBe(7);
+  await expect(api.saveCompanionSyncPackCursor(9)).resolves.toBe(9);
   await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);
   await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);

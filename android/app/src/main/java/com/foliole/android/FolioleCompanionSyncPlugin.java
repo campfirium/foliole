@@ -467,6 +467,33 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void loadSyncPackCursor(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            call.resolve(databaseHelper.loadSyncPackCursor());
+        } catch (Exception exception) {
+            call.reject("Failed to load companion sync pack cursor.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+    @PluginMethod
+    public void saveSyncPackCursor(PluginCall call) {
+        FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
+        try {
+            Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
+                ? call.getData().getInt("cursor")
+                : null;
+            call.resolve(databaseHelper.saveSyncPackCursor(cursor));
+        } catch (Exception exception) {
+            call.reject("Failed to save companion sync pack cursor.", exception);
+        } finally {
+            databaseHelper.close();
+        }
+    }
+
+    @PluginMethod
     public void loadSyncStatePushCursor(PluginCall call) {
         FolioleCompanionDatabaseHelper databaseHelper = new FolioleCompanionDatabaseHelper(getContext());
         try {

@@ -7,10 +7,13 @@ import type {
 
 import { syncCompanionAttachmentResourcesFromDesktop } from './companionDesktopAttachmentResources';
 import { fetchDesktopJson, postDesktopJson } from './companionDesktopSyncHttp';
+import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
+  applyCompanionDesktopSyncPack,
   applyCompanionSyncNodeVersions,
   applyCompanionSyncObjects,
   applyCompanionSyncReviewLog,
+  loadCompanionSyncPackCursor,
   loadCompanionSyncNodeVersionCursor,
   loadCompanionSyncNodeVersionPushCursor,
   loadCompanionSyncNodeVersions,
@@ -22,6 +25,7 @@ import {
   loadCompanionSyncStatePushCursor,
   saveCompanionSyncNodeVersionCursor,
   saveCompanionSyncNodeVersionPushCursor,
+  saveCompanionSyncPackCursor,
   saveCompanionSyncReviewLogCursor,
   saveCompanionSyncReviewLogPushCursor,
   saveCompanionSyncStateCursor,
@@ -31,6 +35,7 @@ export { bootstrapCompanionFromDesktopState } from './companionDesktopSyncBootst
 
 const SYNC_NODE_VERSIONS_PATH = '/companion/sync-node-versions';
 const SYNC_OBJECTS_PATH = '/companion/sync-objects';
+const SYNC_PACK_PATH = '/companion/sync-pack';
 const SYNC_REVIEW_LOG_PATH = '/companion/sync-review-log';
 const SYNC_STATE_PATH = '/companion/sync-state';
 const CHANGE_PAGE_LIMIT = 500;
@@ -38,6 +43,8 @@ const MAX_CHANGE_PAGES = 20;
 
 export interface CompanionDesktopSyncResult {
   appliedNodeIds: string[];
+  appliedPackBlobCount: number;
+  appliedPackObjectCount: number;
   appliedObjectIds: string[];
   appliedReviewOpIds: string[];
   changedObjectIds: string[];
@@ -55,6 +62,16 @@ function buildStatePath(cursor: number | null) {
   params.set('limit', String(CHANGE_PAGE_LIMIT));
   params.set('after_state_seq', String(cursor ?? 0));
   return `${SYNC_STATE_PATH}?${params.toString()}`;
+}
+
+function buildPackPath(cursor: number | null) {
+  const params = new URLSearchParams();
+  params.set('after_state_seq', String(cursor ?? 0));
+  return `${SYNC_PACK_PATH}?${params.toString()}`;
+}
+
+function normalizeEndpointUrl(endpointUrl: string) {
+  return endpointUrl.trim().replace(/\/+$/, '');
 }
 
 function buildEventPath(path: string, cursor: NativeSyncChangeCursor | null) {
@@ -107,6 +124,22 @@ async function pullRemoteStateChanges(endpointUrl: string) {
     if (payload.objects.length < CHANGE_PAGE_LIMIT) break;
   }
   return { appliedObjectIds, changedObjectIds, syncedAttachmentIds };
+}
+
+async function pullRemoteStructurePack(endpointUrl: string) {
+  const cursor = await loadCompanionSyncPackCursor();
+  const pathWithQuery = buildPackPath(cursor);
+  const result = await applyCompanionDesktopSyncPack({
+    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+    url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
+  });
+  if (result.to_state_seq > (cursor ?? 0)) {
+    await saveCompanionSyncPackCursor(result.to_state_seq);
+  }
+  return {
+    appliedPackBlobCount: result.applied_blob_count,
+    appliedPackObjectCount: result.applied_object_count
+  };
 }
 
 async function pullRemoteNodeVersions(endpointUrl: string) {
@@ -211,11 +244,14 @@ async function runCompanionObjectsSync(endpointUrl: string): Promise<CompanionDe
   const pushedNodes = await pushLocalNodeVersions(endpointUrl);
   const pushed = await pushLocalStateChanges(endpointUrl);
   const pushedReviews = await pushLocalReviewLog(endpointUrl);
+  const pack = await pullRemoteStructurePack(endpointUrl);
   const nodes = await pullRemoteNodeVersions(endpointUrl);
   const reviews = await pullRemoteReviewLog(endpointUrl);
   const changes = await pullRemoteStateChanges(endpointUrl);
   return {
     appliedNodeIds: nodes.appliedNodeIds,
+    appliedPackBlobCount: pack.appliedPackBlobCount,
+    appliedPackObjectCount: pack.appliedPackObjectCount,
     appliedObjectIds: changes.appliedObjectIds,
     appliedReviewOpIds: reviews.appliedReviewOpIds,
     changedObjectIds: changes.changedObjectIds,

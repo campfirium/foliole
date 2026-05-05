@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const syncBridgeMock = vi.hoisted(() => ({
+  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
   applyCompanionSyncNodeVersions: vi.fn(async () => []),
   applyCompanionSyncObjects: vi.fn(async () => []),
   applyCompanionSyncReviewLog: vi.fn(async () => []),
@@ -11,12 +12,14 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogPushCursor: vi.fn(async () => null),
   loadCompanionSyncReviewLog: vi.fn(async () => []),
   loadCompanionSyncStateChanges: vi.fn(async () => []),
+  loadCompanionSyncPackCursor: vi.fn(async () => null),
   loadCompanionSyncStateCursor: vi.fn(async () => null),
   loadCompanionSyncStatePushCursor: vi.fn(async () => null),
   saveCompanionSyncNodeVersionCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncNodeVersionPushCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncReviewLogCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor) => cursor),
+  saveCompanionSyncPackCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncStateCursor: vi.fn(async (cursor) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor) => cursor)
 }));
@@ -60,6 +63,7 @@ it('reuses an in-flight sync for repeated requests to the same endpoint', async 
   fetchResolvers[0]?.();
   await expect(firstSync).resolves.toEqual(expect.objectContaining({ appliedObjectIds: [] }));
   expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledTimes(1);
 });
 
 function createEmptySyncResponse(url: string) {

@@ -54,6 +54,7 @@ export interface CompanionWorkspaceSyncPlugin {
     limit?: number;
   }): Promise<{ objects: NativeSyncStateObjectRecord[] }>;
   loadSyncStateCursor(): Promise<{ cursor: number | null }>;
+  loadSyncPackCursor(): Promise<{ cursor: number | null }>;
   loadSyncStatePushCursor(): Promise<{ cursor: number | null }>;
   loadSyncNodeVersionCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   loadSyncNodeVersionPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
@@ -140,6 +141,7 @@ export interface CompanionWorkspaceSyncPlugin {
   }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncOnboardingStatus(args: { status: NativeCompanionWorkspaceSyncState['sync_onboarding_status'] }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncStateCursor(args: { cursor: number | null }): Promise<{ cursor: number | null }>;
+  saveSyncPackCursor(args: { cursor: number | null }): Promise<{ cursor: number | null }>;
   saveSyncStatePushCursor(args: { cursor: number | null }): Promise<{ cursor: number | null }>;
   saveSyncNodeVersionCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   saveSyncNodeVersionPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;

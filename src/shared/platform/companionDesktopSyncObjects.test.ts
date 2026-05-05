@@ -14,6 +14,7 @@ import {
 } from './companionDesktopSyncObjects.testFixtures';
 
 const syncBridgeMock = vi.hoisted(() => ({
+  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 2, applied_object_count: 3, to_state_seq: 8 })),
   applyCompanionSyncNodeVersions: vi.fn(async (nodes: NativeSyncNodeRecord[]) => nodes.map((node) => node.object_id)),
   applyCompanionSyncObjects: vi.fn(async (objects: NativeSyncObjectRecord[]) => (
     objects.map((object) => `${object.object_type}:${object.object_id}`)
@@ -26,12 +27,14 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as NativeSyncReviewLogRecord[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
+  loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStateCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStatePushCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncNodeVersionCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncNodeVersionPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncReviewLogCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
+  saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor)
 }));
@@ -94,6 +97,8 @@ function createFetchMock() {
 
 function expectPullResult(result: unknown) {
   expect(result).toMatchObject({
+    appliedPackBlobCount: 2,
+    appliedPackObjectCount: 3,
     changedObjectIds: ['changed-setting'],
     appliedObjectIds: ['setting:changed-setting'],
     syncedAttachmentIds: []
@@ -101,6 +106,13 @@ function expectPullResult(result: unknown) {
 }
 
 function expectPullFetches(fetchMock: ReturnType<typeof createFetchMock>) {
+  expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledWith({
+    headers: {
+      'X-Device-Id': 'android-test-device',
+      'X-Signature': 'signed'
+    },
+    url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0'
+  });
   expect(fetchMock).toHaveBeenCalledWith(
     'http://10.0.2.2:38641/companion/sync-state?limit=500&after_state_seq=0',
     expect.objectContaining({ headers: expect.objectContaining({ 'X-Device-Id': 'android-test-device' }) })
@@ -113,6 +125,7 @@ function expectPullWrites() {
   expect(syncBridgeMock.applyCompanionSyncObjects).toHaveBeenCalledWith([
     expect.objectContaining({ object_id: 'changed-setting', object_type: 'setting' })
   ]);
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8);
   expect(syncBridgeMock.saveCompanionSyncStateCursor).toHaveBeenCalledWith(1);
 }
 
@@ -235,12 +248,14 @@ describe('companion desktop sync objects', () => {
     syncBridgeMock.loadCompanionSyncReviewLogPushCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
+    syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncStateCursor.mockResolvedValue(null);
     syncBridgeMock.loadCompanionSyncStatePushCursor.mockResolvedValue(null);
     syncBridgeMock.saveCompanionSyncNodeVersionCursor.mockImplementation(async (cursor: NativeSyncChangeCursor | null) => cursor);
     syncBridgeMock.saveCompanionSyncNodeVersionPushCursor.mockImplementation(async (cursor: NativeSyncChangeCursor | null) => cursor);
     syncBridgeMock.saveCompanionSyncReviewLogCursor.mockImplementation(async (cursor: NativeSyncChangeCursor | null) => cursor);
     syncBridgeMock.saveCompanionSyncReviewLogPushCursor.mockImplementation(async (cursor: NativeSyncChangeCursor | null) => cursor);
+    syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
     syncBridgeMock.saveCompanionSyncStateCursor.mockImplementation(async (cursor: number | null) => cursor);
     syncBridgeMock.saveCompanionSyncStatePushCursor.mockImplementation(async (cursor: number | null) => cursor);
     pairingMock.createSignedRequestHeaders.mockResolvedValue({

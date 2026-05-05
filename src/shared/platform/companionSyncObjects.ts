@@ -110,6 +110,7 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
 }
 
 const WEB_SYNC_STATE_CURSOR_KEY = 'foliole-companion-sync-state-cursor';
+const WEB_SYNC_PACK_CURSOR_KEY = 'foliole-companion-sync-pack-cursor';
 const WEB_SYNC_STATE_PUSH_CURSOR_KEY = 'foliole-companion-sync-state-push-cursor';
 const WEB_SYNC_NODE_VERSION_CURSOR_KEY = 'foliole-companion-sync-node-version-cursor';
 const WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY = 'foliole-companion-sync-node-version-push-cursor';
@@ -128,6 +129,20 @@ export async function saveCompanionSyncStateCursor(cursor: number | null) {
     return writeWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY, cursor);
   }
   return (await FolioleCompanionSync.saveSyncStateCursor({ cursor })).cursor;
+}
+
+export async function loadCompanionSyncPackCursor() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
+  }
+  return (await FolioleCompanionSync.loadSyncPackCursor()).cursor;
+}
+
+export async function saveCompanionSyncPackCursor(cursor: number | null) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return writeWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY, cursor);
+  }
+  return (await FolioleCompanionSync.saveSyncPackCursor({ cursor })).cursor;
 }
 
 export async function loadCompanionSyncStatePushCursor() {

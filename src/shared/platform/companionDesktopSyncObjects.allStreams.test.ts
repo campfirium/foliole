@@ -15,6 +15,7 @@ import {
 } from './companionDesktopSyncObjects.testFixtures';
 
 const syncBridgeMock = vi.hoisted(() => ({
+  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
   applyCompanionSyncNodeVersions: vi.fn(async () => [] as string[]),
   applyCompanionSyncObjects: vi.fn(async () => [] as string[]),
   applyCompanionSyncReviewLog: vi.fn(async () => [] as string[]),
@@ -26,12 +27,14 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncReviewLogPushCursor: vi.fn(async (): Promise<NativeSyncChangeCursor | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as NativeSyncReviewLogRecord[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
+  loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStateCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStatePushCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncNodeVersionCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncNodeVersionPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncReviewLogCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
+  saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor)
 }));

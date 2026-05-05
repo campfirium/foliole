@@ -30,6 +30,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private static final String WORKSPACE_SYNC_EVENTS_KEY = "workspace_sync_events";
     private static final String SYNC_STATE_CURSOR_KEY = "sync_state_cursor";
     private static final String SYNC_STATE_PUSH_CURSOR_KEY = "sync_state_push_cursor";
+    private static final String SYNC_PACK_CURSOR_KEY = "sync_pack_cursor";
     private static final String SYNC_NODE_VERSION_CURSOR_KEY = "sync_node_version_cursor";
     private static final String SYNC_NODE_VERSION_PUSH_CURSOR_KEY = "sync_node_version_push_cursor";
     private static final String SYNC_REVIEW_LOG_CURSOR_KEY = "sync_review_log_cursor";
@@ -318,6 +319,14 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject saveSyncStateCursor(Integer cursor) throws Exception {
         return saveNumberCursor(SYNC_STATE_CURSOR_KEY, cursor);
+    }
+
+    JSObject loadSyncPackCursor() throws Exception {
+        return loadNumberCursor(SYNC_PACK_CURSOR_KEY);
+    }
+
+    JSObject saveSyncPackCursor(Integer cursor) throws Exception {
+        return saveNumberCursor(SYNC_PACK_CURSOR_KEY, cursor);
     }
 
     JSObject loadSyncStatePushCursor() throws Exception {
