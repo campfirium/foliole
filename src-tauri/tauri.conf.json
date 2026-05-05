@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev -- --host 127.0.0.1 --port 4600",
     "beforeBuildCommand": "npm run build",
-    "devUrl": "http://127.0.0.1:4600/?diag=solid",
+    "devUrl": "http://127.0.0.1:4600/",
     "frontendDist": "../dist"
   },
   "app": {
@@ -16,6 +16,7 @@
         "title": "Foliole",
         "width": 1400,
         "height": 900,
+        "dataDirectory": "webview-main",
         "decorations": true,
         "resizable": true,
         "maximized": false
@@ -26,6 +27,12 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": true,
+    "targets": "nsis",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
   }
 }
