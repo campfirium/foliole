@@ -1,3 +1,13 @@
+import { useContext } from 'react';
+
+import { AppearanceSettingsContext } from '../../features/settings/context/appearanceSettingsContext';
+import {
+  getWorkspaceSurfaceAssignments,
+  getWorkspaceSurfacePalette
+} from '../../features/settings/model/appearanceSettings';
+
+type WorkspaceSurfaceRow = 'titlebar' | 'footer';
+
 const WORKSPACE_SURFACE_ROW_TEMPLATE = [
   'var(--workspace-rail-width)',
   'var(--workspace-folder-column-width)',
@@ -23,11 +33,11 @@ export const WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT =
 export const WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT =
   'calc(100% - var(--workspace-right-sidebar-current-width, 320px) - (var(--workspace-right-sidebar-splitter-width, 1px) / 2))';
 
-function getSurfaceColor(row: 'titlebar' | 'footer', column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]) {
+function getSurfaceColor(row: WorkspaceSurfaceRow, column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]) {
   return `var(--workspace-region-${row}-${column}-bg)`;
 }
 
-export function WorkspaceSurfaceRowOverlay({ row }: { row: 'titlebar' | 'footer' }) {
+export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceRow }) {
   return (
     <div
       aria-hidden="true"
@@ -54,6 +64,17 @@ function WorkspaceSurfaceRowDivider({ className, left }: { className?: string; l
   );
 }
 
+function useHasFolderTopicDivider(row: WorkspaceSurfaceRow) {
+  const appearance = useContext(AppearanceSettingsContext);
+  const workspaceSurfaceAssignments = appearance?.workspaceSurfaceAssignments ?? getWorkspaceSurfaceAssignments();
+  const workspaceSurfacePalette = appearance?.workspaceSurfacePalette ?? getWorkspaceSurfacePalette();
+  const folderIndex = workspaceSurfaceAssignments[`${row}-folder`];
+  const topicIndex = workspaceSurfaceAssignments[`${row}-topic`];
+  const folderColor = workspaceSurfacePalette[folderIndex] ?? workspaceSurfacePalette[0];
+  const topicColor = workspaceSurfacePalette[topicIndex] ?? workspaceSurfacePalette[0];
+  return folderColor !== topicColor;
+}
+
 export function WorkspaceTitlebarDividers({
   isListCollapsed,
   isRightSidebarCollapsed
@@ -61,11 +82,22 @@ export function WorkspaceTitlebarDividers({
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
 }) {
+  const hasFolderTopicDivider = useHasFolderTopicDivider('titlebar');
+
   return (
     <>
       <WorkspaceSurfaceRowDivider left={WORKSPACE_RAIL_DIVIDER_LEFT} />
+      {isListCollapsed || !hasFolderTopicDivider ? null : <WorkspaceSurfaceRowDivider left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT} />}
       {isListCollapsed ? null : <WorkspaceSurfaceRowDivider left={WORKSPACE_LIST_DIVIDER_LEFT} />}
       {isRightSidebarCollapsed ? null : <WorkspaceSurfaceRowDivider left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT} />}
     </>
   );
+}
+
+export function WorkspaceFooterRowDividers() {
+  const hasFolderTopicDivider = useHasFolderTopicDivider('footer');
+  if (!hasFolderTopicDivider) {
+    return null;
+  }
+  return <WorkspaceSurfaceRowDivider className="max-[1080px]:hidden" left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT} />;
 }

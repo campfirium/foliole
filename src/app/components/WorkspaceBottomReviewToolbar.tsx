@@ -2,7 +2,7 @@ import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
-import { WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
+import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
 
 function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayoutProps }) {
   return (
@@ -57,6 +57,7 @@ export function WorkspaceBottomReviewToolbar({ props }: { props: WorkspaceLayout
         }`}
       >
         {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
+        {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers />}
         {props.isImmersiveMode ? null : (
           <div className="relative z-[1]">
             <WorkspaceStudyDockTrigger
