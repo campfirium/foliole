@@ -71,6 +71,40 @@ export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
   }
 } as const;
 
+export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
+  attachmentResources: {
+    mimeTypeKey: 'mime_type',
+    resolveQueryName: 'attachmentResourceResolve',
+    resultKey: 'resources',
+    storageKey: 'storage_key'
+  },
+  contentBlobs: {
+    compressionKey: 'compression',
+    existingQueryName: 'contentBlobDataExisting',
+    manifestQueryName: 'contentBlobManifestByHash',
+    originalSha256Key: 'original_sha256',
+    originalSizeBytesKey: 'original_size_bytes',
+    resultKey: 'blobs',
+    storedSha256Key: 'stored_sha256',
+    storedSizeBytesKey: 'stored_size_bytes'
+  },
+  pdfPageText: {
+    attachmentIdKey: 'attachment_id',
+    defaultSearchLimit: 20,
+    excerptRadius: 80,
+    matchIndexKey: 'match_index',
+    maxSearchLimit: 100,
+    pageHeightKey: 'page_height',
+    pageKey: 'page',
+    pagesQueryName: 'pdfPageTextPages',
+    pagesResultKey: 'pages',
+    pageWidthKey: 'page_width',
+    searchQueryName: 'pdfPageTextSearch',
+    searchResultKey: 'results',
+    textKey: 'text'
+  }
+} as const;
+
 export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
   snapshot: {
     bodyStatusExpressionToken: '__BODY_STATUS_EXPRESSION__',

@@ -10,25 +10,22 @@ import org.json.JSONObject;
 
 final class FolioleCompanionPdfPageTextStore {
 
-    private static final int DEFAULT_SEARCH_LIMIT = 20;
-    private static final int EXCERPT_RADIUS = 80;
-
     private FolioleCompanionPdfPageTextStore() {}
 
     static JSObject loadPageText(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         JSObject result = new JSObject();
-        result.put("attachment_id", attachmentId);
-        result.put("pages", new JSArray());
+        result.put(stringRule(context, "attachmentIdKey"), attachmentId);
+        result.put(stringRule(context, "pagesResultKey"), new JSArray());
         if (attachmentId == null || attachmentId.trim().isEmpty()) {
             return result;
         }
         JSObject loaded = FolioleCompanionNamedQueryStore.loadArray(
             context,
             database,
-            "pdfPageTextPages",
+            stringRule(context, "pagesQueryName"),
             new String[] { attachmentId.trim() }
         );
-        loaded.put("attachment_id", attachmentId);
+        loaded.put(stringRule(context, "attachmentIdKey"), attachmentId);
         return loaded;
     }
 
@@ -37,51 +34,60 @@ final class FolioleCompanionPdfPageTextStore {
         JSArray results = new JSArray();
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
         result.put("query", query);
-        result.put("results", results);
+        result.put(stringRule(context, "searchResultKey"), results);
         if (normalizedQuery.isEmpty()) {
             return result;
         }
         JSArray rows = FolioleCompanionNamedQueryStore.loadRows(
             context,
             database,
-            "pdfPageTextSearch",
-            "results",
-            new String[] { normalizedQuery, normalizedQuery, Integer.toString(resolveLimit(limit)) }
+            stringRule(context, "searchQueryName"),
+            stringRule(context, "searchResultKey"),
+            new String[] { normalizedQuery, normalizedQuery, Integer.toString(resolveLimit(context, limit)) }
         );
         for (int index = 0; index < rows.length(); index += 1) {
-            results.put(toSearchResult(rows.getJSONObject(index)));
+            results.put(toSearchResult(context, rows.getJSONObject(index)));
         }
         return result;
     }
 
-    private static int resolveLimit(int limit) {
+    private static int resolveLimit(Context context, int limit) throws Exception {
         if (limit <= 0) {
-            return DEFAULT_SEARCH_LIMIT;
+            return intRule(context, "defaultSearchLimit");
         }
-        return Math.min(limit, 100);
+        return Math.min(limit, intRule(context, "maxSearchLimit"));
     }
 
-    private static JSObject toSearchResult(JSONObject row) throws Exception {
+    private static JSObject toSearchResult(Context context, JSONObject row) throws Exception {
         JSObject result = new JSObject();
-        String text = row.optString("text", "");
-        int matchStart = Math.max(0, row.optInt("match_index") - 1);
-        result.put("attachment_id", row.getString("attachment_id"));
-        result.put("page", row.getInt("page"));
-        result.put("text", text);
-        result.put("page_width", row.opt("page_width"));
-        result.put("page_height", row.opt("page_height"));
+        String text = row.optString(stringRule(context, "textKey"), "");
+        int matchStart = Math.max(0, row.optInt(stringRule(context, "matchIndexKey")) - 1);
+        result.put(stringRule(context, "attachmentIdKey"), row.getString(stringRule(context, "attachmentIdKey")));
+        result.put(stringRule(context, "pageKey"), row.getInt(stringRule(context, "pageKey")));
+        result.put(stringRule(context, "textKey"), text);
+        result.put(stringRule(context, "pageWidthKey"), row.opt(stringRule(context, "pageWidthKey")));
+        result.put(stringRule(context, "pageHeightKey"), row.opt(stringRule(context, "pageHeightKey")));
         result.put("match_start", matchStart);
-        result.put("excerpt", buildExcerpt(text, matchStart));
+        result.put("excerpt", buildExcerpt(context, text, matchStart));
         return result;
     }
 
-    private static String buildExcerpt(String text, int matchStart) {
-        if (text == null || text.length() <= EXCERPT_RADIUS * 2) {
+    private static String buildExcerpt(Context context, String text, int matchStart) throws Exception {
+        int excerptRadius = intRule(context, "excerptRadius");
+        if (text == null || text.length() <= excerptRadius * 2) {
             return text == null ? "" : text;
         }
-        int start = Math.max(0, matchStart - EXCERPT_RADIUS);
-        int end = Math.min(text.length(), matchStart + EXCERPT_RADIUS);
+        int start = Math.max(0, matchStart - excerptRadius);
+        int end = Math.min(text.length(), matchStart + excerptRadius);
         return text.substring(start, end).trim();
+    }
+
+    private static int intRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextInt(context, key);
+    }
+
+    private static String stringRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.pdfPageTextString(context, key);
     }
 
 }

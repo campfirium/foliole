@@ -67,19 +67,19 @@ final class FolioleCompanionContentBlobStore {
         JSONObject blob = FolioleCompanionNamedQueryStore.loadFirstRow(
             context,
             database,
-            "contentBlobManifestByHash",
-            "blobs",
+            resourceRule(context, "manifestQueryName"),
+            resourceRule(context, "resultKey"),
             new String[] { hash }
         );
         if (blob == null) {
             throw new IllegalStateException("Content blob manifest is missing.");
         }
         return new ContentBlobManifest(
-            blob.getString("compression"),
-            blob.getLong("original_size_bytes"),
-            blob.getLong("stored_size_bytes"),
-            blob.getString("original_sha256"),
-            blob.getString("stored_sha256")
+            blob.getString(resourceRule(context, "compressionKey")),
+            blob.getLong(resourceRule(context, "originalSizeBytesKey")),
+            blob.getLong(resourceRule(context, "storedSizeBytesKey")),
+            blob.getString(resourceRule(context, "originalSha256Key")),
+            blob.getString(resourceRule(context, "storedSha256Key"))
         );
     }
 
@@ -87,10 +87,14 @@ final class FolioleCompanionContentBlobStore {
         return FolioleCompanionNamedQueryStore.hasRows(
             context,
             database,
-            "contentBlobDataExisting",
-            "blobs",
+            resourceRule(context, "existingQueryName"),
+            resourceRule(context, "resultKey"),
             new String[] { hash }
         );
+    }
+
+    private static String resourceRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.contentBlobString(context, key);
     }
 
     private static JSObject markCached(Context context, SQLiteDatabase database, String hash) throws Exception {

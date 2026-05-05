@@ -77,15 +77,15 @@ final class FolioleCompanionAttachmentResourceStore {
         JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
             context,
             database,
-            "attachmentResourceResolve",
-            "resources",
+            resourceRule(context, "resolveQueryName"),
+            resourceRule(context, "resultKey"),
             new String[] { normalizedAttachmentId }
         );
         if (row == null) {
             return notFound();
         }
-        String storageKey = nullableString(row, "storage_key");
-        String mimeType = nullableString(row, "mime_type");
+        String storageKey = nullableString(row, resourceRule(context, "storageKey"));
+        String mimeType = nullableString(row, resourceRule(context, "mimeTypeKey"));
         if (storageKey == null || storageKey.trim().isEmpty()) {
             return missingFile(mimeType);
         }
@@ -117,6 +117,10 @@ final class FolioleCompanionAttachmentResourceStore {
 
     private static File attachmentFile(Context context, String storageKey) {
         return new File(new File(context.getFilesDir(), "attachments"), storageKey);
+    }
+
+    private static String resourceRule(Context context, String key) throws Exception {
+        return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
     }
 
     private static String nullableString(JSONObject row, String key) {
