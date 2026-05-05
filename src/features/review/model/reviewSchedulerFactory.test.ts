@@ -35,6 +35,12 @@ describe('createReviewSchedulerAdapter', () => {
     });
     expect(result.card.reps).toBe(1);
     expect(result.reviewed_at).toBe('2026-02-26T00:00:00.000Z');
+
+    const preview = await adapter.preview({
+      card: { ...BASE_CARD },
+      now: '2026-02-26T00:00:00.000Z'
+    });
+    expect(preview.Good.card.scheduled_days).toBe(3);
   });
 
   it('throws when rust-only mode is set and tauri invoke is unavailable', async () => {

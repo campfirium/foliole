@@ -1,0 +1,34 @@
+import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
+import type { CommandPaletteItem } from '../../shared/commands/types';
+
+import type { AppPaletteState } from './useAppController';
+import { useReviewPreview } from './useReviewPreview';
+
+export function buildPaletteState(
+  isOpen: boolean,
+  items: CommandPaletteItem[],
+  recentCommandIds: string[],
+  onClose: () => void,
+  onRunCommand: (id: string) => void
+): AppPaletteState {
+  return { isOpen, items, recentCommandIds, onClose, onRunCommand };
+}
+
+type WorkspaceSelectors = {
+  nodesById: Record<string, { review: NodeReviewProfile | null } | undefined>;
+  reviewSession: {
+    currentNodeId: string | null;
+    isAnswerRevealed: boolean;
+  };
+};
+
+export function useCurrentReviewPreview(isStudyMode: boolean, ws: WorkspaceSelectors) {
+  return useReviewPreview({
+    currentNodeId: ws.reviewSession.currentNodeId,
+    isAnswerRevealed: ws.reviewSession.isAnswerRevealed,
+    isStudyMode,
+    reviewProfile: ws.reviewSession.currentNodeId
+      ? (ws.nodesById[ws.reviewSession.currentNodeId]?.review ?? null)
+      : null
+  });
+}

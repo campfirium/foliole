@@ -119,6 +119,13 @@ function createSchedulerGradeMock() {
   }));
 }
 
+const previewStub: ReviewSchedulerAdapter['preview'] = async () => ({
+  Again: { card: createSchedulerCard('2026-03-03T00:00:00.000Z'), reviewed_at: '2026-03-03T00:00:00.000Z' },
+  Hard: { card: createSchedulerCard('2026-03-04T00:00:00.000Z'), reviewed_at: '2026-03-03T00:00:00.000Z' },
+  Good: { card: createSchedulerCard('2026-03-06T00:00:00.000Z'), reviewed_at: '2026-03-03T00:00:00.000Z' },
+  Easy: { card: createSchedulerCard('2026-03-10T00:00:00.000Z'), reviewed_at: '2026-03-03T00:00:00.000Z' }
+});
+
 function expectNextQueueState(state: WorkspaceState) {
   expect(state.activeNodeId).toBe('qa-2');
   expect(state.reviewSession.currentNodeId).toBe('qa-2');
@@ -159,6 +166,20 @@ const EXPECTED_REVIEW_RUNTIME_SYNC = {
   }
 };
 
+function createSchedulerCard(due: string) {
+  return {
+    due,
+    last_review: null,
+    state: 0 as const,
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0
+  };
+}
+
 function expectReviewRuntimeSyncCalled() {
   expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
   expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(EXPECTED_REVIEW_RUNTIME_SYNC);
@@ -171,7 +192,7 @@ describe('createWorkspaceReviewActions', () => {
       createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
     );
     const grade = createSchedulerGradeMock();
-    const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade });
+    const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
 
     const started = actions.startReviewSession(due);
     expect(started).toBe(true);
@@ -195,6 +216,7 @@ describe('createWorkspaceReviewActions', () => {
       harness.setState,
       harness.getState,
       {
+        preview: previewStub,
         grade: async (input) => ({
           card: {
             ...input.card,

@@ -1,4 +1,10 @@
-import type { SchedulerCard, SchedulerGradeInput, SchedulerGradeResult } from './reviewTypes';
+import type {
+  SchedulerCard,
+  SchedulerGradeInput,
+  SchedulerGradeResult,
+  SchedulerPreviewInput,
+  SchedulerPreviewResult
+} from './reviewTypes';
 
 const TIMESTAMP_TZ_PATTERN = /(Z|[+-]\d{2}:\d{2})$/;
 
@@ -70,4 +76,19 @@ export function assertSchedulerGradeResult(value: unknown): asserts value is Sch
   }
   assertSchedulerCard(value.card, 'card');
   assertTimestamp(value.reviewed_at, 'reviewed_at');
+}
+
+export function assertSchedulerPreviewInput(input: SchedulerPreviewInput): void {
+  assertSchedulerCard(input.card, 'card');
+  assertTimestamp(input.now, 'now');
+}
+
+export function assertSchedulerPreviewResult(value: unknown): asserts value is SchedulerPreviewResult {
+  if (!isRecord(value)) {
+    throw new Error('Invalid review preview response: expected object');
+  }
+  assertSchedulerGradeResult(value.Again);
+  assertSchedulerGradeResult(value.Hard);
+  assertSchedulerGradeResult(value.Good);
+  assertSchedulerGradeResult(value.Easy);
 }

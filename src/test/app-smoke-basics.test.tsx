@@ -31,7 +31,7 @@ it('shows editor display mode entrypoint inside more menu trigger', () => {
   expect(localStorage.getItem(EDITOR_DISPLAY_MODE_KEY)).toBeNull();
 });
 
-it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
+it('runs study flow as Study -> Show Answer -> Grade buttons enabled', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1', 'node-2'],
@@ -69,6 +69,9 @@ it('runs study flow as Study -> Show Answer -> Grade buttons enabled', () => {
   expect(screen.getByText(/Reviewing · 1 left · 0 done · Answer revealed/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('3d')).toBeInTheDocument();
+  });
   expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
 });
 

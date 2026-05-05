@@ -18,6 +18,9 @@ function createUnavailableRustAdapter(): ReviewSchedulerAdapter {
   return {
     grade: async () => {
       throw new Error('Rust scheduler is required, but Tauri invoke is unavailable');
+    },
+    preview: async () => {
+      throw new Error('Rust scheduler is required, but Tauri invoke is unavailable');
     }
   };
 }

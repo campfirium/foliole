@@ -20,6 +20,25 @@ export interface ReviewGradeRequest {
   };
 }
 
+export interface ReviewPreviewRequest {
+  request: {
+    card: SchedulerCard;
+    now: string;
+  };
+}
+
+interface ReviewSchedulerResult {
+  card: SchedulerCard;
+  reviewed_at: string;
+}
+
+export interface ReviewPreviewResult {
+  Again: ReviewSchedulerResult;
+  Hard: ReviewSchedulerResult;
+  Good: ReviewSchedulerResult;
+  Easy: ReviewSchedulerResult;
+}
+
 function toRating(value: ReviewGradeRequest['request']['rating']): Grade {
   if (value === 'Again') {
     return Rating.Again;
@@ -73,12 +92,27 @@ function fromTsFsrsCard(card: {
 
 const scheduler = fsrs();
 
+function toSchedulerResult(item: { card: Parameters<typeof fromTsFsrsCard>[0]; log: { review: Date } }): ReviewSchedulerResult {
+  return {
+    card: fromTsFsrsCard(item.card),
+    reviewed_at: item.log.review.toISOString()
+  };
+}
+
 export function reviewGrade(payload: ReviewGradeRequest) {
   const reviewAt = new Date(payload.request.now);
   const grade = toRating(payload.request.rating);
   const next = scheduler.next(toTsFsrsCard(payload.request.card), reviewAt, grade);
+  return toSchedulerResult(next);
+}
+
+export function reviewPreview(payload: ReviewPreviewRequest): ReviewPreviewResult {
+  const reviewAt = new Date(payload.request.now);
+  const preview = scheduler.repeat(toTsFsrsCard(payload.request.card), reviewAt);
   return {
-    card: fromTsFsrsCard(next.card),
-    reviewed_at: next.log.review.toISOString()
+    Again: toSchedulerResult(preview[Rating.Again]),
+    Hard: toSchedulerResult(preview[Rating.Hard]),
+    Good: toSchedulerResult(preview[Rating.Good]),
+    Easy: toSchedulerResult(preview[Rating.Easy])
   };
 }

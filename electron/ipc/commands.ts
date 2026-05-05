@@ -21,7 +21,7 @@ import {
   parseSoftDeleteNodesArgs
 } from './nodeCommandArgs.js';
 import { resolveAppPaths } from './paths.js';
-import { reviewGrade, type ReviewGradeRequest } from './review.js';
+import { reviewGrade, reviewPreview, type ReviewGradeRequest, type ReviewPreviewRequest } from './review.js';
 import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 
@@ -272,6 +272,9 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   }
   if (command === 'review_grade') {
     return reviewGrade(args as unknown as ReviewGradeRequest);
+  }
+  if (command === 'review_preview') {
+    return reviewPreview(args as unknown as ReviewPreviewRequest);
   }
   if (command === 'app_get_version') {
     return app.getVersion();

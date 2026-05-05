@@ -1,9 +1,16 @@
-import { assertSchedulerGradeInput, assertSchedulerGradeResult } from './reviewSchedulerContract';
+import {
+  assertSchedulerGradeInput,
+  assertSchedulerGradeResult,
+  assertSchedulerPreviewInput,
+  assertSchedulerPreviewResult
+} from './reviewSchedulerContract';
 import {
   mapGradeToRustRating,
   type ReviewSchedulerAdapter,
   type SchedulerGradeInput,
-  type SchedulerGradeResult
+  type SchedulerGradeResult,
+  type SchedulerPreviewInput,
+  type SchedulerPreviewResult
 } from './reviewTypes';
 
 type NativeInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -22,6 +29,19 @@ export function createNativeReviewSchedulerAdapter(invoke: NativeInvoke): Review
       });
 
       assertSchedulerGradeResult(result);
+      return result;
+    },
+    preview: async (input: SchedulerPreviewInput): Promise<SchedulerPreviewResult> => {
+      assertSchedulerPreviewInput(input);
+
+      const result = await invoke('review_preview', {
+        request: {
+          card: input.card,
+          now: input.now
+        }
+      });
+
+      assertSchedulerPreviewResult(result);
       return result;
     }
   };

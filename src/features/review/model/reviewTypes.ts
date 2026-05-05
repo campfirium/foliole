@@ -21,13 +21,26 @@ export interface SchedulerGradeInput {
   now: string;
 }
 
+export interface SchedulerPreviewInput {
+  card: SchedulerCard;
+  now: string;
+}
+
 export interface SchedulerGradeResult {
   card: SchedulerCard;
   reviewed_at: string;
 }
 
+export interface SchedulerPreviewResult {
+  Again: SchedulerGradeResult;
+  Hard: SchedulerGradeResult;
+  Good: SchedulerGradeResult;
+  Easy: SchedulerGradeResult;
+}
+
 export interface ReviewSchedulerAdapter {
   grade: (input: SchedulerGradeInput) => Promise<SchedulerGradeResult>;
+  preview: (input: SchedulerPreviewInput) => Promise<SchedulerPreviewResult>;
 }
 
 export function createInitialSchedulerCard(now: string): SchedulerCard {

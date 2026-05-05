@@ -4,7 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { EditorDisplayMode } from '../../features/editor/model/editorDisplayMode';
 import type { MarkdownSyntaxVisibility } from '../../features/editor/model/markdownSyntaxSetting';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import type {
   AccentColorPreset,
   BaseColorMode,
@@ -35,6 +35,7 @@ export interface WorkspaceLayoutProps {
   editorNodeViewState?: NodeViewState;
   canStartStudyMode: boolean;
   reviewDueCount: number;
+  reviewPreview: SchedulerPreviewResult | null;
   isStudyMode: boolean;
   isSettingsOpen: boolean;
   isAnswerRevealed: boolean;

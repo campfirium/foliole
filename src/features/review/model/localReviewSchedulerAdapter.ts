@@ -3,7 +3,9 @@ import {
   type ReviewSchedulerAdapter,
   type SchedulerCard,
   type SchedulerGradeInput,
-  type SchedulerGradeResult
+  type SchedulerGradeResult,
+  type SchedulerPreviewInput,
+  type SchedulerPreviewResult
 } from './reviewTypes';
 
 const NEXT_INTERVAL_DAYS = {
@@ -37,6 +39,15 @@ function updateCard(card: SchedulerCard, input: SchedulerGradeInput): SchedulerC
   };
 }
 
+function createPreviewResult(card: SchedulerCard, now: string): SchedulerPreviewResult {
+  return {
+    Again: { card: updateCard(card, { card, grade: 1, now }), reviewed_at: now },
+    Hard: { card: updateCard(card, { card, grade: 2, now }), reviewed_at: now },
+    Good: { card: updateCard(card, { card, grade: 3, now }), reviewed_at: now },
+    Easy: { card: updateCard(card, { card, grade: 4, now }), reviewed_at: now }
+  };
+}
+
 export function createLocalReviewSchedulerAdapter(): ReviewSchedulerAdapter {
   return {
     grade: async (input): Promise<SchedulerGradeResult> => {
@@ -45,6 +56,9 @@ export function createLocalReviewSchedulerAdapter(): ReviewSchedulerAdapter {
         card: nextCard,
         reviewed_at: input.now
       };
+    },
+    preview: async (input: SchedulerPreviewInput): Promise<SchedulerPreviewResult> => {
+      return createPreviewResult(input.card, input.now);
     }
   };
 }

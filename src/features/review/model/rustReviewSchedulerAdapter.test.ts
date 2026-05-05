@@ -30,10 +30,8 @@ describe('createRustReviewSchedulerAdapter', () => {
       },
       reviewed_at: '2026-02-26T00:00:00.000Z'
     });
-
     const adapter = createRustReviewSchedulerAdapter(invoke);
     const result = await adapter.grade(BASE_INPUT);
-
     expect(invoke).toHaveBeenCalledWith('review_grade', {
       request: {
         card: BASE_INPUT.card,
@@ -47,7 +45,6 @@ describe('createRustReviewSchedulerAdapter', () => {
   it('throws before invoke when request timestamp is invalid', async () => {
     const invoke = vi.fn();
     const adapter = createRustReviewSchedulerAdapter(invoke);
-
     await expect(
       adapter.grade({
         ...BASE_INPUT,
@@ -65,7 +62,27 @@ describe('createRustReviewSchedulerAdapter', () => {
       reviewed_at: 'bad'
     });
     const adapter = createRustReviewSchedulerAdapter(invoke);
-
     await expect(adapter.grade(BASE_INPUT)).rejects.toThrow('reviewed_at');
+  });
+
+});
+
+describe('createRustReviewSchedulerAdapter preview', () => {
+  it('invokes review_preview and returns validated preview response', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      Again: { card: { ...BASE_INPUT.card, due: '2026-02-26T00:10:00.000Z' }, reviewed_at: BASE_INPUT.now },
+      Hard: { card: { ...BASE_INPUT.card, due: '2026-02-27T00:00:00.000Z' }, reviewed_at: BASE_INPUT.now },
+      Good: { card: { ...BASE_INPUT.card, due: '2026-03-01T00:00:00.000Z' }, reviewed_at: BASE_INPUT.now },
+      Easy: { card: { ...BASE_INPUT.card, due: '2026-03-05T00:00:00.000Z' }, reviewed_at: BASE_INPUT.now }
+    });
+    const adapter = createRustReviewSchedulerAdapter(invoke);
+    const result = await adapter.preview({ card: BASE_INPUT.card, now: BASE_INPUT.now });
+    expect(invoke).toHaveBeenCalledWith('review_preview', {
+      request: {
+        card: BASE_INPUT.card,
+        now: BASE_INPUT.now
+      }
+    });
+    expect(result.Good.reviewed_at).toBe(BASE_INPUT.now);
   });
 });
