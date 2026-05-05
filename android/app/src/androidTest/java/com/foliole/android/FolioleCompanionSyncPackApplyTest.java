@@ -82,6 +82,28 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void appliesExternalDocumentStructureRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingExternalDocumentRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals("", selectString("SELECT content FROM external_documents WHERE document_id = 'folder-1:doc.md'"));
+        assertEquals("blob-ext", selectString(
+            "SELECT body_blob_hash FROM external_documents WHERE document_id = 'folder-1:doc.md'"
+        ));
+        assertEquals("External opening", selectString(
+            "SELECT opening_text FROM external_documents WHERE document_id = 'folder-1:doc.md'"
+        ));
+        assertEquals("missing", selectString("SELECT availability FROM content_blobs WHERE hash = 'blob-ext'"));
+        assertEquals("android-test", selectString(
+            "SELECT last_modified_by_device_id FROM sync_object_state " +
+                "WHERE object_type = 'external_document' AND object_id = 'folder-1:doc.md'"
+        ));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
@@ -156,6 +178,30 @@ public class FolioleCompanionSyncPackApplyTest {
         packDatabase.execSQL("INSERT INTO sync_object_state (" +
             "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) " +
             "VALUES ('node', 'node-1', 1, 'node-hash', '" + now + "', NULL)");
+    }
+
+    private void appendIncomingExternalDocumentRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:00:00.000Z";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO external_documents (" +
+                "document_id, folder_id, relative_path, file_name, extension, source_size_bytes, " +
+                "source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, " +
+                "content, indexed_at, created_at, updated_at) VALUES (" +
+                "'folder-1:doc.md', 'folder-1', 'doc.md', 'doc.md', 'md', 44, '" + now + "', 1777, " +
+                "'external-hash', 'External Doc', 'External opening', 'blob-ext', '', '" + now + "', '" + now + "', '" + now + "')");
+            packDatabase.execSQL("INSERT INTO content_blobs (" +
+                "hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, " +
+                "original_sha256, stored_sha256, availability, source_device_id, created_at) VALUES (" +
+                "'blob-ext', 'content/blobs/blob-ext', 'text_body', 'text/plain', 'none', 44, 44, " +
+                "'sha-original-ext', 'sha-stored-ext', 'missing', 'desktop', '" + now + "')");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'external_document', 'folder-1:doc.md', 2, 'external-state-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
     }
 
     private String selectString(String sql) {
