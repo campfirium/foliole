@@ -15,7 +15,7 @@ function getHighlightElement(view: EditorView) {
   return view.contentDOM.querySelector('.cm-md-highlight');
 }
 
-function createEditorView(doc: string, decorations: Array<{ from: number; kind: 'highlight'; to: number }>) {
+function createEditorView(doc: string, decorations: Array<{ from: number; kind: 'cloze' | 'highlight'; to: number }>) {
   const host = document.createElement('div');
   return new EditorView({
     parent: host,
@@ -124,8 +124,26 @@ function registerBoundaryInsertionTests() {
   });
 }
 
+function registerOverlapTests() {
+  it('renders overlapping highlight and cloze decorations in normal text', () => {
+    const view = createEditorView('Alpha Beta Gamma', [
+      { from: 6, kind: 'highlight', to: 16 },
+      { from: 11, kind: 'cloze', to: 16 }
+    ]);
+
+    try {
+      expect(view.contentDOM.querySelector('.cm-md-highlight')?.textContent).toBe('Beta ');
+      expect(view.contentDOM.querySelector('.cm-md-cloze')?.textContent).toBe('Gamma');
+      expect(view.contentDOM.querySelector('.cm-md-anchor-overlap')?.textContent).toBe('Gamma');
+    } finally {
+      view.destroy();
+    }
+  });
+}
+
 describe('codeMirrorTextAnchorState', () => {
   registerChangeMappingTest();
   registerOutOfRangeNormalizationTest();
   registerBoundaryInsertionTests();
+  registerOverlapTests();
 });

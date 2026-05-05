@@ -28,6 +28,14 @@ describe('markdownOblikeExtension', () => {
     expect(names).toContain('CalloutMark');
   });
 
+  it('recognizes OB-like callout fold markers', () => {
+    const names = collectNodeNames('> [!warning]- Folded title');
+
+    expect(names).toContain('CalloutMarker');
+    expect(names).toContain('CalloutKind');
+    expect(names).toContain('CalloutFold');
+  });
+
   it('recognizes OB-like wiki link nodes', () => {
     const names = collectNodeNames('Open [[Page|Alias]]');
 

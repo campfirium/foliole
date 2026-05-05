@@ -30,6 +30,7 @@ export function collectPreviewViewportPlans(args: {
   cursorLineNumber: number | null;
   hideTitleHeading: boolean;
   lineClassByFrom?: ReadonlyMap<number, string>;
+  linkReferenceLineFroms?: ReadonlySet<number>;
   lines: ReadonlyArray<ViewportLineInput>;
   linkReferences?: MarkdownLinkReferenceMap;
   markdownSyntaxVisible: boolean;
@@ -48,6 +49,7 @@ export function collectPreviewViewportPlans(args: {
       isCursorLine: args.cursorLineNumber !== null && line.lineNumber === args.cursorLineNumber,
       lineFrom: line.from,
       lineClassByFrom: args.lineClassByFrom,
+      linkReferenceLineFroms: args.linkReferenceLineFroms,
       lineNumber: line.lineNumber,
       lineText: line.text,
       linkReferences: args.linkReferences,

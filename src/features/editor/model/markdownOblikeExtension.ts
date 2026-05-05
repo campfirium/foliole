@@ -1,5 +1,7 @@
 import type { InlineContext, MarkdownConfig } from '@lezer/markdown';
 
+import { parseFrontmatterBlock } from './markdownFrontmatterExtension';
+
 const SourceHighlightDelimiter = {
   mark: 'SourceHighlightMark',
   resolve: 'SourceHighlight'
@@ -41,11 +43,16 @@ function parseCalloutMarker(cx: InlineContext, pos: number) {
   if (!isAsciiLetter(cx.char(cursor))) return -1;
   while (isCalloutKindCode(cx.char(cursor))) cursor += 1;
   if (cx.char(cursor) !== 93) return -1;
-  return cx.addElement(cx.elt('CalloutMarker', pos, cursor + 1, [
+  const closingTo = cursor + 1;
+  const foldCode = cx.char(closingTo);
+  const hasFold = foldCode === 43 || foldCode === 45;
+  const children = [
     cx.elt('CalloutMark', pos, pos + 2),
     cx.elt('CalloutKind', pos + 2, cursor),
     cx.elt('CalloutMark', cursor, cursor + 1)
-  ]));
+  ];
+  if (hasFold) children.push(cx.elt('CalloutFold', closingTo, closingTo + 1));
+  return cx.addElement(cx.elt('CalloutMarker', pos, hasFold ? closingTo + 1 : closingTo, children));
 }
 
 function parseFootnote(cx: InlineContext, pos: number) {
@@ -119,6 +126,7 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
   {
     defineNodes: [
       'CalloutKind',
+      'CalloutFold',
       'CalloutMark',
       'CalloutMarker',
       'Embed',
@@ -129,12 +137,24 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
       'FootnoteLabel',
       'FootnoteMark',
       'FootnoteNote',
+      { name: 'Frontmatter', block: true },
+      'FrontmatterContent',
+      'FrontmatterDelimiter',
       'SourceHighlight',
       'SourceHighlightMark',
       'WikiLink',
       'WikiLinkAlias',
       'WikiLinkMark',
       'WikiLinkTarget'
+    ],
+    parseBlock: [
+      {
+        name: 'Frontmatter',
+        parse(cx, line) {
+          return parseFrontmatterBlock(cx, line);
+        },
+        before: 'HorizontalRule'
+      }
     ],
     parseInline: [
       {

@@ -59,4 +59,27 @@ describe('buildParagraphMarkerDecorations', () => {
       { className: 'cm-paragraph-marker-line cm-paragraph-marker-line-image', from: 0 }
     ]);
   });
+
+  it('uses parser-backed image matching for image lines with titles', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+
+    view = new EditorView({
+      parent: host,
+      state: EditorState.create({
+        doc: '![Cover](https://example.com/cover.png "Title")\n\nGamma'
+      })
+    });
+
+    const decorations = buildParagraphMarkerDecorations(view, { from: 0, to: 47 });
+    const ranges: Array<{ from: number; className: string | null }> = [];
+
+    decorations.between(0, view.state.doc.length, (from, _to, value) => {
+      ranges.push({ className: value.spec.attributes?.class ?? null, from });
+    });
+
+    expect(ranges).toEqual([
+      { className: 'cm-paragraph-marker-line cm-paragraph-marker-line-image', from: 0 }
+    ]);
+  });
 });

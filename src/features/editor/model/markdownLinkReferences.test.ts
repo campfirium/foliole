@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectMarkdownLinkReferences, normalizeMarkdownLinkReferenceLabel } from './markdownLinkReferences';
+import {
+  collectMarkdownLinkReferenceRanges,
+  collectMarkdownLinkReferences,
+  normalizeMarkdownLinkReferenceLabel
+} from './markdownLinkReferences';
 
 describe('markdownLinkReferences', () => {
   it('collects parser-backed link reference definitions', () => {
@@ -11,5 +15,11 @@ describe('markdownLinkReferences', () => {
 
   it('normalizes labels case-insensitively with collapsed whitespace', () => {
     expect(normalizeMarkdownLinkReferenceLabel('[ A   Ref ]')).toBe('a ref');
+  });
+
+  it('collects link reference definition ranges for preview hiding', () => {
+    expect(collectMarkdownLinkReferenceRanges('Text\n\n[ref]: https://example.com')).toEqual([
+      { from: 6, lineFrom: 6, to: 32 }
+    ]);
   });
 });

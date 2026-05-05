@@ -7,7 +7,7 @@ function parseAssetUrl(assetUrl: string) {
   return match?.[1] ?? null;
 }
 
-describe('anchorClipboardExport', () => {
+describe('anchorClipboardExport image HTML', () => {
   it('keeps internal markdown and exports attachment paths for external paste', () => {
     const payload = createClipboardExportPayload({
       assetsDir: '/Users/tester/Documents/Foliole/Assets',
@@ -25,6 +25,38 @@ describe('anchorClipboardExport', () => {
     });
   });
 
+  it('exports parser-backed asset image targets while preserving titles', () => {
+    const payload = createClipboardExportPayload({
+      assetsDir: '/Users/tester/Documents/Foliole/Assets',
+      externalTextBase: '![Cover](<asset://hash-1.png> "Title")',
+      internalText: '![Cover](<asset://hash-1.png> "Title")',
+      parseAssetUrl
+    });
+
+    expect(payload?.externalText).toBe(
+      '![Cover](file:///Users/tester/Documents/Foliole/Assets/hash-1.png "Title")'
+    );
+    expect(payload?.externalHtml).toBe(
+      '<img alt="Cover" src="file:///Users/tester/Documents/Foliole/Assets/hash-1.png">'
+    );
+  });
+
+  it('renders parser-backed image targets with titles and nested parentheses for external HTML', () => {
+    const payload = createClipboardExportPayload({
+      assetsDir: null,
+      externalTextBase: '![Cover](<https://example.com/gallery/(cover).png> "Title")',
+      internalText: '![Cover](<https://example.com/gallery/(cover).png> "Title")',
+      parseAssetUrl
+    });
+
+    expect(payload?.externalHtml).toBe(
+      '<img alt="Cover" src="https://example.com/gallery/(cover).png">'
+    );
+  });
+
+});
+
+describe('anchorClipboardExport anchor payload', () => {
   it('prefers the expanded markdown selection for external export only', () => {
     const payload = createClipboardExportPayload({
       assetsDir: null,

@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
+import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { extractFrontmatterEntries, projectMarkdownFrontmatter, resolveFrontmatterBounds } from './markdownFrontmatterProjection';
 
+function collectNodeNames(text: string) {
+  const names: string[] = [];
+  const cursor = folioleMarkdownParser.parse(text).cursor();
+  do {
+    names.push(cursor.name);
+  } while (cursor.next());
+  return names;
+}
+
 describe('markdownFrontmatterProjection', () => {
+  it('exposes frontmatter as an OB-like parser extension node', () => {
+    const names = collectNodeNames('---\nauthor: Jane\n---\n# Title');
+
+    expect(names).toContain('Frontmatter');
+    expect(names).toContain('FrontmatterDelimiter');
+    expect(names).toContain('FrontmatterContent');
+  });
+
   it('detects a top-level frontmatter block delimited by dashes', () => {
     expect(resolveFrontmatterBounds('---\nauthor: Jane\n---\n# Title')).toEqual({
       startLine: 1,

@@ -5,6 +5,12 @@ type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export type MarkdownLinkReferenceMap = ReadonlyMap<string, string>;
 
+export interface MarkdownLinkReferenceRange {
+  from: number;
+  lineFrom: number;
+  to: number;
+}
+
 function collectChildNode(node: MarkdownSyntaxNode, name: string) {
   for (let child = node.firstChild; child; child = child.nextSibling) {
     if (child.name === name) return child;
@@ -25,6 +31,29 @@ export function normalizeMarkdownLinkReferenceLabel(label: string) {
 function normalizeReferenceUrl(rawUrl: string) {
   const trimmed = rawUrl.trim();
   return trimmed.startsWith('<') && trimmed.endsWith('>') ? trimmed.slice(1, -1).trim() : trimmed;
+}
+
+function findLineFrom(source: string, position: number) {
+  return source.lastIndexOf('\n', Math.max(0, position - 1)) + 1;
+}
+
+function visitLinkReferenceRanges(
+  node: MarkdownSyntaxNode,
+  source: string,
+  ranges: MarkdownLinkReferenceRange[]
+) {
+  if (node.name === 'LinkReference') {
+    ranges.push({
+      from: node.from,
+      lineFrom: findLineFrom(source, node.from),
+      to: node.to
+    });
+    return;
+  }
+
+  for (let child = node.firstChild; child; child = child.nextSibling) {
+    visitLinkReferenceRanges(child, source, ranges);
+  }
 }
 
 function visitLinkReferences(node: MarkdownSyntaxNode, source: string, references: Map<string, string>) {
@@ -51,4 +80,11 @@ export function collectMarkdownLinkReferences(text: string): MarkdownLinkReferen
   const references = new Map<string, string>();
   visitLinkReferences(tree.topNode, text, references);
   return references;
+}
+
+export function collectMarkdownLinkReferenceRanges(text: string): MarkdownLinkReferenceRange[] {
+  const tree: MarkdownSyntaxTree = folioleMarkdownParser.parse(text);
+  const ranges: MarkdownLinkReferenceRange[] = [];
+  visitLinkReferenceRanges(tree.topNode, text, ranges);
+  return ranges.sort((left, right) => left.from - right.from);
 }

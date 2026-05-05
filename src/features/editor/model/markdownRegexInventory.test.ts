@@ -14,32 +14,18 @@ const scannedRoots = [
   'src/features/editor/components'
 ];
 
-const regexTruthBoundary = /const\s+\w*PATTERN\b|RegExp|\.match\(|\.exec\(/;
+const regexTruthBoundary =
+  /const\s+\w*PATTERN\b|RegExp|\.match\(|\.exec\(|\.test\(|\.replace(?:All)?\s*\(\s*\/|\.split\s*\(\s*\//;
 
 const allowedRegexInventory = [
   {
-    path: 'src/features/editor/adapters/localizeRemoteMarkdownImages.ts',
-    line: 'const MARKDOWN_IMAGE_PATTERN = /!\\[([^\\]]*)\\]\\(([^)\\n]+)\\)/g;',
-    owner: 'remote image import cleanup'
-  },
-  {
-    path: 'src/features/editor/adapters/localizeRemoteMarkdownImages.ts',
-    line: 'const match = /^(\\S+)([\\s\\S]*)$/.exec(trimmedTarget);',
-    owner: 'remote image import target split'
-  },
-  {
-    path: 'src/features/editor/adapters/localizeRemoteMarkdownImages.ts',
-    line: 'let match = MARKDOWN_IMAGE_PATTERN.exec(markdown);',
-    owner: 'remote image import cleanup'
-  },
-  {
-    path: 'src/features/editor/adapters/localizeRemoteMarkdownImages.ts',
-    line: 'match = MARKDOWN_IMAGE_PATTERN.exec(markdown);',
-    owner: 'remote image import cleanup'
+    path: 'src/features/editor/adapters/markdownInputAssist.ts',
+    line: 'const CODE_FENCE_PATTERN = /^\\s*`{3,}/;',
+    owner: 'typing assist'
   },
   {
     path: 'src/features/editor/adapters/markdownInputAssist.ts',
-    line: 'const CODE_FENCE_PATTERN = /^\\s*`{3,}/;',
+    line: 'return /^\\s*``$/.test(before) && after.length === 0;',
     owner: 'typing assist'
   },
   {
@@ -53,8 +39,28 @@ const allowedRegexInventory = [
     owner: 'typing assist'
   },
   {
+    path: 'src/features/editor/adapters/markdownInputAssist.ts',
+    line: 'if (!CODE_FENCE_PATTERN.test(line.text)) {',
+    owner: 'typing assist'
+  },
+  {
+    path: 'src/features/editor/adapters/markdownInputAssist.ts',
+    line: 'if (nextLine && CODE_FENCE_PATTERN.test(nextLine.text)) {',
+    owner: 'typing assist'
+  },
+  {
     path: 'src/features/editor/components/MarkdownTablePreviewDialog.tsx',
     line: 'const COLUMN_SPLIT_PATTERN = /[\\s,，、/|;；:：()[\\]{}]+/;',
+    owner: 'column width measurement'
+  },
+  {
+    path: 'src/features/editor/components/MarkdownTablePreviewDialog.tsx',
+    line: 'if (/\\s/.test(character)) return sum + 0.35;',
+    owner: 'column width measurement'
+  },
+  {
+    path: 'src/features/editor/components/MarkdownTablePreviewDialog.tsx',
+    line: 'if (/[A-Za-z0-9]/.test(character)) return sum + 1;',
     owner: 'column width measurement'
   },
   {
@@ -64,8 +70,13 @@ const allowedRegexInventory = [
   },
   {
     path: 'src/features/editor/model/anchorClipboardExport.ts',
-    line: 'const ASSET_URL_PATTERN = /asset:\\/\\/[^\\s<>)\\]]+/g;',
-    owner: 'external clipboard asset URL export'
+    line: 'const withUnderline = withImages.replaceAll(/<u>([\\s\\S]*?)<\\/u>/g, (_match, text: string) => {',
+    owner: 'external clipboard HTML export'
+  },
+  {
+    path: 'src/features/editor/model/anchorClipboardExport.ts',
+    line: '.split(/\\n{2,}/)',
+    owner: 'external clipboard block export'
   },
   {
     path: 'src/features/editor/model/editorMouseGestureSettings.ts',
@@ -73,34 +84,64 @@ const allowedRegexInventory = [
     owner: 'color setting validation'
   },
   {
-    path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
-    line: 'const FRONTMATTER_DELIMITER_PATTERN = /^\\s*---\\s*$/;',
-    owner: 'centralized frontmatter projection'
+    path: 'src/features/editor/adapters/htmlPaste.ts',
+    line: "const baseName = originalName.replace(/\\.[^.]+$/, '').trim();",
+    owner: 'clipboard image filename cleanup'
   },
   {
-    path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
-    line: 'const FRONTMATTER_KEY_VALUE_PATTERN = /^([^:#\\s][^:]*?)(\\s*:\\s*)(.*)$/;',
-    owner: 'centralized frontmatter projection'
+    path: 'src/features/editor/adapters/lineDiffDecorations.ts',
+    line: "return text.replace(/^\\s*#{1,6}\\s*/, '');",
+    owner: 'diff spacer display normalization'
   },
   {
-    path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
-    line: 'const FRONTMATTER_LIST_ITEM_PATTERN = /^(\\s*)-\\s+(.*)$/;',
-    owner: 'centralized frontmatter projection'
+    path: 'src/features/editor/adapters/lineDiffDecorations.ts',
+    line: "return text.replace(/^(\\s*(?:>\\s*)+)/, '');",
+    owner: 'diff spacer display normalization'
   },
   {
-    path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
-    line: 'const keyMatch = line.match(FRONTMATTER_KEY_VALUE_PATTERN);',
-    owner: 'centralized frontmatter projection'
+    path: 'src/features/editor/adapters/lineDiffDecorations.ts',
+    line: "return text.replace(/^(\\s*[-*+]\\s+)/, '• ');",
+    owner: 'diff spacer display normalization'
   },
   {
-    path: 'src/features/editor/model/markdownFrontmatterProjection.ts',
-    line: 'const listMatch = line.match(FRONTMATTER_LIST_ITEM_PATTERN);',
-    owner: 'centralized frontmatter projection'
+    path: 'src/features/editor/adapters/lineDiffDecorations.ts',
+    line: "return text.replace(/^(\\s*)(\\d+)([.)])(\\s+)/, '$2$3 ');",
+    owner: 'diff spacer display normalization'
+  },
+  {
+    path: 'src/features/editor/model/documentOutline.ts',
+    line: "return collectMarkdownHeadingRanges(content.replace(/\\r\\n/g, '\\n')).map((heading) => ({",
+    owner: 'document outline line ending normalization'
+  },
+  {
+    path: 'src/features/editor/model/markdownHeadingProjection.ts',
+    line: "return sliceWithoutRanges(source, from, to, hiddenRanges).trim().replace(/\\s+/g, ' ');",
+    owner: 'heading text whitespace normalization'
   },
   {
     path: 'src/features/editor/model/markdownInlineProjection.ts',
     line: 'const PUNCTUATION_PATTERN = /^[.,;:!?]+$/;',
     owner: 'autolink punctuation trimming'
+  },
+  {
+    path: 'src/features/editor/model/markdownInlineProjection.ts',
+    line: 'if (!rawText || PUNCTUATION_PATTERN.test(rawText)) return null;',
+    owner: 'autolink punctuation trimming'
+  },
+  {
+    path: 'src/features/editor/model/markdownInlineProjection.ts',
+    line: 'if (!rawText || PUNCTUATION_PATTERN.test(rawText)) return null;',
+    owner: 'autolink punctuation trimming'
+  },
+  {
+    path: 'src/features/editor/model/markdownLinkReferences.ts',
+    line: "return value.trim().split(/\\s+/).join(' ');",
+    owner: 'link reference label normalization'
+  },
+  {
+    path: 'src/features/editor/model/markdownOblikeInlineProjection.ts',
+    line: "return note.replace(/\\\\([\\\\}])/g, '$1').trim() || null;",
+    owner: 'OB-like footnote note unescape'
   }
 ];
 

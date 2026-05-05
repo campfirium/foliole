@@ -221,7 +221,7 @@ describe('MarkdownEditor table preview', () => {
     });
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.querySelector('td strong.font-semibold')?.textContent).toBe('Alpha');
+    expect(dialog.querySelector('td .cm-md-strong')?.textContent).toBe('Alpha');
     expect(screen.getByRole('cell', { name: 'Alpha' })).toBeInTheDocument();
   });
 });

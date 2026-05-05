@@ -82,6 +82,24 @@ it('rewrites remote markdown images when the setting is explicitly enabled', asy
   adapter.destroy();
 });
 
+it('detects remote markdown images through the shared image parser before rewriting', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported',
+    attachment_id: 'hash-1',
+    original_name: 'cover.png'
+  });
+  const { adapter } = createAdapter();
+
+  adapter.setNodeId('node-1');
+  adapter.replaceSelection('![Remote](<https://example.com/cover.png> "Title")');
+  await waitForLocalization();
+
+  expect(adapter.getContent()).toBe('![Remote](asset://hash-1.png "Title")');
+  expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/cover.png');
+
+  adapter.destroy();
+});
+
 it('skips remote download when the setting is turned off', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'false');
   const { adapter } = createAdapter();

@@ -457,6 +457,10 @@ resolve_renderer_reload_delivery_path() {
   printf '%s/%s' "$(resolve_renderer_reload_intent_root)" "${DEV_RENDERER_RELOAD_DELIVERY_FILE}"
 }
 
+resolve_renderer_reload_intent_path() {
+  printf '%s/%s' "$(resolve_renderer_reload_intent_root)" ".windows-dev-renderer-reload-intent.json"
+}
+
 resolve_restart_delivery_path() {
   printf '%s/%s' "$(resolve_restart_intent_root)" "${DEV_RESTART_DELIVERY_FILE}"
 }
@@ -492,6 +496,15 @@ wait_for_delivery_nonce() {
 
   echo "[windows-preview] ${label} delivery timed out nonce=${expected_nonce}"
   return 1
+}
+
+cancel_pending_renderer_reload_intent() {
+  local intent_path=""
+  intent_path="$(resolve_renderer_reload_intent_path)"
+  if [ -f "${intent_path}" ]; then
+    rm -f "${intent_path}"
+    echo "[windows-preview] canceled pending renderer reload intent path=${intent_path}"
+  fi
 }
 
 wait_for_running_status() {
@@ -627,6 +640,7 @@ run_renderer_reload_intent() {
     fi
     if ! wait_for_delivery_nonce "$(resolve_renderer_reload_delivery_path)" "${reload_nonce}" "${WINDOWS_PREVIEW_TIMEOUT_SECONDS}" "renderer reload"; then
       echo "[windows-preview] renderer reload delivery missing; falling back to restart-intent"
+      cancel_pending_renderer_reload_intent
       run_restart_intent
       return $?
     fi

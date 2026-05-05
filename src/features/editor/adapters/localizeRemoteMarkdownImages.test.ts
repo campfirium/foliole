@@ -54,4 +54,18 @@ describe('localizeRemoteMarkdownImages', () => {
 
     expect(importRemoteImageAttachment).toHaveBeenCalledTimes(1);
   });
+
+  it('rewrites parser-backed image targets with angle brackets, titles, and nested parentheses', async () => {
+    importRemoteImageAttachment.mockResolvedValue({
+      status: 'imported',
+      attachment_id: 'hash-1',
+      original_name: 'cover.png'
+    });
+
+    await expect(
+      localizeRemoteMarkdownImages('node-1', '![Cover](<https://example.com/gallery/(cover).png> "Title")')
+    ).resolves.toBe('![Cover](asset://hash-1.png "Title")');
+
+    expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/gallery/(cover).png');
+  });
 });

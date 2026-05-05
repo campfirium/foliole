@@ -1,8 +1,8 @@
+import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { projectMarkdownInlineText } from './markdownInlineTextProjection';
 
-const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
-const FRONTMATTER_KEY_VALUE_PATTERN = /^([^:#\s][^:]*?)(\s*:\s*)(.*)$/;
-const FRONTMATTER_LIST_ITEM_PATTERN = /^(\s*)-\s+(.*)$/;
+type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
+type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export interface FrontmatterBounds {
   startLine: number;
@@ -22,7 +22,7 @@ export interface MarkdownFrontmatterProjection {
 }
 
 function isDelimiterLine(text: string) {
-  return FRONTMATTER_DELIMITER_PATTERN.test(text);
+  return text.trim() === '---';
 }
 
 function normalizeValue(value: string) {
@@ -35,19 +35,57 @@ function normalizeValue(value: string) {
     .trim();
 }
 
-function resolveFrontmatterBoundsInLines(lines: readonly string[]): FrontmatterBounds | null {
-  if (lines.length < 3 || !isDelimiterLine(lines[0] ?? '')) return null;
+function isWhitespace(value: string) {
+  return value === ' ' || value === '\t';
+}
 
-  for (let index = 1; index < lines.length; index += 1) {
-    if (isDelimiterLine(lines[index] ?? '')) {
-      return {
-        startLine: 1,
-        endLine: index + 1
-      };
-    }
+function parseFrontmatterKeyValueLine(line: string) {
+  if (!line || line[0] === '#' || line[0] === ':' || isWhitespace(line[0] ?? '')) return null;
+  const separatorIndex = line.indexOf(':');
+  if (separatorIndex <= 0) return null;
+  const key = line.slice(0, separatorIndex).trim();
+  if (!key) return null;
+  return {
+    key,
+    rawValue: line.slice(separatorIndex + 1).trim()
+  };
+}
+
+function parseFrontmatterListItemLine(line: string) {
+  let cursor = 0;
+  while (cursor < line.length && isWhitespace(line[cursor] ?? '')) cursor += 1;
+  if (line[cursor] !== '-') return null;
+  const valueFrom = cursor + 1;
+  if (!isWhitespace(line[valueFrom] ?? '')) return null;
+  return line.slice(valueFrom).trim();
+}
+
+function findFrontmatterNode(node: MarkdownSyntaxNode): MarkdownSyntaxNode | null {
+  if (node.name === 'Frontmatter') return node;
+  for (let child = node.firstChild; child; child = child.nextSibling) {
+    const found = findFrontmatterNode(child);
+    if (found) return found;
   }
-
   return null;
+}
+
+function lineNumberAt(content: string, position: number) {
+  let lineNumber = 1;
+  for (let index = 0; index < position; index += 1) {
+    if (content[index] === '\n') lineNumber += 1;
+  }
+  return lineNumber;
+}
+
+function resolveFrontmatterBoundsFromParser(content: string): FrontmatterBounds | null {
+  const tree = folioleMarkdownParser.parse(content);
+  const frontmatter = findFrontmatterNode(tree.topNode);
+  return frontmatter
+    ? {
+        startLine: lineNumberAt(content, frontmatter.from),
+        endLine: lineNumberAt(content, frontmatter.to)
+      }
+    : null;
 }
 
 function extractFrontmatterEntriesFromLines(lines: readonly string[], bounds: FrontmatterBounds): FrontmatterEntry[] {
@@ -56,19 +94,19 @@ function extractFrontmatterEntriesFromLines(lines: readonly string[], bounds: Fr
 
   for (let index = bounds.startLine; index < bounds.endLine - 1; index += 1) {
     const line = lines[index] ?? '';
-    const keyMatch = line.match(FRONTMATTER_KEY_VALUE_PATTERN);
-    if (keyMatch) {
+    const keyValue = parseFrontmatterKeyValueLine(line);
+    if (keyValue) {
       currentEntry = {
-        key: keyMatch[1]?.trim() ?? '',
-        values: resolveEntryValues(keyMatch[3] ?? '')
+        key: keyValue.key,
+        values: resolveEntryValues(keyValue.rawValue)
       };
       entries.push(currentEntry);
       continue;
     }
 
-    const listMatch = line.match(FRONTMATTER_LIST_ITEM_PATTERN);
-    if (listMatch && currentEntry) {
-      const value = normalizeValue(listMatch[2] ?? '');
+    const listItem = parseFrontmatterListItemLine(line);
+    if (listItem !== null && currentEntry) {
+      const value = normalizeValue(listItem);
       if (value) currentEntry.values.push(value);
     }
   }
@@ -86,18 +124,18 @@ export function buildFrontmatterSummary(entries: readonly FrontmatterEntry[]) {
 }
 
 export function resolveFrontmatterBounds(content: string): FrontmatterBounds | null {
-  return resolveFrontmatterBoundsInLines(content.split('\n'));
+  return resolveFrontmatterBoundsFromParser(content);
 }
 
 export function extractFrontmatterEntries(content: string): FrontmatterEntry[] {
   const lines = content.split('\n');
-  const bounds = resolveFrontmatterBoundsInLines(lines);
+  const bounds = resolveFrontmatterBoundsFromParser(content);
   return bounds ? extractFrontmatterEntriesFromLines(lines, bounds) : [];
 }
 
 export function projectMarkdownFrontmatter(content: string): MarkdownFrontmatterProjection {
   const lines = content.split('\n');
-  const bounds = resolveFrontmatterBoundsInLines(lines);
+  const bounds = resolveFrontmatterBoundsFromParser(content);
   if (!bounds) {
     return {
       bounds: null,

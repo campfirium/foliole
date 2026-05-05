@@ -3,6 +3,28 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 
+function oneColumnPreview(text: string, extras: Record<string, unknown> = {}) {
+  return {
+    table: {
+      active: false,
+      anchorDecorations: [],
+      columnCount: 1,
+      from: 0,
+      rows: [
+        { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
+        {
+          cells: [{ align: null, from: 18, text, to: 18 + text.length }],
+          from: 16,
+          kind: 'body' as const,
+          to: 20 + text.length
+        }
+      ],
+      to: 20 + text.length,
+      ...extras
+    }
+  };
+}
+
 const ALIGNED_TABLE_PREVIEW = {
   table: {
     active: false,
@@ -35,129 +57,18 @@ const ALIGNED_TABLE_PREVIEW = {
   }
 };
 
-const SOURCE_HIGHLIGHT_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      { cells: [{ align: null, from: 18, text: '==Marked==', to: 28 }], from: 16, kind: 'body' as const, to: 30 }
-    ],
-    to: 30
-  }
-};
-
-const EMPHASIS_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      { cells: [{ align: null, from: 18, text: '*Marked*', to: 26 }], from: 16, kind: 'body' as const, to: 28 }
-    ],
-    to: 28
-  }
-};
-
-const INLINE_LINK_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      {
-        cells: [{ align: null, from: 18, text: '[docs](https://example.com)', to: 45 }],
-        from: 16,
-        kind: 'body' as const,
-        to: 47
-      }
-    ],
-    to: 47
-  }
-};
-
-const REFERENCE_LINK_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    linkReferences: new Map([['ref', 'https://example.com']]),
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      {
-        cells: [{ align: null, from: 18, text: '[docs][ref]', to: 29 }],
-        from: 16,
-        kind: 'body' as const,
-        to: 31
-      }
-    ],
-    to: 31
-  }
-};
-
-const WIKI_LINK_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      {
-        cells: [{ align: null, from: 18, text: '[[Folder/Card]]', to: 33 }],
-        from: 16,
-        kind: 'body' as const,
-        to: 35
-      }
-    ],
-    to: 35
-  }
-};
-
-const EMBED_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      {
-        cells: [{ align: null, from: 18, text: '![[Folder/Card|Alias]]', to: 40 }],
-        from: 16,
-        kind: 'body' as const,
-        to: 42
-      }
-    ],
-    to: 42
-  }
-};
-
-const FOOTNOTE_TABLE_PREVIEW = {
-  table: {
-    active: false,
-    anchorDecorations: [],
-    columnCount: 1,
-    from: 0,
-    rows: [
-      { cells: [{ align: null, from: 2, text: 'A', to: 3 }], from: 0, kind: 'header' as const, to: 5 },
-      {
-        cells: [{ align: null, from: 18, text: 'Cell ^[1]{note} text', to: 38 }],
-        from: 16,
-        kind: 'body' as const,
-        to: 40
-      }
-    ],
-    to: 40
-  }
-};
+const SOURCE_HIGHLIGHT_TABLE_PREVIEW = oneColumnPreview('==Marked==');
+const EMPHASIS_TABLE_PREVIEW = oneColumnPreview('*Marked*');
+const STRONG_TABLE_PREVIEW = oneColumnPreview('**Bold**');
+const STRIKETHROUGH_TABLE_PREVIEW = oneColumnPreview('~~Gone~~');
+const INLINE_CODE_TABLE_PREVIEW = oneColumnPreview('`code`');
+const INLINE_LINK_TABLE_PREVIEW = oneColumnPreview('[docs](https://example.com)');
+const REFERENCE_LINK_TABLE_PREVIEW = oneColumnPreview('[docs][ref]', {
+  linkReferences: new Map([['ref', 'https://example.com']])
+});
+const WIKI_LINK_TABLE_PREVIEW = oneColumnPreview('[[Folder/Card]]');
+const EMBED_TABLE_PREVIEW = oneColumnPreview('![[Folder/Card|Alias]]');
+const FOOTNOTE_TABLE_PREVIEW = oneColumnPreview('Cell ^[1]{note} text');
 
 const ANCHORED_TABLE_PREVIEW = {
   table: {
@@ -217,11 +128,38 @@ describe('MarkdownTablePreviewDialog', () => {
     expect(screen.getByRole('cell', { name: 'Marked' })).toBeInTheDocument();
   });
 
+  it('renders GFM strong text with the shared table class inside the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={STRONG_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td .cm-md-strong')?.textContent).toBe('Bold');
+    expect(screen.getByRole('cell', { name: 'Bold' })).toBeInTheDocument();
+  });
+
+  it('renders GFM strikethrough with the shared table class inside the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={STRIKETHROUGH_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td .cm-md-strikethrough')?.textContent).toBe('Gone');
+    expect(screen.getByRole('cell', { name: 'Gone' })).toBeInTheDocument();
+  });
+
+  it('renders GFM inline code with the shared table class inside the full table preview', async () => {
+    render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={INLINE_CODE_TABLE_PREVIEW} />);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('td .cm-md-inline-code')?.textContent).toBe('code');
+    expect(screen.getByRole('cell', { name: 'code' })).toBeInTheDocument();
+  });
+});
+
+describe('MarkdownTablePreviewDialog links and anchors', () => {
   it('renders GFM inline links inside the full table preview', async () => {
     render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={INLINE_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.querySelector('td [data-md-link-url="https://example.com"]')?.textContent).toBe('docs');
+    const link = dialog.querySelector('td .cm-md-link-text[data-md-link-url="https://example.com"]');
+    expect(link?.textContent).toBe('docs');
     expect(screen.getByRole('cell', { name: 'docs' })).toBeInTheDocument();
   });
 
@@ -229,7 +167,8 @@ describe('MarkdownTablePreviewDialog', () => {
     render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={REFERENCE_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.querySelector('td [data-md-link-url="https://example.com"]')?.textContent).toBe('docs');
+    const link = dialog.querySelector('td .cm-md-link-text[data-md-link-url="https://example.com"]');
+    expect(link?.textContent).toBe('docs');
     expect(screen.getByRole('cell', { name: 'docs' })).toBeInTheDocument();
   });
 
@@ -237,7 +176,8 @@ describe('MarkdownTablePreviewDialog', () => {
     render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={WIKI_LINK_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.querySelector('td [data-md-link-node-title="Folder/Card"]')?.textContent).toBe('Folder/Card');
+    const link = dialog.querySelector('td .cm-md-link-text[data-md-link-node-title="Folder/Card"]');
+    expect(link?.textContent).toBe('Folder/Card');
     expect(screen.getByRole('cell', { name: 'Folder/Card' })).toBeInTheDocument();
   });
 
@@ -245,7 +185,8 @@ describe('MarkdownTablePreviewDialog', () => {
     render(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={EMBED_TABLE_PREVIEW} />);
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.querySelector('td [data-md-embed-target="Folder/Card"]')?.textContent).toBe('Alias');
+    const embed = dialog.querySelector('td .cm-md-link-text[data-md-embed-target="Folder/Card"]');
+    expect(embed?.textContent).toBe('Alias');
     expect(screen.getByRole('cell', { name: 'Alias' })).toBeInTheDocument();
   });
 

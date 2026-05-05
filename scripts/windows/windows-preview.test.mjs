@@ -763,6 +763,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         ].join('\n')
       );
 
+      const rendererReloadRoot = path.join(tempRoot, 'missing-renderer-consumer');
       const result = await runScript({
         ACTION_LOG: actionLog,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
@@ -770,7 +771,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
-        WINDOWS_RENDERER_RELOAD_INTENT_ROOT: path.join(tempRoot, 'missing-renderer-consumer'),
+        WINDOWS_RENDERER_RELOAD_INTENT_ROOT: rendererReloadRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx',
         WINDOWS_PREVIEW_TIMEOUT_SECONDS: '1',
         WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '1',
@@ -783,6 +784,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('selected action: renderer-reload-intent');
       expect(result.stdout).toContain('renderer reload delivery timed out nonce=1');
       expect(result.stdout).toContain('renderer reload delivery missing; falling back to restart-intent');
+      expect(result.stdout).toContain('canceled pending renderer reload intent');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('restart markers updated');
       expect(result.stdout).toContain('restart status:');
@@ -790,6 +792,9 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(restartDelivery).toMatchObject({
         nonce: 1,
         target: 'electron-dev'
+      });
+      await expect(readFile(path.join(rendererReloadRoot, RENDERER_RELOAD_INTENT_FILE), 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT'
       });
       expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {

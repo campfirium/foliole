@@ -156,6 +156,7 @@ describe('live markdown table inline rendering', () => {
     const link = host.querySelector('td.cm-md-table-cell [data-md-link-url="https://example.com"]');
     expect(link?.textContent).toBe('docs');
     expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('docs');
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('[ref]:');
 
     adapter.destroy();
   });

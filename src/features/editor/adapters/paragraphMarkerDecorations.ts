@@ -1,11 +1,12 @@
 import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
 
+import { collectImageMatches } from '../model/markdownImageMatches';
+
 import type { EditorSelection } from './EditorAdapter';
 
 function isStandaloneMarkdownImageLine(text: string) {
-  const trimmed = text.trim();
-  return /^!\[[^\]]*]\([^)]+\)$/.test(trimmed);
+  return collectImageMatches(0, text).some((match) => match.display === 'block' && match.from === 0 && match.to === text.length);
 }
 
 function clampSelection(selection: EditorSelection, maxLength: number) {

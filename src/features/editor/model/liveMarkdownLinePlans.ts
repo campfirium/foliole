@@ -50,6 +50,7 @@ interface PreviewLineDecorationPlanArgs {
   lineNumber: number;
   lineClassByFrom?: ReadonlyMap<number, string>;
   lineText: string;
+  linkReferenceLineFroms?: ReadonlySet<number>;
   linkReferences?: MarkdownLinkReferenceMap;
   markdownSyntaxVisible: boolean;
   thematicBreakLineFroms?: ReadonlySet<number>;
@@ -84,6 +85,7 @@ function resolvePreviewLineClass(args: {
   inCodeBlock: boolean;
   isCodeFenceLine: boolean;
   lineClassByFrom?: ReadonlyMap<number, string>;
+  linkReferenceLineFroms?: ReadonlySet<number>;
   lineFrom: number;
   lineNumber: number;
   showSyntaxOnLine: boolean;
@@ -92,6 +94,8 @@ function resolvePreviewLineClass(args: {
     ? 'cm-line-code-fence'
     : args.inCodeBlock
       ? 'cm-line-code'
+      : args.linkReferenceLineFroms?.has(args.lineFrom)
+        ? 'cm-line-link-reference-hidden'
       : args.lineClassByFrom?.get(args.lineFrom) ?? null;
   return args.hideTitleHeading && args.lineNumber === 1 && baseLineClass === 'cm-line-h1'
     ? 'cm-line-title-heading-hidden'
@@ -126,6 +130,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
     inCodeBlock: args.inCodeBlock,
     isCodeFenceLine,
     lineClassByFrom: args.lineClassByFrom,
+    linkReferenceLineFroms: args.linkReferenceLineFroms,
     lineFrom: args.lineFrom,
     lineNumber: args.lineNumber,
     showSyntaxOnLine

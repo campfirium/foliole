@@ -94,6 +94,21 @@ describe('liveMarkdown reference-style preview line plans', () => {
       ]
     });
   });
+
+  it('hides reference definition lines in preview plans', () => {
+    const plan = collectPreviewLineDecorationPlan({
+      hideTitleHeading: false,
+      inCodeBlock: false,
+      isCursorLine: false,
+      lineFrom: 0,
+      lineNumber: 1,
+      lineText: '[ref]: https://example.com',
+      linkReferenceLineFroms: new Set([0]),
+      markdownSyntaxVisible: false
+    });
+
+    expect(plan.lineClass).toBe('cm-line-link-reference-hidden');
+  });
 });
 
 describe('liveMarkdown Obsidian-like preview line plans', () => {

@@ -1,7 +1,8 @@
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences.js';
+
 import type { ClipboardAnchorRange } from './anchorClipboardPayload.js';
 
 const HIGHLIGHT_MARKER_PATTERN = /==([\s\S]+?)==/g;
-const ASSET_URL_PATTERN = /asset:\/\/[^\s<>)\]]+/g;
 
 export interface ClipboardExportPayload {
   externalHtml: string;
@@ -48,13 +49,17 @@ function replaceAssetUrls(
   assetsDir: string | null,
   parseAssetUrl: (assetUrl: string) => string | null
 ) {
-  return value.replace(ASSET_URL_PATTERN, (assetUrl) => buildAssetFileUrl(assetUrl, assetsDir, parseAssetUrl));
+  return replaceMarkdownImageReferences(value, (alt, src, suffix) => {
+    const nextSource = buildAssetFileUrl(src, assetsDir, parseAssetUrl);
+    const suffixText = suffix ? ` ${suffix}` : '';
+    return `![${alt}](${nextSource}${suffixText})`;
+  });
 }
 
 function renderInlineHtml(value: string) {
   const placeholders = new Map<string, string>();
   let nextToken = 0;
-  const withImages = value.replaceAll(/!\[([^\]]*)\]\(([^)\n]+)\)/g, (_match, alt: string, src: string) => {
+  const withImages = replaceMarkdownImageReferences(value, (alt, src) => {
     const token = `__FOLIOLE_IMAGE_${nextToken}__`;
     nextToken += 1;
     placeholders.set(token, `<img alt="${escapeHtml(alt)}" src="${escapeHtml(src)}">`);
@@ -74,6 +79,34 @@ function renderInlineHtml(value: string) {
   return escaped.replace(HIGHLIGHT_MARKER_PATTERN, '<mark>$1</mark>');
 }
 
+function replaceMarkdownImageReferences(
+  value: string,
+  replacement: (alt: string, src: string, suffix: string) => string
+) {
+  const matches = collectMarkdownImageReferences(value);
+  if (matches.length === 0) {
+    return value;
+  }
+
+  let nextValue = '';
+  let cursor = 0;
+  for (const match of matches) {
+    const target = parseMarkdownImageTarget(match.rawTarget);
+    if (!target) {
+      continue;
+    }
+    nextValue += value.slice(cursor, match.start);
+    nextValue += replacement(match.altText, target.destination, target.suffix);
+    cursor = match.end;
+  }
+  return `${nextValue}${value.slice(cursor)}`;
+}
+
+function isStandaloneMarkdownImageBlock(value: string) {
+  const matches = collectMarkdownImageReferences(value);
+  return matches.length === 1 && matches[0]?.start === 0 && matches[0].end === value.length;
+}
+
 function convertExternalMarkdownToHtml(value: string) {
   return value
     .split(/\n{2,}/)
@@ -82,7 +115,7 @@ function convertExternalMarkdownToHtml(value: string) {
       if (!trimmed) {
         return '';
       }
-      if (/^!\[[^\]]*\]\([^)]+\)$/.test(trimmed)) {
+      if (isStandaloneMarkdownImageBlock(trimmed)) {
         return renderInlineHtml(trimmed);
       }
       return `<p>${renderInlineHtml(trimmed).replaceAll('\n', '<br>')}</p>`;

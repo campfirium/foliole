@@ -1,7 +1,6 @@
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { importRemoteImageAttachment } from '../../../shared/platform/remoteImageLocalization';
-
-const MARKDOWN_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
 
 interface MarkdownImageToken {
   alt: string;
@@ -10,31 +9,6 @@ interface MarkdownImageToken {
   sourceUrl: string;
   suffix: string;
   to: number;
-}
-
-function parseRemoteTarget(rawTarget: string) {
-  const trimmedTarget = rawTarget.trim();
-  if (!trimmedTarget) {
-    return null;
-  }
-
-  if (trimmedTarget.startsWith('<')) {
-    const closingIndex = trimmedTarget.indexOf('>');
-    if (closingIndex > 1) {
-      const sourceUrl = trimmedTarget.slice(1, closingIndex);
-      return { sourceUrl, suffix: trimmedTarget.slice(closingIndex + 1) };
-    }
-    return null;
-  }
-
-  const match = /^(\S+)([\s\S]*)$/.exec(trimmedTarget);
-  if (!match?.[1]) {
-    return null;
-  }
-  return {
-    sourceUrl: match[1],
-    suffix: match[2] ?? ''
-  };
 }
 
 function isRemoteImageUrl(value: string) {
@@ -48,29 +22,27 @@ function isRemoteImageUrl(value: string) {
 
 function collectRemoteMarkdownImages(markdown: string) {
   const matches: MarkdownImageToken[] = [];
-  let match = MARKDOWN_IMAGE_PATTERN.exec(markdown);
-  while (match) {
-    const parsedTarget = parseRemoteTarget(match[2] ?? '');
-    if (parsedTarget && isRemoteImageUrl(parsedTarget.sourceUrl)) {
-      const from = match.index;
-      const raw = match[0] ?? '';
+
+  for (const reference of collectMarkdownImageReferences(markdown)) {
+    const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
+    if (parsedTarget && isRemoteImageUrl(parsedTarget.destination)) {
       matches.push({
-        alt: match[1] ?? '',
-        from,
-        raw,
-        sourceUrl: parsedTarget.sourceUrl,
+        alt: reference.altText,
+        from: reference.start,
+        raw: reference.fullMatch,
+        sourceUrl: parsedTarget.destination,
         suffix: parsedTarget.suffix,
-        to: from + raw.length
+        to: reference.end
       });
     }
-    match = MARKDOWN_IMAGE_PATTERN.exec(markdown);
   }
-  MARKDOWN_IMAGE_PATTERN.lastIndex = 0;
+
   return matches;
 }
 
 function buildLocalizedMarkdownImage(token: MarkdownImageToken, attachmentId: string, originalName: string) {
-  return `![${token.alt}](${buildAssetMarkdownUrl(attachmentId, originalName)}${token.suffix})`;
+  const suffix = token.suffix ? ` ${token.suffix}` : '';
+  return `![${token.alt}](${buildAssetMarkdownUrl(attachmentId, originalName)}${suffix})`;
 }
 
 export async function localizeRemoteMarkdownImages(nodeId: string, markdown: string) {

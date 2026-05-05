@@ -15,7 +15,11 @@ import {
   type MarkdownPrefixRange
 } from '../model/markdownBlockProjection';
 import { collectMarkdownCodeFenceProjection } from '../model/markdownCodeFenceProjection';
-import { collectMarkdownLinkReferences } from '../model/markdownLinkReferences';
+import {
+  collectMarkdownLinkReferenceRanges,
+  collectMarkdownLinkReferences,
+  type MarkdownLinkReferenceRange
+} from '../model/markdownLinkReferences';
 import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
 import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
 
@@ -52,6 +56,17 @@ function applyInlinePresentationPlan(ranges: Range<Decoration>[], plan: InlinePr
   for (const range of plan.replaceRanges) addReplace(ranges, range.from, range.to);
 }
 
+function hideLinkReferenceDefinition(
+  ranges: Range<Decoration>[],
+  lineFrom: number,
+  linkReferenceRangeByLineFrom: ReadonlyMap<number, MarkdownLinkReferenceRange>
+) {
+  const linkReferenceRange = linkReferenceRangeByLineFrom.get(lineFrom);
+  if (!linkReferenceRange) return false;
+  addReplace(ranges, linkReferenceRange.from, linkReferenceRange.to);
+  return true;
+}
+
 function collectViewportLines(view: EditorView, startLineNumber: number, endLineNumber: number): ViewportLineInput[] {
   const lines: ViewportLineInput[] = [];
 
@@ -69,6 +84,14 @@ function collectCodeFenceProjection(view: EditorView) {
 
 function collectThematicBreakLineFroms(view: EditorView) {
   return new Set(collectMarkdownThematicBreakRanges(view.state.doc.toString()).map((range) => range.from));
+}
+
+function collectLinkReferenceRangeByLineFrom(view: EditorView) {
+  const rangesByLineFrom = new Map<number, MarkdownLinkReferenceRange>();
+  for (const range of collectMarkdownLinkReferenceRanges(view.state.doc.toString())) {
+    rangesByLineFrom.set(range.lineFrom, range);
+  }
+  return rangesByLineFrom;
 }
 
 function collectLineClassByFrom(view: EditorView) {
@@ -100,6 +123,8 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const endLine = view.state.doc.line(endLineNumber);
   const codeFenceProjection = collectCodeFenceProjection(view);
   const linkReferences = collectMarkdownLinkReferences(view.state.doc.toString());
+  const linkReferenceRangeByLineFrom = collectLinkReferenceRangeByLineFrom(view);
+  const linkReferenceLineFroms = new Set(linkReferenceRangeByLineFrom.keys());
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
   const lineClassByFrom = collectLineClassByFrom(view);
   const prefixRangesByLineFrom = collectPrefixRangesByLineFrom(view);
@@ -117,6 +142,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     cursorLineNumber: context.cursorLineNumber,
     hideTitleHeading: context.hideTitleHeading,
     lineClassByFrom,
+    linkReferenceLineFroms,
     lines: collectViewportLines(view, startLineNumber, endLineNumber),
     linkReferences,
     markdownSyntaxVisible: context.markdownSyntaxVisible,
@@ -131,6 +157,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
       continue;
     }
     if (plan.lineClass) addLine(ranges, lineFrom, plan.lineClass);
+    if (hideLinkReferenceDefinition(ranges, lineFrom, linkReferenceRangeByLineFrom)) continue;
     if (plan.imageVisible) {
       addImageDecorations(ranges, plan.imageMatches, false, context.nodeId, context.imageClozePresentationVersion);
     }

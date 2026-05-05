@@ -151,6 +151,15 @@ describe('live markdown image rendering basics', () => {
     adapter.destroy();
   });
 
+  it('renders reference-style remote markdown images and hides definitions', () => {
+    const { adapter, host } = createAdapterHost('![Remote][img]\n\n[img]: https://example.com/cover.png');
+
+    expectRemoteImageRendered(host, 'https://example.com/cover.png');
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('[img]:');
+
+    adapter.destroy();
+  });
+
   it('keeps remote image urls with parentheses intact', () => {
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/gallery/(cover).png)');
 

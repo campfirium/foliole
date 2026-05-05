@@ -1,6 +1,7 @@
 import { Compartment, EditorState, type StateEffect } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
+import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
@@ -61,6 +62,13 @@ export function createReadOnlyReconfigureEffect(compartment: Compartment, readOn
 
 export function createReadOnlyExtensions(readOnly: boolean) {
   return [EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)];
+}
+
+function hasRemoteMarkdownImage(content: string) {
+  return collectMarkdownImageReferences(content).some((reference) => {
+    const parsed = parseMarkdownImageTarget(reference.rawTarget);
+    return parsed?.destination.startsWith('http://') || parsed?.destination.startsWith('https://');
+  });
 }
 
 export function dispatchLiveMarkdownReconfigure(args: {
@@ -128,7 +136,7 @@ export class RemoteImageLocalizationController {
     }
 
     const currentContent = this.args.getContent();
-    if (!/!\[[^\]]*\]\((?:<)?https?:\/\//i.test(currentContent)) {
+    if (!hasRemoteMarkdownImage(currentContent)) {
       return;
     }
     if (!shouldAutoLocalizeRemoteImages()) {

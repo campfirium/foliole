@@ -4,10 +4,13 @@ type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export interface MarkdownCalloutPrefixRange {
+  fold: 'collapsed' | 'expanded' | null;
   from: number;
   kind: string;
   lineFrom: number;
   markerText: string;
+  titleFrom: number;
+  titleTo: number;
   to: number;
 }
 
@@ -36,18 +39,32 @@ function formatCalloutLabel(kind: string) {
   return `${kind.slice(0, 1).toUpperCase()}${kind.slice(1).toLowerCase()}`;
 }
 
+function resolveCalloutFold(node: MarkdownSyntaxNode, source: string): MarkdownCalloutPrefixRange['fold'] {
+  const foldNode = collectChildNode(node, 'CalloutFold');
+  if (!foldNode) return null;
+  return source.slice(foldNode.from, foldNode.to) === '-' ? 'collapsed' : 'expanded';
+}
+
+function findLineEnd(source: string, position: number) {
+  const newline = source.indexOf('\n', position);
+  return newline < 0 ? source.length : newline;
+}
+
 function createCalloutPrefixRange(node: MarkdownSyntaxNode, source: string): MarkdownCalloutPrefixRange | null {
   const lineFrom = findLineFrom(source, node.from);
   if (!isBlockquotePrefix(source, lineFrom, node.from)) return null;
   const kindNode = collectChildNode(node, 'CalloutKind');
-  const kind = kindNode ? source.slice(kindNode.from, kindNode.to) : 'note';
+  const kind = kindNode ? source.slice(kindNode.from, kindNode.to).toLowerCase() : 'note';
   let to = node.to;
   while (to < source.length && source.charCodeAt(to) === 32) to += 1;
   return {
+    fold: resolveCalloutFold(node, source),
     from: node.from,
     kind,
     lineFrom,
     markerText: formatCalloutLabel(kind),
+    titleFrom: to,
+    titleTo: findLineEnd(source, to),
     to
   };
 }
