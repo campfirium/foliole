@@ -11,6 +11,7 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
 
 describe('App', () => {
   beforeEach(() => {
+    localStorage.clear();
     useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
   });
 

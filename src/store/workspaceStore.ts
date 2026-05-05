@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
@@ -10,6 +11,14 @@ export interface WorkspaceState {
   updateNodeContent: (nodeId: string, content: string) => void;
   createQANodeFromSelection: (parentNodeId: string, promptContent: string, answerContent: string) => string | null;
 }
+
+interface WorkspacePersistedState {
+  activeNodeId: string | null;
+  nodeOrder: string[];
+  nodesById: Record<string, Node>;
+}
+
+export const WORKSPACE_STORAGE_KEY = 'foliole-workspace-v1';
 
 export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {
   return {
@@ -53,69 +62,82 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 
 const initialState = createInitialWorkspaceState();
 
-export const useWorkspaceStore = create<WorkspaceState>((set) => ({
-  ...initialState,
-  setActiveNode: (nodeId) => {
-    set((state) => {
-      if (!state.nodesById[nodeId]) {
-        return state;
-      }
-      return { activeNodeId: nodeId };
-    });
-  },
-  updateNodeContent: (nodeId, content) => {
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (!node) {
-        return state;
-      }
-
-      return {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: {
-            ...node,
-            content,
-            updatedAt: new Date().toISOString()
+export const useWorkspaceStore = create<WorkspaceState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      setActiveNode: (nodeId) => {
+        set((state) => {
+          if (!state.nodesById[nodeId]) {
+            return state;
           }
+          return { activeNodeId: nodeId };
+        });
+      },
+      updateNodeContent: (nodeId, content) => {
+        set((state) => {
+          const node = state.nodesById[nodeId];
+          if (!node) {
+            return state;
+          }
+
+          return {
+            nodesById: {
+              ...state.nodesById,
+              [nodeId]: {
+                ...node,
+                content,
+                updatedAt: new Date().toISOString()
+              }
+            }
+          };
+        });
+      },
+      createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
+        const normalizedPrompt = promptContent.trim();
+        const normalizedAnswer = answerContent.trim();
+        if (!normalizedPrompt || !normalizedAnswer) {
+          return null;
         }
-      };
-    });
-  },
-  createQANodeFromSelection: (parentNodeId, promptContent, answerContent) => {
-    const normalizedPrompt = promptContent.trim();
-    const normalizedAnswer = answerContent.trim();
-    if (!normalizedPrompt || !normalizedAnswer) {
-      return null;
+
+        const childNodeId = `node-${crypto.randomUUID()}`;
+        const timestamp = new Date().toISOString();
+
+        set((state) => {
+          const parentNode = state.nodesById[parentNodeId];
+          if (!parentNode) {
+            return state;
+          }
+
+          return {
+            nodeOrder: [...state.nodeOrder, childNodeId],
+            nodesById: {
+              ...state.nodesById,
+              [childNodeId]: {
+                id: childNodeId,
+                parentNodeId,
+                title: `QA ${state.nodeOrder.length + 1}`,
+                content: normalizedPrompt,
+                reveal: normalizedAnswer,
+                review: createDefaultReviewProfile(timestamp),
+                createdAt: timestamp,
+                updatedAt: timestamp
+              }
+            }
+          };
+        });
+
+        return childNodeId;
+      }
+    }),
+    {
+      name: WORKSPACE_STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state): WorkspacePersistedState => ({
+        activeNodeId: state.activeNodeId,
+        nodeOrder: state.nodeOrder,
+        nodesById: state.nodesById
+      })
     }
-
-    const childNodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
-
-    set((state) => {
-      const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
-        return state;
-      }
-
-      return {
-        nodeOrder: [...state.nodeOrder, childNodeId],
-        nodesById: {
-          ...state.nodesById,
-          [childNodeId]: {
-            id: childNodeId,
-            parentNodeId,
-            title: `QA ${state.nodeOrder.length + 1}`,
-            content: normalizedPrompt,
-            reveal: normalizedAnswer,
-            review: createDefaultReviewProfile(timestamp),
-            createdAt: timestamp,
-            updatedAt: timestamp
-          }
-        }
-      };
-    });
-
-    return childNodeId;
-  }
-}));
+  )
+);
