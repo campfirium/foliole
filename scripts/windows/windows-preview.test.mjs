@@ -1,3 +1,4 @@
+// @vitest-environment node
 /* global process */
 
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -15,7 +16,7 @@ function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, ...env }
+      env: { ...process.env, WINDOWS_PREVIEW_FORCE_SMOKE: '0', ...env }
     });
     let stdout = '';
     let stderr = '';

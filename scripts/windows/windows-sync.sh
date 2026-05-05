@@ -29,6 +29,12 @@ RSYNC_ARGS=(
   --no-group
   --exclude ".git/"
   --exclude ".lab/"
+  --exclude ".tmp/"
+  --exclude ".tmp-*/"
+  --exclude ".tmp-vitest/"
+  --exclude ".tmp-vitest-*/"
+  --exclude ".tmp-npm/"
+  --exclude ".windows-native-boot-ready.json"
   --exclude "ref/"
   --exclude "src-tauri/"
   --exclude "node_modules/"

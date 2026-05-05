@@ -12,6 +12,7 @@
     "windows:deliver:restart": "WINDOWS_RESTART_CLIENT_MODE=always bash scripts/windows/windows-deliver.sh",
     "windows:deliver:full": "bash scripts/windows/windows-deliver-full.sh",
     "windows:preview": "bash scripts/windows/windows-preview.sh",
+    "windows:smoke": "bash scripts/windows/windows-smoke.sh",
     "windows:sync": "bash scripts/windows/windows-sync.sh",
     "windows:restart-client": "WINDOWS_CLIENT_ACTION=restart bash scripts/windows/windows-restart-client.sh",
     "windows:client:status": "WINDOWS_CLIENT_ACTION=status bash scripts/windows/windows-restart-client.sh",

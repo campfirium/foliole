@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_SYNC_SCRIPT="${WINDOWS_SYNC_SCRIPT:-scripts/windows/windows-sync.sh}"
 WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-client.sh}"
+WINDOWS_SMOKE_SCRIPT="${WINDOWS_SMOKE_SCRIPT:-scripts/windows/windows-smoke.sh}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
 WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS:-${WINDOWS_PREVIEW_TIMEOUT_SECONDS}}"
 WINDOWS_PREVIEW_TIMEOUT_START_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_START_SECONDS:-180}"
@@ -192,6 +193,65 @@ ensure_windows_client_running() {
   return 1
 }
 
+requires_windows_smoke() {
+  local changed_files="$1"
+  if [ -n "${WINDOWS_PREVIEW_FORCE_SMOKE:-}" ]; then
+    [ "${WINDOWS_PREVIEW_FORCE_SMOKE}" != "0" ]
+    return
+  fi
+  printf '%s\n' "${changed_files}" | grep -qE '^(electron/|src/shared/platform/|src/features/settings/|src/shared/commands/)'
+}
+
+reset_status_probe() {
+  STATUS_PROBE_RAN=0
+  STATUS_PROBE_OUTPUT=""
+  STATUS_PROBE_EXIT=0
+}
+
+prepare_windows_smoke() {
+  if [ "${STATUS_PROBE_RAN}" -eq 0 ]; then
+    probe_windows_client_status
+  fi
+
+  if [ "${STATUS_PROBE_EXIT}" -eq 0 ] && echo "${STATUS_PROBE_OUTPUT}" | grep -qE 'status:\s*RUNNING'; then
+    echo "[windows-preview] windows client: RUNNING; stopping before windows:smoke"
+    set +e
+    smoke_stop_output="$(run_windows_client_action stop)"
+    smoke_stop_exit=$?
+    set -e
+    if [ "${smoke_stop_exit}" -ne 0 ] || ! echo "${smoke_stop_output}" | grep -qE 'status:\s*STOPPED'; then
+      echo "[windows-preview] windows client: failed to stop before windows:smoke"
+      if [ -n "${smoke_stop_output}" ]; then
+        echo "${smoke_stop_output}"
+      fi
+      exit 1
+    fi
+    reset_status_probe
+    return 0
+  fi
+
+  if [ "${STATUS_PROBE_EXIT}" -eq 0 ] && echo "${STATUS_PROBE_OUTPUT}" | grep -qE 'status:\s*STOPPED'; then
+    echo "[windows-preview] windows client: STOPPED; ready for windows:smoke"
+    reset_status_probe
+    return 0
+  fi
+
+  if [ "${STATUS_PROBE_EXIT}" -eq 124 ]; then
+    echo "[windows-preview] windows client: status probe timed out (${WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS}s); aborting before windows:smoke"
+  else
+    echo "[windows-preview] windows client: unknown status; aborting before windows:smoke"
+    if [ -n "${STATUS_PROBE_OUTPUT}" ]; then
+      echo "${STATUS_PROBE_OUTPUT}"
+    fi
+  fi
+  exit 1
+}
+
+run_windows_smoke() {
+  echo "[windows-preview] desktop-sensitive changes detected; running windows:smoke before manual acceptance"
+  WINDOWS_SMOKE_SKIP_SYNC=1 bash "${WINDOWS_SMOKE_SCRIPT}"
+}
+
 echo "[windows-preview] step 1/2: sync to windows mirror"
 bash "${WINDOWS_SYNC_SCRIPT}"
 
@@ -223,6 +283,11 @@ else
     restart_for_electron=1
     restart_reason="runtime behind committed electron changes"
   fi
+fi
+
+if requires_windows_smoke "${changed_files}"; then
+  prepare_windows_smoke
+  run_windows_smoke
 fi
 
 if [ "${restart_for_electron}" -eq 1 ]; then
