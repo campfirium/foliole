@@ -46,6 +46,8 @@ $logPath = Join-Path $LogDir "windows-native-dev-$timestamp.log"
 $stateFile = Join-Path $WindowsWorkDir ".windows-native-dev-state.json"
 $lockHashStateFile = Join-Path $WindowsWorkDir ".windows-native-dev-lock.sha256"
 $bootReadyFile = Join-Path $WindowsWorkDir ".windows-native-boot-ready.json"
+$devUrl = "http://127.0.0.1:4600/"
+$script:LastBootFailureReason = ""
 
 function Write-Log {
   param([string]$Message)
@@ -303,7 +305,8 @@ function Save-StateFile {
   param(
     [string]$WorkDir,
     [int]$LauncherPid,
-    [string]$BootSession
+    [string]$BootSession,
+    [string]$TauriLogPath = ""
   )
 
   $payload = [ordered]@{
@@ -311,6 +314,7 @@ function Save-StateFile {
     boot_session = $BootSession
     started_at = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
     workdir = $WorkDir
+    tauri_log = $TauriLogPath
   }
 
   $payload | ConvertTo-Json | Out-File -FilePath $stateFile -Encoding utf8
@@ -360,15 +364,43 @@ function Launch-NativeDev {
   }
 
   $bootSession = [Guid]::NewGuid().ToString("N")
-  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && set `"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu`" && npm run tauri:dev"
+  $tauriLogTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  $tauriLogPath = Join-Path $LogDir "tauri-dev-$tauriLogTimestamp.log"
+  $launchCommand = "cd /d `"$WorkDir`" && set `"FOLIOLE_WORKDIR=$WorkDir`" && set `"FOLIOLE_BOOT_SESSION=$bootSession`" && npm run tauri:dev >> `"$tauriLogPath`" 2>&1"
   Write-Log ""
   Write-Log "[windows-native-dev] step: launch native tauri dev"
   Write-Log "[windows-native-dev] cmd: $launchCommand"
   Write-Log "[windows-native-dev] boot session: $bootSession"
+  Write-Log "[windows-native-dev] tauri dev log: $tauriLogPath"
   $cmdProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $launchCommand -PassThru
-  Save-StateFile -WorkDir $WorkDir -LauncherPid $cmdProc.Id -BootSession $bootSession
+  Save-StateFile -WorkDir $WorkDir -LauncherPid $cmdProc.Id -BootSession $bootSession -TauriLogPath $tauriLogPath
   Write-Log "[windows-native-dev] launcher pid: $($cmdProc.Id)"
   return $bootSession
+}
+
+function Wait-ForDevUrlReady {
+  param([int]$TimeoutSeconds)
+
+  $script:LastBootFailureReason = ""
+  $maxAttempts = [Math]::Max(1, [Math]::Ceiling(($TimeoutSeconds * 1000) / 250))
+
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    try {
+      $response = Invoke-WebRequest -Uri $devUrl -Method Get -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+      if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+        Write-Log "[windows-native-dev] dev url ready: $devUrl status=$($response.StatusCode)"
+        return $true
+      }
+    } catch {
+      # Keep retrying until timeout.
+    }
+
+    Start-Sleep -Milliseconds 250
+  }
+
+  $script:LastBootFailureReason = "DEV_URL_TIMEOUT"
+  Write-Log "[windows-native-dev] dev url timeout after ${TimeoutSeconds}s: $devUrl"
+  return $false
 }
 
 function Wait-ForFrontendReady {
@@ -401,6 +433,7 @@ function Wait-ForFrontendReady {
       $markerSession = "$($marker.session)".Trim()
       $expectedSession = $BootSession.Trim()
       if ($markerSession -eq $expectedSession -and $marker.stage -eq "app_ready") {
+        $script:LastBootFailureReason = ""
         Write-Log "[windows-native-dev] frontend ready marker detected."
         return $true
       }
@@ -411,8 +444,16 @@ function Wait-ForFrontendReady {
     Start-Sleep -Milliseconds 250
   }
 
+  $script:LastBootFailureReason = "BOOT_MARKER_TIMEOUT"
   Write-Log "[windows-native-dev] frontend ready timeout after ${TimeoutSeconds}s (session=$BootSession)."
   Write-Log "[windows-native-dev] expected marker file: $bootReadyFile"
+  try {
+    $state = Get-Content -Path $stateFile -Raw -ErrorAction Stop | ConvertFrom-Json
+    if ($state.tauri_log -and (Test-Path $state.tauri_log)) {
+      Write-Log "[windows-native-dev] tauri dev log (last 30 lines): $($state.tauri_log)"
+      Get-Content -Path $state.tauri_log -Tail 30 | ForEach-Object { Write-Log "  $_" }
+    }
+  } catch {}
   return $false
 }
 
@@ -423,15 +464,21 @@ function Wait-FrontendReadyWithSingleRetry {
     [int]$TimeoutSeconds
   )
 
-  if (Wait-ForFrontendReady -WorkDir $WorkDir -BootSession $BootSession -TimeoutSeconds $TimeoutSeconds) {
+  if ((Wait-ForDevUrlReady -TimeoutSeconds $TimeoutSeconds) -and
+    (Wait-ForFrontendReady -WorkDir $WorkDir -BootSession $BootSession -TimeoutSeconds $TimeoutSeconds)) {
     return $true
   }
 
-  Write-Log "[windows-native-dev] frontend not ready, retrying launch once."
+  Write-Log "[windows-native-dev] boot readiness check failed (reason=$script:LastBootFailureReason), retrying launch once."
   Stop-NativeDevSession -WorkDir $WorkDir
   $retryBootSession = Launch-NativeDev -WorkDir $WorkDir
   Ensure-AppWindowForeground -WorkDir $WorkDir
-  return (Wait-ForFrontendReady -WorkDir $WorkDir -BootSession $retryBootSession -TimeoutSeconds $TimeoutSeconds)
+  if ((Wait-ForDevUrlReady -TimeoutSeconds $TimeoutSeconds) -and
+    (Wait-ForFrontendReady -WorkDir $WorkDir -BootSession $retryBootSession -TimeoutSeconds $TimeoutSeconds)) {
+    return $true
+  }
+
+  return $false
 }
 
 function Ensure-AppWindowForeground {
@@ -532,6 +579,7 @@ if ($Action -eq "apply") {
     Write-Log "[windows-native-dev] apply mode fallback: app not running, start now."
     $applyBootSession = Launch-NativeDev -WorkDir $WindowsWorkDir
     if (-not (Wait-FrontendReadyWithSingleRetry -WorkDir $WindowsWorkDir -BootSession $applyBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
+      Write-Log "[windows-native-dev] boot failure reason: $script:LastBootFailureReason"
       Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
       Write-Log "[windows-native-dev] log file: $logPath"
       exit 11
@@ -550,6 +598,7 @@ if ($Action -eq "restart") {
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
   if (-not (Wait-FrontendReadyWithSingleRetry -WorkDir $WindowsWorkDir -BootSession $restartBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
     Show-Status -WorkDir $WindowsWorkDir
+    Write-Log "[windows-native-dev] boot failure reason: $script:LastBootFailureReason"
     Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
     Write-Log "[windows-native-dev] log file: $logPath"
     exit 11
@@ -565,6 +614,7 @@ if ($Action -eq "start") {
   Ensure-AppWindowForeground -WorkDir $WindowsWorkDir
   if (-not (Wait-FrontendReadyWithSingleRetry -WorkDir $WindowsWorkDir -BootSession $startBootSession -TimeoutSeconds $BootReadyTimeoutSec)) {
     Show-Status -WorkDir $WindowsWorkDir
+    Write-Log "[windows-native-dev] boot failure reason: $script:LastBootFailureReason"
     Write-Log "[windows-native-dev] status: BOOT_TIMEOUT"
     Write-Log "[windows-native-dev] log file: $logPath"
     exit 11
