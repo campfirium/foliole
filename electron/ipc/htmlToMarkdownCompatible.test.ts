@@ -54,6 +54,29 @@ describe('convertHtmlToMarkdownCompatible', () => {
     expect(result.content).toBe('# Chapter One\n\nHello world.');
     expect(result.warnings).toEqual([]);
   });
+
+});
+
+describe('convertHtmlToMarkdownCompatible URL hygiene', () => {
+  it('drops unsafe link and image URL protocols while keeping readable text', () => {
+    const result = convertHtmlToMarkdownCompatible(`
+      <p><a href="javascript:alert(1)">Script link</a></p>
+      <p><a href="file:///tmp/source.md">Local file</a></p>
+      <p><img src="javascript:alert(1)" alt="Bad preview" /></p>
+      <p><img src="file:///tmp/image.png" alt="Local preview" /></p>
+      <p><a href="chapter.xhtml#c1">Chapter link</a></p>
+      <p><img src="https://example.com/image.png" alt="Remote preview" /></p>
+    `);
+
+    expect(result.content).toContain('Script link');
+    expect(result.content).toContain('Local file');
+    expect(result.content).toContain('Bad preview');
+    expect(result.content).toContain('Local preview');
+    expect(result.content).toContain('[Chapter link](chapter.xhtml#c1)');
+    expect(result.content).toContain('![Remote preview](https://example.com/image.png)');
+    expect(result.content).not.toContain('javascript:');
+    expect(result.content).not.toContain('file:///');
+  });
 });
 
 describe('convertHtmlToMarkdownCompatible footnotes', () => {

@@ -2,6 +2,20 @@ import type { DefaultTreeAdapterTypes } from 'parse5';
 
 type HtmlNode = DefaultTreeAdapterTypes.Node;
 type HtmlElement = DefaultTreeAdapterTypes.Element;
+const UNSAFE_MARKDOWN_URL_PROTOCOLS = new Set(['file:', 'javascript:', 'vbscript:']);
+
+export function sanitizeMarkdownUrl(value: string | null) {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+  try {
+    const parsedUrl = new URL(trimmedValue);
+    return UNSAFE_MARKDOWN_URL_PROTOCOLS.has(parsedUrl.protocol) ? null : trimmedValue;
+  } catch {
+    return trimmedValue;
+  }
+}
 
 export const BLOCK_TAGS = new Set([
   'article',
@@ -29,7 +43,7 @@ export const CONTENT_STRIP_TAGS = new Set(['script', 'style']);
 export const EMBEDDED_TAGS = new Set(['audio', 'embed', 'iframe', 'object', 'video']);
 
 export function buildImageMarkdown(node: HtmlElement) {
-  const src = getAttribute(node, 'src');
+  const src = sanitizeMarkdownUrl(getAttribute(node, 'src'));
   const alt = normalizeInline(getAttribute(node, 'alt') ?? '');
   if (!src) return alt;
   return `![${alt}](${src})`;

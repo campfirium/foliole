@@ -1,3 +1,4 @@
+import { normalizeOpenExternalUrl } from '../../../lib/platform/externalUrl';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
@@ -58,14 +59,15 @@ export async function openExternalUrl(target: string) {
   }
 
   const resolvedUrl = resolveExternalUrl(trimmedTarget);
-  if (!resolvedUrl) {
+  const externalUrl = resolvedUrl ? normalizeOpenExternalUrl(resolvedUrl) : null;
+  if (!externalUrl) {
     return;
   }
 
   const runtimeInvoke = getRuntimeInvoke();
   if (runtimeInvoke) {
     try {
-      await runtimeInvoke(NATIVE_COMMANDS.openExternalUrl, { url: resolvedUrl });
+      await runtimeInvoke(NATIVE_COMMANDS.openExternalUrl, { url: externalUrl });
       return;
     } catch (error) {
       logRuntimeWarning('native external URL open failed', {
@@ -73,13 +75,13 @@ export async function openExternalUrl(target: string) {
         action: 'open_external_url',
         command: NATIVE_COMMANDS.openExternalUrl,
         fallback: 'window.open',
-        target: resolvedUrl,
+        target: externalUrl,
         error
       });
     }
   }
 
-  window.open(resolvedUrl, '_blank', EXTERNAL_URL_WINDOW_FEATURES);
+  window.open(externalUrl, '_blank', EXTERNAL_URL_WINDOW_FEATURES);
 }
 
 export async function openLocalPath(targetPath: string) {

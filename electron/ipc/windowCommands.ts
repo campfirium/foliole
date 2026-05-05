@@ -1,5 +1,6 @@
 import { BrowserWindow, app, shell } from 'electron';
 
+import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { exportDiagnosticBundle } from '../diagnostics/diagnosticBundle.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
@@ -89,7 +90,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     });
   }
   if (request.command === NATIVE_COMMANDS.openExternalUrl) {
-    const url = asString(args.url, 'url').trim();
+    const url = normalizeOpenExternalUrl(asString(args.url, 'url'));
     if (!url) {
       return null;
     }

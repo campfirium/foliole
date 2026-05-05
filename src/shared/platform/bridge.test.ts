@@ -119,6 +119,18 @@ it('opens external urls through typed native invoke when available', async () =>
   expect(invoke).toHaveBeenCalledWith('open_external_url', { url: 'https://example.com/docs' });
 });
 
+it('does not open external urls with unsafe protocols', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+  window.electronAPI = createMockElectronApi(invoke as ElectronAPI['invoke']);
+
+  await openExternalUrl('javascript:alert(1)');
+  await openExternalUrl('file:///tmp/source.md');
+
+  expect(invoke).not.toHaveBeenCalled();
+  expect(open).not.toHaveBeenCalled();
+});
+
 it('opens local paths through typed native invoke when available', async () => {
   const invoke = vi.fn().mockResolvedValue(null);
   window.electronAPI = createMockElectronApi(invoke as ElectronAPI['invoke']);

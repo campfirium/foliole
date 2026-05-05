@@ -21,6 +21,7 @@ import {
   normalizeMarkdown,
   normalizeTextNode,
   prefixLines,
+  sanitizeMarkdownUrl,
   wrapCode
 } from './htmlToMarkdownCompatibleUtils.js';
 
@@ -177,7 +178,7 @@ function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, 
   if (node.tagName === 'a') {
     const footnoteReference = renderInlineFootnoteReference(node, footnoteDefinitions);
     if (footnoteReference) return footnoteReference;
-    const href = getAttribute(node, 'href');
+    const href = sanitizeMarkdownUrl(getAttribute(node, 'href'));
     const label = normalizeInline(inline) || href || 'link';
     return href ? `[${label}](${href})` : label;
   }
