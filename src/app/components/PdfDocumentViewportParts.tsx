@@ -130,6 +130,7 @@ interface PdfDocumentViewportContentProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   isToolbarVisible: boolean;
   maxPage: number;
+  onClearSearch: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
@@ -226,6 +227,7 @@ function resolveViewportContentBodyProps(
     highlightLocators: props.highlightLocators,
     isToolbarVisible: props.isToolbarVisible,
     maxPage: props.maxPage,
+    onClearSearch: props.onClearSearch,
     onLoadError: props.onLoadError,
     onLoadSuccess: props.onLoadSuccess,
     onTextContentLoad: props.onTextContentLoad,

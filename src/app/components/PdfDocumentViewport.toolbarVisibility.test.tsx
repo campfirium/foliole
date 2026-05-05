@@ -61,6 +61,7 @@ function ToolbarVisibilityHarness() {
       highlightLocators={[]}
       loadError={null}
       maxPage={1}
+      onClearSearch={() => undefined}
       onContextMenu={() => undefined}
       onLoadError={() => undefined}
       onLoadSuccess={() => undefined}

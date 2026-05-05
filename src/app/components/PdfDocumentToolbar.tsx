@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronUp, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronDown, ChevronUp, RotateCw, X, ZoomIn, ZoomOut } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
 
 import { AppIconButton, AppInput } from '../../shared/ui';
 
@@ -15,6 +16,7 @@ interface PdfDocumentToolbarProps {
   onRotateClockwise: () => void;
   onSearchFocusChange: (focused: boolean) => void;
   searchIndexingHint: string | null;
+  onClearSearch: () => void;
   onSearchQueryChange: (value: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -131,7 +133,25 @@ function resolveToolbarPanelClassName(isVisible: boolean) {
   ].join(' ');
 }
 
+function handleSearchInputKeyDown(
+  event: KeyboardEvent<HTMLInputElement>,
+  canNavigateMatches: boolean,
+  onFindNext: () => void,
+  onFindPrevious: () => void
+) {
+  if (event.key !== 'Enter' || !canNavigateMatches) {
+    return;
+  }
+  event.preventDefault();
+  if (event.shiftKey) {
+    onFindPrevious();
+    return;
+  }
+  onFindNext();
+}
+
 function PdfSearchControls({
+  onClearSearch,
   onFindNext,
   onFindPrevious,
   onSearchFocusChange,
@@ -141,26 +161,17 @@ function PdfSearchControls({
   searchStatus
 }: Pick<
   PdfDocumentToolbarProps,
-  'onFindNext' | 'onFindPrevious' | 'onSearchFocusChange' | 'onSearchQueryChange' | 'searchIndexingHint' | 'searchQuery' | 'searchStatus'
+  'onClearSearch' | 'onFindNext' | 'onFindPrevious' | 'onSearchFocusChange' | 'onSearchQueryChange' | 'searchIndexingHint' | 'searchQuery' | 'searchStatus'
 >) {
   const canNavigateMatches = !searchIndexingHint && searchStatus.hasQuery && searchStatus.total > 0;
+  const hasSearchQuery = searchQuery.trim().length > 0;
 
   return (
     <div className="flex items-center gap-1">
       <AppInput
         aria-label="PDF search"
         className="h-8 w-36 border-transparent bg-transparent px-2 text-xs"
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter' || !canNavigateMatches) {
-            return;
-          }
-          event.preventDefault();
-          if (event.shiftKey) {
-            onFindPrevious();
-            return;
-          }
-          onFindNext();
-        }}
+        onKeyDown={(event) => handleSearchInputKeyDown(event, canNavigateMatches, onFindNext, onFindPrevious)}
         onChange={(event) => onSearchQueryChange(event.target.value)}
         onBlur={() => onSearchFocusChange(false)}
         onFocus={() => onSearchFocusChange(true)}
@@ -182,6 +193,13 @@ function PdfSearchControls({
         label="Next match"
         onClick={onFindNext}
       />
+      <AppIconButton
+        className="size-8"
+        disabled={!hasSearchQuery}
+        icon={<X aria-hidden="true" size={15} strokeWidth={2.1} />}
+        label="Clear search"
+        onClick={onClearSearch}
+      />
       <p aria-live="polite" className="min-w-16 text-center text-xs text-foreground/70" data-testid="pdf-search-status">
         {resolveSearchStatusLabel(searchStatus, searchIndexingHint)}
       </p>
@@ -192,6 +210,7 @@ function PdfSearchControls({
 export function PdfDocumentToolbar({
   isVisible,
   maxPage,
+  onClearSearch,
   onFindNext,
   onFindPrevious,
   onNextPage,
@@ -231,6 +250,7 @@ export function PdfDocumentToolbar({
         />
         <div className="h-5 w-px bg-border/30" />
         <PdfSearchControls
+          onClearSearch={onClearSearch}
           onFindNext={onFindNext}
           onFindPrevious={onFindPrevious}
           onSearchFocusChange={onSearchFocusChange}

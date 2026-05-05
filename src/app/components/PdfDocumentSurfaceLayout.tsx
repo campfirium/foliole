@@ -47,6 +47,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       highlightLocators={props.highlightLocators}
       loadError={props.loadError}
       maxPage={props.maxPage}
+      onClearSearch={() => props.setSearchQuery('')}
       onContextMenu={props.handleContextMenu}
       onLoadError={(message) => props.reportLoadError(message)}
       onLoadSuccess={(numPages) => props.reportLoadSuccess(numPages)}

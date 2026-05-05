@@ -11,6 +11,7 @@ interface PdfDocumentViewportContentBodyProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   isToolbarVisible: boolean;
   maxPage: number;
+  onClearSearch: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
@@ -50,6 +51,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
       <PdfViewportToolbar
         isVisible={props.isToolbarVisible}
         maxPage={props.maxPage}
+        onClearSearch={props.onClearSearch}
         onNextPage={props.onNextPage}
         onPageChange={props.onPageChange}
         onPreviousPage={props.onPreviousPage}

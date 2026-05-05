@@ -11,6 +11,7 @@ const PDF_PAGE_MIN = 1;
 interface PdfViewportToolbarProps {
   isVisible: boolean;
   maxPage: number;
+  onClearSearch: () => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
   onPreviousPage: () => void;
@@ -33,6 +34,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
     <PdfDocumentToolbar
       isVisible={props.isVisible}
       maxPage={props.maxPage}
+      onClearSearch={props.onClearSearch}
       onFindNext={() => props.onSearchRequest('next')}
       onFindPrevious={() => props.onSearchRequest('previous')}
       onNextPage={props.onNextPage}

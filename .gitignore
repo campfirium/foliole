@@ -18,3 +18,4 @@ src-tauri/
 .tmp-vitest-*/
 .windows-native-boot-ready.json
 .windows-native-bridge-ready.json
+.codex

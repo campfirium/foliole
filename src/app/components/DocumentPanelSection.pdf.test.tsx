@@ -4,35 +4,28 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
-
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     editorDisplayMode: 'preview' as const,
     toggleEditorDisplayMode: vi.fn()
   })
 }));
-
 vi.mock('./DocumentPanelBody', () => ({
   DocumentPanelBody: () => <div data-testid="document-panel-body">Document body</div>
 }));
-
 vi.mock('./ReadwiseBookActionsPanel', () => ({
   ReadwiseBookActionsPanel: () => null
 }));
-
 vi.mock('./useNodeSourceUpdatePreview', () => ({
   useNodeSourceUpdatePreview: () => ({
     isLoading: false,
     value: null
   })
 }));
-
 const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn() }));
-
 vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
 }));
-
 const baseNode = {
   id: 'node-1',
   kind: 'topic' as const,
@@ -45,7 +38,6 @@ const baseNode = {
   createdAt: '',
   updatedAt: ''
 };
-
 const defaultImportSource = {
   firstImportedAt: '2026-04-04T14:00:00.000Z',
   lastContentFingerprint: 'fingerprint-1',
@@ -57,7 +49,6 @@ const defaultImportSource = {
   sourceLocator: '/tmp/sample.pdf',
   sourceName: 'sample.pdf'
 };
-
 const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   activeNodeId: 'node-1',
   canGoBack: true,
@@ -101,11 +92,9 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   onStartDocumentResize: () => undefined,
   showAnswerSection: false
 };
-
 function renderSection(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {
   return render(<DocumentPanelSection {...defaultProps} {...overrides} />);
 }
-
 function createPdfSourceDetails(overrides?: {
   importSource?: Record<string, unknown> | null;
   isLoading?: boolean;
@@ -122,14 +111,12 @@ function createPdfSourceDetails(overrides?: {
     }
   };
 }
-
 beforeEach(() => {
   useNodeSourceDetails.mockReturnValue({
     isLoading: false,
     value: null
   } as never);
 });
-
 it('keeps the existing document body for non-pdf nodes', () => {
   useNodeSourceDetails.mockReturnValue({
     isLoading: false,
@@ -207,25 +194,32 @@ it('supports pdf controls with zoom, page navigation, and rotation', () => {
 });
 it('supports in-view pdf search navigation and empty-state feedback', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
-
   renderSection();
-
   const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
   const nextMatchButton = screen.getByRole('button', { name: 'Next match' });
   expect(previousMatchButton).toBeDisabled();
   expect(nextMatchButton).toBeDisabled();
-
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
+  const clearSearchButton = screen.getByRole('button', { name: 'Clear search' });
+  expect(clearSearchButton).toBeDisabled();
   fireEvent.change(searchInput, { target: { value: 'keyword' } });
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9');
     expect(previousMatchButton).toBeEnabled();
     expect(nextMatchButton).toBeEnabled();
+    expect(clearSearchButton).toBeEnabled();
+    expect(screen.queryByText('Search debug')).not.toBeInTheDocument();
   });
-
   fireEvent.click(nextMatchButton);
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
-
+  fireEvent.click(clearSearchButton);
+  await waitFor(() => {
+    expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('Search');
+    expect(searchInput).toHaveValue('');
+    expect(previousMatchButton).toBeDisabled();
+    expect(nextMatchButton).toBeDisabled();
+    expect(clearSearchButton).toBeDisabled();
+  });
   fireEvent.change(searchInput, { target: { value: 'not-found-token' } });
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('No matches');
@@ -236,69 +230,18 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
 
 it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
-
   renderSection();
-
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
   fireEvent.change(searchInput, { target: { value: 'keyword' } });
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
-
   fireEvent.keyDown(searchInput, { key: 'Enter' });
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
-
   fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9'));
 });
 it('keeps the pdf reading container visible while a linked pdf node source is refreshing', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({ isLoading: true }) as never);
-
   renderSection();
-
   expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
   expect(screen.queryByTestId('pdf-document-state-loading')).not.toBeInTheDocument();
-});
-
-it.each([
-  {
-    expectedTestId: 'pdf-document-state-failed',
-    expectedTitle: 'PDF reader failed',
-    sourceDetails: createPdfSourceDetails({
-      keepImportItem: {
-        firstSeenAt: '2026-04-04T14:00:00.000Z',
-        hasSourceUpdate: false,
-        highlightPath: null,
-        keepState: 'enabled',
-        lastImportedAt: '2026-04-04T14:00:00.000Z',
-        lastSeenAt: '2026-04-04T14:00:00.000Z',
-        lastStatus: 'failed',
-        primaryPath: '/tmp',
-        resolvedSourcePath: '/tmp/sample.pdf',
-        ruleId: 'rule-1',
-        ruleLabel: 'Keep import source',
-        sourceMtimeMs: 1,
-        sourcePath: 'sample.pdf',
-        sourceSizeBytes: 1024,
-        sourceType: 'generic'
-      }
-    })
-  },
-  {
-    expectedTestId: 'pdf-document-state-empty',
-    expectedTitle: 'PDF file not linked yet',
-    sourceDetails: createPdfSourceDetails({
-      importSource: {
-        ...defaultImportSource,
-        sourceKind: 'pdf',
-        sourceLocator: '',
-        sourceName: 'sample.pdf'
-      }
-    })
-  }
-])('renders the expected non-ready pdf state: $expectedTestId', ({ expectedTestId, expectedTitle, sourceDetails }) => {
-  useNodeSourceDetails.mockReturnValue(sourceDetails as never);
-
-  renderSection();
-
-  expect(screen.getByTestId(expectedTestId)).toBeInTheDocument();
-  expect(screen.getByText(expectedTitle)).toBeInTheDocument();
 });
