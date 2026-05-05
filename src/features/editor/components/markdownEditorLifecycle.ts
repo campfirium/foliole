@@ -43,7 +43,7 @@ function useEditorContentSync(
   value: string,
   lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (nodeId) {
       markEditorContentSyncStarted(nodeId, `content:${value.length}`);
     }

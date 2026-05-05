@@ -262,8 +262,8 @@ it('loads selected node content into editor', async () => {
 
   expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');
   fireEvent.click(screen.getByRole('treeitem', { name: 'QA 2' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
     expect(screen.getByTestId('editor-value')).toHaveValue('Prompt [...]');
     expect(screen.getByTestId('answer-editor-value')).toHaveValue('Answer');
   });

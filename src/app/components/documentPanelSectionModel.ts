@@ -1,10 +1,10 @@
 import type { CSSProperties } from 'react';
 
-import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
 
+import { hasCachedMarkdownImageReference } from './documentPanelImageReferenceCache';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 
 function resolveInboxEmptyState(activeNode: Node | undefined) {
@@ -27,10 +27,10 @@ function getDocumentPanelState(
   const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
   const shouldCheckItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
   const hasPromptImage = shouldCheckItemImages
-    ? Boolean(activeNode?.content && collectMarkdownImageReferences(activeNode.content).length > 0)
+    ? Boolean(activeNode?.content && hasCachedMarkdownImageReference(activeNode.content))
     : false;
   const hasAnswerImage = shouldCheckItemImages
-    ? Boolean(activeNode?.reveal && collectMarkdownImageReferences(activeNode.reveal).length > 0)
+    ? Boolean(activeNode?.reveal && hasCachedMarkdownImageReference(activeNode.reveal))
     : false;
   const shouldFitItemImages = shouldCheckItemImages && (hasPromptImage || hasAnswerImage);
 

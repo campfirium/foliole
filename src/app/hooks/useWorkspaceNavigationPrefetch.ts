@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import {
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted,
@@ -10,9 +11,11 @@ import {
   markNodeSelectionRequested
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
-import { ensureWorkspaceNodeDocumentReady, openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
+import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+import { useBreadcrumbSelectionAction, usePreparedOpenNodeAction } from './usePreparedNodeSelectionActions';
 
 export interface PreparedNavigationDependencies {
   activeNodeContent: string | null;
@@ -39,32 +42,15 @@ function useNavigationAction(
 ) {
   return useCallback(() => {
     const targetNodeId = resolveTargetNodeId();
-    const run = async () => {
-      if (targetNodeId) {
-        markRequested(targetNodeId);
-        await ensureNodeReady(targetNodeId);
-      }
-      beforeNavigate();
-      finalize(action());
-    };
-    void run();
+    if (targetNodeId) {
+      markRequested(targetNodeId);
+    }
+    beforeNavigate();
+    finalize(action());
+    if (targetNodeId) {
+      void ensureNodeReady(targetNodeId);
+    }
   }, [action, beforeNavigate, ensureNodeReady, finalize, markRequested, resolveTargetNodeId]);
-}
-
-function usePreparedSelectNodeAction(
-  beforeNavigate: () => void,
-  finalize: (result: NodeNavigationResult | null) => void,
-  markRequested: (nodeId: string) => void,
-  openPreparedNode: (nodeId: string) => Promise<NodeNavigationResult | null>
-) {
-  return useCallback(
-    async (nodeId: string) => {
-      markRequested(nodeId);
-      beforeNavigate();
-      finalize(await openPreparedNode(nodeId));
-    },
-    [beforeNavigate, finalize, markRequested, openPreparedNode]
-  );
 }
 
 function useSelectNodeAction(
@@ -72,16 +58,23 @@ function useSelectNodeAction(
   beforeNavigate: () => void,
   finalize: (result: NodeNavigationResult | null) => void,
   markRequested: (nodeId: string) => void,
-  ensureNodeReady: (nodeId: string) => Promise<void>
+  ensureNodeReady: (nodeId: string) => Promise<void>,
+  openPreparedNode: (nodeId: string, focusAnchor?: NodeNavigationResult['focusAnchor']) => Promise<void>
 ) {
   return useCallback(
     async (nodeId: string) => {
+      const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
+      if (targetNode && !isNodeDocumentLoaded(targetNode) && getRuntimeInvoke()) {
+        await openPreparedNode(nodeId);
+        return;
+      }
+
       markRequested(nodeId);
-      await ensureNodeReady(nodeId);
       beforeNavigate();
       finalize(action(nodeId));
+      void ensureNodeReady(nodeId);
     },
-    [action, beforeNavigate, ensureNodeReady, finalize, markRequested]
+    [action, beforeNavigate, ensureNodeReady, finalize, markRequested, openPreparedNode]
   );
 }
 
@@ -140,25 +133,6 @@ function useNodeDocumentPrefetch() {
   }, []);
 }
 
-function usePreparedNodeOpen() {
-  return useCallback(
-    async (nodeId: string) =>
-      openWorkspaceNodeWithPreparedDocument(nodeId, {
-        keepWarm: true,
-        onDocumentMerged: (document) => {
-          markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
-        },
-        onLoadResolved: () => {
-          markNodeDocumentLoadResolved(nodeId);
-        },
-        onLoadStarted: () => {
-          markNodeDocumentLoadStarted(nodeId);
-        }
-      }),
-    []
-  );
-}
-
 function useFinalizeNavigation(
   closeContextMenu: () => void,
   applyNavigationResult: (result: NodeNavigationResult | null) => void
@@ -175,24 +149,35 @@ function useFinalizeNavigation(
 export function usePreparedNavigationHandlers(args: PreparedNavigationDependencies) {
   const markSelectionRequested = useSelectionRequestedMarker(args.nodesById);
   const ensureNodeReady = useNodeDocumentPrefetch();
-  const openPreparedNode = usePreparedNodeOpen();
   const finalizeNavigation = useFinalizeNavigation(args.closeContextMenu, args.applyNavigationResult);
+  const openPreparedNode = usePreparedOpenNodeAction(
+    args.saveActiveNodeView,
+    finalizeNavigation,
+    markSelectionRequested
+  );
   const targetResolvers = useNavigationTargetResolvers(args.activeNodeId, args.nodesById);
+  const handleSelectBreadcrumbNode = useBreadcrumbSelectionAction(
+    args.activeNodeId,
+    args.nodesById,
+    args.jumpToAncestorNode,
+    args.openNode,
+    args.saveActiveNodeView,
+    finalizeNavigation,
+    markSelectionRequested,
+    ensureNodeReady,
+    openPreparedNode
+  );
 
   return {
-    handleSelectNode: usePreparedSelectNodeAction(
+    handleSelectNode: useSelectNodeAction(
+      args.openNode,
       args.saveActiveNodeView,
       finalizeNavigation,
       markSelectionRequested,
+      ensureNodeReady,
       openPreparedNode
     ),
-    handleSelectBreadcrumbNode: useSelectNodeAction(
-      (nodeId) => args.jumpToAncestorNode(nodeId) ?? args.openNode(nodeId),
-      args.saveActiveNodeView,
-      finalizeNavigation,
-      markSelectionRequested,
-      ensureNodeReady
-    ),
+    handleSelectBreadcrumbNode,
     handleGoBack: useNavigationAction(
       args.goBack,
       args.saveActiveNodeView,

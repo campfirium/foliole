@@ -46,6 +46,26 @@ beforeEach(() => {
   seedTrimmedNodeState();
 });
 
+function createDeferredDocument() {
+  let resolve: (value: {
+    content: string;
+    hideTitleHeading: boolean;
+    kind: 'topic';
+    reveal: null;
+    virtualFilter: null;
+  }) => void;
+  const promise = new Promise<{
+    content: string;
+    hideTitleHeading: boolean;
+    kind: 'topic';
+    reveal: null;
+    virtualFilter: null;
+  }>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve: resolve! };
+}
+
 it('loads and merges a trimmed document before programmatic open', async () => {
   const invoke = vi.fn().mockResolvedValue({
     content: 'Loaded node 2 body',
@@ -98,6 +118,31 @@ it('reuses a preloaded document without invoking the runtime again', async () =>
   expect(invoke).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
     content: 'Preloaded node 2 body',
+    hasContent: true
+  });
+});
+
+it('skips applying a prepared open when a newer navigation request supersedes it', async () => {
+  const deferred = createDeferredDocument();
+  const invoke = vi.fn().mockReturnValue(deferred.promise);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const pendingOpen = openWorkspaceNodeWithPreparedDocument('node-2', {
+    shouldApply: () => false
+  });
+
+  deferred.resolve({
+    content: 'Loaded node 2 body',
+    hideTitleHeading: false,
+    kind: 'topic',
+    reveal: null,
+    virtualFilter: null
+  });
+
+  await expect(pendingOpen).resolves.toBeNull();
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    content: '',
     hasContent: true
   });
 });

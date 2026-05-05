@@ -165,7 +165,7 @@ async function runSavePositionBeforeNodeSelectionTest() {
     await result.current.handleSelectNode('node-2');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'save-view']);
+  expect(callOrder).toEqual(['selection-requested', 'save-view', 'open-node']);
   expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', navigationTestNodes);
 }
 
@@ -211,7 +211,7 @@ async function runPrefetchBeforeNodeSelectionTest() {
     markNodeDocumentLoadStarted,
     markNodeSelectionRequested
   });
-  const { view } = createPrefetchHookHarness(callOrder);
+  const { openNode, view } = createPrefetchHookHarness(callOrder);
 
   await act(async () => {
     await view.result.current.handleSelectNode('node-2');
@@ -224,6 +224,7 @@ async function runPrefetchBeforeNodeSelectionTest() {
     'load-resolved',
     'load-merged'
   ]);
+  expect(openNode).not.toHaveBeenCalled();
   expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
@@ -251,7 +252,7 @@ describe('useWorkspaceNavigation', () => {
     await runSavePositionBeforeNodeSelectionTest();
   });
 
-  it('prefetches a trimmed document before opening the target node', async () => {
-    await runPrefetchBeforeNodeSelectionTest();
-  });
+it('opens a cold target only after its document is prepared', async () => {
+  await runPrefetchBeforeNodeSelectionTest();
+});
 });

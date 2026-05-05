@@ -109,24 +109,24 @@ async function expectPreparedNavigationResult(args: {
 
   expect(callOrder).toEqual([
     'selection-requested',
+    'save-view',
+    args.actionName,
     'load-started',
     'load-resolved',
-    'load-merged',
-    'save-view',
-    args.actionName
+    'load-merged'
   ]);
   expect(action).toHaveBeenCalledTimes(1);
   expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: args.expectedTargetNodeId }]]);
 }
 
-describe('useWorkspaceNavigation navigation prefetch', () => {
+describe('useWorkspaceNavigation navigation hydration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetWorkspaceNavigationTestState();
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   });
 
-  it('prefetches the previous node before navigating back', async () => {
+  it('navigates back immediately and then hydrates the previous node', async () => {
     await expectPreparedNavigationResult({
       actionName: 'go-back',
       actionResult: { focusAnchor: null, nodeId: 'node-1' },
@@ -135,7 +135,7 @@ describe('useWorkspaceNavigation navigation prefetch', () => {
     });
   });
 
-  it('prefetches the forward target before navigating forward', async () => {
+  it('navigates forward immediately and then hydrates the forward target', async () => {
     await expectPreparedNavigationResult({
       actionName: 'go-forward',
       actionResult: { focusAnchor: null, nodeId: 'node-1' },
@@ -144,7 +144,7 @@ describe('useWorkspaceNavigation navigation prefetch', () => {
     });
   });
 
-  it('prefetches the parent node before navigating upward', async () => {
+  it('navigates upward immediately and then hydrates the parent node', async () => {
     const parentNodes = {
       ...navigationTestNodes,
       'node-1': {

@@ -15,6 +15,7 @@ interface EnsureWorkspaceNodeDocumentReadyOptions {
   onLoadResolved?: (document: WorkspaceNodeDocument) => void;
   onLoadStarted?: () => void;
   preloadedDocument?: WorkspaceNodeDocument | null;
+  shouldApply?: () => boolean;
 }
 
 const pendingNodeDocumentLoadById = new Map<string, Promise<WorkspaceNodeDocument | null>>();
@@ -181,6 +182,9 @@ export async function openWorkspaceNodeWithPreparedDocument(
   const document = shouldSkipNodePreparation(nodeId)
     ? options.preloadedDocument ?? null
     : await loadWorkspaceNodeDocument(nodeId, options);
+  if (options.shouldApply && !options.shouldApply()) {
+    return null;
+  }
   useWorkspaceStore.setState((state) => buildPreparedOpenState(state, nodeId, document));
   if (document) {
     options.onDocumentMerged?.(document);

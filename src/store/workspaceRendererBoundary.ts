@@ -1,7 +1,13 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { hasNodeContent, hasNodeReveal } from '../features/nodes/model/nodeTypes';
+
+import {
+  listDocumentWorksetNodeIds,
+  hasMatchingNodeIds,
+  reconcileFocusedRendererBoundaryNodes
+} from './workspaceRendererBoundaryFocused';
+import { resolveNodeContentState, resolveNodeRevealState } from './workspaceRendererBoundaryState';
 
 interface WorkspaceRendererBoundaryStateLike {
   activeNodeId: string | null;
@@ -21,8 +27,13 @@ export function isNodeDocumentLoaded(node: Node | null | undefined) {
   if (!node) {
     return false;
   }
-  const contentLoaded = !hasNodeContent(node) || node.content.length > 0;
-  const revealLoaded = !hasNodeReveal(node) || node.reveal !== null;
+  const contentState = resolveNodeContentState(node);
+  const revealState = resolveNodeRevealState(node);
+  const contentLoaded =
+    typeof contentState === 'boolean'
+      ? !contentState || node.content.length > 0
+      : node.content.length > 0;
+  const revealLoaded = typeof revealState === 'boolean' ? !revealState || node.reveal !== null : true;
   return contentLoaded && revealLoaded;
 }
 
@@ -60,8 +71,8 @@ function shouldKeepNodeDocument(
 }
 
 export function toRendererBoundaryNode(node: Node, keepDocument: boolean): Node {
-  const nextHasContent = hasNodeContent(node);
-  const nextHasReveal = hasNodeReveal(node);
+  const nextHasContent = resolveNodeContentState(node);
+  const nextHasReveal = resolveNodeRevealState(node);
   if (keepDocument) {
     return {
       ...node,
@@ -129,8 +140,8 @@ function isBoundaryProjectionReusable(currentNode: Node | undefined, sourceNode:
     currentNode.review === sourceNode.review &&
     currentNode.createdAt === sourceNode.createdAt &&
     currentNode.updatedAt === sourceNode.updatedAt &&
-    currentNode.hasContent === hasNodeContent(sourceNode) &&
-    currentNode.hasReveal === hasNodeReveal(sourceNode) &&
+    currentNode.hasContent === resolveNodeContentState(sourceNode) &&
+    currentNode.hasReveal === resolveNodeRevealState(sourceNode) &&
     currentNode.content === (keepDocument ? sourceNode.content : '') &&
     currentNode.reveal === (keepDocument ? sourceNode.reveal : null)
   );
@@ -202,25 +213,6 @@ function reconcileActiveNodeBoundaryChange(
   return changed ? nextNodesById : currentState.nodesById;
 }
 
-function listDocumentWorksetNodeIds(
-  currentNodesById: Record<string, Node>,
-  nextNodesById: Record<string, Node>
-) {
-  return Object.entries(nextNodesById)
-    .filter(([nodeId, nextNode]) => {
-      const currentNode = currentNodesById[nodeId];
-      if (!currentNode) {
-        return nextNode.content.length > 0 || nextNode.reveal !== null;
-      }
-      return (
-        currentNode.content !== nextNode.content ||
-        currentNode.reveal !== nextNode.reveal ||
-        currentNode.hideTitleHeading !== nextNode.hideTitleHeading
-      );
-    })
-    .map(([nodeId]) => nodeId);
-}
-
 export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoundaryStateLike>(
   state: T | Partial<T>,
   currentState: T & { rendererBoundaryKeepNodeIds?: string[] },
@@ -233,14 +225,33 @@ export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoun
   const nextActiveNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
   const nextNodesById = 'nodesById' in state ? state.nodesById ?? currentState.nodesById : currentState.nodesById;
   const nextKeepNodeIds = new Set(keepNodeIds);
+  const documentWorksetNodeIds = listDocumentWorksetNodeIds(currentState.nodesById, nextNodesById);
 
   if (!('activeNodeId' in state)) {
-    for (const nodeId of listDocumentWorksetNodeIds(currentState.nodesById, nextNodesById)) {
+    for (const nodeId of documentWorksetNodeIds) {
       nextKeepNodeIds.add(nodeId);
     }
   }
 
   const reconciledNodesById =
+    'activeNodeId' in state &&
+    'nodesById' in state &&
+    hasMatchingNodeIds(currentState.nodesById, nextNodesById) &&
+    documentWorksetNodeIds.length <= 4
+      ? reconcileFocusedRendererBoundaryNodes(
+          {
+            activeNodeId: nextActiveNodeId,
+            currentKeepNodeIds: new Set(currentState.rendererBoundaryKeepNodeIds ?? []),
+            currentNodesById: currentState.nodesById,
+            documentWorksetNodeIds,
+            isBoundaryProjectionReusable,
+            keepNodeIds: nextKeepNodeIds,
+            nextNodesById,
+            shouldKeepNodeDocument,
+            toRendererBoundaryNode
+          }
+        )
+      :
     !('nodesById' in state) && 'activeNodeId' in state && state.activeNodeId !== currentState.activeNodeId
       ? reconcileActiveNodeBoundaryChange(
           currentState,

@@ -5,7 +5,7 @@ import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/
 import type { UnifiedPushQueueRules } from '../../features/review/model/unifiedPushQueueRules';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
-import { buildReviewQueuePlan } from '../../store/reviewQueuePlanner';
+import { buildCachedReviewQueuePlan } from '../../store/reviewQueuePlannerCached';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
@@ -111,7 +111,7 @@ export function countDueReviewNodes(
   now: string,
   pushQueueRules?: UnifiedPushQueueRules
 ) {
-  return buildReviewQueuePlan({
+  return buildCachedReviewQueuePlan({
     nodeOrder,
     nodesById,
     now,
@@ -155,7 +155,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     queueNodeIds: args.reviewSession.queueNodeIds,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
   });
-  const reviewPanelQueueNodeIds = buildReviewQueuePlan({
+  const reviewPanelQueueNodeIds = buildCachedReviewQueuePlan({
     includeScheduled: true,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,

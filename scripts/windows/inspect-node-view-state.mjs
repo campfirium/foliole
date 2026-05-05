@@ -14,13 +14,14 @@ export function resolveTitle(argv) {
 export async function main() {
   const title = resolveTitle(process.argv);
   const session = await launchDesktopSession();
+  const consoleRef = globalThis.console;
 
   try {
     const snapshot = await session.firstWindow.evaluate(async (targetTitle) => {
-      const api = window.__folioleWorkspaceDebug;
+      const api = globalThis.window?.__folioleWorkspaceDebug;
       const targetNode = api?.listNodes?.().find((node) => String(node.title ?? '').trim() === targetTitle) ?? null;
       const opened = targetNode ? await (api?.openNode?.(targetNode.id) ?? Promise.resolve(false)) : false;
-      await new Promise((resolve) => window.setTimeout(resolve, 1200));
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 1200));
       const activeNodeId = api?.getActiveNodeId?.() ?? null;
 
       return {
@@ -33,7 +34,7 @@ export async function main() {
       };
     }, title);
 
-    console.log(JSON.stringify(snapshot, null, 2));
+    consoleRef.log(JSON.stringify(snapshot, null, 2));
   } finally {
     await session.close();
   }

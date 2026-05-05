@@ -5,7 +5,7 @@ import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade, type ReviewSche
 import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { buildReviewQueuePlan } from './reviewQueuePlanner';
+import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
 import { buildNextReadingProfile, createEmptyReviewSession, resolveReadingPriorityChain } from './workspaceReviewReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -15,7 +15,12 @@ type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state
 type WorkspaceGet = () => WorkspaceState;
 type WorkspaceReviewActions = Pick<WorkspaceState, 'completeReviewItem' | 'deferReviewItem' | 'dismissReviewItem' | 'exitReviewSession' | 'gradeReviewCard' | 'revealReviewAnswer' | 'startReviewSession'>;
 function buildReviewQueue(state: WorkspaceState, now: string): string[] {
-  return buildReviewQueuePlan({ nodeOrder: state.nodeOrder, nodesById: state.nodesById, now, trashedNodeIds: state.trashedNodeIds }).queueNodeIds;
+  return buildCachedReviewQueuePlan({
+    nodeOrder: state.nodeOrder,
+    nodesById: state.nodesById,
+    now,
+    trashedNodeIds: state.trashedNodeIds
+  }).queueNodeIds;
 }
 function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceReviewActions['startReviewSession'] {
   return (now = new Date().toISOString()) => {
