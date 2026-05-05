@@ -56,7 +56,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
   expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });
 
-it('shows folder list sorting instead of editor actions in folder mode', () => {
+it('renders the folder title, count, and toolbar on one header row', () => {
   render(
     <DocumentPanelHeader
       activeNodeId="node-1"
@@ -65,7 +65,8 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
       canGoForward
       canGoParent={false}
       editableNodeId="node-1"
-      folderListToolbar={<button type="button">Date</button>}
+      folderItemCountLabel="22"
+      folderListToolbar={<button type="button">Date saved</button>}
       isFolderListView
       isSourceUpdatePanelOpen={false}
       nodesById={{
@@ -95,8 +96,9 @@ it('shows folder list sorting instead of editor actions in folder mode', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Date' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Inbox' })).not.toBeInTheDocument();
+  expect(screen.getByText('Inbox')).toBeInTheDocument();
+  expect(screen.getByTestId('folder-list-count')).toHaveTextContent('(22)');
+  expect(screen.getByRole('button', { name: 'Date saved' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Document navigation actions')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('More editor options')).not.toBeInTheDocument();
 });

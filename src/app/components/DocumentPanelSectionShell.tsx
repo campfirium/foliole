@@ -1,13 +1,5 @@
-import { useState } from 'react';
-
 import type { EditorSearchDecorations } from '../../features/editor/adapters/EditorAdapter';
-import {
-  DEFAULT_FOLDER_LIST_SORT_DIRECTION,
-  DEFAULT_FOLDER_LIST_SORT_KEY,
-  resolveDefaultFolderListSortDirection,
-  type FolderListSortDirection,
-  type FolderListSortKey
-} from '../../features/nodes/model/folderListOrdering';
+import { type FolderListSortDirection, type FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -17,8 +9,9 @@ import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
-import { FolderListSortControls } from './FolderListSortControls';
+import { FolderListToolbarControls } from './FolderListToolbarControls';
 import type { LinkPanelRecord } from './linkPanelState';
+import { useFolderListPanelControls } from './useFolderListPanelControls';
 
 interface DocumentPanelShellProps {
   backlinks: BacklinkItem[];
@@ -47,6 +40,11 @@ function countFolderItems(props: DocumentPanelSectionProps, isFolderListView: bo
   return props.nodeOrder.filter((nodeId) => props.nodesById[nodeId]?.parentNodeId === props.activeNodeId).length;
 }
 
+function resolveFolderItemCountLabel(props: DocumentPanelSectionProps, isFolderListView: boolean) {
+  const folderItemCount = countFolderItems(props, isFolderListView);
+  return folderItemCount === null ? null : String(folderItemCount);
+}
+
 function renderDocumentPanelChrome(args: {
   backlinks: BacklinkItem[];
   folderItemCountLabel: string | null;
@@ -54,10 +52,12 @@ function renderDocumentPanelChrome(args: {
   folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
+  onChangeSearchQuery: (value: string) => void;
   onPreviewDocumentSelection: DocumentPanelSectionProps['onRevealDocumentSelection'];
   onPreviewTopicSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => void;
   onToggleSourceUpdatePanel: () => void;
   props: DocumentPanelSectionProps;
+  searchQuery: string;
   setFolderListSortDirection: (value: FolderListSortDirection) => void;
   handleFolderListSortKeyChange: (value: FolderListSortKey) => void;
   showSourceUpdateAction: boolean;
@@ -75,10 +75,12 @@ function renderDocumentPanelChrome(args: {
         folderListSortKey: args.folderListSortKey,
         isFolderListView: args.isFolderListView,
         isSourceUpdatePanelOpen: args.isSourceUpdatePanelOpen,
+        onChangeSearchQuery: args.onChangeSearchQuery,
         onChangeSortDirection: args.setFolderListSortDirection,
         onChangeSortKey: args.handleFolderListSortKeyChange,
         onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,
         props: args.props,
+        searchQuery: args.searchQuery,
         showSourceUpdateAction: args.showSourceUpdateAction
       })}
       <DocumentPriorityQuickSetHint
@@ -117,10 +119,12 @@ function renderDocumentPanelHeader(args: {
   folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
+  onChangeSearchQuery: (value: string) => void;
   onChangeSortDirection: (value: FolderListSortDirection) => void;
   onChangeSortKey: (value: FolderListSortKey) => void;
   onToggleSourceUpdatePanel: () => void;
   props: DocumentPanelSectionProps;
+  searchQuery: string;
   showSourceUpdateAction: boolean;
 }) {
   return (
@@ -133,9 +137,11 @@ function renderDocumentPanelHeader(args: {
       editableNodeId={args.props.editableNodeId}
       folderItemCountLabel={args.folderItemCountLabel}
       folderListToolbar={
-        <FolderListSortControls
+        <FolderListToolbarControls
+          onChangeSearchQuery={args.onChangeSearchQuery}
           onChangeSortDirection={args.onChangeSortDirection}
           onChangeSortKey={args.onChangeSortKey}
+          searchQuery={args.searchQuery}
           sortDirection={args.folderListSortDirection}
           sortKey={args.folderListSortKey}
         />
@@ -159,8 +165,10 @@ function renderDocumentPanelHeader(args: {
 
 function renderDocumentPanelContent(args: {
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
+  folderListSearchQuery: string;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSearchQuery: (value: string) => void;
   isFolderListView: boolean;
   linkPanels: LinkPanelRecord[];
   onChangeFolderListSortDirection: (value: FolderListSortDirection) => void;
@@ -177,8 +185,10 @@ function renderDocumentPanelContent(args: {
     <DocumentPanelContent
       activeNodeId={args.props.activeNodeId}
       bodyProps={args.bodyProps}
+      folderListSearchQuery={args.folderListSearchQuery}
       folderListSortDirection={args.folderListSortDirection}
       folderListSortKey={args.folderListSortKey}
+      onChangeFolderListSearchQuery={args.onChangeFolderListSearchQuery}
       onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
       onChangeFolderListSortKey={args.onChangeFolderListSortKey}
       isFolderListView={args.isFolderListView}
@@ -212,17 +222,9 @@ export function DocumentPanelSectionShell({
   props,
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
-  const [folderListSortKey, setFolderListSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
-  const [folderListSortDirection, setFolderListSortDirection] = useState<FolderListSortDirection>(
-    DEFAULT_FOLDER_LIST_SORT_DIRECTION
-  );
-  const handleFolderListSortKeyChange = (nextSortKey: FolderListSortKey) => {
-    setFolderListSortKey(nextSortKey);
-    setFolderListSortDirection(resolveDefaultFolderListSortDirection(nextSortKey));
-  };
-  const folderItemCount = countFolderItems(props, isFolderListView);
-  const folderItemCountLabel =
-    folderItemCount === null ? null : `${folderItemCount} item${folderItemCount === 1 ? '' : 's'}`;
+  const { folderListSearchQuery, folderListSortDirection, folderListSortKey, handleFolderListSortKeyChange, setFolderListSearchQuery, setFolderListSortDirection } =
+    useFolderListPanelControls();
+  const folderItemCountLabel = resolveFolderItemCountLabel(props, isFolderListView);
 
   return (
     <section aria-label="Document panel" className="relative flex h-full min-h-0 flex-1 flex-col bg-bg-elevated text-foreground">
@@ -233,18 +235,22 @@ export function DocumentPanelSectionShell({
         folderListSortKey,
         isFolderListView,
         isSourceUpdatePanelOpen,
+        onChangeSearchQuery: setFolderListSearchQuery,
         onPreviewDocumentSelection,
         onPreviewTopicSearchDecorations,
         onToggleSourceUpdatePanel,
         props,
+        searchQuery: folderListSearchQuery,
         setFolderListSortDirection,
         handleFolderListSortKeyChange,
         showSourceUpdateAction
       })}
       {renderDocumentPanelContent({
         bodyProps,
+        folderListSearchQuery,
         folderListSortDirection,
         folderListSortKey,
+        onChangeFolderListSearchQuery: setFolderListSearchQuery,
         isFolderListView,
         linkPanels,
         onChangeFolderListSortDirection: setFolderListSortDirection,

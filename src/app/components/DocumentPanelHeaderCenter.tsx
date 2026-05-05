@@ -40,19 +40,22 @@ export function DocumentPanelHeaderCenter({
     const folderTitle = activeNode?.title?.trim() || 'Folder';
     return (
       <div className="min-w-0">
-        <div className="mx-auto flex w-full max-w-[var(--document-max-width)] items-baseline gap-2">
-          <h2 className="truncate text-base font-semibold text-foreground" title={folderTitle}>
-            {folderTitle}
-          </h2>
-          {folderItemCountLabel ? (
-            <p
-              aria-label={`Folder result count ${folderItemCountLabel}`}
-              className="shrink-0 text-sm font-medium text-foreground/58"
-              data-testid="folder-list-count"
-            >
-              {folderItemCountLabel}
-            </p>
-          ) : null}
+        <div className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[auto_minmax(0,1fr)] items-center gap-3 max-[900px]:grid-cols-1">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <h2 className="truncate text-base font-semibold text-foreground" title={folderTitle}>
+              {folderTitle}
+            </h2>
+            {folderItemCountLabel ? (
+              <p
+                aria-label={`Folder result count ${folderItemCountLabel}`}
+                className="shrink-0 text-sm font-medium text-foreground/58"
+                data-testid="folder-list-count"
+              >
+                ({folderItemCountLabel})
+              </p>
+            ) : null}
+          </div>
+          {rightSlot ? <div className="min-w-0">{rightSlot}</div> : null}
         </div>
       </div>
     );

@@ -19,8 +19,10 @@ import { useNodeSourceDetails } from './useNodeSourceDetails';
 interface DocumentPanelContentProps {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
+  folderListSearchQuery: string;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSearchQuery: (searchQuery: string) => void;
   onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isFolderListView: boolean;
@@ -200,8 +202,10 @@ function buildDocumentPanelContentBodyArgs(
     activeNode: derived.activeNode,
     activeNodeId: props.activeNodeId,
     bodyProps: props.bodyProps,
+    folderListSearchQuery: props.folderListSearchQuery,
     folderListSortDirection: props.folderListSortDirection,
     folderListSortKey: props.folderListSortKey,
+    onChangeFolderListSearchQuery: props.onChangeFolderListSearchQuery,
     onChangeFolderListSortDirection: props.onChangeFolderListSortDirection,
     onChangeFolderListSortKey: props.onChangeFolderListSortKey,
     isActivePdfCachedVisible: derived.isActivePdfCachedVisible,

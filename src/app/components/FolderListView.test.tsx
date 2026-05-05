@@ -71,7 +71,7 @@ describe('FolderListView content', () => {
 
     expect(screen.getByTestId('folder-list-title-node-1')).toHaveTextContent('Child topic');
     expect(screen.getByRole('heading', { level: 2, name: 'Library root' })).toBeInTheDocument();
-    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('(1)');
     expect(screen.getByRole('button', { name: 'Sort list by Date saved' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-excerpt-node-1')).toHaveTextContent(
@@ -256,6 +256,6 @@ describe('FolderListView interactions', () => {
 
     expect(screen.queryByRole('button', { name: 'Open Alpha note' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Beta note' })).toBeInTheDocument();
-    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1 / 2');
+    expect(screen.getByTestId('folder-list-count')).toHaveTextContent('(1 / 2)');
   });
 });

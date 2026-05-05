@@ -55,8 +55,10 @@ function renderFolderContent(
   documentMaxWidth: number,
   activeNodeId: string,
   folderTitle: string,
+  folderListSearchQuery: string,
   folderListSortDirection: FolderListSortDirection,
   folderListSortKey: FolderListSortKey,
+  onChangeFolderListSearchQuery: (searchQuery: string) => void,
   onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void,
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void,
   nodeOrder: string[],
@@ -75,11 +77,13 @@ function renderFolderContent(
         folderTitle={folderTitle}
         nodeOrder={nodeOrder}
         nodesById={nodesById}
+        onChangeSearchQuery={onChangeFolderListSearchQuery}
         onChangeSortDirection={onChangeFolderListSortDirection}
         onChangeSortKey={onChangeFolderListSortKey}
         onResetLayout={onResetLayout}
         onSelectNode={onSelectNode}
         onStartDocumentResize={onStartDocumentResize}
+        searchQuery={folderListSearchQuery}
         showEmbeddedHeader={false}
         sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}
@@ -175,8 +179,10 @@ export function resolveDocumentPanelContentBody(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   contentAreaRef: RefObject<HTMLDivElement | null>;
+  folderListSearchQuery: string;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
+  onChangeFolderListSearchQuery: (searchQuery: string) => void;
   onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void;
   isActivePdfCachedVisible: boolean;
@@ -237,8 +243,10 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
       args.bodyProps.documentMaxWidth,
       args.activeNodeId,
       args.activeNode?.title ?? 'Folder',
+      args.folderListSearchQuery,
       args.folderListSortDirection,
       args.folderListSortKey,
+      args.onChangeFolderListSearchQuery,
       args.onChangeFolderListSortDirection,
       args.onChangeFolderListSortKey,
       args.nodeOrder,

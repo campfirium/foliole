@@ -18,6 +18,10 @@ function formatItemCount(count: number) {
   return String(count);
 }
 
+function resolveControlledValue<T>(controlledValue: T | undefined, uncontrolledValue: T) {
+  return controlledValue === undefined ? uncontrolledValue : controlledValue;
+}
+
 function filterFolderListNodes(nodes: Node[], searchQuery: string) {
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   if (!normalizedQuery) {
@@ -39,8 +43,10 @@ function filterFolderListNodes(nodes: Node[], searchQuery: string) {
 export function useFolderListViewState(
   listedNodes: Node[],
   nodeViewById: Record<string, { updatedAt?: string | null } | undefined>,
+  controlledSearchQuery: string | undefined,
   controlledSortKey: FolderListSortKey | undefined,
   controlledSortDirection: FolderListSortDirection | undefined,
+  onChangeSearchQuery: ((searchQuery: string) => void) | undefined,
   onChangeSortKey: ((sortKey: FolderListSortKey) => void) | undefined,
   onChangeSortDirection: ((sortDirection: FolderListSortDirection) => void) | undefined,
   defaultSortKey: FolderListSortKey
@@ -49,9 +55,10 @@ export function useFolderListViewState(
   const [uncontrolledSortDirection, setUncontrolledSortDirection] = useState<FolderListSortDirection>(
     DEFAULT_FOLDER_LIST_SORT_DIRECTION
   );
-  const [searchQuery, setSearchQuery] = useState('');
-  const sortKey = controlledSortKey ?? uncontrolledSortKey;
-  const sortDirection = controlledSortDirection ?? uncontrolledSortDirection;
+  const [uncontrolledSearchQuery, setUncontrolledSearchQuery] = useState('');
+  const searchQuery = resolveControlledValue(controlledSearchQuery, uncontrolledSearchQuery);
+  const sortKey = resolveControlledValue(controlledSortKey, uncontrolledSortKey);
+  const sortDirection = resolveControlledValue(controlledSortDirection, uncontrolledSortDirection);
   const childNodes = useMemo(
     () => sortFolderListNodes(listedNodes, sortKey, sortDirection, nodeViewById),
     [listedNodes, nodeViewById, sortDirection, sortKey]
@@ -66,7 +73,12 @@ export function useFolderListViewState(
     searchQuery,
     sortDirection,
     sortKey,
-    setSearchQuery,
+    setSearchQuery: (nextSearchQuery: string) => {
+      if (controlledSearchQuery === undefined) {
+        setUncontrolledSearchQuery(nextSearchQuery);
+      }
+      onChangeSearchQuery?.(nextSearchQuery);
+    },
     updateSortKey: (nextSortKey: FolderListSortKey) => {
       const nextSortDirection = resolveDefaultFolderListSortDirection(nextSortKey);
       if (controlledSortKey === undefined) {

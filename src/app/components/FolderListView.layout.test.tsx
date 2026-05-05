@@ -73,3 +73,23 @@ it('reuses the shared width resize handles when the document width props are pro
   expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
   expect(screen.getByRole('separator', { name: 'Resize document width from right' })).toBeInTheDocument();
 });
+
+it('hides the embedded header when the folder toolbar is rendered elsewhere', () => {
+  render(
+    <FolderListView
+      folderNodeId="folder-1"
+      nodeOrder={['folder-1']}
+      nodesById={{
+        'folder-1': createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' })
+      }}
+      onChangeSortDirection={() => undefined}
+      onChangeSortKey={() => undefined}
+      onSelectNode={() => undefined}
+      showEmbeddedHeader={false}
+    />
+  );
+
+  expect(screen.queryByRole('button', { name: 'Sort list by Date saved' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox', { name: 'Search folder contents' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { level: 2, name: 'Library root' })).not.toBeInTheDocument();
+});

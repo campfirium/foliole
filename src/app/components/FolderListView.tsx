@@ -28,6 +28,7 @@ interface FolderListViewProps {
   nodes?: Node[];
   nodeViewById?: Record<string, NodeViewState | undefined>;
   nodesById: Record<string, Node>;
+  onChangeSearchQuery?: (searchQuery: string) => void;
   onChangeSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey?: (sortKey: FolderListSortKey) => void;
   onResetLayout?: () => void;
@@ -36,6 +37,7 @@ interface FolderListViewProps {
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  searchQuery?: string;
   emptyState?: {
     description: string;
     title: string;
@@ -156,8 +158,10 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   const state = useFolderListViewState(
     listedNodes,
     nodeViewById,
+    props.searchQuery,
     props.sortKey,
     props.sortDirection,
+    props.onChangeSearchQuery,
     props.onChangeSortKey,
     props.onChangeSortDirection,
     DEFAULT_FOLDER_LIST_SORT_KEY
@@ -173,7 +177,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 
 export function FolderListView(props: FolderListViewProps) {
   const { nodeViewById, resolvedEmptyState, resolvedFolderTitle, state } = useResolvedFolderListState(props);
-  const headerMode = props.showEmbeddedHeader === false ? 'search-only' : 'full';
+  const headerMode = props.showEmbeddedHeader === false ? 'hidden' : 'full';
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">

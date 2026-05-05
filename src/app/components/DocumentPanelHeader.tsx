@@ -96,7 +96,7 @@ function renderHeaderActions(args: {
   toggleEditorDisplayMode: () => void;
 }) {
   if (args.isFolderListView) {
-    return args.folderListToolbar ? <div className="shrink-0">{args.folderListToolbar}</div> : null;
+    return null;
   }
 
   return (
@@ -151,17 +151,21 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
         nodesById={args.nodesById}
         onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
         rightSlot={
-          <>
-            <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
-            <DocumentPriorityControl
-              activeNodeId={args.activeNodeId}
-              defaultPriority={args.reviewSchedulerSettings.pushQueue.defaultPriority}
-              editableNodeId={args.editableNodeId}
-              nodesById={args.nodesById}
-              onPriorityChange={args.onNodePriorityChange}
-              shortcutLabel={args.priorityQuickSetShortcutLabel}
-            />
-          </>
+          args.isFolderListView ? (
+            args.folderListToolbar
+          ) : (
+            <>
+              <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
+              <DocumentPriorityControl
+                activeNodeId={args.activeNodeId}
+                defaultPriority={args.reviewSchedulerSettings.pushQueue.defaultPriority}
+                editableNodeId={args.editableNodeId}
+                nodesById={args.nodesById}
+                onPriorityChange={args.onNodePriorityChange}
+                shortcutLabel={args.priorityQuickSetShortcutLabel}
+              />
+            </>
+          )
         }
       />
       <div className="flex min-w-0 items-center justify-end">
