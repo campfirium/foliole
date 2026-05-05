@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
@@ -10,7 +10,6 @@ import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/n
 import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import {
   renderDocumentPanelBodyLayout,
@@ -44,7 +43,6 @@ interface DocumentPanelBodyProps {
     title: string;
   };
   hasAnswerSection: boolean;
-  isDocumentResizing: boolean;
   onAnswerChange: (answer: string) => void;
   onAnswerImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
@@ -62,17 +60,11 @@ interface DocumentPanelBodyProps {
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
-  onResetLayout: () => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   promptEditorDebugId?: string;
   readOnly?: boolean;
   reveal: string;
   sharedBlockImageMaxHeight?: number;
   showDocumentOutline?: boolean;
-  showDocumentResizeHandles?: boolean;
 }
 
 export function DocumentPanelBody({
@@ -80,7 +72,6 @@ export function DocumentPanelBody({
   answerSectionMode = 'fixed',
   promptEditorDebugId = 'prompt-editor',
   showDocumentOutline = true,
-  showDocumentResizeHandles = true,
   ...props
 }: DocumentPanelBodyProps) {
   const {
@@ -107,7 +98,6 @@ export function DocumentPanelBody({
     promptEditorDebugId,
     sharedBlockImageMaxHeight: props.fitBlockImagesToViewport ? sharedBlockImageMaxHeight : undefined,
     showDocumentOutline,
-    showDocumentResizeHandles,
     ...props
   };
 

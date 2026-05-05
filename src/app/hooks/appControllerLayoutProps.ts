@@ -25,7 +25,6 @@ import {
   openExternalLibrarySettings
 } from './settingsOverlayRequest';
 import type { useAppRuntime } from './useAppRuntime';
-import type { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import type { useEditorContextCommands } from './useEditorContextCommands';
 import type { useExternalLibraryView } from './useExternalLibraryView';
 import type { useListResizer } from './useListResizer';
@@ -37,7 +36,6 @@ import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
 export interface BuildControllerLayoutPropsArgs {
   activeNode: Node | undefined;
   canStartStudyMode: boolean;
-  documentResize: ReturnType<typeof useDocumentWidthResizer>;
   editorCtx: ReturnType<typeof useEditorContextCommands>;
   exitStudyMode: () => void;
   isWorkspaceHydrated: boolean;
@@ -73,7 +71,6 @@ export interface BuildControllerLayoutPropsArgs {
     ) => string | null;
     createVirtualNode: () => string;
     createRootNode: (content?: string, kind?: NodeKind) => string;
-    documentMaxWidth: number;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
     completeReviewItem: () => boolean;
@@ -131,9 +128,7 @@ function createLayoutDataArgs(
     canGoParent: args.nav.canGoParent,
     canStartStudyMode: args.canStartStudyMode,
     contextMenu: args.editorCtx.contextMenu,
-    documentMaxWidth: args.ws.documentMaxWidth,
     documentNode: args.runtime.isViewingTrashNode ? args.selectedTrashNode : args.activeNode,
-    documentResize: args.documentResize,
     editorAdapterRef: args.runtime.editorRef,
     ...resolveEditorBindingArgs(args),
     isResizingList: args.listResize.isResizingList,

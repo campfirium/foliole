@@ -21,7 +21,6 @@ function buildDocumentEditorProps(
   return {
     editorNodeId: props.editorNodeId,
     ...buildReadingPositionProps(props),
-    isDocumentResizing: props.isDocumentResizing,
     isEditorReadOnly: props.isEditorReadOnly,
     isImmersiveEditing,
     isImmersiveMode: props.isImmersiveMode,
@@ -38,7 +37,6 @@ function buildDocumentEditorProps(
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
     onRevealDocumentPosition: props.onRevealDocumentPosition,
     onRevealDocumentSelection: props.onRevealDocumentSelection,
-    onStartDocumentResize: props.onStartDocumentResize,
     priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel,
     reviewSchedulerSettings: props.reviewSchedulerSettings,
     showAnswerSection: props.showAnswerSection
@@ -60,7 +58,6 @@ export function buildDocumentSectionProps(
     canGoForward: props.canGoForward,
     canGoParent: props.canGoParent,
     contextMenu: props.contextMenu,
-    documentMaxWidth: props.documentMaxWidth,
     editableNodeId: props.editorNodeId,
     editorAppearanceKey,
     editorContent: props.editorContent,
@@ -84,7 +81,6 @@ export function buildDocumentSectionProps(
     onGoBack: props.onGoBack,
     onGoForward: props.onGoForward,
     onGoParent: props.onGoParent,
-    onResetLayout: props.onResetLayout,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode: props.onSelectNode,
     onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,

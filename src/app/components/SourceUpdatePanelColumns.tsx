@@ -75,19 +75,15 @@ function PreviewDocumentPane({
       editorHideScrollbar={hideScrollbar}
       editorNodeId={currentNodeId}
       hasAnswerSection={false}
-      isDocumentResizing={false}
       onAnswerChange={() => undefined}
       onEditorChange={onChange}
       onEditorReady={onReady}
       onRevealDocumentPosition={() => undefined}
       onRevealDocumentSelection={() => undefined}
       onResolveDocumentPositionAtViewportY={() => null}
-      onResetLayout={() => undefined}
-      onStartDocumentResize={() => undefined}
       readOnly={readOnly}
       reveal=""
       showDocumentOutline={false}
-      showDocumentResizeHandles={false}
     />
   );
 }

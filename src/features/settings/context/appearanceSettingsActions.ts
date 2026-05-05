@@ -40,6 +40,7 @@ import {
   setInterfaceFontSize,
   setMonospaceFontPreset,
   setPdfReadingMode,
+  setReadingContentWidth,
   setReadingLineHeight,
   setSelectionColorPreset,
   setUiFontPreset,
@@ -70,6 +71,7 @@ type AppearanceState = {
   monospaceFontPresetState: MonospaceFontPreset;
   pdfReadingModeState: PdfReadingMode;
   readingLineHeightState: ReadingLineHeight;
+  readingContentWidthState: number;
   selectionColorPresetState: SelectionColorPreset;
   uiFontPresetState: InterfaceFontPreset;
   workspaceSurfaceAssignmentsState: AppearanceSettingsContextValue['workspaceSurfaceAssignments'];
@@ -90,6 +92,7 @@ type AppearanceState = {
   setMarkdownSyntaxVisibilityState: Setter<MarkdownSyntaxVisibility>;
   setMonospaceFontPresetState: Setter<MonospaceFontPreset>;
   setPdfReadingModeState: Setter<PdfReadingMode>;
+  setReadingContentWidthState: Setter<number>;
   setReadingLineHeightState: Setter<ReadingLineHeight>;
   setSelectionColorPresetState: Setter<SelectionColorPreset>;
   setUiFontPresetState: Setter<InterfaceFontPreset>;
@@ -179,6 +182,7 @@ type AppearanceActions = Pick<
   | 'setMarkdownSyntaxVisibility'
   | 'setMonospaceFontPreset'
   | 'setPdfReadingMode'
+  | 'setReadingContentWidth'
   | 'setReadingLineHeight'
   | 'setSelectionColorPreset'
   | 'setUiFontPreset'
@@ -237,6 +241,7 @@ function createGeneralAppearanceActions(state: AppearanceState) {
     setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
     setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
     setPdfReadingMode: (value: PdfReadingMode) => (setPdfReadingMode(value), state.setPdfReadingModeState(value)),
+    setReadingContentWidth: (value: number) => (setReadingContentWidth(value), state.setReadingContentWidthState(value)),
     setReadingLineHeight: (value: ReadingLineHeight) => (setReadingLineHeight(value), state.setReadingLineHeightState(value)),
     setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
     toggleBaseColorMode: () => {

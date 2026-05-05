@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -10,7 +10,6 @@ import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLink
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
@@ -23,7 +22,6 @@ export interface DocumentPanelSectionProps {
   canGoForward: boolean;
   canGoParent: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
-  documentMaxWidth: number;
   editorContent: string;
   editorAppearanceKey: string;
   isEditorReadOnly: boolean;
@@ -38,7 +36,6 @@ export interface DocumentPanelSectionProps {
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string) => void;
-  isDocumentResizing: boolean;
   showAnswerSection: boolean;
   showDocumentOutline?: boolean;
   onAnswerChange: (answer: string) => void;
@@ -72,13 +69,8 @@ export interface DocumentPanelSectionProps {
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
-  onResetLayout: () => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView?: (nodeId: string) => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   priorityQuickSetShortcutLabel?: string;
   reviewSchedulerSettings?: ReviewSchedulerSettings;
   nodeOrder: string[];

@@ -17,6 +17,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   baseColor: 'foliole-base-color',
   pdfReadingMode: 'foliole-pdf-reading-mode',
   readingLineHeight: 'foliole-reading-line-height',
+  readingContentWidth: 'foliole-reading-content-width',
   dimImagesInDarkMode: 'foliole-dim-images-in-dark-mode',
   fontColor: 'foliole-font-color',
   accentColor: 'foliole-accent-color',

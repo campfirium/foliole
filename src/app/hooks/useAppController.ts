@@ -177,7 +177,6 @@ function buildControllerLayoutState(args: {
   return buildAppControllerLayoutProps({
     activeNode: args.controller.activeNode,
     canStartStudyMode: args.controller.study.canStartStudyMode,
-    documentResize: args.controller.documentResize,
     editorCtx: args.controller.editorCtx,
     exitStudyMode: args.exitStudyMode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,

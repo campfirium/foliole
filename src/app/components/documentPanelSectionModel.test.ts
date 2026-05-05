@@ -28,12 +28,10 @@ function buildProps(overrides: Partial<DocumentPanelSectionProps> = {}): Documen
     canGoForward: true,
     canGoParent: false,
     contextMenu: null,
-    documentMaxWidth: 760,
     editorContent: '# Node 1',
     editorAppearanceKey: 'appearance-1',
     isEditorReadOnly: false,
     editorNodeId: 'node-1',
-    isDocumentResizing: false,
     showAnswerSection: false,
     onAnswerChange: () => undefined,
     onEditorChange: () => undefined,
@@ -56,9 +54,7 @@ function buildProps(overrides: Partial<DocumentPanelSectionProps> = {}): Documen
     onRevealDocumentPosition: () => undefined,
     onRevealDocumentSelection: () => undefined,
     onResolveDocumentPositionAtViewportY: () => null,
-    onResetLayout: () => undefined,
     onSelectNode: () => undefined,
-    onStartDocumentResize: () => undefined,
     nodeOrder: ['node-1'],
     trashedNodeIds: [],
     nodesById: { 'node-1': baseNode },
@@ -76,9 +72,9 @@ describe('documentPanelSectionModel', () => {
   });
 
   it('reserves title space for cards without a visible title heading', () => {
-    expect(getDocumentPanelView(buildProps({ editorContent: 'Body only' }), 'preview').bodyProps.editorContentPaddingTop).toBe('calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))');
-    expect(getDocumentPanelView(buildProps({ editorContent: '# Node 1\nBody' }), 'preview').bodyProps.editorContentPaddingTop).toBeUndefined();
-    expect(getDocumentPanelView(buildProps({ editorContent: '**# Node 1**\nBody' }), 'preview').bodyProps.editorContentPaddingTop).toBeUndefined();
+    expect(getDocumentPanelView(buildProps({ editorContent: 'Body only' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBe('calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))');
+    expect(getDocumentPanelView(buildProps({ editorContent: '# Node 1\nBody' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
+    expect(getDocumentPanelView(buildProps({ editorContent: '**# Node 1**\nBody' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
   });
 
   it('reserves title space only for derived cards and top-level topics', () => {

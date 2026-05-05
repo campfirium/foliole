@@ -44,6 +44,14 @@ import {
   READING_LINE_HEIGHT_OPTIONS,
   type ReadingLineHeight
 } from './appearanceSettingsOptions';
+export {
+  getReadingContentWidth,
+  READING_CONTENT_WIDTH_DEFAULT,
+  READING_CONTENT_WIDTH_MAX,
+  READING_CONTENT_WIDTH_MIN,
+  READING_CONTENT_WIDTH_STEP,
+  setReadingContentWidth
+} from './appearanceReadingWidth';
 import {
   applyEditorTypographyScale,
   applyReadingLineHeight,
@@ -189,6 +197,7 @@ interface ApplyAppearanceSettingsInput {
   baseColor: BaseColorMode;
   resolvedBaseColor: ResolvedBaseColorMode;
   pdfReadingMode: PdfReadingMode;
+  readingContentWidth: number;
   readingLineHeight: ReadingLineHeight;
   dimImagesInDarkMode: boolean;
   accentColor: AccentColorPreset;
@@ -211,6 +220,7 @@ export function applyAppearanceSettings({
   baseColor,
   resolvedBaseColor,
   pdfReadingMode,
+  readingContentWidth,
   readingLineHeight,
   dimImagesInDarkMode,
   accentColor,
@@ -255,6 +265,7 @@ export function applyAppearanceSettings({
   root.style.setProperty('--app-interface-font-family', uiFontValue);
   root.style.setProperty('--content-panel-font-family', interfaceFontValue);
   root.style.setProperty('--content-panel-mono-font-family', monospaceFontValue);
+  root.style.setProperty('--document-max-width', `${readingContentWidth}px`);
   applyEditorTypographyScale(root, clampedFontSize);
   applyReadingLineHeight(root, readingLineHeight);
 }

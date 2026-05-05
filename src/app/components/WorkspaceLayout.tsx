@@ -17,7 +17,6 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import type { ReviewQueueVisibility } from './reviewQueueVisibility';
@@ -46,7 +45,6 @@ export interface WorkspaceLayoutProps {
   canGoForward: boolean;
   canGoParent: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
-  documentMaxWidth: number;
   editorAdapterRef: MutableRefObject<EditorAdapter | null>;
   editorContent: string;
   isImmersiveMode: boolean;
@@ -76,7 +74,6 @@ export interface WorkspaceLayoutProps {
   reviewQueueCount: number;
   reviewCompletedCount: number;
   reviewStatus: 'awaiting-answer' | 'answer-revealed' | 'completed';
-  isDocumentResizing: boolean;
   isResizingList: boolean;
   isResizingRightSidebar: boolean;
   isTrashViewOpen: boolean;
@@ -162,10 +159,6 @@ export interface WorkspaceLayoutProps {
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   onStartStudyMode: () => void;
   onToggleReviewSession: () => void;
   onOpenSettings: () => void;

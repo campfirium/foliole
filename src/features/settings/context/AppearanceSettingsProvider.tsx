@@ -17,6 +17,7 @@ import {
   getFontColorPreset,
   getHighlightColorPreset,
   getPdfReadingMode,
+  getReadingContentWidth,
   getReadingLineHeight,
   getSelectionColorPreset,
   getMonospaceFontPreset,
@@ -73,6 +74,7 @@ export function useAppearanceStateValues() {
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
   const [pdfReadingModeState, setPdfReadingModeState] = useState(() => getPdfReadingMode());
+  const [readingContentWidthState, setReadingContentWidthState] = useState(() => getReadingContentWidth());
   const [readingLineHeightState, setReadingLineHeightState] = useState(() => getReadingLineHeight());
   const [uiFontPresetState, setUiFontPresetState] = useState(() => getUiFontPreset());
   const [customUiFontState, setCustomUiFontState] = useState(() => getCustomUiFont());
@@ -96,6 +98,7 @@ export function useAppearanceStateValues() {
     markdownSyntaxVisibilityState,
     monospaceFontPresetState,
     pdfReadingModeState,
+    readingContentWidthState,
     readingLineHeightState,
     resolvedBaseColorModeState,
     setAutoLocalizeRemoteImagesState,
@@ -110,6 +113,7 @@ export function useAppearanceStateValues() {
     setMarkdownSyntaxVisibilityState,
     setMonospaceFontPresetState,
     setPdfReadingModeState,
+    setReadingContentWidthState,
     setReadingLineHeightState,
     setResolvedBaseColorModeState,
     setUiFontPresetState,
@@ -172,6 +176,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       resolvedBaseColor: state.resolvedBaseColorModeState,
       dimImagesInDarkMode: state.dimImagesInDarkModeState,
       pdfReadingMode: state.pdfReadingModeState,
+      readingContentWidth: state.readingContentWidthState,
       readingLineHeight: state.readingLineHeightState,
       clozeColor: state.clozeColorPresetState,
       customInterfaceFont: state.customInterfaceFontState,
@@ -201,6 +206,7 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.interfaceFontSizeState,
     state.monospaceFontPresetState,
     state.pdfReadingModeState,
+    state.readingContentWidthState,
     state.readingLineHeightState,
     state.selectionColorPresetState,
     state.resolvedBaseColorModeState,

@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
@@ -13,7 +13,6 @@ import type {
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -25,7 +24,6 @@ export interface WorkspaceDocumentSurfaceSource {
   canGoParent: boolean;
   completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
   contextMenu: WorkspaceEditorContextMenu | null;
-  documentMaxWidth: number;
   editorContent: string;
   editorNodeId: string | null;
   editorNodeViewState?: NodeViewState;
@@ -35,7 +33,6 @@ export interface WorkspaceDocumentSurfaceSource {
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionTargetViewportMode: () => EditorViewportMode | null;
   getReadingPositionTargetViewportRatio: () => number | null;
-  isDocumentResizing: boolean;
   isEditorReadOnly: boolean;
   isExternalViewOpen: boolean;
   isImmersiveMode: boolean;
@@ -69,17 +66,12 @@ export interface WorkspaceDocumentSurfaceSource {
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRegisterEditorDraftFlush: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
-  onResetLayout: () => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onSelectNodeInVirtualView: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
-  onStartDocumentResize: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   priorityQuickSetShortcutLabel: string;
   reviewSchedulerSettings: ReviewSchedulerSettings;
   setReadingPositionSelection: (selection: EditorSelection) => void;
@@ -112,7 +104,6 @@ function selectDocumentSurfaceState({
 }: WorkspaceDocumentSurfaceSelectorArgs) {
   return {
     documentNodeId,
-    isDocumentResizing: props.isDocumentResizing,
     isEditorReadOnly: props.isEditorReadOnly,
     isExternalViewOpen: props.isExternalViewOpen,
     isImmersiveEditing,
@@ -129,7 +120,6 @@ function selectDocumentSurfaceState({
 function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
   return {
     contextMenu: props.contextMenu,
-    documentMaxWidth: props.documentMaxWidth,
     editorContent: props.editorContent,
     editorNodeId: props.editorNodeId,
     editorNodeViewState: props.editorNodeViewState,
@@ -153,7 +143,6 @@ function selectDocumentSurfaceNavigation(props: WorkspaceDocumentSurfaceSource) 
     onGoForward: props.onGoForward,
     onGoParent: props.onGoParent,
     onOpenExternalSelection: props.onOpenExternalSelection,
-    onResetLayout: props.onResetLayout,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode: props.onSelectNode,
     onSelectNodeInVirtualView: props.onSelectNodeInVirtualView
@@ -186,7 +175,6 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
     onRevealDocumentPosition: props.onRevealDocumentPosition,
     onRevealDocumentSelection: props.onRevealDocumentSelection,
-    onStartDocumentResize: props.onStartDocumentResize
   };
 }
 

@@ -57,10 +57,6 @@ vi.mock('./useAppRuntime', () => ({
   })
 }));
 
-vi.mock('./useDocumentWidthResizer', () => ({
-  useDocumentWidthResizer: () => ({})
-}));
-
 vi.mock('./useEditorContextCommands', () => ({
   useEditorContextCommands: () => ({})
 }));

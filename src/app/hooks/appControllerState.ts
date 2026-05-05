@@ -8,7 +8,6 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useNavigationReadingPosition } from './appControllerNavigationReadingPosition';
 import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
 import { useAppRuntime } from './useAppRuntime';
-import { useDocumentWidthResizer } from './useDocumentWidthResizer';
 import { useEditorContextCommands } from './useEditorContextCommands';
 import { useExternalLibraryView } from './useExternalLibraryView';
 import { useListResizer } from './useListResizer';
@@ -35,7 +34,6 @@ export function useWorkspaceSelectors() {
       deleteNodePermanently: state.deleteNodePermanently,
       deleteImageClozeRegion: state.deleteImageClozeRegion,
       dismissReviewItem: state.dismissReviewItem,
-      documentMaxWidth: state.layout.documentMaxWidth,
       completeReviewItem: state.completeReviewItem,
       deferReviewItem: state.deferReviewItem,
       goBack: state.goBack,
@@ -56,7 +54,6 @@ export function useWorkspaceSelectors() {
       reviewSession: state.reviewSession,
       resetLayout: state.resetLayout,
       setListCollapsed: state.setListCollapsed,
-      setDocumentMaxWidth: state.setDocumentMaxWidth,
       setListWidth: state.setListWidth,
       setRightSidebarCollapsed: state.setRightSidebarCollapsed,
       setRightSidebarWidth: state.setRightSidebarWidth,
@@ -190,7 +187,6 @@ export function useWorkspaceControllerState(
     isViewingTrashNode: runtime.isViewingTrashNode
   });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
-  const documentResize = useDocumentWidthResizer(ws.documentMaxWidth, ws.setDocumentMaxWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
   const navigationReadingPosition = useNavigationReadingPosition(runtime, ws.nodeViewById, ws.setNodeViewState);
   const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
@@ -215,7 +211,6 @@ export function useWorkspaceControllerState(
   });
   return {
     activeNode,
-    documentResize,
     editorCtx,
     listResize,
     nav,

@@ -1,4 +1,3 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useMemo } from 'react';
 
 import {
@@ -15,7 +14,6 @@ import {
   getWorkspaceListNodeOpening
 } from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
 import { FolderListTextItem } from './FolderListItemRow';
 import { resolveFolderListLocationPath } from './folderListLocationPath';
@@ -23,7 +21,6 @@ import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListViewState } from './useFolderListViewState';
 
 interface FolderListViewProps {
-  documentMaxWidth?: number;
   folderNodeId?: string;
   folderTitle?: string;
   nodeOrder?: string[];
@@ -33,13 +30,8 @@ interface FolderListViewProps {
   onChangeSearchQuery?: (searchQuery: string) => void;
   onChangeSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey?: (sortKey: FolderListSortKey) => void;
-  onResetLayout?: () => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodePath?: (nodeId: string) => void;
-  onStartDocumentResize?: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   searchQuery?: string;
   emptyState?: {
     description: string;
@@ -220,7 +212,6 @@ export function FolderListView(props: FolderListViewProps) {
       <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentEmptyState={resolvedEmptyState}
-          documentMaxWidth={props.documentMaxWidth}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
           headerMode={headerMode}
@@ -240,8 +231,6 @@ export function FolderListView(props: FolderListViewProps) {
               sortKey={state.sortKey}
             />
           )}
-          onResetLayout={props.onResetLayout}
-          onStartDocumentResize={props.onStartDocumentResize}
           searchQuery={state.searchQuery}
           searchResultLabel={state.searchResultLabel}
           sortDirection={state.sortDirection}

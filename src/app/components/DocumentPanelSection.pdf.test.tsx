@@ -63,14 +63,12 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   canGoForward: true,
   canGoParent: false,
   contextMenu: null,
-  documentMaxWidth: 760,
   editableNodeId: 'node-1',
   editorAppearanceKey: 'appearance-1',
   editorContent: '# Node 1',
   isEditorReadOnly: false,
   editorNodeId: 'node-1',
   editorNodeViewState: undefined,
-  isDocumentResizing: false,
   nodeOrder: ['node-1'],
   trashedNodeIds: [],
   nodesById: { 'node-1': baseNode },
@@ -91,13 +89,11 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   onGoForward: () => undefined,
   onGoParent: () => undefined,
   onPersistPdfViewState: () => undefined,
-  onResetLayout: () => undefined,
   onResolveDocumentPositionAtViewportY: () => null,
   onRevealDocumentPosition: () => undefined,
   onRevealDocumentSelection: () => undefined,
   onSelectBreadcrumbNode: () => undefined,
   onSelectNode: () => undefined,
-  onStartDocumentResize: () => undefined,
   showAnswerSection: false
 };
 function renderSection(overrides: Partial<ComponentProps<typeof DocumentPanelSection>> = {}) {

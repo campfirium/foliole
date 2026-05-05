@@ -6,13 +6,13 @@ import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 
 export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
-  const { editorAppearanceKey } = useAppearanceSettings();
+  const { editorAppearanceKey, readingContentWidth } = useAppearanceSettings();
   if (props.isExternalViewOpen) {
     return (
       <ExternalLibraryDocumentSurface
         canGoBack={props.canGoBack}
         canGoForward={props.canGoForward}
-        documentMaxWidth={props.documentMaxWidth}
+        documentMaxWidth={readingContentWidth}
         entriesByFolderId={props.externalEntriesByFolderId}
         folders={props.externalFolders}
         onGoBack={props.onGoBack}
@@ -23,8 +23,6 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
           }
         }}
         onOpenSelection={props.onOpenExternalSelection}
-        onResetLayout={props.onResetLayout}
-        onStartDocumentResize={props.onStartDocumentResize}
         selection={props.externalSelection}
       />
     );

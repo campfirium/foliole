@@ -204,7 +204,7 @@ export function DocumentPanelHeader({
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
 
   return (
-    <AppToolbar as="header" className="min-h-8 pl-4 pr-0 max-[1080px]:pl-2">
+    <AppToolbar as="header" className="min-h-8 pl-4 pr-4 max-[1080px]:px-2">
       <h2 className="sr-only">Content</h2>
       {renderDocumentHeaderContent({
         activeNodeId,

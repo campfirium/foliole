@@ -10,8 +10,7 @@ it('hides editor chrome and keeps the body read-only in immersive reading mode',
   });
 
   expect(documentPanelBodyMock.mock.calls.at(-1)?.[0]).toMatchObject({
-    readOnly: true,
-    showDocumentResizeHandles: false
+    readOnly: true
   });
   expect(typeof documentPanelBodyMock.mock.calls.at(-1)?.[0]?.onEditorDoubleClick).toBe('function');
   expect(documentPanelBodyMock.mock.calls.at(-1)?.[0]?.showDocumentOutline).not.toBe(false);
@@ -26,7 +25,6 @@ it('restores editing inside immersive mode when temporary edit is enabled', () =
   });
 
   expect(documentPanelBodyMock.mock.calls.at(-1)?.[0]).toMatchObject({
-    readOnly: false,
-    showDocumentResizeHandles: false
+    readOnly: false
   });
 });

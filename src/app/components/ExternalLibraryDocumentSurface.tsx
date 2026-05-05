@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -34,11 +33,6 @@ interface ExternalLibraryDocumentSurfaceProps {
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   onGoBack: () => void;
   onGoForward: () => void;
-  onResetLayout: () => void;
-  onStartDocumentResize: (
-    side: 'left' | 'right',
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   selection: ExternalLibrarySelection;
 }
 
@@ -85,19 +79,15 @@ function useExternalFolderBrowseState(props: Pick<ExternalLibraryDocumentSurface
 
 function ExternalFolderListSurface(args: {
   activeFolderId: string;
-  documentMaxWidth: number;
   documentNodes: Node[];
   documentNodesById: Record<string, Node>;
   onOpenSelection: ExternalLibraryDocumentSurfaceProps['onOpenSelection'];
-  onResetLayout: ExternalLibraryDocumentSurfaceProps['onResetLayout'];
-  onStartDocumentResize: ExternalLibraryDocumentSurfaceProps['onStartDocumentResize'];
   selectedFolder: RuntimeExternalSearchFolder | null;
   selection: Extract<ExternalLibrarySelection, { kind: 'folder' | 'directory' }>;
 }) {
   return (
     <section aria-label="Document area" className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
       <FolderListView
-        documentMaxWidth={args.documentMaxWidth}
         emptyState={{
           description:
             args.selection.kind === 'folder'
@@ -115,8 +105,6 @@ function ExternalFolderListSurface(args: {
             kind: 'document'
           })
         }
-        onResetLayout={args.onResetLayout}
-        onStartDocumentResize={args.onStartDocumentResize}
         regionLabel="Folder list view"
       />
     </section>
@@ -209,12 +197,9 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
     return (
       <ExternalFolderListSurface
         activeFolderId={activeFolderId}
-        documentMaxWidth={props.documentMaxWidth}
         documentNodes={documentNodes}
         documentNodesById={documentNodesById}
         onOpenSelection={props.onOpenSelection}
-        onResetLayout={props.onResetLayout}
-        onStartDocumentResize={props.onStartDocumentResize}
         selectedFolder={selectedFolder}
         selection={props.selection}
       />

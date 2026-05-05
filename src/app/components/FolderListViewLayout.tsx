@@ -1,12 +1,10 @@
 import { Search, X } from 'lucide-react';
-import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { AppEmptyState, AppInput } from '../../shared/ui';
-import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
-import { DocumentWidthResizeHandles } from './DocumentWidthResizeHandles';
 import { FolderListSortControls } from './FolderListSortControls';
 
 function FolderListHeader({
@@ -130,33 +128,13 @@ function FolderListHeaderSummary({
 }
 
 function FolderListSurface({
-  children,
-  documentMaxWidth,
-  onResetLayout,
-  onStartDocumentResize
+  children
 }: {
   children: ReactNode;
-  documentMaxWidth?: number;
-  onResetLayout?: () => void;
-  onStartDocumentResize?: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
 }) {
-  const shouldShowResizeHandles = Boolean(documentMaxWidth && onResetLayout && onStartDocumentResize);
-  const style = documentMaxWidth
-    ? ({ '--document-max-width': `${documentMaxWidth}px` } as CSSProperties)
-    : undefined;
-
   return (
-    <div className="relative flex min-h-0 w-full flex-1" style={style}>
+    <div className="relative flex min-h-0 w-full flex-1">
       {children}
-      {shouldShowResizeHandles ? (
-        <DocumentWidthResizeHandles
-          onResetLayout={onResetLayout!}
-          onStartDocumentResize={onStartDocumentResize!}
-        />
-      ) : null}
     </div>
   );
 }
@@ -187,7 +165,6 @@ function FolderListBody({
 
 export function FolderListViewLayout(props: {
   currentEmptyState: { description: string; title: string };
-  documentMaxWidth?: number;
   filteredNodes: Node[];
   folderTitle: string;
   itemCountLabel: string;
@@ -196,22 +173,13 @@ export function FolderListViewLayout(props: {
   onChangeSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey: (sortKey: FolderListSortKey) => void;
   onRenderItem: (node: Node) => ReactNode;
-  onResetLayout?: () => void;
-  onStartDocumentResize?: (
-    side: ResizeSide,
-    event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
-  ) => void;
   searchQuery: string;
   headerMode: 'full' | 'search-only' | 'hidden';
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
   return (
-    <FolderListSurface
-      documentMaxWidth={props.documentMaxWidth}
-      onResetLayout={props.onResetLayout}
-      onStartDocumentResize={props.onStartDocumentResize}
-    >
+    <FolderListSurface>
       <section aria-label="Folder list body" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
         {props.headerMode === 'hidden' ? null : (
           <FolderListHeader

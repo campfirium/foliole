@@ -20,6 +20,7 @@ import { useSettingsFontOptions } from '../useSettingsFontOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
+import { ReadingContentWidthRow } from './ReadingContentWidthRow';
 import {
   AccentColorRow,
   ClozeColorRow,
@@ -198,6 +199,10 @@ function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionSta
       />
       <AppearancePdfReadingModeRow {...props} />
       <ReadingLineHeightRow {...props} />
+      <ReadingContentWidthRow
+        onReadingContentWidthChange={appearance.setReadingContentWidth}
+        readingContentWidth={appearance.readingContentWidth}
+      />
       <DimImagesInDarkModeRow {...props} />
     </SettingsSection>
   );

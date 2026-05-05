@@ -78,14 +78,12 @@ function buildProps(trashedNodeIds: string[]): ComponentProps<typeof DocumentPan
     canGoForward: true,
     canGoParent: false,
     contextMenu: null,
-    documentMaxWidth: 760,
     editableNodeId: 'node-1',
     editorAppearanceKey: 'appearance-1',
     editorContent: '![Cover](asset://hash-1.png)',
     isEditorReadOnly: false,
     editorNodeId: 'node-1',
     editorNodeViewState: undefined,
-    isDocumentResizing: false,
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
       'node-1': baseNode,
@@ -108,13 +106,11 @@ function buildProps(trashedNodeIds: string[]): ComponentProps<typeof DocumentPan
     onGoForward: () => undefined,
     onGoParent: () => undefined,
     onPersistPdfViewState: () => undefined,
-    onResetLayout: () => undefined,
     onResolveDocumentPositionAtViewportY: () => null,
     onRevealDocumentPosition: () => undefined,
     onRevealDocumentSelection: () => undefined,
     onSelectBreadcrumbNode: () => undefined,
     onSelectNode: () => undefined,
-    onStartDocumentResize: () => undefined,
     showAnswerSection: false,
     trashedNodeIds
   };

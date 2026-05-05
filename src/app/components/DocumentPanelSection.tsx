@@ -59,11 +59,12 @@ function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
 }
 
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
-  const { editorDisplayMode } = useAppearanceSettings();
+  const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const { bodyProps, documentLayoutStyle, isFolderListView, loadingLabel } = getDocumentPanelView(
     props,
-    editorDisplayMode
+    editorDisplayMode,
+    readingContentWidth
   );
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
@@ -203,6 +204,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
       <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />
       <DocumentPanelSectionOverlays
         currentSourceUpdateContent={model.currentSourceUpdateContent}
+        documentMaxWidth={model.bodyProps.documentMaxWidth}
         handleSourceUpdateDraftChange={model.handleSourceUpdateDraftChange}
         handleSourceUpdatePanelOpenChange={model.handleSourceUpdatePanelOpenChange}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}

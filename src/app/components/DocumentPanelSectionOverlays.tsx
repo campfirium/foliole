@@ -4,6 +4,7 @@ import { DocumentPanelSourceUpdatePanel } from './DocumentPanelSourceUpdatePanel
 
 interface DocumentPanelSectionOverlaysProps {
   currentSourceUpdateContent: string;
+  documentMaxWidth: number;
   handleSourceUpdateDraftChange: (content: string) => void;
   handleSourceUpdatePanelOpenChange: (open: boolean) => void;
   isSourceUpdatePanelOpen: boolean;
@@ -13,6 +14,7 @@ interface DocumentPanelSectionOverlaysProps {
 
 export function DocumentPanelSectionOverlays({
   currentSourceUpdateContent,
+  documentMaxWidth,
   handleSourceUpdateDraftChange,
   handleSourceUpdatePanelOpenChange,
   isSourceUpdatePanelOpen,
@@ -25,7 +27,7 @@ export function DocumentPanelSectionOverlays({
         <DocumentPanelSourceUpdatePanel
           currentContent={currentSourceUpdateContent}
           currentHighlightCount={sourceUpdatePreview.currentHighlightCount}
-          documentMaxWidth={props.documentMaxWidth}
+          documentMaxWidth={documentMaxWidth}
           editorAppearanceKey={props.editorAppearanceKey}
           editorNodeId={props.editorNodeId}
           onCurrentContentChange={handleSourceUpdateDraftChange}

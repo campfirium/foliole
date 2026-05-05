@@ -96,13 +96,14 @@ export function shouldReserveTitleSlot(
 
 function getDocumentPanelBodyProps(
   props: DocumentPanelSectionProps,
-  panelState: ReturnType<typeof getDocumentPanelState>
+  panelState: ReturnType<typeof getDocumentPanelState>,
+  documentMaxWidth: number
 ) {
   const editorHideTitleHeading = props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false;
   const editorNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   return {
     answerSectionMode: panelState.answerSectionMode,
-    documentMaxWidth: props.documentMaxWidth,
+    documentMaxWidth,
     editorAppearanceKey: props.editorAppearanceKey,
     editorContent: props.editorContent,
     editorContentPaddingBottom: panelState.editorContentPaddingBottom,
@@ -121,7 +122,6 @@ function getDocumentPanelBodyProps(
     emptyState: panelState.emptyState,
     fitBlockImagesToViewport: panelState.fitBlockImagesToViewport,
     hasAnswerSection: panelState.hasAnswerSection,
-    isDocumentResizing: props.isDocumentResizing,
     onAnswerChange: props.onAnswerChange,
     onEditorChange: props.onEditorChange,
     onEditorContextMenu: props.onEditorContextMenu,
@@ -139,26 +139,24 @@ function getDocumentPanelBodyProps(
     onRevealDocumentPosition: props.onRevealDocumentPosition,
     onRevealDocumentSelection: props.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
-    onResetLayout: props.onResetLayout,
-    onStartDocumentResize: props.onStartDocumentResize,
     readOnly: props.isEditorReadOnly || (props.isImmersiveMode && !props.isImmersiveEditing),
     showDocumentOutline: props.showDocumentOutline,
-    showDocumentResizeHandles: !props.isImmersiveMode,
     reveal: panelState.reveal
   };
 }
 
 export function getDocumentPanelView(
   props: DocumentPanelSectionProps,
-  editorDisplayMode: 'preview' | 'source'
+  editorDisplayMode: 'preview' | 'source',
+  documentMaxWidth: number
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const panelState = getDocumentPanelState(props, activeNode, editorDisplayMode, props.showAnswerSection);
 
   return {
     activeNode,
-    bodyProps: getDocumentPanelBodyProps(props, panelState),
-    documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
+    bodyProps: getDocumentPanelBodyProps(props, panelState, documentMaxWidth),
+    documentLayoutStyle: { '--document-max-width': `${documentMaxWidth}px` } as CSSProperties,
     loadingLabel: panelState.loadingLabel,
     isFolderListView: Boolean(
       activeNode &&

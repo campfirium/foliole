@@ -16,6 +16,7 @@ function AppearanceHarness() {
       <div>{appearance.dimImagesInDarkMode ? 'dim-on' : 'dim-off'}</div>
       <div>{appearance.pdfReadingMode}</div>
       <div>{appearance.readingLineHeight}</div>
+      <div>{appearance.readingContentWidth}</div>
       <button onClick={appearance.toggleEditorDisplayMode} type="button">
         Toggle mode
       </button>
@@ -27,6 +28,9 @@ function AppearanceHarness() {
       </button>
       <button onClick={() => appearance.setReadingLineHeight('relaxed')} type="button">
         Relax line height
+      </button>
+      <button onClick={() => appearance.setReadingContentWidth(920)} type="button">
+        Set reading width
       </button>
       <button onClick={appearance.toggleBaseColorMode} type="button">
         Toggle light/dark
@@ -58,15 +62,18 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('dim-off')).toBeInTheDocument();
   expect(screen.getByText('inverted')).toBeInTheDocument();
   expect(screen.getByText('standard')).toBeInTheDocument();
+  expect(screen.getByText('860')).toBeInTheDocument();
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+  expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
   expect(document.body.dataset.bootSkeleton).toBeUndefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle mode' }));
   fireEvent.click(screen.getByRole('button', { name: 'Show syntax' }));
   fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
   fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set reading width' }));
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
   fireEvent.click(screen.getByRole('button', { name: 'Dim images' }));
 
@@ -76,13 +83,16 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('dim-on')).toBeInTheDocument();
   expect(screen.getByText('warm')).toBeInTheDocument();
   expect(screen.getByText('relaxed')).toBeInTheDocument();
+  expect(screen.getByText('920')).toBeInTheDocument();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorDisplayMode)).toBe('preview');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility)).toBe('visible');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('true');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode)).toBe('warm');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingContentWidth)).toBe('920');
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+  expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('920px');
 });

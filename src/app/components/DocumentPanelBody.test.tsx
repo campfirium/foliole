@@ -32,14 +32,11 @@ const baseProps = {
   editorContent: '![Cover](https://example.com/topic.png)',
   editorNodeId: 'node-1',
   hasAnswerSection: false,
-  isDocumentResizing: false,
   onAnswerChange: vi.fn(),
   onEditorChange: vi.fn(),
-  onResetLayout: vi.fn(),
   onRevealDocumentPosition: vi.fn(),
   onRevealDocumentSelection: vi.fn(),
   onResolveDocumentPositionAtViewportY: vi.fn(() => null),
-  onStartDocumentResize: vi.fn(),
   reveal: ''
 };
 

@@ -30,6 +30,7 @@ export interface AppearanceSettingsContextValue {
   editorDisplayMode: EditorDisplayMode;
   clozeColorPreset: ClozeColorPreset;
   pdfReadingMode: PdfReadingMode;
+  readingContentWidth: number;
   readingLineHeight: ReadingLineHeight;
   fontColorPreset: FontColorPreset;
   selectionColorPreset: SelectionColorPreset;
@@ -64,6 +65,7 @@ export interface AppearanceSettingsContextValue {
   setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => void;
   setMonospaceFontPreset: (value: MonospaceFontPreset) => void;
   setPdfReadingMode: (value: PdfReadingMode) => void;
+  setReadingContentWidth: (value: number) => void;
   setReadingLineHeight: (value: ReadingLineHeight) => void;
   setUiFontPreset: (value: InterfaceFontPreset) => void;
   setWorkspaceSurfaceAssignments: (value: WorkspaceSurfaceAssignments) => void;

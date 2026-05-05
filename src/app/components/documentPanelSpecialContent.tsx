@@ -37,7 +37,6 @@ function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentPro
 }
 
 function renderFolderContent(
-  documentMaxWidth: number,
   activeNodeId: string,
   folderTitle: string,
   folderListSortDirection: FolderListSortDirection,
@@ -46,9 +45,7 @@ function renderFolderContent(
   onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void,
   nodeOrder: string[],
   nodesById: Record<string, Node>,
-  onResetLayout: () => void,
   onSelectNode: (nodeId: string) => void,
-  onStartDocumentResize: ComponentProps<typeof DocumentPanelBody>['onStartDocumentResize'],
   pdfCache: JSX.Element,
   trashedNodeIds: string[]
 ) {
@@ -56,16 +53,13 @@ function renderFolderContent(
     <>
       {pdfCache}
       <FolderListView
-        documentMaxWidth={documentMaxWidth}
         folderNodeId={activeNodeId}
         folderTitle={folderTitle}
         nodeOrder={nodeOrder}
         nodesById={nodesById}
         onChangeSortDirection={onChangeFolderListSortDirection}
         onChangeSortKey={onChangeFolderListSortKey}
-        onResetLayout={onResetLayout}
         onSelectNode={onSelectNode}
-        onStartDocumentResize={onStartDocumentResize}
         sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}
         trashedNodeIds={trashedNodeIds}
@@ -227,7 +221,6 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
   }
   if (args.isFolderListView && args.activeNodeId) {
     return renderFolderContent(
-      args.bodyProps.documentMaxWidth,
       args.activeNodeId,
       args.activeNode?.title ?? 'Folder',
       args.folderListSortDirection,
@@ -236,9 +229,7 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
       args.onChangeFolderListSortKey,
       args.nodeOrder,
       args.nodesById,
-      args.bodyProps.onResetLayout,
       args.onSelectNode,
-      args.bodyProps.onStartDocumentResize,
       args.pdfCache,
       args.trashedNodeIds
     );

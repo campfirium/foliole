@@ -47,3 +47,14 @@ it('stores the reading line height preset from appearance settings', async () =>
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingLineHeight)).toBe('relaxed');
   });
 });
+
+it('stores the reading width from appearance settings', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Reading width'), { target: { value: '920' } });
+
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingContentWidth)).toBe('920');
+  });
+});

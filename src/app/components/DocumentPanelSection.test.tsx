@@ -174,7 +174,7 @@ describe('DocumentPanelSection secondary views', () => {
     expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Node 1' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
-    expect(screen.getByRole('separator', { name: 'Resize document width from left' })).toBeInTheDocument();
+    expect(screen.queryByRole('separator', { name: /Resize document width/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
   });
 
