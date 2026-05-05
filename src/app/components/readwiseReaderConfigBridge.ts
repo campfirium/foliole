@@ -1,16 +1,16 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import {
-  hasAppRuntimeCommandRepository,
+  hasReadwiseReaderSetupRuntimeRepository,
   inspectReadwiseReaderSetupInRuntime,
   type RuntimeReadwiseDetectionResult
-} from '../../shared/platform/appRuntimeCommandRepository';
+} from '../../shared/platform/readwiseReaderSetupRuntimeRepository';
 
 export async function inspectReadwiseReaderSetup(input: {
   articleDirectoryPath: string;
   config: ReadwiseReaderConfig;
   fullDocumentDirectoryPath: string;
 }): Promise<RuntimeReadwiseDetectionResult> {
-  if (!hasAppRuntimeCommandRepository()) {
+  if (!hasReadwiseReaderSetupRuntimeRepository()) {
     return {
       checkedSourceCount: 0,
       detectedHighlightCount: 0,

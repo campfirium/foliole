@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import {
-  hasAppRuntimeCommandRepository,
+  hasWorkspaceSearchRuntimeRepository,
   searchWorkspaceInRuntime
-} from '../../shared/platform/appRuntimeCommandRepository';
+} from '../../shared/platform/workspaceSearchRuntimeRepository';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
@@ -36,7 +36,7 @@ function useSearchResults(
   const [runtimeError, setRuntimeError] = useState(false);
 
   useEffect(() => {
-    if (!props.isOpen || !hasAppRuntimeCommandRepository() || !query.trim()) {
+    if (!props.isOpen || !hasWorkspaceSearchRuntimeRepository() || !query.trim()) {
       setRuntimeResults([]);
       setRuntimeError(false);
       return;
@@ -62,7 +62,7 @@ function useSearchResults(
     };
   }, [props.isOpen, query]);
 
-  const hasRuntime = hasAppRuntimeCommandRepository();
+  const hasRuntime = hasWorkspaceSearchRuntimeRepository();
   return { error: hasRuntime ? runtimeError : false, results: hasRuntime ? runtimeResults : localResults };
 }
 
