@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -17,14 +17,14 @@ vi.mock('../../store/workspaceRuntimeSync', () => ({
 
 function renderImmediateCaptureHarness(
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void,
-  scrollListeners: Set<() => void>
+  scrollListeners: Set<(event: EditorScrollEvent) => void>
 ) {
   function ImmediateCaptureHarness() {
     const ref = {
       current: {
         getScrollTop: () => 5400,
         getSelection: () => ({ from: 48000, to: 48024 }),
-        onScroll: (listener: () => void) => {
+        onScroll: (listener: (event: EditorScrollEvent) => void) => {
           scrollListeners.add(listener);
           return () => {
             scrollListeners.delete(listener);
@@ -49,14 +49,14 @@ function renderImmediateCaptureHarness(
 }
 
 function registerCaptureTests() {
-  it('does not write reading position into store while the editor is still scrolling', () => {
+  it('does not write reading position into store for non-user editor scrolls', () => {
     const setNodeViewState = vi.fn();
-    const scrollListeners = new Set<() => void>();
+    const scrollListeners = new Set<(event: EditorScrollEvent) => void>();
     renderImmediateCaptureHarness(setNodeViewState, scrollListeners);
 
     act(() => {
       for (const listener of scrollListeners) {
-        listener();
+        listener({ userInitiated: false });
       }
     });
 
@@ -65,14 +65,14 @@ function registerCaptureTests() {
 
   it('does not update the in-memory reading position while anchor navigation restore is applying', () => {
     const setNodeViewState = vi.fn();
-    const scrollListeners = new Set<() => void>();
+    const scrollListeners = new Set<(event: EditorScrollEvent) => void>();
 
     function ImmediateCaptureHarness() {
       const ref = {
         current: {
           getScrollTop: () => 5400,
           getSelection: () => ({ from: 48000, to: 48024 }),
-          onScroll: (listener: () => void) => {
+          onScroll: (listener: (event: EditorScrollEvent) => void) => {
             scrollListeners.add(listener);
             return () => {
               scrollListeners.delete(listener);
@@ -102,7 +102,7 @@ function registerCaptureTests() {
 
     act(() => {
       for (const listener of scrollListeners) {
-        listener();
+        listener({ userInitiated: true });
       }
     });
 

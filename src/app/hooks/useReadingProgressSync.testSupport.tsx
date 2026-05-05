@@ -1,6 +1,6 @@
 import { useRef, type MutableRefObject } from 'react';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { useReadingProgressSync } from './useReadingProgressSync';
@@ -23,14 +23,14 @@ export function createEditorRef(
 ): MutableRefObject<{
   getScrollTop: () => number;
   getSelection: () => { from: number; to: number };
-  onScroll: (listener: () => void) => () => void;
+  onScroll: (listener: (event: EditorScrollEvent) => void) => () => void;
 } | null> {
-  const scrollListeners = new Set<() => void>();
+  const scrollListeners = new Set<(event: EditorScrollEvent) => void>();
   return {
     current: {
       getScrollTop: () => scrollTop,
       getSelection: () => selection,
-      onScroll: (listener: () => void) => {
+      onScroll: (listener: (event: EditorScrollEvent) => void) => {
         scrollListeners.add(listener);
         return () => {
           scrollListeners.delete(listener);

@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -74,7 +74,7 @@ function expectStoredNodeCloseFlush(invoke: ReturnType<typeof vi.fn>) {
 
 function createPollutedPendingHarnessArgs() {
   return {
-    listeners: new Set<() => void>(),
+    listeners: new Set<(event: EditorScrollEvent) => void>(),
     setNodeViewState: vi.fn(),
     storedNodeViewById: {
       'node-2': {
@@ -86,7 +86,7 @@ function createPollutedPendingHarnessArgs() {
 }
 
 function PollutedPendingHarness(props: {
-  listeners: Set<() => void>;
+  listeners: Set<(event: EditorScrollEvent) => void>;
   readingPositionSyncState: { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   storedNodeViewById: Record<string, NodeViewState>;
@@ -94,7 +94,7 @@ function PollutedPendingHarness(props: {
   const editorRef = useRef<EditorAdapter | null>({
     getScrollTop: () => 0,
     getSelection: () => ({ from: 0, to: 0 }),
-    onScroll: (listener: () => void) => {
+    onScroll: (listener: (event: EditorScrollEvent) => void) => {
       props.listeners.add(listener);
       return () => {
         props.listeners.delete(listener);
@@ -206,7 +206,7 @@ function registerPollutedPendingCloseFlushTests() {
     const view = render(<PollutedPendingHarness {...harnessArgs} readingPositionSyncState={null} />);
     act(() => {
       for (const listener of harnessArgs.listeners) {
-        listener();
+        listener({ userInitiated: true });
       }
     });
     expect(harnessArgs.setNodeViewState).not.toHaveBeenCalled();

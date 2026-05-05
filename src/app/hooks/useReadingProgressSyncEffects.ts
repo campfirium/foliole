@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type MutableRefObject } from 'react';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/testing/debugBridge';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -21,7 +21,7 @@ declare global {
 
 interface ReadingProgressEffectsOptions {
   activeNodeId: string | null;
-  flushReadingProgress: () => void;
+  flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   isWorkspaceHydrated: boolean;
   lifecycleFlush: () => void;
@@ -64,7 +64,7 @@ function useReadingProgressEffects({
       if (isReadingPositionRestoreActive(getReadingPositionSyncState)) {
         return;
       }
-      flushReadingProgress();
+      flushReadingProgress(undefined, null);
     }, READING_PROGRESS_SYNC_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [flushReadingProgress, getReadingPositionSyncState, isWorkspaceHydrated]);
@@ -122,7 +122,7 @@ export function useReadingProgressLifecycle(args: {
 
   useReadingProgressEffects({
     activeNodeId: args.activeNodeId,
-    flushReadingProgress: () => args.flushReadingProgress(),
+    flushReadingProgress: args.flushReadingProgress,
     getReadingPositionSyncState: args.getReadingPositionSyncState,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     lifecycleFlush,
@@ -137,8 +137,8 @@ export function useImmediateReadingProgressCapture(args: ImmediateReadingProgres
       return;
     }
 
-    const unsubscribe = args.editorRef.current.onScroll(() => {
-      captureImmediateReadingProgress(args);
+    const unsubscribe = args.editorRef.current.onScroll((event) => {
+      captureImmediateReadingProgress(args, event);
     });
 
     return unsubscribe;
@@ -156,8 +156,13 @@ export function useImmediateReadingProgressCapture(args: ImmediateReadingProgres
   ]);
 }
 
-function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureArgs) {
+function isUserInitiatedEditorScroll(event: EditorScrollEvent) {
+  return event.userInitiated;
+}
+
+function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureArgs, event: EditorScrollEvent) {
   if (
+    !isUserInitiatedEditorScroll(event) ||
     isReadingPositionRestoreActive(args.getReadingPositionSyncState) ||
     args.shouldSuppressReadingProgressCapture?.()
   ) {
@@ -200,8 +205,9 @@ export function useDebouncedReadingProgressPersistence(args: {
     }
 
     let timeoutId: number | null = null;
-    const unsubscribe = args.editorRef.current.onScroll(() => {
+    const unsubscribe = args.editorRef.current.onScroll((event) => {
       if (
+        !isUserInitiatedEditorScroll(event) ||
         isReadingPositionRestoreActive(args.getReadingPositionSyncState) ||
         args.shouldSuppressReadingProgressCapture?.()
       ) {

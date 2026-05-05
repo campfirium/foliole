@@ -7,6 +7,7 @@ import {
   isPositionNearViewportRatio,
   resolvePositionViewportTop
 } from './codeMirrorEditorSelectionAlignment';
+import type { EditorScrollEvent } from './EditorAdapter';
 
 export { alignSelectionInViewport, isPositionNearViewportRatio, resolvePositionViewportTop };
 
@@ -18,23 +19,58 @@ export function revealEditorPosition(view: EditorView, position: number) {
   alignSelectionInViewport(view, position);
 }
 
-export function subscribeToEditorScroll(view: EditorView, listener: () => void) {
+const USER_SCROLL_INTENT_TIMEOUT_MS = 800;
+const SCROLL_KEYS = new Set([
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'End',
+  'Home',
+  'PageDown',
+  'PageUp',
+  ' '
+]);
+
+export function subscribeToEditorScroll(view: EditorView, listener: (event: EditorScrollEvent) => void) {
   let frameId: number | null = null;
+  let userScrollIntentExpiresAt = 0;
+  let pendingScrollWasUserInitiated = false;
+  const markUserScrollIntent = () => {
+    userScrollIntentExpiresAt = Date.now() + USER_SCROLL_INTENT_TIMEOUT_MS;
+  };
+  const isUserScrollIntentActive = () => Date.now() <= userScrollIntentExpiresAt;
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (SCROLL_KEYS.has(event.key)) {
+      markUserScrollIntent();
+    }
+  };
   const handleScroll = () => {
+    pendingScrollWasUserInitiated = pendingScrollWasUserInitiated || isUserScrollIntentActive();
     if (frameId !== null) {
       return;
     }
     frameId = requestAnimationFrame(() => {
+      const userInitiated = pendingScrollWasUserInitiated;
       frameId = null;
-      listener();
+      pendingScrollWasUserInitiated = false;
+      listener({ userInitiated });
     });
   };
+  view.dom.addEventListener('keydown', handleKeyDown);
+  view.scrollDOM.addEventListener('pointerdown', markUserScrollIntent, { passive: true });
   view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true });
+  view.scrollDOM.addEventListener('touchmove', markUserScrollIntent, { passive: true });
+  view.scrollDOM.addEventListener('wheel', markUserScrollIntent, { passive: true });
   return () => {
     if (frameId !== null) {
       cancelAnimationFrame(frameId);
     }
+    view.dom.removeEventListener('keydown', handleKeyDown);
+    view.scrollDOM.removeEventListener('pointerdown', markUserScrollIntent);
     view.scrollDOM.removeEventListener('scroll', handleScroll);
+    view.scrollDOM.removeEventListener('touchmove', markUserScrollIntent);
+    view.scrollDOM.removeEventListener('wheel', markUserScrollIntent);
   };
 }
 

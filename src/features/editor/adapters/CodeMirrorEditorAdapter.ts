@@ -243,7 +243,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       this.onChange = undefined;
     };
   }
-  onScroll(listener: () => void) { return subscribeToEditorScroll(this.view, listener); }
+  onScroll(listener: Parameters<typeof subscribeToEditorScroll>[1]) { return subscribeToEditorScroll(this.view, listener); }
   private reconfigureLiveMarkdown() {
     reconfigureAdapterLiveMarkdownState({
       liveMarkdownStateCompartment: this.liveMarkdownStateCompartment,

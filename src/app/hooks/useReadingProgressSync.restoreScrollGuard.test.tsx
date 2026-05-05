@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -23,7 +23,7 @@ type ReadingPositionSyncState = {
 } | null;
 
 function RuntimeRestoreHarness(props: {
-  listeners: Set<() => void>;
+  listeners: Set<(event: EditorScrollEvent) => void>;
   readingPositionSyncState: ReadingPositionSyncState;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {
@@ -31,7 +31,7 @@ function RuntimeRestoreHarness(props: {
     current: {
       getScrollTop: () => 0,
       getSelection: () => ({ from: 0, to: 0 }),
-      onScroll: (listener: () => void) => {
+      onScroll: (listener: (event: EditorScrollEvent) => void) => {
         props.listeners.add(listener);
         return () => props.listeners.delete(listener);
       }
@@ -55,28 +55,18 @@ function RuntimeRestoreHarness(props: {
   return null;
 }
 
-function emitScrollAndDebounce(listeners: Set<() => void>) {
+function emitScrollAndDebounce(listeners: Set<(event: EditorScrollEvent) => void>, userInitiated = true) {
   act(() => {
     for (const listener of listeners) {
-      listener();
+      listener({ userInitiated });
     }
     vi.advanceTimersByTime(400);
   });
 }
 
-describe('useReadingProgressSync restore scroll guard', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.clearAllMocks();
-    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
+function registerPollutedPendingGuardTest() {
   it('does not flush polluted pending progress after the restore lock appears', () => {
-    const listeners = new Set<() => void>();
+    const listeners = new Set<(event: EditorScrollEvent) => void>();
     const setNodeViewState = vi.fn();
     const view = render(
       <RuntimeRestoreHarness listeners={listeners} readingPositionSyncState={null} setNodeViewState={setNodeViewState} />
@@ -84,7 +74,7 @@ describe('useReadingProgressSync restore scroll guard', () => {
     vi.clearAllMocks();
     act(() => {
       for (const listener of listeners) {
-        listener();
+        listener({ userInitiated: true });
       }
     });
 
@@ -104,9 +94,16 @@ describe('useReadingProgressSync restore scroll guard', () => {
     expect(syncReadingProgressToRuntime).not.toHaveBeenCalled();
     expect(setNodeViewState).not.toHaveBeenCalled();
   });
+}
 
-  it('ignores the first scroll turn after a restore lock is released', () => {
-    const listeners = new Set<() => void>();
+function registerPostRestoreScrollGuardTests() {
+  registerPostRestoreUserScrollTest();
+  registerPostRestoreReflowScrollTest();
+}
+
+function registerPostRestoreUserScrollTest() {
+  it('persists a user scroll after a restore lock is released', () => {
+    const listeners = new Set<(event: EditorScrollEvent) => void>();
     const setNodeViewState = vi.fn();
     const view = render(
       <RuntimeRestoreHarness
@@ -126,7 +123,65 @@ describe('useReadingProgressSync restore scroll guard', () => {
 
     emitScrollAndDebounce(listeners);
 
+    expect(syncReadingProgressToRuntime).toHaveBeenCalledWith({
+      activeNodeId: 'node-2',
+      nodeViewStates: [
+        {
+          nodeId: 'node-2',
+          scrollTop: 0,
+          selectionFrom: null,
+          selectionTo: null
+        }
+      ],
+      source: 'user-scroll',
+      updatedAt: expect.any(String)
+    });
+    expect(setNodeViewState).toHaveBeenCalledWith('node-2', {
+      scrollTop: 0,
+      selection: null
+    });
+  });
+}
+
+function registerPostRestoreReflowScrollTest() {
+  it('ignores a non-user reflow scroll after a restore lock is released', () => {
+    const listeners = new Set<(event: EditorScrollEvent) => void>();
+    const setNodeViewState = vi.fn();
+    const view = render(
+      <RuntimeRestoreHarness
+        listeners={listeners}
+        readingPositionSyncState={{
+          reason: 'editor-restore-selection',
+          startedAt: Date.now(),
+          targetSelection: { from: 48000, to: 48000 }
+        }}
+        setNodeViewState={setNodeViewState}
+      />
+    );
+    view.rerender(
+      <RuntimeRestoreHarness listeners={listeners} readingPositionSyncState={null} setNodeViewState={setNodeViewState} />
+    );
+    vi.clearAllMocks();
+
+    emitScrollAndDebounce(listeners, false);
+    act(() => vi.advanceTimersByTime(1500));
+
     expect(syncReadingProgressToRuntime).not.toHaveBeenCalled();
     expect(setNodeViewState).not.toHaveBeenCalled();
   });
+}
+
+describe('useReadingProgressSync restore scroll guard', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  registerPollutedPendingGuardTest();
+  registerPostRestoreScrollGuardTests();
 });

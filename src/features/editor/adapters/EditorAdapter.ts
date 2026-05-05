@@ -28,6 +28,10 @@ export interface EditorScrollMetrics {
   scrollTop: number;
 }
 
+export interface EditorScrollEvent {
+  userInitiated: boolean;
+}
+
 export type { EditorDiffDecorations } from './lineDiffDecorations';
 
 export interface EditorAdapter {
@@ -62,5 +66,5 @@ export interface EditorAdapter {
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null): void;
   onContentChange(listener: (content: string) => void): () => void;
-  onScroll(listener: () => void): () => void;
+  onScroll(listener: (event: EditorScrollEvent) => void): () => void;
 }

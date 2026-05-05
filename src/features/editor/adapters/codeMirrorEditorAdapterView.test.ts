@@ -137,8 +137,8 @@ describe('codeMirrorEditorAdapterView fallback alignment', () => {
 describe('codeMirrorEditorAdapterView scroll subscription', () => {
   it('coalesces repeated scroll events into one callback per frame', () => {
     const listener = vi.fn();
-    const { scrollDOM, scrollListeners } = createScrollDomHarness();
-    const unsubscribe = subscribeToEditorScroll({ scrollDOM } as never, listener);
+    const { dom, scrollDOM, scrollListeners } = createScrollDomHarness();
+    const unsubscribe = subscribeToEditorScroll({ dom, scrollDOM } as never, listener);
     const handleScroll = scrollListeners.get('scroll');
 
     expect(handleScroll).toBeTypeOf('function');
@@ -150,15 +150,53 @@ describe('codeMirrorEditorAdapterView scroll subscription', () => {
 
     vi.runAllTimers();
 
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ userInitiated: false });
+
+    unsubscribe();
+  });
+
+  it('marks wheel-driven scroll callbacks as user initiated', () => {
+    const listener = vi.fn();
+    const { dom, scrollDOM, scrollListeners } = createScrollDomHarness();
+    const unsubscribe = subscribeToEditorScroll({ dom, scrollDOM } as never, listener);
+
+    scrollListeners.get('wheel')?.(new Event('wheel'));
+    scrollListeners.get('scroll')?.(new Event('scroll'));
+    vi.runAllTimers();
+
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ userInitiated: true });
+
+    unsubscribe();
+  });
+
+  it('marks keyboard-driven scroll callbacks as user initiated', () => {
+    const listener = vi.fn();
+    const { dom, domListeners, scrollDOM, scrollListeners } = createScrollDomHarness();
+    const unsubscribe = subscribeToEditorScroll({ dom, scrollDOM } as never, listener);
+
+    domListeners.get('keydown')?.(new KeyboardEvent('keydown', { key: 'PageDown' }));
+    scrollListeners.get('scroll')?.(new Event('scroll'));
+    vi.runAllTimers();
+
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ userInitiated: true });
 
     unsubscribe();
   });
 });
 
 function createScrollDomHarness() {
+  const domListeners = new Map<string, EventListener>();
   const scrollListeners = new Map<string, EventListener>();
   return {
+    dom: {
+      addEventListener: vi.fn((event: string, handler: EventListener) => {
+        domListeners.set(event, handler);
+      }),
+      removeEventListener: vi.fn((event: string) => {
+        domListeners.delete(event);
+      })
+    },
+    domListeners,
     scrollDOM: {
       addEventListener: vi.fn((event: string, handler: EventListener) => {
         scrollListeners.set(event, handler);
