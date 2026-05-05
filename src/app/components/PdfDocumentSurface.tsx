@@ -3,7 +3,6 @@ import { pdfjs } from 'react-pdf';
 
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { PdfDocumentToolbar } from './PdfDocumentToolbar';
 import { PdfDocumentViewport } from './PdfDocumentViewport';
 
 const PDF_PAGE_MIN = 1;
@@ -129,34 +128,40 @@ export function PdfDocumentSurface({ nodeViewState, onViewStateChange, sourceHin
   const { handlePageChange, loadError, maxPage, page, pdfSource, setLoadError, setPage, setTotalPages, setZoom, zoom } =
     usePdfSurfaceState(nodeViewState, onViewStateChange, sourceHint);
   const [pageJumpRequest, setPageJumpRequest] = useState<number | null>(null);
+  const [rotation, setRotation] = useState(0);
 
   const handlePageInputChange = (value: number) => {
     handlePageChange(value);
     setPageJumpRequest(clampInteger(value, PDF_PAGE_MIN, maxPage));
   };
 
+  const handlePageStep = (direction: -1 | 1) => {
+    const nextPage = clampInteger(page + direction, PDF_PAGE_MIN, maxPage);
+    handlePageChange(nextPage);
+    setPageJumpRequest(nextPage);
+  };
+
   return (
     <section aria-label="PDF reader panel" className="relative flex min-h-0 flex-1 flex-col bg-bg-canvas" data-testid="pdf-document-surface">
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-gradient-to-b from-bg-canvas via-bg-canvas/88 to-transparent" />
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <PdfDocumentToolbar
-          maxPage={maxPage}
-          onPageChange={handlePageInputChange}
-          onZoomIn={() => setZoom((current) => Math.min(PDF_ZOOM_MAX, current + PDF_ZOOM_STEP))}
-          onZoomOut={() => setZoom((current) => Math.max(PDF_ZOOM_MIN, current - PDF_ZOOM_STEP))}
-          page={page}
-          zoom={zoom}
-        />
         <PdfDocumentViewport
           loadError={loadError}
+          maxPage={maxPage}
+          onNextPage={() => handlePageStep(1)}
           onLoadError={(message) => setLoadError(message)}
           onLoadSuccess={(numPages) => {
             setLoadError(null);
             setTotalPages(numPages);
           }}
+          onPageChange={handlePageInputChange}
+          onPreviousPage={() => handlePageStep(-1)}
+          onRotateClockwise={() => setRotation((current) => (current + 90) % 360)}
+          onZoomIn={() => setZoom((current) => Math.min(PDF_ZOOM_MAX, current + PDF_ZOOM_STEP))}
+          onZoomOut={() => setZoom((current) => Math.max(PDF_ZOOM_MIN, current - PDF_ZOOM_STEP))}
           page={page}
           pageJumpRequest={pageJumpRequest}
           pdfSource={pdfSource}
+          rotation={rotation}
           setPageJumpRequest={setPageJumpRequest}
           setVisiblePage={(value) => setPage(value)}
           totalPages={maxPage === Number.MAX_SAFE_INTEGER ? null : maxPage}

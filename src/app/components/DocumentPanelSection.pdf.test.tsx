@@ -163,7 +163,7 @@ it('renders the pdf reading container for linked pdf nodes', () => {
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
 });
 
-it('supports continuous pdf scrolling controls with page jump and zoom', () => {
+it('supports pdf controls with zoom, page navigation, and rotation', () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
@@ -175,6 +175,15 @@ it('supports continuous pdf scrolling controls with page jump and zoom', () => {
     target: { value: '5' }
   });
   expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(5);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+  expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(4);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  expect(screen.getByRole('spinbutton', { name: 'PDF page' })).toHaveValue(5);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rotate page clockwise' }));
+  expect(screen.getAllByTestId('pdf-document-page')[0]).toHaveAttribute('data-rotate', '90');
 });
 
 it('shows a loading state while a pdf node source is refreshing', () => {

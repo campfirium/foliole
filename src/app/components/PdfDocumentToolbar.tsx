@@ -1,19 +1,40 @@
-import { AppButton, AppInput } from '../../shared/ui';
+import { ChevronDown, ChevronUp, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+
+import { AppIconButton, AppInput } from '../../shared/ui';
 
 interface PdfDocumentToolbarProps {
   maxPage: number;
+  onNextPage: () => void;
   onPageChange: (value: number) => void;
+  onPreviousPage: () => void;
+  onRotateClockwise: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   page: number;
+  rotation: number;
   zoom: number;
 }
 
-function PdfPageControls({ maxPage, onPageChange, page }: Pick<PdfDocumentToolbarProps, 'maxPage' | 'onPageChange' | 'page'>) {
+function PdfPageControls({
+  maxPage,
+  onNextPage,
+  onPageChange,
+  onPreviousPage,
+  page
+}: Pick<PdfDocumentToolbarProps, 'maxPage' | 'onNextPage' | 'onPageChange' | 'onPreviousPage' | 'page'>) {
   const pageCountLabel = Number.isFinite(maxPage) ? maxPage : '--';
+  const canGoPrevious = page > 1;
+  const canGoNext = Number.isFinite(maxPage) ? page < maxPage : true;
 
   return (
     <div className="flex items-center gap-2">
+      <AppIconButton
+        className="size-8"
+        disabled={!canGoPrevious}
+        icon={<ChevronUp aria-hidden="true" size={15} strokeWidth={2.1} />}
+        label="Previous page"
+        onClick={onPreviousPage}
+      />
       <label className="sr-only" htmlFor="pdf-page-input">
         PDF page
       </label>
@@ -35,42 +56,77 @@ function PdfPageControls({ maxPage, onPageChange, page }: Pick<PdfDocumentToolba
       <p className="min-w-16 text-xs text-foreground/55" data-testid="pdf-page-count">
         / {pageCountLabel}
       </p>
+      <AppIconButton
+        className="size-8"
+        disabled={!canGoNext}
+        icon={<ChevronDown aria-hidden="true" size={15} strokeWidth={2.1} />}
+        label="Next page"
+        onClick={onNextPage}
+      />
     </div>
   );
 }
 
-function PdfZoomControls({ onZoomIn, onZoomOut, zoom }: Pick<PdfDocumentToolbarProps, 'onZoomIn' | 'onZoomOut' | 'zoom'>) {
+function PdfZoomControls({
+  onRotateClockwise,
+  onZoomIn,
+  onZoomOut,
+  rotation,
+  zoom
+}: Pick<PdfDocumentToolbarProps, 'onRotateClockwise' | 'onZoomIn' | 'onZoomOut' | 'rotation' | 'zoom'>) {
   return (
     <div className="flex items-center gap-1">
-      <AppButton aria-label="Zoom out" onClick={onZoomOut} size="sm" variant="ghost">
-        -
-      </AppButton>
+      <AppIconButton className="size-8" icon={<ZoomOut aria-hidden="true" size={15} strokeWidth={2.1} />} label="Zoom out" onClick={onZoomOut} />
       <p aria-live="polite" className="min-w-14 text-center text-xs text-foreground/70" data-testid="pdf-zoom-value">
         {zoom}%
       </p>
-      <AppButton aria-label="Zoom in" onClick={onZoomIn} size="sm" variant="ghost">
-        +
-      </AppButton>
+      <AppIconButton className="size-8" icon={<ZoomIn aria-hidden="true" size={15} strokeWidth={2.1} />} label="Zoom in" onClick={onZoomIn} />
+      <div className="h-5 w-px bg-border/40" />
+      <AppIconButton
+        className="size-8"
+        icon={<RotateCw aria-hidden="true" size={15} strokeWidth={2.1} />}
+        label="Rotate page clockwise"
+        onClick={onRotateClockwise}
+      />
+      <p aria-live="polite" className="min-w-10 text-center text-xs text-foreground/70" data-testid="pdf-rotation-value">
+        {rotation}°
+      </p>
     </div>
   );
 }
 
 export function PdfDocumentToolbar({
   maxPage,
+  onNextPage,
   onPageChange,
+  onPreviousPage,
+  onRotateClockwise,
   onZoomIn,
   onZoomOut,
   page,
+  rotation,
   zoom
 }: PdfDocumentToolbarProps) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-4" data-testid="pdf-document-toolbar">
-      <div className="pointer-events-auto flex items-center gap-4 rounded-full bg-gradient-to-b from-bg-elevated/96 via-bg-elevated/82 to-bg-elevated/58 px-4 py-2 shadow-sm backdrop-blur">
+    <div className="mb-4 flex justify-center px-4 pt-3" data-testid="pdf-document-toolbar">
+      <div className="flex items-center gap-4 rounded-full bg-gradient-to-b from-bg-elevated/96 via-bg-elevated/82 to-bg-elevated/58 px-4 py-2 shadow-sm backdrop-blur">
         <div className="flex items-center gap-1">
-          <PdfZoomControls onZoomIn={onZoomIn} onZoomOut={onZoomOut} zoom={zoom} />
+          <PdfZoomControls
+            onRotateClockwise={onRotateClockwise}
+            onZoomIn={onZoomIn}
+            onZoomOut={onZoomOut}
+            rotation={rotation}
+            zoom={zoom}
+          />
         </div>
         <div className="h-5 w-px bg-border/30" />
-        <PdfPageControls maxPage={maxPage} onPageChange={onPageChange} page={page} />
+        <PdfPageControls
+          maxPage={maxPage}
+          onNextPage={onNextPage}
+          onPageChange={onPageChange}
+          onPreviousPage={onPreviousPage}
+          page={page}
+        />
       </div>
     </div>
   );

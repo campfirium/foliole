@@ -25,8 +25,8 @@ vi.mock('react-pdf', async () => {
         </div>
       );
     },
-    Page: ({ pageNumber, scale }: { pageNumber: number; scale: number }) => (
-      <div data-page={pageNumber} data-scale={scale} data-testid="pdf-document-page" />
+    Page: ({ pageNumber, rotate, scale }: { pageNumber: number; rotate?: number; scale: number }) => (
+      <div data-page={pageNumber} data-rotate={rotate ?? 0} data-scale={scale} data-testid="pdf-document-page" />
     ),
     pdfjs: {
       version: '5.4.296',
