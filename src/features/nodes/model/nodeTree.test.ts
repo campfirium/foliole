@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildNodeTreeRows } from './nodeTree';
+import {
+  buildNodeTree,
+  buildNodeTreeRows,
+  buildVisibleNodeTreeRows,
+  collectNodeAncestorIds
+} from './nodeTree';
 import type { Node } from './nodeTypes';
 
 function createNode(id: string, title: string, parentNodeId: string | null): Node {
@@ -28,7 +33,12 @@ describe('buildNodeTreeRows', () => {
 
     const rows = buildNodeTreeRows(nodeOrder, nodesById);
 
-    expect(rows.map((row) => `${row.depth}:${row.node.id}`)).toEqual(['0:root-1', '1:child-1', '1:child-2', '0:root-2']);
+    expect(rows.map((row) => `${row.depth}:${row.node.id}`)).toEqual([
+      '0:root-1',
+      '1:child-1',
+      '1:child-2',
+      '0:root-2'
+    ]);
     expect(rows.find((row) => row.node.id === 'root-1')?.hasChildren).toBe(true);
     expect(rows.find((row) => row.node.id === 'child-1')?.hasChildren).toBe(false);
   });
@@ -43,5 +53,52 @@ describe('buildNodeTreeRows', () => {
     const rows = buildNodeTreeRows(nodeOrder, nodesById);
 
     expect(rows.map((row) => `${row.depth}:${row.node.id}`)).toEqual(['0:orphan', '0:root']);
+  });
+});
+
+describe('buildVisibleNodeTreeRows', () => {
+  it('hides descendant rows for collapsed nodes', () => {
+    const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
+    const nodesById: Record<string, Node> = {
+      root: createNode('root', 'Root', null),
+      'child-1': createNode('child-1', 'Child 1', 'root'),
+      'grandchild-1': createNode('grandchild-1', 'Grandchild 1', 'child-1'),
+      'child-2': createNode('child-2', 'Child 2', 'root')
+    };
+    const rows = buildNodeTreeRows(nodeOrder, nodesById);
+
+    const visible = buildVisibleNodeTreeRows(rows, new Set(['root']));
+
+    expect(visible.map((row) => row.node.id)).toEqual(['root']);
+  });
+
+  it('keeps siblings visible when collapsing one branch', () => {
+    const nodeOrder = ['root', 'child-1', 'grandchild-1', 'child-2'];
+    const nodesById: Record<string, Node> = {
+      root: createNode('root', 'Root', null),
+      'child-1': createNode('child-1', 'Child 1', 'root'),
+      'grandchild-1': createNode('grandchild-1', 'Grandchild 1', 'child-1'),
+      'child-2': createNode('child-2', 'Child 2', 'root')
+    };
+    const rows = buildNodeTreeRows(nodeOrder, nodesById);
+
+    const visible = buildVisibleNodeTreeRows(rows, new Set(['child-1']));
+
+    expect(visible.map((row) => row.node.id)).toEqual(['root', 'child-1', 'child-2']);
+  });
+});
+
+describe('collectNodeAncestorIds', () => {
+  it('returns parent chain from nearest parent to root', () => {
+    const nodeOrder = ['root', 'child', 'grandchild'];
+    const nodesById: Record<string, Node> = {
+      root: createNode('root', 'Root', null),
+      child: createNode('child', 'Child', 'root'),
+      grandchild: createNode('grandchild', 'Grandchild', 'child')
+    };
+
+    const tree = buildNodeTree(nodeOrder, nodesById);
+
+    expect(collectNodeAncestorIds('grandchild', tree.parentById)).toEqual(['child', 'root']);
   });
 });

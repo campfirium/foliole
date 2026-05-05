@@ -5,6 +5,8 @@ import type { NodeTreeRow as NodeTreeRowModel } from '../model/nodeTree';
 
 import { NodeTreeRow } from './NodeTreeRow';
 
+const NOOP_TOGGLE_COLLAPSE = () => undefined;
+
 interface NodeTrashSectionProps {
   isOpen: boolean;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -12,6 +14,26 @@ interface NodeTrashSectionProps {
   onSelect: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   rows: NodeTreeRowModel[];
   selectedNodeIds: string[];
+}
+
+function EmptyTrashButton({
+  disabled,
+  onEmptyTrash
+}: {
+  disabled: boolean;
+  onEmptyTrash: () => void;
+}) {
+  return (
+    <AppButton
+      aria-label="Empty"
+      disabled={disabled}
+      onClick={(event) => (event.stopPropagation(), onEmptyTrash())}
+      size="sm"
+      variant="subtle"
+    >
+      Empty
+    </AppButton>
+  );
 }
 
 export function NodeTrashSection({
@@ -22,19 +44,18 @@ export function NodeTrashSection({
   rows,
   selectedNodeIds
 }: NodeTrashSectionProps) {
-  const handleEmptyTrash = (event: ReactMouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    onEmptyTrash();
-  };
-
   return (
-    <section aria-label="Trash section" className="-mx-4 mt-auto flex flex-none flex-col data-[open=true]:mt-0" data-open={isOpen}>
+    <section
+      aria-label="Trash section"
+      className="-mx-4 mt-auto flex flex-none flex-col data-[open=true]:mt-0"
+      data-open={isOpen}
+    >
       {isOpen ? (
         <div className="flex min-h-[48px] items-center justify-between px-4 pt-2">
-          <span className="text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70">Trash</span>
-          <AppButton aria-label="Empty" disabled={rows.length === 0} onClick={handleEmptyTrash} size="sm" variant="subtle">
-            Empty
-          </AppButton>
+          <span className="text-sm font-semibold uppercase tracking-[0.06em] text-foreground/70">
+            Trash
+          </span>
+          <EmptyTrashButton disabled={rows.length === 0} onEmptyTrash={onEmptyTrash} />
         </div>
       ) : null}
       <div
@@ -48,14 +69,16 @@ export function NodeTrashSection({
           rows.map((row) => (
             <NodeTreeRow
               depth={row.depth}
+              hasChildren={row.hasChildren}
               isActive={false}
+              isCollapsed={false}
               isSelected={selectedNodeIds.includes(row.node.id)}
               key={row.node.id}
               label={row.node.title}
               nodeId={row.node.id}
               onContextMenu={onContextMenu}
               onSelect={onSelect}
-              showBranch={row.depth > 0 || row.hasChildren}
+              onToggleCollapse={NOOP_TOGGLE_COLLAPSE}
             />
           ))
         )}
