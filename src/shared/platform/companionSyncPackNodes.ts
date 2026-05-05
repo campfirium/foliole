@@ -1,6 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
-import { applySyncPackNodesWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor';
+import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import {
@@ -11,14 +11,17 @@ import {
 const INCOMING_PACK_ALIAS = 'inc';
 
 export async function applyCompanionSyncPackNodesWithSharedCore(
-  packPath: string,
+  args: { currentCursor: number; packPath: string },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
   const port = createCapacitorSqliteDbPort(connection);
-  await port.run(`ATTACH DATABASE ${sqlString(packPath)} AS ${INCOMING_PACK_ALIAS}`);
+  await port.run(`ATTACH DATABASE ${sqlString(args.packPath)} AS ${INCOMING_PACK_ALIAS}`);
   try {
-    await applySyncPackNodesWithDbPort(port, { incomingAlias: INCOMING_PACK_ALIAS });
+    return await applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: args.currentCursor,
+      incomingAlias: INCOMING_PACK_ALIAS
+    });
   } finally {
     await port.run(`DETACH DATABASE ${INCOMING_PACK_ALIAS}`);
   }

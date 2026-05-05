@@ -10,7 +10,16 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     retrieveConnection: vi.fn()
   };
 
-  await applyCompanionSyncPackNodesWithSharedCore('/tmp/incoming pack.db', manager as never);
+  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 0, to_state_seq: 4 }) }] });
+
+  await expect(applyCompanionSyncPackNodesWithSharedCore({
+    currentCursor: 0,
+    packPath: '/tmp/incoming pack.db'
+  }, manager as never)).resolves.toEqual({
+    applied: true,
+    fromStateSeq: 0,
+    toStateSeq: 4
+  });
 
   expect(connection.open).toHaveBeenCalled();
   expect(connection.execute).toHaveBeenNthCalledWith(
