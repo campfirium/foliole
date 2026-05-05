@@ -36,6 +36,7 @@ function runScript(env) {
 async function createMockScripts(root, clientBody) {
   const syncScript = path.join(root, 'mock-sync.sh');
   const clientScript = path.join(root, 'mock-client.sh');
+  const freshnessScript = path.join(root, 'mock-freshness.mjs');
   const actionLog = path.join(root, 'actions.log');
 
   await writeFile(
@@ -53,9 +54,10 @@ async function createMockScripts(root, clientBody) {
     ].join('\n'),
     'utf8'
   );
+  await writeFile(freshnessScript, 'process.stdout.write("[check-electron-dist-fresh] status: FRESH\\n");\n', 'utf8');
   await writeFile(actionLog, '', 'utf8');
 
-  return { actionLog, clientScript, syncScript };
+  return { actionLog, clientScript, freshnessScript, syncScript };
 }
 
 async function readActions(actionLog) {
@@ -70,16 +72,51 @@ async function readRestartIntent(rootDir) {
 }
 
 describe('windows-preview script', () => {
+  it('fails before sync when electron-dist is stale', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING"', '  exit 0', 'fi', 'exit 1'].join('\n')
+      );
+
+      await writeFile(
+        freshnessScript,
+        [
+          'process.stdout.write("[check-electron-dist-fresh] status: STALE reason=source-newer-than-compiled-output\\n");',
+          'process.exit(1);'
+        ].join('\n'),
+        'utf8'
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('step 1/3: verify electron-dist freshness');
+      expect(result.stdout).not.toContain('[windows-sync] status: SYNCED');
+      expect(await readActions(actionLog)).toEqual([]);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('chooses sync-only for Class A on a trusted running client', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING"', '  exit 0', 'fi', 'exit 1'].join('\n')
       );
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
@@ -98,7 +135,7 @@ describe('windows-preview script', () => {
   it('chooses restart-intent for Class B working tree electron changes', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -111,6 +148,7 @@ describe('windows-preview script', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
@@ -139,7 +177,7 @@ describe('windows-preview script', () => {
   it('chooses restart-intent when runtime head is behind committed electron changes', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -152,6 +190,7 @@ describe('windows-preview script', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
@@ -181,7 +220,7 @@ describe('windows-preview script', () => {
   it('chooses fallback-start for Class C when no trusted client is running', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -198,6 +237,7 @@ describe('windows-preview script', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
@@ -216,7 +256,7 @@ describe('windows-preview script', () => {
   it('does not fall back to start after selecting restart-intent', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
@@ -233,6 +273,7 @@ describe('windows-preview script', () => {
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_SCRIPT: path.join(tempRoot, 'missing-intent-script.mjs'),
@@ -251,13 +292,14 @@ describe('windows-preview script', () => {
   it('does not use fallback-start when client status is unavailable', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  exit 1', 'fi', 'exit 1'].join('\n')
       );
 
       const result = await runScript({
         ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'

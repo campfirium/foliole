@@ -1,0 +1,169 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+
+const SOURCE_EXTENSIONS = new Set(['.ts', '.cjs']);
+
+function resolveRepoRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+}
+
+function collectFiles(rootPath) {
+  if (!fs.existsSync(rootPath)) {
+    return [];
+  }
+
+  const files = [];
+  const pending = [rootPath];
+
+  while (pending.length > 0) {
+    const currentPath = pending.pop();
+    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const entryPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(entryPath);
+        continue;
+      }
+      if (entry.isFile()) {
+        files.push(entryPath);
+      }
+    }
+  }
+
+  return files.sort();
+}
+
+function getNewestFile(filePaths) {
+  let newest = null;
+
+  for (const filePath of filePaths) {
+    const stats = fs.statSync(filePath);
+    if (newest === null || stats.mtimeMs > newest.mtimeMs) {
+      newest = { mtimeMs: stats.mtimeMs, path: filePath };
+    }
+  }
+
+  return newest;
+}
+
+function resolveExpectedDistPath(sourceRoot, distRoot, sourcePath) {
+  const relativePath = path.relative(sourceRoot, sourcePath);
+  if (path.extname(relativePath) !== '.ts') {
+    return null;
+  }
+
+  return path.join(distRoot, path.basename(sourceRoot), relativePath.replace(/\.ts$/, '.js'));
+}
+
+function createRelativePath(repoRoot, targetPath) {
+  return path.relative(repoRoot, targetPath) || path.basename(targetPath);
+}
+
+export function inspectElectronDistFreshness({
+  repoRoot = resolveRepoRoot(),
+  sourceRoot = path.join(repoRoot, 'electron'),
+  distRoot = path.join(repoRoot, 'electron-dist')
+} = {}) {
+  const sourceFiles = collectFiles(sourceRoot).filter((filePath) => SOURCE_EXTENSIONS.has(path.extname(filePath)));
+  const distFiles = collectFiles(distRoot);
+  const newestSource = getNewestFile(sourceFiles);
+  const newestDist = getNewestFile(distFiles);
+  const problems = [];
+
+  if (sourceFiles.length === 0) {
+    return {
+      checkedDistCount: distFiles.length,
+      checkedSourceCount: 0,
+      ok: true,
+      problems,
+      repoRoot
+    };
+  }
+
+  if (newestDist === null) {
+    problems.push({
+      distRoot: createRelativePath(repoRoot, distRoot),
+      reason: 'compiled-output-missing',
+      source: createRelativePath(repoRoot, newestSource.path)
+    });
+  } else if (newestSource.mtimeMs > newestDist.mtimeMs) {
+    problems.push({
+      newestDist: createRelativePath(repoRoot, newestDist.path),
+      newestSource: createRelativePath(repoRoot, newestSource.path),
+      reason: 'newest-source-newer-than-dist'
+    });
+  }
+
+  for (const sourcePath of sourceFiles) {
+    const expectedDistPath = resolveExpectedDistPath(sourceRoot, distRoot, sourcePath);
+    if (!expectedDistPath) {
+      continue;
+    }
+    if (!fs.existsSync(expectedDistPath)) {
+      problems.push({
+        expectedDist: createRelativePath(repoRoot, expectedDistPath),
+        reason: 'missing-compiled-output',
+        source: createRelativePath(repoRoot, sourcePath)
+      });
+      continue;
+    }
+
+    const sourceMtimeMs = fs.statSync(sourcePath).mtimeMs;
+    const expectedDistMtimeMs = fs.statSync(expectedDistPath).mtimeMs;
+    if (sourceMtimeMs > expectedDistMtimeMs) {
+      problems.push({
+        expectedDist: createRelativePath(repoRoot, expectedDistPath),
+        reason: 'source-newer-than-compiled-output',
+        source: createRelativePath(repoRoot, sourcePath)
+      });
+    }
+  }
+
+  return {
+    checkedDistCount: distFiles.length,
+    checkedSourceCount: sourceFiles.length,
+    newestDist: newestDist ? createRelativePath(repoRoot, newestDist.path) : null,
+    newestSource: newestSource ? createRelativePath(repoRoot, newestSource.path) : null,
+    ok: problems.length === 0,
+    problems,
+    repoRoot
+  };
+}
+
+function printResult(result) {
+  if (result.ok) {
+    process.stdout.write(
+      `[check-electron-dist-fresh] status: FRESH checked_sources=${result.checkedSourceCount} checked_outputs=${result.checkedDistCount} newest_source=${result.newestSource ?? 'none'} newest_output=${result.newestDist ?? 'none'}\n`
+    );
+    return;
+  }
+
+  process.stderr.write(
+    `[check-electron-dist-fresh] status: STALE checked_sources=${result.checkedSourceCount} checked_outputs=${result.checkedDistCount}\n`
+  );
+  for (const problem of result.problems) {
+    const detail = Object.entries(problem)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(' ');
+    process.stderr.write(`[check-electron-dist-fresh] ${detail}\n`);
+  }
+}
+
+function runCli() {
+  const repoRoot = process.env.FOLIOLE_ELECTRON_FRESHNESS_REPO_ROOT?.trim() || resolveRepoRoot();
+  const sourceRoot = process.env.FOLIOLE_ELECTRON_SOURCE_ROOT?.trim() || path.join(repoRoot, 'electron');
+  const distRoot = process.env.FOLIOLE_ELECTRON_DIST_ROOT?.trim() || path.join(repoRoot, 'electron-dist');
+  const result = inspectElectronDistFreshness({ distRoot, repoRoot, sourceRoot });
+
+  printResult(result);
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  runCli();
+}

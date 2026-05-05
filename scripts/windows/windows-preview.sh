@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WINDOWS_SYNC_SCRIPT="${WINDOWS_SYNC_SCRIPT:-scripts/windows/windows-sync.sh}"
 WINDOWS_CLIENT_SCRIPT="${WINDOWS_CLIENT_SCRIPT:-scripts/windows/windows-restart-client.sh}"
 WINDOWS_RESTART_INTENT_SCRIPT="${WINDOWS_RESTART_INTENT_SCRIPT:-scripts/windows/write-restart-intent.mjs}"
+WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT="${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT:-scripts/windows/check-electron-dist-fresh.mjs}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
 WINDOWS_PREVIEW_TIMEOUT_SECONDS="${WINDOWS_PREVIEW_TIMEOUT_SECONDS:-25}"
@@ -257,13 +258,16 @@ run_status_probe_failed() {
   return 1
 }
 
-echo "[windows-preview] step 1/2: sync to windows mirror"
+echo "[windows-preview] step 1/3: verify electron-dist freshness"
+node "${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT}"
+
+echo "[windows-preview] step 2/3: sync to windows mirror"
 bash "${WINDOWS_SYNC_SCRIPT}"
 
 changed_files="$(resolve_changed_files)"
 select_update_action "${changed_files}"
 
-echo "[windows-preview] step 2/2: apply update action"
+echo "[windows-preview] step 3/3: apply update action"
 echo "[windows-preview] reason: ${SELECTED_REASON}"
 
 case "${SELECTED_ACTION}" in
