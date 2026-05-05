@@ -280,7 +280,7 @@
         }
       ]
     },
-    "syncStateExistingForMutation": {
+    "existingState": {
       "resultKey": "rows",
       "sql": "SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1",
       "columns": [
@@ -301,7 +301,7 @@
         }
       ]
     },
-    "syncStateNextSeqForMutation": {
+    "nextStateSeq": {
       "resultKey": "rows",
       "sql": "SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state",
       "columns": [
@@ -1725,6 +1725,23 @@
       "minLimit": 1,
       "resultKey": "blobs",
       "summaryQueryName": "contentBlobMissingSummaryRows"
+    }
+  },
+  "runtimeQueries": {
+    "companionMeta": {
+      "queryName": "companionMetaValue"
+    },
+    "existingState": {
+      "baseContentHashKey": "base_content_hash",
+      "contentHashKey": "content_hash",
+      "queryName": "syncStateExistingForMutation",
+      "resultKey": "rows",
+      "syncDirtyKey": "sync_dirty"
+    },
+    "nextStateSeq": {
+      "nextStateSeqKey": "next_state_seq",
+      "queryName": "syncStateNextSeqForMutation",
+      "resultKey": "rows"
     }
   },
   "syncConflictRead": {

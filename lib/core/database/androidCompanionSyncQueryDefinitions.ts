@@ -113,7 +113,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     sql: 'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
     columns: [{ key: 'value', source: 'value', type: 'nullableString' }]
   },
-  syncStateExistingForMutation: {
+  existingState: {
     resultKey: 'rows',
     sql: 'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
     columns: [
@@ -122,7 +122,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
       { key: 'sync_dirty', source: 'sync_dirty', type: 'long' }
     ]
   },
-  syncStateNextSeqForMutation: {
+  nextStateSeq: {
     resultKey: 'rows',
     sql: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',
     columns: [{ key: 'next_state_seq', source: 'next_state_seq', type: 'long' }]
@@ -180,5 +180,23 @@ export const ANDROID_COMPANION_SYNC_STREAM_READ_RULES = {
 export const ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES = {
   nodeConflicts: {
     queryName: 'nodeConflicts'
+  }
+} as const;
+
+export const ANDROID_COMPANION_RUNTIME_QUERY_RULES = {
+  companionMeta: {
+    queryName: 'companionMetaValue'
+  },
+  existingState: {
+    baseContentHashKey: 'base_content_hash',
+    contentHashKey: 'content_hash',
+    queryName: 'syncStateExistingForMutation',
+    resultKey: 'rows',
+    syncDirtyKey: 'sync_dirty'
+  },
+  nextStateSeq: {
+    nextStateSeqKey: 'next_state_seq',
+    queryName: 'syncStateNextSeqForMutation',
+    resultKey: 'rows'
   }
 } as const;

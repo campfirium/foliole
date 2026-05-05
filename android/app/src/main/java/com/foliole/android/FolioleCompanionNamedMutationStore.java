@@ -66,17 +66,26 @@ final class FolioleCompanionNamedMutationStore {
         JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
             context,
             database,
-            "syncStateExistingForMutation",
-            "rows",
+            runtimeRule(context, "existingState", "queryName"),
+            runtimeRule(context, "existingState", "resultKey"),
             new String[] { objectType, objectId }
         );
         if (row == null) return null;
-        return new ExistingState(row.getString("content_hash"), row.isNull("base_content_hash") ? null : row.getString("base_content_hash"), row.getInt("sync_dirty"));
+        String contentHashKey = runtimeRule(context, "existingState", "contentHashKey");
+        String baseContentHashKey = runtimeRule(context, "existingState", "baseContentHashKey");
+        String syncDirtyKey = runtimeRule(context, "existingState", "syncDirtyKey");
+        return new ExistingState(row.getString(contentHashKey), row.isNull(baseContentHashKey) ? null : row.getString(baseContentHashKey), row.getInt(syncDirtyKey));
     }
 
     private static long nextStateSeq(Context context, SQLiteDatabase database) throws Exception {
-        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(context, database, "syncStateNextSeqForMutation", "rows", null);
-        return row == null ? 1L : row.getLong("next_state_seq");
+        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
+            context,
+            database,
+            runtimeRule(context, "nextStateSeq", "queryName"),
+            runtimeRule(context, "nextStateSeq", "resultKey"),
+            null
+        );
+        return row == null ? 1L : row.getLong(runtimeRule(context, "nextStateSeq", "nextStateSeqKey"));
     }
 
     private static String statement(Context context, String name) throws Exception {
@@ -94,6 +103,10 @@ final class FolioleCompanionNamedMutationStore {
 
     private static JSONObject loadPayload(Context context) throws Exception {
         return new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
+    }
+
+    private static String runtimeRule(Context context, String groupName, String key) throws Exception {
+        return FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key);
     }
 
     private static void bindArgs(SQLiteStatement statement, Object[] args) {

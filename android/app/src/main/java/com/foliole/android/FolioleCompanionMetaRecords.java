@@ -72,7 +72,12 @@ final class FolioleCompanionMetaRecords {
     }
 
     static String loadValue(Context context, SQLiteDatabase database, String key) throws Exception {
-        String stored = FolioleCompanionNamedQueryStore.loadString(context, database, "companionMetaValue", new String[] { key });
+        String stored = FolioleCompanionNamedQueryStore.loadString(
+            context,
+            database,
+            runtimeRule(context, "companionMeta", "queryName"),
+            new String[] { key }
+        );
         return stored == null || stored.trim().isEmpty() ? null : stored;
     }
 
@@ -86,5 +91,9 @@ final class FolioleCompanionMetaRecords {
             value,
             updatedAt
         });
+    }
+
+    private static String runtimeRule(Context context, String groupName, String key) throws Exception {
+        return FolioleCompanionRuntimeQueryRules.stringValue(context, groupName, key);
     }
 }
