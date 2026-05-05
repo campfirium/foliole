@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
+import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import {
   loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport,

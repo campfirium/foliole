@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
-import { loadRuntimePdfImportsInventory } from './pdfImportsBridge';
+import { loadRuntimePdfImportsInventory } from './pdfImportsRuntimeRepository';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {

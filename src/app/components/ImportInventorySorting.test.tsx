@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
+import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
 
 import { sortOverviewItems } from './importOverviewSorting';

@@ -17,7 +17,7 @@ vi.mock('../../shared/platform/readwiseBooksBridge', () => ({
   loadRuntimeReadwiseBooksInventory,
   resetRuntimeReadwiseBookImport
 }));
-vi.mock('../../shared/platform/pdfImportsBridge', () => ({
+vi.mock('../../shared/platform/pdfImportsRuntimeRepository', () => ({
   loadRuntimePdfImportsInventory
 }));
 

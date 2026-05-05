@@ -1,5 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
+import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import { AppListSectionHeader, AppListSurface } from '../../shared/ui';
 
 import { PdfInventoryItem } from './ImportInventoryListItems';
