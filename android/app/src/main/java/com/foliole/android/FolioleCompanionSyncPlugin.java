@@ -302,12 +302,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load companion sync state changes.",
-            databaseHelper -> {
-                Integer cursor = call.getData().has("cursor") && !call.getData().isNull("cursor")
-                    ? call.getData().getInt("cursor")
-                    : null;
-                return databaseHelper.loadSyncStateChanges(cursor, call.getData().optInt("limit", 500));
-            }
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.loadSyncStateChanges(databaseHelper, call)
         );
     }
 
@@ -488,10 +483,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load companion sync objects.",
-            databaseHelper -> databaseHelper.loadSyncObjects(
-                call.getData().optJSONArray("object_ids"),
-                call.getData().optJSONArray("object_types")
-            )
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.loadSyncObjects(databaseHelper, call)
         );
     }
 
@@ -500,7 +492,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to apply companion sync objects.",
-            databaseHelper -> databaseHelper.applySyncObjects(call.getData().optJSONArray("objects"))
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.applySyncObjects(databaseHelper, call)
         );
     }
 
@@ -509,10 +501,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load companion sync node versions.",
-            databaseHelper -> databaseHelper.loadSyncNodeVersions(
-                call.getData().optJSONObject("cursor"),
-                call.getData().optInt("limit", 500)
-            )
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.loadSyncNodeVersions(databaseHelper, call)
         );
     }
 
@@ -521,10 +510,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to load companion sync review log.",
-            databaseHelper -> databaseHelper.loadSyncReviewLog(
-                call.getData().optJSONObject("cursor"),
-                call.getData().optInt("limit", 500)
-            )
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.loadSyncReviewLog(databaseHelper, call)
         );
     }
 
@@ -533,7 +519,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to apply companion sync node versions.",
-            databaseHelper -> databaseHelper.applySyncNodeVersions(call.getData().optJSONArray("nodes"))
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.applySyncNodeVersions(databaseHelper, call)
         );
     }
 
@@ -542,7 +528,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         resolveWithDatabase(
             call,
             "Failed to apply companion sync review log.",
-            databaseHelper -> databaseHelper.applySyncReviewLog(call.getData().optJSONArray("reviews"))
+            databaseHelper -> FolioleCompanionSyncDataPluginActions.applySyncReviewLog(databaseHelper, call)
         );
     }
 }
