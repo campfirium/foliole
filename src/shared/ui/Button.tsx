@@ -15,7 +15,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'col
 
 function resolveVariantClass(variant: ButtonVariant) {
   if (variant === 'primary') {
-    return 'border border-border bg-transparent text-foreground hover:bg-foreground/[0.04]';
+    return 'border border-[var(--app-control-border-color)] bg-transparent text-foreground hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-control-bg-hover-color)]';
   }
   if (variant === 'subtle') {
     return 'text-foreground/70 hover:text-foreground';
@@ -23,7 +23,7 @@ function resolveVariantClass(variant: ButtonVariant) {
   if (variant === 'list') {
     return 'w-full justify-start px-3 text-left text-[13px] text-foreground/80 hover:bg-foreground/[0.03] hover:text-foreground';
   }
-  return 'border border-transparent bg-transparent text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
+  return 'border border-transparent bg-transparent text-foreground/70 hover:bg-[var(--app-control-bg-hover-color)] hover:text-foreground';
 }
 
 function resolveSizeClass(size: ButtonSize) {

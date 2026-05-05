@@ -58,7 +58,7 @@ function WorkspaceSurfaceRowDivider({ className, left }: { className?: string; l
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-y-0 z-[2] w-px -translate-x-1/2 bg-border ${className ?? ''}`}
+      className={`pointer-events-none absolute inset-y-0 z-[2] w-px -translate-x-1/2 bg-divider ${className ?? ''}`}
       style={{ left }}
     />
   );

@@ -30,7 +30,7 @@ export function WorkspaceExternalSectionSplitter({
         aria-hidden="true"
         className={cn(
           'absolute inset-x-0 bottom-0 h-1 cursor-row-resize',
-          'before:absolute before:bottom-0 before:left-4 before:right-4 before:h-px before:bg-border/10',
+          'before:absolute before:bottom-0 before:left-4 before:right-4 before:h-px before:bg-divider/45',
           isResizing && 'before:bg-border-strong'
         )}
       />

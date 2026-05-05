@@ -1,6 +1,9 @@
 import { expect, it } from 'vitest';
 
-import { getWorkspaceSurfaceAutoPaletteChoices } from './workspaceSurfaceAutoPaletteChoices';
+import {
+  createRandomWorkspaceSurfacePalettes,
+  getWorkspaceSurfaceAutoPaletteChoices
+} from './workspaceSurfaceAutoPaletteChoices';
 import { parseWorkspaceSurfaceColor, workspaceSurfaceColorToHsl } from './workspaceSurfaceColor';
 
 function getLightness(value: string) {
@@ -31,5 +34,29 @@ it('keeps random palette column hierarchy stable while varying overall tone', ()
     expect(topicL).toBeLessThan(documentL);
     expect(folderL).toBeGreaterThanOrEqual(62);
     expect(sidebarL).toBeGreaterThanOrEqual(72);
+  }
+});
+
+it('keeps dark random palettes narrow, low-light, and family-like', () => {
+  const palettes = createRandomWorkspaceSurfacePalettes({
+    documentPureWhite: false,
+    folderTopicSharedTone: false
+  }, 8, [], 'dark');
+
+  expect(palettes).toHaveLength(8);
+  for (const palette of palettes) {
+    const [rail, folder, topic, document, sidebar] = palette;
+    const railL = getLightness(rail!);
+    const folderL = getLightness(folder!);
+    const topicL = getLightness(topic!);
+    const documentL = getLightness(document!);
+    const sidebarL = getLightness(sidebar!);
+
+    expect(documentL).toBeLessThanOrEqual(12);
+    expect(railL).toBeGreaterThanOrEqual(11);
+    expect(folderL).toBeGreaterThan(railL);
+    expect(topicL).toBeGreaterThan(folderL);
+    expect(sidebarL).toBeGreaterThan(topicL);
+    expect(sidebarL).toBeLessThanOrEqual(16);
   }
 });

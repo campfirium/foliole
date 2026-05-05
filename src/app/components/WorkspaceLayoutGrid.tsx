@@ -31,7 +31,7 @@ function WorkspaceGridDivider({
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute z-[2] w-px -translate-x-1/2 bg-border max-[1080px]:hidden"
+      className="pointer-events-none absolute z-[2] w-px -translate-x-1/2 bg-divider max-[1080px]:hidden"
       style={{ bottom, left, top }}
     />
   );

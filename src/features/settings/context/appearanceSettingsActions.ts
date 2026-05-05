@@ -5,15 +5,22 @@ import { type MarkdownSyntaxVisibility, setMarkdownSyntaxVisibility } from '../.
 import { setAutoLocalizeRemoteImages } from '../../editor/model/remoteImageLocalizationSetting';
 import {
   type AccentColorPreset,
-  type BaseColorMode,
   type ClozeColorPreset,
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_ACCENT_COLOR_PRESET,
+  DEFAULT_DARK_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_FONT_COLOR_PRESET,
+  DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_DARK_SELECTION_COLOR_PRESET,
+  DEFAULT_FONT_COLOR_PRESET,
+  DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE,
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET,
   DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
   DEFAULT_WORKSPACE_SURFACE_PALETTE,
   type HighlightColorPreset,
+  type FontColorPreset,
   INTERFACE_FONT_SIZE_DEFAULT,
   type InterfaceFontPreset,
   type MonospaceFontPreset,
@@ -21,6 +28,7 @@ import {
   setAccentColorPreset,
   setBaseColorMode,
   setClozeColorPreset,
+  setFontColorPreset,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
   setCustomUiFont,
@@ -33,6 +41,7 @@ import {
   setWorkspaceSurfaceAssignments,
   setWorkspaceSurfacePalette
 } from '../model/appearanceSettings';
+import type { BaseColorMode, ResolvedBaseColorMode } from '../model/baseColorMode';
 
 import type { AppearanceSettingsContextValue } from './appearanceSettingsContext';
 
@@ -41,11 +50,13 @@ type Setter<T> = Dispatch<SetStateAction<T>>;
 type AppearanceState = {
   accentColorPresetState: AccentColorPreset;
   baseColorModeState: BaseColorMode;
+  resolvedBaseColorModeState: ResolvedBaseColorMode;
   clozeColorPresetState: ClozeColorPreset;
   customInterfaceFontState: string;
   customMonospaceFontState: string;
   customUiFontState: string;
   editorDisplayModeState: EditorDisplayMode;
+  fontColorPresetState: FontColorPreset;
   highlightColorPresetState: HighlightColorPreset;
   interfaceFontPresetState: InterfaceFontPreset;
   interfaceFontSizeState: number;
@@ -63,6 +74,7 @@ type AppearanceState = {
   setCustomMonospaceFontState: Setter<string>;
   setCustomUiFontState: Setter<string>;
   setEditorDisplayModeState: Setter<EditorDisplayMode>;
+  setFontColorPresetState: Setter<FontColorPreset>;
   setHighlightColorPresetState: Setter<HighlightColorPreset>;
   setInterfaceFontPresetState: Setter<InterfaceFontPreset>;
   setInterfaceFontSizeState: Setter<number>;
@@ -84,36 +96,59 @@ function clampAssignmentsToPalette(state: AppearanceState, palette: typeof state
 }
 
 function createWorkspaceSurfaceActions(state: AppearanceState) {
+  const defaultPalette = state.resolvedBaseColorModeState === 'dark'
+    ? DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE
+    : DEFAULT_WORKSPACE_SURFACE_PALETTE;
   return {
     resetWorkspaceSurfaceSettings: () => {
-      setWorkspaceSurfacePalette(DEFAULT_WORKSPACE_SURFACE_PALETTE);
+      setWorkspaceSurfacePalette(defaultPalette, state.resolvedBaseColorModeState);
       setWorkspaceSurfaceAssignments(
         DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
-        DEFAULT_WORKSPACE_SURFACE_PALETTE.length
+        defaultPalette.length,
+        state.resolvedBaseColorModeState
       );
-      state.setWorkspaceSurfacePaletteState(DEFAULT_WORKSPACE_SURFACE_PALETTE);
+      state.setWorkspaceSurfacePaletteState(defaultPalette);
       state.setWorkspaceSurfaceAssignmentsState(DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS);
     },
     setWorkspaceSurfaceAssignments: (value: typeof state.workspaceSurfaceAssignmentsState) => {
-      setWorkspaceSurfaceAssignments(value, state.workspaceSurfacePaletteState.length);
+      setWorkspaceSurfaceAssignments(value, state.workspaceSurfacePaletteState.length, state.resolvedBaseColorModeState);
       state.setWorkspaceSurfaceAssignmentsState(value);
     },
     setWorkspaceSurfacePalette: (value: typeof state.workspaceSurfacePaletteState) => {
       const nextAssignments = clampAssignmentsToPalette(state, value);
-      setWorkspaceSurfacePalette(value);
-      setWorkspaceSurfaceAssignments(nextAssignments, value.length);
+      setWorkspaceSurfacePalette(value, state.resolvedBaseColorModeState);
+      setWorkspaceSurfaceAssignments(nextAssignments, value.length, state.resolvedBaseColorModeState);
       state.setWorkspaceSurfacePaletteState(value);
       state.setWorkspaceSurfaceAssignmentsState(nextAssignments);
     }
   };
 }
 
-export function createAppearanceActions(
-  state: AppearanceState
-): Pick<
+function getDefaultAccentColor(mode: ResolvedBaseColorMode) {
+  return mode === 'dark' ? DEFAULT_DARK_ACCENT_COLOR_PRESET : DEFAULT_ACCENT_COLOR_PRESET;
+}
+
+function getDefaultClozeColor(mode: ResolvedBaseColorMode) {
+  return mode === 'dark' ? DEFAULT_DARK_CLOZE_COLOR_PRESET : DEFAULT_CLOZE_COLOR_PRESET;
+}
+
+function getDefaultFontColor(mode: ResolvedBaseColorMode) {
+  return mode === 'dark' ? DEFAULT_DARK_FONT_COLOR_PRESET : DEFAULT_FONT_COLOR_PRESET;
+}
+
+function getDefaultHighlightColor(mode: ResolvedBaseColorMode) {
+  return mode === 'dark' ? DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET : DEFAULT_HIGHLIGHT_COLOR_PRESET;
+}
+
+function getDefaultSelectionColor(mode: ResolvedBaseColorMode) {
+  return mode === 'dark' ? DEFAULT_DARK_SELECTION_COLOR_PRESET : DEFAULT_SELECTION_COLOR_PRESET;
+}
+
+type AppearanceActions = Pick<
   AppearanceSettingsContextValue,
   | 'resetAccentColorPreset'
   | 'resetClozeColorPreset'
+  | 'resetFontColorPreset'
   | 'resetHighlightColorPreset'
   | 'resetInterfaceFontSize'
   | 'resetSelectionColorPreset'
@@ -125,6 +160,7 @@ export function createAppearanceActions(
   | 'setCustomInterfaceFont'
   | 'setCustomMonospaceFont'
   | 'setCustomUiFont'
+  | 'setFontColorPreset'
   | 'setHighlightColorPreset'
   | 'setInterfaceFontPreset'
   | 'setInterfaceFontSize'
@@ -135,32 +171,68 @@ export function createAppearanceActions(
   | 'setWorkspaceSurfaceAssignments'
   | 'setWorkspaceSurfacePalette'
   | 'toggleEditorDisplayMode'
-> {
+>;
+
+function createColorPresetActions(state: AppearanceState) {
   return {
-    resetAccentColorPreset: () => (setAccentColorPreset(DEFAULT_ACCENT_COLOR_PRESET), state.setAccentColorPresetState(DEFAULT_ACCENT_COLOR_PRESET)),
-    resetClozeColorPreset: () => (setClozeColorPreset(DEFAULT_CLOZE_COLOR_PRESET), state.setClozeColorPresetState(DEFAULT_CLOZE_COLOR_PRESET)),
-    resetHighlightColorPreset: () => (setHighlightColorPreset(DEFAULT_HIGHLIGHT_COLOR_PRESET), state.setHighlightColorPresetState(DEFAULT_HIGHLIGHT_COLOR_PRESET)),
+    resetAccentColorPreset: () => {
+      const value = getDefaultAccentColor(state.resolvedBaseColorModeState);
+      setAccentColorPreset(value, state.resolvedBaseColorModeState);
+      state.setAccentColorPresetState(value);
+    },
+    resetClozeColorPreset: () => {
+      const value = getDefaultClozeColor(state.resolvedBaseColorModeState);
+      setClozeColorPreset(value, state.resolvedBaseColorModeState);
+      state.setClozeColorPresetState(value);
+    },
+    resetFontColorPreset: () => {
+      const value = getDefaultFontColor(state.resolvedBaseColorModeState);
+      setFontColorPreset(value, state.resolvedBaseColorModeState);
+      state.setFontColorPresetState(value);
+    },
+    resetHighlightColorPreset: () => {
+      const value = getDefaultHighlightColor(state.resolvedBaseColorModeState);
+      setHighlightColorPreset(value, state.resolvedBaseColorModeState);
+      state.setHighlightColorPresetState(value);
+    },
+    resetSelectionColorPreset: () => {
+      const value = getDefaultSelectionColor(state.resolvedBaseColorModeState);
+      setSelectionColorPreset(value, state.resolvedBaseColorModeState);
+      state.setSelectionColorPresetState(value);
+    },
+    setAccentColorPreset: (value: AccentColorPreset) => (setAccentColorPreset(value, state.resolvedBaseColorModeState), state.setAccentColorPresetState(value)),
+    setClozeColorPreset: (value: ClozeColorPreset) => (setClozeColorPreset(value, state.resolvedBaseColorModeState), state.setClozeColorPresetState(value)),
+    setFontColorPreset: (value: FontColorPreset) => (setFontColorPreset(value, state.resolvedBaseColorModeState), state.setFontColorPresetState(value)),
+    setHighlightColorPreset: (value: HighlightColorPreset) => (setHighlightColorPreset(value, state.resolvedBaseColorModeState), state.setHighlightColorPresetState(value)),
+    setSelectionColorPreset: (value: SelectionColorPreset) => (setSelectionColorPreset(value, state.resolvedBaseColorModeState), state.setSelectionColorPresetState(value))
+  };
+}
+
+function createGeneralAppearanceActions(state: AppearanceState) {
+  return {
     resetInterfaceFontSize: () => (setInterfaceFontSize(INTERFACE_FONT_SIZE_DEFAULT), state.setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT)),
-    resetSelectionColorPreset: () => (setSelectionColorPreset(DEFAULT_SELECTION_COLOR_PRESET), state.setSelectionColorPresetState(DEFAULT_SELECTION_COLOR_PRESET)),
-    setAccentColorPreset: (value) => (setAccentColorPreset(value), state.setAccentColorPresetState(value)),
-    setAutoLocalizeRemoteImages: (value) => (setAutoLocalizeRemoteImages(value), state.setAutoLocalizeRemoteImagesState(value)),
-    setBaseColorMode: (value) => (setBaseColorMode(value), state.setBaseColorModeState(value)),
-    setClozeColorPreset: (value) => (setClozeColorPreset(value), state.setClozeColorPresetState(value)),
-    setCustomInterfaceFont: (value) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
-    setCustomMonospaceFont: (value) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
-    setCustomUiFont: (value) => (setCustomUiFont(value), state.setCustomUiFontState(value)),
-    setHighlightColorPreset: (value) => (setHighlightColorPreset(value), state.setHighlightColorPresetState(value)),
-    setInterfaceFontPreset: (value) => (setInterfaceFontPreset(value), state.setInterfaceFontPresetState(value)),
-    setInterfaceFontSize: (value) => (setInterfaceFontSize(value), state.setInterfaceFontSizeState(value)),
-    setMarkdownSyntaxVisibility: (value) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
-    setMonospaceFontPreset: (value) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
-    setSelectionColorPreset: (value) => (setSelectionColorPreset(value), state.setSelectionColorPresetState(value)),
-    setUiFontPreset: (value) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
+    setAutoLocalizeRemoteImages: (value: boolean) => (setAutoLocalizeRemoteImages(value), state.setAutoLocalizeRemoteImagesState(value)),
+    setBaseColorMode: (value: BaseColorMode) => (setBaseColorMode(value), state.setBaseColorModeState(value)),
+    setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
+    setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
+    setCustomUiFont: (value: string) => (setCustomUiFont(value), state.setCustomUiFontState(value)),
+    setInterfaceFontPreset: (value: InterfaceFontPreset) => (setInterfaceFontPreset(value), state.setInterfaceFontPresetState(value)),
+    setInterfaceFontSize: (value: number) => (setInterfaceFontSize(value), state.setInterfaceFontSizeState(value)),
+    setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
+    setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
+    setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
     toggleEditorDisplayMode: () => {
       const next = state.editorDisplayModeState === 'preview' ? 'source' : 'preview';
       state.setEditorDisplayModeState(next);
       return setEditorDisplayMode(next);
-    },
+    }
+  };
+}
+
+export function createAppearanceActions(state: AppearanceState): AppearanceActions {
+  return {
+    ...createColorPresetActions(state),
+    ...createGeneralAppearanceActions(state),
     ...createWorkspaceSurfaceActions(state)
   };
 }

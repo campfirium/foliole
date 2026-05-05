@@ -5,23 +5,39 @@ import {
   applyAppearanceColorSettings,
   type AccentColorPreset,
   type ClozeColorPreset,
+  DEFAULT_DARK_ACCENT_COLOR_PRESET,
+  DEFAULT_DARK_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_FONT_COLOR_PRESET,
+  DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_DARK_SELECTION_COLOR_PRESET,
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_FONT_COLOR_PRESET,
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET,
   getAccentColorPreset,
   getClozeColorPreset,
+  getFontColorPreset,
   getHighlightColorPreset,
   getSelectionColorPreset,
+  type FontColorPreset,
   type HighlightColorPreset,
   type SelectionColorPreset,
   setAccentColorPreset,
   setClozeColorPreset,
+  setFontColorPreset,
   setHighlightColorPreset,
   setSelectionColorPreset
 } from './appearanceColorSettings';
 import {
+  applyEditorTypographyScale,
+  resolveInterfaceFontFamily,
+  resolveMonospaceFontFamily
+} from './appearanceTypography';
+import { BASE_COLOR_OPTIONS, type BaseColorMode, isBaseColorMode, type ResolvedBaseColorMode } from './baseColorMode';
+import {
   applyWorkspaceSurfaceSettings,
+  DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE,
   DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
   DEFAULT_WORKSPACE_SURFACE_PALETTE,
   getWorkspaceSurfaceAssignments,
@@ -33,25 +49,38 @@ import {
 } from './workspaceSurfaceSettings';
 export {
   type AccentColorPreset,
+  BASE_COLOR_OPTIONS,
+  type BaseColorMode,
   type ClozeColorPreset,
+  type FontColorPreset,
   type HighlightColorPreset,
   type SelectionColorPreset,
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_ACCENT_COLOR_PRESET,
+  DEFAULT_DARK_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_FONT_COLOR_PRESET,
+  DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_DARK_SELECTION_COLOR_PRESET,
+  DEFAULT_FONT_COLOR_PRESET,
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET,
   getAccentColorPreset,
   getClozeColorPreset,
+  getFontColorPreset,
   getHighlightColorPreset,
   getSelectionColorPreset,
   setAccentColorPreset,
   setClozeColorPreset,
+  setFontColorPreset,
   setHighlightColorPreset,
   setSelectionColorPreset,
   type WorkspaceSurfaceAssignments,
   type WorkspaceSurfacePalette,
   DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS,
   DEFAULT_WORKSPACE_SURFACE_PALETTE,
+  DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE,
+  type ResolvedBaseColorMode,
   getWorkspaceSurfaceAssignments,
   getWorkspaceSurfacePalette,
   setWorkspaceSurfaceAssignments,
@@ -59,10 +88,8 @@ export {
 };
 export const INTERFACE_FONT_OPTIONS = ['default', 'inter', 'system', 'source-sans', 'serif', 'rounded', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
-export const BASE_COLOR_OPTIONS = ['light'] as const;
 export type InterfaceFontPreset = (typeof INTERFACE_FONT_OPTIONS)[number];
 export type MonospaceFontPreset = (typeof MONOSPACE_FONT_OPTIONS)[number];
-export type BaseColorMode = (typeof BASE_COLOR_OPTIONS)[number];
 export const INTERFACE_FONT_SIZE_MIN = 12;
 export const INTERFACE_FONT_SIZE_MAX = 36;
 export const INTERFACE_FONT_SIZE_DEFAULT = 17;
@@ -77,43 +104,12 @@ const STORAGE_KEYS = {
   customMonospaceFont: APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
 } as const;
 
-const SYSTEM_FONT_FALLBACK =
-  "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif";
-
-const INTERFACE_FONT_PRESET_VALUES: Record<InterfaceFontPreset, string> = {
-  default: SYSTEM_FONT_FALLBACK,
-  inter:
-    "'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif",
-  system: SYSTEM_FONT_FALLBACK,
-  'source-sans':
-    "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif",
-  serif: "'Source Serif 4', 'Noto Serif CJK SC', 'Songti SC', SimSun, Georgia, serif",
-  rounded:
-    "'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif",
-  custom: SYSTEM_FONT_FALLBACK
-};
-
-const MONOSPACE_FONT_PRESET_VALUES: Record<MonospaceFontPreset, string> = {
-  default:
-    "'JetBrains Mono', 'Cascadia Code', 'Sarasa Mono SC', 'SFMono-Regular', Menlo, Consolas, 'Noto Sans Mono CJK SC', monospace",
-  jetbrains: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
-  cascadia: "'Cascadia Code', Consolas, 'JetBrains Mono', monospace",
-  consolas: "Consolas, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace",
-  fira: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace",
-  sarasa: "'Sarasa Mono SC', 'JetBrains Mono', 'Cascadia Code', monospace",
-  custom: "'JetBrains Mono', 'Cascadia Code', 'Sarasa Mono SC', 'SFMono-Regular', Menlo, Consolas, 'Noto Sans Mono CJK SC', monospace"
-};
-
 function isInterfaceFontPreset(value: string): value is InterfaceFontPreset {
   return INTERFACE_FONT_OPTIONS.includes(value as InterfaceFontPreset);
 }
 
 function isMonospaceFontPreset(value: string): value is MonospaceFontPreset {
   return MONOSPACE_FONT_OPTIONS.includes(value as MonospaceFontPreset);
-}
-
-function isBaseColorMode(value: string): value is BaseColorMode {
-  return BASE_COLOR_OPTIONS.includes(value as BaseColorMode);
 }
 
 function clampFontSize(value: number) {
@@ -124,22 +120,6 @@ function sanitizeFontFamily(value: string) {
   const cleaned = value.replace(/[;{}]/g, '').replace(/^@/, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
   const primaryName = cleaned.split(/\s+&\s+/)[0]?.trim() ?? '';
   return primaryName.slice(0, 256);
-}
-
-function quoteFontFamilyName(value: string) {
-  return `'${value.replace(/'/g, "\\'")}'`;
-}
-
-function toPx(value: number) {
-  return `${Math.round(value * 100) / 100}px`;
-}
-
-function applyEditorTypographyScale(root: HTMLElement, baseFontSize: number) {
-  root.style.setProperty('--content-panel-font-size', `${baseFontSize}px`);
-  root.style.setProperty('--content-panel-h1-font-size', toPx(baseFontSize * 1.42));
-  root.style.setProperty('--content-panel-h2-font-size', toPx(baseFontSize * 1.18));
-  root.style.setProperty('--content-panel-h3-font-size', toPx(baseFontSize * 1.04));
-  root.style.setProperty('--content-panel-code-font-size', toPx(baseFontSize * 0.82));
 }
 
 export function getInterfaceFontPreset(): InterfaceFontPreset {
@@ -217,7 +197,9 @@ export function setInterfaceFontSize(value: number) {
 
 interface ApplyAppearanceSettingsInput {
   baseColor: BaseColorMode;
+  resolvedBaseColor: ResolvedBaseColorMode;
   accentColor: AccentColorPreset;
+  fontColor: FontColorPreset;
   selectionColor: SelectionColorPreset;
   highlightColor: HighlightColorPreset;
   clozeColor: ClozeColorPreset;
@@ -232,27 +214,11 @@ interface ApplyAppearanceSettingsInput {
   workspaceSurfacePalette: WorkspaceSurfacePalette;
 }
 
-function resolveInterfaceFontFamily(interfaceFont: InterfaceFontPreset, customInterfaceFont: string) {
-  if (interfaceFont !== 'custom') {
-    return INTERFACE_FONT_PRESET_VALUES[interfaceFont];
-  }
-  const sanitizedCustomFont = sanitizeFontFamily(customInterfaceFont);
-  return sanitizedCustomFont ? `${quoteFontFamilyName(sanitizedCustomFont)}, ${SYSTEM_FONT_FALLBACK}` : SYSTEM_FONT_FALLBACK;
-}
-
-function resolveMonospaceFontFamily(monospaceFont: MonospaceFontPreset, customMonospaceFont: string) {
-  if (monospaceFont !== 'custom') {
-    return MONOSPACE_FONT_PRESET_VALUES[monospaceFont];
-  }
-  const sanitizedCustomFont = sanitizeFontFamily(customMonospaceFont);
-  return sanitizedCustomFont
-    ? `${quoteFontFamilyName(sanitizedCustomFont)}, ${MONOSPACE_FONT_PRESET_VALUES.default}`
-    : MONOSPACE_FONT_PRESET_VALUES.default;
-}
-
 export function applyAppearanceSettings({
   baseColor,
+  resolvedBaseColor,
   accentColor,
+  fontColor,
   selectionColor,
   highlightColor,
   clozeColor,
@@ -270,15 +236,18 @@ export function applyAppearanceSettings({
     return;
   }
   const clampedFontSize = clampFontSize(interfaceFontSize);
-  const uiFontValue = resolveInterfaceFontFamily(uiFont, customUiFont);
-  const interfaceFontValue = resolveInterfaceFontFamily(interfaceFont, customInterfaceFont);
-  const monospaceFontValue = resolveMonospaceFontFamily(monospaceFont, customMonospaceFont);
+  const uiFontValue = resolveInterfaceFontFamily(uiFont, sanitizeFontFamily(customUiFont));
+  const interfaceFontValue = resolveInterfaceFontFamily(interfaceFont, sanitizeFontFamily(customInterfaceFont));
+  const monospaceFontValue = resolveMonospaceFontFamily(monospaceFont, sanitizeFontFamily(customMonospaceFont));
   const root = document.documentElement;
   root.dataset.baseColor = baseColor;
+  root.dataset.resolvedBaseColor = resolvedBaseColor;
   applyAppearanceColorSettings(root, {
     accentColor,
     clozeColor,
+    fontColor,
     highlightColor,
+    mode: resolvedBaseColor,
     selectionColor
   });
   applyWorkspaceSurfaceSettings(root, {

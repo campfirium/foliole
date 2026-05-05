@@ -15,10 +15,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#ffffff',
-        'bg-subtle': '#fcfcfc',
-        'bg-panel': '#f6f6f6',
-        'bg-elevated': '#ffffff',
+        canvas: 'rgb(var(--color-canvas) / <alpha-value>)',
+        'bg-subtle': 'rgb(var(--color-bg-subtle) / <alpha-value>)',
+        'bg-panel': 'rgb(var(--color-bg-panel) / <alpha-value>)',
+        'bg-elevated': 'rgb(var(--color-bg-elevated) / <alpha-value>)',
         'companion-base': '#ffffff',
         'companion-content': '#ffffff',
         'companion-subtle': '#f7f7f5',
@@ -28,51 +28,51 @@ export default {
         'companion-accent-soft': 'rgba(47, 125, 107, 0.12)',
         'companion-text-secondary': '#6b7280',
         'companion-text-tertiary': '#9ca3af',
-        divider: 'rgba(32, 33, 36, 0.08)',
-        'panel-outline': 'rgba(32, 33, 36, 0.14)',
-        'settings-shell': '#ffffff',
-        'settings-sidebar': '#f6f6f4',
-        'settings-group': '#f7f7f5',
-        'settings-selected': '#ecece8',
-        'settings-divider': 'rgba(32, 33, 36, 0.08)',
-        'settings-outline': 'rgba(32, 33, 36, 0.14)',
+        divider: 'rgb(var(--color-divider) / <alpha-value>)',
+        'panel-outline': 'rgb(var(--color-foreground) / 0.14)',
+        'settings-shell': 'rgb(var(--color-canvas) / <alpha-value>)',
+        'settings-sidebar': 'rgb(var(--color-bg-panel) / <alpha-value>)',
+        'settings-group': 'rgb(var(--color-bg-subtle) / <alpha-value>)',
+        'settings-selected': 'rgb(var(--color-secondary) / <alpha-value>)',
+        'settings-divider': 'rgb(var(--color-settings-divider) / <alpha-value>)',
+        'settings-outline': 'rgb(var(--color-foreground) / 0.14)',
         border: {
-          DEFAULT: 'rgba(32, 33, 36, 0.18)',
-          strong: 'rgba(32, 33, 36, 0.34)'
+          DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
+          strong: 'rgb(var(--color-border-strong) / <alpha-value>)'
         },
         accent: {
-          DEFAULT: '#5f6368',
-          strong: '#3c4043',
-          foreground: '#f7f7f5'
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          strong: 'rgb(var(--color-accent-strong) / <alpha-value>)',
+          foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)'
         },
-        background: '#f5f5f3',
-        foreground: '#202124',
+        background: 'rgb(var(--color-background) / <alpha-value>)',
+        foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
         primary: {
           DEFAULT: '#5f6368',
           foreground: '#f7f7f5'
         },
         secondary: {
-          DEFAULT: '#ececea',
-          foreground: '#202124'
+          DEFAULT: 'rgb(var(--color-secondary) / <alpha-value>)',
+          foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
         },
         muted: {
-          DEFAULT: '#f1f1ef',
-          foreground: '#5f6368'
+          DEFAULT: 'rgb(var(--color-muted) / <alpha-value>)',
+          foreground: 'rgb(var(--color-muted-foreground) / <alpha-value>)'
         },
         card: {
-          DEFAULT: '#f7f7f5',
-          foreground: '#202124'
+          DEFAULT: 'rgb(var(--color-card) / <alpha-value>)',
+          foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
         },
         popover: {
-          DEFAULT: '#f7f7f5',
-          foreground: '#202124'
+          DEFAULT: 'rgb(var(--color-popover) / <alpha-value>)',
+          foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
         },
         destructive: {
           DEFAULT: '#fb7185',
           foreground: '#ffffff'
         },
-        input: 'rgba(32, 33, 36, 0.18)',
-        ring: '#5f6368'
+        input: 'rgb(var(--color-border) / <alpha-value>)',
+        ring: 'rgb(var(--color-accent) / <alpha-value>)'
       },
       fontFamily: {
         sans: ['var(--font-family-interface)'],

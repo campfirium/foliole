@@ -205,7 +205,6 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
 
   return (
     <div className="window-titlebar-right-anchor-shell relative z-[3]" data-collapsed={isCollapsed}>
-      {isCollapsed ? null : <div aria-hidden="true" className="window-titlebar-right-divider" />}
       <div className="window-titlebar-right-content" data-collapsed={isCollapsed}>
         <div className="window-titlebar-right-expanded-action">
           <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />

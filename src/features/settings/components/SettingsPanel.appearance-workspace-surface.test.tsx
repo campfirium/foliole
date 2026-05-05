@@ -31,6 +31,43 @@ it('persists workspace surface palette and region assignments from appearance se
   });
 });
 
+it('stores workspace surface settings in the active base color mode', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'dark' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add palette color' }));
+  fireEvent.doubleClick(screen.getByRole('button', { name: 'Palette color 6' }), { clientX: 320, clientY: 240 });
+  fireEvent.change(screen.getByLabelText('Workspace surface palette hex'), { target: { value: '#26342e' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Palette color 6' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Main doc' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark) ?? '[]');
+    const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignmentsDark) ?? '{}');
+    expect(palette[5]).toBe('#26342e');
+    expect(assignments['main-document']).toBe(5);
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette)).toBeNull();
+  });
+});
+
+it('uses dark automatic workspace generation when editing dark appearance', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'dark' } });
+  fireEvent.change(screen.getByLabelText('Automatic workspace seed hex'), { target: { value: '#30362f' } });
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark) ?? '[]');
+    expect(palette.slice(0, 5).every((color: string) => {
+      const parsed = parseWorkspaceSurfaceColor(color);
+      return parsed && Math.max(parsed.r, parsed.g, parsed.b) < 90;
+    })).toBe(true);
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette)).toBeNull();
+  });
+});
+
 it('maps an automatic column palette into free-mode palette slots', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
@@ -209,7 +246,7 @@ it('applies auto palette options before writing into the free palette slots', as
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
   fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Olive' }));
-  fireEvent.click(screen.getByLabelText('Document stays white'));
+  fireEvent.click(screen.getByLabelText('Use neutral document surface'));
   fireEvent.click(screen.getByLabelText('Folder and topic share tone'));
 
   await waitFor(() => {
@@ -248,7 +285,7 @@ it('restores workspace surface generator preferences and active mode from storag
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
   await waitFor(() => {
-    expect(screen.getByLabelText('Document stays white')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Use neutral document surface')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('Folder and topic share tone')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#8a962f');
   });

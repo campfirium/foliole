@@ -71,21 +71,18 @@ beforeEach(() => {
 
 function expectExpandedRightAnchorLayout(container: HTMLElement) {
   const shell = container.querySelector('.window-titlebar-right-anchor-shell');
-  const divider = container.querySelector('.window-titlebar-right-divider');
   const content = container.querySelector('.window-titlebar-right-content');
   const toggleAction = container.querySelector('.window-titlebar-right-expanded-action');
   const anchor = container.querySelector('.window-titlebar-right-zone');
   const panelActions = container.querySelector('.window-titlebar-right-panel-actions');
   expect(shell).not.toBeNull();
-  expect(divider).not.toBeNull();
   expect(content).not.toBeNull();
   expect(toggleAction).not.toBeNull();
   expect(anchor).not.toBeNull();
   expect(panelActions).not.toBeNull();
-  if (!shell || !divider || !content || !toggleAction || !anchor || !panelActions) {
+  if (!shell || !content || !toggleAction || !anchor || !panelActions) {
     throw new Error('right sidebar titlebar anchor should exist');
   }
-  expect(shell.contains(divider)).toBe(true);
   expect(shell.contains(content)).toBe(true);
   expect(content.contains(toggleAction)).toBe(true);
   expect(content.contains(anchor)).toBe(true);

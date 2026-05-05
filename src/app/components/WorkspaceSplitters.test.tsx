@@ -15,8 +15,10 @@ it('uses the shared divider tone for the left item-column boundary', () => {
     />
   );
 
-  expect(screen.getByRole('separator', { name: 'Resize folder list' })).toBeInTheDocument();
-  expect(container.querySelector('span')).toHaveClass('before:bg-border');
+  const separator = screen.getByRole('separator', { name: 'Resize folder list' });
+  expect(separator).toBeInTheDocument();
+  expect(separator).toHaveClass('bg-transparent');
+  expect(container.querySelector('span')).toHaveClass('cursor-col-resize');
 });
 
 it('uses the shared divider tone for the right item-column boundary', () => {
@@ -31,8 +33,10 @@ it('uses the shared divider tone for the right item-column boundary', () => {
     />
   );
 
-  expect(screen.getByRole('separator', { name: 'Resize node list' })).toBeInTheDocument();
-  expect(container.querySelector('span')).toHaveClass('before:bg-border');
+  const separator = screen.getByRole('separator', { name: 'Resize node list' });
+  expect(separator).toBeInTheDocument();
+  expect(separator).toHaveClass('bg-transparent');
+  expect(container.querySelector('span')).toHaveClass('cursor-col-resize');
 });
 
 it('renders the virtual section splitter as an inset shared divider', () => {
@@ -47,5 +51,5 @@ it('renders the virtual section splitter as an inset shared divider', () => {
 
   expect(screen.getByRole('separator', { name: 'Resize virtual section' })).toBeInTheDocument();
   expect(container.firstChild).toHaveClass('h-1');
-  expect(container.querySelector('span')).toHaveClass('before:bg-border/10', 'before:bottom-0', 'before:left-4', 'before:right-4');
+  expect(container.querySelector('span')).toHaveClass('before:bg-divider/45', 'before:bottom-0', 'before:left-4', 'before:right-4');
 });

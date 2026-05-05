@@ -31,7 +31,7 @@ export function ReviewActionBar({
       role="group"
     >
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-        <div className="min-w-0 truncate text-[13px] font-medium text-companion-text-secondary">{secondary}</div>
+        <div className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">{secondary}</div>
         <div className="flex items-center justify-center">{primary}</div>
         <div aria-hidden="true" className="min-w-0" />
       </div>

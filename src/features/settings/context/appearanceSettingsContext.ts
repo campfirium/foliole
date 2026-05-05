@@ -4,8 +4,8 @@ import type { EditorDisplayMode } from '../../editor/model/editorDisplayMode';
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import type {
   AccentColorPreset,
-  BaseColorMode,
   ClozeColorPreset,
+  FontColorPreset,
   HighlightColorPreset,
   InterfaceFontPreset,
   SelectionColorPreset,
@@ -13,17 +13,20 @@ import type {
   WorkspaceSurfaceAssignments,
   WorkspaceSurfacePalette
 } from '../model/appearanceSettings';
+import type { BaseColorMode, ResolvedBaseColorMode } from '../model/baseColorMode';
 
 export interface AppearanceSettingsContextValue {
   accentColorPreset: AccentColorPreset;
   autoLocalizeRemoteImages: boolean;
   baseColorMode: BaseColorMode;
+  resolvedBaseColorMode: ResolvedBaseColorMode;
   customInterfaceFont: string;
   customMonospaceFont: string;
   customUiFont: string;
   editorAppearanceKey: string;
   editorDisplayMode: EditorDisplayMode;
   clozeColorPreset: ClozeColorPreset;
+  fontColorPreset: FontColorPreset;
   selectionColorPreset: SelectionColorPreset;
   highlightColorPreset: HighlightColorPreset;
   interfaceFontPreset: InterfaceFontPreset;
@@ -35,6 +38,7 @@ export interface AppearanceSettingsContextValue {
   workspaceSurfacePalette: WorkspaceSurfacePalette;
   resetAccentColorPreset: () => void;
   resetClozeColorPreset: () => void;
+  resetFontColorPreset: () => void;
   resetSelectionColorPreset: () => void;
   resetHighlightColorPreset: () => void;
   resetInterfaceFontSize: () => void;
@@ -43,6 +47,7 @@ export interface AppearanceSettingsContextValue {
   setAutoLocalizeRemoteImages: (value: boolean) => void;
   setBaseColorMode: (value: BaseColorMode) => void;
   setClozeColorPreset: (value: ClozeColorPreset) => void;
+  setFontColorPreset: (value: FontColorPreset) => void;
   setHighlightColorPreset: (value: HighlightColorPreset) => void;
   setSelectionColorPreset: (value: SelectionColorPreset) => void;
   setCustomInterfaceFont: (value: string) => void;

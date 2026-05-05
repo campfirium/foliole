@@ -27,7 +27,7 @@ function ReviewGradeButton(props: {
 
 export function ReviewGradeActions({
   buttonClassName,
-  buttonVariant = 'ghost',
+  buttonVariant = 'primary',
   errorMessage,
   groupClassName,
   isSubmitting,

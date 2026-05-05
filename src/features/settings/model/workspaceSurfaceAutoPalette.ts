@@ -6,10 +6,16 @@ import {
 } from './workspaceSurfaceColor';
 import { type WorkspaceSurfaceAssignments, type WorkspaceSurfacePalette } from './workspaceSurfaceSettings';
 
+export type WorkspaceSurfaceAutoPaletteMode = 'dark' | 'light';
+
 const DEFAULT_COLUMN_LIGHTNESS = [84, 91, 94, 98, 95] as const;
 const DEFAULT_COLUMN_SATURATION_FACTORS = [0.58, 0.42, 0.3, 0.12, 0.2] as const;
 const WHITE_DOCUMENT_LIGHTNESS = [84, 94, 96, 100, 97] as const;
 const WHITE_DOCUMENT_SATURATION_FACTORS = [0.48, 0.22, 0.16, 0, 0.1] as const;
+const DARK_COLUMN_LIGHTNESS = [13, 14, 15, 12, 16] as const;
+const DARK_COLUMN_SATURATION_FACTORS = [0.2, 0.16, 0.12, 0.04, 0.16] as const;
+const DARK_NEUTRAL_DOCUMENT_LIGHTNESS = [13, 14, 15, 12, 16] as const;
+const DARK_NEUTRAL_DOCUMENT_SATURATION_FACTORS = [0.18, 0.14, 0.1, 0.02, 0.14] as const;
 
 export type WorkspaceSurfaceAutoPaletteOptions = {
   documentPureWhite: boolean;
@@ -33,6 +39,19 @@ function resolveColumnRecipe(options: WorkspaceSurfaceAutoPaletteOptions) {
   };
 }
 
+function resolveDarkColumnRecipe(options: WorkspaceSurfaceAutoPaletteOptions) {
+  if (options.documentPureWhite) {
+    return {
+      lightness: DARK_NEUTRAL_DOCUMENT_LIGHTNESS,
+      saturationFactors: DARK_NEUTRAL_DOCUMENT_SATURATION_FACTORS
+    };
+  }
+  return {
+    lightness: DARK_COLUMN_LIGHTNESS,
+    saturationFactors: DARK_COLUMN_SATURATION_FACTORS
+  };
+}
+
 function clampPercentage(value: number) {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
@@ -43,14 +62,15 @@ function clampChannel(value: number, min: number, max: number) {
 
 function buildSafeSeedTone(
   seedColor: WorkspaceSurfaceColorValue,
+  mode: WorkspaceSurfaceAutoPaletteMode,
   tuning?: WorkspaceSurfaceAutoPaletteTuning
 ) {
   const seedHsl = workspaceSurfaceColorToHsl(seedColor);
-  const saturationRange = tuning?.saturationRange ?? { max: 42, min: 18 };
+  const saturationRange = tuning?.saturationRange ?? (mode === 'dark' ? { max: 30, min: 10 } : { max: 42, min: 18 });
   return {
     a: seedColor.a,
     h: seedHsl.h,
-    l: clampChannel(seedHsl.l, 36, 72),
+    l: mode === 'dark' ? clampChannel(seedHsl.l, 18, 56) : clampChannel(seedHsl.l, 36, 72),
     s: seedHsl.s <= 8 ? 0 : clampChannel(seedHsl.s, saturationRange.min, saturationRange.max)
   };
 }
@@ -65,10 +85,11 @@ function resolveColumnSaturation(sourceSaturation: number, factor: number) {
 export function buildWorkspaceSurfaceAutoColumnPalette(
   seedColor: WorkspaceSurfaceColorValue,
   options: WorkspaceSurfaceAutoPaletteOptions,
-  tuning?: WorkspaceSurfaceAutoPaletteTuning
+  tuning?: WorkspaceSurfaceAutoPaletteTuning,
+  mode: WorkspaceSurfaceAutoPaletteMode = 'light'
 ): WorkspaceSurfacePalette {
-  const seedHsl = buildSafeSeedTone(seedColor, tuning);
-  const recipe = resolveColumnRecipe(options);
+  const seedHsl = buildSafeSeedTone(seedColor, mode, tuning);
+  const recipe = mode === 'dark' ? resolveDarkColumnRecipe(options) : resolveColumnRecipe(options);
   const palette = recipe.lightness.map((lightness, index) => (
     formatWorkspaceSurfaceColorCss(workspaceSurfaceColorFromHsl({
       a: seedColor.a,
@@ -81,7 +102,9 @@ export function buildWorkspaceSurfaceAutoColumnPalette(
     palette[2] = palette[1];
   }
   if (options.documentPureWhite) {
-    palette[3] = formatWorkspaceSurfaceColorCss({ a: seedColor.a, r: 255, g: 255, b: 255 });
+    palette[3] = mode === 'dark'
+      ? formatWorkspaceSurfaceColorCss(workspaceSurfaceColorFromHsl({ a: seedColor.a, h: seedHsl.h, l: 12, s: resolveColumnSaturation(seedHsl.s, 0.02) }))
+      : formatWorkspaceSurfaceColorCss({ a: seedColor.a, r: 255, g: 255, b: 255 });
   }
   return palette;
 }

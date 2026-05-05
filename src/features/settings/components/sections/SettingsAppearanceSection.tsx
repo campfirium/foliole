@@ -1,10 +1,10 @@
-import { useRef } from 'react';
-
 import { SettingsSection } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
   DEFAULT_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_FONT_COLOR_PRESET,
+  DEFAULT_FONT_COLOR_PRESET,
   DEFAULT_HIGHLIGHT_COLOR_PRESET,
   DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
@@ -15,6 +15,7 @@ import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
 import {
   AccentColorRow,
   ClozeColorRow,
+  FontColorRow,
   HighlightColorRow,
   SelectionColorRow,
   SettingsSelectRow
@@ -24,6 +25,10 @@ import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
 
 function ensureAccentHex(value: string) {
   return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_ACCENT_COLOR_PRESET;
+}
+
+function ensureFontHex(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_FONT_COLOR_PRESET;
 }
 
 function ensureHighlightHex(value: string) {
@@ -39,10 +44,6 @@ function ensureClozeHex(value: string) {
 }
 
 function useAppearanceSectionState() {
-  const accentColorInputRef = useRef<HTMLInputElement>(null);
-  const selectionColorInputRef = useRef<HTMLInputElement>(null);
-  const highlightColorInputRef = useRef<HTMLInputElement>(null);
-  const clozeColorInputRef = useRef<HTMLInputElement>(null);
   const appearance = useAppearanceSettings();
   const fontOptions = useSettingsFontOptions({
     customInterfaceFont: appearance.customInterfaceFont,
@@ -53,14 +54,15 @@ function useAppearanceSectionState() {
     uiFontPreset: appearance.uiFontPreset
   });
   return {
-    accentColorInputRef,
-    selectionColorInputRef,
-    highlightColorInputRef,
-    clozeColorInputRef,
     appearance,
-    baseColorOptions: [{ label: 'Light', value: 'light' }],
+    baseColorOptions: [
+      { label: 'Light', value: 'light' },
+      { label: 'Dark', value: 'dark' },
+      { label: 'Follow system', value: 'system' }
+    ],
     fontOptions,
     safeAccentColor: ensureAccentHex(appearance.accentColorPreset),
+    safeFontColor: ensureFontHex(appearance.fontColorPreset),
     safeSelectionColor: ensureSelectionHex(appearance.selectionColorPreset),
     safeHighlightColor: ensureHighlightHex(appearance.highlightColorPreset),
     safeClozeColor: ensureClozeHex(appearance.clozeColorPreset)
@@ -69,54 +71,59 @@ function useAppearanceSectionState() {
 
 function AppearanceColorSection(props: ReturnType<typeof useAppearanceSectionState>) {
   const {
-    accentColorInputRef,
     appearance,
-    baseColorOptions,
-    clozeColorInputRef,
-    highlightColorInputRef,
     safeAccentColor,
     safeClozeColor,
+    safeFontColor,
     safeHighlightColor,
-    safeSelectionColor,
-    selectionColorInputRef
+    safeSelectionColor
   } = props;
+  const defaultFontColor = appearance.resolvedBaseColorMode === 'dark'
+    ? DEFAULT_DARK_FONT_COLOR_PRESET
+    : DEFAULT_FONT_COLOR_PRESET;
 
   return (
     <SettingsSection ariaLabel="Appearance color section" title="Color">
-      <SettingsSelectRow
-        description="Choose the foundation color mode for the interface."
-        label="Base color"
-        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
-        options={baseColorOptions}
-        value={appearance.baseColorMode}
+      <FontColorRow
+        defaultFontColor={defaultFontColor}
+        onFontColorPresetReset={appearance.resetFontColorPreset}
+        safeFontColor={safeFontColor}
+        setFontColorPreset={(value) => appearance.setFontColorPreset(value as typeof appearance.fontColorPreset)}
       />
       <AccentColorRow
-        accentColorInputRef={accentColorInputRef}
         onAccentColorPresetReset={appearance.resetAccentColorPreset}
-        onOpenAccentColorPicker={() => accentColorInputRef.current?.click()}
         safeAccentColor={safeAccentColor}
         setAccentColorPreset={(value) => appearance.setAccentColorPreset(value as typeof appearance.accentColorPreset)}
       />
       <SelectionColorRow
-        onOpenSelectionColorPicker={() => selectionColorInputRef.current?.click()}
         onSelectionColorPresetReset={appearance.resetSelectionColorPreset}
         safeSelectionColor={safeSelectionColor}
-        selectionColorInputRef={selectionColorInputRef}
         setSelectionColorPreset={(value) => appearance.setSelectionColorPreset(value as typeof appearance.selectionColorPreset)}
       />
       <HighlightColorRow
-        highlightColorInputRef={highlightColorInputRef}
         onHighlightColorPresetReset={appearance.resetHighlightColorPreset}
-        onOpenHighlightColorPicker={() => highlightColorInputRef.current?.click()}
         safeHighlightColor={safeHighlightColor}
         setHighlightColorPreset={(value) => appearance.setHighlightColorPreset(value as typeof appearance.highlightColorPreset)}
       />
       <ClozeColorRow
-        clozeColorInputRef={clozeColorInputRef}
         onClozeColorPresetReset={appearance.resetClozeColorPreset}
-        onOpenClozeColorPicker={() => clozeColorInputRef.current?.click()}
         safeClozeColor={safeClozeColor}
         setClozeColorPreset={(value) => appearance.setClozeColorPreset(value as typeof appearance.clozeColorPreset)}
+      />
+    </SettingsSection>
+  );
+}
+
+function BaseColorSection(props: ReturnType<typeof useAppearanceSectionState>) {
+  const { appearance, baseColorOptions } = props;
+  return (
+    <SettingsSection ariaLabel="Base color section" title="Base color">
+      <SettingsSelectRow
+        description={`Set the foundation color mode. Currently editing ${appearance.resolvedBaseColorMode} settings.`}
+        label="Mode"
+        onChange={(value) => appearance.setBaseColorMode(value as typeof appearance.baseColorMode)}
+        options={baseColorOptions}
+        value={appearance.baseColorMode}
       />
     </SettingsSection>
   );
@@ -161,6 +168,7 @@ export function SettingsAppearanceSection(props: { onEnterPreview: () => void })
   const state = useAppearanceSectionState();
   return (
     <>
+      <BaseColorSection {...state} />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <AppearanceColorSection {...state} />
       <AppearanceSupportingSections {...state} />

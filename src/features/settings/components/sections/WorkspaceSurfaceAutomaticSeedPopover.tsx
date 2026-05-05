@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppInput, appFloatingSurfaceClassName } from '../../../../shared/ui';
 import {
   buildWorkspaceSurfaceAutoColumnPalette,
+  type WorkspaceSurfaceAutoPaletteMode,
   type WorkspaceSurfaceAutoPaletteOptions
 } from '../../model/workspaceSurfaceAutoPalette';
 import { WORKSPACE_SURFACE_AUTO_SEED_PRESETS } from '../../model/workspaceSurfaceAutoSeedPresets';
@@ -16,11 +17,22 @@ import {
 
 import { cn } from '@/shared/lib/utils';
 
+type AutomaticSeedSwatch = {
+  displayHex: string;
+  hex: string;
+  id: string;
+  label: string;
+  signature: string;
+};
+
 function buildAutomaticSeedSwatches(
-  options: WorkspaceSurfaceAutoPaletteOptions
+  options: WorkspaceSurfaceAutoPaletteOptions,
+  mode: WorkspaceSurfaceAutoPaletteMode
 ) {
   const generatedSeeds = [];
-  for (const lightness of [38, 50, 62]) {
+  const lightnessSteps = mode === 'dark' ? [24, 34, 44] : [38, 50, 62];
+  const saturationSteps = mode === 'dark' ? [10, 18, 26, 34] : [18, 28, 38, 48];
+  for (const lightness of lightnessSteps) {
     generatedSeeds.push({
       hex: formatWorkspaceSurfaceColorHex(workspaceSurfaceColorFromHsl({ a: 1, h: 0, l: lightness, s: 0 })),
       id: `neutral-${lightness}`,
@@ -28,8 +40,8 @@ function buildAutomaticSeedSwatches(
     });
   }
   for (let hue = 0; hue < 360; hue += 15) {
-    for (const saturation of [18, 28, 38, 48]) {
-      for (const lightness of [38, 50, 62]) {
+    for (const saturation of saturationSteps) {
+      for (const lightness of lightnessSteps) {
         generatedSeeds.push({
           hex: formatWorkspaceSurfaceColorHex(workspaceSurfaceColorFromHsl({ a: 1, h: hue, l: lightness, s: saturation })),
           id: `h${hue}-s${saturation}-l${lightness}`,
@@ -38,20 +50,21 @@ function buildAutomaticSeedSwatches(
       }
     }
   }
-  const uniqueSwatches = new Map<string, { displayHex: string; hex: string; id: string; label: string }>();
+  const uniqueSwatches = new Map<string, AutomaticSeedSwatch>();
   for (const preset of [...WORKSPACE_SURFACE_AUTO_SEED_PRESETS, ...generatedSeeds]) {
     const parsed = parseWorkspaceSurfaceColor(preset.hex);
     if (!parsed) {
       continue;
     }
-    const palette = buildWorkspaceSurfaceAutoColumnPalette(parsed, options);
+    const palette = buildWorkspaceSurfaceAutoColumnPalette(parsed, options, undefined, mode);
     const signature = palette.join('|');
     if (!uniqueSwatches.has(signature)) {
       uniqueSwatches.set(signature, {
         displayHex: palette[0] ?? preset.hex,
         hex: preset.hex,
         id: preset.id,
-        label: preset.label
+        label: preset.label,
+        signature
       });
     }
   }
@@ -104,11 +117,15 @@ function useAutomaticSeedPopoverState(color: WorkspaceSurfaceColorValue) {
 }
 
 function AutomaticSeedSwatchGrid(props: {
-  activeDisplayHex: string;
+  activeSignature: string;
   onSelect: (hex: string) => void;
   options: WorkspaceSurfaceAutoPaletteOptions;
+  resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
-  const swatches = useMemo(() => buildAutomaticSeedSwatches(props.options), [props.options]);
+  const swatches = useMemo(
+    () => buildAutomaticSeedSwatches(props.options, props.resolvedBaseColorMode),
+    [props.options, props.resolvedBaseColorMode]
+  );
 
   return (
     <div className="grid grid-cols-8 gap-1.5">
@@ -117,7 +134,7 @@ function AutomaticSeedSwatchGrid(props: {
           aria-label={`Use automatic seed ${preset.label}`}
           className={cn(
             'h-9 w-9 rounded-sm border transition-colors',
-            props.activeDisplayHex === preset.displayHex.toLowerCase()
+            props.activeSignature === preset.signature
               ? 'border-border-strong/75 ring-1 ring-border-strong/45'
               : 'border-border/40 hover:border-border/70'
           )}
@@ -135,12 +152,17 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
   color: WorkspaceSurfaceColorValue;
   onChange: (color: WorkspaceSurfaceColorValue) => void;
   options: WorkspaceSurfaceAutoPaletteOptions;
+  resolvedBaseColorMode: WorkspaceSurfaceAutoPaletteMode;
 }) {
   const { draft, open, setDraft, setOpen } = useAutomaticSeedPopoverState(props.color);
+  const activeSignature = useMemo(() => {
+    const palette = buildWorkspaceSurfaceAutoColumnPalette(props.color, props.options, undefined, props.resolvedBaseColorMode);
+    return palette.join('|');
+  }, [props.color, props.options, props.resolvedBaseColorMode]);
   const activeDisplayHex = useMemo(() => {
-    const palette = buildWorkspaceSurfaceAutoColumnPalette(props.color, props.options);
+    const palette = buildWorkspaceSurfaceAutoColumnPalette(props.color, props.options, undefined, props.resolvedBaseColorMode);
     return (palette[0] ?? formatWorkspaceSurfaceColorHex(props.color)).toLowerCase();
-  }, [props.color, props.options]);
+  }, [props.color, props.options, props.resolvedBaseColorMode]);
 
   const applyHex = (value: string) => {
     setDraft(value);
@@ -175,12 +197,13 @@ export function WorkspaceSurfaceAutomaticSeedPopover(props: {
           className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-[95] w-[416px] rounded-md border-border/70 p-3 shadow-panel')}
         >
           <AutomaticSeedSwatchGrid
-            activeDisplayHex={activeDisplayHex}
+            activeSignature={activeSignature}
             onSelect={(hex) => {
               applyHex(hex);
               setOpen(false);
             }}
             options={props.options}
+            resolvedBaseColorMode={props.resolvedBaseColorMode}
           />
         </div>
       ) : null}

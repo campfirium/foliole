@@ -3,7 +3,12 @@ import { beforeEach, expect, it } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
 import {
+  DEFAULT_DARK_CLOZE_COLOR_PRESET,
+  DEFAULT_DARK_FONT_COLOR_PRESET,
+  DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET,
+  DEFAULT_DARK_SELECTION_COLOR_PRESET,
   getClozeColorPreset,
+  getFontColorPreset,
   getCustomInterfaceFont,
   getCustomMonospaceFont,
   getCustomUiFont,
@@ -47,4 +52,11 @@ it('maps legacy green highlight default to the current text-color default', () =
 it('falls back to dedicated defaults for selection and cloze colors', () => {
   expect(getSelectionColorPreset()).toBe('#3876ff');
   expect(getClozeColorPreset()).toBe('#facc15');
+});
+
+it('uses dedicated dark defaults for reading colors', () => {
+  expect(getFontColorPreset('dark')).toBe(DEFAULT_DARK_FONT_COLOR_PRESET);
+  expect(getSelectionColorPreset('dark')).toBe(DEFAULT_DARK_SELECTION_COLOR_PRESET);
+  expect(getHighlightColorPreset('dark')).toBe(DEFAULT_DARK_HIGHLIGHT_COLOR_PRESET);
+  expect(getClozeColorPreset('dark')).toBe(DEFAULT_DARK_CLOZE_COLOR_PRESET);
 });

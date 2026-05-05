@@ -24,7 +24,7 @@ export function WorkspaceToolbar({
   return (
     <AppToolbar
       aria-label="Workspace toolbar"
-      className="relative flex min-h-[44px] flex-none items-center border-b border-border bg-bg-subtle px-3"
+      className="relative flex min-h-[44px] flex-none items-center border-b border-divider bg-bg-subtle px-3"
     >
       <ToolbarActionGroup ariaLabel="Navigation toolbar actions" className="gap-1">
         <AppIconButton
@@ -51,7 +51,7 @@ export function WorkspaceToolbar({
       </ToolbarActionGroup>
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 w-px bg-border max-[1080px]:hidden"
+        className="pointer-events-none absolute inset-y-0 w-px bg-divider max-[1080px]:hidden"
         style={{ left: dividerLeft }}
       />
     </AppToolbar>

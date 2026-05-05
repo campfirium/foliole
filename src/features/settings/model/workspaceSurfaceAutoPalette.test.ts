@@ -42,6 +42,19 @@ it('recomputes the whole palette for white document and shared navigation prefer
   ]);
 });
 
+it('builds a low-light dark auto palette from the same seed color', () => {
+  const seed = parseWorkspaceSurfaceColor('#30362f');
+
+  expect(seed).not.toBeNull();
+  expect(buildWorkspaceSurfaceAutoColumnPalette(seed!, DEFAULT_OPTIONS, undefined, 'dark')).toEqual([
+    '#212121',
+    '#242424',
+    '#262626',
+    '#1f1f1f',
+    '#292929'
+  ]);
+});
+
 it('writes the generated auto palette into the leading free-mode slots', () => {
   const merged = applyWorkspaceSurfaceAutoPalette(
     ['#ffffff', '#fcfcfc', '#f6f6f6', '#f5f5f3', '#ececea', '#d8d8d8'],
