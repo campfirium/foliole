@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createDesktopReviewSchedulerAdapter } from './desktopReviewSchedulerAdapter';
 import type { SchedulerGradeInput } from './reviewTypes';
-import { createRustReviewSchedulerAdapter } from './rustReviewSchedulerAdapter';
 
 const BASE_INPUT: SchedulerGradeInput = {
   card: {
@@ -19,7 +19,7 @@ const BASE_INPUT: SchedulerGradeInput = {
   now: '2026-02-26T00:00:00.000Z'
 };
 
-describe('createRustReviewSchedulerAdapter', () => {
+describe('createDesktopReviewSchedulerAdapter', () => {
   it('invokes review_grade and returns validated response', async () => {
     const invoke = vi.fn().mockResolvedValue({
       card: {
@@ -30,7 +30,7 @@ describe('createRustReviewSchedulerAdapter', () => {
       },
       reviewed_at: '2026-02-26T00:00:00.000Z'
     });
-    const adapter = createRustReviewSchedulerAdapter(invoke);
+    const adapter = createDesktopReviewSchedulerAdapter(invoke);
     const result = await adapter.grade(BASE_INPUT);
     expect(invoke).toHaveBeenCalledWith('review_grade', {
       request: {
@@ -44,7 +44,7 @@ describe('createRustReviewSchedulerAdapter', () => {
 
   it('throws before invoke when request timestamp is invalid', async () => {
     const invoke = vi.fn();
-    const adapter = createRustReviewSchedulerAdapter(invoke);
+    const adapter = createDesktopReviewSchedulerAdapter(invoke);
     await expect(
       adapter.grade({
         ...BASE_INPUT,
@@ -61,13 +61,12 @@ describe('createRustReviewSchedulerAdapter', () => {
       },
       reviewed_at: 'bad'
     });
-    const adapter = createRustReviewSchedulerAdapter(invoke);
+    const adapter = createDesktopReviewSchedulerAdapter(invoke);
     await expect(adapter.grade(BASE_INPUT)).rejects.toThrow('reviewed_at');
   });
-
 });
 
-describe('createRustReviewSchedulerAdapter preview', () => {
+describe('createDesktopReviewSchedulerAdapter preview', () => {
   it('invokes review_preview and returns validated preview response', async () => {
     const invoke = vi.fn().mockResolvedValue({
       Again: { card: { ...BASE_INPUT.card, due: '2026-02-26T00:10:00.000Z' }, reviewed_at: BASE_INPUT.now },
@@ -75,7 +74,7 @@ describe('createRustReviewSchedulerAdapter preview', () => {
       Good: { card: { ...BASE_INPUT.card, due: '2026-03-01T00:00:00.000Z' }, reviewed_at: BASE_INPUT.now },
       Easy: { card: { ...BASE_INPUT.card, due: '2026-03-05T00:00:00.000Z' }, reviewed_at: BASE_INPUT.now }
     });
-    const adapter = createRustReviewSchedulerAdapter(invoke);
+    const adapter = createDesktopReviewSchedulerAdapter(invoke);
     const result = await adapter.preview({ card: BASE_INPUT.card, now: BASE_INPUT.now });
     expect(invoke).toHaveBeenCalledWith('review_preview', {
       request: {

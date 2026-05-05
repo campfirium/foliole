@@ -25,7 +25,7 @@ describe('createReviewSchedulerAdapter', () => {
     vi.mocked(getRuntimeInvoke).mockReset();
   });
 
-  it('falls back to local scheduler when tauri invoke is unavailable', async () => {
+  it('falls back to local scheduler when desktop invoke is unavailable', async () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
     const adapter = createReviewSchedulerAdapter();
     const result = await adapter.grade({
@@ -43,27 +43,14 @@ describe('createReviewSchedulerAdapter', () => {
     expect(preview.Good.card.scheduled_days).toBe(3);
   });
 
-  it('throws when rust-only mode is set and tauri invoke is unavailable', async () => {
-    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
-    const adapter = createReviewSchedulerAdapter('rust-only');
-
-    await expect(
-      adapter.grade({
-        card: { ...BASE_CARD },
-        grade: 3,
-        now: '2026-02-26T00:00:00.000Z'
-      })
-    ).rejects.toThrow('Rust scheduler is required');
-  });
-
-  it('uses tauri invoke when available', async () => {
+  it('uses desktop invoke when available', async () => {
     const invoke = vi.fn().mockResolvedValue({
       card: { ...BASE_CARD, reps: 9 },
       reviewed_at: '2026-02-26T00:00:00.000Z'
     });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const adapter = createReviewSchedulerAdapter('rust-only');
+    const adapter = createReviewSchedulerAdapter();
     const result = await adapter.grade({
       card: { ...BASE_CARD },
       grade: 4,
