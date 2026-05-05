@@ -83,6 +83,32 @@ function Get-RunningEmulatorSerial {
   return $null
 }
 
+function Get-RunningEmulatorSerialForAvd {
+  param(
+    [string]$AdbPath,
+    [string]$AvdName
+  )
+
+  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
+  foreach ($line in $deviceLines) {
+    $trimmed = $line.Trim()
+    if ([string]::IsNullOrWhiteSpace($trimmed)) {
+      continue
+    }
+    $parts = $trimmed -split "\s+"
+    if ($parts.Count -lt 2 -or $parts[0] -notlike "emulator-*" -or $parts[1] -eq "offline") {
+      continue
+    }
+
+    $candidateAvd = (& $AdbPath -s $parts[0] emu avd name 2>$null | Select-Object -First 1).Trim()
+    if ($candidateAvd -eq $AvdName) {
+      return $parts[0]
+    }
+  }
+
+  return $null
+}
+
 function Wait-ForEmulatorReady {
   param(
     [string]$AdbPath,
@@ -133,17 +159,16 @@ $adbPath = Resolve-ToolPath `
 Write-Info "avd: $AvdName"
 Write-Info "sdk: $sdkRoot"
 
-$existingProcess = Get-CimInstance Win32_Process -Filter "name = 'qemu-system-x86_64.exe' or name = 'qemu-system-x86_64-headless.exe'" |
-  Where-Object { $_.CommandLine -like "*-avd $AvdName*" }
+& $adbPath start-server | Out-Null
+$existingSerial = Get-RunningEmulatorSerialForAvd -AdbPath $adbPath -AvdName $AvdName
 
-if ($null -eq $existingProcess) {
+if ($null -eq $existingSerial) {
   Start-Process -FilePath $emulatorPath -ArgumentList "-avd", $AvdName
   Write-Info "launch: requested"
 } else {
-  Write-Info "launch: already running"
+  Write-Info "launch: already running ($existingSerial)"
 }
 
-& $adbPath start-server | Out-Null
 $serial = Wait-ForEmulatorReady -AdbPath $adbPath -TimeoutSeconds $BootTimeoutSeconds
 if ($null -eq $serial) {
   Write-Info "status: STARTED"

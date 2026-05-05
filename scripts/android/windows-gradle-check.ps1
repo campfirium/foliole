@@ -28,8 +28,27 @@ function Resolve-JavaHome {
   throw "JAVA_HOME not found. Install Android Studio or configure a JDK."
 }
 
+function Resolve-SdkRoot {
+  $candidates = @(
+    $env:ANDROID_SDK_ROOT,
+    $env:ANDROID_HOME,
+    "$env:LOCALAPPDATA\Android\Sdk"
+  ) | Where-Object { $_ -and $_.Trim().Length -gt 0 }
+
+  foreach ($candidate in $candidates) {
+    if (Test-Path -Path $candidate) {
+      return $candidate
+    }
+  }
+
+  throw "Android SDK not found. Install Android SDK first."
+}
+
 $javaHome = Resolve-JavaHome
+$sdkRoot = Resolve-SdkRoot
 $env:JAVA_HOME = $javaHome
+$env:ANDROID_HOME = $sdkRoot
+$env:ANDROID_SDK_ROOT = $sdkRoot
 $env:Path = "$javaHome\bin;$env:Path"
 
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir

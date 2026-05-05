@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.foliole.android"
     compileSdk = rootProject.ext.compileSdkVersion
+    lintOptions {
+        baseline file("lint-baseline.xml")
+    }
     defaultConfig {
         applicationId "com.foliole.android"
         minSdkVersion rootProject.ext.minSdkVersion

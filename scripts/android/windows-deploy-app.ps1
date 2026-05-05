@@ -3,7 +3,9 @@ param(
   [string]$AndroidHostDir = "android",
   [string]$AppId = "com.foliole.android",
   [string]$MainActivity = "com.foliole.android.MainActivity",
-  [int]$BootTimeoutSeconds = 180
+  [int]$BootTimeoutSeconds = 180,
+  [int]$LaunchTimeoutSeconds = 20,
+  [int]$LaunchStabilitySeconds = 4
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +45,22 @@ function Resolve-SdkRoot {
   }
 
   throw "Android SDK not found. Install Android SDK first."
+}
+
+function Resolve-NodeExe {
+  $candidates = @(
+    (Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+    "$env:ProgramFiles\nodejs\node.exe",
+    "$env:LOCALAPPDATA\Programs\nodejs\node.exe"
+  ) | Where-Object { $_ -and $_.Trim().Length -gt 0 }
+
+  foreach ($candidate in $candidates) {
+    if (Test-Path -Path $candidate) {
+      return $candidate
+    }
+  }
+
+  throw "node.exe not found. Install Node.js first."
 }
 
 function Get-RunningDeviceSerial {
@@ -102,6 +120,13 @@ if (!(Test-Path -Path $adbPath)) {
   throw "adb not found. Install Android platform-tools first."
 }
 
+$nodeExe = Resolve-NodeExe
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$verifyScript = Join-Path $repoRoot "scripts\android\verify-android-launch.mjs"
+if (!(Test-Path -Path $verifyScript)) {
+  throw "Android launch verification script not found: $verifyScript"
+}
+
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
 if (!(Test-Path -Path $androidDir)) {
   throw "Android host not initialized: $androidDir. Create the Capacitor Android host first."
@@ -130,6 +155,12 @@ Write-Info "launching activity: $MainActivity"
 & $adbPath -s $serial shell am start -n "$AppId/$MainActivity"
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
+}
+
+Write-Info "verifying foreground activity"
+& $nodeExe $verifyScript --adb $adbPath --serial $serial --app-id $AppId --component "$AppId/$MainActivity" --timeout-seconds $LaunchTimeoutSeconds --stability-seconds $LaunchStabilitySeconds
+if ($LASTEXITCODE -ne 0) {
+  throw "Android app did not remain in the foreground after launch."
 }
 
 Write-Info "status: OPENED"

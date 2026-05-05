@@ -1,5 +1,19 @@
 package com.foliole.android;
 
+import android.annotation.SuppressLint;
+import android.os.Bundle;
+import android.webkit.WebSettings;
+
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {}
+@SuppressLint("Instantiatable")
+public class MainActivity extends BridgeActivity {
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(FolioleCompanionBootstrapPlugin.class);
+        registerPlugin(FolioleCompanionSyncPlugin.class);
+        super.onCreate(savedInstanceState);
+        getBridge().getWebView().getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+    }
+}

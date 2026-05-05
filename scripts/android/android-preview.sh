@@ -23,7 +23,7 @@ echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to windows mirror"
 bash "${WINDOWS_SYNC_SCRIPT}"
 
 echo "[android-preview] step 2/${PREVIEW_TOTAL_STEPS}: sync capacitor android host"
-if ! bash "${ANDROID_SYNC_SCRIPT}"; then
+if ! ANDROID_SKIP_WINDOWS_SYNC=1 bash "${ANDROID_SYNC_SCRIPT}"; then
   echo "[android-preview] failed at: android host sync"
   echo "[android-preview] status: FAILED"
   exit 1
