@@ -30,12 +30,12 @@ export async function buildCompanionSyncPackResource(parsedRequestUrl: URL): Pro
   }
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-'));
   const packId = randomUUID();
-  const outputPath = path.join(tempRoot, `${packId}.db`);
+  const outputPath = path.join(tempRoot, `${packId}.syncpack`);
   try {
     await buildDesktopSyncPack({ fromStateSeq, outputPath, packId });
     return {
       body: await fs.readFile(outputPath),
-      fileName: `${packId}.db`,
+      fileName: `${packId}.syncpack`,
       status: 'ready',
       statusCode: 200
     };

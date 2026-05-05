@@ -1,9 +1,11 @@
 // @vitest-environment node
 
 import { promises as fs } from 'node:fs';
+import fsSync from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
+import { inflateSync } from 'node:zlib';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -65,20 +67,41 @@ function insertNodeSyncState() {
 }
 
 function readPackRows(packPath: string) {
-  const db = new BetterSqlite3(packPath, { readonly: true });
+  const entries = readStoredZipEntries(packPath);
+  const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
+  const incomingBytes = inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0));
+  const incomingPath = path.join(tempRoot, 'read-incoming.db');
+  fsSync.writeFileSync(incomingPath, incomingBytes);
+  const db = new BetterSqlite3(incomingPath, { readonly: true });
   try {
-    const manifestRow = db.prepare("SELECT value FROM pack_manifest WHERE key = 'manifest_json'").get() as { value: string };
     return {
       blobDataTable: db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blob_data'").get(),
       blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
-      manifest: JSON.parse(manifestRow.value),
+      manifest,
       nodes: db.prepare('SELECT id, content, body_blob_hash FROM nodes').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all()
     };
   } finally {
     db.close();
   }
+}
+
+function readStoredZipEntries(filePath: string) {
+  const buffer = fsSync.readFileSync(filePath);
+  const entries = new Map<string, Buffer>();
+  let offset = 0;
+  while (buffer.readUInt32LE(offset) === 0x04034b50) {
+    const compressedSize = buffer.readUInt32LE(offset + 18);
+    const fileNameLength = buffer.readUInt16LE(offset + 26);
+    const extraLength = buffer.readUInt16LE(offset + 28);
+    const nameStart = offset + 30;
+    const contentStart = nameStart + fileNameLength + extraLength;
+    const name = buffer.subarray(nameStart, nameStart + fileNameLength).toString('utf8');
+    entries.set(name, buffer.subarray(contentStart, contentStart + compressedSize));
+    offset = contentStart + compressedSize;
+  }
+  return entries;
 }
 
 it('builds a sqlite pack with structure and blob manifests but no body bytes', async () => {
@@ -101,7 +124,14 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
     blobDataTable: undefined,
     blobs: [expect.objectContaining({ kind: 'text_body' })],
     manifest: expect.objectContaining({
+      compression: 'zlib',
+      database_file: 'incoming.db.deflate',
+      database_compressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      format: 'foliole.sync-pack',
+      format_version: 1,
       pack_id: 'pack-1',
+      schema_version: expect.any(Number),
       tables: [
         { name: 'sync_object_state', row_count: 1 },
         { name: 'nodes', row_count: 1 },
@@ -165,6 +195,8 @@ it('packs external document structure with body blob manifests but no body bytes
       opening_text: expect.stringContaining('External body')
     })],
     manifest: expect.objectContaining({
+      compression: 'zlib',
+      database_file: 'incoming.db.deflate',
       tables: [
         { name: 'sync_object_state', row_count: 1 },
         { name: 'nodes', row_count: 0 },

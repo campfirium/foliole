@@ -26,7 +26,7 @@ const contentBlobResourceMock = vi.hoisted(() => ({
 const syncPackMock = vi.hoisted(() => ({
   buildCompanionSyncPackResource: vi.fn(async (): Promise<unknown> => ({
     body: Buffer.from('sqlite-pack'),
-    fileName: 'pack-1.db',
+    fileName: 'pack-1.syncpack',
     status: 'ready',
     statusCode: 200
   }))
@@ -76,7 +76,7 @@ beforeEach(() => {
   });
   syncPackMock.buildCompanionSyncPackResource.mockResolvedValue({
     body: Buffer.from('sqlite-pack'),
-    fileName: 'pack-1.db',
+    fileName: 'pack-1.syncpack',
     status: 'ready',
     statusCode: 200
   });
@@ -177,7 +177,7 @@ it('serves signed content body blobs without loading the workspace snapshot', as
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
 
-it('serves signed sqlite sync packs without loading the workspace snapshot', async () => {
+it('serves signed sync pack containers without loading the workspace snapshot', async () => {
   const response = createResponse();
   await createHandler()({
     headers: {},
@@ -186,9 +186,9 @@ it('serves signed sqlite sync packs without loading the workspace snapshot', asy
   } as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Disposition': 'attachment; filename="pack-1.db"',
+    'Content-Disposition': 'attachment; filename="pack-1.syncpack"',
     'Content-Length': Buffer.byteLength('sqlite-pack'),
-    'Content-Type': 'application/vnd.sqlite3'
+    'Content-Type': 'application/zip'
   });
   expect(response.end).toHaveBeenCalledWith(Buffer.from('sqlite-pack'));
   expect(syncPackMock.buildCompanionSyncPackResource).toHaveBeenCalledWith(expect.objectContaining({

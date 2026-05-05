@@ -198,9 +198,9 @@ async function handleAuthenticatedGet(
     const resource = await buildCompanionSyncPackResource(parsedRequestUrl);
     if (resource.status === 'ready') {
       response.writeHead(200, {
-        'Content-Disposition': `attachment; filename="${resource.fileName ?? 'sync-pack.db'}"`,
+        'Content-Disposition': `attachment; filename="${resource.fileName ?? 'sync-pack.syncpack'}"`,
         'Content-Length': resource.body?.byteLength ?? 0,
-        'Content-Type': 'application/vnd.sqlite3'
+        'Content-Type': 'application/zip'
       });
       response.end(resource.body);
     } else {
