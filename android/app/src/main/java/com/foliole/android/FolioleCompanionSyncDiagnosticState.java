@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionSyncDiagnosticState {
@@ -27,10 +26,7 @@ final class FolioleCompanionSyncDiagnosticState {
     }
 
     private static JSArray loadRows(Context context, SQLiteDatabase database, String queryName, String resultKey) throws Exception {
-        JSArray items = new JSArray();
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, queryName).getJSONArray(resultKey);
-        for (int index = 0; index < rows.length(); index += 1) items.put(rows.getJSONObject(index));
-        return items;
+        return FolioleCompanionNamedQueryStore.loadRows(context, database, queryName, resultKey);
     }
 
     private static int loadNumberMetaValue(Context context, SQLiteDatabase database, String key) throws Exception {

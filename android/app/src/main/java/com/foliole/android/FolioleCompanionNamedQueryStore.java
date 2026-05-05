@@ -103,6 +103,19 @@ final class FolioleCompanionNamedQueryStore {
         return result;
     }
 
+    static JSArray loadRows(Context context, SQLiteDatabase database, String queryName, String resultKey) throws Exception {
+        return loadRows(context, database, queryName, resultKey, null);
+    }
+
+    static JSArray loadRows(Context context, SQLiteDatabase database, String queryName, String resultKey, String[] args) throws Exception {
+        JSONArray rows = loadArray(context, database, queryName, args).getJSONArray(resultKey);
+        JSArray result = new JSArray();
+        for (int index = 0; index < rows.length(); index += 1) {
+            result.put(rows.getJSONObject(index));
+        }
+        return result;
+    }
+
     private static String replaceTokens(String sql, Map<String, String> replacements) {
         if (replacements == null) {
             return sql;

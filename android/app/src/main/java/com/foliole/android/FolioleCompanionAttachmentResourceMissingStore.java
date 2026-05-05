@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -16,7 +15,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     static JSObject loadMissingResources(Context context, SQLiteDatabase database, int limit) throws Exception {
         JSArray resources = new JSArray();
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "attachmentResourceMissingRows").getJSONArray("resources");
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "attachmentResourceMissingRows", "resources");
         int maxResources = Math.max(1, limit);
         for (int index = 0; index < rows.length() && resources.length() < maxResources; index += 1) {
             JSONObject row = rows.getJSONObject(index);
@@ -30,9 +29,7 @@ final class FolioleCompanionAttachmentResourceMissingStore {
 
     static JSObject summarizeMissingResources(Context context, SQLiteDatabase database) throws Exception {
         MissingAttachmentSummary summary = new MissingAttachmentSummary();
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "attachmentResourceMissingSummaryRows")
-            .getJSONArray("resources");
+        JSArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "attachmentResourceMissingSummaryRows", "resources");
         for (int index = 0; index < rows.length(); index += 1) {
             JSONObject row = rows.getJSONObject(index);
             if (!isMissingResource(context, row.getString("availability"), nullableString(row, "storage_key"))) continue;
@@ -50,9 +47,8 @@ final class FolioleCompanionAttachmentResourceMissingStore {
     static JSObject loadMissingResource(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
         String normalizedAttachmentId = requireText(attachmentId, "attachment_id");
         JSObject result = new JSObject();
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "attachmentResourceMissingById", new String[] { normalizedAttachmentId })
-            .getJSONArray("resources");
+        JSArray rows = FolioleCompanionNamedQueryStore
+            .loadRows(context, database, "attachmentResourceMissingById", "resources", new String[] { normalizedAttachmentId });
         if (rows.length() <= 0) {
             result.put("resource", null);
             return result;

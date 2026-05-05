@@ -59,9 +59,6 @@ final class FolioleCompanionSyncDiagnosticContent {
     }
 
     private static JSArray loadRecentTopics(Context context, SQLiteDatabase database) throws Exception {
-        JSArray items = new JSArray();
-        JSONArray topics = FolioleCompanionNamedQueryStore.loadArray(context, database, "diagnosticRecentTopics").getJSONArray("topics");
-        for (int index = 0; index < topics.length(); index += 1) items.put(topics.getJSONObject(index));
-        return items;
+        return FolioleCompanionNamedQueryStore.loadRows(context, database, "diagnosticRecentTopics", "topics");
     }
 }

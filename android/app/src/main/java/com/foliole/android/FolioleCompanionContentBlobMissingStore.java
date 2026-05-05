@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionContentBlobMissingStore {
@@ -14,9 +13,8 @@ final class FolioleCompanionContentBlobMissingStore {
 
     static JSObject loadMissingHashes(Context context, SQLiteDatabase database, int limit) throws Exception {
         JSArray hashes = new JSArray();
-        JSONArray blobs = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "contentBlobMissingHashes", new String[] { String.valueOf(Math.max(1, limit)) })
-            .getJSONArray("blobs");
+        JSArray blobs = FolioleCompanionNamedQueryStore
+            .loadRows(context, database, "contentBlobMissingHashes", "blobs", new String[] { String.valueOf(Math.max(1, limit)) });
         for (int index = 0; index < blobs.length(); index += 1) {
             hashes.put(blobs.getJSONObject(index).getString("hash"));
         }
@@ -31,7 +29,7 @@ final class FolioleCompanionContentBlobMissingStore {
         long bytes = 0;
         long failedCount = 0;
         long failedBytes = 0;
-        JSONArray blobs = FolioleCompanionNamedQueryStore.loadArray(context, database, "contentBlobMissingSummaryRows").getJSONArray("blobs");
+        JSArray blobs = FolioleCompanionNamedQueryStore.loadRows(context, database, "contentBlobMissingSummaryRows", "blobs");
         for (int index = 0; index < blobs.length(); index += 1) {
             JSONObject blob = blobs.getJSONObject(index);
             count++;
