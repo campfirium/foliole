@@ -33,6 +33,11 @@ function createExplicitArticleSnapshot() {
     activeNodeId: 'node-1',
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
+      'folder-1': createNodeRecord({
+        id: 'folder-1',
+        kind: 'folder',
+        title: 'Folder'
+      }),
       'node-1': createNodeRecord({
         content: '# First\n\nBody',
         createdAt: '2026-04-20T09:00:00.000Z',
@@ -72,6 +77,7 @@ describe('companionReadableArticle title and reading helpers', () => {
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
     expect(result).toEqual({
+      bodyBlobHash: null,
       bodyStatus: 'ready',
       content: '# First\n\nBody',
       hideTitleHeading: false,
@@ -93,6 +99,43 @@ describe('companionReadableArticle title and reading helpers', () => {
     const result = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1');
 
     expect(result?.hideTitleHeading).toBe(true);
+  });
+});
+
+describe('companionReadableArticle title slot', () => {
+  it('reserves title space for titleless companion articles and derived cards', () => {
+    const snapshot = createExplicitArticleSnapshot();
+    snapshot.nodesById['node-1'] = {
+      ...snapshot.nodesById['node-1'],
+      content: 'Body only'
+    };
+    snapshot.nodesById['node-2'] = {
+      ...snapshot.nodesById['node-2'],
+      anchorLink: { id: 'highlight-1', kind: 'highlight' },
+      content: 'Highlight body',
+      kind: 'item',
+      parentNodeId: 'node-1'
+    };
+
+    const titleSlot = 'calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))';
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')?.contentPaddingTop).toBe(titleSlot);
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBe(titleSlot);
+  });
+
+  it('does not reserve title space for visible headings or nested EPUB-style child topics', () => {
+    const snapshot = createExplicitArticleSnapshot();
+    snapshot.nodesById['node-1'] = {
+      ...snapshot.nodesById['node-1'],
+      content: '**# First**\n\nBody'
+    };
+    snapshot.nodesById['node-2'] = {
+      ...snapshot.nodesById['node-2'],
+      content: 'Child topic body',
+      parentNodeId: 'node-1'
+    };
+
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')?.contentPaddingTop).toBeUndefined();
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBeUndefined();
   });
 });
 

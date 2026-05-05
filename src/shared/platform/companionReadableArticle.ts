@@ -5,10 +5,13 @@ import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
+import { isCompanionArticleNode, resolveCompanionArticleContentPaddingTop } from './companionReadableArticleTitleSlot';
+
 export interface CompanionReadableArticle {
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   content: string;
+  contentPaddingTop?: string;
   hideTitleHeading: boolean;
   nodeId: string;
   persistedNodeViewState: PersistedNodeViewState | null;
@@ -57,23 +60,6 @@ function hasReadableContent(node: CompanionReadableNode | undefined) {
   ));
 }
 
-function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode | undefined) {
-  if (!node || node.kind !== 'topic') {
-    return false;
-  }
-
-  let parentNodeId = node.parentNodeId;
-  while (parentNodeId) {
-    const parentNode = snapshot.nodesById[parentNodeId];
-    if (!parentNode || parentNode.kind !== 'folder') {
-      return false;
-    }
-    parentNodeId = parentNode.parentNodeId;
-  }
-
-  return true;
-}
-
 function buildReadableArticle(node: CompanionReadableNode, persistedNodeViewState: PersistedNodeViewState | null) {
   return {
     bodyStatus: normalizeBodyStatus(node.bodyStatus) ?? 'ready' as const,
@@ -93,8 +79,10 @@ function resolveReferencePdfAttachmentId(node: CompanionReadableNode) {
 }
 
 function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode) {
+  const contentPaddingTop = resolveCompanionArticleContentPaddingTop(snapshot, node);
   return {
     ...buildReadableArticle(node, snapshot.persistedNodeViewById?.[node.id] ?? null),
+    ...(contentPaddingTop ? { contentPaddingTop } : {}),
     textAnchorDecorations: collectDocumentTextAnchorDecorations({
       activeNodeId: node.id,
       nodesById: snapshot.nodesById,
@@ -230,7 +218,7 @@ export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | nul
   return snapshot.nodeOrder
     .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
     .map((nodeId) => snapshot.nodesById[nodeId])
-    .filter((node) => isArticleNode(snapshot, node))
+    .filter((node) => isCompanionArticleNode(snapshot, node))
     .filter(hasReadableContent)
     .sort((left, right) => {
       const updatedAtCompare = right.updatedAt.localeCompare(left.updatedAt);

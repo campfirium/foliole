@@ -127,14 +127,34 @@ function registerReadableArticleTest() {
     const article = await loadCompanionReadableArticle();
 
     expect(article).toEqual({
+      bodyBlobHash: null,
       bodyStatus: 'ready',
       content: 'Readable from local snapshot',
       hideTitleHeading: false,
       nodeId: 'node-1',
+      persistedNodeViewState: null,
       pdfAttachmentId: null,
       textAnchorDecorations: [],
       title: 'Synced article'
     });
+  });
+
+  it('uses the provided snapshot on native Android so title-slot context stays available', async () => {
+    const state = createStoredSyncState();
+    const snapshot = state.workspace_snapshot;
+    if (!snapshot) throw new Error('Expected stored snapshot to exist.');
+    capacitorMock.getPlatform.mockReturnValue('android');
+    capacitorMock.isNativePlatform.mockReturnValue(true);
+    snapshot.nodesById['node-1'] = {
+      ...snapshot.nodesById['node-1'],
+      content: 'Body only',
+      kind: 'topic'
+    };
+
+    const article = await loadCompanionReadableArticle(snapshot);
+
+    expect(capacitorMock.plugin.loadReadableArticle).not.toHaveBeenCalled();
+    expect(article?.contentPaddingTop).toBe('calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))');
   });
 }
 

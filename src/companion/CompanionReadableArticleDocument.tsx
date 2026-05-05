@@ -75,6 +75,7 @@ export function ReadableArticleDocument(props: {
       ) : null}
       <CompanionArticleDocument
         content={props.readableArticle.content}
+        contentPaddingTop={props.readableArticle.contentPaddingTop}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
         nodeViewState={toEditorViewState(props.readableArticle)}

@@ -2,13 +2,14 @@ import type { CSSProperties } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { hasCachedMarkdownImageReference } from './documentPanelImageReferenceCache';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 
-const TITLE_SLOT_PADDING_TOP = 'calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))';
+export { hasVisibleTitleHeading } from '../../shared/lib/nodeTitleSlot';
 
 function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined) {
   if (props.isWorkspaceHydrated === false) {
@@ -84,25 +85,13 @@ function getDocumentPanelState(
   } as const;
 }
 
-export function hasVisibleTitleHeading(content: string, hideTitleHeading: boolean) {
-  if (hideTitleHeading) {
-    return false;
-  }
-  return content.startsWith('# ') || content.startsWith('**# ');
-}
-
 export function shouldReserveTitleSlot(
   node: Node | undefined,
   nodesById: Record<string, Node>,
   content: string,
   hideTitleHeading: boolean
 ) {
-  if (!node || hasVisibleTitleHeading(content, hideTitleHeading)) {
-    return false;
-  }
-  const parentNode = node.parentNodeId ? nodesById[node.parentNodeId] : undefined;
-  const isRootTopic = node.kind === 'topic' && (node.parentNodeId === null || Boolean(parentNode && isInboxNode(parentNode)));
-  return Boolean(node.anchorLink) || isRootTopic;
+  return shouldReserveNodeTitleSlot({ content, hideTitleHeading, node, nodesById });
 }
 
 function getDocumentPanelBodyProps(
@@ -118,7 +107,7 @@ function getDocumentPanelBodyProps(
     editorContent: props.editorContent,
     editorContentPaddingBottom: panelState.editorContentPaddingBottom,
     editorContentPaddingTop: shouldReserveTitleSlot(editorNode, props.nodesById, props.editorContent, editorHideTitleHeading)
-      ? TITLE_SLOT_PADDING_TOP
+      ? NODE_TITLE_SLOT_PADDING_TOP
       : undefined,
     editorHideTitleHeading,
     immersiveEditing: props.isImmersiveMode && props.isImmersiveEditing,

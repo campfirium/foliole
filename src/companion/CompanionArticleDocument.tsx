@@ -12,6 +12,7 @@ import { cn } from '@/shared/lib/utils';
 
 export function CompanionArticleDocument(props: {
   content: string;
+  contentPaddingTop?: string;
   hideTitleHeading?: boolean;
   layout?: 'article' | 'review';
   nodeId: string;
@@ -27,6 +28,7 @@ export function CompanionArticleDocument(props: {
       <MarkdownEditor
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"
+        contentPaddingTop={props.contentPaddingTop}
         hideTitleHeading={props.hideTitleHeading}
         hideScrollbar
         nodeId={props.nodeId}

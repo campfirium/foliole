@@ -114,8 +114,11 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
 }
 
 export async function loadCompanionReadableArticle(snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
+  if (snapshot) {
+    return resolveReadableCompanionArticle(snapshot);
+  }
   if (!isNativeAndroidCompanionRuntime()) {
-    return resolveReadableCompanionArticle(snapshot ?? readWebSyncState().workspace_snapshot);
+    return resolveReadableCompanionArticle(readWebSyncState().workspace_snapshot);
   }
   return normalizeReadableArticlePayload(await FolioleCompanionSync.loadReadableArticle());
 }
