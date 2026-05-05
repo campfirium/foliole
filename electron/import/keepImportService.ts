@@ -9,7 +9,7 @@ import {
 } from '../ipc/importSourcePipeline.js';
 
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
-import { loadPreparedKeepImportRecord } from './keepImportPreparedRecord.js';
+import { loadPreparedKeepImportRecord, shouldKeepImportReadwiseSource } from './keepImportPreparedRecord.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
@@ -97,7 +97,12 @@ function buildPreviewResult(rootPath: string, previewedAt: string, entries: Keep
 export async function previewKeepImportRule(config: KeepImportRuleConfig): Promise<NativeKeepImportPreviewResult> {
   const previewedAt = new Date().toISOString();
   const discoveredSources = await discoverDirectoryImportSources(config.directoryPath);
-  const entries = await Promise.all(discoveredSources.map((source) => classifySource(config, source)));
+  const importableSources = (
+    await Promise.all(
+      discoveredSources.map(async (source) => ((await shouldKeepImportReadwiseSource(config, source)) ? source : null))
+    )
+  ).filter((source): source is DirectoryImportSourceDescriptor => source !== null);
+  const entries = await Promise.all(importableSources.map((source) => classifySource(config, source)));
   return buildPreviewResult(config.directoryPath, previewedAt, entries);
 }
 
@@ -201,8 +206,13 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
   }
   try {
     const discoveredSources = await discoverDirectoryImportSources(config.directoryPath);
+    const importableSources = (
+      await Promise.all(
+        discoveredSources.map(async (source) => ((await shouldKeepImportReadwiseSource(config, source)) ? source : null))
+      )
+    ).filter((source): source is DirectoryImportSourceDescriptor => source !== null);
     const runEntries: KeepImportRunEntry[] = [];
-    for (const source of discoveredSources) {
+    for (const source of importableSources) {
       const preview = await classifySource(config, source);
       if (preview.status === 'unchanged' || preview.status === 'failed' || preview.status === 'blocked_deleted') {
         if (preview.status === 'blocked_deleted') {

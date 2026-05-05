@@ -102,6 +102,8 @@ it('opens the readwise settings panel with all parser fields and keeps preview d
   fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
 
   expect(await screen.findByRole('heading', { name: 'Readwise Reader settings' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Readwise import scope')).toHaveValue('highlights_only');
+  expect(screen.getByRole('option', { name: 'Only with highlights' })).toBeInTheDocument();
   expect(screen.getByDisplayValue('## Highlights')).toBeInTheDocument();
   expect(screen.getByDisplayValue('## New highlights added')).toBeInTheDocument();
   expect(screen.getByDisplayValue('\\n\\n')).toBeInTheDocument();
@@ -152,6 +154,7 @@ it('saves the readwise reader setup only after preview and enable', async () => 
           readwiseReaderConfig: expect.objectContaining({
             highlightsHeading: '## Highlights',
             highlightSeparator: '\\n\\n',
+            importScope: 'highlights_only',
             newHighlightsHeading: '## New highlights added',
             noteKeyword: 'Note:',
             tagKeyword: 'Tags:',
@@ -172,4 +175,34 @@ it('saves the readwise reader setup only after preview and enable', async () => 
   });
 
   expect(screen.getByText('Configured')).toBeInTheDocument();
+});
+
+it('saves the readwise import scope when the user switches to import all', async () => {
+  render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open Readwise Reader settings' }));
+  expect(await screen.findByRole('heading', { name: 'Readwise Reader settings' })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Readwise import scope'), { target: { value: 'all' } });
+  fireEvent.click(screen.getByLabelText('Readwise root folder'));
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Preview' })).toBeEnabled();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+  expect(await screen.findByRole('heading', { name: 'Readwise preview' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+  await waitFor(() => {
+    expect(window.electronAPI?.invoke).toHaveBeenCalledWith(
+      'save_import_manager_settings',
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          readwiseReaderConfig: expect.objectContaining({
+            importScope: 'all'
+          })
+        })
+      })
+    );
+  });
 });

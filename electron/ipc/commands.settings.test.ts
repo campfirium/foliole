@@ -38,6 +38,7 @@ vi.mock('../import/importManagerSettings.js', () => ({
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       highlightSeparator: '\\n\\n',
+      importScope: 'highlights_only',
       newHighlightsHeading: '## New highlights added',
       noteKeyword: 'Note:',
       tagKeyword: 'Tags:',
@@ -127,6 +128,7 @@ async function expectAppAndImportSettingsCommands() {
           readwiseReaderConfig: {
             highlightsHeading: '## Highlights',
             highlightSeparator: '\\n\\n',
+            importScope: 'all',
             newHighlightsHeading: '## New highlights added',
             noteKeyword: 'Note:',
             tagKeyword: 'Tags:',
@@ -143,6 +145,7 @@ async function expectAppAndImportSettingsCommands() {
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       highlightSeparator: '\\n\\n',
+      importScope: 'all',
       newHighlightsHeading: '## New highlights added',
       noteKeyword: 'Note:',
       tagKeyword: 'Tags:',

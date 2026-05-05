@@ -5,6 +5,25 @@ import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwise
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { loadPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
+export async function shouldImportReadwiseSource(
+  source: DirectoryImportSourceDescriptor,
+  options: {
+    highlightDirectoryPath: string;
+    readwiseConfig: ReadwiseReaderConfig;
+  }
+) {
+  if (options.readwiseConfig.importScope === 'all') {
+    return true;
+  }
+  const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
+  try {
+    const articleMarkdown = await fs.readFile(articlePath, 'utf8');
+    return extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig).length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function loadPreparedReadwiseImportRecord(
   source: DirectoryImportSourceDescriptor,
   options: {

@@ -87,6 +87,40 @@ function saveReadwiseKeepImportSettings(paths: {
     readwiseReaderConfig: {
       highlightSeparator: '\\n\\n',
       highlightsHeading: '## Highlights',
+      importScope: 'highlights_only',
+      newHighlightsHeading: '## New highlights added',
+      noteKeyword: 'Note:',
+      tagKeyword: 'Tags:',
+      validatedAt: '2026-03-26T01:00:00.000Z'
+    },
+    readwiseRootPath: paths.readwiseRoot,
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: paths.highlightDir,
+        id: 'draft-import-source-1',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'articles',
+        primaryPath: paths.fullDocumentDir
+      }
+    ]
+  });
+}
+
+function saveReadwiseKeepImportSettingsWithScope(
+  paths: {
+    fullDocumentDir: string;
+    highlightDir: string;
+    readwiseRoot: string;
+  },
+  importScope: 'all' | 'highlights_only'
+) {
+  saveImportManagerSettings({
+    readwiseReaderConfig: {
+      highlightSeparator: '\\n\\n',
+      highlightsHeading: '## Highlights',
+      importScope,
       newHighlightsHeading: '## New highlights added',
       noteKeyword: 'Note:',
       tagKeyword: 'Tags:',
@@ -183,6 +217,14 @@ it('writes a dedicated readwise scan log with per-file decisions', async () => {
   const sourceDir = path.join(tempRoot, 'readwise-articles');
   await fs.mkdir(sourceDir, { recursive: true });
   await fs.writeFile(path.join(sourceDir, 'article.md'), '# Imported\nBody\n', 'utf8');
+  saveReadwiseKeepImportSettingsWithScope(
+    {
+      fullDocumentDir: sourceDir,
+      highlightDir: sourceDir,
+      readwiseRoot: sourceDir
+    },
+    'all'
+  );
 
   await runKeepImportRule({
     directoryPath: sourceDir,

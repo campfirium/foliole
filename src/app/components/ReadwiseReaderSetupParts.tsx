@@ -1,9 +1,9 @@
-import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type { ReadwiseImportScope, ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeReadwiseContract';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppInput, AppStatusBadge } from '../../shared/ui';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
-import { formatReadwiseSourceLabel } from './importSourceWorkspaceModel';
+import { formatReadwiseSourceLabel, importSourceSelectClassName } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
 import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
 
@@ -136,6 +136,7 @@ export function ReadwiseParserFields(props: {
 
   return (
     <section className="space-y-3">
+      <ReadwiseImportScopeField importScope={props.config.importScope} onChange={(value) => props.onChange('importScope', value)} />
       {fields.map((entry) => (
         <label className={readwiseFormRowClassName} key={entry.field}>
           <div>
@@ -148,6 +149,49 @@ export function ReadwiseParserFields(props: {
         </label>
       ))}
     </section>
+  );
+}
+
+function ReadwiseImportScopeField(props: {
+  importScope: ReadwiseImportScope;
+  onChange: (value: ReadwiseImportScope) => void;
+}) {
+  const importScopeOptions: Array<{ description: string; label: string; value: ReadwiseImportScope }> = [
+    {
+      description: 'Skip files that do not have any parsed highlights.',
+      label: 'Only with highlights',
+      value: 'highlights_only'
+    },
+    {
+      description: 'Import every file from the selected Readwise content folder.',
+      label: 'Import all',
+      value: 'all'
+    }
+  ];
+
+  return (
+    <label className={readwiseFormRowClassName}>
+      <div>
+        <span className="block text-sm font-semibold text-foreground">Import scope</span>
+        <span className="mt-1 block text-sm text-foreground/65">
+          {importScopeOptions.find((option) => option.value === props.importScope)?.description}
+        </span>
+      </div>
+      <div className="w-full md:w-[340px]">
+        <select
+          aria-label="Readwise import scope"
+          className={importSourceSelectClassName}
+          onChange={(event) => props.onChange(event.target.value as ReadwiseImportScope)}
+          value={props.importScope}
+        >
+          {importScopeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </label>
   );
 }
 

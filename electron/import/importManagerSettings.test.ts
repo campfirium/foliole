@@ -41,6 +41,7 @@ const IMPORT_MANAGER_SETTINGS_INPUT = {
   readwiseReaderConfig: {
     highlightsHeading: '## Highlights',
     highlightSeparator: '\\n\\n',
+    importScope: 'highlights_only',
     newHighlightsHeading: '## New highlights added',
     noteKeyword: 'Note:',
     tagKeyword: 'Tags:',
@@ -94,6 +95,7 @@ function expectNormalizedSavedSettings() {
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       highlightSeparator: '\\n\\n',
+      importScope: 'highlights_only',
       newHighlightsHeading: '## New highlights added',
       noteKeyword: 'Note:',
       tagKeyword: 'Tags:',
@@ -143,6 +145,7 @@ function expectReloadedSettingsAfterRestart() {
     readwiseReaderConfig: {
       highlightsHeading: '## Highlights',
       highlightSeparator: '\\n\\n',
+      importScope: 'highlights_only',
       newHighlightsHeading: '## New highlights added',
       noteKeyword: 'Note:',
       tagKeyword: 'Tags:',
