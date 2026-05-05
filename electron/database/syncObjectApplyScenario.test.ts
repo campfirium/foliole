@@ -88,6 +88,52 @@ function reviewRecord(overrides: Partial<NativeSyncObjectRecord> = {}): NativeSy
   };
 }
 
+function importSourceRecord(): NativeSyncObjectRecord {
+  return {
+    content_hash: 'import-source-hash-1',
+    deleted_at: null,
+    object_id: 'source-1',
+    object_type: 'import_source',
+    payload_json: JSON.stringify({
+      first_imported_at: '2026-04-21T10:00:00.000Z',
+      last_content_fingerprint: 'document-hash-1',
+      last_imported_at: '2026-04-21T16:00:00.000Z',
+      latest_node_id: 'node-1',
+      provider: 'manual',
+      source_kind: 'markdown',
+      source_locator: '/docs/article.md',
+      source_name: 'article.md'
+    }),
+    updated_at: '2026-04-21T16:00:00.000Z'
+  };
+}
+
+function externalDocumentRecord(overrides: Partial<NativeSyncObjectRecord> = {}): NativeSyncObjectRecord {
+  return {
+    content_hash: 'document-hash-1',
+    deleted_at: null,
+    object_id: 'folder-1:article.md',
+    object_type: 'external_document',
+    payload_json: JSON.stringify({
+      body_blob_hash: 'blob-document-1',
+      content: 'Imported article body',
+      extension: '.md',
+      file_name: 'article.md',
+      folder_id: 'folder-1',
+      indexed_at: '2026-04-21T16:00:00.000Z',
+      is_present: 1,
+      opening_text: 'Imported article body',
+      relative_path: 'article.md',
+      source_modified_at: '2026-04-21T15:55:00.000Z',
+      source_modified_ms: 1777,
+      source_size_bytes: 88,
+      title: 'Imported Article'
+    }),
+    updated_at: '2026-04-21T16:00:00.000Z',
+    ...overrides
+  };
+}
+
 it('covers reading and review state apply, idempotency, stale ignore, and fresh update', async () => {
   insertNode('node-1');
   const initialRecords = [readingRecord(), reviewRecord()];
@@ -133,4 +179,39 @@ it('covers reading and review state apply, idempotency, stale ignore, and fresh 
      WHERE object_type = 'node_review' AND object_id = ?`,
     ['node-1']
   )).toEqual({ dirty: 0, hash: 'review-hash-2' });
+});
+
+it('covers imported article source and external document presence transitions', async () => {
+  await expect(applySyncObjectsAsync([importSourceRecord(), externalDocumentRecord()])).resolves.toEqual([
+    'import_source:source-1',
+    'external_document:folder-1:article.md'
+  ]);
+  await expect(applySyncObjectsAsync([importSourceRecord(), externalDocumentRecord()])).resolves.toEqual([]);
+  await expect(applySyncObjectsAsync([
+    externalDocumentRecord({
+      content_hash: 'document-missing-hash',
+      deleted_at: '2026-04-22T16:00:00.000Z',
+      payload_json: null,
+      updated_at: '2026-04-22T16:00:00.000Z'
+    })
+  ])).resolves.toEqual(['external_document:folder-1:article.md']);
+
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryOne<{ latest_node_id: string; source_name: string }>(
+    'SELECT latest_node_id, source_name FROM import_sources WHERE source_fingerprint = ?',
+    ['source-1']
+  )).toEqual({ latest_node_id: 'node-1', source_name: 'article.md' });
+  expect(driver.queryOne<{ body_blob_hash: string; is_present: number; missing_at: string }>(
+    'SELECT body_blob_hash, is_present, missing_at FROM external_documents WHERE document_id = ?',
+    ['folder-1:article.md']
+  )).toEqual({
+    body_blob_hash: 'blob-document-1',
+    is_present: 0,
+    missing_at: '2026-04-22T16:00:00.000Z'
+  });
+  expect(driver.queryOne<{ deleted_at: string; dirty: number }>(
+    `SELECT deleted_at, sync_dirty AS dirty FROM sync_object_state
+     WHERE object_type = 'external_document' AND object_id = ?`,
+    ['folder-1:article.md']
+  )).toEqual({ deleted_at: '2026-04-22T16:00:00.000Z', dirty: 0 });
 });
