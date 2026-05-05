@@ -43,6 +43,55 @@ it('can hide navigation icons', () => {
   expect(screen.getByRole('treeitem', { name: 'Study prompt' }).querySelector('[data-node-icon]')).toBeNull();
 });
 
+it('keeps selected rows in the calm list selection style', () => {
+  render(
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={false}
+      isCollapsed={false}
+      isSelected
+      label="Study prompt"
+      nodeId="node-1"
+      onSelect={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rowSpacing={0}
+    />
+  );
+
+  const row = screen.getByRole('treeitem', { name: 'Study prompt' });
+  expect(row).toHaveAttribute('aria-selected', 'true');
+  expect(row).toHaveAttribute('data-active', 'false');
+  expect(row.className).toContain('bg-foreground/[0.05]');
+  expect(row.className).not.toContain('border-border-strong');
+  expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
+});
+
+it('condenses bulk-selected rows without using the active button style', () => {
+  render(
+    <NodeTreeRow
+      depth={0}
+      hasChildren={false}
+      isActive={false}
+      isBulkSelectionActive
+      isCollapsed={false}
+      isSelected
+      label="Study prompt"
+      nodeId="node-1"
+      onSelect={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rowSpacing={0}
+    />
+  );
+
+  const row = screen.getByRole('treeitem', { name: 'Study prompt' });
+  expect(row).toHaveAttribute('data-active', 'false');
+  expect(row).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(row.className).toContain('my-0.5');
+  expect(row).toHaveStyle({ paddingTop: '1px', paddingBottom: '1px' });
+  expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
+});
+
 it('toggles collapse on plain row click when children exist', () => {
   const onSelect = vi.fn();
   const onToggleCollapse = vi.fn();

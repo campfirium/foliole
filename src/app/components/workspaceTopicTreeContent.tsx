@@ -17,6 +17,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   nodesById: WorkspaceListNodesById;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
   onToggleCollapse: (nodeId: string) => void;
+  selectedNodeIds: string[];
   visibleRows: ReturnType<typeof buildVisibleNodeTreeRows>;
 }) {
   return (
@@ -46,6 +47,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           onSelectNode={args.onSelectNode}
           onToggleCollapse={args.onToggleCollapse}
           rows={args.visibleRows}
+          selectedNodeIds={args.selectedNodeIds}
         />
       )}
     </div>

@@ -149,6 +149,13 @@ describe('WindowTitleBar', () => {
     expect(title).toBeInTheDocument();
     expect(title).toHaveAttribute('title', 'YC 编写的 Vibe Coding 指南');
   });
+
+  it('renders an external marker beside external document titles', () => {
+    const { container } = renderTitleBar({ centerTitle: 'External topic title', centerTitleIcon: 'external' });
+
+    expect(screen.getByText('External topic title')).toBeInTheDocument();
+    expect(container.querySelector('.window-titlebar-center-title svg')).not.toBeNull();
+  });
 });
 
 describe('WindowTitleBar view switches', () => {

@@ -25,11 +25,15 @@ import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 import { FolderListView } from './FolderListView';
 
 interface ExternalLibraryDocumentSurfaceProps {
+  canGoBack: boolean;
+  canGoForward: boolean;
   documentMaxWidth: number;
   entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
   folders: RuntimeExternalSearchFolder[];
   onOpenImportedNode: (result: NativeTextImportResult) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
+  onGoBack: () => void;
+  onGoForward: () => void;
   onResetLayout: () => void;
   onStartDocumentResize: (
     side: 'left' | 'right',
@@ -168,6 +172,27 @@ function ExternalEmptySurface(args: {
   );
 }
 
+function renderExternalPreviewSurface(args: {
+  isImporting: boolean;
+  onHandleImport: () => void;
+  preview: RuntimeExternalSearchPreview;
+  props: ExternalLibraryDocumentSurfaceProps;
+}) {
+  return (
+    <ExternalLibraryPreviewSurface
+      canGoBack={args.props.canGoBack}
+      canGoForward={args.props.canGoForward}
+      documentMaxWidth={args.props.documentMaxWidth}
+      isImporting={args.isImporting}
+      onGoBack={args.props.onGoBack}
+      onGoForward={args.props.onGoForward}
+      onHandleImport={args.onHandleImport}
+      onOpenSelection={args.props.onOpenSelection}
+      preview={args.preview}
+    />
+  );
+}
+
 export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSurfaceProps) {
   const { error, preview } = useExternalSearchPreview(props.selection);
   const [isImporting, setIsImporting] = useState(false);
@@ -221,5 +246,10 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
     );
   }
 
-  return <ExternalLibraryPreviewSurface isImporting={isImporting} onHandleImport={() => void handleImport()} preview={preview} />;
+  return renderExternalPreviewSurface({
+    isImporting,
+    onHandleImport: () => void handleImport(),
+    preview,
+    props
+  });
 }

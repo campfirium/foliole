@@ -158,6 +158,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
         nodesById: props.nodesById,
         onSelectNode: interaction.handleSelectNode,
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
+        selectedNodeIds: interaction.topicTreeState.selectedNodeIds,
         visibleRows
       })}
       {interaction.topicTreeMenu}
@@ -206,6 +207,7 @@ function renderWorkspaceTopicTreeHeader(args: {
         args.setCollapsedNodeIds(args.hasCollapsedNodes ? new Set() : new Set(args.collapsibleNodeIds))
       }
       searchQuery={args.searchQuery}
+      selectedCount={args.interaction.topicTreeState.selectedNodeIds.length}
       sortDirection={args.contentSort.sort.direction}
       sortKey={args.contentSort.sort.key}
     />

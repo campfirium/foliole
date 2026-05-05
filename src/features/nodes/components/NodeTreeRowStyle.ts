@@ -2,6 +2,7 @@ import { cn } from '../../../shared/lib/utils';
 
 export function resolveNodeRowButtonClassName(args: {
   depth: number;
+  isBulkSelectionActive: boolean;
   isDerived: boolean;
   isSelected: boolean;
 }) {
@@ -9,7 +10,8 @@ export function resolveNodeRowButtonClassName(args: {
     'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] pr-[0.4rem]',
     'text-foreground',
     'font-normal',
-    args.isSelected && 'bg-foreground/[0.05]'
+    args.isSelected && 'bg-foreground/[0.05]',
+    args.isSelected && args.isBulkSelectionActive && 'my-0.5'
   );
 }
 

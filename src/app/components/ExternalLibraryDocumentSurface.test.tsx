@@ -51,9 +51,13 @@ it('renders the external folder contents in the center document area using the f
 
   render(
     <ExternalLibraryDocumentSurface
+      canGoBack={false}
+      canGoForward={false}
       documentMaxWidth={760}
       entriesByFolderId={entriesByFolderId}
       folders={folders}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
       onOpenImportedNode={vi.fn()}
       onOpenSelection={onOpenSelection}
       onResetLayout={vi.fn()}

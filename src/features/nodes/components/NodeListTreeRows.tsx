@@ -60,6 +60,7 @@ function renderNodeListRow(
       depth={props.isTrashViewOpen ? 0 : row.depth}
       hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
+      isBulkSelectionActive={props.selectedNodeIds.length > 1}
       isCollapsed={props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id)}
       isDerived={isDerivedNode}
       isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox || isTrashRoot || isVirtualRoot}

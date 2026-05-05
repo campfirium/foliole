@@ -22,6 +22,7 @@ interface NodeListHeaderProps {
   onToggleCollapseAll: () => void;
   onSearchQueryChange: (searchQuery: string) => void;
   searchQuery: string;
+  selectedCount?: number;
   showTitleSearch?: boolean;
   trashCount: number;
 }
@@ -96,6 +97,7 @@ function renderNodeListHeaderShell(args: {
   onSearchQueryChange: (searchQuery: string) => void;
   onToggleCollapseAll: () => void;
   searchQuery: string;
+  selectedCount: number;
   showTitleSearch: boolean;
   showVirtualCreateAction: boolean;
   trashCount: number;
@@ -110,6 +112,9 @@ function renderNodeListHeaderShell(args: {
         Topics
       </button>
       {args.showTitleSearch && !args.isVirtualViewOpen ? renderSearchLauncher(args.onOpenSearch) : <span aria-hidden="true" className="size-8" />}
+      <span className="min-w-0 flex-1 truncate text-center text-xs text-foreground/55">
+        {args.selectedCount > 1 ? `${args.selectedCount} selected` : ''}
+      </span>
       <ToolbarActionGroup ariaLabel={args.isTrashViewOpen ? 'Trash actions' : args.isVirtualViewOpen ? 'Virtual folder actions' : 'Topic list actions'}>
         {args.isTrashViewOpen
           ? renderTrashActions(args.onEmptyTrash, args.trashCount)
@@ -145,6 +150,7 @@ export function NodeListHeader({
   onToggleCollapseAll,
   onSearchQueryChange,
   searchQuery,
+  selectedCount = 0,
   showTitleSearch = true,
   trashCount
 }: NodeListHeaderProps) {
@@ -179,6 +185,7 @@ export function NodeListHeader({
     onSearchQueryChange,
     onToggleCollapseAll,
     searchQuery,
+    selectedCount,
     showTitleSearch,
     showVirtualCreateAction,
     trashCount

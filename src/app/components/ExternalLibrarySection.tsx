@@ -90,8 +90,8 @@ function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
     return null;
   }
   return (
-    <span aria-label="External folder" className="inline-flex items-center text-foreground/45">
-      <HardDrive aria-hidden="true" size={15} strokeWidth={1.8} />
+    <span aria-label="External folder" className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">
+      <HardDrive aria-hidden="true" className="translate-y-px" size={14} strokeWidth={1.7} />
     </span>
   );
 }

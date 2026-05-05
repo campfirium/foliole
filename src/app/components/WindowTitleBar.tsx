@@ -1,4 +1,4 @@
-import { Copy, Minus, PanelLeft, PanelRight, Square, X } from 'lucide-react';
+import { Copy, HardDrive, Minus, PanelLeft, PanelRight, Square, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { workspaceChangeTimestamp } from 'virtual:workspace-change-timestamp';
 
@@ -23,6 +23,7 @@ const WINDOW_CONTROLS_WIDTH = 138;
 interface WindowTitleBarProps {
   activeRightPanelId: WorkspaceRightPanelId;
   centerTitle: string | null;
+  centerTitleIcon?: 'external';
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
   isTrashViewOpen: boolean;
@@ -185,14 +186,19 @@ function WindowControlButtons({ controlsEnabled, isMaximized, onClose, onMinimiz
   );
 }
 
-function WindowCenterTitle({ onDoubleClick, title }: { onDoubleClick: () => void; title: string | null }) {
+function WindowCenterTitle({ icon, onDoubleClick, title }: { icon?: 'external'; onDoubleClick: () => void; title: string | null }) {
   return (
     <div
       aria-hidden="true"
       className="window-titlebar-center-slot window-titlebar-drag-fill relative z-[3]"
       onDoubleClick={onDoubleClick}
     >
-      {title ? <span className="window-titlebar-center-title" title={title}>{title}</span> : null}
+      {title ? (
+        <span className="window-titlebar-center-title gap-1.5" title={title}>
+          <span className="min-w-0 truncate" title={title}>{title}</span>
+          {icon === 'external' ? <HardDrive aria-hidden="true" className="flex-none" size={14} strokeWidth={1.7} /> : null}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -253,7 +259,7 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
       />
       <WindowLeadingActions {...props} />
-      <WindowCenterTitle onDoubleClick={handleToggleMaximize} title={props.centerTitle} />
+      <WindowCenterTitle icon={props.centerTitleIcon} onDoubleClick={handleToggleMaximize} title={props.centerTitle} />
       <WindowTitleBarRightSidebarAnchor
         activeRightPanelId={props.activeRightPanelId}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}

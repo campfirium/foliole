@@ -38,6 +38,7 @@ interface DocumentPanelHeaderProps {
   onToggleSourceUpdatePanel: () => void;
   priorityQuickSetShortcutLabel: string;
   reviewSchedulerSettings: ReviewSchedulerSettings;
+  showDocumentControls?: boolean;
   showSourceUpdateAction: boolean;
 }
 
@@ -148,7 +149,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
         isFolderListView={args.isFolderListView}
         nodesById={args.nodesById}
         onSelectBreadcrumbNode={args.onSelectBreadcrumbNode}
-        rightSlot={
+        rightSlot={args.showDocumentControls === false ? null : (
           <>
             <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
             <DocumentPriorityControl
@@ -160,7 +161,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
               shortcutLabel={args.priorityQuickSetShortcutLabel}
             />
           </>
-        }
+        )}
       />
       <div className="absolute right-0 top-1/2 flex min-w-0 -translate-y-1/2 items-center justify-end">
         {renderHeaderActions({
@@ -197,6 +198,7 @@ export function DocumentPanelHeader({
   onToggleSourceUpdatePanel,
   priorityQuickSetShortcutLabel,
   reviewSchedulerSettings,
+  showDocumentControls = true,
   showSourceUpdateAction
 }: DocumentPanelHeaderProps) {
   const { editorDisplayMode, toggleEditorDisplayMode } = useAppearanceSettings();
@@ -226,6 +228,7 @@ export function DocumentPanelHeader({
         onToggleSourceUpdatePanel,
         priorityQuickSetShortcutLabel,
         reviewSchedulerSettings,
+        showDocumentControls,
         showSourceUpdateAction,
         toggleEditorDisplayMode
       })}

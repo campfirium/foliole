@@ -190,6 +190,7 @@ export function NodeListPanel(props: NodeListPanelProps) {
           props.collapse.hasCollapsedNotes ? props.collapse.expandAllNotes() : props.collapse.collapseAllNotes()
         }
         searchQuery={props.searchQuery}
+        selectedCount={props.selectedNodeIds.length}
         showTitleSearch={props.showTitleSearch}
         trashCount={props.trashRowsLength}
       />

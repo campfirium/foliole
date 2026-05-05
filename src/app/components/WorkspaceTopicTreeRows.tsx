@@ -17,6 +17,7 @@ interface WorkspaceTopicTreeRowsProps {
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: NodeTreeRow[];
+  selectedNodeIds: string[];
 }
 
 function renderWorkspaceTopicTreeRow(
@@ -30,9 +31,11 @@ function renderWorkspaceTopicTreeRow(
     onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
     onToggleCollapse: (nodeId: string) => void;
     rowSpacing: number;
+    selectedNodeIds: string[];
   }
 ) {
   const node = args.nodesById[row.node.id];
+  const isSelected = args.selectedNodeIds.includes(row.node.id);
   const isReviewCard = isFsrsWorkspaceListNode(node);
   const nodeIconState = resolveNodeTreeRowIconState({
     isDismissed: node?.reading?.state === 'dismissed',
@@ -47,8 +50,9 @@ function renderWorkspaceTopicTreeRow(
       depth={row.depth}
       hasChildren={row.hasChildren}
       isActive={args.activeNodeId === row.node.id}
+      isBulkSelectionActive={args.selectedNodeIds.length > 1}
       isCollapsed={args.collapsedNodeIds.has(row.node.id)}
-      isSelected={args.activeNodeId === row.node.id}
+      isSelected={isSelected}
       key={row.node.id}
       label={row.node.title}
       nodeId={row.node.id}
@@ -76,7 +80,8 @@ export function WorkspaceTopicTreeRows({
   onContextMenu,
   onSelectNode,
   onToggleCollapse,
-  rows
+  rows,
+  selectedNodeIds
 }: WorkspaceTopicTreeRowsProps) {
   const rowSpacing = getNodeListRowSpacing();
   const onRowKeyDown = useMemo(
@@ -101,7 +106,8 @@ export function WorkspaceTopicTreeRows({
           onRowKeyDown,
           onSelectNode,
           onToggleCollapse,
-          rowSpacing
+          rowSpacing,
+          selectedNodeIds
         })
       )}
     </section>

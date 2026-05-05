@@ -16,6 +16,7 @@ interface WorkspaceTopicTreeHeaderProps {
   onSearchQueryChange: (searchQuery: string) => void;
   onToggleCollapseAll: () => void;
   searchQuery: string;
+  selectedCount?: number;
   sortDirection: WorkspaceContentSortDirection;
   sortKey: WorkspaceContentSortKey;
 }
@@ -29,6 +30,7 @@ export function WorkspaceTopicTreeHeader({
   onToggleCollapseAll,
   onSearchQueryChange,
   searchQuery,
+  selectedCount = 0,
   sortDirection,
   sortKey
 }: WorkspaceTopicTreeHeaderProps) {
@@ -52,6 +54,9 @@ export function WorkspaceTopicTreeHeader({
     >
       <h2 className="sr-only">Current folder topics</h2>
       {renderSearchLauncher(() => setIsSearchOpen(true))}
+      <span className="min-w-0 flex-1 truncate text-center text-xs text-foreground/55">
+        {selectedCount > 1 ? `${selectedCount} selected` : ''}
+      </span>
       <WorkspaceTopicTreeHeaderActions
         hasCollapsibleNodes={hasCollapsibleNodes}
         hasCollapsedNodes={hasCollapsedNodes}

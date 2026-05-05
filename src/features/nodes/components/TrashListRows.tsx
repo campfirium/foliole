@@ -48,6 +48,7 @@ function renderTrashRow(
       dragDisabledLabel={null}
       hasChildren={false}
       isActive={isActive}
+      isBulkSelectionActive={props.selectedNodeIds.length > 1}
       isCollapsed={false}
       isDragDisabled
       isSelected={isSelected}

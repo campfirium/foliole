@@ -422,8 +422,9 @@ b {
 }
 
 .window-titlebar-center-title {
+  align-items: center;
   color: var(--window-titlebar-title-color);
-  display: block;
+  display: inline-flex;
   font-size: 14px;
   font-weight: 500;
   max-width: 48rem;

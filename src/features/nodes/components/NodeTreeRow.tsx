@@ -23,6 +23,7 @@ interface NodeTreeRowProps {
   descendantCount?: number;
   depth: number;
   isActive: boolean;
+  isBulkSelectionActive?: boolean;
   isCollapsed: boolean;
   isDerived?: boolean;
   isMuted?: boolean;
@@ -53,11 +54,12 @@ interface NodeTreeRowProps {
   onToggleCollapse: (nodeId: string) => void;
 }
 
-function resolveNodeRowStyle(depth: number, rowSpacing: number) {
+function resolveNodeRowStyle(depth: number, rowSpacing: number, isCondensedSelected: boolean) {
+  const verticalPadding = isCondensedSelected ? Math.max(1, rowSpacing - 5) : rowSpacing;
   return {
     '--node-depth': depth,
-    paddingBottom: `${rowSpacing}px`,
-    paddingTop: `${rowSpacing}px`
+    paddingBottom: `${verticalPadding}px`,
+    paddingTop: `${verticalPadding}px`
   } as CSSProperties;
 }
 
@@ -73,6 +75,7 @@ function renderNodeTreeRowButton(props: {
   depth: number;
   hasChildren: boolean;
   isActive: boolean;
+  isBulkSelectionActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
   isMuted: boolean;
@@ -98,7 +101,8 @@ function renderNodeTreeRowButton(props: {
 
 function NodeTreeRowImpl(props: NodeTreeRowProps) {
   recordNodeListRowRender(props.nodeId);
-  const style = resolveNodeRowStyle(props.depth, props.rowSpacing);
+  const isCondensedSelected = Boolean(props.isSelected && props.isBulkSelectionActive);
+  const style = resolveNodeRowStyle(props.depth, props.rowSpacing, isCondensedSelected);
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
@@ -117,6 +121,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         depth: props.depth,
         hasChildren: props.hasChildren,
         isActive: props.isActive,
+        isBulkSelectionActive: props.isBulkSelectionActive ?? false,
         isCollapsed: props.isCollapsed,
         isDerived: props.isDerived ?? false,
         isMuted: props.isMuted ?? false,
@@ -149,6 +154,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.dropIntent === next.dropIntent &&
     previous.hasChildren === next.hasChildren &&
     previous.isActive === next.isActive &&
+    previous.isBulkSelectionActive === next.isBulkSelectionActive &&
     previous.isCollapsed === next.isCollapsed &&
     previous.isDerived === next.isDerived &&
     previous.isDragDisabled === next.isDragDisabled &&
@@ -183,6 +189,7 @@ interface NodeTreeRowButtonProps {
   depth: number;
   hasChildren: boolean;
   isActive: boolean;
+  isBulkSelectionActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
   isMuted: boolean;
@@ -208,6 +215,7 @@ function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
   const rename = useRenameState(props.label, props.nodeId, props.onRename);
   const buttonClassName = resolveNodeRowButtonClassName({
     depth: props.depth,
+    isBulkSelectionActive: props.isBulkSelectionActive,
     isDerived: props.isDerived,
     isSelected: props.isSelected
   });
@@ -228,6 +236,7 @@ function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
     handlers,
     hasChildren: props.hasChildren,
     isActive: props.isActive,
+    isBulkSelectionActive: props.isBulkSelectionActive,
     isCollapsed: props.isCollapsed,
     isDerived: props.isDerived,
     isMuted: props.isMuted,

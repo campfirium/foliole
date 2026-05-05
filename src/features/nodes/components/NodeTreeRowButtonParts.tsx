@@ -89,6 +89,7 @@ export function renderNodeTreeRowButtonSurface(props: {
   handlers: ReturnType<typeof createNodeTreeRowButtonHandlers>;
   hasChildren: boolean;
   isActive: boolean;
+  isBulkSelectionActive: boolean;
   isCollapsed: boolean;
   isDerived: boolean;
   isMuted: boolean;
@@ -117,6 +118,7 @@ export function renderNodeTreeRowButtonSurface(props: {
       data-node-derived={props.isDerived ? 'true' : 'false'}
       data-node-emphasis={props.isDerived ? 'secondary' : 'primary'}
       data-node-id={props.nodeId}
+      data-node-bulk-selected={props.isBulkSelectionActive && props.treeItemState['aria-selected'] ? 'true' : undefined}
       data-node-row-spacing={String(props.rowSpacing)}
       data-node-visibility={props.isMuted ? 'muted' : 'normal'}
       id={`node-treeitem-${props.nodeId}`}

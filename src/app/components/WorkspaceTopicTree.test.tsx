@@ -116,6 +116,19 @@ it('places title search in the item column and keeps matches visible while searc
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Vue Notes' })).toBeNull();
 });
 
+it('shows every ctrl-selected current-folder topic as selected', () => {
+  render(<WorkspaceTopicTreeHarness />);
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' }), { ctrlKey: true });
+
+  const selectedRows = within(itemColumn).getAllByRole('treeitem', { selected: true });
+  expect(selectedRows).toHaveLength(2);
+  expect(within(itemColumn).getByText('2 selected')).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'React Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
+});
+
 it('collapses a newly opened folder by default but expands the selected topic itself', () => {
   render(<WorkspaceTopicTreeCollapseHarness />);
 
