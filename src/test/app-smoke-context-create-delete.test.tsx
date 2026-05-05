@@ -27,6 +27,14 @@ it('creates highlight node from editor context menu without leaving current node
   expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
   expect(workspace.nodesById[createdNodeId]?.title).toBe('Welcome');
   expect(workspace.nodesById[createdNodeId]?.content).toBe('Welcome');
+  expect(screen.getByRole('treeitem', { name: 'Welcome to Foliole' })).toHaveAttribute(
+    'data-node-derived',
+    'false'
+  );
+  expect(screen.getByRole('treeitem', { name: 'Welcome' })).toHaveAttribute(
+    'data-node-derived',
+    'true'
+  );
 });
 
 it('creates cloze node from editor context menu without leaving current node', () => {
@@ -45,7 +53,7 @@ it('creates cloze node from editor context menu without leaving current node', (
     throw new Error('expected a child node');
   }
   expect(workspace.nodesById[createdNodeId]?.parentNodeId).toBe('node-1');
-  expect(workspace.nodesById[createdNodeId]?.title).toBe('[...] to Foliole Start writing markdown here.');
+  expect(workspace.nodesById[createdNodeId]?.title).toBe('[...] to Foliole');
   expect(workspace.nodesById[createdNodeId]?.reveal).toBe('Welcome');
 });
 

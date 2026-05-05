@@ -60,10 +60,19 @@
 
 ## Windows Native 客户端同步规则（强制）
 1. Windows 端 Tauri 启动由用户手动负责（例如在 `C:\dev\foliole` 执行 `npm run tauri:dev`）。
-2. Agent 每次代码改动后默认执行 `npm run windows:deliver`：先过质量闸（`lint -> typecheck -> test -> build`），通过后再同步到 Windows 镜像目录。
-3. 仅在用户明确要求“只同步”时，才执行 `npm run windows:sync`。
-4. 对用户宣称“可在 Windows 客户端验收”前，必须回报本次执行的实际命令与最终状态字段（`status: SYNCED` 或 `status: DELIVERED`）。
+2. Agent 每次代码改动后默认执行 `npm run windows:preview`：先同步到 Windows 镜像目录，并仅在 `electron/**` 改动时自动重启客户端；否则依赖 Vite HMR。
+3. 仅在用户明确要求“只同步（不自检/不重启）”时，才执行 `npm run windows:sync`。
+4. 对用户宣称“可在 Windows 客户端看到效果/可验收”前，必须回报本次执行的实际命令与最终状态字段（`status: SYNCED` / `status: RESTARTED` / `status: DELIVERED`）。
 5. 若质量闸或同步失败，必须先修复失败项再继续功能结论输出；禁止以“代码已改完”替代客户端可见结果。
+
+## Windows Preview Workflow (Effective Immediately)
+- Goal: fast loop for renderer changes with Vite HMR on Windows; restart only when needed.
+- Default loop command: `npm run windows:preview`
+- `windows:preview` does:
+  - `windows:sync` (rsync source to `C:\\dev\\foliole`)
+  - Ensure Windows `electron:dev` is running (auto-start if stopped)
+  - If changes include `electron/**`: restart Windows client; otherwise rely on Vite HMR
+- `windows:deliver` is reserved for explicit “deliver/acceptance” checks because it runs full quality gate (`lint + typecheck + test + build`) before syncing and restarting.
 
 ## Windows 环境安装目录约定（强制）
 1. Windows 侧安装型开发环境（如 `nvm`、`nodejs`、`cargo`、工具链缓存）默认统一落在 `D:\R` 根目录下分子目录管理。

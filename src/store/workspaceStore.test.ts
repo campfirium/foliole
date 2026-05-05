@@ -58,7 +58,7 @@ it('updates reveal only for qa nodes', () => {
 it('derives title from normalized markdown content', () => {
   useWorkspaceStore.getState().updateNodeContent('node-1', '# New Title\n\nBody paragraph.');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('New Title Body paragraph.');
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('New Title');
 });
 
 it('keeps full normalized sentence in derived title', () => {
@@ -92,6 +92,13 @@ it('uses Untitled when content has no usable text', () => {
   useWorkspaceStore.getState().updateNodeContent('node-1', ' \n\t  ');
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Untitled');
+});
+
+it('keeps manual title when content changes after rename', () => {
+  useWorkspaceStore.getState().updateNodeTitle('node-1', 'Manual Title');
+  useWorkspaceStore.getState().updateNodeContent('node-1', '# Auto Title\nBody');
+
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Title');
 });
 
 it('creates QA node from selected content', () => {

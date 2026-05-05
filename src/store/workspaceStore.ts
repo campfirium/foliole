@@ -31,6 +31,7 @@ export interface WorkspaceState {
   setDocumentMaxWidth: (width: number) => void;
   setListWidth: (width: number) => void;
   setActiveNode: (nodeId: string) => void;
+  updateNodeTitle: (nodeId: string, title: string) => void;
   updateNodeContent: (nodeId: string, content: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => void;
   startReviewSession: (now?: string) => boolean;

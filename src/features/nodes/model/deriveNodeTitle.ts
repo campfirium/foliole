@@ -2,6 +2,7 @@ import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
 
 export const UNTITLED_NODE_TITLE = 'Untitled';
 const ANCHOR_TAG_PATTERN = /<\/?(?:highlight|cloze)(?:\s+id="[^"]+")?\s*>/g;
+const MARKDOWN_HEADING_PATTERN = /^\s{0,3}#{1,6}\s+(.+)$/;
 
 function sanitizeTitleCandidate(value: string) {
   return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
@@ -32,7 +33,26 @@ function normalizeMarkdownContent(content: string) {
   return stripMarkdownInline(normalized);
 }
 
+function pickHeadingTitle(content: string) {
+  const noAnchorTags = content.replace(ANCHOR_TAG_PATTERN, '');
+  for (const line of noAnchorTags.split(/\r?\n/)) {
+    const match = line.match(MARKDOWN_HEADING_PATTERN);
+    if (!match) {
+      continue;
+    }
+    const headingText = sanitizeTitleCandidate(stripMarkdownInline(match[1] ?? ''));
+    if (headingText) {
+      return headingText;
+    }
+  }
+  return '';
+}
+
 export function deriveNodeTitleFromContent(content: string) {
+  const headingTitle = pickHeadingTitle(content);
+  if (headingTitle) {
+    return headingTitle;
+  }
   const candidate = sanitizeTitleCandidate(normalizeMarkdownContent(content));
   return candidate || UNTITLED_NODE_TITLE;
 }

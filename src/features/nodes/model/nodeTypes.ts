@@ -19,6 +19,7 @@ export interface Node {
   id: string;
   parentNodeId: string | null;
   title: string;
+  isTitleManual?: boolean;
   content: string;
   anchorLink?: NodeAnchorLink | null;
   reveal: string | null;

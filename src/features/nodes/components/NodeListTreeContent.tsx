@@ -23,6 +23,7 @@ interface NodeListRowsProps {
   nodesById: Record<string, Node>;
   onContextMenu: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  onRename: (nodeId: string, title: string) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: NodeTreeRow[];
   selectedNodeIds: string[];
@@ -45,32 +46,37 @@ function NodeListRows(props: NodeListRowsProps) {
     rows: props.rows
   });
 
-  return props.rows.map((row) => (
-    <NodeTreeRowItem
-      depth={row.depth}
-      hasChildren={row.hasChildren}
-      isActive={
-        (props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id
-      }
-      isCollapsed={props.collapsedNodeIds.has(row.node.id)}
-      isDragDisabled={props.isTrashViewOpen || Boolean(props.nodesById[row.node.id]?.anchorLink)}
-      isDropTarget={props.drag.dropTargetNodeId === row.node.id}
-      dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
-      isSelected={props.selectedNodeIds.includes(row.node.id)}
-      key={row.node.id}
-      label={row.node.title}
-      nodeId={row.node.id}
-      onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
-      onDragEnter={props.drag.onDragEnterNode}
-      onDragOver={props.drag.onDragOverNode}
-      onDragStart={props.drag.onDragStartNode}
-      onDrop={props.drag.onDropOnNode}
-      onKeyDown={onRowKeyDown}
-      onContextMenu={props.onContextMenu}
-      onSelect={props.onSelect}
-      onToggleCollapse={props.onToggleCollapse}
-    />
-  ));
+  return props.rows.map((row) => {
+    const isDerivedNode = Boolean(props.nodesById[row.node.id]?.anchorLink);
+    return (
+      <NodeTreeRowItem
+        depth={row.depth}
+        hasChildren={row.hasChildren}
+        isActive={
+          (props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id
+        }
+        isCollapsed={props.collapsedNodeIds.has(row.node.id)}
+        isDerived={isDerivedNode}
+        isDragDisabled={props.isTrashViewOpen || isDerivedNode}
+        isDropTarget={props.drag.dropTargetNodeId === row.node.id}
+        dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
+        isSelected={props.selectedNodeIds.includes(row.node.id)}
+        key={row.node.id}
+        label={row.node.title}
+        nodeId={row.node.id}
+        onDragEnd={(event) => (event.preventDefault(), props.drag.onDragEnd())}
+        onDragEnter={props.drag.onDragEnterNode}
+        onDragOver={props.drag.onDragOverNode}
+        onDragStart={props.drag.onDragStartNode}
+        onDrop={props.drag.onDropOnNode}
+        onKeyDown={onRowKeyDown}
+        onContextMenu={props.onContextMenu}
+        onSelect={props.onSelect}
+        onRename={props.onRename}
+        onToggleCollapse={props.onToggleCollapse}
+      />
+    );
+  });
 }
 
 interface NodeListPanelProps {
@@ -90,6 +96,7 @@ interface NodeListPanelProps {
   nodesById: Record<string, Node>;
   noteRowIds: string[];
   onOpenNotesView: () => void;
+  onRenameNode: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
@@ -144,6 +151,7 @@ function NodeListPanel(props: NodeListPanelProps) {
             isTrashViewOpen={props.isTrashViewOpen}
             nodesById={props.nodesById}
             onContextMenu={props.contextMenu.openContextMenu}
+            onRename={props.onRenameNode}
             onSelect={props.onSelect}
             onToggleCollapse={props.collapse.toggleCollapse}
             rows={props.activeRows}
@@ -175,6 +183,7 @@ interface NodeListTreeContentProps {
   nodesById: Record<string, Node>;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  updateNodeTitle: (nodeId: string, title: string) => void;
   restoreNode: (nodeId: string) => void;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
@@ -197,6 +206,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         nodesById={props.nodesById}
         noteRowIds={props.state.noteRowIds}
         onOpenNotesView={props.onOpenNotesView}
+        onRenameNode={props.updateNodeTitle}
         onSelect={props.onSelect}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}

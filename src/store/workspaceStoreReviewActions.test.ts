@@ -62,6 +62,7 @@ function createWorkspaceFixture(nodes: Node[]): WorkspaceState {
     setDocumentMaxWidth: () => undefined,
     setListWidth: () => undefined,
     setActiveNode: () => undefined,
+    updateNodeTitle: () => undefined,
     updateNodeContent: () => undefined,
     updateNodeReveal: () => undefined,
     startReviewSession: () => false,

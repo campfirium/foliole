@@ -7,6 +7,22 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Get-HealthCheckSeconds {
+  $raw = $env:FOLIOLE_ELECTRON_HEALTHCHECK_SECONDS
+  if ([string]::IsNullOrWhiteSpace($raw)) {
+    return 30
+  }
+  try {
+    $value = [int]$raw
+    if ($value -lt 5) {
+      return 5
+    }
+    return $value
+  } catch {
+    return 30
+  }
+}
+
 function Write-Info {
   param([string]$Message)
   Write-Host "[windows-restart-client] $Message"
@@ -95,9 +111,18 @@ function Start-ElectronShell {
   $npmCmd = Resolve-NpmCommand
   $nodeDir = Split-Path -Path $npmCmd -Parent
   $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
-  $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/d", "/c", $command -WorkingDirectory $WorkDir -PassThru
+  $outLog = Join-Path $env:TEMP "foliole-electron-dev.out.log"
+  $errLog = Join-Path $env:TEMP "foliole-electron-dev.err.log"
+  $proc = Start-Process `
+    -FilePath "cmd.exe" `
+    -ArgumentList "/d", "/c", $command `
+    -WorkingDirectory $WorkDir `
+    -PassThru `
+    -RedirectStandardOutput $outLog `
+    -RedirectStandardError $errLog
   Start-Sleep -Seconds 1
   Save-TrackedPid -ProcessId $proc.Id
+  Write-Info "electron:dev logs: out=$outLog err=$errLog"
   return $proc
 }
 
@@ -175,7 +200,7 @@ function Wait-ElectronHealthy {
 function Start-ElectronWithHealthCheck {
   param([string]$WorkDir)
   $started = Start-ElectronShell -WorkDir $WorkDir
-  $health = Wait-ElectronHealthy -ShellPid $started.Id
+  $health = Wait-ElectronHealthy -ShellPid $started.Id -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $health.ok) {
     throw "startup health check failed: $($health.reason)"
   }

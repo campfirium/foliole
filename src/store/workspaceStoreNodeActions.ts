@@ -1,4 +1,4 @@
-import { deriveNodeTitleForCloze, deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
+import { deriveNodeTitleForCloze, deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 
 import { createDefaultReviewProfile } from './workspaceSeed';
 import type { WorkspaceState } from './workspaceStore';
@@ -24,6 +24,7 @@ type WorkspaceNodeActions = Pick<
   | 'moveNodes'
   | 'restoreNode'
   | 'setNodeViewState'
+  | 'updateNodeTitle'
   | 'updateNodeContent'
   | 'updateNodeReveal'
 >;
@@ -50,6 +51,29 @@ function createSetNodeViewStateAction(set: WorkspaceSet): WorkspaceNodeActions['
   };
 }
 
+function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeTitle'] {
+  return (nodeId, title) => {
+    set((state) => {
+      const node = state.nodesById[nodeId];
+      if (!node) {
+        return state;
+      }
+      const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
+      return {
+        nodesById: {
+          ...state.nodesById,
+          [nodeId]: {
+            ...node,
+            title: nextTitle,
+            isTitleManual: true,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      };
+    });
+  };
+}
+
 function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions['updateNodeContent'] {
   return (nodeId, content) => {
     set((state) => {
@@ -57,13 +81,14 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       if (!node) {
         return state;
       }
+      const derivedTitle = deriveNodeTitleFromContent(content);
       return {
         nodesById: {
           ...state.nodesById,
           [nodeId]: {
             ...node,
             content,
-            title: deriveNodeTitleFromContent(content),
+            title: node.isTitleManual ? node.title : derivedTitle,
             updatedAt: new Date().toISOString()
           }
         }
@@ -203,6 +228,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
   return {
     ...trashActions,
     setNodeViewState: createSetNodeViewStateAction(set),
+    updateNodeTitle: createUpdateNodeTitleAction(set),
     updateNodeContent: createUpdateNodeContentAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
     createRootNode: createRootNodeAction(set),

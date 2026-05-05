@@ -22,7 +22,7 @@ it('supports ctrl/cmd multi-select and shift range select in node list', () => {
   render(<App />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  const node1Button = within(listPanel).getByRole('treeitem', { name: 'Welcome to Foliole Start writing markdown here.' });
+  const node1Button = within(listPanel).getByRole('treeitem', { name: 'Welcome to Foliole' });
   const node2Button = within(listPanel).getByRole('treeitem', { name: 'Node 2' });
   const node3Button = within(listPanel).getByRole('treeitem', { name: 'Node 3' });
 

@@ -9,11 +9,13 @@ import { cn } from '../../../lib/utils';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
+import { NodeRenameInput, useRenameState } from './NodeTreeRowRename';
 
 interface NodeTreeRowProps {
   depth: number;
   isActive: boolean;
   isCollapsed: boolean;
+  isDerived?: boolean;
   isSelected: boolean;
   hasChildren: boolean;
   isDragDisabled?: boolean;
@@ -28,6 +30,7 @@ interface NodeTreeRowProps {
   onDrop?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onRename?: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
 }
@@ -44,6 +47,7 @@ export function NodeTreeRow({
   depth,
   isActive,
   isCollapsed,
+  isDerived = false,
   isSelected,
   hasChildren,
   isDragDisabled = false,
@@ -58,6 +62,7 @@ export function NodeTreeRow({
   onDrop,
   onContextMenu,
   onKeyDown,
+  onRename,
   onSelect,
   onToggleCollapse
 }: NodeTreeRowProps) {
@@ -85,11 +90,13 @@ export function NodeTreeRow({
         hasChildren={hasChildren}
         isActive={isActive}
         isCollapsed={isCollapsed}
+        isDerived={isDerived}
         isSelected={isSelected}
         label={label}
         nodeId={nodeId}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
+        onRename={onRename}
         onSelect={onSelect}
         onToggleCollapse={onToggleCollapse}
         style={style}
@@ -103,14 +110,31 @@ interface NodeTreeRowButtonProps {
   hasChildren: boolean;
   isActive: boolean;
   isCollapsed: boolean;
+  isDerived: boolean;
   isSelected: boolean;
   label: string;
   nodeId: string;
   onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onRename?: (nodeId: string, title: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   style: CSSProperties;
+}
+
+function renderNodeLabel(label: string, rename: ReturnType<typeof useRenameState>) {
+  if (rename.isRenaming) {
+    return (
+      <NodeRenameInput
+        draftTitle={rename.draftTitle}
+        label={label}
+        onCancel={rename.cancelRename}
+        onChange={rename.setDraftTitle}
+        onSubmit={rename.submitRename}
+      />
+    );
+  }
+  return <span className="min-w-0 truncate">{label}</span>;
 }
 
 function NodeTreeRowButton({
@@ -118,15 +142,18 @@ function NodeTreeRowButton({
   hasChildren,
   isActive,
   isCollapsed,
+  isDerived,
   isSelected,
   label,
   nodeId,
   onContextMenu,
   onKeyDown,
+  onRename,
   onSelect,
   onToggleCollapse,
   style
 }: NodeTreeRowButtonProps) {
+  const rename = useRenameState(label, nodeId, onRename);
   return (
     <AppButton
       active={isSelected}
@@ -135,12 +162,18 @@ function NodeTreeRowButton({
       aria-level={depth + 1}
       aria-pressed={isSelected}
       aria-selected={isSelected}
-      className="gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4"
+      className={cn(
+        'gap-2 pl-[calc(0.5rem+var(--node-depth,0)*1rem)] pr-4',
+        !isSelected && !isDerived && 'text-foreground',
+        !isSelected && isDerived && 'text-foreground/70'
+      )}
+      data-node-derived={isDerived ? 'true' : 'false'}
       data-node-id={nodeId}
       id={`node-treeitem-${nodeId}`}
       onContextMenu={onContextMenu ? (event) => onContextMenu(nodeId, event) : undefined}
       onKeyDown={onKeyDown ? (event) => onKeyDown(nodeId, event) : undefined}
       onClick={(event) => onSelect(nodeId, resolveSelectModifiers(event))}
+      onDoubleClick={(event) => (event.stopPropagation(), rename.beginRename())}
       role="treeitem"
       style={style}
       variant="list"
@@ -152,7 +185,7 @@ function NodeTreeRowButton({
         nodeId={nodeId}
         onToggleCollapse={onToggleCollapse}
       />
-      <span className="min-w-0 truncate">{label}</span>
+      {renderNodeLabel(label, rename)}
     </AppButton>
   );
 }

@@ -261,3 +261,21 @@ it('keeps first note content unchanged when editing a newly created note', () =>
   expect(workspaceAfterEdit.nodesById['node-1']?.content).toBe(originalFirstNodeContent);
   expect(workspaceAfterEdit.nodesById[newNodeId]?.content).toBe('My second note content');
 });
+
+it('supports inline rename and preserves manual title after content edits', () => {
+  render(<App />);
+
+  const nodeRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
+  fireEvent.doubleClick(nodeRow);
+
+  const renameInput = screen.getByRole('textbox', { name: /Rename/i });
+  fireEvent.change(renameInput, { target: { value: 'Manual Article Title' } });
+  fireEvent.keyDown(renameInput, { key: 'Enter' });
+
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
+
+  fireEvent.change(screen.getByTestId('editor-value'), {
+    target: { value: '# New Heading\nBody content' }
+  });
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
+});
