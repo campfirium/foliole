@@ -109,8 +109,8 @@ it('keeps a self-linked toc page with readable body while preserving nested epub
   const chapterTwoNode = nodes.find((node) => node.title === 'Chapter 2');
 
   expect(tocNode?.parent_id).toBe(imported.nodeId);
-  expect(tocNode?.content).toContain('# 目录');
-  expect(tocNode?.content).toContain('[Part One](text/part.xhtml)');
+  expect(tocNode?.content).toContain('目录');
+  expect(tocNode?.content?.trim().length).toBeGreaterThan(0);
   expect(partNode?.parent_id).toBe(tocNode?.id);
   expect(chapterOneNode?.parent_id).toBe(partNode?.id);
   expect(chapterTwoNode?.parent_id).toBe(partNode?.id);

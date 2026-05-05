@@ -2,6 +2,7 @@ import { IMAGE_CLOZE_CREATE_EVENT, type ImageClozeCreateEventDetail } from '../.
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
 import { attachOverlayDragHandlers, type DraftRect, updateDraftRectElement } from './imageClozeWidgetDraft';
+import { createSavedRegionLayer, focusImageRegionInViewport } from './imageClozeWidgetOverlayHelpers';
 
 function dispatchImageClozeCreateEvent(detail: ImageClozeCreateEventDetail) {
   window.dispatchEvent(new CustomEvent<ImageClozeCreateEventDetail>(IMAGE_CLOZE_CREATE_EVENT, { detail }));
@@ -11,60 +12,6 @@ function createIconMarkup(path: string) {
   return `<svg viewBox="0 0 16 16" aria-hidden="true" class="cm-md-image-icon"><path d="${path}"></path></svg>`;
 }
 
-function toPercent(value: number) {
-  return `${value * 100}%`;
-}
-
-function focusImageRegionInViewport(wrapper: HTMLElement, presentation: ImageClozeEditorPresentation | null) {
-  const focusRegionId = presentation?.focusRegionId;
-  if (!focusRegionId) {
-    return;
-  }
-  const region = presentation?.regions.find((entry) => entry.id === focusRegionId) ?? null;
-  if (!region) {
-    return;
-  }
-  const scroller = wrapper.closest('.cm-scroller');
-  if (!(scroller instanceof HTMLElement)) {
-    return;
-  }
-
-  requestAnimationFrame(() => {
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const scrollerRect = scroller.getBoundingClientRect();
-    const regionCenterY = (region.y + region.height * 0.5) * wrapperRect.height;
-    const targetTop = scroller.scrollTop + (wrapperRect.top - scrollerRect.top) + regionCenterY - scroller.clientHeight * 0.35;
-    scroller.scrollTop = Math.max(0, targetTop);
-  });
-}
-
-function createSavedRegionLayer(presentation: ImageClozeEditorPresentation | null) {
-  const layer = document.createElement('div');
-  layer.className = 'cm-md-image-cloze-regions';
-  if (!presentation || presentation.regions.length === 0) {
-    return layer;
-  }
-
-  const hiddenRegionIds = new Set(presentation.hiddenRegionIds);
-  const outlinedRegionIds = new Set(presentation.outlinedRegionIds);
-  for (const region of presentation.regions) {
-    const regionElement = document.createElement('div');
-    regionElement.className = 'cm-md-image-cloze-region';
-    regionElement.dataset.regionId = region.id;
-    regionElement.dataset.regionState = hiddenRegionIds.has(region.id)
-      ? 'hidden'
-      : outlinedRegionIds.has(region.id)
-        ? 'outlined'
-        : 'normal';
-    regionElement.style.left = toPercent(region.x);
-    regionElement.style.top = toPercent(region.y);
-    regionElement.style.width = toPercent(region.width);
-    regionElement.style.height = toPercent(region.height);
-    layer.append(regionElement);
-  }
-  return layer;
-}
-
 function showCreatedFeedback(actions: HTMLElement, anchorPoint: { x: number; y: number }) {
   const host = actions.parentElement?.parentElement;
   if (!host) {
@@ -72,7 +19,6 @@ function showCreatedFeedback(actions: HTMLElement, anchorPoint: { x: number; y: 
   }
   const existing = host.querySelector('.cm-md-image-cloze-feedback');
   existing?.remove();
-
   const feedback = document.createElement('div');
   feedback.className = 'cm-md-image-cloze-feedback';
   feedback.textContent = 'Item created.';
@@ -82,11 +28,7 @@ function showCreatedFeedback(actions: HTMLElement, anchorPoint: { x: number; y: 
   window.setTimeout(() => feedback.remove(), 1400);
 }
 
-function createActionButton(args: {
-  ariaLabel: string;
-  iconPath: string;
-  onClick: (event: MouseEvent) => void;
-}) {
+function createActionButton(args: { ariaLabel: string; iconPath: string; onClick: (event: MouseEvent) => void }) {
   const button = document.createElement('button');
   button.className = 'cm-md-image-cloze-action';
   button.setAttribute('aria-label', args.ariaLabel);
@@ -96,12 +38,7 @@ function createActionButton(args: {
   return button;
 }
 
-function buildImageClozeRegionDetail(args: {
-  attachmentId: string;
-  from: number;
-  draftRect: DraftRect;
-  to: number;
-}) {
+function buildImageClozeRegionDetail(args: { attachmentId: string; from: number; draftRect: DraftRect; to: number }) {
   return {
     attachmentId: args.attachmentId,
     imageRange: { from: args.from, to: args.to },
@@ -147,7 +84,6 @@ function createOverlayActions(args: {
     }
     args.closeClozeMode();
   };
-
   args.actions.append(
     createActionButton({
       ariaLabel: 'Confirm image cloze',
@@ -192,6 +128,49 @@ function createOverlayStateController(args: { overlay: HTMLElement; wrapper: HTM
   };
 }
 
+function createOverlaySession(args: {
+  actions: HTMLElement;
+  draftRectElement: HTMLElement;
+  overlay: HTMLElement;
+  wrapper: HTMLElement;
+}) {
+  let actionAnchorPoint: { x: number; y: number } | null = null;
+  const resetDraft = () => {
+    actionAnchorPoint = null;
+    args.actions.hidden = true;
+    args.actions.style.left = '';
+    args.actions.style.top = '';
+    updateDraftRectElement(args.draftRectElement, null);
+  };
+  const overlayState = createOverlayStateController({
+    onEscape: () => {
+      overlayState.sync(false);
+      resetDraft();
+    },
+    overlay: args.overlay,
+    wrapper: args.wrapper
+  });
+
+  return {
+    getActionAnchorPoint: () => actionAnchorPoint,
+    hideOverlay() {
+      overlayState.sync(false);
+      resetDraft();
+    },
+    isOpen: overlayState.isOpen,
+    openOverlay() {
+      overlayState.sync(true);
+      resetDraft();
+    },
+    resetDraft,
+    setActionAnchorPoint(anchorPoint: { x: number; y: number }) {
+      actionAnchorPoint = anchorPoint;
+      args.actions.style.left = `${anchorPoint.x}px`;
+      args.actions.style.top = `${anchorPoint.y}px`;
+    }
+  };
+}
+
 function attachOverlayInteractions(args: {
   attachmentId: string;
   draftRectElement: HTMLElement;
@@ -204,60 +183,39 @@ function attachOverlayInteractions(args: {
   actions.className = 'cm-md-image-cloze-actions';
   actions.hidden = true;
   args.overlay.append(actions);
-  let actionAnchorPoint: { x: number; y: number } | null = null;
-
-  const resetDraft = () => {
-    actionAnchorPoint = null;
-    actions.hidden = true;
-    actions.style.left = '';
-    actions.style.top = '';
-    updateDraftRectElement(args.draftRectElement, null);
-  };
-
-  const closeClozeMode = () => {
-    overlayState.sync(false);
-    resetDraft();
-  };
-
-  const overlayState = createOverlayStateController({
-    onEscape: closeClozeMode,
+  const session = createOverlaySession({
+    actions,
+    draftRectElement: args.draftRectElement,
     overlay: args.overlay,
     wrapper: args.wrapper
   });
-
   const dragHandlers = attachOverlayDragHandlers({
     actions,
     draftRectElement: args.draftRectElement,
-    onFinalize: (anchorPoint) => {
-      actionAnchorPoint = anchorPoint;
-      actions.style.left = `${anchorPoint.x}px`;
-      actions.style.top = `${anchorPoint.y}px`;
-    },
+    onFinalize: session.setActionAnchorPoint,
     overlay: args.overlay
   });
   createOverlayActions({
     actions,
     attachmentId: args.attachmentId,
-    closeClozeMode,
+    closeClozeMode: session.hideOverlay,
     from: args.from,
-    getActionAnchorPoint: () => actionAnchorPoint,
+    getActionAnchorPoint: session.getActionAnchorPoint,
     getDraftRect: dragHandlers.getDraftRect,
     to: args.to
   });
-
   return {
     closeIfIdle() {
-      if (overlayState.isOpen() && (!actions.hidden || dragHandlers.getDraftRect() !== null || dragHandlers.isDragging())) {
+      if (session.isOpen() && (!actions.hidden || dragHandlers.getDraftRect() !== null || dragHandlers.isDragging())) {
         return;
       }
-      closeClozeMode();
+      session.hideOverlay();
     },
     openClozeMode() {
-      if (overlayState.isOpen()) {
+      if (session.isOpen()) {
         return;
       }
-      overlayState.sync(true);
-      resetDraft();
+      session.openOverlay();
     }
   };
 }
@@ -278,11 +236,9 @@ export function createImageClozeImageSurface(args: {
   wrapper.append(args.renderImage());
   wrapper.append(createSavedRegionLayer(args.presentation ?? null));
   focusImageRegionInViewport(wrapper, args.presentation ?? null);
-
   if (!args.attachmentId) {
     return wrapper;
   }
-
   const overlay = document.createElement('div');
   overlay.className = 'cm-md-image-cloze-overlay';
   overlay.hidden = true;
@@ -292,7 +248,6 @@ export function createImageClozeImageSurface(args: {
   draftRectElement.className = 'cm-md-image-cloze-draft';
   draftRectElement.hidden = true;
   overlay.append(draftRectElement);
-
   const controls = attachOverlayInteractions({
     attachmentId: args.attachmentId,
     draftRectElement,

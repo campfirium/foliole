@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -40,10 +40,6 @@ function formatImportStatus(status: ReadwiseBookInventoryItem['importStatus']) {
 export function buildReadwiseBookPlaceholderNodeId(bookKey: string) {
   const digest = createHash('sha256').update(`readwise-book\u001f${bookKey}`).digest('hex').slice(0, 24);
   return `node-readwise-book-${digest}`;
-}
-
-function createReadwiseBookNodeId() {
-  return `node-readwise-book-${randomUUID()}`;
 }
 
 export function buildReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryItem) {
@@ -120,7 +116,7 @@ function ensureReadwiseBookNodeInInbox(node: ActiveNodeRow, updatedAt: string) {
 }
 
 function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: number, updatedAt: string) {
-  const nodeId = createReadwiseBookNodeId();
+  const nodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
   upsertNodeSnapshot({
     anchorLink: null,
     content: buildReadwiseBookPlaceholderContent(book),

@@ -12,16 +12,18 @@ const { readFile, runPreparedImport, showOpenDialog } = vi.hoisted(() => ({
 
 const mockWindow = {
   close: vi.fn(),
+  isDestroyed: vi.fn(() => false),
   isMaximized: vi.fn(() => false),
   maximize: vi.fn(),
   minimize: vi.fn(),
-  webContents: { toggleDevTools: vi.fn() },
+  webContents: { send: vi.fn(), toggleDevTools: vi.fn() },
   unmaximize: vi.fn()
 };
 
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),
+    getAllWindows: vi.fn(() => [mockWindow]),
     getFocusedWindow: vi.fn(() => mockWindow)
   },
   app: { getVersion: () => '1.0.0' },

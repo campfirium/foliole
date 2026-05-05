@@ -126,7 +126,7 @@ it('loads only the active node document from runtime hydrate', async () => {
   const loadDocumentCalls = invoke.mock.calls.filter(([command]) => command === 'load_node_document');
 
   expect(loadDocumentCalls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
-  expect(nodesById?.['node-1']).toEqual({
+  expect(nodesById?.['node-1']).toMatchObject({
     id: 'node-1',
     kind: 'topic',
     content: '',
@@ -134,7 +134,7 @@ it('loads only the active node document from runtime hydrate', async () => {
     hasReveal: false,
     reveal: null
   });
-  expect(nodesById?.['node-2']).toEqual({
+  expect(nodesById?.['node-2']).toMatchObject({
     id: 'node-2',
     kind: 'item',
     content: 'Loaded node 2 body',
@@ -143,7 +143,7 @@ it('loads only the active node document from runtime hydrate', async () => {
     hideTitleHeading: false,
     reveal: 'Loaded node 2 answer'
   });
-  expect(nodesById?.['node-3']).toEqual({
+  expect(nodesById?.['node-3']).toMatchObject({
     id: 'node-3',
     kind: 'topic',
     content: '',

@@ -71,7 +71,11 @@ function expectReadwiseImportedState(input: {
       '',
       '<highlight id="1">This is the highlighted sentence</highlight id="1"> inside the article body.',
       '',
-      'Another paragraph with <highlight id="2">Another matching excerpt</highlight id="2">. End.'
+      'Another paragraph with <highlight id="2">Another matching excerpt</highlight id="2">. End.',
+      '',
+      '## Unmatched Sidecar Highlights',
+      '',
+      '- Missing: quote that is not present in the body'
     ].join('\n'),
     kind: 'topic',
     parent_id: 'special-inbox',
@@ -95,10 +99,10 @@ function expectReadwiseImportedState(input: {
   ]);
   expect(input.runRows).toEqual([
     {
-      degraded_reason: null,
+      degraded_reason: 'Controlled context degraded: 1 unmatched sidecar highlight(s)',
       duplicate_semantic: 'new',
       node_id: input.nodeId,
-      result_status: 'imported'
+      result_status: 'degraded'
     }
   ]);
 }

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 
 const STATE_ROOT_ENV = 'FOLIOLE_ELECTRON_TEST_STATE_ROOT';
 

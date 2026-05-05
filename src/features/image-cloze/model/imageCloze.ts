@@ -19,6 +19,13 @@ export interface ImageClozeDraftRegion extends ImageClozeLocator {
   id: string;
 }
 
+function stripDraftRegion(region: ImageClozeDraftRegion) {
+  const { answer, attachmentId: _attachmentId, ...nextRegion } = region;
+  void answer;
+  void _attachmentId;
+  return nextRegion;
+}
+
 export function listImageClozePresentationRegions(imageRegions: NodeImageRegionGroup[] | null | undefined) {
   if (!imageRegions) {
     return [];
@@ -38,7 +45,7 @@ export function appendImageClozeRegions(
 ): NodeImageRegionGroup[] {
   const existingGroups = currentImageRegions ? [...currentImageRegions] : [];
   const existingGroup = existingGroups.find((group) => group.attachmentId === attachmentId);
-  const nextRegions = regions.map(({ answer: _answer, attachmentId: _attachmentId, ...region }) => region);
+  const nextRegions = regions.map(stripDraftRegion);
 
   if (!existingGroup) {
     return [...existingGroups, { attachmentId, regions: nextRegions }];

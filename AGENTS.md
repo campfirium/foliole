@@ -62,6 +62,7 @@
 - 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
 - 持久化主路径统一走 Electron main process；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。
 - Windows 预览是否默认执行，只看 `.lab/internal/runtime/windows-preview.flag`。
+- Electron Playwright、桌面自动化回归、性能诊断与时序采样默认一律走 Windows 侧现成脚本链路：`scripts/windows/windows-desktop-test.sh`、`scripts/windows/run-playwright-desktop.ps1` 与 `playwright.desktop.config.ts`；除非用户当次明确要求排查 WSL 本地运行时，否则不得把 WSL 内直接拉起的 Electron 当成默认诊断或验收入口。
 - 桌面窗口已可见但 bridge-backed controls 失效时，默认优先排查 preload/bridge 链路，不得先草率归因为 renderer 未启动。
 
 ## 结构与代码约束

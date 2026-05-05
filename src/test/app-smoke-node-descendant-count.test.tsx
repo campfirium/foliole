@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -39,7 +39,6 @@ it('shows total descendant counts at the end of node rows', () => {
   render(<App />);
 
   const listPanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.click(within(listPanel).getByRole('button', { name: 'Expand Child 1' }));
 
   expect(within(listPanel).getByRole('treeitem', { name: 'Root' })).toHaveTextContent('Root(3)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 1' })).toHaveTextContent('Child 1(1)');

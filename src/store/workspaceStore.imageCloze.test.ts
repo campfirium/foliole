@@ -39,40 +39,41 @@ beforeEach(() => {
   });
 });
 
-it('creates image cloze item nodes with prompt context and reveal image content', () => {
-  const createdIds = useWorkspaceStore.getState().createImageClozeNodes(
-    'node-1',
-    'hash-1',
-    {
-      promptContent: 'Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image',
-      revealContent: '![Cover](asset://hash-1.png)'
-    },
-    [
-      {
-        answer: 'Paris',
-        attachmentId: 'hash-1',
-        height: 0.15,
-        id: 'region-1',
-        width: 0.2,
-        x: 0.1,
-        y: 0.2
-      },
-      {
-        answer: 'River',
-        attachmentId: 'hash-1',
-        height: 0.12,
-        id: 'region-2',
-        width: 0.18,
-        x: 0.42,
-        y: 0.55
-      }
-    ]
-  );
+const IMAGE_CLOZE_SOURCE = {
+  promptContent: 'Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image',
+  revealContent: '![Cover](asset://hash-1.png)'
+};
 
-  expect(createdIds).toHaveLength(2);
+const IMAGE_CLOZE_REGIONS = [
+  {
+    answer: 'Paris',
+    attachmentId: 'hash-1',
+    height: 0.15,
+    id: 'region-1',
+    width: 0.2,
+    x: 0.1,
+    y: 0.2
+  },
+  {
+    answer: 'River',
+    attachmentId: 'hash-1',
+    height: 0.12,
+    id: 'region-2',
+    width: 0.18,
+    x: 0.42,
+    y: 0.55
+  }
+] as const;
+
+function createImageClozeNodes() {
+  return useWorkspaceStore.getState().createImageClozeNodes('node-1', 'hash-1', IMAGE_CLOZE_SOURCE, [...IMAGE_CLOZE_REGIONS]);
+}
+
+function expectCreatedImageClozeNodes(createdIds: string[]) {
   const firstNode = useWorkspaceStore.getState().nodesById[createdIds[0] as string];
   const secondNode = useWorkspaceStore.getState().nodesById[createdIds[1] as string];
   const parentNode = useWorkspaceStore.getState().nodesById['node-1'];
+
   expect(firstNode?.parentNodeId).toBe('node-1');
   expect(firstNode?.kind).toBe('item');
   expect(firstNode?.content).toBe('Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image');
@@ -110,4 +111,11 @@ it('creates image cloze item nodes with prompt context and reveal image content'
       ]
     }
   ]);
+}
+
+it('creates image cloze item nodes with prompt context and reveal image content', () => {
+  const createdIds = createImageClozeNodes();
+
+  expect(createdIds).toHaveLength(2);
+  expectCreatedImageClozeNodes(createdIds as string[]);
 });

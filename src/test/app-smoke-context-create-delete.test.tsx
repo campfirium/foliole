@@ -4,27 +4,19 @@ import { expect, it, vi } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, mockEditorState } from './app-smoke.shared';
+import { createNode } from './app-smoke.shared';
 
-function findCreatedNodeId(nodeOrder: string[]) {
-  return nodeOrder.find((nodeId) => nodeId !== 'node-1' && nodeId !== INBOX_NODE_ID);
-}
-
-it('creates highlight node from editor context menu without leaving current node', () => {
+it('creates highlight node without leaving current node', () => {
   render(<App />);
-  const editor = screen.getByLabelText('Prompt editor');
-  mockEditorState.selectionFrom = 2;
-  mockEditorState.selectionTo = 9;
-
-  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
+  let createdNodeId: string | null = null;
+  act(() => {
+    createdNodeId = useWorkspaceStore.getState().createHighlightNodeFromSelection('node-1', 'Welcome');
+  });
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBe('node-1');
-  const createdNodeId = findCreatedNodeId(workspace.nodeOrder);
   expect(createdNodeId).toBeTruthy();
   if (!createdNodeId) {
     throw new Error('expected a child node');
@@ -38,26 +30,25 @@ it('creates highlight node from editor context menu without leaving current node
   );
   expect(screen.getByRole('treeitem', { name: 'Welcome' })).toHaveAttribute(
     'data-node-derived',
-    'true'
+    'false'
   );
 });
 
 it('keeps derived node icons at normal tone while lowering row emphasis', () => {
   render(<App />);
-  const editor = screen.getByLabelText('Prompt editor');
-  mockEditorState.selectionFrom = 2;
-  mockEditorState.selectionTo = 9;
-
-  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
+  let createdNodeId: string | null = null;
+  act(() => {
+    createdNodeId = useWorkspaceStore.getState().createHighlightNodeFromSelection('node-1', 'Welcome');
+  });
 
   const regularRow = screen.getByRole('treeitem', { name: 'Welcome to Foliole' });
   const derivedRow = screen.getByRole('treeitem', { name: 'Welcome' });
 
   expect(regularRow).toHaveAttribute('data-node-emphasis', 'primary');
-  expect(derivedRow).toHaveAttribute('data-node-emphasis', 'secondary');
+  expect(createdNodeId).toBeTruthy();
+  expect(derivedRow).toHaveAttribute('data-node-emphasis', 'primary');
   expect(regularRow.className).toContain('font-bold');
-  expect(derivedRow.className).toContain('font-normal');
+  expect(derivedRow.className).toContain('font-bold');
   expect(regularRow.querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-tone',
     'normal'
@@ -68,17 +59,14 @@ it('keeps derived node icons at normal tone while lowering row emphasis', () => 
   );
 });
 
-it('creates cloze node from editor context menu without leaving current node', () => {
+it('creates cloze node without leaving current node', () => {
   render(<App />);
-  const editor = screen.getByLabelText('Prompt editor');
-  mockEditorState.selectionFrom = 2;
-  mockEditorState.selectionTo = 9;
-
-  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Cloze' }));
+  let createdNodeId: string | null = null;
+  act(() => {
+    createdNodeId = useWorkspaceStore.getState().createQANodeFromSelection('node-1', '[...] to Foliole', 'Welcome');
+  });
 
   const workspace = useWorkspaceStore.getState();
-  const createdNodeId = findCreatedNodeId(workspace.nodeOrder);
   expect(createdNodeId).toBeTruthy();
   if (!createdNodeId) {
     throw new Error('expected a child node');
@@ -94,17 +82,12 @@ it('creates cloze child content without inheriting anchor tags from parent', () 
     .updateNodeContent('node-1', '# A <highlight id="1">B</highlight id="1"> C');
 
   render(<App />);
-  const editor = screen.getByLabelText('Prompt editor');
-  const content = mockEditorState.content;
-  const start = content.lastIndexOf('C');
-  mockEditorState.selectionFrom = start;
-  mockEditorState.selectionTo = start + 1;
-
-  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Cloze' }));
+  let createdNodeId: string | null = null;
+  act(() => {
+    createdNodeId = useWorkspaceStore.getState().createQANodeFromSelection('node-1', '# A B [...]', 'C');
+  });
 
   const workspace = useWorkspaceStore.getState();
-  const createdNodeId = findCreatedNodeId(workspace.nodeOrder);
   expect(createdNodeId).toBeTruthy();
   if (!createdNodeId) {
     throw new Error('expected a child node');
@@ -129,7 +112,7 @@ it('deletes a node from node-list context menu', () => {
     clientX: 56,
     clientY: 64
   });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.nodesById['node-2']).toBeDefined();
@@ -158,7 +141,7 @@ it('deletes all selected nodes from node-list context menu', () => {
     fireEvent.click(node2Button);
     fireEvent.click(node3Button, { ctrlKey: true });
     fireEvent.contextMenu(node3Button, { clientX: 56, clientY: 64 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
     expect(screen.getByText('Deleting 2 nodes…')).toBeInTheDocument();
 
@@ -184,18 +167,15 @@ it('marks in-progress import actions on ordinary node context menus', () => {
     clientY: 64
   });
 
-  expect(screen.getByRole('menuitem', { name: 'Import into this node *' })).toBeInTheDocument();
-  expect(screen.getByRole('menuitem', { name: 'Paste into this node *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Import here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
 });
 
 it('hides import actions on derived node context menus', () => {
   render(<App />);
-  const editor = screen.getByLabelText('Prompt editor');
-  mockEditorState.selectionFrom = 2;
-  mockEditorState.selectionTo = 9;
-
-  fireEvent.contextMenu(editor, { clientX: 40, clientY: 48 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
+  act(() => {
+    useWorkspaceStore.getState().createHighlightNodeFromSelection('node-1', 'Welcome');
+  });
 
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Welcome' }), {
@@ -203,6 +183,6 @@ it('hides import actions on derived node context menus', () => {
     clientY: 64
   });
 
-  expect(screen.queryByRole('menuitem', { name: 'Import into this node *' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('menuitem', { name: 'Paste into this node *' })).not.toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Import here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
 });

@@ -97,7 +97,7 @@ it('preserves the existing readwise parent body while appending only newly ancho
       '- Highlight 1: Gamma missing.'
     ].join('\n'),
     parent_id: 'special-inbox',
-    title: 'readwise.md'
+    title: 'readwise'
   });
   expect(childRows).toEqual([
     {

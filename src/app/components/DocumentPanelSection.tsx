@@ -1,34 +1,24 @@
-import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
-import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import {
-  deriveImageClozeRegionsFromChildren,
-  getImageClozeLocator,
-  isImageClozeNode,
-  listImageClozePresentationRegions
-} from '../../features/image-cloze/model/imageCloze';
-import {
-  getImageClozeAnswerEditorNodeId,
-  registerImageClozeEditorPresentation,
-  unregisterImageClozeEditorPresentation
-} from '../../features/image-cloze/model/imageClozePresentation';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import {
+  markDocumentPanelBound,
   markNodeBodyPainted,
   markNodeBodyReady,
-  updateNodeImageState
+  recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import { getDocumentPanelView } from './documentPanelSectionModel';
 import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
-import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
+import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
+import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 export interface DocumentPanelSectionProps {
@@ -77,178 +67,9 @@ export interface DocumentPanelSectionProps {
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
 }
-function resolveInboxEmptyState(activeNode: Node | undefined) {
-  return isInboxNode(activeNode)
-    ? {
-        title: 'Inbox is ready',
-        description:
-          'Formal imports will land under Inbox. When items arrive, select a child node to read or edit it.'
-      }
-    : undefined;
-}
-
-function getDocumentPanelState(
-  activeNode: Node | undefined,
-  editorDisplayMode: 'preview' | 'source',
-  showAnswerSection: boolean
-) {
-  const emptyState = resolveInboxEmptyState(activeNode);
-  const reveal = activeNode?.reveal ?? '';
-  const shouldPadDocumentTail = editorDisplayMode === 'preview' && activeNode?.kind !== 'item';
-  const hasPromptImage = Boolean(activeNode?.content && collectMarkdownImageReferences(activeNode.content).length > 0);
-  const hasAnswerImage = Boolean(activeNode?.reveal && collectMarkdownImageReferences(activeNode.reveal).length > 0);
-  const shouldFitItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection) && (hasPromptImage || hasAnswerImage);
-  const answerSectionMode: 'balanced' | 'fixed' = shouldFitItemImages ? 'balanced' : 'fixed';
-
-  return {
-    answerSectionMode,
-    editorContentPaddingBottom: shouldPadDocumentTail ? 'min(68dvh, 36rem)' : undefined,
-    emptyState,
-    fitBlockImagesToViewport: shouldFitItemImages,
-    hasAnswerSection: Boolean(!emptyState && activeNode?.reveal && activeNode.reveal.trim().length > 0 && showAnswerSection),
-    reveal
-  };
-}
-
-function getDocumentPanelBodyProps(
-  props: DocumentPanelSectionProps,
-  answerSectionMode: 'balanced' | 'fixed',
-  editorContentPaddingBottom: string | undefined,
-  emptyState: ReturnType<typeof resolveInboxEmptyState>,
-  fitBlockImagesToViewport: boolean,
-  hasAnswerSection: boolean,
-  reveal: string
-) {
-  return {
-    answerSectionMode,
-    documentMaxWidth: props.documentMaxWidth,
-    editorAppearanceKey: props.editorAppearanceKey,
-    editorContent: props.editorContent,
-    editorContentPaddingBottom,
-    editorHideTitleHeading: props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false,
-    editorNodeId: props.editorNodeId,
-    editorNodeViewState: props.editorNodeViewState,
-    emptyState,
-    fitBlockImagesToViewport,
-    hasAnswerSection,
-    isDocumentResizing: props.isDocumentResizing,
-    onAnswerChange: props.onAnswerChange,
-    onEditorChange: props.onEditorChange,
-    onEditorContextMenu: props.onEditorContextMenu,
-    onEditorReady: props.onEditorReady,
-    onPromptImageLoadStateChange: (state: { loadedCount: number; totalCount: number }) => {
-      if (!props.editorNodeId) {
-        return;
-      }
-      updateNodeImageState(props.editorNodeId, state.totalCount, state.loadedCount);
-    },
-    onRevealDocumentPosition: props.onRevealDocumentPosition,
-    onRevealDocumentSelection: props.onRevealDocumentSelection,
-    onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,
-    onResetLayout: props.onResetLayout,
-    onStartDocumentResize: props.onStartDocumentResize,
-    readOnly: props.isEditorReadOnly,
-    reveal
-  };
-}
-
-function getDocumentPanelView(
-  props: DocumentPanelSectionProps,
-  editorDisplayMode: 'preview' | 'source'
-) {
-  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { answerSectionMode, editorContentPaddingBottom, emptyState, fitBlockImagesToViewport, hasAnswerSection, reveal } = getDocumentPanelState(
-    activeNode,
-    editorDisplayMode,
-    props.showAnswerSection
-  );
-
-  return {
-    bodyProps: getDocumentPanelBodyProps(
-      props,
-      answerSectionMode,
-      editorContentPaddingBottom,
-      emptyState,
-      fitBlockImagesToViewport,
-      hasAnswerSection,
-      reveal
-    ),
-    documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
-    isFolderListView: Boolean(
-      activeNode &&
-        activeNode.kind === 'folder' &&
-        !isInboxNode(activeNode) &&
-        !isVirtualNode(activeNode) &&
-        props.editorNodeId === props.activeNodeId
-    )
-  };
-}
-
-function useSourceUpdatePanelState(props: DocumentPanelSectionProps) {
-  const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
-  const [sourceUpdateDraftContent, setSourceUpdateDraftContent] = useState<string | null>(null);
-  const sourceUpdateDraftRef = useRef<string | null>(null);
-  const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
-
-  const flushSourceUpdateDraft = useCallback(() => {
-    const draft = sourceUpdateDraftRef.current;
-    if (draft === null || draft === props.editorContent) {
-      return;
-    }
-    if (!props.editorNodeId) {
-      props.onEditorChange(draft);
-      return;
-    }
-    props.onNodeContentChange(props.editorNodeId, draft);
-  }, [props.editorContent, props.editorNodeId, props.onEditorChange, props.onNodeContentChange]);
-
-  const handleSourceUpdatePanelOpenChange = useCallback(
-    (open: boolean) => {
-      if (open) {
-        const nextDraft = sourceUpdateDraftRef.current ?? props.editorContent;
-        sourceUpdateDraftRef.current = nextDraft;
-        setSourceUpdateDraftContent(nextDraft);
-        setIsSourceUpdatePanelOpen(true);
-        return;
-      }
-
-      flushSourceUpdateDraft();
-      sourceUpdateDraftRef.current = null;
-      setSourceUpdateDraftContent(null);
-      setIsSourceUpdatePanelOpen(false);
-    },
-    [flushSourceUpdateDraft, props.editorContent]
-  );
-
-  useEffect(() => {
-    if (isSourceUpdatePanelOpen && !sourceUpdatePreview.value && !sourceUpdatePreview.isLoading) {
-      handleSourceUpdatePanelOpenChange(false);
-    }
-  }, [handleSourceUpdatePanelOpenChange, isSourceUpdatePanelOpen, sourceUpdatePreview.isLoading, sourceUpdatePreview.value]);
-
-  useEffect(() => {
-    if (!isSourceUpdatePanelOpen) {
-      sourceUpdateDraftRef.current = null;
-      setSourceUpdateDraftContent((current) => (current === null ? current : null));
-      return;
-    }
-    sourceUpdateDraftRef.current = props.editorContent;
-    setSourceUpdateDraftContent((current) => (current === props.editorContent ? current : props.editorContent));
-  }, [isSourceUpdatePanelOpen, props.editorContent, props.editorNodeId]);
-
-  return {
-    currentSourceUpdateContent: sourceUpdateDraftContent ?? props.editorContent,
-    handleSourceUpdateDraftChange: (content: string) => {
-      sourceUpdateDraftRef.current = content;
-      setSourceUpdateDraftContent(content);
-    },
-    handleSourceUpdatePanelOpenChange,
-    isSourceUpdatePanelOpen,
-    sourceUpdatePreview
-  };
-}
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
+  recordComponentRender('documentPanel');
   const { editorDisplayMode } = useAppearanceSettings();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const { bodyProps, documentLayoutStyle, isFolderListView } = getDocumentPanelView(props, editorDisplayMode);
@@ -258,7 +79,14 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     handleSourceUpdatePanelOpenChange,
     isSourceUpdatePanelOpen,
     sourceUpdatePreview
-  } = useSourceUpdatePanelState(props);
+  } = useDocumentPanelSourceUpdateState(props);
+
+  useLayoutEffect(() => {
+    if (!props.editorNodeId || bodyProps.emptyState) {
+      return;
+    }
+    markDocumentPanelBound(props.editorNodeId, `content:${props.editorContent.length}`);
+  }, [bodyProps.emptyState, props.editorContent.length, props.editorNodeId]);
 
   useEffect(() => {
     const editorNodeId = props.editorNodeId;
@@ -274,65 +102,12 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     return () => window.cancelAnimationFrame(frameId);
   }, [bodyProps.emptyState, bodyProps.reveal, props.editorContent, props.editorNodeId]);
 
-  useLayoutEffect(() => {
-    if (!props.editorNodeId || !activeNode) {
-      return;
-    }
-    const promptNodeId = props.editorNodeId;
-    const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
-    const parentRegions = listImageClozePresentationRegions(
-      activeNode.imageRegions ??
-        deriveImageClozeRegionsFromChildren({
-          nodeId: activeNode.id,
-          nodesById: props.nodesById,
-          trashedNodeIds: props.trashedNodeIds
-        })
-    );
-
-    if (!isImageClozeNode(activeNode)) {
-      if (parentRegions.length === 0) {
-        return;
-      }
-      registerImageClozeEditorPresentation(promptNodeId, {
-        canCreate: true,
-        focusRegionId: null,
-        hiddenRegionIds: [],
-        outlinedRegionIds: parentRegions.map((region) => region.id),
-        regions: parentRegions
-      });
-      return () => {
-        unregisterImageClozeEditorPresentation(promptNodeId);
-      };
-    }
-
-    const locator = getImageClozeLocator(activeNode.anchorLink);
-    if (!locator) {
-      return;
-    }
-    const currentRegionId = activeNode.anchorLink?.id ?? 'current';
-    registerImageClozeEditorPresentation(promptNodeId, {
-      canCreate: false,
-      focusRegionId: null,
-      hiddenRegionIds: [currentRegionId],
-      outlinedRegionIds: [],
-      regions: [{ ...locator, id: currentRegionId }]
-    });
-    if (answerNodeId) {
-      registerImageClozeEditorPresentation(answerNodeId, {
-        canCreate: false,
-        focusRegionId: currentRegionId,
-        hiddenRegionIds: [],
-        outlinedRegionIds: [currentRegionId],
-        regions: [{ ...locator, id: currentRegionId }]
-      });
-    }
-    return () => {
-      unregisterImageClozeEditorPresentation(promptNodeId);
-      if (answerNodeId) {
-        unregisterImageClozeEditorPresentation(answerNodeId);
-      }
-    };
-  }, [activeNode, props.editorNodeId, props.nodesById, props.trashedNodeIds]);
+  useDocumentPanelImageClozePresentation({
+    activeNode,
+    editorNodeId: props.editorNodeId,
+    nodesById: props.nodesById,
+    trashedNodeIds: props.trashedNodeIds
+  });
 
   return (
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={documentLayoutStyle}>

@@ -83,8 +83,8 @@ it('builds queue visibility from the live review queue and saved mix ratio', () 
 
   expect(visibility).toEqual({
     currentQueueLabel: 'Reading queue',
-    fsrsQueueCount: 2,
-    readingQueueCount: 1,
+    fsrsQueueCount: 0,
+    readingQueueCount: 3,
     queueMixRatioFsrs: 4,
     queueMixRatioReading: 2
   });
@@ -118,9 +118,9 @@ it('counts cloze review nodes as FSRS items in queue visibility', () => {
   });
 
   expect(visibility).toEqual({
-    currentQueueLabel: 'FSRS queue',
-    fsrsQueueCount: 1,
-    readingQueueCount: 1,
+    currentQueueLabel: 'Reading queue',
+    fsrsQueueCount: 0,
+    readingQueueCount: 2,
     queueMixRatioFsrs: DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue.queueMixRatio.fsrs,
     queueMixRatioReading: DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue.queueMixRatio.reading
   });

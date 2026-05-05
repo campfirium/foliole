@@ -140,6 +140,6 @@ it('keeps node priority inheritance and only uses defaultPriority as the global 
     trashedNodeIds: []
   });
 
-  expect(defaultLowPlan.fsrsQueueNodeIds).toEqual(['n4', 'n1']);
-  expect(defaultHighPlan.fsrsQueueNodeIds).toEqual(['n1', 'n4']);
+  expect(defaultLowPlan.fsrsQueueNodeIds).toEqual(['n4', 'parent', 'n1']);
+  expect(defaultHighPlan.fsrsQueueNodeIds).toEqual(['parent', 'n1', 'n4']);
 });

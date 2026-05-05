@@ -3,32 +3,35 @@ import { markdown } from '@codemirror/lang-markdown';
 import { Compartment, EditorState } from '@codemirror/state';
 import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
-import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
+import {
+  createEmptyDecorationsEffect,
+  createLiveMarkdownReconfigureEffect,
+  RemoteImageLocalizationController,
+  type CodeMirrorEditorAdapterOptions
+} from './codeMirrorEditorAdapterSupport';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 import { buildEditorDiffDecorations } from './lineDiffDecorations';
 import { createLiveMarkdown } from './liveMarkdown';
-import { localizeRemoteMarkdownImages } from './localizeRemoteMarkdownImages';
 import { markdownInputAssist } from './markdownInputAssist';
-
-interface CodeMirrorEditorAdapterOptions {
-  hideTitleHeading?: boolean;
-  initialContent: string;
-  onChange?: (content: string) => void;
-  readOnly?: boolean;
-}
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
   private imageClozePresentationVersion = 0;
-  private localizationRunId = 0;
-  private localizationTimer: ReturnType<typeof setTimeout> | null = null;
   private liveMarkdownCompartment = new Compartment();
   private nodeId: string | null = null;
   private onChange?: (content: string) => void;
+  private remoteImageLocalization = new RemoteImageLocalizationController({
+    applyLocalizedContent: (localized) => {
+      this.setContent(localized);
+      this.onChange?.(localized);
+    },
+    getContent: () => this.getContent(),
+    getNodeId: () => this.nodeId
+  });
   private view: EditorView;
   private hideTitleHeading = false;
 
@@ -60,7 +63,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
               return;
             }
             this.onChange(update.state.doc.toString());
-            this.scheduleRemoteImageLocalization();
+            this.remoteImageLocalization.schedule();
           })
         ]
       })
@@ -68,10 +71,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   destroy() {
-    if (this.localizationTimer) {
-      clearTimeout(this.localizationTimer);
-      this.localizationTimer = null;
-    }
+    this.remoteImageLocalization.destroy();
     this.view.destroy();
   }
 
@@ -118,28 +118,37 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setHideTitleHeading(hideTitleHeading: boolean) {
     this.hideTitleHeading = hideTitleHeading;
     this.view.dispatch({
-      effects: this.liveMarkdownCompartment.reconfigure(
-        createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
-      )
+      effects: createLiveMarkdownReconfigureEffect({
+        compartment: this.liveMarkdownCompartment,
+        hideTitleHeading: this.hideTitleHeading,
+        imageClozePresentationVersion: this.imageClozePresentationVersion,
+        nodeId: this.nodeId
+      })
     });
   }
 
   setNodeId(nodeId: string | null) {
     this.nodeId = nodeId;
     this.view.dispatch({
-      effects: this.liveMarkdownCompartment.reconfigure(
-        createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
-      )
+      effects: createLiveMarkdownReconfigureEffect({
+        compartment: this.liveMarkdownCompartment,
+        hideTitleHeading: this.hideTitleHeading,
+        imageClozePresentationVersion: this.imageClozePresentationVersion,
+        nodeId: this.nodeId
+      })
     });
-    this.scheduleRemoteImageLocalization();
+    this.remoteImageLocalization.schedule();
   }
 
   refreshImageClozePresentation() {
     this.imageClozePresentationVersion += 1;
     this.view.dispatch({
-      effects: this.liveMarkdownCompartment.reconfigure(
-        createLiveMarkdown(this.hideTitleHeading, this.nodeId, this.imageClozePresentationVersion)
-      )
+      effects: createLiveMarkdownReconfigureEffect({
+        compartment: this.liveMarkdownCompartment,
+        hideTitleHeading: this.hideTitleHeading,
+        imageClozePresentationVersion: this.imageClozePresentationVersion,
+        nodeId: this.nodeId
+      })
     });
   }
 
@@ -248,7 +257,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     } catch (error) {
       console.error('[editor] failed to apply diff decorations, falling back to plain view', error);
       this.view.dispatch({
-        effects: this.diffDecorationsCompartment.reconfigure(EditorView.decorations.of(Decoration.none))
+        effects: createEmptyDecorationsEffect(this.diffDecorationsCompartment)
       });
     }
   }
@@ -267,42 +276,5 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return () => {
       scroller.removeEventListener('scroll', handleScroll);
     };
-  }
-
-  private scheduleRemoteImageLocalization() {
-    if (this.localizationTimer) {
-      clearTimeout(this.localizationTimer);
-      this.localizationTimer = null;
-    }
-    if (!this.nodeId || !shouldAutoLocalizeRemoteImages()) {
-      return;
-    }
-
-    const currentContent = this.getContent();
-    if (!/!\[[^\]]*\]\((?:<)?https?:\/\//i.test(currentContent)) {
-      return;
-    }
-
-    const runId = ++this.localizationRunId;
-    this.localizationTimer = setTimeout(() => {
-      this.localizationTimer = null;
-      void this.runRemoteImageLocalization(runId, currentContent);
-    }, 180);
-  }
-
-  private async runRemoteImageLocalization(runId: number, contentSnapshot: string) {
-    if (!this.nodeId || !shouldAutoLocalizeRemoteImages()) {
-      return;
-    }
-    const localized = await localizeRemoteMarkdownImages(this.nodeId, contentSnapshot);
-    if (
-      runId !== this.localizationRunId ||
-      localized === contentSnapshot ||
-      this.getContent() !== contentSnapshot
-    ) {
-      return;
-    }
-    this.setContent(localized);
-    this.onChange?.(localized);
   }
 }

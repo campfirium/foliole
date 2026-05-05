@@ -4,8 +4,10 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../../shared/platform/bridge';
 import {
   beginNodeSelectionFlow,
+  markNodeDocumentMerged,
   markNodeDocumentLoadResolved,
-  markNodeDocumentLoadStarted
+  markNodeDocumentLoadStarted,
+  markPreviousNodeTrimmed
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { hasPendingNodeSync } from '../../store/workspacePendingNodeSync';
 import {
@@ -24,6 +26,7 @@ export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
     previousActiveNodeIdRef.current = activeNodeId;
 
     if (previousActiveNodeId && previousActiveNodeId !== activeNodeId && !hasPendingNodeSync(previousActiveNodeId)) {
+      markPreviousNodeTrimmed(previousActiveNodeId);
       useWorkspaceStore.setState((state) => {
         const previousNode = state.nodesById[previousActiveNodeId];
         if (!previousNode) {
@@ -56,6 +59,7 @@ export function useWorkspaceActiveNodeDocument(activeNodeId: string | null) {
         return;
       }
       markNodeDocumentLoadResolved(activeNodeId);
+      markNodeDocumentMerged(activeNodeId);
       useWorkspaceStore.setState((state) => {
         const nextNode = state.nodesById[activeNodeId];
         if (!nextNode) {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { IMAGE_CLOZE_CREATE_EVENT } from '../../image-cloze/model/imageClozeEvents';
+
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 
 function createPointerLikeEvent(
@@ -41,6 +42,42 @@ function createSurface() {
   return surface;
 }
 
+function mockOverlayRect(overlay: HTMLElement) {
+  Object.defineProperty(overlay, 'getBoundingClientRect', {
+    value: () =>
+      ({
+        bottom: 300,
+        height: 240,
+        left: 0,
+        right: 400,
+        toJSON: () => ({}),
+        top: 0,
+        width: 400,
+        x: 0,
+        y: 0
+      }) satisfies DOMRect
+  });
+}
+
+function mockOverlayPointerCapture(overlay: HTMLElement) {
+  Object.defineProperty(overlay, 'setPointerCapture', { value: () => undefined });
+  Object.defineProperty(overlay, 'releasePointerCapture', { value: () => undefined });
+  Object.defineProperty(overlay, 'hasPointerCapture', { value: () => true });
+}
+
+function draftImageCloze(surface: HTMLElement) {
+  const overlay = surface.querySelector('.cm-md-image-cloze-overlay') as HTMLElement;
+  mockOverlayRect(overlay);
+  mockOverlayPointerCapture(overlay);
+
+  surface.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+  overlay.dispatchEvent(createPointerLikeEvent('pointerdown', { button: 0, clientX: 40, clientY: 50, pointerId: 1 }));
+  overlay.dispatchEvent(createPointerLikeEvent('pointermove', { clientX: 160, clientY: 120, pointerId: 1 }));
+  overlay.dispatchEvent(createPointerLikeEvent('pointerup', { clientX: 160, clientY: 120, pointerId: 1 }));
+
+  return overlay;
+}
+
 describe('image cloze widget toolbar', () => {
   it('opens direct drag mode on hover and hides it when leaving idle', () => {
     const surface = createSurface();
@@ -63,36 +100,9 @@ describe('image cloze widget toolbar', () => {
 
   it('keeps the drafted rectangle visible after pointerup and ignores repeated hover opens', () => {
     const surface = createSurface();
-    const overlay = surface.querySelector('.cm-md-image-cloze-overlay') as HTMLElement;
     const draft = surface.querySelector('.cm-md-image-cloze-draft') as HTMLElement;
     const actions = surface.querySelector('.cm-md-image-cloze-actions') as HTMLElement;
-
-    Object.defineProperty(overlay, 'getBoundingClientRect', {
-      value: () =>
-        ({
-          bottom: 300,
-          height: 240,
-          left: 0,
-          right: 400,
-          toJSON: () => ({}),
-          top: 0,
-          width: 400,
-          x: 0,
-          y: 0
-        }) satisfies DOMRect
-    });
-    Object.defineProperty(overlay, 'setPointerCapture', { value: () => undefined });
-    Object.defineProperty(overlay, 'releasePointerCapture', { value: () => undefined });
-    Object.defineProperty(overlay, 'hasPointerCapture', { value: () => true });
-
-    surface.dispatchEvent(new Event('pointerenter', { bubbles: true }));
-    overlay.dispatchEvent(createPointerLikeEvent('pointerdown', { button: 0, clientX: 40, clientY: 50, pointerId: 1 }));
-    overlay.dispatchEvent(createPointerLikeEvent('pointermove', { clientX: 160, clientY: 120, pointerId: 1 }));
-
-    expect(draft.hidden).toBe(false);
-    expect(actions.hidden).toBe(true);
-
-    overlay.dispatchEvent(createPointerLikeEvent('pointerup', { clientX: 160, clientY: 120, pointerId: 1 }));
+    draftImageCloze(surface);
 
     expect(draft.hidden).toBe(false);
     expect(actions.hidden).toBe(false);
@@ -107,35 +117,12 @@ describe('image cloze widget toolbar', () => {
 
   it('dispatches create on confirm click instead of starting a new draft', () => {
     const surface = createSurface();
-    const overlay = surface.querySelector('.cm-md-image-cloze-overlay') as HTMLElement;
     const actions = surface.querySelector('.cm-md-image-cloze-actions') as HTMLElement;
     const confirmButton = actions.querySelector('button') as HTMLButtonElement;
     const onCreate = vi.fn();
 
     window.addEventListener(IMAGE_CLOZE_CREATE_EVENT, onCreate);
-    Object.defineProperty(overlay, 'getBoundingClientRect', {
-      value: () =>
-        ({
-          bottom: 300,
-          height: 240,
-          left: 0,
-          right: 400,
-          toJSON: () => ({}),
-          top: 0,
-          width: 400,
-          x: 0,
-          y: 0
-        }) satisfies DOMRect
-    });
-    Object.defineProperty(overlay, 'setPointerCapture', { value: () => undefined });
-    Object.defineProperty(overlay, 'releasePointerCapture', { value: () => undefined });
-    Object.defineProperty(overlay, 'hasPointerCapture', { value: () => true });
-
-    surface.dispatchEvent(new Event('pointerenter', { bubbles: true }));
-    overlay.dispatchEvent(createPointerLikeEvent('pointerdown', { button: 0, clientX: 40, clientY: 50, pointerId: 1 }));
-    overlay.dispatchEvent(createPointerLikeEvent('pointermove', { clientX: 160, clientY: 120, pointerId: 1 }));
-    overlay.dispatchEvent(createPointerLikeEvent('pointerup', { clientX: 160, clientY: 120, pointerId: 1 }));
-
+    draftImageCloze(surface);
     confirmButton.dispatchEvent(createPointerLikeEvent('pointerdown', { button: 0, clientX: 160, clientY: 120, pointerId: 2 }));
     confirmButton.click();
 

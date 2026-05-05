@@ -7,6 +7,7 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { useCurrentReviewPreview } from './appControllerHelpers';
+import { measureSelectionComputation } from './appControllerInstrumentation';
 import { buildAppControllerLayoutProps } from './appControllerLayoutProps';
 import { buildControllerPaletteState } from './appControllerPaletteState';
 import { useNowIso, useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -58,7 +59,19 @@ function useDerivedControllerState(args: {
   startStudyMode: () => void;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const reviewDueCount = countDueReviewNodes(args.ws.nodeOrder, args.ws.nodesById, args.ws.trashedNodeIds, args.nowIso, args.reviewSettings.reviewSchedulerSettings.pushQueue);
+  const reviewDueCount = measureSelectionComputation(
+    args.ws.activeNodeId,
+    args.ws.nodeOrder.length,
+    'review_due_count',
+    () =>
+      countDueReviewNodes(
+        args.ws.nodeOrder,
+        args.ws.nodesById,
+        args.ws.trashedNodeIds,
+        args.nowIso,
+        args.reviewSettings.reviewSchedulerSettings.pushQueue
+      )
+  );
   const paletteItems = useAppPaletteItems({
     activeNodeId: args.ws.activeNodeId,
     formalImportAvailable: args.formalImport.isAvailable && !args.formalImport.isImporting,
@@ -71,19 +84,21 @@ function useDerivedControllerState(args: {
     study: args.controller.study,
     ws: args.ws
   });
-  const layoutProps = buildControllerLayoutState({
-    controller: args.controller,
-    exitStudyMode: args.exitStudyMode,
-    formalImport: args.formalImport,
-    isReviewEditing: args.isReviewEditing,
-    isStudyMode: args.isStudyMode,
-    nowIso: args.nowIso,
-    reviewDueCount,
-    reviewPreview: args.reviewPreview,
-    reviewSettings: args.reviewSettings,
-    startStudyMode: args.startStudyMode,
-    ws: args.ws
-  });
+  const layoutProps = measureSelectionComputation(args.ws.activeNodeId, args.ws.nodeOrder.length, 'layout_props', () =>
+    buildControllerLayoutState({
+      controller: args.controller,
+      exitStudyMode: args.exitStudyMode,
+      formalImport: args.formalImport,
+      isReviewEditing: args.isReviewEditing,
+      isStudyMode: args.isStudyMode,
+      nowIso: args.nowIso,
+      reviewDueCount,
+      reviewPreview: args.reviewPreview,
+      reviewSettings: args.reviewSettings,
+      startStudyMode: args.startStudyMode,
+      ws: args.ws
+    })
+  );
   return { layoutProps, paletteItems };
 }
 

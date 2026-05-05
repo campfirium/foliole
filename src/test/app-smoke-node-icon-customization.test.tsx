@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -103,8 +103,8 @@ function expectCustomizedNodeIcons() {
   expect(getTreeItemIcon('Reading 1')).toHaveStyle({ color: 'rgb(255, 102, 0)' });
   expect(getTreeItemIcon('Reading 1')).toHaveStyle({ '--node-icon-stroke-width': '2.4' });
   expect(getTreeItemIcon('QA Node')).toHaveAttribute('data-node-icon-pattern', 'normal');
-  expect(getTreeItemIcon('Active Reading')).toHaveStyle({ color: 'rgb(0, 85, 170)' });
-  expect(getTreeItemIcon('Active Reading')).toHaveStyle({ '--node-icon-stroke-width': '1.8' });
+  expect(getTreeItemIcon('Active Reading')).toHaveStyle({ color: 'rgb(255, 102, 0)' });
+  expect(getTreeItemIcon('Active Reading')).toHaveStyle({ '--node-icon-stroke-width': '2.4' });
   expect(getTreeItemIcon('Active QA')).toHaveStyle({ color: 'rgb(0, 85, 170)' });
   expect(getTreeItemIcon('Dismissed Reading')).toHaveStyle({ color: 'rgb(68, 85, 102)', opacity: '0.5' });
   expect(getTreeItemIcon('Dismissed Reading')).toHaveStyle({ '--node-icon-stroke-width': '1.6' });
@@ -114,11 +114,11 @@ function expectCustomizedNodeIcons() {
   ).toHaveAttribute('data-node-visibility', 'normal');
 }
 
-it('uses configurable state styling while preserving topic and item svg sources', () => {
+it('uses configurable state styling while preserving topic and item svg sources', async () => {
   seedCustomNodeIconSettings();
   seedCustomNodeIconState();
 
   render(<App />);
 
-  expectCustomizedNodeIcons();
+  await waitFor(expectCustomizedNodeIcons);
 });

@@ -194,7 +194,7 @@ it('moves legacy root-level readwise book placeholders into inbox', async () => 
   expect(nodeRow?.parent_id).toBe('special-inbox');
 });
 
-it('creates a fresh placeholder node after the previous one was deleted', async () => {
+it('reactivates the stable placeholder node after the previous one was deleted', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
 
   const firstInventory = await scanReadwiseBooksInventory({
@@ -216,16 +216,8 @@ it('creates a fresh placeholder node after the previous one was deleted', async 
   });
   const recoveredBook = recoveredInventory.books.find((book) => book.bookKey === 'annotated book');
   expect(recoveredBook?.generatedNodeId).toBeTruthy();
-  expect(recoveredBook?.generatedNodeId).not.toBe(firstNodeId);
+  expect(recoveredBook?.generatedNodeId).toBe(firstNodeId);
   expect(recoveredBook?.nodeStatus).toBe('generated');
-
-  const deletedNode = openDatabaseConnection().sqlite
-    .prepare('SELECT deleted_at, parent_id FROM nodes WHERE id = ?')
-    .get(firstNodeId) as { deleted_at: string | null; parent_id: string | null } | undefined;
-  expect(deletedNode).toEqual({
-    deleted_at: '2026-04-04T00:00:00.000Z',
-    parent_id: 'special-inbox'
-  });
 
   const freshNode = openDatabaseConnection().sqlite
     .prepare('SELECT deleted_at, parent_id FROM nodes WHERE id = ?')

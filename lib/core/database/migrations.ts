@@ -178,6 +178,13 @@ const CREATE_TABLE_STATEMENTS_V13 = ['ALTER TABLE nodes ADD COLUMN kind TEXT NOT
 
 const CREATE_TABLE_STATEMENTS_V14 = ['ALTER TABLE nodes ADD COLUMN virtual_filter TEXT'];
 const CREATE_TABLE_STATEMENTS_V15 = [
+  `CREATE TABLE IF NOT EXISTS attachments (
+    id TEXT PRIMARY KEY,
+    original_name TEXT,
+    mime_type TEXT,
+    size_bytes INTEGER,
+    created_at TEXT NOT NULL
+  )`,
   'ALTER TABLE attachments ADD COLUMN pdf_index_status TEXT',
   'ALTER TABLE attachments ADD COLUMN pdf_indexed_at TEXT',
   'ALTER TABLE attachments ADD COLUMN pdf_index_error TEXT',
@@ -191,6 +198,12 @@ const CREATE_TABLE_STATEMENTS_V15 = [
   )`
 ];
 const CREATE_TABLE_STATEMENTS_V16 = [
+  `CREATE TABLE IF NOT EXISTS pdf_page_text (
+    attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+    page INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    PRIMARY KEY (attachment_id, page)
+  )`,
   'ALTER TABLE pdf_page_text ADD COLUMN page_width REAL',
   'ALTER TABLE pdf_page_text ADD COLUMN page_height REAL'
 ];

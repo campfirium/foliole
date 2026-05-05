@@ -69,7 +69,34 @@ async function expectImageStillRenderedOnSelection(host: HTMLElement, source: st
   });
 }
 
-describe('live markdown image rendering', () => {
+function createOutlinedPresentation() {
+  return {
+    canCreate: true,
+    focusRegionId: null,
+    hiddenRegionIds: [],
+    outlinedRegionIds: ['region-1'],
+    regions: [
+      {
+        attachmentId: 'hash-1',
+        height: 0.2,
+        id: 'region-1',
+        width: 0.3,
+        x: 0.1,
+        y: 0.2
+      }
+    ]
+  };
+}
+
+async function expectOutlinedRegionRendered(host: HTMLElement) {
+  await waitFor(() => {
+    const region = host.querySelector('.cm-md-image-cloze-region[data-region-id="region-1"]');
+    expect(region).not.toBeNull();
+    expect(region).toHaveAttribute('data-region-state', 'outlined');
+  });
+}
+
+describe('live markdown image rendering basics', () => {
   beforeEach(() => {
     resolveRuntimeAttachmentResource.mockReset();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
@@ -146,6 +173,17 @@ describe('live markdown image rendering', () => {
 
     adapter.destroy();
   });
+});
+
+describe('live markdown image rendering image cloze presentation', () => {
+  beforeEach(() => {
+    resolveRuntimeAttachmentResource.mockReset();
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
 
   it('shows outlined image cloze regions immediately after presentation refresh without requiring focus interaction', async () => {
     resolveRuntimeAttachmentResource.mockResolvedValue({
@@ -157,29 +195,9 @@ describe('live markdown image rendering', () => {
     const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
 
     adapter.setNodeId('node-1');
-    registerImageClozeEditorPresentation('node-1', {
-      canCreate: true,
-      focusRegionId: null,
-      hiddenRegionIds: [],
-      outlinedRegionIds: ['region-1'],
-      regions: [
-        {
-          attachmentId: 'hash-1',
-          height: 0.2,
-          id: 'region-1',
-          width: 0.3,
-          x: 0.1,
-          y: 0.2
-        }
-      ]
-    });
+    registerImageClozeEditorPresentation('node-1', createOutlinedPresentation());
     adapter.refreshImageClozePresentation();
-
-    await waitFor(() => {
-      const region = host.querySelector('.cm-md-image-cloze-region[data-region-id="region-1"]');
-      expect(region).not.toBeNull();
-      expect(region).toHaveAttribute('data-region-state', 'outlined');
-    });
+    await expectOutlinedRegionRendered(host);
 
     unregisterImageClozeEditorPresentation('node-1');
     adapter.destroy();

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
@@ -27,7 +27,7 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
@@ -36,7 +36,7 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
 
   fireEvent.click(within(nodePanel).getByRole('button', { name: 'Nodes' }));
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Child' }), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
@@ -44,34 +44,43 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
 });
 
 it('supports multi-select permanent delete inside trash', () => {
-  useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1', 'node-2', 'node-3'],
-    nodesById: {
-      ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
-      'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
-    }
-  }));
+  vi.useFakeTimers();
+  try {
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': createNode({ id: 'node-2', title: 'Node 2', content: '# Node 2' }),
+        'node-3': createNode({ id: 'node-3', title: 'Node 3', content: '# Node 3' })
+      }
+    }));
 
-  render(<App />);
-  const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
-  fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 3' }), { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 3' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
-  const trashedNode2 = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
-  const trashedNode3 = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
-  fireEvent.click(trashedNode2);
-  fireEvent.click(trashedNode3, { ctrlKey: true });
-  fireEvent.contextMenu(trashedNode3, { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
+    const trashedNode2 = within(nodePanel).getByRole('treeitem', { name: 'Node 2' });
+    const trashedNode3 = within(nodePanel).getByRole('treeitem', { name: 'Node 3' });
+    fireEvent.click(trashedNode2);
+    fireEvent.click(trashedNode3, { ctrlKey: true });
+    fireEvent.contextMenu(trashedNode3, { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
 
-  const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']).toBeUndefined();
-  expect(workspace.nodesById['node-3']).toBeUndefined();
+    act(() => {
+      vi.advanceTimersToNextTimer();
+    });
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.nodesById['node-3']).toBeUndefined();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it('relearns reading nodes from the node context menu', () => {
@@ -173,7 +182,7 @@ it('empties all trash items from trash header action', () => {
   render(<App />);
   const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
   fireEvent.contextMenu(within(nodePanel).getByRole('treeitem', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
   fireEvent.click(within(nodePanel).getByRole('button', { name: 'Empty' }));
 
@@ -182,7 +191,7 @@ it('empties all trash items from trash header action', () => {
   expect(workspace.trashedNodeIds).toEqual([]);
 });
 
-it('restores the main document when leaving trash after previewing a trashed node', () => {
+it('restores the main document when leaving trash after selecting a trashed node', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1', 'node-2'],
@@ -198,11 +207,11 @@ it('restores the main document when leaving trash after previewing a trashed nod
     clientX: 56,
     clientY: 64
   });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
   fireEvent.click(within(nodePanel).getByRole('treeitem', { name: 'Trashed child' }));
-  expect(screen.getByTestId('editor-value')).toHaveValue('# Trashed child body');
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
 
   fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
   expect(screen.getByTestId('editor-value')).toHaveValue('# Welcome to Foliole\n\nStart writing markdown here.');

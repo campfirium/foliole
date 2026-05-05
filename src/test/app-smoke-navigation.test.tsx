@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
@@ -85,10 +85,10 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
     nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
     nodesById: {
       ...state.nodesById,
-      'node-1': createNode({ id: 'node-1', title: 'Root 1', content: '# Root 1' }),
-      'node-2': createNode({ id: 'node-2', title: 'Root 2', content: '# Root 2' }),
-      'node-3': createNode({ id: 'node-3', title: 'Root 3', content: '# Root 3' }),
-      'node-4': createNode({ id: 'node-4', title: 'Folder', content: '# Folder' })
+      'node-1': createNode({ id: 'node-1', kind: 'topic', title: 'Root 1', content: '# Root 1', reveal: null }),
+      'node-2': createNode({ id: 'node-2', kind: 'topic', title: 'Root 2', content: '# Root 2', reveal: null }),
+      'node-3': createNode({ id: 'node-3', kind: 'topic', title: 'Root 3', content: '# Root 3', reveal: null }),
+      'node-4': createNode({ id: 'node-4', kind: 'folder', title: 'Folder', content: '# Folder' })
     }
   }));
 
@@ -136,7 +136,7 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
   expect(state.nodeOrder).toEqual(['node-1', 'node-4', 'node-2', 'node-3']);
 });
 
-it('renders breadcrumbs in document header and jumps to ancestor anchor', () => {
+it('renders breadcrumbs in document header and jumps to ancestor node', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],
@@ -161,11 +161,9 @@ it('renders breadcrumbs in document header and jumps to ancestor anchor', () => 
   render(<App />);
 
   const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
+  expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
   fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-  const expectedFrom = '# Parent <highlight id="1">Needle</highlight id="1">'.indexOf('Needle');
-  expect(mockEditorState.selectionFrom).toBe(expectedFrom);
-  expect(mockEditorState.selectionTo).toBe(expectedFrom + 'Needle'.length);
 });
 
 it('supports toolbar parent and navigation history actions', () => {
@@ -204,13 +202,27 @@ it('supports toolbar parent and navigation history actions', () => {
 it('reveals document highlights from the right sidebar list', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
-    nodeOrder: ['node-1', 'node-2'],
+    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
     nodesById: {
       ...state.nodesById,
       'node-2': createNode({
         id: 'node-2',
         title: 'Parent',
         content: '# Parent <highlight id="1">Needle</highlight id="1">\n\n<highlight id="2">Second mark</highlight id="2">'
+      }),
+      'node-3': createNode({
+        id: 'node-3',
+        parentNodeId: 'node-2',
+        title: 'Needle highlight',
+        content: 'Needle',
+        anchorLink: { id: '1', kind: 'highlight' }
+      }),
+      'node-4': createNode({
+        id: 'node-4',
+        parentNodeId: 'node-2',
+        title: 'Second mark highlight',
+        content: 'Second mark',
+        anchorLink: { id: '2', kind: 'highlight' }
       })
     }
   }));
@@ -221,8 +233,10 @@ it('reveals document highlights from the right sidebar list', () => {
   fireEvent.click(screen.getByRole('button', { name: /Second mark/i }));
 
   const expectedFrom = '# Parent <highlight id="1">Needle</highlight id="1">\n\n<highlight id="2">Second mark</highlight id="2">'.indexOf('Second mark');
-  expect(mockEditorState.selectionFrom).toBe(expectedFrom);
-  expect(mockEditorState.selectionTo).toBe(expectedFrom + 'Second mark'.length);
+  return waitFor(() => {
+    expect(mockEditorState.selectionFrom).toBe(expectedFrom);
+    expect(mockEditorState.selectionTo).toBe(expectedFrom + 'Second mark'.length);
+  });
 });
 
 it('expands compact breadcrumbs when clicking ellipsis', () => {

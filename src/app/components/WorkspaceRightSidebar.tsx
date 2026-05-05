@@ -1,5 +1,6 @@
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemBridge';
+import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
@@ -115,6 +116,7 @@ export function WorkspaceRightSidebar(props: Pick<
   activePanelId: WorkspaceRightPanelId;
   onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
 }) {
+  recordComponentRender('rightSidebar');
   return (
     <aside
       aria-label="Inspector"

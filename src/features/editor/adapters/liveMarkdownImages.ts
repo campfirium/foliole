@@ -1,7 +1,7 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
 import { ASSET_MARKDOWN_SCHEME, parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import { resolveRuntimeAttachmentResource } from '../../../shared/platform/attachmentResources';
+import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 

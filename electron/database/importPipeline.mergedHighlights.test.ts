@@ -77,7 +77,7 @@ it('refreshes imported highlight child nodes when a generic merged import change
   expect(nodeRow).toEqual({
     content: '# Imported\nUse <highlight id="1">different</highlight id="1"> text',
     parent_id: 'special-inbox',
-    title: 'note.md'
+    title: 'note'
   });
   expect(childRows).toEqual([
     {

@@ -16,6 +16,7 @@ it('supports review keyboard flow with edit mode guard (Esc -> Space -> 1/2/3/4)
       ...state.nodesById,
       'node-1': {
         ...state.nodesById['node-1'],
+        kind: 'item',
         reveal: 'Answer 1',
         review: {
           due: FIXED_TIMESTAMP,

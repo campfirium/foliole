@@ -77,7 +77,7 @@ it('flushes automatic mirror updates through the same incremental path used by r
   await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2, queued_article_count: 2 });
 
   const mirrorEntries = await fs.readdir(mirrorPath('.'));
-  const dedupedFileName = mirrorEntries.find((entry) => entry.startsWith('Same Title--'));
+  const dedupedFileName = mirrorEntries.find((entry) => entry.startsWith('Same Title') && entry !== 'Same Title.md');
   expect(dedupedFileName).toBeTruthy();
 
   saveNode('node-second', null, 'Same Title', 'Second body updated.', '2030-03-30T00:00:00.000Z', 1);

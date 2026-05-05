@@ -3,12 +3,13 @@ import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
+import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
+import {
+  createUpsertNodeOrderStatement,
+  createUpsertNodeReadingStatement,
+  createUpsertNodeStatement
+} from './nodeMutationStatements.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
-
-const SPECIAL_ROOT_NODE_RECORDS = {
-  'special-inbox': { title: 'Inbox' },
-  'special-virtual-root': { title: 'Virtual Nodes' }
-} as const;
 
 interface NodeAnchorLinkPayload {
   id: string;
@@ -89,56 +90,6 @@ function toImageRegionsValue(imageRegions: NodeImageRegionGroupPayload[] | null 
   return imageRegions && imageRegions.length > 0 ? JSON.stringify(imageRegions) : null;
 }
 
-function createUpsertNodeStatement(driver: DatabaseDriver) {
-  return driver.prepare(
-    `INSERT INTO nodes (
-     id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-     ON CONFLICT(id) DO UPDATE SET
-       parent_id = excluded.parent_id,
-       kind = excluded.kind,
-       priority = excluded.priority,
-       desired_retention = excluded.desired_retention,
-       title = excluded.title,
-       is_title_manual = excluded.is_title_manual,
-       hide_title_heading = excluded.hide_title_heading,
-       content = excluded.content,
-       virtual_filter = excluded.virtual_filter,
-       reveal = excluded.reveal,
-       anchor_link = excluded.anchor_link,
-       image_regions = excluded.image_regions,
-       updated_at = excluded.updated_at,
-       deleted_at = NULL`
-  );
-}
-
-function createUpsertNodeOrderStatement(driver: DatabaseDriver) {
-  return driver.prepare(
-    `INSERT INTO node_order (node_id, position)
-     VALUES (?, ?)
-     ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`
-  );
-}
-
-function createUpsertNodeReadingStatement(driver: DatabaseDriver) {
-  return driver.prepare(
-    `INSERT INTO node_reading (
-       node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
-       next_at, priority, reading_position, repetition_count, state
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(node_id) DO UPDATE SET
-       interval_duration_ms = excluded.interval_duration_ms,
-       interval_growth_factor = excluded.interval_growth_factor,
-       last_handled_at = excluded.last_handled_at,
-       next_at = excluded.next_at,
-       priority = excluded.priority,
-       reading_position = excluded.reading_position,
-       repetition_count = excluded.repetition_count,
-       state = excluded.state`
-  );
-}
-
 function writeNodeReadingSnapshot(
   input: UpsertNodeSnapshotInput,
   runUpsert: (params?: DatabaseBindParams) => void,
@@ -159,38 +110,6 @@ function writeNodeReadingSnapshot(
     input.reading.repetitionCount,
     input.reading.state
   ]);
-}
-
-function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: keyof typeof SPECIAL_ROOT_NODE_RECORDS, updatedAt: string) {
-  const existingNode = driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [nodeId]);
-  if (existingNode) {
-    return;
-  }
-  driver.execute(
-    `INSERT INTO nodes (
-       id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
-       content, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
-     ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', NULL, NULL, NULL, NULL, ?, ?, NULL)`,
-    [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, updatedAt, updatedAt]
-  );
-}
-
-function ensureSpecialRootNodesForInput(driver: DatabaseDriver, input: UpsertNodeSnapshotInput) {
-  if (input.nodeId in SPECIAL_ROOT_NODE_RECORDS) {
-    ensureSpecialRootNode(driver, input.nodeId as keyof typeof SPECIAL_ROOT_NODE_RECORDS, input.updatedAt);
-  }
-  if (input.parentNodeId && input.parentNodeId in SPECIAL_ROOT_NODE_RECORDS) {
-    ensureSpecialRootNode(driver, input.parentNodeId as keyof typeof SPECIAL_ROOT_NODE_RECORDS, input.updatedAt);
-  }
-}
-
-function ensureSpecialRootNodesForOrder(driver: DatabaseDriver, nodeIds: string[]) {
-  const updatedAt = new Date().toISOString();
-  for (const nodeId of nodeIds) {
-    if (nodeId in SPECIAL_ROOT_NODE_RECORDS) {
-      ensureSpecialRootNode(driver, nodeId as keyof typeof SPECIAL_ROOT_NODE_RECORDS, updatedAt);
-    }
-  }
 }
 
 export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnapshotInput): void {

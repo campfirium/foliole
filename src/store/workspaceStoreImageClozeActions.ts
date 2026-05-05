@@ -138,6 +138,75 @@ function updateParentNodeImageRegions(
   };
 }
 
+function syncCreatedImageClozeNodes(
+  createdNodes: WorkspaceNode[],
+  handlers: RuntimeSyncHandlers,
+  nextNodeOrder: string[] | null,
+  updatedParentNode: WorkspaceNode | null
+) {
+  if (!nextNodeOrder || createdNodes.length === 0) {
+    return [];
+  }
+  for (const node of createdNodes) {
+    handlers.syncNodeCreation(node);
+  }
+  if (updatedParentNode) {
+    handlers.syncNodeContent(updatedParentNode);
+  }
+  handlers.syncNodeOrder(nextNodeOrder);
+  return createdNodes.map((node) => node.id);
+}
+
+function buildImageClozeStateUpdate(args: {
+  normalizedAttachmentId: string;
+  normalizedRegions: ImageClozeDraftRegion[];
+  normalizedSourcePayload: ReturnType<typeof normalizeImageClozeSourcePayload>;
+  parentNodeId: string;
+  reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession'];
+  state: WorkspaceState;
+  timestamp: string;
+}) {
+  const parentNode = args.state.nodesById[args.parentNodeId];
+  if (!parentNode) {
+    return args.state;
+  }
+  const batch = createImageClozeNodeBatch({
+    normalizedAttachmentId: args.normalizedAttachmentId,
+    normalizedRegions: args.normalizedRegions,
+    parentNodeId: args.parentNodeId,
+    sourcePayload: args.normalizedSourcePayload,
+    state: args.state,
+    timestamp: args.timestamp
+  });
+  const updatedParentNode = updateParentNodeImageRegions(
+    parentNode,
+    args.normalizedAttachmentId,
+    args.normalizedRegions,
+    args.timestamp
+  );
+  batch.nextNodesById[args.parentNodeId] = updatedParentNode;
+
+  const nextNodeOrder = [...args.state.nodeOrder, ...batch.createdNodes.map((node) => node.id)];
+  const nextState = {
+    nodeOrder: nextNodeOrder,
+    nodesById: batch.nextNodesById,
+    untitledSequenceByParent: batch.untitledSequenceByParent
+  };
+
+  return {
+    createdNodes: batch.createdNodes,
+    nextNodeOrder,
+    nextState: {
+      ...nextState,
+      reviewSession: args.reconcileReviewSession({
+        ...args.state,
+        ...nextState
+      })
+    },
+    updatedParentNode
+  };
+}
+
 export function createImageClozeNodesAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers,
@@ -158,53 +227,24 @@ export function createImageClozeNodesAction(
     let nextNodeOrder: string[] | null = null;
 
     set((state) => {
-      const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
-        return state;
-      }
-
-      const batch = createImageClozeNodeBatch({
+      const nextResult = buildImageClozeStateUpdate({
         normalizedAttachmentId,
         normalizedRegions,
+        normalizedSourcePayload,
         parentNodeId,
-        sourcePayload: normalizedSourcePayload,
+        reconcileReviewSession,
         state,
         timestamp
       });
-      createdNodes.push(...batch.createdNodes);
-      updatedParentNode = updateParentNodeImageRegions(
-        parentNode,
-        normalizedAttachmentId,
-        normalizedRegions,
-        timestamp
-      );
-      batch.nextNodesById[parentNodeId] = updatedParentNode;
-
-      nextNodeOrder = [...state.nodeOrder, ...createdNodes.map((node) => node.id)];
-      return {
-        nodeOrder: nextNodeOrder,
-        nodesById: batch.nextNodesById,
-        untitledSequenceByParent: batch.untitledSequenceByParent,
-        reviewSession: reconcileReviewSession({
-          ...state,
-          nodeOrder: nextNodeOrder,
-          nodesById: batch.nextNodesById,
-          untitledSequenceByParent: batch.untitledSequenceByParent
-        })
-      };
+      if (!('createdNodes' in nextResult)) {
+        return state;
+      }
+      createdNodes.push(...nextResult.createdNodes);
+      updatedParentNode = nextResult.updatedParentNode;
+      nextNodeOrder = nextResult.nextNodeOrder;
+      return nextResult.nextState;
     });
 
-    if (!nextNodeOrder || createdNodes.length === 0) {
-      return [];
-    }
-
-    for (const node of createdNodes) {
-      handlers.syncNodeCreation(node);
-    }
-    if (updatedParentNode) {
-      handlers.syncNodeContent(updatedParentNode);
-    }
-    handlers.syncNodeOrder(nextNodeOrder);
-    return createdNodes.map((node) => node.id);
+    return syncCreatedImageClozeNodes(createdNodes, handlers, nextNodeOrder, updatedParentNode);
   };
 }

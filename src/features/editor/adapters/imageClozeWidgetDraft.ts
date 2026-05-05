@@ -69,6 +69,69 @@ function finalizeDraftRect(args: {
   args.actions.hidden = false;
 }
 
+function startDraftDrag(args: {
+  actions: HTMLElement;
+  draftRectElement: HTMLElement;
+  overlay: HTMLElement;
+  setDragStart: (point: { x: number; y: number }) => void;
+}) {
+  return (event: PointerEvent) => {
+    if (event.button !== 0 || event.target !== args.overlay) {
+      return;
+    }
+    const point = mapPointerToRatio(event, args.overlay);
+    if (!point) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    args.overlay.setPointerCapture(event.pointerId);
+    args.setDragStart(point);
+    args.actions.hidden = true;
+    updateDraftRectElement(args.draftRectElement, { height: 0, width: 0, x: point.x, y: point.y });
+  };
+}
+
+function updateDraftDrag(args: {
+  getDragStart: () => { x: number; y: number } | null;
+  overlay: HTMLElement;
+  updateDraft: (nextDraftRect: DraftRect | null) => void;
+}) {
+  return (event: PointerEvent) => {
+    const dragStart = args.getDragStart();
+    if (!dragStart) {
+      return;
+    }
+    const point = mapPointerToRatio(event, args.overlay);
+    if (!point) {
+      return;
+    }
+    args.updateDraft(normalizeDraftRect(dragStart.x, dragStart.y, point.x, point.y));
+  };
+}
+
+function endDraftDrag(args: {
+  actions: HTMLElement;
+  getDraftRect: () => DraftRect | null;
+  onFinalize: (anchorPoint: { x: number; y: number }) => void;
+  overlay: HTMLElement;
+  resetDraft: () => void;
+  stopDragging: () => void;
+}) {
+  return (event: PointerEvent) => {
+    finalizeDraftRect({
+      actions: args.actions,
+      draftRect: args.getDraftRect(),
+      onFinalize: args.onFinalize,
+      overlay: args.overlay,
+      pointerEvent: event,
+      pointerId: event.pointerId,
+      resetDraft: args.resetDraft
+    });
+    args.stopDragging();
+  };
+}
+
 export function attachOverlayDragHandlers(args: {
   actions: HTMLElement;
   draftRectElement: HTMLElement;
@@ -91,49 +154,30 @@ export function attachOverlayDragHandlers(args: {
     dragStart = null;
     updateDraft(null);
   };
-
-  args.overlay.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) {
-      return;
-    }
-    if (event.target !== args.overlay) {
-      return;
-    }
-    const point = mapPointerToRatio(event, args.overlay);
-    if (!point) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    args.overlay.setPointerCapture(event.pointerId);
-    dragStart = point;
-    args.actions.hidden = true;
-    updateDraft({ height: 0, width: 0, x: point.x, y: point.y });
-  });
-
-  args.overlay.addEventListener('pointermove', (event) => {
-    if (!dragStart) {
-      return;
-    }
-    const point = mapPointerToRatio(event, args.overlay);
-    if (!point) {
-      return;
-    }
-    updateDraft(normalizeDraftRect(dragStart.x, dragStart.y, point.x, point.y));
-  });
-
-  args.overlay.addEventListener('pointerup', (event) => {
-    finalizeDraftRect({
+  args.overlay.addEventListener(
+    'pointerdown',
+    startDraftDrag({
       actions: args.actions,
-      draftRect,
+      draftRectElement: args.draftRectElement,
+      overlay: args.overlay,
+      setDragStart: (point) => {
+        dragStart = point;
+        draftRect = { height: 0, width: 0, x: point.x, y: point.y };
+      }
+    })
+  );
+  args.overlay.addEventListener('pointermove', updateDraftDrag({ getDragStart: () => dragStart, overlay: args.overlay, updateDraft }));
+  args.overlay.addEventListener(
+    'pointerup',
+    endDraftDrag({
+      actions: args.actions,
+      getDraftRect: () => draftRect,
       onFinalize: args.onFinalize,
       overlay: args.overlay,
-      pointerEvent: event,
-      pointerId: event.pointerId,
-      resetDraft
-    });
-    stopDragging();
-  });
+      resetDraft,
+      stopDragging
+    })
+  );
   args.overlay.addEventListener('pointercancel', () => {
     stopDragging();
     resetDraft();

@@ -16,6 +16,7 @@ it('renders the review queue panel with the active session queue', () => {
     nodesById: {
       'fsrs-1': createNode({
         id: 'fsrs-1',
+        kind: 'item',
         title: 'Review prompt',
         content: '# Prompt',
         reveal: 'Answer',
@@ -33,8 +34,10 @@ it('renders the review queue panel with the active session queue', () => {
       }),
       'reading-1': createNode({
         id: 'reading-1',
+        kind: 'topic',
         title: 'Reading passage',
         content: 'Read me',
+        reveal: null,
         reading: {
           intervalDurationMs: 86400000,
           intervalGrowthFactor: 1.5,
@@ -74,8 +77,10 @@ it('labels cloze review nodes as FSRS in the review queue panel', () => {
     nodesById: {
       'cloze-1': createNode({
         id: 'cloze-1',
+        kind: 'item',
         title: 'Cloze prompt',
         content: '# Prompt',
+        reveal: null,
         anchorLink: {
           id: 'anchor-1',
           kind: 'cloze'
@@ -94,8 +99,10 @@ it('labels cloze review nodes as FSRS in the review queue panel', () => {
       }),
       'reading-1': createNode({
         id: 'reading-1',
+        kind: 'topic',
         title: 'Reading passage',
-        content: 'Read me'
+        content: 'Read me',
+        reveal: null
       })
     },
     reviewSession: {
@@ -123,8 +130,10 @@ it('shows scheduled review cards in the whole queue even when the live review se
     nodesById: {
       'cloze-scheduled': createNode({
         id: 'cloze-scheduled',
+        kind: 'item',
         title: 'Scheduled review card',
         content: 'Prompt [...]',
+        reveal: null,
         anchorLink: {
           id: 'anchor-2',
           kind: 'cloze'
@@ -143,8 +152,10 @@ it('shows scheduled review cards in the whole queue even when the live review se
       }),
       'reading-1': createNode({
         id: 'reading-1',
+        kind: 'topic',
         title: 'Reading passage',
         content: 'Read me',
+        reveal: null,
         reading: {
           intervalDurationMs: 86400000,
           intervalGrowthFactor: 1.5,

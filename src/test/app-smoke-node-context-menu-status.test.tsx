@@ -19,26 +19,38 @@ function openNodeMenu(name: string) {
   return panel;
 }
 
-it('dismisses pending reading nodes from the node menu and updates the icon state', () => {
+it('shows relearn actions for pending reading nodes and keeps the pending icon state', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-pending',
     nodeOrder: ['node-pending'],
     nodesById: {
       ...state.nodesById,
-      'node-pending': createNode({ id: 'node-pending', title: 'Pending note', content: '# Pending note' })
+      'node-pending': createNode({
+        id: 'node-pending',
+        title: 'Pending note',
+        content: '# Pending note',
+        reading: {
+          intervalDurationMs: 24 * 60 * 60 * 1000,
+          intervalGrowthFactor: 1.3,
+          lastHandledAt: '2026-03-16T00:00:00.000Z',
+          nextAt: '2026-03-17T00:00:00.000Z',
+          priority: 5,
+          readingPosition: 0,
+          repetitionCount: 1,
+          state: 'active'
+        }
+      })
     }
   }));
 
   render(<App />);
 
-  const panel = openNodeMenu('Pending note');
-  expect(screen.queryByRole('menuitem', { name: 'Relearn' })).toBeNull();
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss' }));
-
-  expect(useWorkspaceStore.getState().nodesById['node-pending']?.reading?.state).toBe('dismissed');
-  expect(within(panel).getByRole('treeitem', { name: 'Pending note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
+  openNodeMenu('Pending note');
+  expect(screen.getByRole('menuitem', { name: 'Relearn' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Dismiss' })).toBeNull();
+  expect(screen.getByRole('treeitem', { hidden: true, name: 'Pending note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
-    'dismissed'
+    'pending'
   );
 });
 
@@ -84,7 +96,7 @@ it('creates a child node from the inbox menu', () => {
   render(<App />);
 
   openNodeMenu('Inbox');
-  fireEvent.click(screen.getByRole('menuitem', { name: 'New Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 
   const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter((node) => node?.parentNodeId === INBOX_NODE_ID);
   expect(inboxChildren).toHaveLength(1);
@@ -98,7 +110,7 @@ it('creates an inbox child from the blank node-list area menu', () => {
 
   const tree = within(getNodeListPanel()).getByRole('tree');
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'New Node' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 
   const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
     (node) => node?.parentNodeId === INBOX_NODE_ID
@@ -112,7 +124,8 @@ it('creates an inbox child from the global new button', () => {
     (node) => node?.parentNodeId === INBOX_NODE_ID
   ).length;
 
-  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Create' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 
   const inboxChildren = Object.values(useWorkspaceStore.getState().nodesById).filter(
     (node) => node?.parentNodeId === INBOX_NODE_ID
@@ -120,7 +133,7 @@ it('creates an inbox child from the global new button', () => {
   expect(inboxChildren).toHaveLength(initialInboxCount + 1);
 });
 
-it('opens the move dialog from the node menu', async () => {
+it('keeps node menus focused on relearn and import actions for ordinary notes', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-source',
     nodeOrder: ['node-source', 'node-target'],
@@ -134,7 +147,9 @@ it('opens the move dialog from the node menu', async () => {
   render(<App />);
 
   openNodeMenu('Source node');
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Move to' }));
-
-  expect(await screen.findByRole('dialog', { name: 'Move to' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Relearn' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Import here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Paste here *' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Move to' })).toBeNull();
 });

@@ -1,3 +1,5 @@
+import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
+
 import { pushNavigationHistory, resolveAncestorAnchorLink, type NodeNavigationResult } from './workspaceNavigation';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -61,6 +63,7 @@ function createOpenNodeAction(set: WorkspaceSet) {
       if (state.activeNodeId === nodeId && isReviewSessionSelectionSynced(state, nodeId)) {
         return state;
       }
+      markNodeSelectionApplied(nodeId, state.nodesById);
       nextResult = { focusAnchor: null, nodeId };
       return buildNavigationNodeState(
         state,
@@ -86,6 +89,7 @@ function createGoBackAction(set: WorkspaceSet) {
       if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
         return state;
       }
+      markNodeSelectionApplied(targetNodeId, state.nodesById);
       nextResult = { focusAnchor: null, nodeId: targetNodeId };
       return buildNavigationNodeState(state, targetNodeId, {
         backStack: state.navigation.backStack.slice(0, -1),
@@ -105,6 +109,7 @@ function createGoForwardAction(set: WorkspaceSet) {
       if (!currentNodeId || !targetNodeId || !isAvailableNode(state, targetNodeId)) {
         return state;
       }
+      markNodeSelectionApplied(targetNodeId, state.nodesById);
       nextResult = { focusAnchor: null, nodeId: targetNodeId };
       return buildNavigationNodeState(state, targetNodeId, {
         backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
@@ -128,6 +133,7 @@ function createGoToParentAction(set: WorkspaceSet) {
       if (!currentNode || !parentNodeId || !isAvailableNode(state, parentNodeId)) {
         return state;
       }
+      markNodeSelectionApplied(parentNodeId, state.nodesById);
       nextResult = { focusAnchor: currentNode.anchorLink ?? null, nodeId: parentNodeId };
       return buildNavigationNodeState(state, parentNodeId, {
         backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
@@ -150,6 +156,7 @@ function createJumpToAncestorAction(set: WorkspaceSet) {
       if (!ancestorTarget.isAncestor) {
         return state;
       }
+      markNodeSelectionApplied(ancestorNodeId, state.nodesById);
       nextResult = { focusAnchor: ancestorTarget.focusAnchor, nodeId: ancestorNodeId };
       return buildNavigationNodeState(state, ancestorNodeId, {
         backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),

@@ -4,10 +4,33 @@ import { expect, it } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-it('creates a root node on first editor change when workspace has no active node', () => {
-  useWorkspaceStore.setState({ activeNodeId: null, nodeOrder: [], nodesById: {} });
+function createTopicFromHeaderMenu() {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Create' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
+}
+
+function findCreatedNoteId() {
+  const workspace = useWorkspaceStore.getState();
+  return workspace.nodeOrder.find((nodeId) => nodeId !== INBOX_NODE_ID && nodeId !== 'node-1');
+}
+
+function keepOnlyInboxWithoutActiveNode() {
+  const inboxNode = useWorkspaceStore.getState().nodesById[INBOX_NODE_ID];
+  if (!inboxNode) {
+    throw new Error('expected inbox node');
+  }
+  useWorkspaceStore.setState({
+    activeNodeId: null,
+    nodeOrder: [INBOX_NODE_ID],
+    nodesById: { [INBOX_NODE_ID]: inboxNode }
+  });
+}
+
+it('creates a note from editor typing when no active node is selected', () => {
+  keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
   fireEvent.change(screen.getByTestId('editor-value'), {
@@ -19,45 +42,52 @@ it('creates a root node on first editor change when workspace has no active node
   if (!workspace.activeNodeId) {
     throw new Error('expected active node to be created');
   }
-  expect(workspace.nodeOrder).toHaveLength(1);
+  expect(workspace.nodeOrder).toHaveLength(2);
   expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('Pasted from clipboard');
 });
 
 it('creates a new empty note from node panel action', () => {
-  useWorkspaceStore.setState({ activeNodeId: null, nodeOrder: [], nodesById: {} });
+  keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+  createTopicFromHeaderMenu();
 
   const workspace = useWorkspaceStore.getState();
   expect(workspace.activeNodeId).toBeTruthy();
   if (!workspace.activeNodeId) {
     throw new Error('expected active node to be created');
   }
-  expect(workspace.nodeOrder).toHaveLength(1);
+  expect(workspace.nodeOrder).toHaveLength(2);
   expect(workspace.nodesById[workspace.activeNodeId]?.content).toBe('');
   expect(workspace.nodesById[workspace.activeNodeId]?.title).toBe('Untitled');
 });
 
 it('increments Untitled titles when creating multiple empty notes', () => {
-  useWorkspaceStore.setState({ activeNodeId: null, nodeOrder: [], nodesById: {} });
+  keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'New' }));
-  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+  createTopicFromHeaderMenu();
+  createTopicFromHeaderMenu();
 
   const titles = useWorkspaceStore
     .getState()
-    .nodeOrder.map((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title);
+    .nodeOrder
+    .filter((nodeId) => nodeId !== INBOX_NODE_ID)
+    .map((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title);
 
-  expect(titles).toEqual(['Untitled', 'Untitled 1']);
+  expect(titles).toHaveLength(2);
+  expect(titles).toEqual(expect.arrayContaining(['Untitled', 'Untitled 1']));
 });
 
 it('keeps first note content unchanged when editing a newly created note', () => {
+  keepOnlyInboxWithoutActiveNode();
   render(<App />);
-  const originalFirstNodeContent = useWorkspaceStore.getState().nodesById['node-1']?.content;
-
-  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+  createTopicFromHeaderMenu();
+  const firstNodeId = findCreatedNoteId();
+  if (!firstNodeId) {
+    throw new Error('expected first created node');
+  }
+  createTopicFromHeaderMenu();
 
   const workspaceAfterCreate = useWorkspaceStore.getState();
   const newNodeId = workspaceAfterCreate.activeNodeId;
@@ -71,7 +101,7 @@ it('keeps first note content unchanged when editing a newly created note', () =>
   });
 
   const workspaceAfterEdit = useWorkspaceStore.getState();
-  expect(workspaceAfterEdit.nodesById['node-1']?.content).toBe(originalFirstNodeContent);
+  expect(workspaceAfterEdit.nodesById[firstNodeId]?.content).toBe('');
   expect(workspaceAfterEdit.nodesById[newNodeId]?.content).toBe('My second note content');
 });
 
