@@ -96,7 +96,7 @@ async function recoverFailedTask(task, options, dependencies, error) {
   await stabilizeWorkspace(task, options, dependencies, `task failure after ${task}`);
   const committed = await dependencies.commitTrackedChangesFn(
     REPO_ROOT,
-    await dependencies.buildCommitMessageFn(task)
+    () => dependencies.buildCommitMessageFn(task)
   );
 
   if (committed) {
@@ -131,7 +131,7 @@ async function executeTaskRound(taskEntry, round, options, dependencies, priorSi
   await stabilizeWorkspace(taskEntry.task, options, dependencies, `quality gate after task: ${taskEntry.task}`);
   return dependencies.commitTrackedChangesFn(
     REPO_ROOT,
-    await dependencies.buildCommitMessageFn(taskEntry.task)
+    () => dependencies.buildCommitMessageFn(taskEntry.task)
   );
 }
 
@@ -145,7 +145,7 @@ export async function reconcileDirtyWorkspace(task, options, dependencies) {
   await stabilizeWorkspace(task, options, dependencies, 'startup dirty workspace');
   const committed = await dependencies.commitTrackedChangesFn(
     REPO_ROOT,
-    await dependencies.buildCommitMessageFn('reconcile dirty workspace')
+    () => dependencies.buildCommitMessageFn('reconcile dirty workspace')
   );
   if (committed) {
     dependencies.stdout.write('[codex-loop] reconciled dirty workspace and committed changes\n');
