@@ -1,4 +1,4 @@
-import electron from 'electron';
+import { app, shell } from 'electron';
 
 import { bootReport } from './boot.js';
 import type { InvokeRequest } from './contracts.js';
@@ -11,8 +11,6 @@ import {
   loadWorkspaceState,
   saveWorkspaceState
 } from './storage.js';
-
-const { app, shell } = electron;
 
 function asString(value: unknown, field: string): string {
   if (typeof value !== 'string') {

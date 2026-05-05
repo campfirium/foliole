@@ -1,4 +1,4 @@
-import electron, { type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 import {
   IPC_INVOKE_CHANNEL,
@@ -11,8 +11,6 @@ import {
   type InvokeRequest,
   type MenuCommandEvent
 } from './ipc/contracts.js';
-
-const { contextBridge, ipcRenderer } = electron;
 
 type EventHandler = (...args: unknown[]) => void;
 

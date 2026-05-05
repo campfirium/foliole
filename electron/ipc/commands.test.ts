@@ -5,10 +5,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { handleInvokeRequest } from './commands.js';
 
 vi.mock('electron', () => ({
-  default: {
-    app: { getVersion: () => '1.0.0' },
-    shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
-  }
+  app: { getVersion: () => '1.0.0' },
+  shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }));
 
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));

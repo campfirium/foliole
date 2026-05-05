@@ -1,6 +1,9 @@
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 
+import { createElectronLaunchEnv } from './electron-dev-env.mjs';
+import { isViteServerReady } from './electron-dev-server.mjs';
+
 const VITE_URL = 'http://127.0.0.1:4600';
 
 function run(command, args, options = {}) {
@@ -19,13 +22,8 @@ function wait(ms) {
 
 async function waitForViteReady(maxAttempts = 60) {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    try {
-      const response = await globalThis.fetch(VITE_URL, { method: 'GET' });
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // retry
+    if (await isViteServerReady(VITE_URL)) {
+      return;
     }
     await wait(500);
   }
@@ -43,19 +41,18 @@ await new Promise((resolve, reject) => {
   });
 });
 
-const vite = run('npm', ['run', 'dev']);
-await waitForViteReady();
+let vite = null;
+if (!(await isViteServerReady(VITE_URL))) {
+  vite = run('npm', ['run', 'dev']);
+  await waitForViteReady();
+}
 
 const electron = run('npx', ['electron', 'electron-dist/main.js'], {
-  env: {
-    ...process.env,
-    ELECTRON_RUN_AS_NODE: '',
-    ELECTRON_RENDERER_URL: VITE_URL
-  }
+  env: createElectronLaunchEnv(process.env, VITE_URL)
 });
 
 const shutdown = () => {
-  if (!vite.killed) {
+  if (vite && !vite.killed) {
     vite.kill('SIGTERM');
   }
   if (!electron.killed) {
@@ -68,9 +65,11 @@ electron.on('exit', (code) => {
   process.exit(code ?? 0);
 });
 
-vite.on('exit', () => {
-  shutdown();
-});
+if (vite) {
+  vite.on('exit', () => {
+    shutdown();
+  });
+}
 
 process.on('SIGINT', () => {
   shutdown();

@@ -1,8 +1,6 @@
 import path from 'node:path';
 
-import electron from 'electron';
-
-const { app } = electron;
+import { app } from 'electron';
 
 export interface AppPaths {
   app_data_dir: string;

@@ -1,12 +1,12 @@
-import electron, {
+import {
+  BrowserWindow,
+  Menu,
   type BrowserWindow as ElectronBrowserWindow,
   type MenuItem as ElectronMenuItem,
   type MenuItemConstructorOptions
 } from 'electron';
 
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
-
-const { BrowserWindow, Menu } = electron;
 
 const MENU_COMMAND_IDS = [
   'workspace.openNotes',
