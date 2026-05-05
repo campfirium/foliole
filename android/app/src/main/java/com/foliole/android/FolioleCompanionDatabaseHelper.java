@@ -20,7 +20,7 @@ import java.util.UUID;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 7;
     private static final String META_TABLE = "companion_meta";
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
@@ -28,8 +28,12 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     private static final String WORKSPACE_SYNC_ONBOARDING_STATUS_KEY = "workspace_sync_onboarding_status";
     private static final String WORKSPACE_SYNC_REMEMBERED_TARGETS_KEY = "workspace_sync_remembered_targets";
     private static final String WORKSPACE_SYNC_EVENTS_KEY = "workspace_sync_events";
-    private static final String SYNC_CHANGE_CURSOR_KEY = "sync_change_cursor";
-    private static final String SYNC_PUSH_CURSOR_KEY = "sync_push_cursor";
+    private static final String SYNC_STATE_CURSOR_KEY = "sync_state_cursor";
+    private static final String SYNC_STATE_PUSH_CURSOR_KEY = "sync_state_push_cursor";
+    private static final String SYNC_NODE_VERSION_CURSOR_KEY = "sync_node_version_cursor";
+    private static final String SYNC_NODE_VERSION_PUSH_CURSOR_KEY = "sync_node_version_push_cursor";
+    private static final String SYNC_REVIEW_LOG_CURSOR_KEY = "sync_review_log_cursor";
+    private static final String SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = "sync_review_log_push_cursor";
     private final Context context;
 
     FolioleCompanionDatabaseHelper(Context context) {
@@ -64,6 +68,29 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
                 FolioleCompanionSchemaInstaller.install(context, database);
             } catch (Exception exception) {
                 throw new IllegalStateException("Failed to upgrade companion schema.", exception);
+            }
+        }
+        if (oldVersion < 5) {
+            database.execSQL("DROP TABLE IF EXISTS sync_object_state");
+            database.execSQL("DROP TABLE IF EXISTS sync_peer_cursors");
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion sync schema.", exception);
+            }
+        }
+        if (oldVersion < 6) {
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion node version schema.", exception);
+            }
+        }
+        if (oldVersion < 7) {
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion review log schema.", exception);
             }
         }
     }
@@ -148,14 +175,13 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase database = getWritableDatabase();
         database.beginTransaction();
         try {
-            String deviceId = loadOrCreateDeviceId(database, lastSyncedAt);
             FolioleCompanionNodeSnapshotWriter.upsertNodeSnapshot(
                 database,
                 nodeId,
                 new JSONObject(nodeSnapshotJson),
                 lastSyncedAt,
-                true,
-                deviceId
+                false,
+                null
             );
             database.setTransactionSuccessful();
         } finally {
@@ -166,14 +192,6 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         saveMetaValue(database, WORKSPACE_SYNC_ONBOARDING_STATUS_KEY, "completed", lastSyncedAt);
         saveRememberedTargets(database, appendRememberedTarget(loadRememberedTargets(database), endpointUrl.trim()), lastSyncedAt);
         return loadWorkspaceSyncState();
-    }
-
-    JSObject loadDirtyNodes() throws Exception {
-        SQLiteDatabase database = getWritableDatabase();
-        String now = Instant.now().toString();
-        String deviceId = loadOrCreateDeviceId(database, now);
-        String lastSyncedAt = loadMetaValue(database, WORKSPACE_SYNC_LAST_SYNCED_AT_KEY);
-        return FolioleCompanionDirtyNodeExport.loadDirtyNodes(database, deviceId, lastSyncedAt);
     }
 
     JSObject loadSyncIndex() throws Exception {
@@ -193,70 +211,136 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionSyncObjectStore.applySyncObjects(database, objects, deviceId);
     }
 
-    JSObject loadSyncChangeCursor() throws Exception {
+    JSObject applySyncNodeVersions(JSONArray nodes) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        JSObject result = new JSObject();
-        String stored = loadMetaValue(database, SYNC_CHANGE_CURSOR_KEY);
-        result.put("cursor", stored == null ? JSONObject.NULL : new JSONObject(stored));
-        return result;
+        return FolioleCompanionSyncNodeVersionStore.applyNodeVersions(database, nodes);
     }
 
-    JSObject saveSyncChangeCursor(JSONObject cursor) throws Exception {
+    JSObject applySyncReviewLog(JSONArray reviews) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        String now = Instant.now().toString();
-        if (cursor == null || cursor.isNull("created_at") || cursor.isNull("change_id")) {
-            deleteMetaValue(database, SYNC_CHANGE_CURSOR_KEY);
-        } else {
-            JSONObject normalized = new JSONObject();
-            normalized.put("created_at", cursor.getString("created_at"));
-            normalized.put("change_id", cursor.getString("change_id"));
-            saveMetaValue(database, SYNC_CHANGE_CURSOR_KEY, normalized.toString(), now);
-        }
-        return loadSyncChangeCursor();
+        return FolioleCompanionSyncReviewLogStore.applyReviewLog(database, reviews);
     }
 
-    JSObject loadSyncPushCursor() throws Exception {
+    JSObject loadSyncNodeVersions(JSONObject cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        JSObject result = new JSObject();
-        String stored = loadMetaValue(database, SYNC_PUSH_CURSOR_KEY);
-        result.put("cursor", stored == null ? JSONObject.NULL : new JSONObject(stored));
-        return result;
+        String deviceId = loadOrCreateDeviceId(database, Instant.now().toString());
+        return FolioleCompanionSyncNodeVersionStore.loadNodeVersions(database, cursor, limit, deviceId);
     }
 
-    JSObject saveSyncPushCursor(JSONObject cursor) throws Exception {
+    JSObject loadSyncReviewLog(JSONObject cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        if (cursor == null || cursor.isNull("created_at") || cursor.isNull("change_id")) {
-            deleteMetaValue(database, SYNC_PUSH_CURSOR_KEY);
-        } else {
-            JSONObject normalized = new JSONObject();
-            normalized.put("created_at", cursor.getString("created_at"));
-            normalized.put("change_id", cursor.getString("change_id"));
-            saveMetaValue(database, SYNC_PUSH_CURSOR_KEY, normalized.toString(), Instant.now().toString());
-        }
-        return loadSyncPushCursor();
+        String deviceId = loadOrCreateDeviceId(database, Instant.now().toString());
+        return FolioleCompanionSyncReviewLogStore.loadReviewLog(database, cursor, limit, deviceId);
     }
 
-    JSObject loadSyncChanges(JSONObject cursor, int limit) throws Exception {
+    JSObject loadSyncStateChanges(Integer cursor, int limit) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncChangeStore.loadChanges(database, cursor, limit);
+        return FolioleCompanionSyncObjectStore.loadSyncStateChanges(database, cursor == null ? 0 : cursor, limit);
+    }
+
+    JSObject loadSyncStateCursor() throws Exception {
+        return loadNumberCursor(SYNC_STATE_CURSOR_KEY);
+    }
+
+    JSObject saveSyncStateCursor(Integer cursor) throws Exception {
+        return saveNumberCursor(SYNC_STATE_CURSOR_KEY, cursor);
+    }
+
+    JSObject loadSyncStatePushCursor() throws Exception {
+        return loadNumberCursor(SYNC_STATE_PUSH_CURSOR_KEY);
+    }
+
+    JSObject saveSyncStatePushCursor(Integer cursor) throws Exception {
+        return saveNumberCursor(SYNC_STATE_PUSH_CURSOR_KEY, cursor);
+    }
+
+    JSObject loadSyncNodeVersionCursor() throws Exception {
+        return loadSyncEventCursor(SYNC_NODE_VERSION_CURSOR_KEY);
+    }
+
+    JSObject saveSyncNodeVersionCursor(JSONObject cursor) throws Exception {
+        return saveSyncEventCursor(SYNC_NODE_VERSION_CURSOR_KEY, cursor);
+    }
+
+    JSObject loadSyncNodeVersionPushCursor() throws Exception {
+        return loadSyncEventCursor(SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
+    }
+
+    JSObject saveSyncNodeVersionPushCursor(JSONObject cursor) throws Exception {
+        return saveSyncEventCursor(SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
+    }
+
+    JSObject loadSyncReviewLogCursor() throws Exception {
+        return loadSyncEventCursor(SYNC_REVIEW_LOG_CURSOR_KEY);
+    }
+
+    JSObject saveSyncReviewLogCursor(JSONObject cursor) throws Exception {
+        return saveSyncEventCursor(SYNC_REVIEW_LOG_CURSOR_KEY, cursor);
+    }
+
+    JSObject loadSyncReviewLogPushCursor() throws Exception {
+        return loadSyncEventCursor(SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
+    }
+
+    JSObject saveSyncReviewLogPushCursor(JSONObject cursor) throws Exception {
+        return saveSyncEventCursor(SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
     }
 
     JSObject saveSyncSettingRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncChangeStore.saveSetting(database, record, deviceId);
+        return FolioleCompanionSyncStateWriteStore.saveSetting(database, record, deviceId);
     }
 
     JSObject saveSyncNodeReadingRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncChangeStore.saveNodeReading(database, record, deviceId);
+        return FolioleCompanionSyncStateWriteStore.saveNodeReading(database, record, deviceId);
+    }
+
+    private JSObject loadNumberCursor(String key) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        JSObject result = new JSObject();
+        String stored = loadMetaValue(database, key);
+        result.put("cursor", stored == null ? JSONObject.NULL : Integer.parseInt(stored));
+        return result;
+    }
+
+    private JSObject saveNumberCursor(String key, Integer cursor) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        if (cursor == null || cursor <= 0) {
+            deleteMetaValue(database, key);
+        } else {
+            saveMetaValue(database, key, String.valueOf(cursor), Instant.now().toString());
+        }
+        return loadNumberCursor(key);
+    }
+
+    private JSObject loadSyncEventCursor(String key) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        JSObject result = new JSObject();
+        String stored = loadMetaValue(database, key);
+        result.put("cursor", stored == null ? JSONObject.NULL : new JSONObject(stored));
+        return result;
+    }
+
+    private JSObject saveSyncEventCursor(String key, JSONObject cursor) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        if (cursor == null || cursor.isNull("created_at") || cursor.isNull("change_id")) {
+            deleteMetaValue(database, key);
+        } else {
+            JSONObject normalized = new JSONObject();
+            normalized.put("created_at", cursor.getString("created_at"));
+            normalized.put("change_id", cursor.getString("change_id"));
+            saveMetaValue(database, key, normalized.toString(), Instant.now().toString());
+        }
+        return loadSyncEventCursor(key);
     }
 
     JSObject saveSyncNodeReviewRecord(JSONObject record) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = loadOrCreateDeviceId(database, Instant.now().toString());
-        return FolioleCompanionSyncChangeStore.saveNodeReview(database, record, deviceId);
+        return FolioleCompanionSyncStateWriteStore.saveNodeReview(database, record, deviceId);
     }
 
     JSObject saveSyncActiveViewState(JSONObject record) throws Exception {
@@ -415,7 +499,10 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
             return false;
         }
         String normalized = status.trim();
-        return normalized.equals("completed") || normalized.equals("dismissed") || normalized.equals("pending");
+        return normalized.equals("accepted") ||
+            normalized.equals("completed") ||
+            normalized.equals("dismissed") ||
+            normalized.equals("pending");
     }
 
     private void saveRememberedTargets(SQLiteDatabase database, List<String> rememberedTargets, String updatedAt) {

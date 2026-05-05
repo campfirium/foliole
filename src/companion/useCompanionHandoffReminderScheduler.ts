@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { scheduleCompanionHandoffReminders } from '../shared/platform/companionHandoffNotifications';
-import { loadCompanionDirtyNodes } from '../shared/platform/companionWorkspaceSync';
+import { loadCompanionPendingSyncSummary } from '../shared/platform/companionSyncObjects';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -17,13 +17,13 @@ export function useCompanionHandoffReminderScheduler(args: {
       return;
     }
 
-    void loadCompanionDirtyNodes()
-      .then((payload) => {
+    void loadCompanionPendingSyncSummary()
+      .then((summary) => {
         if (cancelled) {
           return;
         }
         return scheduleCompanionHandoffReminders({
-          dirtyCount: payload.nodes.length,
+          dirtyCount: summary.pendingCount,
           settings: args.settings
         });
       })

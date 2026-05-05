@@ -6,6 +6,7 @@ export type CompanionSyncOnboardingStatus = NativeCompanionWorkspaceSyncState['s
 
 function normalizeSyncOnboardingStatus(raw: Record<string, unknown>): CompanionSyncOnboardingStatus {
   if (
+    raw.sync_onboarding_status === 'accepted' ||
     raw.sync_onboarding_status === 'completed' ||
     raw.sync_onboarding_status === 'dismissed' ||
     raw.sync_onboarding_status === 'pending'

@@ -63,9 +63,9 @@ it('records external search folders as sync objects', () => {
     object_type: 'external_folder',
     sync_dirty: 1
   }]);
-  expect(openDatabaseConnection().driver.queryOne<{ object_type: string }>(
-    `SELECT object_type FROM sync_change_log WHERE object_type = 'external_folder' AND object_id = 'folder-1'`
-  )).toEqual({ object_type: 'external_folder' });
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'external_folder' AND object_id = 'folder-1'`
+  )).toEqual({ count: 0 });
 });
 
 it('writes an external folder tombstone when a folder is removed', () => {

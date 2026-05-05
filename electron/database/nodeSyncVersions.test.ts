@@ -22,7 +22,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
-import { flushNodeSyncVersion } from './nodeSyncVersions.js';
+import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
 
@@ -79,13 +79,45 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
     sync_dirty: 0
   });
   expect(
-    connection.driver.queryOne<{ object_id: string; parent_version_id: string | null; version_id: string }>(
-      'SELECT object_id, parent_version_id, version_id FROM node_sync_versions WHERE version_id = ?',
+    connection.driver.queryOne<{ object_id: string; parent_version_id: string | null; snapshot_json: string | null; version_id: string }>(
+      'SELECT object_id, parent_version_id, snapshot_json, version_id FROM node_sync_versions WHERE version_id = ?',
       [versionId ?? '']
     )
   ).toEqual({
     object_id: 'node-1',
     parent_version_id: null,
+    snapshot_json: expect.stringContaining('"title":"Node 1"'),
     version_id: versionId
+  });
+});
+
+it('creates an initial sync version for an unversioned clean node', () => {
+  upsertNodeSnapshot({
+    nodeId: 'node-1',
+    parentNodeId: null,
+    kind: 'topic',
+    title: 'Node 1',
+    isTitleManual: true,
+    content: 'Hello world',
+    reveal: null,
+    anchorLink: null,
+    imageRegions: null,
+    position: 0,
+    createdAt: '2026-04-21T10:00:00.000Z',
+    updatedAt: '2026-04-21T10:00:00.000Z'
+  });
+
+  const connection = openDatabaseConnection();
+  connection.driver.execute('UPDATE nodes SET sync_dirty = 0 WHERE id = ?', ['node-1']);
+
+  expect(flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z')).toContain('node-1');
+  expect(
+    connection.driver.queryOne<{ current_version_id: string | null; sync_dirty: number }>(
+      'SELECT current_version_id, sync_dirty FROM nodes WHERE id = ?',
+      ['node-1']
+    )
+  ).toEqual({
+    current_version_id: expect.stringMatching(/^desktop-.*#0$/),
+    sync_dirty: 0
   });
 });

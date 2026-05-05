@@ -1,0 +1,104 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
+
+const electronMock = vi.hoisted(() => ({
+  userDataPath: `/tmp/foliole-sync-push-events-${Math.random().toString(16).slice(2)}`
+}));
+const syncDatabaseMock = vi.hoisted(() => ({
+  applySyncNodes: vi.fn(() => ['node-mobile']),
+  applySyncReviewLog: vi.fn(() => ['op-mobile'])
+}));
+const syncAppliedEventsMock = vi.hoisted(() => ({ notifyWorkspaceSyncApplied: vi.fn() }));
+
+vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => electronMock.userDataPath) },
+  safeStorage: {
+    decryptString: vi.fn((payload: Buffer) => payload.toString('utf8')),
+    encryptString: vi.fn((payload: string) => Buffer.from(payload, 'utf8')),
+    isEncryptionAvailable: vi.fn(() => true)
+  }
+}));
+vi.mock('../database/syncApply.js', () => ({ applySyncNodes: syncDatabaseMock.applySyncNodes }));
+vi.mock('../database/syncReviewLog.js', () => ({ applySyncReviewLog: syncDatabaseMock.applySyncReviewLog }));
+vi.mock('./workspaceSyncAppliedEvents.js', () => ({
+  notifyWorkspaceSyncApplied: syncAppliedEventsMock.notifyWorkspaceSyncApplied
+}));
+
+async function pairDevice(endpoint: string) {
+  const createResponse = await fetch(`${endpoint}/companion/pair-requests`, {
+    body: JSON.stringify({ device_id: 'android-test-device', device_kind: 'android', device_name: 'Pixel Test' }),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST'
+  });
+  const pairRequest = (await createResponse.json()) as { pair_request_id: string };
+  const { approveCompanionPairRequest } = await import('./companionPairingRequests.js');
+  approveCompanionPairRequest(pairRequest.pair_request_id);
+  const finalizeResponse = await fetch(`${endpoint}/companion/pair`, {
+    body: JSON.stringify({ pair_request_id: pairRequest.pair_request_id }),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST'
+  });
+  return (await finalizeResponse.json()) as { device_id: string; device_secret: string };
+}
+
+async function resetTestState() {
+  const { stopLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
+  await stopLanWorkspaceSyncServer();
+  const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
+  const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
+  clearCompanionPairRequests();
+  clearCompanionRequestNonceCache();
+  syncAppliedEventsMock.notifyWorkspaceSyncApplied.mockClear();
+  delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
+  fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
+  electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-sync-push-events-'));
+}
+
+async function postNodeAndReviewPushes(endpoint: string, paired: { device_id: string; device_secret: string }) {
+  const nodeResponse = await postSigned(
+    endpoint,
+    '/companion/sync-node-versions',
+    JSON.stringify({ nodes: [{ object_id: 'node-mobile', object_type: 'node' }] }),
+    paired
+  );
+  expect(nodeResponse.status).toBe(200);
+  await expect(nodeResponse.json()).resolves.toMatchObject({ applied_node_ids: ['node-mobile'] });
+
+  const reviewResponse = await postSigned(
+    endpoint,
+    '/companion/sync-review-log',
+    JSON.stringify({ reviews: [{ op_id: 'op-mobile' }] }),
+    paired
+  );
+  expect(reviewResponse.status).toBe(200);
+  await expect(reviewResponse.json()).resolves.toMatchObject({ applied_op_ids: ['op-mobile'] });
+}
+
+describe('lan workspace sync push events', () => {
+  afterEach(resetTestState);
+
+  it('notifies renderer windows when pushed node and review streams are applied', async () => {
+    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38685';
+    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
+    await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
+    const paired = await pairDevice('http://127.0.0.1:38685');
+
+    await postNodeAndReviewPushes('http://127.0.0.1:38685', paired);
+
+    expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
+      appliedNodeIds: ['node-mobile'],
+      appliedObjectIds: [],
+      appliedReviewOpIds: []
+    });
+    expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
+      appliedNodeIds: [],
+      appliedObjectIds: [],
+      appliedReviewOpIds: ['op-mobile']
+    });
+  });
+});

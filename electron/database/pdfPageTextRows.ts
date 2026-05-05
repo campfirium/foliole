@@ -1,11 +1,8 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import {
-  appendSyncChangeLog,
   computeSyncContentHash,
   upsertSyncObjectState,
-  type SyncObjectType
+  type StateSyncObjectType
 } from '../../lib/core/database/syncState.js';
 import { syncPdfSearchIndexForAttachmentIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
@@ -23,7 +20,7 @@ interface ExistingPdfPageRow extends DatabaseRow {
   page: number;
 }
 
-const PDF_PAGE_TEXT_OBJECT_TYPE: SyncObjectType = 'pdf_page_text';
+const PDF_PAGE_TEXT_OBJECT_TYPE: StateSyncObjectType = 'pdf_page_text';
 
 function toPdfPageTextObjectId(attachmentId: string, page: number) {
   return `${attachmentId}:${page}`;
@@ -51,28 +48,6 @@ function computePdfPageTextTombstoneHash(attachmentId: string, page: number, del
   });
 }
 
-function appendPdfPageTextChange(input: {
-  attachmentId: string;
-  changeType: 'delete' | 'upsert';
-  contentHash: string;
-  deviceId: string;
-  page: number;
-  payloadJson: string;
-  timestamp: string;
-}) {
-  appendSyncChangeLog(openDatabaseConnection().driver, {
-    changeId: randomUUID(),
-    objectType: PDF_PAGE_TEXT_OBJECT_TYPE,
-    objectId: toPdfPageTextObjectId(input.attachmentId, input.page),
-    changeType: input.changeType,
-    deviceId: input.deviceId,
-    contentHash: input.contentHash,
-    payloadJson: input.payloadJson,
-    createdAt: input.timestamp,
-    appliedAt: input.timestamp
-  });
-}
-
 function recordPdfPageTextDeleted(attachmentId: string, page: number, deviceId: string, deletedAt: string) {
   const contentHash = computePdfPageTextTombstoneHash(attachmentId, page, deletedAt);
   upsertSyncObjectState(openDatabaseConnection().driver, {
@@ -83,15 +58,6 @@ function recordPdfPageTextDeleted(attachmentId: string, page: number, deviceId: 
     lastModifiedByDeviceId: deviceId,
     updatedAt: deletedAt,
     syncDirty: true
-  });
-  appendPdfPageTextChange({
-    attachmentId,
-    changeType: 'delete',
-    contentHash,
-    deviceId,
-    page,
-    payloadJson: JSON.stringify({ attachment_id: attachmentId, page }),
-    timestamp: deletedAt
   });
 }
 
@@ -128,15 +94,6 @@ export function savePdfPageTextRows(
         lastModifiedByDeviceId: deviceId,
         updatedAt: now,
         syncDirty: true
-      });
-      appendPdfPageTextChange({
-        attachmentId,
-        changeType: 'upsert',
-        contentHash,
-        deviceId,
-        page: page.page,
-        payloadJson: JSON.stringify(toPdfPageTextPayload(attachmentId, page)),
-        timestamp: now
       });
     }
     for (const row of existingPages) {

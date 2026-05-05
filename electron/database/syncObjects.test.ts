@@ -47,8 +47,8 @@ function insertSettingRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['setting', 'user_space:windows:desktop:*:app_settings', 'hash-setting', 'desktop', '2026-04-21T16:20:00.000Z', 1]
   );
 }
@@ -65,8 +65,8 @@ function insertImportSourceRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['import_source', 'source-1', 'hash-import-source', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
 }
@@ -83,8 +83,8 @@ function insertExternalFolderRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['external_folder', 'folder-1', 'hash-external-folder', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
 }
@@ -106,8 +106,8 @@ function insertAttachmentRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['attachment', 'att-1', 'hash-attachment', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
 }
@@ -166,7 +166,9 @@ it('loads attachment metadata and blob manifest sync payloads', () => {
     original_name: 'cover.png',
     blob: {
       availability: 'local',
+      cached_at: '2026-04-21T10:00:00.000Z',
       content_hash: 'sha256:att-1',
+      last_verified_at: '2026-04-21T10:00:00.000Z',
       storage_key: 'sha256-att-1.png'
     }
   });
@@ -192,7 +194,7 @@ it('records import sources as sync objects when written', () => {
   writeImportSource(openDatabaseConnection().driver, record);
 
   expect(loadSyncObjects(['source-1'], ['import_source'])).toHaveLength(1);
-  expect(openDatabaseConnection().driver.queryOne<{ object_type: string }>(
-    `SELECT object_type FROM sync_change_log WHERE object_type = 'import_source' AND object_id = 'source-1'`
-  )).toEqual({ object_type: 'import_source' });
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'import_source' AND object_id = 'source-1'`
+  )).toEqual({ count: 0 });
 });

@@ -87,13 +87,13 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   const localOnlyCount = connection.sqlite
     .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
     .get('watch_import_cursor_state') as { count: number };
-  const change = connection.sqlite
+  const changeCount = connection.sqlite
     .prepare(
-      `SELECT change_type, payload_json
+      `SELECT COUNT(*) AS count
        FROM sync_change_log
        WHERE object_type = 'setting' AND object_id = ?`
     )
-    .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
+    .get('user_space:windows:desktop:*:app_settings') as { count: number };
 
   expect(settingRecord).toMatchObject({
     device_id: '*',
@@ -109,11 +109,6 @@ it('mirrors syncable settings into setting records and sync object state', () =>
     object_type: 'setting',
     sync_dirty: 1
   });
-  expect(change.change_type).toBe('upsert');
-  expect(JSON.parse(String(change.payload_json))).toMatchObject({
-    key: 'app_settings',
-    scope: 'user_space',
-    value_json: '{"theme":"dark"}'
-  });
+  expect(changeCount.count).toBe(0);
   expect(localOnlyCount.count).toBe(0);
 });

@@ -1,6 +1,4 @@
-import { randomUUID } from 'node:crypto';
-
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 import type { DatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -45,17 +43,6 @@ function writeViewStateObject(connection: DatabaseConnection, key: string, paylo
     lastModifiedByDeviceId: deviceId,
     updatedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(connection.driver, {
-    changeId: randomUUID(),
-    objectType: 'view_state',
-    objectId,
-    changeType: 'upsert',
-    deviceId,
-    contentHash,
-    payloadJson: JSON.stringify(syncPayload),
-    createdAt: updatedAt,
-    appliedAt: updatedAt
   });
 }
 

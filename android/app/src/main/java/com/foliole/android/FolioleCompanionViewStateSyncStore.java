@@ -11,7 +11,6 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
-import java.util.UUID;
 
 final class FolioleCompanionViewStateSyncStore {
 
@@ -99,26 +98,7 @@ final class FolioleCompanionViewStateSyncStore {
     }
 
     private static void writeSyncRows(SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) {
-        ContentValues state = new ContentValues();
-        state.put("object_type", "view_state");
-        state.put("object_id", objectId);
-        state.put("content_hash", contentHash);
-        state.put("last_modified_by_device_id", deviceId);
-        state.put("updated_at", now);
-        state.put("sync_dirty", 1);
-        database.insertWithOnConflict("sync_object_state", null, state, SQLiteDatabase.CONFLICT_REPLACE);
-
-        ContentValues change = new ContentValues();
-        change.put("change_id", UUID.randomUUID().toString());
-        change.put("object_type", "view_state");
-        change.put("object_id", objectId);
-        change.put("change_type", "upsert");
-        change.put("device_id", deviceId);
-        change.put("content_hash", contentHash);
-        change.put("payload_json", payload.toString());
-        change.put("created_at", now);
-        change.put("applied_at", now);
-        database.insertOrThrow("sync_change_log", null, change);
+        FolioleCompanionSyncStateRows.upsert(database, "view_state", objectId, null, contentHash, deviceId, now, null, 1);
     }
 
     private static void upsertActiveNode(SQLiteDatabase database, String nodeId, String now) {

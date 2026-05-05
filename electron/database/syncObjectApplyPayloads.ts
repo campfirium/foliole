@@ -228,13 +228,26 @@ function applyViewState(driver: DatabaseDriver, record: NativeSyncObjectRecord) 
 }
 
 export function applySyncObjectPayload(driver: DatabaseDriver, record: NativeSyncObjectRecord) {
-  if (record.object_type === 'attachment') applyAttachment(driver, record);
-  if (record.object_type === 'external_document') applyExternalDocument(driver, record);
-  if (record.object_type === 'external_folder') applyExternalFolder(driver, record);
-  if (record.object_type === 'import_source') applyImportSource(driver, record);
-  if (record.object_type === 'node_reading') applyNodeReading(driver, record);
-  if (record.object_type === 'node_review') applyNodeReview(driver, record);
-  if (record.object_type === 'pdf_page_text') applyPdfPageText(driver, record);
-  if (record.object_type === 'setting') applySetting(driver, record);
-  if (record.object_type === 'view_state') applyViewState(driver, record);
+  switch (record.object_type) {
+    case 'attachment':
+      return applyAttachment(driver, record);
+    case 'external_document':
+      return applyExternalDocument(driver, record);
+    case 'external_folder':
+      return applyExternalFolder(driver, record);
+    case 'import_source':
+      return applyImportSource(driver, record);
+    case 'node_reading':
+      return applyNodeReading(driver, record);
+    case 'node_review':
+      return applyNodeReview(driver, record);
+    case 'pdf_page_text':
+      return applyPdfPageText(driver, record);
+    case 'setting':
+      return applySetting(driver, record);
+    case 'view_state':
+      return applyViewState(driver, record);
+    default:
+      throw new Error(`Unsupported sync object type: ${String((record as { object_type?: unknown }).object_type)}`);
+  }
 }

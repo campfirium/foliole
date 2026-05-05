@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 const DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
 const PLATFORM = 'windows';
@@ -97,23 +95,5 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
     lastModifiedByDeviceId: deviceId,
     updatedAt: input.updatedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'setting',
-    objectId: toSettingObjectId({ deviceId, key: input.key, scope }),
-    changeType: 'upsert',
-    deviceId,
-    contentHash,
-    payloadJson: JSON.stringify({
-      device_id: recordDeviceId,
-      form_factor: FORM_FACTOR,
-      key: input.key,
-      platform: PLATFORM,
-      scope,
-      value_json: input.valueJson
-    }),
-    createdAt: input.updatedAt,
-    appliedAt: input.updatedAt
   });
 }

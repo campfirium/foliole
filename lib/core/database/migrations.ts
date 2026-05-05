@@ -3,7 +3,7 @@ import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migratio
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 import { migrateWorkspaceSearchIndexes } from './workspaceSearchMigration.js';
 
-export const DATABASE_SCHEMA_VERSION = 26;
+export const DATABASE_SCHEMA_VERSION = 28;
 
 const CREATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -35,7 +35,8 @@ const CREATE_SCHEMA_STATEMENTS = [
     parent_version_id TEXT,
     device_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    content_hash TEXT NOT NULL
+    content_hash TEXT NOT NULL,
+    snapshot_json TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS idx_node_sync_versions_object_created
     ON node_sync_versions (object_id, created_at)`,
@@ -207,7 +208,7 @@ const CREATE_SCHEMA_STATEMENTS = [
 ];
 
 const LEGACY_REBUILD_REQUIRED_MESSAGE =
-  'legacy development database schema is no longer supported; delete the existing foliole.db and rebuild with the new schema';
+  'existing database schema is no longer supported; reset foliole.db and initialize fresh schema';
 
 function readUserVersion(sqlite: DatabaseMigrationTarget): number {
   const value = sqlite.pragma('user_version', { simple: true });
@@ -226,7 +227,7 @@ function createFreshSchema(sqlite: DatabaseMigrationTarget) {
   setUserVersion(sqlite, DATABASE_SCHEMA_VERSION);
 }
 
-export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
+export function initializeDatabaseSchema(sqlite: DatabaseMigrationTarget) {
   const applyInTransaction = sqlite.transaction(() => {
     const currentVersion = readUserVersion(sqlite);
     if (currentVersion === 0) {
@@ -245,7 +246,7 @@ export function runDatabaseMigrations(sqlite: DatabaseMigrationTarget) {
 }
 
 export function initializeDatabaseConnection<T extends DatabaseConnectionLike>(connection: T): T {
-  runDatabaseMigrations(connection.sqlite);
+  initializeDatabaseSchema(connection.sqlite);
   return connection;
 }
 

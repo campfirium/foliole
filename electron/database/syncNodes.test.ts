@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { loadSyncNodes } from './syncNodes.js';
+import { loadSyncNodes, loadSyncNodeVersionsSince } from './syncNodes.js';
 
 let tempRoot = '';
 
@@ -175,5 +175,27 @@ describe('loadSyncNodes', () => {
 
   it('returns empty array for empty object ids input', () => {
     expect(loadSyncNodes([])).toEqual([]);
+  });
+
+  it('loads current node records changed after a node version cursor', () => {
+    const connection = openDatabaseConnection();
+    insertSyncNodeFixture(connection);
+
+    expect(loadSyncNodeVersionsSince({ createdAt: '2026-04-21T10:30:00.000Z', versionId: 'desktop#1' }, 10))
+      .toEqual(expectedSyncNodeRecord());
+  });
+
+  it('uses version snapshot json instead of current node state for version streams', () => {
+    const connection = openDatabaseConnection();
+    insertSyncNodeFixture(connection);
+    connection.driver.execute(
+      `UPDATE node_sync_versions
+       SET snapshot_json = ?
+       WHERE version_id = ?`,
+      [JSON.stringify({ ...expectedSyncNodeRecord()[0].snapshot, title: 'Historical title' }), 'desktop#2']
+    );
+
+    expect(loadSyncNodeVersionsSince({ createdAt: '2026-04-21T10:30:00.000Z', versionId: 'desktop#1' }, 10)[0].snapshot.title)
+      .toBe('Historical title');
   });
 });

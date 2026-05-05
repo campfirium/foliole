@@ -17,10 +17,11 @@ export type SyncObjectType =
   | 'setting'
   | 'view_state';
 
-export type SyncChangeType = 'delete' | 'link' | 'touch' | 'unlink' | 'upsert';
+export type StateSyncObjectType = Exclude<SyncObjectType, 'import_run' | 'node'>;
+export type SyncStreamName = 'node_versions' | 'review_log' | 'state';
 
 export interface SyncObjectStateInput {
-  objectType: SyncObjectType;
+  objectType: StateSyncObjectType;
   objectId: string;
   currentVersionId?: string | null;
   contentHash: string;
@@ -30,43 +31,27 @@ export interface SyncObjectStateInput {
   syncDirty?: boolean;
 }
 
-export interface SyncChangeLogInput {
-  changeId: string;
-  objectType: SyncObjectType;
-  objectId: string;
-  changeType: SyncChangeType;
-  deviceId: string;
-  baseVersionId?: string | null;
-  resultVersionId?: string | null;
-  contentHash: string;
-  payloadJson: string;
-  createdAt: string;
-  appliedAt?: string | null;
+export interface SyncObjectStateRecord extends SyncObjectStateInput {
+  stateSeq: number;
+  currentVersionId: string | null;
+  deletedAt: string | null;
+  syncDirty: boolean;
 }
 
-export interface SyncChangeCursor {
-  createdAt: string;
-  changeId: string;
-}
-
-export interface SyncChangeLogRecord extends SyncChangeLogInput {
-  baseVersionId: string | null;
-  resultVersionId: string | null;
-  appliedAt: string | null;
-}
-
-interface SyncChangeLogRow extends DatabaseRow {
-  change_id: string;
-  object_type: SyncObjectType;
+interface SyncObjectStateRow extends DatabaseRow {
+  object_type: StateSyncObjectType;
   object_id: string;
-  change_type: SyncChangeType;
-  device_id: string;
-  base_version_id: string | null;
-  result_version_id: string | null;
+  state_seq: number;
+  current_version_id: string | null;
   content_hash: string;
-  payload_json: string;
-  created_at: string;
-  applied_at: string | null;
+  last_modified_by_device_id: string;
+  updated_at: string;
+  deleted_at: string | null;
+  sync_dirty: number;
+}
+
+interface SyncPeerCursorRow extends DatabaseRow {
+  cursor_value: string;
 }
 
 type JsonValue = boolean | null | number | string | JsonValue[] | { [key: string]: JsonValue | undefined };
@@ -92,127 +77,100 @@ export function computeSyncContentHash(objectType: SyncObjectType, payload: Json
 }
 
 export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectStateInput): void {
-  driver.execute(
-    `INSERT INTO sync_object_state (
+  driver.transaction((transactionDriver) => {
+    const nextSeq = (transactionDriver.queryOne<{ value: number }>(
+      'SELECT COALESCE(MAX(state_seq), 0) + 1 AS value FROM sync_object_state'
+    )?.value ?? 1);
+    transactionDriver.execute(
+      `INSERT INTO sync_object_state (
+         object_type,
+         object_id,
+         state_seq,
+         current_version_id,
+         content_hash,
+         last_modified_by_device_id,
+         updated_at,
+         deleted_at,
+         sync_dirty
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(object_type, object_id) DO UPDATE SET
+         state_seq = excluded.state_seq,
+         current_version_id = excluded.current_version_id,
+         content_hash = excluded.content_hash,
+         last_modified_by_device_id = excluded.last_modified_by_device_id,
+         updated_at = excluded.updated_at,
+         deleted_at = excluded.deleted_at,
+         sync_dirty = excluded.sync_dirty`,
+      [
+        input.objectType,
+        input.objectId,
+        nextSeq,
+        input.currentVersionId ?? null,
+        input.contentHash,
+        input.lastModifiedByDeviceId,
+        input.updatedAt,
+        input.deletedAt ?? null,
+        input.syncDirty ? 1 : 0
+      ]
+    );
+  });
+}
+
+function toSyncObjectStateRecord(row: SyncObjectStateRow): SyncObjectStateRecord {
+  return {
+    objectType: row.object_type,
+    objectId: row.object_id,
+    stateSeq: row.state_seq,
+    currentVersionId: row.current_version_id,
+    contentHash: row.content_hash,
+    lastModifiedByDeviceId: row.last_modified_by_device_id,
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at,
+    syncDirty: row.sync_dirty === 1
+  };
+}
+
+export function selectSyncStateChangesSince(driver: DatabaseDriver, cursor: number, limit = 500): SyncObjectStateRecord[] {
+  const rows = driver.queryAll<SyncObjectStateRow>(
+    `SELECT
        object_type,
        object_id,
+       state_seq,
        current_version_id,
        content_hash,
        last_modified_by_device_id,
        updated_at,
        deleted_at,
        sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(object_type, object_id) DO UPDATE SET
-       current_version_id = excluded.current_version_id,
-       content_hash = excluded.content_hash,
-       last_modified_by_device_id = excluded.last_modified_by_device_id,
-       updated_at = excluded.updated_at,
-       deleted_at = excluded.deleted_at,
-       sync_dirty = excluded.sync_dirty`,
-    [
-      input.objectType,
-      input.objectId,
-      input.currentVersionId ?? null,
-      input.contentHash,
-      input.lastModifiedByDeviceId,
-      input.updatedAt,
-      input.deletedAt ?? null,
-      input.syncDirty ? 1 : 0
-    ]
+     FROM sync_object_state
+     WHERE state_seq > ?
+     ORDER BY state_seq ASC
+     LIMIT ?`,
+    [Math.max(0, Math.trunc(cursor)), Math.max(1, Math.min(1000, Math.trunc(limit)))]
   );
+  return rows.map(toSyncObjectStateRecord);
 }
 
-export function appendSyncChangeLog(driver: DatabaseDriver, input: SyncChangeLogInput): void {
-  driver.execute(
-    `INSERT INTO sync_change_log (
-       change_id,
-       object_type,
-       object_id,
-       change_type,
-       device_id,
-       base_version_id,
-       result_version_id,
-       content_hash,
-       payload_json,
-       created_at,
-       applied_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      input.changeId,
-      input.objectType,
-      input.objectId,
-      input.changeType,
-      input.deviceId,
-      input.baseVersionId ?? null,
-      input.resultVersionId ?? null,
-      input.contentHash,
-      input.payloadJson,
-      input.createdAt,
-      input.appliedAt ?? null
-    ]
-  );
+export function getPeerCursor(driver: DatabaseDriver, peerId: string, streamName: SyncStreamName): string | null {
+  return driver.queryOne<SyncPeerCursorRow>(
+    'SELECT cursor_value FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ?',
+    [peerId, streamName]
+  )?.cursor_value ?? null;
 }
 
-function toSyncChangeLogRecord(row: SyncChangeLogRow): SyncChangeLogRecord {
-  return {
-    changeId: row.change_id,
-    objectType: row.object_type,
-    objectId: row.object_id,
-    changeType: row.change_type,
-    deviceId: row.device_id,
-    baseVersionId: row.base_version_id,
-    resultVersionId: row.result_version_id,
-    contentHash: row.content_hash,
-    payloadJson: row.payload_json,
-    createdAt: row.created_at,
-    appliedAt: row.applied_at
-  };
-}
-
-export function listSyncChangesAfterCursor(
+export function setPeerCursor(
   driver: DatabaseDriver,
-  cursor: SyncChangeCursor | null,
-  limit = 500
-): SyncChangeLogRecord[] {
-  const rows = cursor
-    ? driver.queryAll<SyncChangeLogRow>(
-        `SELECT
-           change_id,
-           object_type,
-           object_id,
-           change_type,
-           device_id,
-           base_version_id,
-           result_version_id,
-           content_hash,
-           payload_json,
-           created_at,
-           applied_at
-         FROM sync_change_log
-         WHERE created_at > ? OR (created_at = ? AND change_id > ?)
-         ORDER BY created_at ASC, change_id ASC
-         LIMIT ?`,
-        [cursor.createdAt, cursor.createdAt, cursor.changeId, limit]
-      )
-    : driver.queryAll<SyncChangeLogRow>(
-        `SELECT
-           change_id,
-           object_type,
-           object_id,
-           change_type,
-           device_id,
-           base_version_id,
-           result_version_id,
-           content_hash,
-           payload_json,
-           created_at,
-           applied_at
-         FROM sync_change_log
-         ORDER BY created_at ASC, change_id ASC
-         LIMIT ?`,
-        [limit]
-      );
-
-  return rows.map(toSyncChangeLogRecord);
+  peerId: string,
+  streamName: SyncStreamName,
+  cursorValue: string,
+  updatedAt: string
+): void {
+  driver.execute(
+    `INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(peer_id, stream_name) DO UPDATE SET
+       cursor_value = excluded.cursor_value,
+       updated_at = excluded.updated_at`,
+    [peerId, streamName, cursorValue, updatedAt]
+  );
 }

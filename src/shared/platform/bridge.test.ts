@@ -5,6 +5,7 @@ import {
   listRuntimeSystemFonts,
   onManagedInboxUpdated,
   onNativeMenuCommand,
+  onWorkspaceSyncApplied,
   openExternalUrl,
   openLocalPath,
   reportRuntimeAppReady,
@@ -13,7 +14,7 @@ import {
   resolveRuntimeAppPaths,
   syncNativeMenuState
 } from './bridge';
-import type { ElectronAPI } from './electronApi';
+import type { ElectronAPI, WorkspaceSyncAppliedPayload } from './electronApi';
 import { onMainWindowResized } from './windowControls';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
@@ -222,6 +223,24 @@ it('filters empty managed inbox update events before reaching the handler', asyn
 
   expect(handler).toHaveBeenCalledTimes(1);
   expect(handler).toHaveBeenCalledWith('import-42');
+});
+
+it('filters empty workspace sync applied events before reaching the handler', async () => {
+  const onWorkspaceSyncAppliedBridge = vi.fn((handler: (payload: WorkspaceSyncAppliedPayload) => void) => {
+    handler({ appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] });
+    handler({ appliedNodeIds: ['node-1'], appliedObjectIds: [], appliedReviewOpIds: [] });
+    return () => undefined;
+  });
+  window.electronAPI = {
+    ...createMockElectronApi(vi.fn()),
+    onWorkspaceSyncApplied: onWorkspaceSyncAppliedBridge
+  };
+  const handler = vi.fn();
+
+  await onWorkspaceSyncApplied(handler);
+
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler).toHaveBeenCalledWith({ appliedNodeIds: ['node-1'], appliedObjectIds: [], appliedReviewOpIds: [] });
 });
 
 it('filters empty native menu events before reaching the handler', async () => {

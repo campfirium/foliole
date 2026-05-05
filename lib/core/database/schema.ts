@@ -1,4 +1,4 @@
-import { integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const nodes = sqliteTable('nodes', {
   id: text('id').primaryKey(),
@@ -30,7 +30,8 @@ export const nodeSyncVersions = sqliteTable('node_sync_versions', {
   parentVersionId: text('parent_version_id'),
   deviceId: text('device_id').notNull(),
   createdAt: text('created_at').notNull(),
-  contentHash: text('content_hash').notNull()
+  contentHash: text('content_hash').notNull(),
+  snapshotJson: text('snapshot_json')
 });
 
 export const nodeSyncConflicts = sqliteTable('node_sync_conflicts', {
@@ -194,6 +195,7 @@ export const syncObjectState = sqliteTable(
   {
     objectType: text('object_type').notNull(),
     objectId: text('object_id').notNull(),
+    stateSeq: integer('state_seq').notNull(),
     currentVersionId: text('current_version_id'),
     contentHash: text('content_hash').notNull(),
     lastModifiedByDeviceId: text('last_modified_by_device_id').notNull(),
@@ -201,7 +203,10 @@ export const syncObjectState = sqliteTable(
     deletedAt: text('deleted_at'),
     syncDirty: integer('sync_dirty', { mode: 'boolean' }).notNull().default(false)
   },
-  (table) => [primaryKey({ columns: [table.objectType, table.objectId] })]
+  (table) => [
+    primaryKey({ columns: [table.objectType, table.objectId] }),
+    uniqueIndex('idx_sync_object_state_state_seq_unique').on(table.stateSeq)
+  ]
 );
 
 export const syncChangeLog = sqliteTable('sync_change_log', {
@@ -217,6 +222,17 @@ export const syncChangeLog = sqliteTable('sync_change_log', {
   createdAt: text('created_at').notNull(),
   appliedAt: text('applied_at')
 });
+
+export const syncPeerCursors = sqliteTable(
+  'sync_peer_cursors',
+  {
+    peerId: text('peer_id').notNull(),
+    streamName: text('stream_name').notNull(),
+    cursorValue: text('cursor_value').notNull(),
+    updatedAt: text('updated_at').notNull()
+  },
+  (table) => [primaryKey({ columns: [table.peerId, table.streamName] })]
+);
 
 export const attachmentBlobs = sqliteTable('attachment_blobs', {
   attachmentId: text('attachment_id').primaryKey(),

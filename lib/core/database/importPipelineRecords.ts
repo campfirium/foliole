@@ -8,7 +8,7 @@ import type {
 
 import type { DatabaseDriver } from './driver.js';
 import { loadOrCreateDatabaseDeviceId } from './syncDeviceIdentity.js';
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 interface ImportSourceRow {
   [column: string]: unknown;
@@ -134,17 +134,6 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
     lastModifiedByDeviceId: deviceId,
     updatedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'import_source',
-    objectId: sourceFingerprint,
-    changeType: 'upsert',
-    deviceId,
-    contentHash,
-    payloadJson: JSON.stringify(payload),
-    createdAt: updatedAt,
-    appliedAt: updatedAt
   });
 }
 

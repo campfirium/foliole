@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+
 const syncMocks = vi.hoisted(() => ({
   discoverCompanionDesktop: vi.fn(),
   discoverCompanionDesktops: vi.fn(),
@@ -20,14 +22,16 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 
 function createArgs() {
+  const bootstrapState: NativeCompanionBootstrapState = {
+    booted_at: '2026-04-24T03:00:00.000Z',
+    database_path: 'foliole-companion.db',
+    database_ready: true,
+    device_id: 'android-test-device',
+    device_name: null,
+    runtime_kind: 'android-capacitor'
+  };
   return {
-    bootstrapState: {
-      booted_at: '2026-04-24T03:00:00.000Z',
-      database_path: 'foliole-companion.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor' as const
-    },
+    bootstrapState,
     onError: vi.fn(),
     onSaveEndpoint: vi.fn(async () => undefined)
   };
@@ -43,11 +47,43 @@ function mockStoredPairingState() {
   });
 }
 
-describe('useCompanionWorkspacePairing', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+function desktopDiscovery(hostName = 'V', endpointUrl = 'http://192.168.1.8:38641') {
+  return {
+    discovery: {
+      app_version: '0.1.0',
+      desktop_device_name: `Foliole Desktop on ${hostName}`,
+      desktop_name: 'Foliole Desktop',
+      desktop_platform: hostName === 'Studio' ? 'macOS' : 'Windows',
+      host_name: hostName,
+      peer_id: `desktop-${hostName.toLowerCase()}`
+    },
+    endpointUrl
+  };
+}
 
+function mockPairRequest() {
+  syncMocks.requestCompanionPairing.mockResolvedValue({
+    expires_at: '2026-04-24T10:02:00.000Z',
+    pair_request_id: 'pair-request-1',
+    status: 'pending'
+  });
+}
+
+function pairedState() {
+  return {
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Pixel 9',
+    is_paired: true,
+    paired_at: '2026-04-24T10:03:00.000Z'
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('useCompanionWorkspacePairing loading', () => {
   it('loads stored pairing state once on initial render', async () => {
     mockStoredPairingState();
     const args = createArgs();
@@ -60,50 +96,17 @@ describe('useCompanionWorkspacePairing', () => {
       expect(syncMocks.loadCompanionPairingState).toHaveBeenCalledTimes(1);
     });
   });
+});
 
-
+describe('useCompanionWorkspacePairing request flow', () => {
   it('can cancel a pending pair request and keep discovered devices available', async () => {
     mockStoredPairingState();
     syncMocks.discoverCompanionDesktops.mockResolvedValue([
-      {
-        discovery: {
-          app_version: '0.1.0',
-          desktop_device_name: 'Foliole Desktop on V',
-          desktop_name: 'Foliole Desktop',
-          desktop_platform: 'Windows',
-          host_name: 'V',
-          peer_id: 'desktop-v'
-        },
-        endpointUrl: 'http://192.168.1.8:38641'
-      },
-      {
-        discovery: {
-          app_version: '0.1.0',
-          desktop_device_name: 'Foliole Desktop on Studio',
-          desktop_name: 'Foliole Desktop',
-          desktop_platform: 'macOS',
-          host_name: 'Studio',
-          peer_id: 'desktop-studio'
-        },
-        endpointUrl: 'http://192.168.1.12:38641'
-      }
+      desktopDiscovery(),
+      desktopDiscovery('Studio', 'http://192.168.1.12:38641')
     ]);
-    syncMocks.discoverCompanionDesktop.mockResolvedValue({
-      discovery: {
-        app_version: '0.1.0',
-        desktop_device_name: 'Foliole Desktop on V',
-        desktop_name: 'Foliole Desktop',
-        desktop_platform: 'Windows',
-        host_name: 'V',
-        peer_id: 'desktop-v'
-      },
-      endpointUrl: 'http://192.168.1.8:38641'
-    });
-    syncMocks.requestCompanionPairing.mockResolvedValue({
-      expires_at: '2026-04-24T10:02:00.000Z',
-      pair_request_id: 'pair-request-1',
-      status: 'pending'
-    });
+    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
+    mockPairRequest();
     const args = createArgs();
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
 
@@ -128,22 +131,8 @@ describe('useCompanionWorkspacePairing', () => {
 
   it('clears an expired pending pair request so the user can pair again', async () => {
     mockStoredPairingState();
-    syncMocks.discoverCompanionDesktop.mockResolvedValue({
-      discovery: {
-        app_version: '0.1.0',
-        desktop_device_name: 'Foliole Desktop on V',
-        desktop_name: 'Foliole Desktop',
-        desktop_platform: 'Windows',
-        host_name: 'V',
-        peer_id: 'desktop-v'
-      },
-      endpointUrl: 'http://192.168.1.8:38641'
-    });
-    syncMocks.requestCompanionPairing.mockResolvedValue({
-      expires_at: '2026-04-24T10:02:00.000Z',
-      pair_request_id: 'pair-request-1',
-      status: 'pending'
-    });
+    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
+    mockPairRequest();
     syncMocks.pairCompanionWithDesktop.mockRejectedValue(new Error('Desktop pairing failed with 404.'));
     const args = createArgs();
 
@@ -165,22 +154,8 @@ describe('useCompanionWorkspacePairing', () => {
 
   it('uses the native device name when requesting pairing', async () => {
     mockStoredPairingState();
-    syncMocks.discoverCompanionDesktop.mockResolvedValue({
-      discovery: {
-        app_version: '0.1.0',
-        desktop_device_name: 'Foliole Desktop on V',
-        desktop_name: 'Foliole Desktop',
-        desktop_platform: 'Windows',
-        host_name: 'V',
-        peer_id: 'desktop-v'
-      },
-      endpointUrl: 'http://192.168.1.8:38641'
-    });
-    syncMocks.requestCompanionPairing.mockResolvedValue({
-      expires_at: '2026-04-24T10:02:00.000Z',
-      pair_request_id: 'pair-request-1',
-      status: 'pending'
-    });
+    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
+    mockPairRequest();
     const args = createArgs();
     args.bootstrapState.device_name = 'Pixel 9';
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
@@ -193,34 +168,16 @@ describe('useCompanionWorkspacePairing', () => {
       deviceName: 'Pixel 9'
     }));
   });
+});
 
+describe('useCompanionWorkspacePairing completion flow', () => {
   it('does not send duplicate completion requests while approval is being consumed', async () => {
     mockStoredPairingState();
-    syncMocks.discoverCompanionDesktop.mockResolvedValue({
-      discovery: {
-        app_version: '0.1.0',
-        desktop_device_name: 'Foliole Desktop on V',
-        desktop_name: 'Foliole Desktop',
-        desktop_platform: 'Windows',
-        host_name: 'V',
-        peer_id: 'desktop-v'
-      },
-      endpointUrl: 'http://192.168.1.8:38641'
-    });
-    syncMocks.requestCompanionPairing.mockResolvedValue({
-      expires_at: '2026-04-24T10:02:00.000Z',
-      pair_request_id: 'pair-request-1',
-      status: 'pending'
-    });
+    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
+    mockPairRequest();
     syncMocks.pairCompanionWithDesktop.mockImplementation(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 10));
-      return {
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Pixel 9',
-        is_paired: true,
-        paired_at: '2026-04-24T10:03:00.000Z'
-      };
+      return pairedState();
     });
     const args = createArgs();
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
@@ -239,34 +196,14 @@ describe('useCompanionWorkspacePairing', () => {
     expect(syncMocks.pairCompanionWithDesktop).toHaveBeenCalledTimes(1);
     expect(result.current.pairingState.is_paired).toBe(true);
   });
+});
 
-
-
+describe('useCompanionWorkspacePairing stale completion flow', () => {
   it('ignores stale completion retries after pairing already succeeded', async () => {
     mockStoredPairingState();
-    syncMocks.discoverCompanionDesktop.mockResolvedValue({
-      discovery: {
-        app_version: '0.1.0',
-        desktop_device_name: 'Foliole Desktop on V',
-        desktop_name: 'Foliole Desktop',
-        desktop_platform: 'Windows',
-        host_name: 'V',
-        peer_id: 'desktop-v'
-      },
-      endpointUrl: 'http://192.168.1.8:38641'
-    });
-    syncMocks.requestCompanionPairing.mockResolvedValue({
-      expires_at: '2026-04-24T10:02:00.000Z',
-      pair_request_id: 'pair-request-1',
-      status: 'pending'
-    });
-    syncMocks.pairCompanionWithDesktop.mockResolvedValueOnce({
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Pixel 9',
-      is_paired: true,
-      paired_at: '2026-04-24T10:03:00.000Z'
-    });
+    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
+    mockPairRequest();
+    syncMocks.pairCompanionWithDesktop.mockResolvedValueOnce(pairedState());
     const args = createArgs();
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
 
@@ -290,35 +227,17 @@ describe('useCompanionWorkspacePairing', () => {
     expect(result.current.pairingState.is_paired).toBe(true);
     expect(args.onError).toHaveBeenLastCalledWith(null);
   });
+});
 
+describe('useCompanionWorkspacePairing stale hydration flow', () => {
   it('keeps the paired state when a stale initial load resolves after pairing', async () => {
     let resolveStoredPairingState: (value: unknown) => void = () => undefined;
     syncMocks.loadCompanionPairingState.mockReturnValue(new Promise((resolve) => {
       resolveStoredPairingState = resolve;
     }));
-    syncMocks.discoverCompanionDesktop.mockResolvedValue({
-      discovery: {
-        app_version: '0.1.0',
-        desktop_device_name: 'Foliole Desktop on V',
-        desktop_name: 'Foliole Desktop',
-        desktop_platform: 'Windows',
-        host_name: 'V',
-        peer_id: 'desktop-v'
-      },
-      endpointUrl: 'http://192.168.1.8:38641'
-    });
-    syncMocks.requestCompanionPairing.mockResolvedValue({
-      expires_at: '2026-04-24T10:02:00.000Z',
-      pair_request_id: 'pair-request-1',
-      status: 'pending'
-    });
-    syncMocks.pairCompanionWithDesktop.mockResolvedValue({
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Pixel 9',
-      is_paired: true,
-      paired_at: '2026-04-24T10:03:00.000Z'
-    });
+    syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
+    mockPairRequest();
+    syncMocks.pairCompanionWithDesktop.mockResolvedValue(pairedState());
     const args = createArgs();
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
 

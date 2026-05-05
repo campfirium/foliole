@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 
 import {
-  DATABASE_SCHEMA_VERSION,
-  initializeDatabaseConnection
+  initializeDatabaseConnection,
+  isLegacyDatabaseRebuildRequiredError
 } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
@@ -11,21 +11,18 @@ import {
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
-import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
-export { DATABASE_SCHEMA_VERSION, runDatabaseMigrations } from '../../lib/core/database/migrations.js';
+export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 type DatabaseInitStageReporter = (stage: string, payload?: unknown) => void;
 
 export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
   const databasePath = resolveDatabasePath();
-  const shouldSnapshotBeforeMigration = shouldSnapshotExistingDatabase(databasePath);
 
   try {
     reportStage?.('database_open_connection_start', {
-      databasePath,
-      shouldSnapshotBeforeMigration
+      databasePath
     });
     const connection = openDatabaseConnection();
     try {
@@ -35,12 +32,9 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       reportStage?.('database_integrity_check_start');
       verifyDatabaseIntegrity(connection.sqlite);
       reportStage?.('database_integrity_check_complete');
-      reportStage?.('database_snapshot_before_migration_start');
-      snapshotBeforePendingMigration(connection, shouldSnapshotBeforeMigration);
-      reportStage?.('database_snapshot_before_migration_complete');
-      reportStage?.('database_migration_start');
+      reportStage?.('database_schema_init_start');
       const initializedConnection = initializeDatabaseConnection(connection);
-      reportStage?.('database_migration_complete');
+      reportStage?.('database_schema_init_complete');
       seedInitialWorkspace(initializedConnection);
       return initializedConnection;
     } catch (error) {
@@ -48,6 +42,9 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
       throw error;
     }
   } catch (error) {
+    if (isLegacyDatabaseRebuildRequiredError(error)) {
+      return rebuildLegacyDevelopmentDatabase(databasePath, reportStage);
+    }
     if (!isDatabaseCorruptionError(error)) {
       throw error;
     }
@@ -71,46 +68,35 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_integrity_check_start');
     verifyDatabaseIntegrity(connection.sqlite);
     reportStage?.('database_recovery_integrity_check_complete');
-    reportStage?.('database_recovery_migration_start');
+    reportStage?.('database_recovery_schema_init_start');
     const initializedConnection = initializeDatabaseConnection(connection);
-    reportStage?.('database_recovery_migration_complete');
+    reportStage?.('database_recovery_schema_init_complete');
     seedInitialWorkspace(initializedConnection);
     return initializedConnection;
   }
 }
 
-function snapshotBeforePendingMigration(
-  connection: ReturnType<typeof openDatabaseConnection>,
-  shouldSnapshotBeforeMigration: boolean
-) {
-  if (!shouldSnapshotBeforeMigration) {
-    return;
-  }
-
-  if (readUserVersion(connection.sqlite) >= DATABASE_SCHEMA_VERSION) {
-    return;
-  }
-
-  createInternalDatabaseSnapshot({
-    reason: 'pre-migration',
-    sourceDatabase: connection.sqlite,
-    sourcePath: connection.dbPath
-  });
+function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: DatabaseInitStageReporter) {
+  reportStage?.('database_legacy_rebuild_start', { databasePath });
+  closeDatabaseConnection();
+  deleteSqliteDatabaseFiles(databasePath);
+  reportStage?.('database_legacy_rebuild_deleted', { databasePath });
+  const connection = openDatabaseConnection();
+  reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
+  const initializedConnection = initializeDatabaseConnection(connection);
+  reportStage?.('database_legacy_rebuild_schema_init_complete');
+  seedInitialWorkspace(initializedConnection);
+  return initializedConnection;
 }
 
-function shouldSnapshotExistingDatabase(databasePath: string) {
-  try {
-    const stats = fs.statSync(databasePath);
-    return stats.isFile() && stats.size > 0;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return false;
+function deleteSqliteDatabaseFiles(databasePath: string) {
+  for (const filePath of [databasePath, `${databasePath}-wal`, `${databasePath}-shm`]) {
+    try {
+      fs.rmSync(filePath, { force: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
     }
-    throw error;
   }
-}
-
-function readUserVersion(sqlite: ReturnType<typeof openDatabaseConnection>['sqlite']) {
-  const value = sqlite.pragma('user_version', { simple: true });
-  return typeof value === 'number' ? value : Number(value ?? 0);
 }

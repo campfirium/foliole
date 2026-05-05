@@ -1,8 +1,6 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -160,17 +158,6 @@ function recordAttachmentSyncState(driver: DatabaseDriver, payload: ReturnType<t
     updatedAt,
     syncDirty: true
   });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'attachment',
-    objectId: payload.attachment_id,
-    changeType: 'upsert',
-    deviceId,
-    contentHash,
-    payloadJson: JSON.stringify(payload),
-    createdAt: updatedAt,
-    appliedAt: updatedAt
-  });
 }
 
 export function recordAttachmentDeleted(driver: DatabaseDriver, attachmentId: string, deletedAt: string) {
@@ -185,16 +172,5 @@ export function recordAttachmentDeleted(driver: DatabaseDriver, attachmentId: st
     updatedAt: deletedAt,
     deletedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'attachment',
-    objectId: attachmentId,
-    changeType: 'delete',
-    deviceId,
-    contentHash,
-    payloadJson: JSON.stringify(payload),
-    createdAt: deletedAt,
-    appliedAt: deletedAt
   });
 }

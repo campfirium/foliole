@@ -71,27 +71,18 @@ function hashBytes(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function expectAttachmentSyncChange(attachmentId: string, sizeBytes: number) {
-  expect(openDatabaseConnection().driver.queryOne<{ object_type: string }>(
-    `SELECT object_type FROM sync_change_log WHERE object_type = 'attachment' AND object_id = ?`,
+function expectAttachmentSyncState(attachmentId: string, sizeBytes: number) {
+  expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; object_type: string; sync_dirty: number }>(
+    `SELECT content_hash, object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
     [attachmentId]
-  )).toEqual({ object_type: 'attachment' });
-  const change = openDatabaseConnection().driver.queryOne<{ payload_json: string }>(
-    `SELECT payload_json FROM sync_change_log WHERE object_type = 'attachment' AND object_id = ?`,
-    [attachmentId]
-  );
-  expect(JSON.parse(change?.payload_json ?? '{}')).toEqual({
-    attachment_id: attachmentId,
-    blob: expect.objectContaining({
-      availability: 'local',
-      content_hash: attachmentId,
-      storage_key: `${attachmentId}.png`
-    }),
-    created_at: expect.any(String),
-    mime_type: 'image/png',
-    original_name: 'cover.png',
-    size_bytes: sizeBytes
-  });
+  )).toEqual({ content_hash: expect.any(String), object_type: 'attachment', sync_dirty: 1 });
+  expect(findAttachmentBlobManifestById(attachmentId)).toEqual(expect.objectContaining({
+    attachmentId,
+    availability: 'local',
+    contentHash: attachmentId,
+    sizeBytes,
+    storageKey: `${attachmentId}.png`
+  }));
 }
 
 it('imports a local png into the app attachment directory and links it to the node', async () => {
@@ -147,7 +138,7 @@ it('imports a local png into the app attachment directory and links it to the no
     `SELECT object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
     [hashBytes(imageBytes)]
   )).toEqual({ object_type: 'attachment', sync_dirty: 1 });
-  expectAttachmentSyncChange(hashBytes(imageBytes), imageBytes.byteLength);
+  expectAttachmentSyncState(hashBytes(imageBytes), imageBytes.byteLength);
 });
 
 it('reuses the same stored file and attachment record for repeated imports of identical content', async () => {

@@ -173,6 +173,18 @@ describe('companionReviewSession', () => {
     });
     expect(result?.nextSession.currentCard?.nodeId).toBe('item-2');
     expect(result?.nextSession.queueNodeIds).toEqual(['item-2', 'topic-1']);
+    expect(result?.reviewLog).toMatchObject({
+      cardBefore: {
+        due: '2026-04-22T08:00:00.000Z',
+        stability: 2.1
+      },
+      cardAfter: {
+        due: '2026-04-25T08:10:00.000Z',
+        stability: 3.4
+      },
+      grade: 3,
+      reviewedAt: '2026-04-22T08:10:00.000Z'
+    });
   });
 
   it('keeps due reading items in the unified companion review queue', () => {

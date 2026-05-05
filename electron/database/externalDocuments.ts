@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
@@ -47,7 +47,6 @@ function recordExternalDocumentSync(args: {
   contentHash: string;
   deviceId: string;
   documentId: string;
-  payloadJson: string;
   updatedAt: string;
 }) {
   const connection = openDatabaseConnection();
@@ -58,17 +57,6 @@ function recordExternalDocumentSync(args: {
     lastModifiedByDeviceId: args.deviceId,
     updatedAt: args.updatedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(connection.driver, {
-    changeId: randomUUID(),
-    objectType: 'external_document',
-    objectId: args.documentId,
-    changeType: 'upsert',
-    deviceId: args.deviceId,
-    contentHash: args.contentHash,
-    payloadJson: args.payloadJson,
-    createdAt: args.updatedAt,
-    appliedAt: args.updatedAt
   });
 }
 
@@ -89,17 +77,6 @@ function tombstoneExternalDocument(documentId: string, deviceId: string, deleted
     lastModifiedByDeviceId: deviceId,
     updatedAt: deletedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(connection.driver, {
-    changeId: randomUUID(),
-    objectType: 'external_document',
-    objectId: documentId,
-    changeType: 'delete',
-    deviceId,
-    contentHash,
-    payloadJson: JSON.stringify({ documentId }),
-    createdAt: deletedAt,
-    appliedAt: deletedAt
   });
 }
 
@@ -153,7 +130,6 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
       contentHash: syncContentHash,
       deviceId,
       documentId,
-      payloadJson: JSON.stringify({ documentId, ...payload }),
       updatedAt: indexedAt
     });
   }

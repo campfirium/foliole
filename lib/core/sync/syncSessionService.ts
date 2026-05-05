@@ -90,13 +90,6 @@ async function applyObjectBatch(targetInvoke: NativeInvoke, objects: NativeSyncO
   return objects.length > 0 ? invokeApplySyncObjects(targetInvoke, { objects }) : [];
 }
 
-function splitGenericObjects(objects: NativeSyncObjectRecord[]) {
-  return {
-    attachmentObjects: objects.filter((object) => object.object_type === 'attachment'),
-    trailingObjects: objects.filter((object) => object.object_type !== 'attachment')
-  };
-}
-
 async function loadGenericObjects(source: SyncPullRemoteSource, entries: NativeSyncIndexEntry[]) {
   return entries.length > 0
     ? source.loadSyncObjects(collectObjectIds(entries), collectObjectTypes(entries))
@@ -126,13 +119,10 @@ export async function runSyncPullSession(
     ? await remoteSource.loadSyncNodes(requestedRemoteObjectIds)
     : [];
   const requestedRemoteSyncObjects = await loadGenericObjects(remoteSource, requestedObjectEntries);
-  const remoteBatches = splitGenericObjects(requestedRemoteSyncObjects);
-  const appliedRemoteAttachmentIds = await applyObjectBatch(localInvoke, remoteBatches.attachmentObjects);
+  const appliedRemoteObjectIds = await applyObjectBatch(localInvoke, requestedRemoteSyncObjects);
   const execution = requestedRemoteNodes.length > 0
     ? await planAndExecuteSyncNodesFromRemote(localInvoke, localIndex, requestedRemoteNodes)
     : createEmptyExecutionResult();
-  const appliedRemoteTrailingIds = await applyObjectBatch(localInvoke, remoteBatches.trailingObjects);
-  const appliedRemoteObjectIds = [...appliedRemoteAttachmentIds, ...appliedRemoteTrailingIds];
 
   return {
     appliedRemoteObjectIds,
@@ -163,13 +153,10 @@ export async function runSyncPushSession(
     ? await localSource.loadSyncNodes(requestedLocalObjectIds)
     : [];
   const requestedLocalSyncObjects = await loadGenericObjects(localSource, requestedObjectEntries);
-  const localBatches = splitGenericObjects(requestedLocalSyncObjects);
-  const appliedLocalAttachmentIds = await applyObjectBatch(remoteInvoke, localBatches.attachmentObjects);
+  const appliedLocalObjectIds = await applyObjectBatch(remoteInvoke, requestedLocalSyncObjects);
   const execution = requestedLocalNodes.length > 0
     ? await planAndExecuteSyncNodesFromRemote(remoteInvoke, remoteIndex, requestedLocalNodes)
     : createEmptyExecutionResult();
-  const appliedLocalTrailingIds = await applyObjectBatch(remoteInvoke, localBatches.trailingObjects);
-  const appliedLocalObjectIds = [...appliedLocalAttachmentIds, ...appliedLocalTrailingIds];
 
   return {
     appliedLocalObjectIds,

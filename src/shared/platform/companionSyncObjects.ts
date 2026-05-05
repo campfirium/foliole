@@ -1,17 +1,28 @@
 import type {
-  NativeWorkspaceReadingProfile,
-  NativeWorkspaceReviewProfile
-} from '../../../lib/platform/nativeStorageContract';
-import type {
   NativeSyncChangeCursor,
-  NativeSyncChangeRecord,
-  NativeSyncObjectRecord
+  NativeSyncNodeRecord,
+  NativeSyncObjectRecord,
+  NativeSyncReviewLogRecord,
+  NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import {
+  readWebCursor,
+  readWebNumberCursor,
+  writeWebCursor,
+  writeWebNumberCursor
+} from './companionSyncWebCursors';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
+export {
+  saveCompanionSyncActiveViewState,
+  saveCompanionSyncNodeReadingRecord,
+  saveCompanionSyncNodeReviewRecord,
+  saveCompanionSyncNodeViewState,
+  saveCompanionSyncSettingRecord
+} from './companionSyncStateWriters';
 
 export async function loadCompanionSyncIndex() {
   if (!isNativeAndroidCompanionRuntime()) {
@@ -40,143 +51,144 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
   return (await FolioleCompanionSync.applySyncObjects({ objects })).applied_object_ids;
 }
 
-const WEB_SYNC_CHANGE_CURSOR_KEY = 'foliole-companion-sync-change-cursor';
-const WEB_SYNC_PUSH_CURSOR_KEY = 'foliole-companion-sync-push-cursor';
-
-function readWebSyncChangeCursor(): NativeSyncChangeCursor | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(WEB_SYNC_CHANGE_CURSOR_KEY) ?? 'null') as NativeSyncChangeCursor | null;
-    return parsed?.created_at && parsed.change_id ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeWebSyncChangeCursor(cursor: NativeSyncChangeCursor | null) {
-  if (typeof window !== 'undefined') {
-    if (cursor) window.localStorage.setItem(WEB_SYNC_CHANGE_CURSOR_KEY, JSON.stringify(cursor));
-    else window.localStorage.removeItem(WEB_SYNC_CHANGE_CURSOR_KEY);
-  }
-  return cursor;
-}
-
-function readWebCursor(key: string): NativeSyncChangeCursor | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(key) ?? 'null') as NativeSyncChangeCursor | null;
-    return parsed?.created_at && parsed.change_id ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeWebCursor(key: string, cursor: NativeSyncChangeCursor | null) {
-  if (typeof window !== 'undefined') {
-    if (cursor) window.localStorage.setItem(key, JSON.stringify(cursor));
-    else window.localStorage.removeItem(key);
-  }
-  return cursor;
-}
-
-export async function loadCompanionSyncChangeCursor() {
+export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return readWebSyncChangeCursor();
+    return [];
   }
-  return (await FolioleCompanionSync.loadSyncChangeCursor()).cursor;
+  return (await FolioleCompanionSync.applySyncNodeVersions({ nodes })).applied_node_ids;
 }
 
-export async function saveCompanionSyncChangeCursor(cursor: NativeSyncChangeCursor | null) {
+export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRecord[]) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return writeWebSyncChangeCursor(cursor);
+    return [];
   }
-  return (await FolioleCompanionSync.saveSyncChangeCursor({ cursor })).cursor;
+  return (await FolioleCompanionSync.applySyncReviewLog({ reviews })).applied_op_ids;
 }
 
-export async function loadCompanionSyncPushCursor() {
+const WEB_SYNC_STATE_CURSOR_KEY = 'foliole-companion-sync-state-cursor';
+const WEB_SYNC_STATE_PUSH_CURSOR_KEY = 'foliole-companion-sync-state-push-cursor';
+const WEB_SYNC_NODE_VERSION_CURSOR_KEY = 'foliole-companion-sync-node-version-cursor';
+const WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY = 'foliole-companion-sync-node-version-push-cursor';
+const WEB_SYNC_REVIEW_LOG_CURSOR_KEY = 'foliole-companion-sync-review-log-cursor';
+const WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = 'foliole-companion-sync-review-log-push-cursor';
+
+export async function loadCompanionSyncStateCursor() {
   if (!isNativeAndroidCompanionRuntime()) {
-    return readWebCursor(WEB_SYNC_PUSH_CURSOR_KEY);
+    return readWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY);
   }
-  return (await FolioleCompanionSync.loadSyncPushCursor()).cursor;
+  return (await FolioleCompanionSync.loadSyncStateCursor()).cursor;
 }
 
-export async function saveCompanionSyncPushCursor(cursor: NativeSyncChangeCursor | null) {
+export async function saveCompanionSyncStateCursor(cursor: number | null) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return writeWebCursor(WEB_SYNC_PUSH_CURSOR_KEY, cursor);
+    return writeWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY, cursor);
   }
-  return (await FolioleCompanionSync.saveSyncPushCursor({ cursor })).cursor;
+  return (await FolioleCompanionSync.saveSyncStateCursor({ cursor })).cursor;
 }
 
-export async function loadCompanionSyncChanges(cursor: NativeSyncChangeCursor | null, limit = 500) {
+export async function loadCompanionSyncStatePushCursor() {
   if (!isNativeAndroidCompanionRuntime()) {
-    return [] as NativeSyncChangeRecord[];
+    return readWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY);
   }
-  return (await FolioleCompanionSync.loadSyncChanges({ cursor, limit })).changes;
+  return (await FolioleCompanionSync.loadSyncStatePushCursor()).cursor;
 }
 
-export async function saveCompanionSyncSettingRecord(args: {
-  key: string;
-  valueJson: string;
-  scope?: string;
-  platform?: string;
-  formFactor?: string;
-  deviceId?: string;
-}) {
+export async function saveCompanionSyncStatePushCursor(cursor: number | null) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return null;
+    return writeWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY, cursor);
   }
-  return FolioleCompanionSync.saveSyncSettingRecord({
-    device_id: args.deviceId ?? '*',
-    form_factor: args.formFactor ?? 'phone',
-    key: args.key,
-    platform: args.platform ?? 'android',
-    scope: args.scope ?? 'device',
-    value_json: args.valueJson
-  });
+  return (await FolioleCompanionSync.saveSyncStatePushCursor({ cursor })).cursor;
 }
 
-export async function saveCompanionSyncNodeReadingRecord(args: {
-  nodeId: string;
-  reading: NativeWorkspaceReadingProfile;
-}) {
+export async function loadCompanionSyncNodeVersionCursor() {
   if (!isNativeAndroidCompanionRuntime()) {
-    return null;
+    return readWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY);
   }
-  return FolioleCompanionSync.saveSyncNodeReadingRecord({
-    node_id: args.nodeId,
-    reading_json: JSON.stringify(args.reading)
-  });
+  return (await FolioleCompanionSync.loadSyncNodeVersionCursor()).cursor;
 }
 
-export async function saveCompanionSyncNodeReviewRecord(args: {
-  nodeId: string;
-  review: NativeWorkspaceReviewProfile;
-}) {
+export async function loadCompanionSyncNodeVersions(cursor: NativeSyncChangeCursor | null, limit = 500) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return null;
+    return [] as NativeSyncNodeRecord[];
   }
-  return FolioleCompanionSync.saveSyncNodeReviewRecord({
-    node_id: args.nodeId,
-    review_json: JSON.stringify(args.review)
-  });
+  return (await FolioleCompanionSync.loadSyncNodeVersions({ cursor, limit })).nodes;
 }
 
-export async function saveCompanionSyncActiveViewState(nodeId: string | null) {
+export async function saveCompanionSyncNodeVersionCursor(cursor: NativeSyncChangeCursor | null) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return null;
+    return writeWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY, cursor);
   }
-  return FolioleCompanionSync.saveSyncActiveViewState({ node_id: nodeId });
+  return (await FolioleCompanionSync.saveSyncNodeVersionCursor({ cursor })).cursor;
 }
 
-export async function saveCompanionSyncNodeViewState(args: {
-  nodeId: string;
-  scrollTop: number;
-}) {
+export async function loadCompanionSyncNodeVersionPushCursor() {
   if (!isNativeAndroidCompanionRuntime()) {
-    return null;
+    return readWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
   }
-  return FolioleCompanionSync.saveSyncNodeViewState({
-    node_id: args.nodeId,
-    scroll_top: Math.max(0, Math.trunc(args.scrollTop))
-  });
+  return (await FolioleCompanionSync.loadSyncNodeVersionPushCursor()).cursor;
+}
+
+export async function saveCompanionSyncNodeVersionPushCursor(cursor: NativeSyncChangeCursor | null) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return writeWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
+  }
+  return (await FolioleCompanionSync.saveSyncNodeVersionPushCursor({ cursor })).cursor;
+}
+
+export async function loadCompanionSyncReviewLogCursor() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return readWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY);
+  }
+  return (await FolioleCompanionSync.loadSyncReviewLogCursor()).cursor;
+}
+
+export async function loadCompanionSyncReviewLog(cursor: NativeSyncChangeCursor | null, limit = 500) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as NativeSyncReviewLogRecord[];
+  }
+  return (await FolioleCompanionSync.loadSyncReviewLog({ cursor, limit })).reviews;
+}
+
+export async function saveCompanionSyncReviewLogCursor(cursor: NativeSyncChangeCursor | null) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return writeWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY, cursor);
+  }
+  return (await FolioleCompanionSync.saveSyncReviewLogCursor({ cursor })).cursor;
+}
+
+export async function loadCompanionSyncReviewLogPushCursor() {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return readWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
+  }
+  return (await FolioleCompanionSync.loadSyncReviewLogPushCursor()).cursor;
+}
+
+export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncChangeCursor | null) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
+  }
+  return (await FolioleCompanionSync.saveSyncReviewLogPushCursor({ cursor })).cursor;
+}
+
+export async function loadCompanionSyncStateChanges(cursor: number | null, limit = 500) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as NativeSyncStateObjectRecord[];
+  }
+  return (await FolioleCompanionSync.loadSyncStateChanges({ cursor, limit })).objects;
+}
+
+export async function loadCompanionPendingSyncSummary() {
+  const [stateCursor, nodeCursor, reviewCursor] = await Promise.all([
+    loadCompanionSyncStatePushCursor(),
+    loadCompanionSyncNodeVersionPushCursor(),
+    loadCompanionSyncReviewLogPushCursor()
+  ]);
+  const [stateChanges, nodeVersions, reviewLog] = await Promise.all([
+    loadCompanionSyncStateChanges(stateCursor, 1),
+    loadCompanionSyncNodeVersions(nodeCursor, 1),
+    loadCompanionSyncReviewLog(reviewCursor, 1)
+  ]);
+  return {
+    pendingCount: stateChanges.length + nodeVersions.length + reviewLog.length
+  };
 }

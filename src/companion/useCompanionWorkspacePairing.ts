@@ -10,28 +10,21 @@ import {
   requestCompanionPairing
 } from '../shared/platform/companionWorkspaceSync';
 
+import {
+  createCompanionDeviceName,
+  type CompanionDesktopDiscovery,
+  mergeSelectedDiscovery,
+  normalizeDiscovery,
+  type PendingPairRequest
+} from './companionWorkspacePairingModel';
+export type { CompanionDesktopDiscovery } from './companionWorkspacePairingModel';
+
 export type CompanionPairingStatus =
   | 'idle'
   | 'checking-desktop'
   | 'requesting-pair'
   | 'awaiting-approval'
   | 'completing-pair';
-
-export type CompanionDesktopDiscovery = {
-  appVersion: string;
-  desktopDeviceName: string;
-  desktopName: string;
-  desktopPlatform: string;
-  endpointUrl: string;
-  hostName: string;
-  peerId: string;
-};
-
-export type PendingPairRequest = {
-  endpointUrl: string;
-  expiresAt: string;
-  pairRequestId: string;
-} | null;
 
 type PairingHookArgs = {
   bootstrapState: NativeCompanionBootstrapState;
@@ -46,33 +39,6 @@ const EMPTY_PAIRING_STATE: NativeCompanionPairingState = {
   is_paired: false,
   paired_at: null
 };
-
-function createCompanionDeviceName(bootstrapState: NativeCompanionBootstrapState) {
-  const normalizedName = bootstrapState.device_name?.trim();
-  if (normalizedName) {
-    return normalizedName;
-  }
-  return bootstrapState.runtime_kind === 'android-capacitor' ? 'Android device' : 'Web preview';
-}
-
-function normalizeDiscovery(endpointUrl: string, discovery: {
-  app_version?: string;
-  desktop_device_name?: string;
-  desktop_name: string;
-  desktop_platform?: string;
-  host_name?: string;
-  peer_id: string;
-}) {
-  return {
-    appVersion: discovery.app_version?.trim() || 'Unknown version',
-    desktopDeviceName: discovery.desktop_device_name?.trim() || discovery.desktop_name,
-    desktopName: discovery.desktop_name,
-    desktopPlatform: discovery.desktop_platform?.trim() || 'Desktop',
-    endpointUrl: endpointUrl.trim(),
-    hostName: discovery.host_name?.trim() || 'Unknown host',
-    peerId: discovery.peer_id
-  };
-}
 
 function useStoredPairingStateLoader(args: {
   pairingMutationVersionRef: MutableRefObject<number>;
@@ -138,24 +104,6 @@ function createCheckDesktopAction(args: {
   };
 }
 
-function mergeSelectedDiscovery(
-  discoveries: CompanionDesktopDiscovery[],
-  selectedDiscovery: CompanionDesktopDiscovery
-) {
-  if (discoveries.length === 0) {
-    return [selectedDiscovery];
-  }
-  const selectedKey = selectedDiscovery.peerId || selectedDiscovery.endpointUrl;
-  let matched = false;
-  const nextDiscoveries = discoveries.map((discovery) => {
-    const discoveryKey = discovery.peerId || discovery.endpointUrl;
-    const shouldReplace = discoveryKey === selectedKey || discovery.endpointUrl === selectedDiscovery.endpointUrl;
-    matched = matched || shouldReplace;
-    return shouldReplace ? selectedDiscovery : discovery;
-  });
-  return matched ? nextDiscoveries : [...nextDiscoveries, selectedDiscovery];
-}
-
 function createRequestPairingAction(
   args: PairingHookArgs & {
     desktopDiscoveries: CompanionDesktopDiscovery[];
@@ -193,14 +141,42 @@ function createRequestPairingAction(
   };
 }
 
-function createCompletePairingAction(
-  args: PairingHookArgs & {
-    getPairingState: () => NativeCompanionPairingState;
-    setPairingState: (state: NativeCompanionPairingState) => void;
-    setPairingStatus: (status: CompanionPairingStatus) => void;
-    setPendingPairRequest: (value: PendingPairRequest) => void;
+type CompletePairingActionArgs = PairingHookArgs & {
+  getPairingState: () => NativeCompanionPairingState;
+  setPairingState: (state: NativeCompanionPairingState) => void;
+  setPairingStatus: (status: CompanionPairingStatus) => void;
+  setPendingPairRequest: (value: PendingPairRequest) => void;
+};
+
+async function handleCompletePairingError(args: CompletePairingActionArgs, error: unknown) {
+  const message = error instanceof Error ? error.message : 'Failed to complete desktop pairing.';
+  const isStillAwaitingApproval = message.includes('409') || message.includes('pair_request_pending');
+  const isExpired = message.includes('404') || message.includes('pair_request_not_found');
+  const isRejected = message.includes('403') || message.includes('pair_request_rejected');
+  const storedPairingState = isExpired ? await loadCompanionPairingState().catch(() => null) : null;
+  if (storedPairingState?.is_paired) {
+    args.setPairingState(storedPairingState);
+    args.setPendingPairRequest(null);
+    args.setPairingStatus('idle');
+    args.onError(null);
+    return storedPairingState;
   }
-) {
+  const shouldKeepWaiting = isStillAwaitingApproval || (!isExpired && !isRejected);
+  args.setPairingStatus(shouldKeepWaiting ? 'awaiting-approval' : 'idle');
+  if (!shouldKeepWaiting) args.setPendingPairRequest(null);
+  args.onError(
+    isStillAwaitingApproval
+      ? null
+      : isExpired
+        ? 'Pairing request expired. Tap Pair again.'
+        : isRejected
+          ? 'Pairing request was rejected.'
+          : message
+  );
+  throw error;
+}
+
+function createCompletePairingAction(args: CompletePairingActionArgs) {
   return async (pendingPairRequest: PendingPairRequest) => {
     if (!pendingPairRequest) {
       return null;
@@ -227,33 +203,7 @@ function createCompletePairingAction(
       args.setPairingStatus('idle');
       return nextPairingState;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to complete desktop pairing.';
-      const isStillAwaitingApproval = message.includes('409') || message.includes('pair_request_pending');
-      const isExpired = message.includes('404') || message.includes('pair_request_not_found');
-      const isRejected = message.includes('403') || message.includes('pair_request_rejected');
-      const storedPairingState = isExpired ? await loadCompanionPairingState().catch(() => null) : null;
-      if (storedPairingState?.is_paired) {
-        args.setPairingState(storedPairingState);
-        args.setPendingPairRequest(null);
-        args.setPairingStatus('idle');
-        args.onError(null);
-        return storedPairingState;
-      }
-      const shouldKeepWaiting = isStillAwaitingApproval || (!isExpired && !isRejected);
-      args.setPairingStatus(shouldKeepWaiting ? 'awaiting-approval' : 'idle');
-      if (!shouldKeepWaiting) {
-        args.setPendingPairRequest(null);
-      }
-      args.onError(
-        isStillAwaitingApproval
-          ? null
-          : isExpired
-            ? 'Pairing request expired. Tap Pair again.'
-            : isRejected
-              ? 'Pairing request was rejected.'
-              : message
-      );
-      throw error;
+      return await handleCompletePairingError(args, error);
     }
   };
 }
@@ -291,7 +241,7 @@ export function useCompanionWorkspacePairing(args: PairingHookArgs) {
   });
 
   return {
-    desktopDiscovery: desktopDiscoveries[0] ?? null,
+    desktopDiscovery: desktopDiscoveries.length > 0 ? desktopDiscoveries[0] : null,
     desktopDiscoveries,
     pairingState,
     pairingStatus,

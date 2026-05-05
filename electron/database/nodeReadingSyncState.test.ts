@@ -77,15 +77,14 @@ function getNodeReadingRow() {
     .get('node-reading') as Record<string, unknown> | undefined;
 }
 
-function listNodeReadingChanges() {
+function countNodeReadingChanges() {
   return openDatabaseConnection().sqlite
     .prepare(
-      `SELECT change_type, object_id, payload_json
+      `SELECT COUNT(*) AS count
        FROM sync_change_log
-       WHERE object_type = 'node_reading' AND object_id = 'node-reading'
-       ORDER BY rowid ASC`
+       WHERE object_type = 'node_reading' AND object_id = 'node-reading'`
     )
-    .all() as Array<{ change_type: string; object_id: string; payload_json: string }>;
+    .get() as { count: number };
 }
 
 it('writes sync object state for node reading snapshots and tombstones', () => {
@@ -95,12 +94,7 @@ it('writes sync object state for node reading snapshots and tombstones', () => {
 
   expect(activeState).toMatchObject({ deleted_at: null, object_id: 'node-reading', sync_dirty: 1 });
   expect(String(activeState?.last_modified_by_device_id)).toMatch(/^desktop-/);
-  expect(listNodeReadingChanges()).toHaveLength(1);
-  expect(JSON.parse(listNodeReadingChanges()[0].payload_json)).toMatchObject({
-    nodeId: 'node-reading',
-    readingPosition: 0,
-    state: 'dismissed'
-  });
+  expect(countNodeReadingChanges().count).toBe(0);
 
   upsertReadingNode(false);
 
@@ -110,9 +104,5 @@ it('writes sync object state for node reading snapshots and tombstones', () => {
     object_type: 'node_reading',
     sync_dirty: 1
   });
-  expect(listNodeReadingChanges().at(-1)).toMatchObject({
-    change_type: 'delete',
-    object_id: 'node-reading',
-    payload_json: JSON.stringify({ nodeId: 'node-reading' })
-  });
+  expect(countNodeReadingChanges().count).toBe(0);
 });

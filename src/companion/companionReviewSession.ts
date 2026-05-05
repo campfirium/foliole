@@ -3,6 +3,10 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { getReviewItemKind, isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
+import {
+  getCurrentReviewSchedulerSettings,
+  getReviewSchedulerVersion
+} from '../features/settings/model/reviewSchedulerSettings';
 import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 
 import {
@@ -161,11 +165,13 @@ export async function gradeCompanionReviewCard(args: {
   }
 
   const scheduler = createReviewSchedulerAdapter();
+  const cardBefore = toSchedulerCard(node.review, now);
   const result = await scheduler.grade({
-    card: toSchedulerCard(node.review, now),
+    card: cardBefore,
     grade: args.grade,
     now
   });
+  const schedulerVersion = getReviewSchedulerVersion(getCurrentReviewSchedulerSettings());
 
   const nextSnapshot: WorkspaceSnapshot = {
     ...args.snapshot,
@@ -184,6 +190,13 @@ export async function gradeCompanionReviewCard(args: {
 
   return {
     nextSession: resolveCompanionReviewSession(nextSnapshot, now),
+    reviewLog: {
+      cardAfter: result.card,
+      cardBefore,
+      grade: args.grade,
+      reviewedAt: result.reviewed_at,
+      schedulerVersion
+    },
     reviewedAt: result.reviewed_at,
     snapshot: nextSnapshot
   };

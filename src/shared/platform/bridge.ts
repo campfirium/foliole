@@ -2,7 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
 import { toRuntimeAppPaths, toRuntimeSystemFontCatalog } from './bridgePayloads';
-import { getElectronAPI } from './electronApi';
+import { getElectronAPI, type WorkspaceSyncAppliedPayload } from './electronApi';
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeEvent, logRuntimeWarning } from './runtimeLogging';
@@ -11,6 +11,7 @@ const EXTERNAL_URL_WINDOW_FEATURES = 'noopener,noreferrer';
 
 export type NativeMenuUnlisten = (() => void) | null;
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
+export type WorkspaceSyncAppliedUnlisten = (() => void) | null;
 
 export type { RuntimeAppPaths, RuntimeSystemFontCatalog } from './bridgePayloads';
 export { getRuntimeInvoke } from './runtimeInvoke';
@@ -231,6 +232,25 @@ export async function onManagedInboxUpdated(
       return;
     }
     handler(importId);
+  });
+}
+
+export async function onWorkspaceSyncApplied(
+  handler: (payload: WorkspaceSyncAppliedPayload) => void
+): Promise<WorkspaceSyncAppliedUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge?.onWorkspaceSyncApplied) {
+    return null;
+  }
+  return bridge.onWorkspaceSyncApplied((payload) => {
+    if (
+      payload.appliedNodeIds.length === 0 &&
+      payload.appliedObjectIds.length === 0 &&
+      payload.appliedReviewOpIds.length === 0
+    ) {
+      return;
+    }
+    handler(payload);
   });
 }
 

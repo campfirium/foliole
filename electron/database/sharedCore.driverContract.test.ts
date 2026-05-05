@@ -251,6 +251,7 @@ function expectReviewSyncWrites() {
   expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_object_state'), [
     'node_review',
     'node-1',
+    1,
     null,
     expect.any(String),
     'desktop-local',
@@ -258,19 +259,7 @@ function expectReviewSyncWrites() {
     null,
     1
   ]);
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_change_log'), [
-    'op-1',
-    'node_review',
-    'node-1',
-    'upsert',
-    'desktop-local',
-    null,
-    null,
-    expect.any(String),
-    expect.any(String),
-    '2026-03-14T00:00:00.000Z',
-    '2026-03-14T00:00:00.000Z'
-  ]);
+  expect(executeSpy).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_change_log'), expect.anything());
 }
 
 it('writes review mutation via driver contract with injected context', () => {
@@ -278,7 +267,7 @@ it('writes review mutation via driver contract with injected context', () => {
 
   applyReviewGrade(driver, reviewMutationInput, reviewMutationContext);
 
-  expect(transactionSpy).toHaveBeenCalledTimes(1);
+  expect(transactionSpy).toHaveBeenCalledTimes(2);
   expectReviewPersistence(runs);
   expectReviewSyncWrites();
 });

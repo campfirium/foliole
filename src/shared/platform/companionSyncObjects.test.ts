@@ -5,17 +5,29 @@ const capacitorMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'android'),
   plugin: {
     applySyncObjects: vi.fn(async () => ({ applied_object_ids: ['setting:one'] })),
-    loadSyncChanges: vi.fn(async () => ({ changes: [{ change_id: 'change-1', created_at: '2026-04-25T00:00:00.000Z' }] })),
-    loadSyncChangeCursor: vi.fn(async () => ({ cursor: { change_id: 'change-1', created_at: '2026-04-25T00:00:00.000Z' } })),
+    applySyncNodeVersions: vi.fn(async () => ({ applied_node_ids: ['node-1'] })),
+    applySyncReviewLog: vi.fn(async () => ({ applied_op_ids: ['op-1'] })),
     loadSyncIndex: vi.fn(async () => ({ entries: [{ object_id: 'one', object_type: 'setting' }] })),
     loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
-    loadSyncPushCursor: vi.fn(async () => ({ cursor: null })),
+    loadSyncStateChanges: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting', state_seq: 1 }] })),
+    loadSyncStateCursor: vi.fn(async () => ({ cursor: 2 })),
+    loadSyncStatePushCursor: vi.fn(async () => ({ cursor: null })),
+    loadSyncNodeVersionCursor: vi.fn(async () => ({ cursor: null })),
+    loadSyncNodeVersionPushCursor: vi.fn(async () => ({ cursor: null })),
+    loadSyncNodeVersions: vi.fn(async () => ({ nodes: [{ object_id: 'node-1' }] })),
+    loadSyncReviewLogCursor: vi.fn(async () => ({ cursor: null })),
+    loadSyncReviewLogPushCursor: vi.fn(async () => ({ cursor: null })),
+    loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] })),
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
     saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
-    saveSyncChangeCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncStateCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncStatePushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncNodeVersionCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' }))
   }
 }));
@@ -33,8 +45,12 @@ function expectNativePluginCalls(cursor: { change_id: string; created_at: string
     object_ids: ['one'],
     object_types: ['setting']
   });
-  expect(capacitorMock.plugin.saveSyncChangeCursor).toHaveBeenCalledWith({ cursor });
-  expect(capacitorMock.plugin.saveSyncPushCursor).toHaveBeenCalledWith({ cursor });
+  expect(capacitorMock.plugin.saveSyncStateCursor).toHaveBeenCalledWith({ cursor: 3 });
+  expect(capacitorMock.plugin.saveSyncStatePushCursor).toHaveBeenCalledWith({ cursor: 3 });
+  expect(capacitorMock.plugin.saveSyncNodeVersionCursor).toHaveBeenCalledWith({ cursor });
+  expect(capacitorMock.plugin.saveSyncNodeVersionPushCursor).toHaveBeenCalledWith({ cursor });
+  expect(capacitorMock.plugin.saveSyncReviewLogCursor).toHaveBeenCalledWith({ cursor });
+  expect(capacitorMock.plugin.saveSyncReviewLogPushCursor).toHaveBeenCalledWith({ cursor });
 }
 
 function createReadingProfile() {
@@ -64,46 +80,74 @@ function createReviewProfile() {
   };
 }
 
-async function testNativePluginBridge() {
-  const {
-    applyCompanionSyncObjects,
-    loadCompanionSyncChanges,
-    loadCompanionSyncChangeCursor,
-    loadCompanionSyncIndex,
-    loadCompanionSyncObjects,
-    loadCompanionSyncPushCursor,
-    saveCompanionSyncActiveViewState,
-    saveCompanionSyncNodeReadingRecord,
-    saveCompanionSyncNodeReviewRecord,
-    saveCompanionSyncNodeViewState,
-    saveCompanionSyncChangeCursor,
-    saveCompanionSyncPushCursor,
-    saveCompanionSyncSettingRecord
-  } = await import('./companionSyncObjects');
-
+async function expectNativeCursorBridge(api: typeof import('./companionSyncObjects')) {
   const cursor = { change_id: 'change-2', created_at: '2026-04-25T00:01:00.000Z' };
-  await expect(loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
-  await expect(loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
-  await expect(loadCompanionSyncChangeCursor()).resolves.toEqual({ change_id: 'change-1', created_at: '2026-04-25T00:00:00.000Z' });
-  await expect(loadCompanionSyncPushCursor()).resolves.toBeNull();
-  await expect(loadCompanionSyncChanges(null)).resolves.toEqual([{ change_id: 'change-1', created_at: '2026-04-25T00:00:00.000Z' }]);
-  await expect(saveCompanionSyncChangeCursor(cursor)).resolves.toEqual(cursor);
-  await expect(saveCompanionSyncPushCursor(cursor)).resolves.toEqual(cursor);
-  await expect(saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
+  await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
+  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
+  await expect(api.saveCompanionSyncStateCursor(3)).resolves.toBe(3);
+  await expect(api.saveCompanionSyncStatePushCursor(3)).resolves.toBe(3);
+  await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
+  await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);
+  await expect(api.saveCompanionSyncReviewLogCursor(cursor)).resolves.toEqual(cursor);
+  await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
+  expectNativePluginCalls(cursor);
+}
+
+async function expectWebCursorFallback(api: typeof import('./companionSyncObjects')) {
+  const cursor = { change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' };
+  await expect(api.loadCompanionSyncStateCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
+  await expect(api.saveCompanionSyncStateCursor(7)).resolves.toBe(7);
+  await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);
+  await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
+  await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);
+  await expect(api.saveCompanionSyncReviewLogCursor(cursor)).resolves.toEqual(cursor);
+  await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
+}
+
+async function testNativePluginBridge() {
+  const api = await import('./companionSyncObjects');
+  await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+  await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+  await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([{ object_id: 'one', object_type: 'setting', state_seq: 1 }]);
+  await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
+  await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
+  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
+  await expectNativeCursorBridge(api);
+  await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
     .resolves.toEqual({ content_hash: 'hash-setting', object_id: 'setting-1' });
-  await expect(saveCompanionSyncActiveViewState('node-1'))
+  await expect(api.saveCompanionSyncActiveViewState('node-1'))
     .resolves.toEqual({ content_hash: 'hash-active', object_id: 'active' });
-  await expect(saveCompanionSyncNodeReadingRecord({
+  await expect(api.saveCompanionSyncNodeReadingRecord({
     nodeId: 'node-1',
     reading: createReadingProfile()
   })).resolves.toEqual({ content_hash: 'hash-reading', object_id: 'node-1' });
-  await expect(saveCompanionSyncNodeReviewRecord({
+  await expect(api.saveCompanionSyncNodeReviewRecord({
     nodeId: 'node-1',
-    review: createReviewProfile()
+    review: createReviewProfile(),
+    reviewLog: {
+      cardAfter: { difficulty: 1.2, due: '2026-04-26T00:00:00.000Z', stability: 2.3 },
+      cardBefore: { difficulty: 1, due: '2026-04-25T00:00:00.000Z', stability: 2 },
+      grade: 3,
+      reviewedAt: '2026-04-25T00:00:00.000Z',
+      schedulerVersion: 'ts-fsrs@4'
+    }
   })).resolves.toEqual({ content_hash: 'hash-review', object_id: 'node-1' });
-  await expect(saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42.8 }))
+  expect(capacitorMock.plugin.saveSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
+    node_id: 'node-1',
+    review_log_json: expect.stringContaining('"reviewedAt"')
+  }));
+  await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42.8 }))
     .resolves.toEqual({ content_hash: 'hash-view', object_id: 'view' });
-  await expect(applyCompanionSyncObjects([{
+  await expect(api.applyCompanionSyncObjects([{
     content_hash: 'hash',
     deleted_at: null,
     object_id: 'one',
@@ -111,49 +155,34 @@ async function testNativePluginBridge() {
     payload_json: '{}',
     updated_at: '2026-04-25T00:00:00.000Z'
   }])).resolves.toEqual(['setting:one']);
-
-  expectNativePluginCalls(cursor);
+  await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual(['node-1']);
+  await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual(['op-1']);
 }
 
 async function testWebFallbackBridge() {
   capacitorMock.isNative.mockReturnValue(false);
-  const {
-    applyCompanionSyncObjects,
-    loadCompanionSyncChanges,
-    loadCompanionSyncChangeCursor,
-    loadCompanionSyncIndex,
-    loadCompanionSyncObjects,
-    loadCompanionSyncPushCursor,
-    saveCompanionSyncActiveViewState,
-    saveCompanionSyncNodeReadingRecord,
-    saveCompanionSyncNodeReviewRecord,
-    saveCompanionSyncNodeViewState,
-    saveCompanionSyncChangeCursor,
-    saveCompanionSyncPushCursor,
-    saveCompanionSyncSettingRecord
-  } = await import('./companionSyncObjects');
-
-  await expect(loadCompanionSyncIndex()).resolves.toEqual([]);
-  await expect(loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([]);
-  await expect(loadCompanionSyncChanges(null)).resolves.toEqual([]);
-  await expect(loadCompanionSyncChangeCursor()).resolves.toBeNull();
-  await expect(loadCompanionSyncPushCursor()).resolves.toBeNull();
-  await expect(saveCompanionSyncChangeCursor({ change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' }))
-    .resolves.toEqual({ change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' });
-  await expect(saveCompanionSyncPushCursor({ change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' }))
-    .resolves.toEqual({ change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' });
-  await expect(saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' })).resolves.toBeNull();
-  await expect(saveCompanionSyncActiveViewState('node-1')).resolves.toBeNull();
-  await expect(saveCompanionSyncNodeReadingRecord({
+  const api = await import('./companionSyncObjects');
+  await expect(api.loadCompanionSyncIndex()).resolves.toEqual([]);
+  await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([]);
+  await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([]);
+  await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([]);
+  await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([]);
+  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 0 });
+  await expectWebCursorFallback(api);
+  await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' })).resolves.toBeNull();
+  await expect(api.saveCompanionSyncActiveViewState('node-1')).resolves.toBeNull();
+  await expect(api.saveCompanionSyncNodeReadingRecord({
     nodeId: 'node-1',
     reading: createReadingProfile()
   })).resolves.toBeNull();
-  await expect(saveCompanionSyncNodeReviewRecord({
+  await expect(api.saveCompanionSyncNodeReviewRecord({
     nodeId: 'node-1',
     review: createReviewProfile()
   })).resolves.toBeNull();
-  await expect(saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42 })).resolves.toBeNull();
-  await expect(applyCompanionSyncObjects([])).resolves.toEqual([]);
+  await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42 })).resolves.toBeNull();
+  await expect(api.applyCompanionSyncObjects([])).resolves.toEqual([]);
+  await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual([]);
+  await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
 }
 
 describe('companion sync objects bridge', () => {

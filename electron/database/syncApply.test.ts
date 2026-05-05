@@ -64,6 +64,26 @@ function createRemoteNodeRecord(): NativeSyncNodeRecord {
   };
 }
 
+function insertLocalNodeVersion(versionId: string) {
+  const connection = openDatabaseConnection();
+  connection.driver.execute(
+    `INSERT INTO nodes (
+       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'node-1',
+      'item',
+      'Local Node',
+      'local body',
+      versionId,
+      'desktop',
+      0,
+      '2026-04-21T09:00:00.000Z',
+      '2026-04-21T09:30:00.000Z'
+    ]
+  );
+}
+
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-apply-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -102,7 +122,7 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   });
   expect(
     connection.sqlite.prepare(
-      `SELECT version_id, parent_version_id, device_id, created_at, content_hash
+      `SELECT version_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
        FROM node_sync_versions WHERE version_id = ?`
     ).get('phone#1')
   ).toEqual({
@@ -110,6 +130,7 @@ it('applies remote sync nodes into state, version table, and attachment links', 
     created_at: '2026-04-21T11:00:00.000Z',
     device_id: 'phone',
     parent_version_id: 'desktop#0',
+    snapshot_json: expect.stringContaining('"title":"Remote Node"'),
     version_id: 'phone#1'
   });
   expect(
@@ -120,4 +141,59 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   expect(
     connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1')
   ).toEqual({ node_id: 'node-1', position: 4 });
+});
+
+it('fast-forwards remote node versions when the local version is an ancestor', () => {
+  insertLocalNodeVersion('desktop#1');
+  const record = createRemoteNodeRecord();
+  record.parent_version_id = 'desktop#1';
+  record.ancestor_version_ids = ['desktop#1', 'desktop#0'];
+
+  expect(applySyncNodes([record])).toEqual(['node-1']);
+
+  const connection = openDatabaseConnection();
+  expect(
+    connection.sqlite.prepare('SELECT current_version_id, title, content FROM nodes WHERE id = ?').get('node-1')
+  ).toEqual({
+    content: 'remote body',
+    current_version_id: 'phone#1',
+    title: 'Remote Node'
+  });
+  expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
+});
+
+it('records divergent remote node versions without overwriting the local node', () => {
+  insertLocalNodeVersion('desktop#2');
+  const record = createRemoteNodeRecord();
+  record.parent_version_id = 'desktop#0';
+  record.ancestor_version_ids = ['desktop#0'];
+
+  expect(applySyncNodes([record])).toEqual([]);
+
+  const connection = openDatabaseConnection();
+  expect(
+    connection.sqlite.prepare('SELECT current_version_id, title, content FROM nodes WHERE id = ?').get('node-1')
+  ).toEqual({
+    content: 'local body',
+    current_version_id: 'desktop#2',
+    title: 'Local Node'
+  });
+  expect(
+    connection.sqlite
+      .prepare('SELECT conflict_version_id, object_id, parent_version_id, device_id FROM node_sync_conflicts')
+      .all()
+  ).toEqual([
+    {
+      conflict_version_id: 'phone#1',
+      device_id: 'phone',
+      object_id: 'node-1',
+      parent_version_id: 'desktop#0'
+    }
+  ]);
+});
+
+it('can acknowledge already applied node versions for push cursor delivery', () => {
+  insertLocalNodeVersion('phone#1');
+
+  expect(applySyncNodes([createRemoteNodeRecord()], { includeAlreadyApplied: true })).toEqual(['node-1']);
 });

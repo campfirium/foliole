@@ -74,7 +74,7 @@ function mockFloatingBar() {
 function mockWorkspaceSync(args: {
   isPaired?: boolean;
   snapshot?: WorkspaceSnapshot | null;
-  syncOnboardingStatus?: 'completed' | 'dismissed' | 'pending';
+  syncOnboardingStatus?: 'accepted' | 'completed' | 'dismissed' | 'pending';
 } = {}) {
   const snapshot = args.snapshot === undefined ? createSnapshot() : args.snapshot;
   useCompanionWorkspaceSync.mockReturnValue({

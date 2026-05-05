@@ -119,21 +119,10 @@ function selectReviewChangeLogRow() {
   const connection = openDatabaseConnection();
   return connection.sqlite
     .prepare(
-      `SELECT object_type, object_id, change_type, device_id, created_at, applied_at, payload_json
-       FROM sync_change_log WHERE object_type = 'node_review' AND object_id = ? LIMIT 1`
+      `SELECT COUNT(*) AS count
+       FROM sync_change_log WHERE object_type = 'node_review' AND object_id = ?`
     )
-    .get(NODE_ID) as Record<string, unknown> | undefined;
-}
-
-function selectReviewChangeLogRows() {
-  const connection = openDatabaseConnection();
-  return connection.sqlite
-    .prepare(
-      `SELECT change_type, object_id, payload_json
-       FROM sync_change_log WHERE object_type = 'node_review' AND object_id = ?
-       ORDER BY rowid ASC`
-    )
-    .all(NODE_ID) as Array<Record<string, unknown>>;
+    .get(NODE_ID) as { count: number };
 }
 
 it('writes node_review and review_log in one grading mutation', () => {
@@ -165,7 +154,7 @@ it('writes node_review and review_log in one grading mutation', () => {
   });
 });
 
-it('writes sync state and append-only change log for review grading', () => {
+it('writes sync state for review grading without generic change log rows', () => {
   seedQaNode();
   applyReviewGrade(GRADE_INPUT);
 
@@ -180,18 +169,7 @@ it('writes sync state and append-only change log for review grading', () => {
     sync_dirty: 1
   });
   expect(String(state?.last_modified_by_device_id)).toMatch(/^desktop-/);
-  expect(change).toMatchObject({
-    object_type: 'node_review',
-    object_id: NODE_ID,
-    change_type: 'upsert',
-    created_at: '2026-03-06T00:00:00.000Z',
-    applied_at: '2026-03-06T00:00:00.000Z'
-  });
-  expect(String(change?.device_id)).toMatch(/^desktop-/);
-  expect(JSON.parse(String(change?.payload_json))).toMatchObject({
-    nodeId: NODE_ID,
-    review: { due: '2026-03-10T00:00:00.000Z', reps: 1 }
-  });
+  expect(change.count).toBe(0);
 });
 
 it('tombstones review sync state when review state is reset', () => {
@@ -208,9 +186,5 @@ it('tombstones review sync state when review state is reset', () => {
     sync_dirty: 1
   });
   expect(typeof state?.deleted_at).toBe('string');
-  expect(selectReviewChangeLogRows().at(-1)).toMatchObject({
-    change_type: 'delete',
-    object_id: NODE_ID,
-    payload_json: JSON.stringify({ nodeId: NODE_ID })
-  });
+  expect(selectReviewChangeLogRow().count).toBe(0);
 });

@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-let mockedAppDataDir = '/tmp/foliole-shared-core-migration-tests';
+let mockedAppDataDir = '/tmp/foliole-shared-core-schema-tests';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -24,7 +24,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 let tempRoot = '';
 
 beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-shared-core-migration-'));
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-shared-core-schema-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
 });
 
@@ -43,7 +43,7 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'attachment_blobs', 'external_documents', 'node_sync_conflicts', 'node_sync_versions', 'nodes', 'node_reading', 'node_review', 'review_log', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'external_documents', 'node_sync_conflicts', 'node_sync_versions', 'nodes', 'node_reading', 'node_review', 'review_log', 'setting_records', 'settings', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
@@ -62,12 +62,13 @@ it('initializes a fresh database with the current schema', () => {
     { name: 'settings' },
     { name: 'sync_change_log' },
     { name: 'sync_object_state' },
+    { name: 'sync_peer_cursors' },
     { name: 'sync_peers' },
     { name: 'workspace_meta' }
   ]);
 });
 
-it('rejects legacy development databases and requires rebuild', () => {
+it('rejects legacy development databases and requires a fresh schema reset', () => {
   const connection = openDatabaseConnection();
 
   connection.sqlite.exec(`
@@ -79,7 +80,7 @@ it('rejects legacy development databases and requires rebuild', () => {
   `);
   connection.sqlite.pragma('user_version = 12');
 
-  expect(() => initializeDatabaseConnection(connection)).toThrow(/delete the existing foliole\.db and rebuild/i);
+  expect(() => initializeDatabaseConnection(connection)).toThrow(/reset foliole\.db and initialize fresh schema/i);
 });
 
 it('creates new nodes columns required by sync-aware schema', () => {

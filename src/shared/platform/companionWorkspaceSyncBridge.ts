@@ -4,7 +4,6 @@ import type {
   CompanionWorkspaceDiscoveryPayload,
   CompanionWorkspacePairPayload,
   CompanionWorkspacePairRequestPayload,
-  NativeCompanionDirtyNodePayload,
   NativeCompanionPairingState,
   NativeCompanionReadableArticlePayload,
   NativeCompanionSignedRequestHeaders,
@@ -12,9 +11,11 @@ import type {
 } from '../../../lib/platform/nativeCompanionSyncContract';
 import type {
   NativeSyncChangeCursor,
-  NativeSyncChangeRecord,
   NativeSyncIndexEntry,
-  NativeSyncObjectRecord
+  NativeSyncNodeRecord,
+  NativeSyncObjectRecord,
+  NativeSyncReviewLogRecord,
+  NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
@@ -29,20 +30,33 @@ export interface CompanionDiscoveryCandidatesPayload {
 
 export interface CompanionWorkspaceSyncPlugin {
   applySyncObjects(args: { objects: NativeSyncObjectRecord[] }): Promise<{ applied_object_ids: string[] }>;
-  loadSyncChanges(args: {
-    cursor: NativeSyncChangeCursor | null;
-    limit?: number;
-  }): Promise<{ changes: NativeSyncChangeRecord[] }>;
-  loadSyncChangeCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  applySyncNodeVersions(args: { nodes: NativeSyncNodeRecord[] }): Promise<{ applied_node_ids: string[] }>;
+  applySyncReviewLog(args: { reviews: NativeSyncReviewLogRecord[] }): Promise<{ applied_op_ids: string[] }>;
   loadSyncIndex(): Promise<{ entries: NativeSyncIndexEntry[] }>;
   loadSyncObjects(args: {
     object_ids: string[];
     object_types?: Array<NativeSyncObjectRecord['object_type']>;
   }): Promise<{ objects: NativeSyncObjectRecord[] }>;
-  loadSyncPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  loadSyncStateChanges(args: {
+    cursor: number | null;
+    limit?: number;
+  }): Promise<{ objects: NativeSyncStateObjectRecord[] }>;
+  loadSyncStateCursor(): Promise<{ cursor: number | null }>;
+  loadSyncStatePushCursor(): Promise<{ cursor: number | null }>;
+  loadSyncNodeVersionCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  loadSyncNodeVersionPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  loadSyncNodeVersions(args: {
+    cursor: NativeSyncChangeCursor | null;
+    limit?: number;
+  }): Promise<{ nodes: NativeSyncNodeRecord[] }>;
+  loadSyncReviewLogCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  loadSyncReviewLogPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  loadSyncReviewLog(args: {
+    cursor: NativeSyncChangeCursor | null;
+    limit?: number;
+  }): Promise<{ reviews: NativeSyncReviewLogRecord[] }>;
   loadPairingState(): Promise<NativeCompanionPairingState>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
-  loadDirtyNodes(): Promise<NativeCompanionDirtyNodePayload>;
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
   loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
   removeWorkspaceSyncRememberedTarget(args: { endpoint_url: string }): Promise<NativeCompanionWorkspaceSyncState>;
@@ -53,8 +67,12 @@ export interface CompanionWorkspaceSyncPlugin {
     status: 'completed' | 'failed' | 'skipped' | 'started';
   }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncOnboardingStatus(args: { status: NativeCompanionWorkspaceSyncState['sync_onboarding_status'] }): Promise<NativeCompanionWorkspaceSyncState>;
-  saveSyncChangeCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
-  saveSyncPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncStateCursor(args: { cursor: number | null }): Promise<{ cursor: number | null }>;
+  saveSyncStatePushCursor(args: { cursor: number | null }): Promise<{ cursor: number | null }>;
+  saveSyncNodeVersionCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncNodeVersionPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncReviewLogCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncReviewLogPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   saveSyncSettingRecord(args: {
     device_id?: string;
     form_factor?: string;
@@ -69,6 +87,7 @@ export interface CompanionWorkspaceSyncPlugin {
   }): Promise<{ content_hash: string; object_id: string }>;
   saveSyncNodeReviewRecord(args: {
     node_id: string;
+    review_log_json?: string;
     review_json: string;
   }): Promise<{ content_hash: string; object_id: string }>;
   saveSyncActiveViewState(args: {

@@ -1,5 +1,4 @@
 import type {
-  NativeCompanionDirtyNodePayload,
   CompanionWorkspaceSnapshotPayload,
   CompanionWorkspaceVersionPayload,
   NativeCompanionWorkspaceSyncState
@@ -22,7 +21,7 @@ import {
   WORKSPACE_SNAPSHOT_PATH,
   WORKSPACE_VERSION_PATH
 } from './companionWorkspaceSyncBridge';
-import { normalizeDirtyNodePayload, normalizeReadableArticlePayload } from './companionWorkspaceSyncPayloads';
+import { normalizeReadableArticlePayload } from './companionWorkspaceSyncPayloads';
 import {
   appendRememberedTarget,
   type CompanionSyncOnboardingStatus,
@@ -49,18 +48,6 @@ export {
   pairCompanionWithDesktop,
   requestCompanionPairing
 };
-
-export async function loadCompanionDirtyNodes() {
-  if (!isNativeAndroidCompanionRuntime()) {
-    const state = readWebSyncState();
-    return {
-      device_id: 'web-preview',
-      last_synced_at: state.last_synced_at,
-      nodes: []
-    } satisfies NativeCompanionDirtyNodePayload;
-  }
-  return normalizeDirtyNodePayload(await FolioleCompanionSync.loadDirtyNodes());
-}
 
 export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
   const normalizedEndpointUrl = endpointUrl.trim() ? normalizeEndpointUrl(endpointUrl) : null;

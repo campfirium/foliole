@@ -1,0 +1,126 @@
+// @vitest-environment node
+
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+let mockedAppDataDir = '/tmp/foliole-sync-object-apply-visibility-tests';
+
+vi.mock('../ipc/paths.js', () => ({
+  resolveAppPaths: () => ({
+    app_data_dir: mockedAppDataDir,
+    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
+    app_config_dir: path.join(mockedAppDataDir, 'config'),
+    app_log_dir: path.join(mockedAppDataDir, 'logs')
+  })
+}));
+
+import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { loadReadingProgress } from './readingProgress.js';
+import { applySyncObjects } from './syncObjectApply.js';
+import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
+
+let tempRoot = '';
+
+beforeEach(async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-object-apply-visibility-'));
+  mockedAppDataDir = path.join(tempRoot, 'app-data');
+  initializeDatabaseConnection(openDatabaseConnection());
+});
+
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+function insertNode(nodeId: string) {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES (?, 'item', ?, '', ?, ?)`,
+    [nodeId, nodeId, '2026-04-22T08:00:00.000Z', '2026-04-22T08:00:00.000Z']
+  );
+}
+
+function androidStateRecords(): NativeSyncObjectRecord[] {
+  return [{
+    content_hash: 'hash-reading-android',
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_reading',
+    payload_json: JSON.stringify({
+      lastHandledAt: '2026-04-22T08:10:00.000Z',
+      nextAt: '2026-04-23T08:10:00.000Z',
+      readingPosition: 9,
+      state: 'active'
+    }),
+    updated_at: '2026-04-22T08:10:00.000Z'
+  }, {
+    content_hash: 'hash-review-android',
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_review',
+    payload_json: JSON.stringify({
+      due: '2026-04-25T08:10:00.000Z',
+      lastReviewAt: '2026-04-22T08:10:00.000Z',
+      reps: 4,
+      scheduledDays: 3,
+      state: 2
+    }),
+    updated_at: '2026-04-22T08:11:00.000Z'
+  }, {
+    content_hash: 'hash-active-view-android',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:android-test:active_node',
+    object_type: 'view_state',
+    payload_json: JSON.stringify({ activeNodeId: 'node-1' }),
+    updated_at: '2026-04-22T08:12:00.000Z'
+  }, {
+    content_hash: 'hash-node-view-android',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:android-test:node:node-1',
+    object_type: 'view_state',
+    payload_json: JSON.stringify({ nodeId: 'node-1', scrollTop: 128, selectionFrom: 5, selectionTo: 13 }),
+    updated_at: '2026-04-22T08:13:00.000Z'
+  }];
+}
+
+it('makes Android-applied reading, review, and view state visible to desktop snapshots', () => {
+  insertNode('node-1');
+
+  expect(applySyncObjects(androidStateRecords())).toEqual([
+    'node_reading:node-1',
+    'node_review:node-1',
+    'view_state:session_resume:android:phone:android-test:active_node',
+    'view_state:session_resume:android:phone:android-test:node:node-1'
+  ]);
+
+  const workspaceSnapshot = loadWorkspaceSnapshot();
+  expect(workspaceSnapshot?.activeNodeId).toBe('node-1');
+  expect(workspaceSnapshot?.nodesById['node-1']?.reading).toMatchObject({
+    readingPosition: 9,
+    state: 'active'
+  });
+  expect(workspaceSnapshot?.nodesById['node-1']?.review).toMatchObject({
+    lastReviewAt: '2026-04-22T08:10:00.000Z',
+    reps: 4,
+    scheduledDays: 3,
+    state: 2
+  });
+
+  expect(loadReadingProgress()).toEqual({
+    activeNodeId: 'node-1',
+    nodeViewStateById: {
+      'node-1': {
+        scrollTop: 128,
+        selectionFrom: 5,
+        selectionTo: 13,
+        updatedAt: '2026-04-22T08:13:00.000Z'
+      }
+    }
+  });
+});

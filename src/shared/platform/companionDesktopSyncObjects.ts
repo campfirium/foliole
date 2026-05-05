@@ -1,188 +1,210 @@
 import type {
   NativeSyncChangeCursor,
-  NativeSyncChangeRecord,
-  NativeSyncIndexEntry,
-  NativeSyncObjectRecord
+  NativeSyncNodeRecord,
+  NativeSyncObjectRecord,
+  NativeSyncReviewLogRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import { fetchDesktopJson, postDesktopJson } from './companionDesktopSyncHttp';
 import {
+  applyCompanionSyncNodeVersions,
   applyCompanionSyncObjects,
-  loadCompanionSyncChanges,
-  loadCompanionSyncChangeCursor,
-  loadCompanionSyncIndex,
-  loadCompanionSyncPushCursor,
-  saveCompanionSyncChangeCursor,
-  saveCompanionSyncPushCursor
+  applyCompanionSyncReviewLog,
+  loadCompanionSyncNodeVersionCursor,
+  loadCompanionSyncNodeVersionPushCursor,
+  loadCompanionSyncNodeVersions,
+  loadCompanionSyncReviewLogCursor,
+  loadCompanionSyncReviewLogPushCursor,
+  loadCompanionSyncReviewLog,
+  loadCompanionSyncStateChanges,
+  loadCompanionSyncStateCursor,
+  loadCompanionSyncStatePushCursor,
+  saveCompanionSyncNodeVersionCursor,
+  saveCompanionSyncNodeVersionPushCursor,
+  saveCompanionSyncReviewLogCursor,
+  saveCompanionSyncReviewLogPushCursor,
+  saveCompanionSyncStateCursor,
+  saveCompanionSyncStatePushCursor
 } from './companionSyncObjects';
-import { createSignedRequestHeaders } from './companionWorkspacePairing';
-import { normalizeEndpointUrl } from './companionWorkspaceSyncBridge';
+export { bootstrapCompanionFromDesktopState } from './companionDesktopSyncBootstrap';
 
-const SYNC_INDEX_PATH = '/companion/sync-index';
-const SYNC_CHANGES_PATH = '/companion/sync-changes';
+const SYNC_NODE_VERSIONS_PATH = '/companion/sync-node-versions';
 const SYNC_OBJECTS_PATH = '/companion/sync-objects';
+const SYNC_REVIEW_LOG_PATH = '/companion/sync-review-log';
+const SYNC_STATE_PATH = '/companion/sync-state';
+const CHANGE_PAGE_LIMIT = 500;
+const MAX_CHANGE_PAGES = 20;
 
-function entryKey(entry: Pick<NativeSyncIndexEntry, 'object_id' | 'object_type'>) {
-  return `${entry.object_type}:${entry.object_id}`;
-}
-
-function isGenericEntry(entry: NativeSyncIndexEntry) {
-  return entry.object_type !== 'node';
-}
-
-function shouldPullObject(local: NativeSyncIndexEntry | undefined, remote: NativeSyncIndexEntry) {
-  return !local || local.content_hash !== remote.content_hash || local.sync_version_id !== remote.sync_version_id;
-}
-
-function collectPullEntries(localIndex: NativeSyncIndexEntry[], remoteIndex: NativeSyncIndexEntry[]) {
-  const localByKey = new Map(localIndex.map((entry) => [entryKey(entry), entry]));
-  return remoteIndex
-    .filter(isGenericEntry)
-    .filter((remote) => shouldPullObject(localByKey.get(entryKey(remote)), remote));
-}
-
-function groupEntriesByType(entries: NativeSyncIndexEntry[]) {
-  const byType = new Map<NativeSyncObjectRecord['object_type'], string[]>();
-  for (const entry of entries) {
-    if (entry.object_type === 'node') continue;
-    byType.set(entry.object_type, [...(byType.get(entry.object_type) ?? []), entry.object_id]);
-  }
-  return [...byType.entries()];
-}
-
-async function fetchDesktopJson<T>(endpointUrl: string, pathWithQuery: string): Promise<T> {
-  const endpoint = normalizeEndpointUrl(endpointUrl);
-  const response = await fetch(`${endpoint}${pathWithQuery}`, {
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery })
-  });
-  if (!response.ok) {
-    throw new Error(`Desktop sync source returned ${response.status}.`);
-  }
-  return await response.json() as T;
-}
-
-async function postDesktopJson<T>(endpointUrl: string, pathWithQuery: string, body: unknown): Promise<T> {
-  const endpoint = normalizeEndpointUrl(endpointUrl);
-  const bodyText = JSON.stringify(body);
-  const response = await fetch(`${endpoint}${pathWithQuery}`, {
-    body: bodyText,
-    headers: {
-      'Content-Type': 'application/json',
-      ...await createSignedRequestHeaders({ bodyText, method: 'POST', pathWithQuery })
-    },
-    method: 'POST'
-  });
-  if (!response.ok) {
-    throw new Error(`Desktop sync target returned ${response.status}.`);
-  }
-  return await response.json() as T;
-}
-
-function buildObjectsPath(objectType: NativeSyncObjectRecord['object_type'], objectIds: string[]) {
+function buildStatePath(cursor: number | null) {
   const params = new URLSearchParams();
-  params.append('object_type', objectType);
-  for (const objectId of objectIds) {
-    params.append('object_id', objectId);
-  }
-  return `${SYNC_OBJECTS_PATH}?${params.toString()}`;
+  params.set('limit', String(CHANGE_PAGE_LIMIT));
+  params.set('after_state_seq', String(cursor ?? 0));
+  return `${SYNC_STATE_PATH}?${params.toString()}`;
 }
 
-async function loadRemoteObjects(endpointUrl: string, entries: NativeSyncIndexEntry[]) {
-  const objectBatches = await Promise.all(
-    groupEntriesByType(entries).map(async ([objectType, objectIds]) => {
-      const payload = await fetchDesktopJson<{ objects: NativeSyncObjectRecord[] }>(
-        endpointUrl,
-        buildObjectsPath(objectType, objectIds)
-      );
-      return payload.objects;
-    })
-  );
-  return objectBatches.flat();
-}
-
-function buildChangesPath(cursor: NativeSyncChangeCursor | null) {
+function buildEventPath(path: string, cursor: NativeSyncChangeCursor | null) {
   const params = new URLSearchParams();
-  params.set('limit', '500');
+  params.set('limit', String(CHANGE_PAGE_LIMIT));
   if (cursor) {
     params.set('after_created_at', cursor.created_at);
     params.set('after_change_id', cursor.change_id);
   }
-  return `${SYNC_CHANGES_PATH}?${params.toString()}`;
+  return `${path}?${params.toString()}`;
 }
 
-function changeToObjectRecord(change: NativeSyncChangeRecord): NativeSyncObjectRecord {
-  return {
-    content_hash: change.content_hash,
-    deleted_at: change.change_type === 'delete' ? change.created_at : null,
-    object_id: change.object_id,
-    object_type: change.object_type,
-    payload_json: change.change_type === 'delete' ? null : change.payload_json,
-    updated_at: change.created_at
-  };
+function takeAcceptedPrefix<T>(records: T[], acceptedIds: string[], getId: (record: T) => string) {
+  const acceptedCounts = new Map<string, number>();
+  for (const id of acceptedIds) {
+    acceptedCounts.set(id, (acceptedCounts.get(id) ?? 0) + 1);
+  }
+  const accepted: T[] = [];
+  for (const record of records) {
+    const id = getId(record);
+    const count = acceptedCounts.get(id) ?? 0;
+    if (count <= 0) {
+      break;
+    }
+    acceptedCounts.set(id, count - 1);
+    accepted.push(record);
+  }
+  return accepted;
 }
 
-async function pullRemoteChanges(endpointUrl: string) {
-  const cursor = await loadCompanionSyncChangeCursor();
-  const payload = await fetchDesktopJson<{ changes: NativeSyncChangeRecord[] }>(
-    endpointUrl,
-    buildChangesPath(cursor)
-  );
-  const objects = payload.changes.map(changeToObjectRecord);
-  const appliedObjectIds = objects.length ? await applyCompanionSyncObjects(objects) : [];
-  const lastChange = payload.changes.at(-1);
-  if (lastChange) {
-    await saveCompanionSyncChangeCursor({
-      change_id: lastChange.change_id,
-      created_at: lastChange.created_at
-    });
+async function pullRemoteStateChanges(endpointUrl: string) {
+  let cursor = await loadCompanionSyncStateCursor();
+  const appliedObjectIds: string[] = [];
+  const changedObjectIds: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const payload = await fetchDesktopJson<{ objects: Array<NativeSyncObjectRecord & { state_seq: number }> }>(
+      endpointUrl,
+      buildStatePath(cursor)
+    );
+    if (payload.objects.length > 0) {
+      appliedObjectIds.push(...await applyCompanionSyncObjects(payload.objects));
+      changedObjectIds.push(...payload.objects.map((object) => object.object_id));
+    }
+    const lastObject = payload.objects.at(-1);
+    if (!lastObject) break;
+    cursor = lastObject.state_seq;
+    await saveCompanionSyncStateCursor(cursor);
+    if (payload.objects.length < CHANGE_PAGE_LIMIT) break;
   }
-  return {
-    appliedObjectIds,
-    changedObjectIds: payload.changes.map((change) => change.object_id)
-  };
+  return { appliedObjectIds, changedObjectIds };
 }
 
-async function pullRemoteStateDiff(endpointUrl: string) {
-  const [localIndex, remotePayload] = await Promise.all([
-    loadCompanionSyncIndex(),
-    fetchDesktopJson<{ entries: NativeSyncIndexEntry[] }>(endpointUrl, SYNC_INDEX_PATH)
-  ]);
-  const pullEntries = collectPullEntries(localIndex, remotePayload.entries);
-  if (pullEntries.length === 0) {
-    return { appliedObjectIds: [], requestedObjectIds: [] };
+async function pullRemoteNodeVersions(endpointUrl: string) {
+  let cursor = await loadCompanionSyncNodeVersionCursor();
+  const appliedNodeIds: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const payload = await fetchDesktopJson<{ nodes: NativeSyncNodeRecord[] }>(
+      endpointUrl,
+      buildEventPath(SYNC_NODE_VERSIONS_PATH, cursor)
+    );
+    if (payload.nodes.length > 0) {
+      appliedNodeIds.push(...await applyCompanionSyncNodeVersions(payload.nodes));
+    }
+    const lastNode = payload.nodes.at(-1);
+    if (!lastNode?.version_id || !lastNode.version_created_at) break;
+    cursor = { change_id: lastNode.version_id, created_at: lastNode.version_created_at };
+    await saveCompanionSyncNodeVersionCursor(cursor);
+    if (payload.nodes.length < CHANGE_PAGE_LIMIT) break;
   }
-  const objects = await loadRemoteObjects(endpointUrl, pullEntries);
-  return {
-    appliedObjectIds: await applyCompanionSyncObjects(objects),
-    requestedObjectIds: pullEntries.map((entry) => entry.object_id)
-  };
+  return { appliedNodeIds };
 }
 
-async function pushLocalChanges(endpointUrl: string) {
-  const cursor = await loadCompanionSyncPushCursor();
-  const changes = await loadCompanionSyncChanges(cursor, 500);
-  const objects = changes.map(changeToObjectRecord);
-  if (objects.length === 0) {
-    return { pushedObjectIds: [] };
+async function pullRemoteReviewLog(endpointUrl: string) {
+  let cursor = await loadCompanionSyncReviewLogCursor();
+  const appliedReviewOpIds: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const payload = await fetchDesktopJson<{ reviews: NativeSyncReviewLogRecord[] }>(
+      endpointUrl,
+      buildEventPath(SYNC_REVIEW_LOG_PATH, cursor)
+    );
+    if (payload.reviews.length > 0) {
+      appliedReviewOpIds.push(...await applyCompanionSyncReviewLog(payload.reviews));
+    }
+    const lastReview = payload.reviews.at(-1);
+    if (!lastReview) break;
+    cursor = { change_id: lastReview.op_id, created_at: lastReview.reviewed_at };
+    await saveCompanionSyncReviewLogCursor(cursor);
+    if (payload.reviews.length < CHANGE_PAGE_LIMIT) break;
   }
-  await postDesktopJson<{ applied_object_ids: string[] }>(endpointUrl, SYNC_OBJECTS_PATH, { objects });
-  const lastChange = changes.at(-1);
-  if (lastChange) {
-    await saveCompanionSyncPushCursor({
-      change_id: lastChange.change_id,
-      created_at: lastChange.created_at
-    });
+  return { appliedReviewOpIds };
+}
+
+async function pushLocalStateChanges(endpointUrl: string) {
+  let cursor = await loadCompanionSyncStatePushCursor();
+  const pushedObjectIds: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const objects = await loadCompanionSyncStateChanges(cursor, CHANGE_PAGE_LIMIT);
+    if (objects.length === 0) break;
+    const response = await postDesktopJson<{ applied_object_ids: string[] }>(endpointUrl, SYNC_OBJECTS_PATH, { objects });
+    const acceptedObjects = takeAcceptedPrefix(
+      objects,
+      response.applied_object_ids ?? [],
+      (object) => `${object.object_type}:${object.object_id}`
+    );
+    pushedObjectIds.push(...acceptedObjects.map((object) => object.object_id));
+    const lastObject = acceptedObjects.at(-1);
+    if (!lastObject) break;
+    cursor = lastObject.state_seq;
+    await saveCompanionSyncStatePushCursor(cursor);
+    if (acceptedObjects.length < objects.length || objects.length < CHANGE_PAGE_LIMIT) break;
   }
-  return { pushedObjectIds: changes.map((change) => change.object_id) };
+  return { pushedObjectIds };
+}
+
+async function pushLocalNodeVersions(endpointUrl: string) {
+  let cursor = await loadCompanionSyncNodeVersionPushCursor();
+  const pushedNodeIds: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const nodes = await loadCompanionSyncNodeVersions(cursor, CHANGE_PAGE_LIMIT);
+    if (nodes.length === 0) break;
+    const response = await postDesktopJson<{ applied_node_ids: string[] }>(endpointUrl, SYNC_NODE_VERSIONS_PATH, { nodes });
+    const acceptedNodes = takeAcceptedPrefix(nodes, response.applied_node_ids ?? [], (node) => node.object_id);
+    pushedNodeIds.push(...acceptedNodes.map((node) => node.object_id));
+    const lastNode = acceptedNodes.at(-1);
+    if (!lastNode?.version_id || !lastNode.version_created_at) break;
+    cursor = { change_id: lastNode.version_id, created_at: lastNode.version_created_at };
+    await saveCompanionSyncNodeVersionPushCursor(cursor);
+    if (acceptedNodes.length < nodes.length || nodes.length < CHANGE_PAGE_LIMIT) break;
+  }
+  return { pushedNodeIds };
+}
+
+async function pushLocalReviewLog(endpointUrl: string) {
+  let cursor = await loadCompanionSyncReviewLogPushCursor();
+  const pushedReviewOpIds: string[] = [];
+  for (let page = 0; page < MAX_CHANGE_PAGES; page += 1) {
+    const reviews = await loadCompanionSyncReviewLog(cursor, CHANGE_PAGE_LIMIT);
+    if (reviews.length === 0) break;
+    const response = await postDesktopJson<{ applied_op_ids: string[] }>(endpointUrl, SYNC_REVIEW_LOG_PATH, { reviews });
+    const acceptedReviews = takeAcceptedPrefix(reviews, response.applied_op_ids ?? [], (review) => review.op_id);
+    pushedReviewOpIds.push(...acceptedReviews.map((review) => review.op_id));
+    const lastReview = acceptedReviews.at(-1);
+    if (!lastReview) break;
+    cursor = { change_id: lastReview.op_id, created_at: lastReview.reviewed_at };
+    await saveCompanionSyncReviewLogPushCursor(cursor);
+    if (acceptedReviews.length < reviews.length || reviews.length < CHANGE_PAGE_LIMIT) break;
+  }
+  return { pushedReviewOpIds };
 }
 
 export async function syncCompanionObjectsFromDesktop(endpointUrl: string) {
-  const pushed = await pushLocalChanges(endpointUrl);
-  const changes = await pullRemoteChanges(endpointUrl);
-  const stateDiff = await pullRemoteStateDiff(endpointUrl);
+  const pushedNodes = await pushLocalNodeVersions(endpointUrl);
+  const pushed = await pushLocalStateChanges(endpointUrl);
+  const pushedReviews = await pushLocalReviewLog(endpointUrl);
+  const nodes = await pullRemoteNodeVersions(endpointUrl);
+  const reviews = await pullRemoteReviewLog(endpointUrl);
+  const changes = await pullRemoteStateChanges(endpointUrl);
   return {
-    appliedObjectIds: [...changes.appliedObjectIds, ...stateDiff.appliedObjectIds],
+    appliedNodeIds: nodes.appliedNodeIds,
+    appliedObjectIds: changes.appliedObjectIds,
+    appliedReviewOpIds: reviews.appliedReviewOpIds,
     changedObjectIds: changes.changedObjectIds,
+    pushedNodeIds: pushedNodes.pushedNodeIds,
     pushedObjectIds: pushed.pushedObjectIds,
-    requestedObjectIds: stateDiff.requestedObjectIds
+    pushedReviewOpIds: pushedReviews.pushedReviewOpIds,
+    requestedObjectIds: []
   };
 }

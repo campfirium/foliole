@@ -94,6 +94,30 @@ function listNodeAttachmentRefs(nodeId: string) {
   );
 }
 
+function buildNodeSyncSnapshot(row: NodeSyncVersionSourceRow, nodeId: string) {
+  return {
+    anchor_link: row.anchor_link,
+    attachments: listNodeAttachmentRefs(nodeId),
+    content: row.content,
+    created_at: row.created_at,
+    deleted_at: row.deleted_at,
+    desired_retention: row.desired_retention,
+    hide_title_heading: row.hide_title_heading === 1,
+    id: row.id,
+    image_regions: row.image_regions,
+    is_title_manual: row.is_title_manual === 1,
+    kind: row.kind,
+    opening_text: row.opening_text,
+    parent_id: row.parent_id,
+    position: row.position,
+    priority: row.priority,
+    reveal: row.reveal,
+    title: row.title,
+    updated_at: row.updated_at,
+    virtual_filter: row.virtual_filter
+  };
+}
+
 export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOString()): string | null {
   const connection = openDatabaseConnection();
   const deviceId = loadOrCreateDesktopDeviceId(now);
@@ -101,7 +125,7 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
 
   connection.driver.transaction(() => {
     const row = loadNodeSyncVersionSource(nodeId);
-    if (!row || row.sync_dirty !== 1) {
+    if (!row || (row.sync_dirty !== 1 && row.current_version_id)) {
       return;
     }
     const versionId = nextNodeSyncVersionId(deviceId, now);
@@ -137,9 +161,10 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
          parent_version_id,
          device_id,
          created_at,
-         content_hash
-       ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [versionId, row.id, row.current_version_id, deviceId, now, contentHash]
+         content_hash,
+         snapshot_json
+       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [versionId, row.id, row.current_version_id, deviceId, now, contentHash, JSON.stringify(buildNodeSyncSnapshot(row, nodeId))]
     );
     connection.driver.execute(
       `UPDATE nodes
@@ -155,7 +180,9 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
 
 export function flushDirtyNodeSyncVersions(now = new Date().toISOString()) {
   const nodeIds = openDatabaseConnection().driver
-    .queryAll<{ id: string }>('SELECT id FROM nodes WHERE sync_dirty = 1 ORDER BY updated_at ASC')
+    .queryAll<{ id: string }>(
+      'SELECT id FROM nodes WHERE sync_dirty = 1 OR current_version_id IS NULL ORDER BY updated_at ASC'
+    )
     .map((row) => row.id);
 
   for (const nodeId of nodeIds) {

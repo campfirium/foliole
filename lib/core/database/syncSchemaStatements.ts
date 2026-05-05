@@ -2,14 +2,20 @@ export const SYNC_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS sync_object_state (
     object_type TEXT NOT NULL,
     object_id TEXT NOT NULL,
+    state_seq INTEGER NOT NULL,
     current_version_id TEXT,
     content_hash TEXT NOT NULL,
     last_modified_by_device_id TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
     sync_dirty INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (object_type, object_id)
+    PRIMARY KEY (object_type, object_id),
+    UNIQUE (state_seq)
   )`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_object_state_seq
+    ON sync_object_state (state_seq)`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq
+    ON sync_object_state (object_type, state_seq)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_object_state_dirty
     ON sync_object_state (sync_dirty, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_updated
@@ -35,6 +41,13 @@ export const SYNC_SCHEMA_STATEMENTS = [
     ON sync_change_log (created_at, change_id)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_change_log_result_version
     ON sync_change_log (result_version_id)`,
+  `CREATE TABLE IF NOT EXISTS sync_peer_cursors (
+    peer_id TEXT NOT NULL,
+    stream_name TEXT NOT NULL,
+    cursor_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (peer_id, stream_name)
+  )`,
   `CREATE TABLE IF NOT EXISTS attachment_blobs (
     attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE,
     content_hash TEXT,

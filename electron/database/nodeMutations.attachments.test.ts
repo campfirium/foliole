@@ -144,14 +144,12 @@ it('keeps shared inline images until the last body reference is permanently dele
     linkRows: 0,
     pdfIndexRows: 0
   });
-  expect(openDatabaseConnection().driver.queryOne<{ change_type: string; deleted_at: string }>(
-    `SELECT log.change_type, state.deleted_at
-     FROM sync_change_log log
-     INNER JOIN sync_object_state state
-       ON state.object_type = log.object_type AND state.object_id = log.object_id
-     WHERE log.object_type = 'attachment' AND log.object_id = ?`,
+  expect(openDatabaseConnection().driver.queryOne<{ deleted_at: string }>(
+    `SELECT deleted_at
+     FROM sync_object_state
+     WHERE object_type = 'attachment' AND object_id = ?`,
     ['hash-image']
-  )).toEqual({ change_type: 'delete', deleted_at: expect.any(String) });
+  )).toEqual({ deleted_at: expect.any(String) });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 

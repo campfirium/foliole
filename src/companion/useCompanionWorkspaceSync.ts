@@ -8,7 +8,6 @@ import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
   persistCompanionWorkspaceSnapshot,
-  pullCompanionWorkspaceSnapshot,
   recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget,
   saveCompanionSyncOnboardingStatus,
@@ -47,7 +46,7 @@ async function initializeWorkspaceSyncState(args: {
   args.setStatus('idle');
 }
 
-async function pullDesktopWorkspaceAndObjects(args: {
+async function syncDesktopStreams(args: {
   endpointUrl: string;
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
@@ -58,12 +57,10 @@ async function pullDesktopWorkspaceAndObjects(args: {
     status: 'started'
   });
   args.setState(startedState);
-  const pulledState = await pullCompanionWorkspaceSnapshot(args.endpointUrl);
   await syncCompanionObjectsFromDesktop(args.endpointUrl);
   const nextState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     message: 'Sync completed.',
-    occurredAt: pulledState.last_synced_at ?? undefined,
     status: 'completed'
   });
   args.setState(nextState);
@@ -109,7 +106,7 @@ function useWorkspaceSnapshotActions(args: {
     args.setStatus('syncing');
     args.setError(null);
     try {
-      const nextState = await pullDesktopWorkspaceAndObjects({
+      const nextState = await syncDesktopStreams({
         endpointUrl,
         setReadableArticle: args.setReadableArticle,
         setState: args.setState

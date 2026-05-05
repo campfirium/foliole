@@ -8,15 +8,23 @@ import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
-import { handleSyncObjectsPush } from './companionLanSyncObjectPush.js';
 import {
-  buildSyncChangesPayload,
+  handleSyncNodeVersionsPush,
+  handleSyncObjectsPush,
+  handleSyncReviewLogPush
+} from './companionLanSyncObjectPush.js';
+import {
   buildSyncIndexPayload,
+  buildSyncNodeVersionsPayload,
   buildSyncObjectsPayload,
+  buildSyncReviewLogPayload,
+  buildSyncStatePayload,
   isSyncObjectEndpoint,
-  SYNC_CHANGES_PATH,
   SYNC_INDEX_PATH,
-  SYNC_OBJECTS_PATH
+  SYNC_NODE_VERSIONS_PATH,
+  SYNC_OBJECTS_PATH,
+  SYNC_REVIEW_LOG_PATH,
+  SYNC_STATE_PATH
 } from './companionLanSyncObjects.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
@@ -27,7 +35,13 @@ export const PAIR_ENDPOINT_PATH = '/companion/pair';
 export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
-export { SYNC_CHANGES_PATH, SYNC_INDEX_PATH, SYNC_OBJECTS_PATH };
+export {
+  SYNC_INDEX_PATH,
+  SYNC_NODE_VERSIONS_PATH,
+  SYNC_OBJECTS_PATH,
+  SYNC_REVIEW_LOG_PATH,
+  SYNC_STATE_PATH
+};
 
 function resolveCorsOrigin(request: http.IncomingMessage) {
   const origin = request.headers.origin;
@@ -77,13 +91,53 @@ function writeOptions(request: http.IncomingMessage, response: http.ServerRespon
 }
 
 function buildSyncEndpointPayload(parsedRequestUrl: URL) {
-  if (parsedRequestUrl.pathname === SYNC_CHANGES_PATH) {
-    return buildSyncChangesPayload(parsedRequestUrl);
-  }
   if (parsedRequestUrl.pathname === SYNC_INDEX_PATH) {
     return buildSyncIndexPayload();
   }
+  if (parsedRequestUrl.pathname === SYNC_STATE_PATH) {
+    return buildSyncStatePayload(parsedRequestUrl);
+  }
+  if (parsedRequestUrl.pathname === SYNC_NODE_VERSIONS_PATH) {
+    return buildSyncNodeVersionsPayload(parsedRequestUrl);
+  }
+  if (parsedRequestUrl.pathname === SYNC_REVIEW_LOG_PATH) {
+    return buildSyncReviewLogPayload(parsedRequestUrl);
+  }
   return buildSyncObjectsPayload(parsedRequestUrl);
+}
+
+async function handlePostRequest(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  parsedRequestUrl: URL,
+  args: {
+    appVersion: string;
+    onPairRequestCreated: (() => void) | null;
+    peerId: string;
+    updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
+  }
+) {
+  if (parsedRequestUrl.pathname === PAIR_REQUESTS_ENDPOINT_PATH) {
+    await handlePairRequestCreate(request, response, args.updatePairingStatus, args.onPairRequestCreated, writeJson);
+    return true;
+  }
+  if (parsedRequestUrl.pathname === PAIR_ENDPOINT_PATH) {
+    await handlePairRequest(request, response, args.appVersion, args.peerId, args.updatePairingStatus, writeJson);
+    return true;
+  }
+  if (parsedRequestUrl.pathname === SYNC_OBJECTS_PATH) {
+    await handleSyncObjectsPush(request, response, writeJson);
+    return true;
+  }
+  if (parsedRequestUrl.pathname === SYNC_NODE_VERSIONS_PATH) {
+    await handleSyncNodeVersionsPush(request, response, writeJson);
+    return true;
+  }
+  if (parsedRequestUrl.pathname === SYNC_REVIEW_LOG_PATH) {
+    await handleSyncReviewLogPush(request, response, writeJson);
+    return true;
+  }
+  return false;
 }
 
 export function createLanWorkspaceSyncRequestHandler(args: {
@@ -102,17 +156,8 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, 200, buildDiscoveryPayload(args.appVersion, args.peerId));
       return;
     }
-    if (request.method === 'POST' && parsedRequestUrl.pathname === PAIR_REQUESTS_ENDPOINT_PATH) {
-      await handlePairRequestCreate(request, response, args.updatePairingStatus, args.onPairRequestCreated, writeJson);
-      return;
-    }
-    if (request.method === 'POST' && parsedRequestUrl.pathname === PAIR_ENDPOINT_PATH) {
-      await handlePairRequest(request, response, args.appVersion, args.peerId, args.updatePairingStatus, writeJson);
-      return;
-    }
-    if (request.method === 'POST' && parsedRequestUrl.pathname === SYNC_OBJECTS_PATH) {
-      await handleSyncObjectsPush(request, response, writeJson);
-      return;
+    if (request.method === 'POST') {
+      if (await handlePostRequest(request, response, parsedRequestUrl, args)) return;
     }
     if (request.method !== 'GET') {
       writeJson(request, response, 405, { error: 'method_not_allowed' });
@@ -127,11 +172,11 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, auth.status_code, { error: auth.error });
       return;
     }
-    const snapshot = loadWorkspaceSnapshot();
     if (isSyncObjectEndpoint(request, parsedRequestUrl)) {
       writeJson(request, response, 200, buildSyncEndpointPayload(parsedRequestUrl));
       return;
     }
+    const snapshot = loadWorkspaceSnapshot();
     if (parsedRequestUrl.pathname === WORKSPACE_VERSION_PATH) {
       writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.peerId, snapshot));
       return;

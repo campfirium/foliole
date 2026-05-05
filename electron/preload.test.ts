@@ -60,6 +60,7 @@ function executePreload(env: Record<string, string | undefined> = {}) {
         onManagedInboxUpdated: expect.any(Function),
         onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
+        onWorkspaceSyncApplied: expect.any(Function),
         onWindowResized: expect.any(Function),
         setNativeHotkeyRecordingActive: expect.any(Function)
       })
@@ -114,6 +115,27 @@ function executePreload(env: Record<string, string | undefined> = {}) {
     expect(ipcOn).toHaveBeenCalledWith('foliole:native-keyboard-input', expect.any(Function));
     expect(handler).toHaveBeenCalledWith({ altKey: true, code: 'KeyG', controlKey: true, key: 'g', metaKey: false, shiftKey: false, type: 'keyDown' });
     expect(ipcRemoveListener).toHaveBeenCalledWith('foliole:native-keyboard-input', listener);
+  });
+
+  it('forwards sanitized workspace sync applied events through preload', () => {
+    const { exposeInMainWorld, ipcOn } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const handler = vi.fn();
+
+    electronApi.onWorkspaceSyncApplied(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, {
+      appliedNodeIds: ['node-1', 1],
+      appliedObjectIds: ['node_reading:node-1'],
+      appliedReviewOpIds: [null, 'op-1']
+    });
+
+    expect(ipcOn).toHaveBeenCalledWith('foliole:workspace-sync-applied', expect.any(Function));
+    expect(handler).toHaveBeenCalledWith({
+      appliedNodeIds: ['node-1'],
+      appliedObjectIds: ['node_reading:node-1'],
+      appliedReviewOpIds: ['op-1']
+    });
   });
 
   it('sends native hotkey recorder active state through preload', () => {

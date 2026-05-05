@@ -25,7 +25,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
-import { initializeDatabase, runDatabaseMigrations } from './migrate.js';
+import { initializeDatabase, initializeDatabaseSchema } from './migrate.js';
 
 let tempRoot = '';
 
@@ -45,7 +45,7 @@ function createLegacyDatabase() {
   const legacyDatabasePath = path.join(mockedAppDataDir, 'foliole.db');
   nodeFs.mkdirSync(path.dirname(legacyDatabasePath), { recursive: true });
   const sqlite = new BetterSqlite3(legacyDatabasePath);
-  runDatabaseMigrations(sqlite);
+  initializeDatabaseSchema(sqlite);
   sqlite
     .prepare(
       `INSERT INTO nodes (

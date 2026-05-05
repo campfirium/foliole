@@ -18,10 +18,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import {
-  appendSyncChangeLog,
   computeSyncContentHash,
+  getPeerCursor,
   initializeDatabaseConnection,
-  listSyncChangesAfterCursor,
+  selectSyncStateChangesSince,
+  setPeerCursor,
   upsertSyncObjectState
 } from '../../lib/core/database/index.js';
 
@@ -92,48 +93,57 @@ it('writes sync object state for attachment pdf text setting and view state', ()
   ]);
 });
 
-it('appends sync changes and queries after a cursor', () => {
+it('advances state sequence monotonically and queries by cursor', () => {
   const driver = openInitializedDriver();
-  const firstPayload = JSON.stringify({ attachmentId: 'att-1' });
-  const secondPayload = JSON.stringify({ attachmentId: 'att-2' });
-
-  appendSyncChangeLog(driver, {
-    changeId: 'desktop-1:0001',
+  for (let index = 0; index < 1000; index += 1) {
+    upsertSyncObjectState(driver, {
+      objectType: 'setting',
+      objectId: `setting-${index}`,
+      contentHash: computeSyncContentHash('setting', { index }),
+      lastModifiedByDeviceId: 'desktop-1',
+      updatedAt: `2026-04-24T00:00:${String(index % 60).padStart(2, '0')}.000Z`
+    });
+  }
+  upsertSyncObjectState(driver, {
     objectType: 'attachment',
     objectId: 'att-1',
-    changeType: 'upsert',
-    deviceId: 'desktop-1',
     contentHash: computeSyncContentHash('attachment', { attachmentId: 'att-1' }),
-    payloadJson: firstPayload,
-    createdAt: '2026-04-24T00:00:00.000Z',
-    appliedAt: '2026-04-24T00:00:01.000Z'
+    lastModifiedByDeviceId: 'desktop-1',
+    updatedAt: '2026-04-24T00:10:00.000Z'
   });
-  appendSyncChangeLog(driver, {
-    changeId: 'desktop-1:0002',
+  upsertSyncObjectState(driver, {
     objectType: 'attachment',
-    objectId: 'att-2',
-    changeType: 'upsert',
-    deviceId: 'desktop-1',
-    contentHash: computeSyncContentHash('attachment', { attachmentId: 'att-2' }),
-    payloadJson: secondPayload,
-    createdAt: '2026-04-24T00:00:00.000Z'
+    objectId: 'att-1',
+    contentHash: computeSyncContentHash('attachment', { attachmentId: 'att-1', updated: true }),
+    lastModifiedByDeviceId: 'desktop-1',
+    updatedAt: '2026-04-24T00:11:00.000Z'
   });
 
-  const changes = listSyncChangesAfterCursor(
-    driver,
-    { createdAt: '2026-04-24T00:00:00.000Z', changeId: 'desktop-1:0001' },
-    10
+  const duplicateSeqRows = driver.queryAll<{ count: number }>(
+    `SELECT COUNT(*) AS count
+     FROM sync_object_state
+     GROUP BY state_seq
+     HAVING COUNT(*) > 1`
   );
+  const rows = selectSyncStateChangesSince(driver, 999, 10);
 
-  expect(changes).toEqual([
-    expect.objectContaining({
-      changeId: 'desktop-1:0002',
-      objectType: 'attachment',
-      objectId: 'att-2',
-      payloadJson: secondPayload,
-      appliedAt: null
-    })
-  ]);
+  expect(duplicateSeqRows).toEqual([]);
+  expect(rows.map((row) => row.stateSeq)).toEqual([1000, 1002]);
+  expect(rows.at(-1)).toEqual(expect.objectContaining({ objectId: 'att-1', objectType: 'attachment' }));
+});
+
+it('stores independent peer cursors per stream', () => {
+  const driver = openInitializedDriver();
+
+  setPeerCursor(driver, 'peer-1', 'state', '12', '2026-04-24T00:00:00.000Z');
+  setPeerCursor(driver, 'peer-1', 'review_log', 'op-1', '2026-04-24T00:01:00.000Z');
+  setPeerCursor(driver, 'peer-1', 'node_versions', 'version-1', '2026-04-24T00:02:00.000Z');
+  setPeerCursor(driver, 'peer-1', 'state', '13', '2026-04-24T00:03:00.000Z');
+
+  expect(getPeerCursor(driver, 'peer-1', 'state')).toBe('13');
+  expect(getPeerCursor(driver, 'peer-1', 'review_log')).toBe('op-1');
+  expect(getPeerCursor(driver, 'peer-1', 'node_versions')).toBe('version-1');
+  expect(getPeerCursor(driver, 'peer-2', 'state')).toBeNull();
 });
 
 it('creates attachment blob and setting record tables in fresh databases', () => {

@@ -54,15 +54,14 @@ function listPdfPageTextState() {
     .all() as Array<{ deleted_at: string | null; object_id: string; sync_dirty: number }>;
 }
 
-function listPdfPageTextChanges() {
+function countPdfPageTextChanges() {
   return openDatabaseConnection().sqlite
     .prepare(
-      `SELECT object_id, change_type, payload_json
+      `SELECT COUNT(*) AS count
        FROM sync_change_log
-       WHERE object_type = 'pdf_page_text'
-       ORDER BY created_at ASC, object_id ASC`
+       WHERE object_type = 'pdf_page_text'`
     )
-    .all() as Array<{ change_type: string; object_id: string; payload_json: string }>;
+    .get() as { count: number };
 }
 
 it('writes sync object state for saved PDF page text rows', () => {
@@ -81,22 +80,7 @@ it('writes sync object state for saved PDF page text rows', () => {
     { object_id: 'pdf-1:1', deleted_at: null, sync_dirty: 1 },
     { object_id: 'pdf-1:2', deleted_at: null, sync_dirty: 1 }
   ]);
-  expect(listPdfPageTextChanges().map((change) => ({
-    changeType: change.change_type,
-    objectId: change.object_id,
-    payload: JSON.parse(change.payload_json)
-  }))).toEqual([
-    {
-      changeType: 'upsert',
-      objectId: 'pdf-1:1',
-      payload: { attachment_id: 'pdf-1', page: 1, page_height: 1200, page_width: 800, text: 'Page one' }
-    },
-    {
-      changeType: 'upsert',
-      objectId: 'pdf-1:2',
-      payload: { attachment_id: 'pdf-1', page: 2, page_height: null, page_width: null, text: 'Page two' }
-    }
-  ]);
+  expect(countPdfPageTextChanges().count).toBe(0);
 });
 
 it('marks removed PDF pages as deleted sync objects', () => {
@@ -120,9 +104,5 @@ it('marks removed PDF pages as deleted sync objects', () => {
     { object_id: 'pdf-1:1', deleted_at: null, sync_dirty: 1 },
     { object_id: 'pdf-1:2', deleted_at: '2026-04-24T00:02:00.000Z', sync_dirty: 1 }
   ]);
-  expect(listPdfPageTextChanges().at(-1)).toMatchObject({
-    change_type: 'delete',
-    object_id: 'pdf-1:2',
-    payload_json: JSON.stringify({ attachment_id: 'pdf-1', page: 2 })
-  });
+  expect(countPdfPageTextChanges().count).toBe(0);
 });

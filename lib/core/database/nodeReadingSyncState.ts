@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export interface NodeReadingSyncPayload {
   intervalDurationMs: number;
@@ -68,17 +66,6 @@ function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeRead
     updatedAt: input.updatedAt,
     syncDirty: true
   });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'node_reading',
-    objectId: input.nodeId,
-    changeType: 'delete',
-    deviceId: input.deviceId,
-    contentHash,
-    payloadJson: JSON.stringify({ nodeId: input.nodeId }),
-    createdAt: input.updatedAt,
-    appliedAt: input.updatedAt
-  });
 }
 
 function recordNodeReadingUpsert(
@@ -93,17 +80,6 @@ function recordNodeReadingUpsert(
     lastModifiedByDeviceId: input.deviceId,
     updatedAt: input.updatedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'node_reading',
-    objectId: input.nodeId,
-    changeType: 'upsert',
-    deviceId: input.deviceId,
-    contentHash,
-    payloadJson: JSON.stringify(toNodeReadingPayload(input.nodeId, input.reading)),
-    createdAt: input.updatedAt,
-    appliedAt: input.updatedAt
   });
 }
 

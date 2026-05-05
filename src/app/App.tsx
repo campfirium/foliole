@@ -16,6 +16,7 @@ import { GoToNodePalette } from './components/GoToNodePalette';
 import { SearchPalette } from './components/SearchPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useAppController } from './hooks/useAppController';
+import { useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 
 function AppContent() {
   const [externalPreviewRequest, setExternalPreviewRequest] = useState<ExternalDocumentPreviewRequest | null>(null);
@@ -25,6 +26,7 @@ function AppContent() {
   const controller = useAppController({
     onOpenExternalPreview: handleOpenExternalPreview
   });
+  useWorkspaceSyncAppliedRefresh();
 
   useEffect(() => {
     installWorkspaceDebugBridge();

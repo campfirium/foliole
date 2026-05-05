@@ -22,13 +22,13 @@ function createSurface() {
 }
 
 describe('CompanionShellOverlays sync onboarding', () => {
-  it('shows onboarding first when the device is not paired', () => {
+  it('shows onboarding only while the user has not decided', () => {
     render(
       <CompanionShellOverlays
         isBottomBarDisabled={false}
         isSyncPaired={false}
         surface={createSurface()}
-        syncOnboardingStatus="completed"
+        syncOnboardingStatus="pending"
       />
     );
 
@@ -43,6 +43,19 @@ describe('CompanionShellOverlays sync onboarding', () => {
         isSyncPaired={false}
         surface={createSurface()}
         syncOnboardingStatus="dismissed"
+      />
+    );
+
+    expect(screen.queryByText('Bring your content to this device?')).not.toBeInTheDocument();
+  });
+
+  it('hides onboarding after the user starts setup', () => {
+    render(
+      <CompanionShellOverlays
+        isBottomBarDisabled={false}
+        isSyncPaired={false}
+        surface={createSurface()}
+        syncOnboardingStatus="accepted"
       />
     );
 

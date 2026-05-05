@@ -1,13 +1,16 @@
 import type http from 'node:http';
 
-import { listSyncChangesAfterCursor } from '../../lib/core/database/syncState.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadSyncIndex } from '../database/syncIndex.js';
-import { loadSyncObjects } from '../database/syncObjects.js';
+import { loadSyncNodeVersionsSince } from '../database/syncNodes.js';
+import { loadSyncObjects, loadSyncStateObjectsSince } from '../database/syncObjects.js';
+import { loadSyncReviewLogSince } from '../database/syncReviewLog.js';
 
-export const SYNC_CHANGES_PATH = '/companion/sync-changes';
 export const SYNC_INDEX_PATH = '/companion/sync-index';
+export const SYNC_NODE_VERSIONS_PATH = '/companion/sync-node-versions';
 export const SYNC_OBJECTS_PATH = '/companion/sync-objects';
+export const SYNC_REVIEW_LOG_PATH = '/companion/sync-review-log';
+export const SYNC_STATE_PATH = '/companion/sync-state';
 
 function readQueryValues(url: URL, key: string) {
   return [...new Set(url.searchParams.getAll(key).map((value) => value.trim()).filter(Boolean))];
@@ -28,41 +31,58 @@ export function buildSyncObjectsPayload(parsedRequestUrl: URL) {
   };
 }
 
-function readCursor(parsedRequestUrl: URL) {
-  const createdAt = parsedRequestUrl.searchParams.get('after_created_at')?.trim();
-  const changeId = parsedRequestUrl.searchParams.get('after_change_id')?.trim();
-  return createdAt && changeId ? { createdAt, changeId } : null;
-}
-
 function readLimit(parsedRequestUrl: URL) {
   const limit = Number(parsedRequestUrl.searchParams.get('limit') ?? 500);
   return Number.isFinite(limit) ? Math.max(1, Math.min(1000, Math.trunc(limit))) : 500;
 }
 
-export function buildSyncChangesPayload(parsedRequestUrl: URL) {
-  const changes = listSyncChangesAfterCursor(
-    openDatabaseConnection().driver,
-    readCursor(parsedRequestUrl),
-    readLimit(parsedRequestUrl)
-  ).filter((change) => change.objectType !== 'node');
+function readStateSeqCursor(parsedRequestUrl: URL) {
+  const cursor = Number(parsedRequestUrl.searchParams.get('after_state_seq') ?? 0);
+  return Number.isFinite(cursor) ? Math.max(0, Math.trunc(cursor)) : 0;
+}
+
+function readEventCursor(parsedRequestUrl: URL) {
+  const createdAt = parsedRequestUrl.searchParams.get('after_created_at')?.trim();
+  const changeId = parsedRequestUrl.searchParams.get('after_change_id')?.trim();
+  return createdAt && changeId ? { createdAt, changeId } : null;
+}
+
+export function buildSyncStatePayload(parsedRequestUrl: URL) {
   return {
-    changes: changes.map((change) => ({
-      change_id: change.changeId,
-      object_type: change.objectType,
-      object_id: change.objectId,
-      change_type: change.changeType,
-      device_id: change.deviceId,
-      content_hash: change.contentHash,
-      payload_json: change.payloadJson,
-      created_at: change.createdAt
-    }))
+    objects: loadSyncStateObjectsSince(
+      readStateSeqCursor(parsedRequestUrl),
+      readLimit(parsedRequestUrl)
+    )
+  };
+}
+
+export function buildSyncNodeVersionsPayload(parsedRequestUrl: URL) {
+  const cursor = readEventCursor(parsedRequestUrl);
+  flushDirtyNodeSyncVersions();
+  return {
+    nodes: loadSyncNodeVersionsSince(
+      cursor ? { createdAt: cursor.createdAt, versionId: cursor.changeId } : null,
+      readLimit(parsedRequestUrl)
+    )
+  };
+}
+
+export function buildSyncReviewLogPayload(parsedRequestUrl: URL) {
+  const cursor = readEventCursor(parsedRequestUrl);
+  return {
+    reviews: loadSyncReviewLogSince(
+      cursor ? { reviewedAt: cursor.createdAt, opId: cursor.changeId } : null,
+      readLimit(parsedRequestUrl)
+    )
   };
 }
 
 export function isSyncObjectEndpoint(request: http.IncomingMessage, parsedRequestUrl: URL) {
   return request.method === 'GET' && (
-    parsedRequestUrl.pathname === SYNC_CHANGES_PATH ||
     parsedRequestUrl.pathname === SYNC_INDEX_PATH ||
-    parsedRequestUrl.pathname === SYNC_OBJECTS_PATH
+    parsedRequestUrl.pathname === SYNC_NODE_VERSIONS_PATH ||
+    parsedRequestUrl.pathname === SYNC_OBJECTS_PATH ||
+    parsedRequestUrl.pathname === SYNC_REVIEW_LOG_PATH ||
+    parsedRequestUrl.pathname === SYNC_STATE_PATH
   );
 }

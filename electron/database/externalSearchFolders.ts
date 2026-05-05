@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -131,13 +129,6 @@ function upsertExternalSearchFolders(
       }),
       deviceId,
       folderId: folder.id,
-      payloadJson: JSON.stringify({
-        attachment_mode: folder.attachmentMode,
-        attachment_root_path: folder.attachmentRootPath,
-        excluded_dirs_json: JSON.stringify(folder.excludedDirs),
-        folder_path: folder.folderPath,
-        id: folder.id
-      }),
       updatedAt: now
     });
   });
@@ -148,7 +139,6 @@ function recordExternalFolderSync(args: {
   deletedAt?: string | null;
   deviceId: string;
   folderId: string;
-  payloadJson: string;
   updatedAt: string;
 }) {
   const driver = openDatabaseConnection().driver;
@@ -161,17 +151,6 @@ function recordExternalFolderSync(args: {
     updatedAt: args.updatedAt,
     syncDirty: true
   });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'external_folder',
-    objectId: args.folderId,
-    changeType: args.deletedAt ? 'delete' : 'upsert',
-    deviceId: args.deviceId,
-    contentHash: args.contentHash,
-    payloadJson: args.payloadJson,
-    createdAt: args.updatedAt,
-    appliedAt: args.updatedAt
-  });
 }
 
 function tombstoneRemovedExternalFolders(rows: ExternalSearchFolderRow[], keptIds: Set<string>, now: string, deviceId: string) {
@@ -182,7 +161,6 @@ function tombstoneRemovedExternalFolders(rows: ExternalSearchFolderRow[], keptId
       deletedAt: now,
       deviceId,
       folderId: row.id,
-      payloadJson: JSON.stringify({ id: row.id }),
       updatedAt: now
     });
   }

@@ -3,12 +3,8 @@ import { syncCompanionObjectsFromDesktop } from '../shared/platform/companionDes
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   loadCompanionReadableArticle,
-  loadCompanionWorkspaceVersion,
-  pullCompanionWorkspaceSnapshot,
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
-
-import { shouldPullUpdatedDesktopSnapshot } from './companionAutoSync';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 
@@ -16,14 +12,13 @@ export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSync
   return loadCompanionReadableArticle(snapshot);
 }
 
-export async function applyPulledSnapshot(args: {
+export async function runCompanionStreamSync(args: {
   cancelled: () => boolean;
   endpointUrl: string;
   setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
 }) {
-  const syncedState = await pullCompanionWorkspaceSnapshot(args.endpointUrl);
   await syncCompanionObjectsFromDesktop(args.endpointUrl);
   if (args.cancelled()) {
     return;
@@ -31,7 +26,6 @@ export async function applyPulledSnapshot(args: {
   const completedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     message: 'Auto sync completed.',
-    occurredAt: syncedState.last_synced_at ?? undefined,
     status: 'completed'
   });
   args.setState(completedState);
@@ -50,32 +44,13 @@ export async function tryForegroundAutoSync(args: {
   const endpointUrl = args.state.endpoint_url;
   if (!endpointUrl) return;
   args.setStatus('syncing');
-  args.setError(null);
   try {
-    const version = await loadCompanionWorkspaceVersion(endpointUrl);
-    if (!version.has_snapshot || !shouldPullUpdatedDesktopSnapshot({
-      lastSyncedAt: args.state.last_synced_at,
-      remoteExportedAt: version.exported_at
-    })) {
-      await syncCompanionObjectsFromDesktop(endpointUrl);
-      if (!args.cancelled()) {
-        const skippedState = await recordCompanionWorkspaceSyncEvent({
-          endpointUrl,
-          message: version.has_snapshot ? 'Checked desktop. No new changes.' : 'Checked desktop. No snapshot available.',
-          status: 'skipped'
-        });
-        args.setState(skippedState);
-        args.setStatus('idle');
-      }
-      return;
-    }
     await recordCompanionWorkspaceSyncEvent({ endpointUrl, message: 'Auto sync started.', status: 'started' });
-    await applyPulledSnapshot({ ...args, endpointUrl });
+    await runCompanionStreamSync({ ...args, endpointUrl });
   } catch (syncError) {
     if (args.cancelled()) return;
     const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
     args.setStatus('idle');
-    args.setError(message);
     const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);
     if (failedState) args.setState(failedState);
   }

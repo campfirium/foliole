@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseDriver } from './driver.js';
-import { appendSyncChangeLog, computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export interface NodeReviewSyncPayload {
   due: string;
@@ -54,17 +52,6 @@ export function recordNodeReviewSyncState(
     updatedAt: context.reviewedAt,
     syncDirty: true
   });
-  appendSyncChangeLog(driver, {
-    changeId: context.opId,
-    objectType: 'node_review',
-    objectId: nodeId,
-    changeType: 'upsert',
-    deviceId: context.deviceId,
-    contentHash,
-    payloadJson: JSON.stringify({ logId: context.logId, nodeId, opId: context.opId, review: payload }),
-    createdAt: context.reviewedAt,
-    appliedAt: context.reviewedAt
-  });
 }
 
 export function recordNodeReviewTombstone(
@@ -81,16 +68,5 @@ export function recordNodeReviewTombstone(
     lastModifiedByDeviceId: context.deviceId,
     updatedAt: context.deletedAt,
     syncDirty: true
-  });
-  appendSyncChangeLog(driver, {
-    changeId: randomUUID(),
-    objectType: 'node_review',
-    objectId: nodeId,
-    changeType: 'delete',
-    deviceId: context.deviceId,
-    contentHash,
-    payloadJson: JSON.stringify({ nodeId }),
-    createdAt: context.deletedAt,
-    appliedAt: context.deletedAt
   });
 }

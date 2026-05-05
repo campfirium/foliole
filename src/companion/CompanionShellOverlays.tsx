@@ -9,7 +9,7 @@ export function CompanionShellOverlays(props: {
   surface: ReturnType<typeof useCompanionArticleSurface>;
   syncOnboardingStatus: ReturnType<typeof useCompanionWorkspaceSync>['state']['sync_onboarding_status'];
 }) {
-  const shouldShowSyncOnboarding = !props.isSyncPaired && props.syncOnboardingStatus !== 'dismissed';
+  const shouldShowSyncOnboarding = !props.isSyncPaired && props.syncOnboardingStatus === 'pending';
 
   if (shouldShowSyncOnboarding) {
     return (

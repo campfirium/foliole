@@ -120,16 +120,11 @@ it('writes sync object state for active node and node view states', () => {
   ]);
   expect(rows.every((row) => row.last_modified_by_device_id === 'desktop-test')).toBe(true);
   expect(rows.every((row) => row.sync_dirty === 1)).toBe(true);
-  const changes = openDatabaseConnection().sqlite
+  const changeCount = openDatabaseConnection().sqlite
     .prepare(
-      `SELECT object_id, change_type
-       FROM sync_change_log WHERE object_type = 'view_state'
-       ORDER BY object_id ASC`
+      `SELECT COUNT(*) AS count
+       FROM sync_change_log WHERE object_type = 'view_state'`
     )
-    .all() as Array<Record<string, unknown>>;
-  expect(changes).toEqual([
-    { change_type: 'upsert', object_id: 'session_resume:windows:desktop:desktop-test:active_node' },
-    { change_type: 'upsert', object_id: 'session_resume:windows:desktop:desktop-test:node:node-1' },
-    { change_type: 'upsert', object_id: 'session_resume:windows:desktop:desktop-test:node:node-2' }
-  ]);
+    .get() as { count: number };
+  expect(changeCount.count).toBe(0);
 });

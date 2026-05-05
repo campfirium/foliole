@@ -1,8 +1,8 @@
 package com.foliole.android;
 
-import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class FolioleCompanionSyncObjectStore {
+    private static final String TAG = "FolioleSyncObjects";
 
     private FolioleCompanionSyncObjectStore() {}
 
@@ -42,14 +43,30 @@ final class FolioleCompanionSyncObjectStore {
     static JSObject loadSyncObjects(SQLiteDatabase database, JSONArray objectIds, JSONArray objectTypes) throws Exception {
         JSArray objects = new JSArray();
         for (SyncStateRow row : readStateRows(database, objectIds, objectTypes)) {
-            JSObject object = new JSObject();
-            object.put("object_type", row.objectType);
-            object.put("object_id", row.objectId);
-            object.put("content_hash", row.contentHash);
-            object.put("updated_at", row.updatedAt);
-            object.put("deleted_at", row.deletedAt == null ? JSONObject.NULL : row.deletedAt);
-            object.put("payload_json", row.deletedAt == null ? readPayloadJson(database, row.objectType, row.objectId) : JSONObject.NULL);
-            objects.put(object);
+            objects.put(toSyncObject(database, row, false));
+        }
+        JSObject result = new JSObject();
+        result.put("objects", objects);
+        return result;
+    }
+
+    static JSObject loadSyncStateChanges(SQLiteDatabase database, int cursor, int limit) throws Exception {
+        JSArray objects = new JSArray();
+        try (Cursor row = database.rawQuery(
+            "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at " +
+                "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? ORDER BY state_seq ASC LIMIT ?",
+            new String[] { String.valueOf(Math.max(0, cursor)), String.valueOf(normalizeLimit(limit)) }
+        )) {
+            while (row.moveToNext()) {
+                objects.put(toSyncObject(database, new SyncStateRow(
+                    row.getString(0),
+                    row.getString(1),
+                    row.getString(3),
+                    row.getString(4),
+                    row.isNull(5) ? null : row.getString(5),
+                    row.getInt(2)
+                ), true));
+            }
         }
         JSObject result = new JSObject();
         result.put("objects", objects);
@@ -63,24 +80,117 @@ final class FolioleCompanionSyncObjectStore {
             result.put("applied_object_ids", appliedObjectIds);
             return result;
         }
-        database.beginTransaction();
-        try {
-            for (int index = 0; index < objects.length(); index += 1) {
-                JSONObject object = objects.optJSONObject(index);
-                if (object == null) {
-                    continue;
-                }
-                FolioleCompanionSyncObjectApply.applyPayload(database, object);
-                upsertState(database, object, deviceId);
-                appliedObjectIds.put(object.optString("object_type") + ":" + object.optString("object_id"));
+        for (int index = 0; index < objects.length(); index += 1) {
+            JSONObject object = objects.optJSONObject(index);
+            if (object == null) {
+                Log.w(TAG, "Skipped invalid sync object at index " + index);
+                continue;
             }
-            database.setTransactionSuccessful();
-        } finally {
-            database.endTransaction();
+            try {
+                String appliedObjectId = applySingleSyncObject(database, object, deviceId);
+                if (appliedObjectId != null) {
+                    appliedObjectIds.put(appliedObjectId);
+                }
+            } catch (Exception error) {
+                Log.w(TAG, "Skipped sync object " + object.optString("object_type") + ":" + object.optString("object_id"), error);
+            }
         }
         JSObject result = new JSObject();
         result.put("applied_object_ids", appliedObjectIds);
         return result;
+    }
+
+    private static String applySingleSyncObject(SQLiteDatabase database, JSONObject object, String deviceId) throws Exception {
+        validateSyncObjectRecord(object);
+        database.beginTransaction();
+        try {
+            if (!shouldApplyObject(database, object)) {
+                database.setTransactionSuccessful();
+                return null;
+            }
+            FolioleCompanionSyncObjectApply.applyPayload(database, object);
+            upsertState(database, object, deviceId);
+            database.setTransactionSuccessful();
+            return object.optString("object_type") + ":" + object.optString("object_id");
+        } finally {
+            database.endTransaction();
+        }
+    }
+
+    private static void validateSyncObjectRecord(JSONObject object) throws Exception {
+        String objectType = requireString(object, "object_type");
+        if (!isStateObjectType(objectType)) {
+            throw new IllegalArgumentException("Unsupported sync object type: " + objectType);
+        }
+        requireString(object, "object_id");
+        requireString(object, "content_hash");
+        requireString(object, "updated_at");
+        Object deletedAt = requireNullableString(object, "deleted_at");
+        Object payloadJson = requireNullableString(object, "payload_json");
+        if (deletedAt == JSONObject.NULL && payloadJson == JSONObject.NULL) {
+            throw new IllegalArgumentException("Invalid sync object payload_json");
+        }
+    }
+
+    private static String requireString(JSONObject object, String key) throws Exception {
+        if (!object.has(key) || object.isNull(key)) {
+            throw new IllegalArgumentException("Invalid sync object " + key);
+        }
+        String value = object.getString(key).trim();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("Invalid sync object " + key);
+        }
+        return value;
+    }
+
+    private static Object requireNullableString(JSONObject object, String key) throws Exception {
+        if (!object.has(key)) {
+            throw new IllegalArgumentException("Invalid sync object " + key);
+        }
+        Object value = object.get(key);
+        if (value == JSONObject.NULL) {
+            return value;
+        }
+        if (!(value instanceof String) || ((String) value).trim().isEmpty()) {
+            throw new IllegalArgumentException("Invalid sync object " + key);
+        }
+        return value;
+    }
+
+    private static boolean isStateObjectType(String type) {
+        return type.equals("attachment") ||
+            type.equals("external_document") ||
+            type.equals("external_folder") ||
+            type.equals("import_source") ||
+            type.equals("node_reading") ||
+            type.equals("node_review") ||
+            type.equals("pdf_page_text") ||
+            type.equals("setting") ||
+            type.equals("view_state");
+    }
+
+    private static boolean shouldApplyObject(SQLiteDatabase database, JSONObject object) {
+        try (Cursor cursor = database.query(
+            "sync_object_state",
+            new String[] { "content_hash", "deleted_at", "updated_at" },
+            "object_type = ? AND object_id = ?",
+            new String[] { object.optString("object_type"), object.optString("object_id") },
+            null,
+            null,
+            null,
+            "1"
+        )) {
+            if (!cursor.moveToFirst()) {
+                return true;
+            }
+            String currentHash = cursor.getString(0);
+            String currentDeletedAt = cursor.isNull(1) ? null : cursor.getString(1);
+            String nextDeletedAt = nullIfEmpty(object.optString("deleted_at", ""));
+            if (currentHash.equals(object.optString("content_hash")) && sameNullableString(currentDeletedAt, nextDeletedAt)) {
+                return false;
+            }
+            return cursor.getString(2).compareTo(object.optString("updated_at")) <= 0;
+        }
     }
 
     private static List<SyncStateRow> readStateRows(SQLiteDatabase database, JSONArray objectIds, JSONArray objectTypes) {
@@ -107,11 +217,26 @@ final class FolioleCompanionSyncObjectStore {
                     cursor.getString(1),
                     cursor.getString(2),
                     cursor.getString(3),
-                    cursor.isNull(4) ? null : cursor.getString(4)
+                    cursor.isNull(4) ? null : cursor.getString(4),
+                    0
                 ));
             }
         }
         return rows;
+    }
+
+    private static JSObject toSyncObject(SQLiteDatabase database, SyncStateRow row, boolean includeStateSeq) throws Exception {
+        JSObject object = new JSObject();
+        object.put("object_type", row.objectType);
+        object.put("object_id", row.objectId);
+        object.put("content_hash", row.contentHash);
+        object.put("updated_at", row.updatedAt);
+        object.put("deleted_at", row.deletedAt == null ? JSONObject.NULL : row.deletedAt);
+        object.put("payload_json", row.deletedAt == null ? readPayloadJson(database, row.objectType, row.objectId) : JSONObject.NULL);
+        if (includeStateSeq) {
+            object.put("state_seq", row.stateSeq);
+        }
+        return object;
     }
 
     private static String readPayloadJson(SQLiteDatabase database, String objectType, String objectId) throws Exception {
@@ -170,16 +295,17 @@ final class FolioleCompanionSyncObjectStore {
     }
 
     private static void upsertState(SQLiteDatabase database, JSONObject record, String deviceId) {
-        ContentValues values = new ContentValues();
-        values.put("object_type", record.optString("object_type"));
-        values.put("object_id", record.optString("object_id"));
-        values.put("current_version_id", nullIfEmpty(record.optString("sync_version_id", "")));
-        values.put("content_hash", record.optString("content_hash"));
-        values.put("last_modified_by_device_id", deviceId);
-        values.put("updated_at", record.optString("updated_at"));
-        values.put("deleted_at", nullIfEmpty(record.optString("deleted_at", "")));
-        values.put("sync_dirty", 0);
-        database.insertWithOnConflict("sync_object_state", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        FolioleCompanionSyncStateRows.upsert(
+            database,
+            record.optString("object_type"),
+            record.optString("object_id"),
+            nullIfEmpty(record.optString("sync_version_id", "")),
+            record.optString("content_hash"),
+            deviceId,
+            record.optString("updated_at"),
+            nullIfEmpty(record.optString("deleted_at", "")),
+            0
+        );
     }
 
     private static List<String> toStringList(JSONArray values) {
@@ -198,8 +324,17 @@ final class FolioleCompanionSyncObjectStore {
         return String.join(",", placeholders);
     }
 
+    private static int normalizeLimit(int limit) {
+        return Math.max(1, Math.min(1000, limit <= 0 ? 500 : limit));
+    }
+
     private static String nullIfEmpty(String value) {
-        return value == null || value.trim().isEmpty() ? null : value;
+        return value == null || value.trim().isEmpty() || value.equals("null") ? null : value;
+    }
+
+    private static boolean sameNullableString(String left, String right) {
+        if (left == null) return right == null;
+        return left.equals(right);
     }
 
     private static final class SyncStateRow {
@@ -208,13 +343,15 @@ final class FolioleCompanionSyncObjectStore {
         final String contentHash;
         final String updatedAt;
         final String deletedAt;
+        final int stateSeq;
 
-        SyncStateRow(String objectType, String objectId, String contentHash, String updatedAt, String deletedAt) {
+        SyncStateRow(String objectType, String objectId, String contentHash, String updatedAt, String deletedAt, int stateSeq) {
             this.objectType = objectType;
             this.objectId = objectId;
             this.contentHash = contentHash;
             this.updatedAt = updatedAt;
             this.deletedAt = deletedAt;
+            this.stateSeq = stateSeq;
         }
     }
 }

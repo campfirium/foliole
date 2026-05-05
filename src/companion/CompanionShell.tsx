@@ -10,6 +10,7 @@ import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCar
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { CompanionSyncContent } from './CompanionSyncContent';
+import { CompanionSyncInlineStatus } from './CompanionSyncInlineStatus';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -84,7 +85,7 @@ function renderMainContent(
     );
   }
   if (surface.activeAction === 'recent') {
-    return renderRecentBrowseContent(surface);
+    return renderRecentBrowseContent(surface, workspaceSync);
   }
   if (surface.activeAction === 'review') {
     return renderReviewContent(surface, workspaceError, hasSnapshot, reviewBreadcrumbItems, onSelectReviewBreadcrumbItem);
@@ -92,7 +93,10 @@ function renderMainContent(
   return renderReadableArticleOrFallback(surface, workspaceError, hasSnapshot);
 }
 
-function renderRecentBrowseContent(surface: ReturnType<typeof useCompanionArticleSurface>) {
+function renderRecentBrowseContent(
+  surface: ReturnType<typeof useCompanionArticleSurface>,
+  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>
+) {
   if (surface.browsedFolder) {
     return (
       <NodeBrowseList
@@ -109,8 +113,11 @@ function renderRecentBrowseContent(surface: ReturnType<typeof useCompanionArticl
   return (
     <RecentArticleList
       currentArticleId={surface.readableArticle?.nodeId ?? null}
+      endpointUrl={workspaceSync.state.endpoint_url}
       onSelectArticle={surface.handleSelectRecentArticle}
+      onSyncNow={(endpointUrl) => void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined)}
       recentArticles={surface.recentArticles}
+      status={workspaceSync.status}
     />
   );
 }
@@ -246,6 +253,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
             <div className={isImmersiveReview ? 'h-20' : 'h-auto'}>
               <TopFloatingBar activeAction={surface.activeAction} onAction={surface.handleTopBarAction} visible={isTopBarVisible} />
             </div>
+            {surface.activeAction === 'more' ? null : <CompanionSyncInlineStatus workspaceSync={workspaceSync} />}
             {renderMainContent(
               surface,
               workspaceSync,

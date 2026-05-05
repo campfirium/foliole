@@ -4,6 +4,10 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { openDatabaseConnection } from './connection.js';
 
+interface ApplySyncNodesOptions {
+  includeAlreadyApplied?: boolean;
+}
+
 function orderNodesForApply(records: NativeSyncNodeRecord[]) {
   const byId = new Map(records.map((record) => [record.object_id, record]));
   const ordered: NativeSyncNodeRecord[] = [];
@@ -33,21 +37,73 @@ function upsertRemoteVersion(driver: DatabaseDriver, record: NativeSyncNodeRecor
   }
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash
-     ) VALUES (?, ?, ?, ?, ?, ?)
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(version_id) DO UPDATE SET
        object_id = excluded.object_id,
        parent_version_id = excluded.parent_version_id,
        device_id = excluded.device_id,
        created_at = excluded.created_at,
-       content_hash = excluded.content_hash`,
+       content_hash = excluded.content_hash,
+       snapshot_json = excluded.snapshot_json`,
     [
       record.version_id,
       record.object_id,
       record.parent_version_id,
       record.device_id,
       record.version_created_at,
-      record.content_hash ?? ''
+      record.content_hash ?? '',
+      JSON.stringify(record.snapshot)
+    ]
+  );
+}
+
+function loadLocalNodeVersion(driver: DatabaseDriver, nodeId: string) {
+  return driver.queryOne<{ current_version_id: string | null }>(
+    'SELECT current_version_id FROM nodes WHERE id = ?',
+    [nodeId]
+  );
+}
+
+function isRemoteFastForward(record: NativeSyncNodeRecord, localVersionId: string | null | undefined) {
+  if (!localVersionId || record.version_id === localVersionId) {
+    return true;
+  }
+  if (record.parent_version_id === localVersionId) {
+    return true;
+  }
+  return record.ancestor_version_ids.includes(localVersionId);
+}
+
+function recordRemoteNodeConflict(driver: DatabaseDriver, record: NativeSyncNodeRecord) {
+  if (!record.version_id) {
+    return;
+  }
+  driver.execute(
+    `INSERT INTO node_sync_conflicts (
+       conflict_version_id,
+       object_id,
+       parent_version_id,
+       device_id,
+       content_hash,
+       snapshot_json,
+       detected_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(conflict_version_id) DO UPDATE SET
+       object_id = excluded.object_id,
+       parent_version_id = excluded.parent_version_id,
+       device_id = excluded.device_id,
+       content_hash = excluded.content_hash,
+       snapshot_json = excluded.snapshot_json,
+       detected_at = excluded.detected_at`,
+    [
+      record.version_id,
+      record.object_id,
+      record.parent_version_id,
+      record.device_id,
+      record.content_hash,
+      JSON.stringify(record.snapshot),
+      new Date().toISOString()
     ]
   );
 }
@@ -135,7 +191,7 @@ function replaceNodeAttachmentLinks(driver: DatabaseDriver, record: NativeSyncNo
   }
 }
 
-export function applySyncNodes(records: NativeSyncNodeRecord[]) {
+export function applySyncNodes(records: NativeSyncNodeRecord[], options: ApplySyncNodesOptions = {}) {
   if (records.length === 0) {
     return [];
   }
@@ -145,8 +201,27 @@ export function applySyncNodes(records: NativeSyncNodeRecord[]) {
 
   connection.driver.transaction(() => {
     for (const record of ordered) {
-      upsertRemoteNode(connection.driver, record);
+      const localNode = loadLocalNodeVersion(connection.driver, record.object_id);
+      if (!localNode) {
+        upsertRemoteNode(connection.driver, record);
+        upsertRemoteVersion(connection.driver, record);
+        replaceNodeOrderCompat(connection.driver, record);
+        replaceNodeAttachmentLinks(connection.driver, record);
+        appliedIds.push(record.object_id);
+        continue;
+      }
       upsertRemoteVersion(connection.driver, record);
+      if (!isRemoteFastForward(record, localNode?.current_version_id)) {
+        recordRemoteNodeConflict(connection.driver, record);
+        continue;
+      }
+      if (record.version_id === localNode.current_version_id) {
+        if (options.includeAlreadyApplied) {
+          appliedIds.push(record.object_id);
+        }
+        continue;
+      }
+      upsertRemoteNode(connection.driver, record);
       replaceNodeOrderCompat(connection.driver, record);
       replaceNodeAttachmentLinks(connection.driver, record);
       appliedIds.push(record.object_id);

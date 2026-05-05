@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import { runDatabaseMigrations } from '../lib/core/database/migrations.js';
+import { initializeDatabaseSchema } from '../lib/core/database/migrations.js';
 import { NODE_KIND_MIGRATION_CANDIDATES_META_KEY } from '../lib/core/nodes/nodeKind.js';
 
 const require = createRequire(import.meta.url);
@@ -14,7 +14,7 @@ async function main() {
   const sqlite = new BetterSqlite3(resolvePath(dbPath));
 
   try {
-    runDatabaseMigrations(sqlite);
+    initializeDatabaseSchema(sqlite);
     const row = sqlite
       .prepare('SELECT value FROM workspace_meta WHERE key = ?')
       .get(NODE_KIND_MIGRATION_CANDIDATES_META_KEY) as { value?: string } | undefined;

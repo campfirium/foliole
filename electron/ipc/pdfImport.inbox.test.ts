@@ -116,7 +116,7 @@ async function expectPdfImportChain(options: {
     .prepare("SELECT COUNT(*) AS count FROM attachment_blobs WHERE attachment_id = ?")
     .get(pdfAttachment?.attachmentId)).toEqual({ count: 1 });
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'attachment' AND object_id = ?")
+    .prepare("SELECT COUNT(*) AS count FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?")
     .get(pdfAttachment?.attachmentId)).toEqual({ count: 1 });
 }
 

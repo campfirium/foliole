@@ -31,9 +31,13 @@ export interface NativeSyncObjectRecord {
   content_hash: string;
   deleted_at: string | null;
   object_id: string;
-  object_type: Exclude<NativeSyncObjectType, 'node'>;
+  object_type: Exclude<NativeSyncObjectType, 'import_run' | 'node'>;
   payload_json: string | null;
   updated_at: string;
+}
+
+export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
+  state_seq: number;
 }
 
 export interface NativeSyncChangeCursor {
@@ -41,15 +45,36 @@ export interface NativeSyncChangeCursor {
   created_at: string;
 }
 
-export interface NativeSyncChangeRecord {
-  change_id: string;
-  object_type: Exclude<NativeSyncObjectType, 'node'>;
-  object_id: string;
-  change_type: 'delete' | 'link' | 'touch' | 'unlink' | 'upsert';
+export interface NativeSyncReviewLogRecord {
+  difficulty_after: number;
+  difficulty_before: number;
+  due_after: string;
+  due_before: string;
+  grade: number;
+  id: string;
+  node_id: string;
+  op_id: string;
+  reviewed_at: string;
+  scheduler_version: string;
+  stability_after: number;
+  stability_before: number;
   device_id: string;
-  content_hash: string;
-  payload_json: string;
-  created_at: string;
+}
+
+export interface NativeSyncReviewLogDraft {
+  cardAfter: {
+    due: string;
+    stability: number;
+    difficulty: number;
+  };
+  cardBefore: {
+    due: string;
+    stability: number;
+    difficulty: number;
+  };
+  grade: 1 | 2 | 3 | 4;
+  reviewedAt: string;
+  schedulerVersion: string;
 }
 
 export interface NativeSyncNodeAttachmentRef {

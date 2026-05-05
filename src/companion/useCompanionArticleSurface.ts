@@ -43,12 +43,13 @@ function useCompanionReviewGradeAction(
       if (!result) {
         throw new Error('The current review card is no longer available.');
       }
-      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       await persistCompanionReviewSyncObject({
         itemKind: 'fsrs',
         nodeId: reviewSession.currentCard.nodeId,
+        reviewLog: result.reviewLog,
         snapshot: result.snapshot
       });
+      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : 'Failed to apply the review grade.');
@@ -91,12 +92,12 @@ function useCompanionReadingReviewActions(
       if (!result) {
         throw new Error('The current reading item is no longer available.');
       }
-      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       await persistCompanionReviewSyncObject({
         itemKind: 'reading',
         nodeId: reviewSession.currentCard.nodeId,
         snapshot: result.snapshot
       });
+      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
       setReadingError(error instanceof Error ? error.message : 'Failed to update the reading review item.');

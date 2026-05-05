@@ -11,8 +11,8 @@ final class FolioleCompanionAttachmentSyncPayload {
 
     static String readPayloadJson(SQLiteDatabase database, String objectId) throws Exception {
         String sql = "SELECT a.id, a.original_name, a.mime_type, a.size_bytes, a.created_at, " +
-            "b.content_hash, b.storage_key, b.size_bytes, b.mime_type, b.availability, " +
-            "b.source_device_id, b.created_at, b.cached_at, b.last_verified_at " +
+            "b.content_hash, b.storage_key, b.size_bytes, b.mime_type, " +
+            "b.availability, b.source_device_id, b.created_at, b.cached_at, b.last_verified_at " +
             "FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1";
         try (Cursor cursor = database.rawQuery(sql, new String[] { objectId })) {
             if (!cursor.moveToFirst()) {

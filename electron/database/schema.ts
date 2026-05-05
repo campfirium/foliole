@@ -17,6 +17,7 @@ export {
   settingRecords,
   settings,
   syncChangeLog,
+  syncPeerCursors,
   syncObjectState,
   syncPeers,
   workspaceMeta

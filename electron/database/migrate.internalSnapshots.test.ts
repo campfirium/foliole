@@ -10,8 +10,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
-let mockedAppDataDir = '/tmp/foliole-migration-snapshot-app-data';
-let mockedDocumentsDir = '/tmp/foliole-migration-snapshot-documents';
+let mockedAppDataDir = '/tmp/foliole-schema-reset-app-data';
+let mockedDocumentsDir = '/tmp/foliole-schema-reset-documents';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -30,7 +30,7 @@ import { initializeDatabase } from './migrate.js';
 let tempRoot = '';
 
 beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-migration-snapshot-'));
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-schema-reset-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   mockedDocumentsDir = path.join(tempRoot, 'Documents');
 });
@@ -40,18 +40,19 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('creates a pre-migration snapshot inside Backups before rejecting a legacy library database', async () => {
+it('rebuilds a legacy development database without keeping the old database', async () => {
   const databasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
   await fs.mkdir(path.dirname(databasePath), { recursive: true });
   createVersionTwelveDatabase(databasePath);
 
-  await expect(async () => initializeDatabase()).rejects.toThrow(/delete the existing foliole\.db and rebuild/i);
+  const connection = initializeDatabase();
+
   expect(resolveDatabasePath()).toBe(databasePath);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBeGreaterThan(12);
+  expect(connection.sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get('legacy-node')).toBeUndefined();
 
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(databasePath);
-  const snapshotNames = await fs.readdir(snapshotDirectory);
-  expect(snapshotNames).toHaveLength(1);
-  expect(snapshotNames[0]?.startsWith('pre-migration-')).toBe(true);
+  await expect(fs.readdir(snapshotDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 function createVersionTwelveDatabase(databasePath: string) {

@@ -17,6 +17,12 @@ export interface NativeKeyboardInputPayload {
   type: string;
 }
 
+export interface WorkspaceSyncAppliedPayload {
+  appliedNodeIds: string[];
+  appliedObjectIds: string[];
+  appliedReviewOpIds: string[];
+}
+
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
@@ -27,6 +33,7 @@ export interface ElectronAPI {
   onReadwiseBookEpubProgress?: (
     handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void
   ) => () => void;
+  onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;
 }

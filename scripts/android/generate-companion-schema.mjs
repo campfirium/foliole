@@ -55,6 +55,41 @@ const statements = [
     repetition_count INTEGER NOT NULL DEFAULT 0,
     state TEXT NOT NULL DEFAULT 'active'
   )`,
+  `CREATE TABLE IF NOT EXISTS review_log (
+    id TEXT PRIMARY KEY,
+    op_id TEXT NOT NULL UNIQUE,
+    device_id TEXT NOT NULL,
+    node_id TEXT NOT NULL REFERENCES nodes(id),
+    grade INTEGER NOT NULL,
+    scheduler_version TEXT NOT NULL,
+    reviewed_at TEXT NOT NULL,
+    due_before TEXT NOT NULL,
+    stability_before REAL NOT NULL,
+    difficulty_before REAL NOT NULL,
+    due_after TEXT NOT NULL,
+    stability_after REAL NOT NULL,
+    difficulty_after REAL NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_sync_versions (
+    version_id TEXT PRIMARY KEY,
+    object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    parent_version_id TEXT,
+    device_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    snapshot_json TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_sync_conflicts (
+    conflict_version_id TEXT PRIMARY KEY,
+    object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    parent_version_id TEXT,
+    device_id TEXT,
+    content_hash TEXT,
+    snapshot_json TEXT NOT NULL,
+    detected_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_node_sync_conflicts_object_detected
+    ON node_sync_conflicts (object_id, detected_at)`,
   `CREATE TABLE IF NOT EXISTS node_order (
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL
@@ -156,14 +191,20 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS sync_object_state (
     object_type TEXT NOT NULL,
     object_id TEXT NOT NULL,
+    state_seq INTEGER NOT NULL,
     current_version_id TEXT,
     content_hash TEXT NOT NULL,
     last_modified_by_device_id TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
     sync_dirty INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (object_type, object_id)
+    PRIMARY KEY (object_type, object_id),
+    UNIQUE (state_seq)
   )`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_object_state_seq
+    ON sync_object_state (state_seq)`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq
+    ON sync_object_state (object_type, state_seq)`,
   `CREATE TABLE IF NOT EXISTS sync_change_log (
     change_id TEXT PRIMARY KEY,
     object_type TEXT NOT NULL,
@@ -176,6 +217,13 @@ const statements = [
     payload_json TEXT NOT NULL,
     created_at TEXT NOT NULL,
     applied_at TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS sync_peer_cursors (
+    peer_id TEXT NOT NULL,
+    stream_name TEXT NOT NULL,
+    cursor_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (peer_id, stream_name)
   )`
 ];
 

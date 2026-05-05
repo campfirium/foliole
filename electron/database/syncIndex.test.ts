@@ -67,8 +67,8 @@ function insertVersionRecord(connection: ReturnType<typeof openDatabaseConnectio
 function insertSyncObjectState(connection: ReturnType<typeof openDatabaseConnection>) {
   connection.driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['external_document', 'folder-1:alpha.md', 'hash-external-alpha', 'desktop', '2026-04-21T12:00:00.000Z', 1]
   );
 }

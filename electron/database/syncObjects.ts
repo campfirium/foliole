@@ -1,15 +1,20 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import type { NativeSyncObjectRecord, NativeSyncObjectType } from '../../lib/platform/nativeSyncContract.js';
+import type {
+  NativeSyncObjectRecord,
+  NativeSyncObjectType,
+  NativeSyncStateObjectRecord
+} from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
 
-type NonNodeSyncObjectType = Exclude<NativeSyncObjectType, 'node'>;
+type NonNodeSyncObjectType = Exclude<NativeSyncObjectType, 'import_run' | 'node'>;
 
 interface SyncObjectStateRow extends DatabaseRow {
   content_hash: string;
   deleted_at: string | null;
   object_id: string;
   object_type: NonNodeSyncObjectType;
+  state_seq?: number;
   updated_at: string;
 }
 
@@ -170,6 +175,13 @@ function toRecord(row: SyncObjectStateRow): NativeSyncObjectRecord {
   };
 }
 
+function toStateRecord(row: SyncObjectStateRow): NativeSyncStateObjectRecord {
+  return {
+    ...toRecord(row),
+    state_seq: row.state_seq ?? 0
+  };
+}
+
 export function loadSyncObjects(objectIds: string[], objectTypes?: string[]) {
   if (objectIds.length === 0) return [];
   const objectPlaceholders = objectIds.map(() => '?').join(', ');
@@ -182,4 +194,16 @@ export function loadSyncObjects(objectIds: string[], objectTypes?: string[]) {
     [...objectIds, ...(objectTypes ?? [])]
   );
   return rows.map(toRecord);
+}
+
+export function loadSyncStateObjectsSince(cursor: number, limit = 500) {
+  const rows = openDatabaseConnection().driver.queryAll<Required<SyncObjectStateRow>>(
+    `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
+     FROM sync_object_state
+     WHERE object_type <> 'node' AND state_seq > ?
+     ORDER BY state_seq ASC
+     LIMIT ?`,
+    [Math.max(0, Math.trunc(cursor)), Math.max(1, Math.min(1000, Math.trunc(limit)))]
+  );
+  return rows.map(toStateRecord);
 }

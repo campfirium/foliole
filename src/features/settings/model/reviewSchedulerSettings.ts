@@ -128,6 +128,21 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
   ].join('|');
 }
 
+export function getReviewSchedulerVersion(settings: ReviewSchedulerSettings) {
+  return [
+    settings.algorithm,
+    `dr=${settings.desiredRetention.toFixed(2)}`,
+    `mi=${settings.maximumIntervalDays}`,
+    `fz=${settings.enableFuzz ? '1' : '0'}`,
+    `st=${settings.enableShortTerm ? '1' : '0'}`,
+    `pqdp=${settings.pushQueue.defaultPriority}`,
+    `pqpr=${settings.pushQueue.priorityRatio.toFixed(2)}`,
+    `pqmx=${settings.pushQueue.queueMixRatio.reading}:${settings.pushQueue.queueMixRatio.fsrs}`,
+    `pqii=${settings.pushQueue.readingInitialIntervalMs}`,
+    `pqgr=${settings.pushQueue.readingIntervalGrowthFactorRange.min.toFixed(2)}-${settings.pushQueue.readingIntervalGrowthFactorRange.max.toFixed(2)}`
+  ].join('|');
+}
+
 export function getCurrentReviewSchedulerSettings() {
   return currentReviewSchedulerSettings;
 }

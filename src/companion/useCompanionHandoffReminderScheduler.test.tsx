@@ -1,26 +1,22 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const platform = vi.hoisted(() => ({
-  loadCompanionDirtyNodes: vi.fn(async () => ({
-    device_id: 'android-1',
-    last_synced_at: null,
-    nodes: []
-  })),
+  loadCompanionPendingSyncSummary: vi.fn(async () => ({ pendingCount: 0 })),
   scheduleCompanionHandoffReminders: vi.fn(async () => ({ scheduled: 0, status: 'cancelled' }))
 }));
 
-vi.mock('../shared/platform/companionWorkspaceSync', () => ({
-  loadCompanionDirtyNodes: platform.loadCompanionDirtyNodes
+vi.mock('../shared/platform/companionSyncObjects', () => ({
+  loadCompanionPendingSyncSummary: platform.loadCompanionPendingSyncSummary
 }));
 
 vi.mock('../shared/platform/companionHandoffNotifications', () => ({
   scheduleCompanionHandoffReminders: platform.scheduleCompanionHandoffReminders
 }));
 
-function createWorkspaceSync(state?: Partial<NativeCompanionWorkspaceSyncState>) {
+function createWorkspaceSync() {
   return {
     state: {
       endpoint_url: 'http://desktop.local',
@@ -28,43 +24,38 @@ function createWorkspaceSync(state?: Partial<NativeCompanionWorkspaceSyncState>)
       remembered_targets: [],
       sync_events: [],
       sync_onboarding_status: 'completed',
-      workspace_snapshot: null,
-      ...state
+      workspace_snapshot: null
     },
-    status: 'idle'
-  } as never;
+    status: 'idle' as const
+  };
+}
+
+function asWorkspaceSync(value: unknown) {
+  return value as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
 }
 
 describe('useCompanionHandoffReminderScheduler', () => {
   beforeEach(() => {
-    platform.loadCompanionDirtyNodes.mockReset();
+    platform.loadCompanionPendingSyncSummary.mockReset();
     platform.scheduleCompanionHandoffReminders.mockReset();
-    platform.loadCompanionDirtyNodes.mockResolvedValue({
-      device_id: 'android-1',
-      last_synced_at: null,
-      nodes: []
-    });
+    platform.loadCompanionPendingSyncSummary.mockResolvedValue({ pendingCount: 0 });
     platform.scheduleCompanionHandoffReminders.mockResolvedValue({ scheduled: 0, status: 'cancelled' });
   });
 
-  it('schedules reminders from native dirty nodes', async () => {
-    platform.loadCompanionDirtyNodes.mockResolvedValue({
-      device_id: 'android-1',
-      last_synced_at: null,
-      nodes: [{ device_id: 'android-1', object_id: 'node-1', object_type: 'node', snapshot: {}, updated_at: '2026-04-25T10:00:00.000Z' }]
-    });
+  it('schedules reminders from pending local sync streams', async () => {
+    platform.loadCompanionPendingSyncSummary.mockResolvedValue({ pendingCount: 2 });
     const { useCompanionHandoffReminderScheduler } = await import('./useCompanionHandoffReminderScheduler');
 
     renderHook(() =>
       useCompanionHandoffReminderScheduler({
         settings: { fixedTime: '18:00', shortDelay: '5' },
-        workspaceSync: createWorkspaceSync()
+        workspaceSync: asWorkspaceSync(createWorkspaceSync())
       })
     );
 
     await waitFor(() => {
       expect(platform.scheduleCompanionHandoffReminders).toHaveBeenCalledWith({
-        dirtyCount: 1,
+        dirtyCount: 2,
         settings: { fixedTime: '18:00', shortDelay: '5' }
       });
     });
@@ -76,11 +67,11 @@ describe('useCompanionHandoffReminderScheduler', () => {
     renderHook(() =>
       useCompanionHandoffReminderScheduler({
         settings: { fixedTime: '18:00', shortDelay: '5' },
-        workspaceSync: { ...createWorkspaceSync(), status: 'syncing' } as never
+        workspaceSync: asWorkspaceSync({ ...createWorkspaceSync(), status: 'syncing' })
       })
     );
 
-    expect(platform.loadCompanionDirtyNodes).not.toHaveBeenCalled();
+    expect(platform.loadCompanionPendingSyncSummary).not.toHaveBeenCalled();
     expect(platform.scheduleCompanionHandoffReminders).not.toHaveBeenCalled();
   });
 });

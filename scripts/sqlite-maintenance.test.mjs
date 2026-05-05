@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { runDatabaseMigrations } from '../lib/core/database/migrations.js';
+import { initializeDatabaseSchema } from '../lib/core/database/migrations.js';
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -30,7 +30,7 @@ it('backs up and restores sqlite through the script entrypoint', async () => {
   const backupPath = path.join(tempRoot, 'backup.db');
   const sqlite = new BetterSqlite3(dbPath);
   sqlite.pragma('journal_mode = WAL');
-  runDatabaseMigrations(sqlite);
+  initializeDatabaseSchema(sqlite);
   sqlite
     .prepare(
       `INSERT INTO nodes (

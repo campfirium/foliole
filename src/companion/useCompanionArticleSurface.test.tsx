@@ -75,6 +75,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: '2026-04-22T08:03:00.000Z',
     remembered_targets: ['http://10.0.2.2:38641'],
+    sync_events: [],
     sync_onboarding_status: 'completed' as const,
     workspace_snapshot: snapshot
   };
@@ -90,6 +91,7 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     completePairing: vi.fn(),
+    cancelPairing: vi.fn(),
     desktopDiscoveries: [],
     desktopDiscovery: null,
     error: null,
@@ -186,6 +188,8 @@ async function expectReadingReviewActionPersists() {
   expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
     nodeId: 'article-1'
   }));
+  expect(syncObjectMock.saveCompanionSyncNodeReadingRecord.mock.invocationCallOrder[0])
+    .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]);
 }
 
 describe('useCompanionArticleSurface', () => {
@@ -239,6 +243,17 @@ describe('useCompanionArticleSurface browsing', () => {
     expect(result.current.readableArticle?.nodeId).toBe('article-2');
     expect(result.current.selectedBrowseNodeId).toBe('article-2');
     expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('article-2');
+  });
+
+  it('keeps the current readable article available when snapshot recent rows are empty', () => {
+    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(null), createFloatingBar()));
+
+    expect(result.current.recentArticles).toEqual([{
+      nodeId: 'article-1',
+      preview: null,
+      title: 'First article',
+      updatedAt: ''
+    }]);
   });
 
   it('persists companion scroll view state after scroll settles', async () => {
