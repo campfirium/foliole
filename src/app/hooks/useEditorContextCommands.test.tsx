@@ -20,8 +20,19 @@ beforeEach(() => {
   vi.stubGlobal('requestAnimationFrame', requestAnimationFrameSpy);
 });
 
-it('reapplies the current selection when opening the editor context menu', () => {
-  const adapter = {
+function createImageTarget() {
+  const imageTarget = document.createElement('img');
+  const imageWidget = document.createElement('span');
+  imageWidget.dataset.mdImageAttachmentId = 'hash-1';
+  imageWidget.dataset.mdImageFrom = '3';
+  imageWidget.dataset.mdImageSource = 'asset://hash-1.png';
+  imageWidget.dataset.mdImageTo = '27';
+  imageWidget.append(imageTarget);
+  return imageTarget;
+}
+
+function createEditorAdapter(overrides: Record<string, unknown> = {}) {
+  return {
     destroy: vi.fn(),
     focus: vi.fn(),
     getContent: vi.fn(() => 'Welcome to Foliole'),
@@ -29,7 +40,8 @@ it('reapplies the current selection when opening the editor context menu', () =>
     getLineBlockHeight: vi.fn(() => 24),
     getScrollMetrics: vi.fn(),
     getScrollTop: vi.fn(),
-    getSelection: vi.fn(() => ({ from: 2, to: 9 })),
+    getSelection: vi.fn(() => ({ from: 0, to: 0 })),
+    getSelectionRanges: vi.fn(() => []),
     onContentChange: vi.fn(),
     onScroll: vi.fn(),
     replaceRange: vi.fn(),
@@ -40,8 +52,17 @@ it('reapplies the current selection when opening the editor context menu', () =>
     setContent: vi.fn(),
     setDiffDecorations: vi.fn(),
     setScrollTop: vi.fn(),
-    setSelection: vi.fn()
+    setSelection: vi.fn(),
+    setSelectionRanges: vi.fn(),
+    ...overrides
   };
+}
+
+it('reapplies the current selection when opening the editor context menu', () => {
+  const adapter = createEditorAdapter({
+    getSelection: vi.fn(() => ({ from: 2, to: 9 })),
+    getSelectionRanges: vi.fn(() => [{ from: 2, to: 9 }])
+  });
 
   const editorRef = { current: adapter };
   const { result } = renderHook(() =>
@@ -67,42 +88,17 @@ it('reapplies the current selection when opening the editor context menu', () =>
   });
 
   expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
-  expect(adapter.setSelection).toHaveBeenCalledWith({ from: 2, to: 9 });
+  expect(adapter.setSelectionRanges).toHaveBeenCalledWith([{ from: 2, to: 9 }]);
   expect(adapter.focus).toHaveBeenCalledTimes(1);
 });
 
 it('opens image commands when the context menu targets an attachment image', () => {
-  const imageTarget = document.createElement('img');
-  const imageWidget = document.createElement('span');
-  imageWidget.dataset.mdImageAttachmentId = 'hash-1';
-  imageWidget.dataset.mdImageFrom = '3';
-  imageWidget.dataset.mdImageSource = 'asset://hash-1.png';
-  imageWidget.dataset.mdImageTo = '27';
-  imageWidget.append(imageTarget);
-
   const editorRef = {
-    current: {
-      destroy: vi.fn(),
-      focus: vi.fn(),
-      getContent: vi.fn(() => '![Cover](asset://hash-1.png)'),
-      getDocumentPositionAtViewportY: vi.fn(() => 0),
-      getLineBlockHeight: vi.fn(() => 24),
-      getScrollMetrics: vi.fn(),
-      getScrollTop: vi.fn(),
-      getSelection: vi.fn(() => ({ from: 0, to: 0 })),
-      onContentChange: vi.fn(),
-      onScroll: vi.fn(),
-      replaceRange: vi.fn(),
-      replaceSelection: vi.fn(),
-      revealPosition: vi.fn(),
-      restoreSelection: vi.fn(),
-      revealSelection: vi.fn(),
-      setContent: vi.fn(),
-      setDiffDecorations: vi.fn(),
-      setScrollTop: vi.fn(),
-      setSelection: vi.fn()
-    }
+    current: createEditorAdapter({
+      getContent: vi.fn(() => '![Cover](asset://hash-1.png)')
+    })
   };
+  const imageTarget = createImageTarget();
 
   const { result } = renderHook(() =>
     useEditorContextCommands({
@@ -139,35 +135,10 @@ it('opens image commands when the context menu targets an attachment image', () 
 it('cuts an attachment image only after clipboard copy succeeds', async () => {
   vi.mocked(copyAttachmentImageToClipboard).mockResolvedValue({ status: 'copied' });
   const updateNodeContent = vi.fn();
-  const adapter = {
-    destroy: vi.fn(),
-    focus: vi.fn(),
-    getContent: vi.fn(() => 'after-cut'),
-    getDocumentPositionAtViewportY: vi.fn(() => 0),
-    getLineBlockHeight: vi.fn(() => 24),
-    getScrollMetrics: vi.fn(),
-    getScrollTop: vi.fn(),
-    getSelection: vi.fn(() => ({ from: 0, to: 0 })),
-    onContentChange: vi.fn(),
-    onScroll: vi.fn(),
-    replaceRange: vi.fn(),
-    replaceSelection: vi.fn(),
-    revealPosition: vi.fn(),
-    restoreSelection: vi.fn(),
-    revealSelection: vi.fn(),
-    setContent: vi.fn(),
-    setDiffDecorations: vi.fn(),
-    setScrollTop: vi.fn(),
-    setSelection: vi.fn()
-  };
-
-  const imageTarget = document.createElement('img');
-  const imageWidget = document.createElement('span');
-  imageWidget.dataset.mdImageAttachmentId = 'hash-1';
-  imageWidget.dataset.mdImageFrom = '3';
-  imageWidget.dataset.mdImageSource = 'asset://hash-1.png';
-  imageWidget.dataset.mdImageTo = '27';
-  imageWidget.append(imageTarget);
+  const adapter = createEditorAdapter({
+    getContent: vi.fn(() => 'after-cut')
+  });
+  const imageTarget = createImageTarget();
 
   const { result } = renderHook(() =>
     useEditorContextCommands({

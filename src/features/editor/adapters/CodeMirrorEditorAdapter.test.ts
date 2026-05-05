@@ -12,7 +12,8 @@ const {
   mockEditorView,
   mockEditorStateCreate,
   mockReadOnlyOf,
-  mockEditableOf
+  mockEditableOf,
+  mockAllowMultipleSelectionsOf
 } = vi.hoisted(() => ({
   mockCompartmentReconfigure: vi.fn((value: unknown) => value),
   mockDrawSelection: vi.fn(() => 'draw-selection-extension'),
@@ -25,7 +26,8 @@ const {
   mockEditorView: vi.fn(),
   mockEditorStateCreate: vi.fn((config) => config),
   mockReadOnlyOf: vi.fn(() => 'read-only-extension'),
-  mockEditableOf: vi.fn(() => 'editable-extension')
+  mockEditableOf: vi.fn(() => 'editable-extension'),
+  mockAllowMultipleSelectionsOf: vi.fn(() => 'allow-multiple-selections-extension')
 }));
 
 vi.mock('@codemirror/commands', () => ({
@@ -49,6 +51,9 @@ vi.mock('@codemirror/state', () => ({
   },
   EditorState: {
     create: mockEditorStateCreate,
+    allowMultipleSelections: {
+      of: mockAllowMultipleSelectionsOf
+    },
     readOnly: {
       of: mockReadOnlyOf
     }
@@ -117,6 +122,7 @@ function resetEditorMocks() {
   mockEditorView.mockClear();
   mockReadOnlyOf.mockClear();
   mockEditableOf.mockClear();
+  mockAllowMultipleSelectionsOf.mockClear();
 }
 
 function createAdapterWithStubbedView() {
@@ -157,8 +163,10 @@ describe('CodeMirrorEditorAdapter', () => {
     });
 
     expect(mockDrawSelection).toHaveBeenCalledTimes(1);
+    expect(mockAllowMultipleSelectionsOf).toHaveBeenCalledWith(true);
     const extensions = mockEditorStateCreate.mock.calls[0]?.[0]?.extensions;
     expect(extensions).toContain('draw-selection-extension');
+    expect(extensions).toContain('allow-multiple-selections-extension');
   });
 
   it('keeps read-only editors selectable so comparison panes can copy text', () => {

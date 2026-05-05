@@ -12,6 +12,7 @@ import {
   RemoteImageLocalizationController,
   type CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
+import { createCodeMirrorSelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 import { buildEditorDiffDecorations } from './lineDiffDecorations';
 import { createLiveMarkdown } from './liveMarkdown';
@@ -46,6 +47,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           markdown(),
           anchorStructureGuard,
           history(),
+          EditorState.allowMultipleSelections.of(true),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorState.readOnly.of(options.readOnly === true),
           // Keep the DOM selectable even in read-only panes so users can copy text from comparison views.
@@ -157,16 +159,24 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return { from, to };
   }
 
+  getSelectionRanges(): EditorSelection[] {
+    return toEditorSelectionRanges(this.view.state.selection);
+  }
+
   setSelection(selection: EditorSelection) {
-    const { anchor, head } = this.clampSelection(selection);
+    this.setSelectionRanges([selection]);
+  }
+
+  setSelectionRanges(selections: EditorSelection[]) {
     this.view.dispatch({
-      selection: { anchor, head },
+      selection: createCodeMirrorSelection(selections, (position) => this.clampPosition(position)),
       scrollIntoView: false
     });
   }
 
   revealSelection(selection: EditorSelection) {
-    const { anchor, head } = this.clampSelection(selection);
+    const anchor = this.clampPosition(selection.from);
+    const head = this.clampPosition(selection.to);
     this.view.dispatch({
       selection: { anchor, head },
       scrollIntoView: true
@@ -176,17 +186,12 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
 
   restoreSelection(selection: EditorSelection) {
-    const { anchor, head } = this.clampSelection(selection);
+    const anchor = this.clampPosition(selection.from);
+    const head = this.clampPosition(selection.to);
     this.view.dispatch({
       selection: { anchor, head },
       scrollIntoView: true
     });
-  }
-
-  private clampSelection(selection: EditorSelection) {
-    const anchor = this.clampPosition(selection.from);
-    const head = this.clampPosition(selection.to);
-    return { anchor, head };
   }
 
   private clampPosition(position: number) {

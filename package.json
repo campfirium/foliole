@@ -26,6 +26,7 @@
     "agent:loop": "bash scripts/codex/run-loop.sh",
     "agent:loop:dry-run": "bash scripts/codex/run-loop.sh --dry-run",
     "task:finish": "node scripts/task-finish.mjs",
+    "verify:preview": "bash scripts/verify-preview.sh",
     "quality:fast": "bash scripts/quality-gate-fast.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",

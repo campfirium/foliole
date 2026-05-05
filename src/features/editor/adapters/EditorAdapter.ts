@@ -20,8 +20,10 @@ export interface EditorAdapter {
   restoreSelection(selection: EditorSelection): void;
   setContent(content: string): void;
   getSelection(): EditorSelection;
+  getSelectionRanges(): EditorSelection[];
   revealSelection(selection: EditorSelection): void;
   setSelection(selection: EditorSelection): void;
+  setSelectionRanges(selections: EditorSelection[]): void;
   getLineBlockHeight(lineNumber: number): number;
   getScrollTop(): number;
   setScrollTop(scrollTop: number): void;

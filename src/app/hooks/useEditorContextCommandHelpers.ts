@@ -41,12 +41,12 @@ function refreshSelectionHighlight(adapter: EditorAdapter | null) {
   if (!adapter) {
     return;
   }
-  const selection = adapter.getSelection();
-  if (selection.from === selection.to) {
+  const selections = adapter.getSelectionRanges().filter((selection) => selection.from !== selection.to);
+  if (selections.length === 0) {
     return;
   }
   requestAnimationFrame(() => {
-    adapter.setSelection(selection);
+    adapter.setSelectionRanges(selections);
     adapter.focus();
   });
 }
@@ -62,7 +62,7 @@ export function createSelectionCommandRunner(
     if (!payload) {
       return;
     }
-    const applied = applySelectionMarkup(editorRef.current, anchorKind, payload.anchorId);
+    const applied = applySelectionMarkup(editorRef.current, anchorKind, payload.entries);
     if (!applied) {
       closeContextMenu();
       return;

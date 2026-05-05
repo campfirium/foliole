@@ -1,11 +1,19 @@
-import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
 
 export type CommandMarkupType = 'cloze' | 'highlight';
 
+export interface SelectionCommandEntry {
+  anchorId: string;
+  clozeContent: string;
+  range: EditorSelection;
+  selectionText: string;
+}
+
 export interface SelectionCommandPayload {
   anchorId: string;
-  parentNodeId: string;
   clozeContent: string;
+  entries: SelectionCommandEntry[];
+  parentNodeId: string;
   selectionText: string;
 }
 
@@ -30,30 +38,42 @@ export function getSelectionCommandPayload(
   }
 
   const content = adapter.getContent();
-  const selection = adapter.getSelection();
-  const max = content.length;
-  const from = Math.max(0, Math.min(selection.from, selection.to, max));
-  const to = Math.max(0, Math.min(Math.max(selection.from, selection.to), max));
-
-  if (from === to) {
+  const selections = getNormalizedSelectionRanges(adapter, content.length);
+  if (selections.length === 0) {
     return null;
   }
-
-  const selectionText = stripAnchorTags(content.slice(from, to)).trim();
-  if (!selectionText) {
+  let nextAnchorId = getNextAnchorNumericId(content);
+  const entries = selections
+    .map((range): SelectionCommandEntry | null => {
+      const selectionText = stripAnchorTags(content.slice(range.from, range.to)).trim();
+      if (!selectionText) {
+        return null;
+      }
+      const prefix = content.slice(0, range.from);
+      const suffix = content.slice(range.to);
+      const clozeRawContent = `${prefix}${CLOZE_PLACEHOLDER}${suffix}`;
+      const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
+      const entry = {
+        anchorId: String(nextAnchorId),
+        clozeContent,
+        range,
+        selectionText
+      };
+      nextAnchorId += 1;
+      return entry;
+    })
+    .filter((entry): entry is SelectionCommandEntry => entry !== null);
+  if (entries.length === 0) {
     return null;
   }
-
-  const prefix = content.slice(0, from);
-  const suffix = content.slice(to);
-  const clozeRawContent = `${prefix}${CLOZE_PLACEHOLDER}${suffix}`;
-  const clozeContent = stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
-  const anchorId = String(getNextAnchorNumericId(content));
+  const clozeContent = buildCombinedClozeContent(content, entries);
+  const selectionText = entries.map((entry) => entry.selectionText).join('\n');
 
   return {
-    anchorId,
-    parentNodeId,
+    anchorId: entries[0]?.anchorId ?? String(nextAnchorId),
     clozeContent,
+    entries,
+    parentNodeId,
     selectionText
   };
 }
@@ -65,28 +85,55 @@ function stripAnchorTags(value: string) {
 export function applySelectionMarkup(
   adapter: EditorAdapter | null,
   markupType: CommandMarkupType,
-  anchorId: string
+  entries: SelectionCommandEntry[]
 ) {
-  if (!adapter) {
+  if (!adapter || entries.length === 0) {
     return false;
   }
-
-  const selection = adapter.getSelection();
-  if (selection.from === selection.to) {
-    return false;
-  }
-
   const content = adapter.getContent();
-  const from = Math.min(selection.from, selection.to);
-  const to = Math.max(selection.from, selection.to);
-  const selectedText = content.slice(from, to);
-  if (!selectedText.trim()) {
-    return false;
-  }
-
   const tagName = markupType === 'highlight' ? 'highlight' : 'cloze';
-  adapter.replaceSelection(`<${tagName} id="${anchorId}">${selectedText}</${tagName} id="${anchorId}">`);
-  return true;
+  let applied = false;
+  [...entries]
+    .sort((left, right) => right.range.from - left.range.from)
+    .forEach((entry) => {
+      const selectedText = content.slice(entry.range.from, entry.range.to);
+      if (!selectedText.trim()) {
+        return;
+      }
+      adapter.replaceRange(
+        entry.range.from,
+        entry.range.to,
+        `<${tagName} id="${entry.anchorId}">${selectedText}</${tagName} id="${entry.anchorId}">`
+      );
+      applied = true;
+    });
+  return applied;
+}
+
+function getNormalizedSelectionRanges(adapter: EditorAdapter, max: number) {
+  const selections = adapter
+    .getSelectionRanges()
+    .map((selection) => ({
+      from: Math.max(0, Math.min(selection.from, selection.to, max)),
+      to: Math.max(0, Math.min(Math.max(selection.from, selection.to), max))
+    }))
+    .filter((selection) => selection.from < selection.to)
+    .sort((left, right) => left.from - right.from);
+  return selections.filter((selection, index) => {
+    const previous = selections[index - 1];
+    return !previous || previous.from !== selection.from || previous.to !== selection.to;
+  });
+}
+
+function buildCombinedClozeContent(content: string, entries: SelectionCommandEntry[]) {
+  const clozeRawContent = [...entries]
+    .sort((left, right) => right.range.from - left.range.from)
+    .reduce(
+      (currentContent, entry) =>
+        `${currentContent.slice(0, entry.range.from)}${CLOZE_PLACEHOLDER}${currentContent.slice(entry.range.to)}`,
+      content
+    );
+  return stripAnchorTags(clozeRawContent) || CLOZE_PLACEHOLDER;
 }
 
 function getNextAnchorNumericId(content: string): number {

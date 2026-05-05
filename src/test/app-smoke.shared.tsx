@@ -24,6 +24,7 @@ export const mockEditorAdapter: EditorAdapter = {
     mockEditorState.content = content;
   },
   getSelection: () => ({ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }),
+  getSelectionRanges: () => [{ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }],
   getLineBlockHeight: () => 24,
   revealPosition: (position) => {
     mockEditorState.selectionFrom = position;
@@ -38,6 +39,11 @@ export const mockEditorAdapter: EditorAdapter = {
     mockEditorState.selectionTo = selection.to;
   },
   setSelection: (selection) => {
+    mockEditorState.selectionFrom = selection.from;
+    mockEditorState.selectionTo = selection.to;
+  },
+  setSelectionRanges: (selections) => {
+    const selection = selections.at(-1) ?? { from: 0, to: 0 };
     mockEditorState.selectionFrom = selection.from;
     mockEditorState.selectionTo = selection.to;
   },
