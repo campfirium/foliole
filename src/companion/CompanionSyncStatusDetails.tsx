@@ -1,15 +1,10 @@
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventSemantics';
 
-import { formatSyncResultMessage } from './companionSyncActivityCopy';
+import { formatSyncResultMessage, isReportableSyncEvent } from './companionSyncActivityCopy';
+import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
-
-function formatClock(timestamp: string | null) {
-  if (!timestamp) {
-    return 'Never';
-  }
-  return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
 
 function formatDeviceKind(deviceKind: string | null) {
   if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
@@ -77,48 +72,6 @@ function SettingsLinkRow(props: {
   );
 }
 
-function resolveLastSyncRow(props: {
-  lastSyncedAt: string | null;
-  status: 'idle' | 'loading' | 'syncing';
-  syncEvents: NativeCompanionSyncEvent[];
-}) {
-  const latestEvent = props.syncEvents[0] ?? null;
-  const latestCompletedEvent = props.syncEvents.find(isFullSyncCompletedEvent) ?? null;
-  if (props.status === 'syncing') {
-    return {
-      detail: 'Pulling changes now.',
-      value: 'Syncing',
-      valueTone: 'default' as const
-    };
-  }
-  if (latestEvent?.status === 'failed') {
-    return {
-      detail: latestEvent.message,
-      value: 'Failed',
-      valueTone: 'error' as const
-    };
-  }
-  if (latestEvent?.status === 'skipped') {
-    return {
-      detail: latestEvent.message,
-      value: formatClock(latestEvent.occurred_at),
-      valueTone: 'default' as const
-    };
-  }
-  return {
-    detail: props.lastSyncedAt ? formatLastSyncDetail(latestCompletedEvent ?? latestEvent) : 'No sync check yet',
-    value: formatClock(props.lastSyncedAt),
-    valueTone: props.lastSyncedAt ? 'success' as const : 'default' as const
-  };
-}
-
-function formatLastSyncDetail(event: NativeCompanionSyncEvent | null) {
-  if (!event) {
-    return 'Everything was up to date.';
-  }
-  return formatSyncResultMessage(event.message);
-}
-
 function formatEventStatus(event: NativeCompanionSyncEvent) {
   if (event.status === 'completed') {
     return isFullSyncCompletedEvent(event) ? 'Synced' : 'Checked';
@@ -168,7 +121,7 @@ function SyncActivitySummary(props: {
   events: NativeCompanionSyncEvent[];
   onOpen(): void;
 }) {
-  const latestEvent = props.events.find((event) => event.status !== 'started') ?? null;
+  const latestEvent = props.events.find(isReportableSyncEvent) ?? null;
   const summary = latestEvent
     ? `${formatEventStatus(latestEvent)} ${formatClock(latestEvent.occurred_at)}`
     : 'No activity';
@@ -178,7 +131,7 @@ function SyncActivitySummary(props: {
 }
 
 function ActivityPage(props: { events: NativeCompanionSyncEvent[] }) {
-  const visibleEvents = props.events.filter((event) => event.status !== 'started');
+  const visibleEvents = props.events.filter(isReportableSyncEvent);
   return (
     <section className="border-t border-companion-divider">
       {visibleEvents.length === 0 ? (
@@ -227,9 +180,9 @@ export function CompanionSyncStatusDetails(props: {
   endpointUrl: string;
   lastSyncedAt: string | null;
   pairingState: NativeCompanionPairingState;
-  syncedTopicCount: number;
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
+  syncProgress: CompanionDesktopSyncProgress | null;
   status: 'idle' | 'loading' | 'syncing';
   page: CompanionSettingsPage;
   onOpenPage(page: CompanionSettingsPage): void;
@@ -246,7 +199,7 @@ export function CompanionSyncStatusDetails(props: {
     <div className="border-t border-companion-divider">
       <SettingsRow
         detail={lastSync.detail}
-        label="Last sync"
+        label={lastSync.label}
         value={lastSync.value}
         valueTone={lastSync.valueTone}
       />

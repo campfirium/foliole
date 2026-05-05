@@ -8,17 +8,6 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const PAIRING_APPROVAL_POLL_MS = 1_500;
 
-function countSyncedTopics(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
-  const snapshot = workspaceSync.state.workspace_snapshot;
-  if (!snapshot) {
-    return 0;
-  }
-  return snapshot.nodeOrder.filter((nodeId) => {
-    const node = snapshot.nodesById[nodeId];
-    return node?.kind === 'topic' && !snapshot.trashedNodeIds.includes(nodeId);
-  }).length;
-}
-
 function buildSyncPanelProps(args: {
   handoffReminders: ReturnType<typeof useCompanionHandoffReminderSettings>;
   onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
@@ -35,9 +24,9 @@ function buildSyncPanelProps(args: {
     handoffReminderSettings: handoffReminders.settings,
     lastSyncedAt: workspaceSync.state.last_synced_at,
     rememberedTargets: workspaceSync.state.remembered_targets,
-    syncedTopicCount: countSyncedTopics(workspaceSync),
     syncConflictCount: workspaceSync.syncConflictCount,
     syncEvents: workspaceSync.state.sync_events,
+    syncProgress: workspaceSync.syncProgress,
     onCancelPairing: workspaceSync.cancelPairing,
     onChangeHandoffReminderSettings: handoffReminders.updateSettings,
     onCheckDesktop: workspaceSync.checkDesktop,

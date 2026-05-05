@@ -45,6 +45,7 @@ function createWorkspaceSync() {
       sync_onboarding_status: 'pending',
       workspace_snapshot: null
     },
+    syncProgress: null,
     status: 'idle'
   } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
 }

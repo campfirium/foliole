@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
@@ -19,9 +20,9 @@ type CompanionSyncPanelProps = {
   handoffReminderSettings: CompanionHandoffReminderSettings;
   lastSyncedAt: string | null;
   rememberedTargets: string[];
-  syncedTopicCount: number;
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
+  syncProgress: CompanionDesktopSyncProgress | null;
   onCancelPairing(): void;
   onCheckDesktop(endpointUrl: string): Promise<unknown>;
   onChangeHandoffReminderSettings(settings: CompanionHandoffReminderSettings): void;
@@ -84,7 +85,7 @@ function SyncStatusCard(props: {
   );
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncedTopicCount' | 'syncConflictCount' | 'syncEvents'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
   endpointUrl: string;
 }) {
   return (
@@ -93,9 +94,9 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
       lastSyncedAt={props.lastSyncedAt}
       pairingState={props.pairingState}
       status={props.status}
-      syncedTopicCount={props.syncedTopicCount}
       syncConflictCount={props.syncConflictCount}
       syncEvents={props.syncEvents}
+      syncProgress={props.syncProgress}
       page={props.page}
       onOpenPage={props.onOpenSettingsPage}
     />
@@ -205,9 +206,9 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
               lastSyncedAt={props.lastSyncedAt}
               pairingState={props.pairingState}
               status={props.status}
-              syncedTopicCount={props.syncedTopicCount}
               syncConflictCount={props.syncConflictCount}
               syncEvents={props.syncEvents}
+              syncProgress={props.syncProgress}
               page={props.page}
               onOpenSettingsPage={props.onOpenSettingsPage}
             />

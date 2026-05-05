@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CompanionShellOverlays } from './CompanionShellOverlays';
+import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
 function createSurface() {
@@ -24,11 +25,14 @@ describe('CompanionShellOverlays', () => {
   it('does not block the shell with sync onboarding', () => {
     render(
       <CompanionShellOverlays
+        activeSecondaryDestinationId={null}
+        companionTabConfig={DEFAULT_COMPANION_TAB_CONFIG}
         isBottomBarDisabled={false}
         isCaptureSheetOpen={false}
         isNavigationVisible={false}
         onCaptureSheetOpenChange={vi.fn()}
         onNavigationAction={vi.fn()}
+        onSecondaryDestination={vi.fn()}
         surface={createSurface()}
       />
     );
@@ -39,11 +43,14 @@ describe('CompanionShellOverlays', () => {
   it('keeps navigation available when visible', () => {
     render(
       <CompanionShellOverlays
+        activeSecondaryDestinationId={null}
+        companionTabConfig={DEFAULT_COMPANION_TAB_CONFIG}
         isBottomBarDisabled={false}
         isCaptureSheetOpen={false}
         isNavigationVisible
         onCaptureSheetOpenChange={vi.fn()}
         onNavigationAction={vi.fn()}
+        onSecondaryDestination={vi.fn()}
         surface={createSurface()}
       />
     );

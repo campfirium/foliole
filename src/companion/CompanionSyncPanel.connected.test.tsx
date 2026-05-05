@@ -22,9 +22,9 @@ function createConnectedProps() {
     },
     lastSyncedAt: null,
     rememberedTargets: [],
-    syncedTopicCount: 0,
     syncConflictCount: 0,
     syncEvents: [],
+    syncProgress: null,
     onCancelPairing: vi.fn(),
     onCheckDesktop: vi.fn(async () => undefined),
     onChangeHandoffReminderSettings: vi.fn(),
@@ -108,6 +108,7 @@ function testSeparatesConnectionFromActivity() {
   );
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.getByText('Failed')).toBeInTheDocument();
   expect(screen.queryByText('Synced')).not.toBeInTheDocument();
   screen.getByRole('button', { name: /Activity/ }).click();
   expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncActivity');
@@ -128,7 +129,8 @@ function testManualPassIsNotAutomatic() {
     />
   );
 
-  expect(screen.getByText('Everything was up to date.')).toBeInTheDocument();
+  expect(screen.getByText('No sync yet')).toBeInTheDocument();
+  expect(screen.queryByText('No changes to sync.')).not.toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
 }
 
@@ -141,11 +143,9 @@ function testOlderFailuresAreNeutralAfterCompletedPass() {
     />
   );
 
-  expect(screen.getByText('No changes to sync.')).toBeInTheDocument();
-  const oldFailure = screen.getByText('Earlier issue: Desktop sync timed out while fetching content blobs.');
-  expect(oldFailure).toBeInTheDocument();
-  expect(oldFailure.className).not.toContain('text-error');
-  expect(screen.getByText('No changes to sync.').className).not.toContain('text-companion-accent');
+  const currentFailure = screen.getByText('Desktop sync timed out while fetching content blobs.');
+  expect(currentFailure).toBeInTheDocument();
+  expect(screen.queryByText('No changes to sync.')).not.toBeInTheDocument();
 }
 
 function testHealthyBacklogPassAvoidsStrictCompletion() {
@@ -185,6 +185,54 @@ function testCurrentFailureShowsCause() {
   expect(screen.queryByText('Sync did not complete')).not.toBeInTheDocument();
 }
 
+function testHidesCheckOnlyCompletionWithoutTiming() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      lastSyncedAt="2026-05-02T11:09:00.000Z"
+      syncEvents={[{
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'check-only-event',
+        message: 'Sync fully completed; timing: topic list 1s, topic bodies 0.1s, attachment files 0.1s',
+        occurred_at: '2026-05-02T11:09:00.000Z',
+        status: 'completed'
+      }]}
+    />
+  );
+
+  expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.getByText('No sync yet')).toBeInTheDocument();
+  expect(screen.queryByText(/Timing:/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Last check')).not.toBeInTheDocument();
+  expect(screen.getByText('No activity')).toBeInTheDocument();
+}
+
+function testShowsTransferProgressInLastSyncRow() {
+  render(
+    <CompanionSyncPanel
+      {...createConnectedProps()}
+      syncProgress={{
+        attachmentBreakdown: {
+          activeTopicAttachments: 0,
+          imageAttachments: 21,
+          otherAttachments: 0,
+          pdfAttachments: 1
+        },
+        completed: 0,
+        completedBytes: 0,
+        phase: 'attachment',
+        total: 22,
+        totalBytes: 34288435
+      }}
+    />
+  );
+
+  expect(screen.queryByText('Last sync')).not.toBeInTheDocument();
+  expect(screen.getByText('Attachments')).toBeInTheDocument();
+  expect(screen.getByText('0/22 - 0 B/32.7 MB')).toBeInTheDocument();
+  expect(screen.getByText('Images 21 · PDFs 1 · Other 0')).toBeInTheDocument();
+}
+
 describe('CompanionSyncPanel connected state', () => {
   it('shows a paired state without setup controls', testShowsPairedState);
   it('shows pending sync conflicts when the local database has them', testShowsPendingSyncConflicts);
@@ -194,4 +242,6 @@ describe('CompanionSyncPanel connected state', () => {
   it('shows a healthy backlog sync pass without claiming strict completion', testHealthyBacklogPassAvoidsStrictCompletion);
   it('shows older failures as neutral history after a later backlog sync pass', testOlderFailuresAreNeutralAfterBacklogPass);
   it('shows the current failure cause in activity', testCurrentFailureShowsCause);
+  it('hides check-only completed passes from user-facing sync status', testHidesCheckOnlyCompletionWithoutTiming);
+  it('replaces the Last sync row with transfer progress while syncing resources', testShowsTransferProgressInLastSyncRow);
 });

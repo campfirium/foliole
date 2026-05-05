@@ -1,20 +1,35 @@
 export function formatSyncResultMessage(message: string) {
-  if (message === 'Sync checked' || message === 'Auto sync completed.') {
+  const displayMessage = stripDiagnosticSuffixes(message);
+  if (isSyncCheckOnlyMessage(displayMessage)) {
     return 'No changes to sync.';
   }
-  if (message === 'Sync fully completed.') {
-    return 'Everything was up to date.';
+  if (displayMessage.startsWith('Sync fully completed; ')) {
+    return capitalizeFirst(displayMessage.replace('Sync fully completed; ', '').replace(/\.$/, '.'));
   }
-  if (message.startsWith('Sync fully completed; ')) {
-    return capitalizeFirst(message.replace('Sync fully completed; ', '').replace(/\.$/, '.'));
+  if (displayMessage.startsWith('Sync made progress; ')) {
+    return capitalizeFirst(displayMessage.replace('Sync made progress; ', '').replace(/\.$/, '.'));
   }
-  if (message.startsWith('Sync made progress; ')) {
-    return capitalizeFirst(message.replace('Sync made progress; ', '').replace(/\.$/, '.'));
+  if (displayMessage.startsWith('Sync checked; ')) {
+    return capitalizeFirst(displayMessage.replace('Sync checked; ', '').replace(/\.$/, '.'));
   }
-  if (message.startsWith('Sync checked; ')) {
-    return capitalizeFirst(message.replace('Sync checked; ', '').replace(/\.$/, '.'));
-  }
-  return message;
+  return displayMessage;
+}
+
+export function isSyncCheckOnlyMessage(message: string) {
+  const displayMessage = stripDiagnosticSuffixes(message);
+  return displayMessage === 'Sync checked' ||
+    displayMessage === 'Auto sync completed.' ||
+    displayMessage === 'Sync fully completed.';
+}
+
+export function isReportableSyncEvent(event: { message: string; status: string }) {
+  return event.status !== 'started' && !(event.status === 'completed' && isSyncCheckOnlyMessage(event.message));
+}
+
+function stripDiagnosticSuffixes(message: string) {
+  return message
+    .replace(/;\s*timing:.*$/i, '.')
+    .replace(/;\s*body internals:.*$/i, '.');
 }
 
 function capitalizeFirst(value: string) {

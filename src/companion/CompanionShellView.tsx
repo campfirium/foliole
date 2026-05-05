@@ -62,7 +62,6 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         onNavigationAction={model.handleNavigationAction}
         onSecondaryDestination={model.handleSecondaryDestination}
         surface={model.surface}
-        syncProgress={model.workspaceSync.syncProgress}
       />
     </>
   );

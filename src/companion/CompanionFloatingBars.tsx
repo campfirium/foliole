@@ -1,8 +1,5 @@
 import type { ComponentType } from 'react';
 
-import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
-
-import { CompanionBottomSyncStatus } from './CompanionBottomSyncStatus';
 import {
   resolveCompanionTabs,
   type CompanionResolvedTab,
@@ -43,7 +40,6 @@ export function CompanionBottomTabBar(props: {
   config: CompanionTabConfig;
   onAction(action: CompanionTabAction): void;
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
-  syncProgress?: CompanionDesktopSyncProgress | null;
   visible: boolean;
 }) {
   if (!props.visible) {
@@ -55,7 +51,6 @@ export function CompanionBottomTabBar(props: {
       className="fixed inset-x-0 bottom-0 z-20 border-t border-companion-divider bg-companion-content px-4 pb-5 pt-2 shadow-panel"
       data-testid="companion-bottom-tab-bar"
     >
-      <CompanionBottomSyncStatus progress={props.syncProgress ?? null} />
       <div className="mx-auto flex w-full max-w-[760px] items-center gap-1">
         {renderTabButtons(resolveCompanionTabs(props.config), props)}
       </div>

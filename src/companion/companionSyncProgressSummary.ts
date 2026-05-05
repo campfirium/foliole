@@ -1,5 +1,11 @@
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
+export type CompanionSyncProgressSummary = {
+  detail: string | null;
+  status: string;
+  title: string;
+};
+
 function countLabel(count: number | undefined, singular: string, plural: string) {
   const value = count ?? 0;
   return `${value} ${value === 1 ? singular : plural}`;
@@ -98,39 +104,19 @@ function progressCountLabel(progress: CompanionDesktopSyncProgress, completed: n
   return progress.total === null ? 'Checking' : `${completed}/${total}`;
 }
 
-export function CompanionBottomSyncStatus(props: {
-  progress: CompanionDesktopSyncProgress | null;
-}) {
-  if (!props.progress) return null;
-  const total = displayTotal(props.progress);
-  const completed = visibleCompleted(props.progress, total);
-  const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
-  const count = progressCountLabel(props.progress, completed, total);
-  const showBytes = !isActiveTopicProgress(props.progress) && !isReviewQueueProgress(props.progress);
-  const byteLabel = showBytes && props.progress.totalBytes != null && props.progress.completedBytes != null
-    ? `${formatBytes(props.progress.completedBytes)}/${formatBytes(props.progress.totalBytes)}`
+export function formatCompanionSyncProgressSummary(progress: CompanionDesktopSyncProgress): CompanionSyncProgressSummary {
+  const total = displayTotal(progress);
+  const completed = visibleCompleted(progress, total);
+  const count = progressCountLabel(progress, completed, total);
+  const showBytes = !isActiveTopicProgress(progress) && !isReviewQueueProgress(progress);
+  const byteLabel = showBytes && progress.totalBytes != null && progress.completedBytes != null
+    ? `${formatBytes(progress.completedBytes)}/${formatBytes(progress.totalBytes)}`
     : null;
-  const elapsedLabel = formatElapsedTime(props.progress.elapsedMs);
-  const failedLabel = props.progress.failedCount && props.progress.failedCount > 0
-    ? `${props.progress.failedCount} failed`
-    : null;
-  const statusLabel = [byteLabel ? `${count} - ${byteLabel}` : count, failedLabel, elapsedLabel].filter(Boolean).join(' · ');
-  const detail = formatContentBreakdown(props.progress) ?? formatAttachmentBreakdown(props.progress);
-  return (
-    <section
-      aria-label="Sync progress"
-      className="mx-auto mb-2 w-full max-w-[760px] rounded-md border border-companion-divider bg-companion-subtle px-3 py-2 text-xs leading-5 text-companion-text-secondary"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-medium text-foreground">{formatSyncPhase(props.progress)}</span>
-        <span className="shrink-0 tabular-nums">{statusLabel}</span>
-      </div>
-      {detail ? <div className="mt-0.5 truncate text-companion-text-secondary">{detail}</div> : null}
-      {props.progress.total === null ? null : (
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-companion-divider">
-          <div className="h-full rounded-full bg-companion-accent" style={{ width: `${ratio}%` }} />
-        </div>
-      )}
-    </section>
-  );
+  const elapsedLabel = formatElapsedTime(progress.elapsedMs);
+  const failedLabel = progress.failedCount && progress.failedCount > 0 ? `${progress.failedCount} failed` : null;
+  return {
+    detail: formatContentBreakdown(progress) ?? formatAttachmentBreakdown(progress),
+    status: [byteLabel ? `${count} - ${byteLabel}` : count, failedLabel, elapsedLabel].filter(Boolean).join(' · '),
+    title: formatSyncPhase(progress)
+  };
 }
