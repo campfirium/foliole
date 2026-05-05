@@ -28,7 +28,12 @@ final class FolioleCompanionSyncConflictCopyProjection {
         String content = snapshot.optString("content", "");
         String title = conflictCopyTitle(snapshot, record.optString("device_id", ""));
         String openingText = openingText(content, snapshot.optString("title", ""));
-        String bodyBlobHash = FolioleCompanionTextBodyBlobs.upsert(database, content, now);
+        String bodyBlobHash = FolioleCompanionTextBodyBlobs.upsert(
+            InstrumentationRegistry.getInstrumentation().getTargetContext(),
+            database,
+            content,
+            now
+        );
         String localVersionId = FolioleCompanionSyncConflictCopyIdentity.copyVersionId(deviceId, copyNodeId, sourceVersionId);
         JSONObject copySnapshot = copySnapshot(copyNodeId, title, content, openingText, bodyBlobHash, snapshot, now);
         String contentHash = FolioleCompanionSyncContentHash.hash(copySnapshot);
