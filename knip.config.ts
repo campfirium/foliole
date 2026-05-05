@@ -2,7 +2,10 @@ const config = {
   entry: [
     'index.html',
     'src/main.tsx',
+    'src/companion/index.html',
     'vite.config.ts',
+    'vite.companion.config.ts',
+    'vite.shared.ts',
     'playwright.config.ts',
     'playwright.desktop.config.ts',
     'electron/main.ts',
@@ -17,9 +20,10 @@ const config = {
     'scripts/**/*.{js,mjs,ts}',
     'src/**/*.{ts,tsx}',
     'tests/**/*.{ts,tsx}',
-    '*.config.{js,ts}'
+    '*.config.{js,ts}',
+    'vite.shared.ts'
   ],
-  ignoreDependencies: ['prettier']
+  ignoreDependencies: ['@capacitor/android', '@capacitor/core', 'prettier']
 };
 
 export default config;

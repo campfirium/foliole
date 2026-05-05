@@ -24,7 +24,15 @@ echo "[npm-hardening] ok: codex shell wrappers do not auto-install global packag
 audit_cache_dir=".tmp/npm-audit-cache"
 audit_json_file=".tmp/npm-audit-report.json"
 mkdir -p "${audit_cache_dir}"
+set +e
 npm audit --omit=dev --json --cache "${audit_cache_dir}" > "${audit_json_file}"
+audit_exit=$?
+set -e
+if [[ "${audit_exit}" -gt 1 ]]; then
+  echo "[npm-hardening] npm audit failed unexpectedly"
+  cat "${audit_json_file}"
+  exit "${audit_exit}"
+fi
 node -e "
   const fs = require('node:fs');
   const report = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));

@@ -23,10 +23,13 @@
     "sqlite:backup": "node --experimental-strip-types scripts/sqlite-maintenance.ts backup",
     "sqlite:restore": "node --experimental-strip-types scripts/sqlite-maintenance.ts restore",
     "sqlite:node-kind-report": "node --experimental-strip-types scripts/node-kind-report.ts",
+    "android:web:dev": "vite --config vite.companion.config.ts",
+    "android:web:build": "vite build --config vite.companion.config.ts",
     "android:open": "bash scripts/android/windows-open.sh",
     "android:sync": "bash scripts/android/windows-cap-sync.sh",
     "android:emulator": "bash scripts/android/windows-run-emulator.sh",
     "android:logcat": "bash scripts/android/windows-logcat.sh",
+    "android:preview": "bash scripts/android/android-preview.sh",
     "agent:codex": "bash scripts/codex/run-task.sh",
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",
@@ -42,6 +45,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@capacitor/core": "8.3.0",
     "@codemirror/commands": "^6.10.2",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/state": "^6.5.4",
@@ -51,7 +55,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.1",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "0.45.2",
     "lucide-react": "^0.575.0",
     "parse5": "7.3.0",
     "pdfjs-dist": "5.4.296",
@@ -63,6 +67,8 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@capacitor/android": "8.3.0",
+    "@capacitor/cli": "8.3.0",
     "@eslint/js": "^9.21.0",
     "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.6.3",

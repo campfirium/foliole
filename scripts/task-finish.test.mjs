@@ -8,24 +8,50 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   collectPreviewDiagnostics,
-  extractWindowsPreviewStatus,
+  extractPreviewStatus,
+  inferPreviewTargetsFromFiles,
+  resolveChangedFiles,
+  resolvePreviewTargets,
   runTaskFinish
 } from './task-finish.mjs';
 
 describe('task-finish helpers', () => {
   it('extracts the final preview status from script output', () => {
     expect(
-      extractWindowsPreviewStatus(
+      extractPreviewStatus(
         [
           '[windows-preview] step 1/3: verify electron-dist freshness',
           '[windows-preview] status: SYNCED',
           '[windows-preview] status: STARTED'
-        ].join('\n')
+        ].join('\n'),
+        'windows'
       )
     ).toBe('STARTED');
   });
 
-  it('always runs preview as the task finish step', async () => {
+  it('resolves changed files from git status output', () => {
+    expect(resolveChangedFiles(' M package.json\n?? android/\nR  old.ts -> src/companion/main.tsx\n')).toEqual([
+      'package.json',
+      'android/',
+      'src/companion/main.tsx'
+    ]);
+  });
+
+  it('infers preview targets from changed files', () => {
+    expect(inferPreviewTargetsFromFiles(['android/app/build.gradle'])).toEqual(['android']);
+    expect(inferPreviewTargetsFromFiles(['electron/main.ts'])).toEqual(['windows']);
+    expect(inferPreviewTargetsFromFiles(['package.json'])).toEqual(['android', 'windows']);
+  });
+
+  it('prefers explicit preview target override when provided', () => {
+    expect(resolvePreviewTargets({ changedFiles: ['electron/main.ts'], requestedTarget: 'android' })).toEqual(['android']);
+    expect(resolvePreviewTargets({ changedFiles: ['android/app/build.gradle'], requestedTarget: 'both' })).toEqual([
+      'android',
+      'windows'
+    ]);
+  });
+
+  it('runs windows preview when desktop files changed', async () => {
     const runWindowsPreview = vi.fn().mockResolvedValue({
       code: 0,
       stderr: '',
@@ -33,16 +59,42 @@ describe('task-finish helpers', () => {
     });
 
     const result = await runTaskFinish({
+      changedFiles: ['electron/main.ts'],
       collectDiagnostics: vi.fn(),
       runWindowsPreview
     });
 
     expect(runWindowsPreview).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
-      attemptCount: 1,
       executed: true,
       exitCode: 0,
       previewStatus: 'STARTED',
+      previewTarget: 'windows',
+      previewTargets: ['windows'],
+      status: 'EXECUTED'
+    });
+  });
+
+  it('runs android preview when android files changed', async () => {
+    const runAndroidPreview = vi.fn().mockResolvedValue({
+      code: 0,
+      stderr: '',
+      stdout: '[android-preview] status: OPENED\n'
+    });
+
+    const result = await runTaskFinish({
+      changedFiles: ['android/app/build.gradle'],
+      collectDiagnostics: vi.fn(),
+      runAndroidPreview
+    });
+
+    expect(runAndroidPreview).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      executed: true,
+      exitCode: 0,
+      previewStatus: 'OPENED',
+      previewTarget: 'android',
+      previewTargets: ['android'],
       status: 'EXECUTED'
     });
   });
@@ -62,6 +114,7 @@ describe('task-finish helpers', () => {
       });
 
     const result = await runTaskFinish({
+      changedFiles: ['electron/main.ts'],
       collectDiagnostics: vi.fn(),
       runWindowsPreview
     });
@@ -88,6 +141,7 @@ describe('task-finish helpers', () => {
     });
 
     const result = await runTaskFinish({
+      changedFiles: ['electron/main.ts'],
       collectDiagnostics: collectDiagnosticsMock,
       runWindowsPreview
     });
@@ -115,6 +169,7 @@ describe('task-finish helpers', () => {
     const collectDiagnosticsMock = vi.fn().mockResolvedValue({ latestBootEvent: { stage: 'missing' } });
 
     const result = await runTaskFinish({
+      changedFiles: ['electron/main.ts'],
       collectDiagnostics: collectDiagnosticsMock,
       runWindowsPreview
     });
