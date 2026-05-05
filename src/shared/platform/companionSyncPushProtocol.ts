@@ -15,7 +15,7 @@ export interface SyncObjectIdentity {
 }
 
 export type SyncBaseReference =
-  | { kind: 'blocked'; reason: 'missing_base_reference' }
+  | { kind: 'blocked'; reason: 'invalid_identity' | 'missing_base_reference' }
   | { baseContentHash: string; kind: 'content_hash' }
   | { kind: 'op_id'; opId: string }
   | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null };
@@ -80,6 +80,14 @@ function stateObjectIdentity(row: Pick<NativeSyncStateObjectRecord, 'object_id' 
   };
 }
 
+function isValidStateObjectIdentity(row: Pick<NativeSyncStateObjectRecord, 'object_id' | 'object_type'>) {
+  if (row.object_type !== 'setting' && row.object_type !== 'view_state') {
+    return true;
+  }
+  const parts = row.object_id.split(':', 5);
+  return parts.length === 5 && parts.every((part) => part.trim().length > 0);
+}
+
 function stateClientOpId(row: NativeSyncStateObjectRecord) {
   return `${row.object_type}:${row.object_id}:${row.state_seq}`;
 }
@@ -95,6 +103,9 @@ function createStateObjectSyncAdapter(
       };
     },
     baseReference(row) {
+      if (!isValidStateObjectIdentity(row)) {
+        return { kind: 'blocked', reason: 'invalid_identity' };
+      }
       return row.base_content_hash
         ? { baseContentHash: row.base_content_hash, kind: 'content_hash' }
         : { kind: 'blocked', reason: 'missing_base_reference' };
