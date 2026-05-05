@@ -50,6 +50,8 @@ export interface CompanionDesktopSyncResult {
   syncedAttachmentIds: string[];
   attachmentResourceError: string | null;
   contentBlobError: string | null;
+  localDirtyCount: number | null;
+  pendingAckCount: number | null;
   remainingAttachmentResourceBytes: number | null;
   remainingAttachmentResourceCount: number | null;
   remainingContentBlobBytes: number | null;
@@ -108,6 +110,18 @@ async function loadMissingAttachmentResourceSummary() {
   return {
     total: diagnostics?.content.missing_attachment_resource_count ?? null,
     totalBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null
+  };
+}
+
+async function loadFinalLocalSyncSummary() {
+  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
+  return {
+    localDirtyCount: diagnostics?.sync_state.local_dirty_count ?? null,
+    pendingAckCount: diagnostics?.sync_state.pending_ack_count ?? null,
+    remainingAttachmentResourceBytes: diagnostics?.content.missing_attachment_resource_bytes ?? null,
+    remainingAttachmentResourceCount: diagnostics?.content.missing_attachment_resource_count ?? null,
+    remainingContentBlobBytes: diagnostics?.content.missing_content_blob_bytes ?? null,
+    remainingContentBlobCount: diagnostics?.content.missing_content_blob_count ?? null
   };
 }
 
@@ -267,10 +281,7 @@ async function runCompanionObjectsSync(
   } catch (error) {
     contentBlobError = errorMessage(error);
   }
-  const [remainingAttachmentResourceSummary, remainingContentBlobSummary] = await Promise.all([
-    loadMissingAttachmentResourceSummary(),
-    loadMissingContentBlobSummary()
-  ]);
+  const finalSummary = await loadFinalLocalSyncSummary();
   return {
     appliedNodeIds: [],
     appliedPackBlobCount: pack.appliedPackBlobCount,
@@ -285,10 +296,12 @@ async function runCompanionObjectsSync(
     syncedAttachmentIds,
     attachmentResourceError,
     contentBlobError,
-    remainingAttachmentResourceBytes: remainingAttachmentResourceSummary.totalBytes,
-    remainingAttachmentResourceCount: remainingAttachmentResourceSummary.total,
-    remainingContentBlobBytes: remainingContentBlobSummary.totalBytes,
-    remainingContentBlobCount: remainingContentBlobSummary.total,
+    localDirtyCount: finalSummary.localDirtyCount,
+    pendingAckCount: finalSummary.pendingAckCount,
+    remainingAttachmentResourceBytes: finalSummary.remainingAttachmentResourceBytes,
+    remainingAttachmentResourceCount: finalSummary.remainingAttachmentResourceCount,
+    remainingContentBlobBytes: finalSummary.remainingContentBlobBytes,
+    remainingContentBlobCount: finalSummary.remainingContentBlobCount,
     syncedContentBlobHashes
   };
 }

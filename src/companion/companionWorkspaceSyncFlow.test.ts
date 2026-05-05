@@ -25,6 +25,8 @@ function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncResult> 
     attachmentResourceError: null,
     changedObjectIds: [],
     contentBlobError: null,
+    localDirtyCount: 0,
+    pendingAckCount: 0,
     pushedNodeIds: [],
     pushedObjectIds: [],
     pushedReviewOpIds: [],
@@ -70,10 +72,10 @@ async function testUsesStreamSyncDirectly() {
     'http://10.0.2.2:38641',
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; topic bodies and attachment files are cached.',
-    status: 'skipped'
+    message: 'Sync completed.',
+    status: 'completed'
   }));
   expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
   expect(setStatus).toHaveBeenLastCalledWith('idle');
@@ -99,7 +101,7 @@ async function testUsesRememberedSyncTarget() {
     'http://192.168.1.44:38641',
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     endpointUrl: 'http://192.168.1.44:38641',
     status: 'started'
@@ -156,6 +158,32 @@ async function testRecordsBacklogBytes() {
   }));
 }
 
+async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    localDirtyCount: 1,
+    pendingAckCount: 1,
+    remainingAttachmentResourceCount: 0,
+    remainingContentBlobCount: 0
+  }));
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('skipped');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Sync pass finished; local changes are still waiting to settle.',
+    status: 'skipped'
+  }));
+}
+
 describe('tryForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -170,4 +198,6 @@ describe('tryForegroundAutoSync', () => {
   it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 
   it('records remaining cache bytes when a pass leaves body or attachment backlog', testRecordsBacklogBytes);
+
+  it('does not record completed while local work is waiting', testDoesNotCompleteWhileLocalWorkIsWaiting);
 });

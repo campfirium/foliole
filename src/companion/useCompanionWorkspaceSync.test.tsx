@@ -10,6 +10,8 @@ const syncObjectsMock = vi.hoisted(() => ({
   syncCompanionObjectsFromDesktop: vi.fn(async () => ({
     attachmentResourceError: null,
     contentBlobError: null,
+    localDirtyCount: 0,
+    pendingAckCount: 0,
     remainingAttachmentResourceCount: 0,
     remainingContentBlobCount: 0
   }))

@@ -33,6 +33,8 @@ function describeManualSyncPassResult(result: {
   remainingAttachmentResourceCount: number | null;
   remainingContentBlobBytes?: number | null;
   remainingContentBlobCount: number | null;
+  localDirtyCount?: number | null;
+  pendingAckCount?: number | null;
 }) {
   if (result.attachmentResourceError) {
     return {
@@ -50,9 +52,20 @@ function describeManualSyncPassResult(result: {
   const remainingAttachments = result.remainingAttachmentResourceCount;
   const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
+  if (
+    remainingBodies === 0 &&
+    remainingAttachments === 0 &&
+    result.localDirtyCount === 0 &&
+    result.pendingAckCount === 0
+  ) {
+    return {
+      message: 'Sync completed.',
+      status: 'completed' as const
+    };
+  }
   if (remainingBodies === 0 && remainingAttachments === 0) {
     return {
-      message: 'Sync pass finished; topic bodies and attachment files are cached.',
+      message: 'Sync pass finished; local changes are still waiting to settle.',
       status: 'skipped' as const
     };
   }
