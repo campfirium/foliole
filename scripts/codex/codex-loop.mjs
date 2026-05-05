@@ -5,6 +5,7 @@ import process from 'node:process';
 import { runCodexTask } from './codex-task.mjs';
 import { buildCommitMessage, commitTrackedChanges, readGitStatus, runCommand } from './git-state.mjs';
 import { REPO_ROOT, completePauseTask, isGateEntry, readTodoEntry } from './todo-ledger.mjs';
+import { buildFailureSignature, buildNextRoundTask, buildRepairTask, createExhaustedRepairError, EXHAUSTED_REPAIR_CODE, normalizeFailureMessage } from './codex-loop-shared.mjs';
 
 const REPAIR_ATTEMPT_LIMIT = 2;
 const TASK_CONVERSATION_LIMIT = 3;
@@ -50,45 +51,7 @@ function parseArgs(argv) {
 }
 
 async function runQualityGate() {
-  await runCommand('bash', ['scripts/quality-gate-fast.sh'], {
-    cwd: REPO_ROOT,
-    stdio: 'inherit'
-  });
-}
-
-function normalizeFailureMessage(error) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
-
-export function buildFailureSignature(error) {
-  const firstLine = normalizeFailureMessage(error)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)[0];
-  return (firstLine ?? 'unknown failure').slice(0, 200);
-}
-
-export function buildRepairTask(task, reason) {
-  const normalizedTask = task || 'reconcile current workspace';
-  return [
-    `Repair the current workspace for task: ${normalizedTask}.`,
-    'Focus only on the existing uncommitted changes left by the previous loop iteration.',
-    'Fix quality-gate failures and keep the task boundary unchanged.',
-    `Failure context: ${reason}`
-  ].join(' ');
-}
-
-function buildNextRoundTask(task, reason) {
-  const normalizedTask = task || 'reconcile current workspace';
-  return [
-    `Continue repairing task: ${normalizedTask}.`,
-    'The previous conversation exhausted its repair budget.',
-    'Work only from the current uncommitted workspace and keep the same task boundary.',
-    `Failure context: ${reason}`
-  ].join(' ');
+  await runCommand('bash', ['scripts/quality-gate-fast.sh'], { cwd: REPO_ROOT, stdio: 'inherit' });
 }
 
 async function appendLoopFailureRecord(record) {
@@ -257,11 +220,9 @@ async function runLoop(options, overrides = {}) {
           repeatedSignatureCount = signature === lastSignature ? repeatedSignatureCount + 1 : 1;
           lastSignature = signature;
           if (repeatedSignatureCount >= SAME_SIGNATURE_LIMIT || round === TASK_CONVERSATION_LIMIT) {
-            throw recoveryError;
+            throw createExhaustedRepairError(taskEntry.task, round, signature, recoveryError, TASK_CONVERSATION_LIMIT, REPAIR_ATTEMPT_LIMIT);
           }
-          dependencies.stdout.write(
-            `[codex-loop] reopening task in a fresh round after failure: ${signature}\n`
-          );
+          dependencies.stdout.write(`[codex-loop] reopening task in a fresh round after failure: ${signature}\n`);
         }
       }
     }
@@ -282,10 +243,11 @@ async function runLoop(options, overrides = {}) {
 const isMainModule = process.argv[1]?.endsWith('codex-loop.mjs');
 if (isMainModule) {
   const exitCode = await runLoop(parseArgs(process.argv.slice(2))).catch((error) => {
-    process.stderr.write(`[codex-loop] stopped: ${normalizeFailureMessage(error)}\n`);
+    const prefix = error?.code === EXHAUSTED_REPAIR_CODE ? '[codex-loop] failure summary' : '[codex-loop] stopped';
+    process.stderr.write(`${prefix}: ${normalizeFailureMessage(error)}\n`);
     return EXIT_UNRECOVERABLE_FAILURE;
   });
   process.exit(exitCode);
 }
 
-export { parseArgs, runLoop };
+export { buildFailureSignature, buildRepairTask, parseArgs, runLoop };
