@@ -35,6 +35,7 @@ export function WorkspaceGridContent({
   props: WorkspaceGridContentSource;
 }) {
   const listNodesById = useProjectedListNodesById(props.nodesById);
+  const showDocumentOutline = activeRightPanelId !== 'outline' || props.isRightSidebarCollapsed;
   const documentSurfaceProps = useMemo(
     () => ({
       ...selectWorkspaceDocumentSurfaceProps({
@@ -44,15 +45,15 @@ export function WorkspaceGridContent({
         onShouldSuppressSelectionRestore,
         props
       }),
-      showDocumentOutline: activeRightPanelId !== 'outline' || props.isRightSidebarCollapsed
+      showDocumentOutline
     }),
     [
-      activeRightPanelId,
       documentNodeId,
       isImmersiveEditing,
       onEnterImmersiveEdit,
       onShouldSuppressSelectionRestore,
-      props
+      props,
+      showDocumentOutline
     ]
   );
   const outlineActivePosition = resolveOutlineActivePosition({

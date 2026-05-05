@@ -28,9 +28,7 @@ interface WorkspaceSurfaceActionsSource {
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 }
 
-type WorkspaceGridRenderSource = WorkspaceLayoutGridSource & {
-  shouldSuppressNavigationSelectionRestore: () => boolean;
-};
+type WorkspaceGridRenderSource = WorkspaceLayoutGridSource;
 
 function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
   const handleOpenNotesView = useCallback(() => {
@@ -124,7 +122,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onStartImport={() => void flatProps.onRunImportFile()}
         onSelectNode={handleSelectNode}
         immersive={immersive}
-        gridProps={flatProps}
+        gridProps={props}
         titleBarProps={props}
       />
       {clipboardImportNotice.notice ? <ClipboardImportNotice message={clipboardImportNotice.notice.message} tone={clipboardImportNotice.notice.tone} /> : null}
@@ -152,7 +150,7 @@ function renderWorkspaceGrid(args: {
   props: WorkspaceGridRenderSource;
 }) {
   const shouldSuppressSelectionRestore = () =>
-    args.immersive.shouldSuppressSelectionRestore() || args.props.shouldSuppressNavigationSelectionRestore();
+    args.immersive.shouldSuppressSelectionRestore() || args.props.navigation.shouldSuppressNavigationSelectionRestore();
 
   return (
     <WorkspaceLayoutGrid

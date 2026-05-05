@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
@@ -17,12 +17,15 @@ import {
   WorkspaceLeftRail,
   type WorkspaceLeftRailSource
 } from './WorkspaceLeftRail';
+import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-export type WorkspaceLayoutGridSource = WorkspaceGridContentSource &
+type WorkspaceLayoutGridFlatSource = WorkspaceGridContentSource &
   WorkspaceBottomReviewToolbarSource &
   WorkspaceLeftRailSource &
   WorkspaceGridDividerOverlayProps;
+
+export type WorkspaceLayoutGridSource = WorkspaceLayoutProps;
 
 export function WorkspaceLayoutGrid({
   activeRightPanelId,
@@ -49,23 +52,24 @@ export function WorkspaceLayoutGrid({
   isImmersiveEditing: boolean;
   props: WorkspaceLayoutGridSource;
 }) {
+  const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
   recordComponentRender('workspaceGrid');
-  const gridTemplateColumns = props.isImmersiveMode
+  const gridTemplateColumns = flatProps.isImmersiveMode
     ? 'minmax(0, 1fr)'
     : 'var(--workspace-rail-width) minmax(0, 1fr)';
 
   return (
     <WorkspaceLayoutGridShell gridTemplateColumns={gridTemplateColumns}>
-      {renderWorkspaceGridDividerOverlay(props)}
-      {props.isImmersiveMode ? null : (
+      {renderWorkspaceGridDividerOverlay(flatProps)}
+      {flatProps.isImmersiveMode ? null : (
         <WorkspaceLeftRail
           {...selectWorkspaceLeftRailProps({
             isImportManagementOpen,
             onOpenImportManagement,
             onStartClipboardImport,
             onStartImport,
-            props,
-            showStudyDock: !props.isStudyMode
+            props: flatProps,
+            showStudyDock: !flatProps.isStudyMode
           })}
         />
       )}
@@ -76,9 +80,9 @@ export function WorkspaceLayoutGrid({
         onEnterImmersiveEdit={onEnterImmersiveEdit}
         onShouldSuppressSelectionRestore={onShouldSuppressSelectionRestore}
         onSelectNode={onSelectNode}
-        props={props}
+        props={flatProps}
       />
-      <WorkspaceBottomReviewToolbar {...selectWorkspaceBottomReviewToolbarProps(props)} />
+      <WorkspaceBottomReviewToolbar {...selectWorkspaceBottomReviewToolbarProps(flatProps)} />
     </WorkspaceLayoutGridShell>
   );
 }
@@ -101,7 +105,7 @@ function WorkspaceLayoutGridShell({
 }
 
 function renderWorkspaceGridDividerOverlay(
-  props: WorkspaceGridDividerOverlayProps & { isImmersiveMode: boolean }
+  props: WorkspaceLayoutGridFlatSource & { isImmersiveMode: boolean }
 ) {
   if (props.isImmersiveMode) {
     return null;

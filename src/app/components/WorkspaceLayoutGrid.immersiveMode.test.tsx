@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { groupWorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutGrid } from './WorkspaceLayoutGrid';
 
 const lifecycle = vi.hoisted(() => ({
@@ -12,6 +13,11 @@ const lifecycle = vi.hoisted(() => ({
 }));
 
 vi.mock('./WorkspaceLayoutGridSections', () => createGridSectionsMock());
+
+vi.mock('./WorkspaceLeftRail', () => ({
+  selectWorkspaceLeftRailProps: (args: { props: unknown }) => args.props,
+  WorkspaceLeftRail: () => <div data-testid="left-rail">left</div>
+}));
 
 vi.mock('./WorkspaceListSplitter', () => ({
   WorkspaceListSplitter: () => <div data-testid="list-splitter">splitter</div>
@@ -236,7 +242,7 @@ function buildNode(args: { id: string; content: string; reveal?: string | null; 
 }
 
 function buildProps(isImmersiveMode: boolean, nodesById: Record<string, unknown> = {}) {
-  return {
+  return groupWorkspaceLayoutProps({
     isImmersiveMode,
     isResizingList: false,
     isResizingRightSidebar: false,
@@ -254,10 +260,11 @@ function buildProps(isImmersiveMode: boolean, nodesById: Record<string, unknown>
     onRightSidebarSplitterKeyDown: () => undefined,
     onRightSidebarSplitterPointerDown: () => undefined,
     onRevealAnchorInDocument: () => undefined,
+    getReadingPositionSelection: () => null,
     setNodeViewState: () => undefined,
     reviewCurrentNodeId: null,
     reviewPanelQueueNodeIds: [],
     reviewSchedulerSettings: null,
     trashedNodeIds: []
-  } as never;
+  } as never);
 }
