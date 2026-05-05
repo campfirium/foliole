@@ -29,7 +29,7 @@ async function testRecordsPushFailureWithoutFailingPull() {
 
   expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.',
+    message: 'Sync checked; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.',
     status: 'skipped'
   }));
 }
@@ -56,7 +56,7 @@ async function testRecordsPushConflictWithoutCompleting() {
 
   expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; 2 device change(s) need review before they can be sent.',
+    message: 'Sync checked; 2 device change(s) need review before they can be sent.',
     status: 'skipped'
   }));
 }

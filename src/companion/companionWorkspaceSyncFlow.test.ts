@@ -109,7 +109,7 @@ async function testRecordsBacklogBytes() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
+    message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
     status: 'skipped'
   }));
 }
@@ -135,7 +135,7 @@ async function testRecordsDownloadedResourcesForPass() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; downloaded 1 topic body (1.0 MB) this pass; 5 topic bodies (5.0 MB) still downloading.',
+    message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync; 5 topic bodies (5.0 MB) still downloading.',
     status: 'skipped'
   }));
 }
@@ -158,7 +158,7 @@ async function testRecordsStructureLagWithoutCompleting() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; 4 topic list change(s) still applying.',
+    message: 'Sync checked; 4 topic list change(s) still applying.',
     status: 'skipped'
   }));
 }
@@ -255,7 +255,7 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync pass finished; local changes are still waiting to settle.',
+    message: 'Sync checked; local changes are still waiting to settle.',
     status: 'skipped'
   }));
 }

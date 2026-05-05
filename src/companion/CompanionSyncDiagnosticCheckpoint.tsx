@@ -16,7 +16,7 @@ function formatBytes(value: number | null | undefined) {
 function formatEvent(event: SyncDiagnosticEvent | null) {
   if (!event) return 'None';
   if (event.status === 'completed') {
-    return event.message === FULL_SYNC_COMPLETED_MESSAGE ? 'All sync stages completed' : 'Legacy sync pass finished';
+    return event.message === FULL_SYNC_COMPLETED_MESSAGE ? 'All sync stages completed' : 'Earlier sync check finished';
   }
   if (event.status === 'started') return 'Started';
   if (event.status === 'failed') return 'Needs retry';

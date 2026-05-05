@@ -52,7 +52,7 @@ function testBlocksFinishedPassWithDirtyWork() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync pass was recorded while 1 device change(s), 1 desktop confirmation(s), 0 change issue(s), 0 topic body file(s), 0 attachment file(s), and 0 topic list change(s) remain.',
+      detail: 'A finished sync check was recorded while 1 device change(s), 1 desktop confirmation(s), 0 change issue(s), 0 topic body file(s), 0 attachment file(s), and 0 topic list change(s) remain.',
       severity: 'error'
     })
   ]));
@@ -97,7 +97,7 @@ function testBlocksStalePendingAck() {
   const report = buildSyncConvergenceReport(result({
     android: {
       ...result().android!,
-      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync pass finished; local changes are still waiting to settle.', occurred_at: '2026-05-01T00:02:00.000Z', status: 'skipped' }],
+      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync checked; local changes are still waiting to settle.', occurred_at: '2026-05-01T00:02:00.000Z', status: 'skipped' }],
       sync_state: {
         ...result().android!.sync_state,
         pending_ack_count: 1,
@@ -110,7 +110,7 @@ function testBlocksStalePendingAck() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'pending_ack_survived_finished_pass',
-      detail: '1 desktop confirmation(s) remained pending after a later sync pass finished.',
+      detail: '1 desktop confirmation(s) remained pending after a later sync check.',
       severity: 'error'
     })
   ]));
@@ -120,7 +120,7 @@ function testBlocksPushConflicts() {
   const report = buildSyncConvergenceReport(result({
     android: {
       ...result().android!,
-      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync pass finished; 2 device change(s) need review before they can be sent.', occurred_at: '2026-05-01T00:03:00.000Z', status: 'skipped' }]
+      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync checked; 2 device change(s) need review before they can be sent.', occurred_at: '2026-05-01T00:03:00.000Z', status: 'skipped' }]
     }
   }));
 
@@ -128,7 +128,7 @@ function testBlocksPushConflicts() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'push_conflict_or_rejection_waiting',
-      detail: 'Sync pass finished; 2 device change(s) need review before they can be sent.',
+      detail: 'Sync checked; 2 device change(s) need review before they can be sent.',
       severity: 'error'
     })
   ]));
@@ -166,7 +166,7 @@ function testBlocksFinishedPassWithResourceBacklog() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync pass was recorded while 0 device change(s), 0 desktop confirmation(s), 0 change issue(s), 3 topic body file(s), 2 attachment file(s), and 1 topic list change(s) remain.',
+      detail: 'A finished sync check was recorded while 0 device change(s), 0 desktop confirmation(s), 0 change issue(s), 3 topic body file(s), 2 attachment file(s), and 1 topic list change(s) remain.',
       severity: 'error'
     })
   ]));

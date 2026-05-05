@@ -40,7 +40,7 @@ describe('describeCompanionSyncPassResult', () => {
       syncedContentBlobBytes: 1048576,
       syncedContentBlobHashes: ['hash-1', 'hash-2']
     }))).toEqual({
-      message: 'Sync fully completed; downloaded 2 topic bodies (1.0 MB) and 1 attachment file (2.0 MB) this pass',
+      message: 'Sync fully completed; downloaded 2 topic bodies (1.0 MB) and 1 attachment file (2.0 MB) in this sync',
       outcome: 'completed',
       status: 'completed'
     });
@@ -53,7 +53,7 @@ describe('describeCompanionSyncPassResult', () => {
       remainingContentBlobBytes: 5242880,
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync pass finished; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
+      message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -66,7 +66,7 @@ describe('describeCompanionSyncPassResult', () => {
       syncedContentBlobBytes: 1048576,
       syncedContentBlobHashes: ['hash-1']
     }))).toEqual({
-      message: 'Sync pass finished; downloaded 1 topic body (1.0 MB) this pass; 5 topic bodies (5.0 MB) still downloading.',
+      message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync; 5 topic bodies (5.0 MB) still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -77,7 +77,7 @@ describe('describeCompanionSyncPassResult', () => {
       localDirtyCount: 1,
       pendingAckCount: 1
     }))).toEqual({
-      message: 'Sync pass finished; local changes are still waiting to settle.',
+      message: 'Sync checked; local changes are still waiting to settle.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -88,7 +88,7 @@ describe('describeCompanionSyncPassResult', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync pass finished; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies still downloading.',
+      message: 'Sync checked; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -100,7 +100,7 @@ describe('describeCompanionSyncPassResult', () => {
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync pass finished; 1 device change(s) need review before they can be sent; 3 topic bodies still downloading.',
+      message: 'Sync checked; 1 device change(s) need review before they can be sent; 3 topic bodies still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -110,7 +110,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushIssueCount: 1
     }))).toEqual({
-      message: 'Sync pass finished; 1 device change(s) need review before they can be sent.',
+      message: 'Sync checked; 1 device change(s) need review before they can be sent.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -120,7 +120,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: 4
     }))).toEqual({
-      message: 'Sync pass finished; 4 topic list change(s) still applying.',
+      message: 'Sync checked; 4 topic list change(s) still applying.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -130,7 +130,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: null
     }))).toEqual({
-      message: 'Sync pass finished; topic list confirmation is still pending.',
+      message: 'Sync checked; topic list confirmation is still pending.',
       outcome: 'skipped',
       status: 'skipped'
     });

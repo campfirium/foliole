@@ -135,8 +135,8 @@ function expectDiagnosticSummary() {
   expect(screen.getByText('Sync status')).toBeInTheDocument();
   expect(screen.getByText('Sync check')).toBeInTheDocument();
   expect(screen.getByText('Needs attention')).toBeInTheDocument();
-  expect(screen.getByText('Latest finished sync pass still has work left')).toBeInTheDocument();
-  expect(screen.getByText('A finished sync pass was recorded while 1 device change(s), 1 desktop confirmation(s), 1 change issue(s), 5 topic body file(s), 2 attachment file(s), and 3 topic list change(s) remain.')).toBeInTheDocument();
+  expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
+  expect(screen.getByText('A finished sync check was recorded while 1 device change(s), 1 desktop confirmation(s), 1 change issue(s), 5 topic body file(s), 2 attachment file(s), and 3 topic list change(s) remain.')).toBeInTheDocument();
 }
 
 function expectStageCheckpoint() {
@@ -156,13 +156,13 @@ function expectStageCheckpoint() {
 function expectCheckpointDetails() {
   expect(screen.getByText('Current topic')).toBeInTheDocument();
   expect(screen.getByText('Downloading: Current topic')).toBeInTheDocument();
-  expect(screen.getByText('Legacy sync pass finished')).toBeInTheDocument();
+  expect(screen.getByText('Earlier sync check finished')).toBeInTheDocument();
   expect(screen.queryByText('Completed')).not.toBeInTheDocument();
   expect(screen.getByText('3 changes')).toBeInTheDocument();
   expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
   expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
   expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();
-  expect(screen.queryByText('A finished sync pass exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
+  expect(screen.queryByText('A finished sync check exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
 }
 
 function expectAndroidDiagnosticRows() {
@@ -210,9 +210,9 @@ describe('CompanionSyncDiagnosticsPanel', () => {
         status: 'blocked',
         checks: [{
           code: 'completed_event_with_local_work',
-          detail: 'A finished sync pass was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.',
+          detail: 'A finished sync check was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.',
           severity: 'error',
-          title: 'Latest finished sync pass still has work left'
+          title: 'Latest sync check still has work left'
         }]
       }
     });
@@ -240,8 +240,8 @@ describe('CompanionSyncDiagnosticsPanel', () => {
 
     await waitFor(() => expect(screen.getByText('Sync check')).toBeInTheDocument());
     expect(screen.getByText('Needs attention')).toBeInTheDocument();
-    expect(screen.getByText('Latest finished sync pass still has work left')).toBeInTheDocument();
-    expect(screen.getByText('A finished sync pass was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.')).toBeInTheDocument();
+    expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
+    expect(screen.getByText('A finished sync check was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.')).toBeInTheDocument();
     expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });
 

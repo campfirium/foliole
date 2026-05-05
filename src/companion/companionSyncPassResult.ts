@@ -77,7 +77,13 @@ function appendDownloadSuffix(prefix: string, result: CompanionSyncPassInput) {
       result.syncedAttachmentResourceBytes
     ));
   }
-  return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `downloaded ${suffixes.join(' and ')} this pass`);
+  return suffixes.length === 0 ? prefix : joinBacklogSuffix(prefix, `downloaded ${suffixes.join(' and ')} in this sync`);
+}
+
+function syncCheckedPrefix(result: CompanionSyncPassInput) {
+  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0
+    ? 'Sync made progress'
+    : 'Sync checked';
 }
 
 function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
@@ -115,7 +121,7 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   }
   if (result.pushError) {
     return createPassResult(
-      appendBacklogSuffix(appendDownloadSuffix(`Sync pass finished; device changes could not be sent: ${result.pushError}`, result), result),
+      appendBacklogSuffix(appendDownloadSuffix(`${syncCheckedPrefix(result)}; device changes could not be sent: ${result.pushError}`, result), result),
       'skipped'
     );
   }
@@ -125,7 +131,7 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
-      appendBacklogSuffix(appendDownloadSuffix(`Sync pass finished; ${rejectedOrConflicted} device change(s) need review before they can be sent.`, result), result),
+      appendBacklogSuffix(appendDownloadSuffix(`${syncCheckedPrefix(result)}; ${rejectedOrConflicted} device change(s) need review before they can be sent.`, result), result),
       'skipped'
     );
   }
@@ -143,7 +149,7 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
     result.remainingAttachmentResourceCount === 0 &&
     (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0)
   ) {
-    return createPassResult(appendDownloadSuffix('Sync pass finished; local changes are still waiting to settle.', result), 'skipped');
+    return createPassResult(appendDownloadSuffix(`${syncCheckedPrefix(result)}; local changes are still waiting to settle.`, result), 'skipped');
   }
-  return createPassResult(appendBacklogSuffix(appendDownloadSuffix('Sync pass finished', result), result), 'skipped');
+  return createPassResult(appendBacklogSuffix(appendDownloadSuffix(syncCheckedPrefix(result), result), result), 'skipped');
 }

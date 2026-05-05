@@ -139,11 +139,11 @@ function testOlderFailuresAreNeutralAfterCompletedPass() {
     />
   );
 
-  expect(screen.getByText('Legacy sync pass finished')).toBeInTheDocument();
+  expect(screen.getByText('Earlier sync check finished')).toBeInTheDocument();
   const oldFailure = screen.getByText('Earlier sync attempt did not complete');
   expect(oldFailure).toBeInTheDocument();
   expect(oldFailure.className).not.toContain('text-error');
-  expect(screen.getByText('Legacy sync pass finished').className).not.toContain('text-companion-accent');
+  expect(screen.getByText('Earlier sync check finished').className).not.toContain('text-companion-accent');
 }
 
 function testHealthyBacklogPassAvoidsStrictCompletion() {
@@ -151,7 +151,7 @@ function testHealthyBacklogPassAvoidsStrictCompletion() {
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
   expect(screen.getByText('Some topic bodies are still downloading.')).toBeInTheDocument();
-  expect(screen.queryByText('No finished sync pass yet')).not.toBeInTheDocument();
+  expect(screen.queryByText('No finished sync yet')).not.toBeInTheDocument();
   expect(screen.queryByText('Finished automatic pass')).not.toBeInTheDocument();
 }
 

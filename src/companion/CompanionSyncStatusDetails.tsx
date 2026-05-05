@@ -106,7 +106,7 @@ function resolveLastSyncRow(props: {
     };
   }
   return {
-    detail: props.lastSyncedAt ? formatLastCompletedDetail(latestCompletedEvent) : 'No finished sync pass yet',
+    detail: props.lastSyncedAt ? formatLastCompletedDetail(latestCompletedEvent) : 'No finished sync yet',
     value: formatClock(props.lastSyncedAt),
     valueTone: props.lastSyncedAt ? 'success' as const : 'default' as const
   };
@@ -118,7 +118,7 @@ function formatLastCompletedDetail(event: NativeCompanionSyncEvent | null) {
 
 function formatEventStatus(event: NativeCompanionSyncEvent) {
   if (event.status === 'completed') {
-    return isFullSyncCompletedEvent(event) ? 'Fully synced' : 'Legacy pass';
+    return isFullSyncCompletedEvent(event) ? 'Fully synced' : 'Earlier sync';
   }
   if (event.status === 'failed') {
     return 'Failed';
@@ -133,7 +133,7 @@ function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: Nat
   if (event.status === 'completed') {
     return isFullSyncCompletedEvent(event)
       ? 'All sync stages completed'
-      : 'Legacy sync pass finished';
+      : 'Earlier sync check finished';
   }
   if (event.status === 'started' && event.message === 'Auto sync started.') {
     return 'Started auto sync';

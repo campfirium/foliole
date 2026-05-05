@@ -126,7 +126,7 @@ function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {
       'pending_ack_survived_finished_pass',
       'error',
       'Desktop confirmation was not pulled back',
-      `${staleCount} desktop confirmation(s) remained pending after a later sync pass finished.`
+      `${staleCount} desktop confirmation(s) remained pending after a later sync check.`
     );
   }
   return check(
@@ -192,8 +192,8 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   return [check(
     'completed_event_with_local_work',
     'error',
-    'Latest finished sync pass still has work left',
-    `A finished sync pass was recorded while ${dirtyCount} device change(s), ${pendingAckCount} desktop confirmation(s), ${pushIssueCount} change issue(s), ${missingBodies} topic body file(s), ${missingAttachments} attachment file(s), and ${lag} topic list change(s) remain.`
+    'Latest sync check still has work left',
+    `A finished sync check was recorded while ${dirtyCount} device change(s), ${pendingAckCount} desktop confirmation(s), ${pushIssueCount} change issue(s), ${missingBodies} topic body file(s), ${missingAttachments} attachment file(s), and ${lag} topic list change(s) remain.`
   )];
 }
 
