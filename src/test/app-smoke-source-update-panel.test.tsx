@@ -32,6 +32,7 @@ it('writes split panel edits back to the active document content', () => {
   fireEvent.change(editors[0], {
     target: { value: '# Welcome to Foliole\n\nChanged from source update panel.' }
   });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close source update panel' }));
 
   expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(
     '# Welcome to Foliole\n\nChanged from source update panel.'

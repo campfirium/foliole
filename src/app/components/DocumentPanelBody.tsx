@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { cn } from '../../shared/lib/utils';
@@ -16,6 +17,7 @@ interface DocumentPanelBodyProps {
   editorAppearanceKey: string;
   editorContent: string;
   editorContentPaddingBottom?: string;
+  editorDiffDecorations?: EditorDiffDecorations | null;
   editorHideTitleHeading?: boolean;
   emptyContent?: ReactNode;
   editorNodeId: string | null;
@@ -133,6 +135,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyProps) {
         debugId={props.promptEditorDebugId}
         hideTitleHeading={props.editorHideTitleHeading}
         key={`prompt-${props.editorAppearanceKey}`}
+        lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
         nodeViewState={props.editorNodeViewState}
         onChange={props.onEditorChange}

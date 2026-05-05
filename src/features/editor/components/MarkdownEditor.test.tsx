@@ -15,6 +15,7 @@ const mockDestroy = vi.fn();
 const mockGetScrollMetrics = vi.fn(() => ({ clientHeight: 0, scrollHeight: 0, scrollTop: 0 }));
 const mockGetContent = vi.fn(() => '');
 const mockSetContent = vi.fn();
+const mockSetDiffDecorations = vi.fn();
 const mockSetHideTitleHeading = vi.fn();
 const mockSetSelection = vi.fn();
 const mockSetScrollTop = vi.fn();
@@ -37,8 +38,14 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     getDocumentPositionAtViewportY() {
       return 0;
     }
+    getLineBlockHeight() {
+      return 24;
+    }
     setContent(content: string) {
       mockSetContent(content);
+    }
+    setDiffDecorations(diffDecorations: unknown) {
+      mockSetDiffDecorations(diffDecorations);
     }
     setHideTitleHeading(value: boolean) {
       mockSetHideTitleHeading(value);
@@ -105,6 +112,7 @@ function resetMocks() {
     mockDestroy.mockClear();
     mockGetContent.mockClear();
     mockSetContent.mockClear();
+    mockSetDiffDecorations.mockClear();
     mockSetHideTitleHeading.mockClear();
     mockSetSelection.mockClear();
     mockSetScrollTop.mockClear();

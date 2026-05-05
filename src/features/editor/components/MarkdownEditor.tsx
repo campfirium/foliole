@@ -3,7 +3,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, type MouseEvent as Reac
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/testing/debugBridge';
 import { useMouseGestureSettings } from '../../settings/context/MouseGestureSettingsProvider';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
-import type { EditorAdapter } from '../adapters/EditorAdapter';
+import type { EditorAdapter, EditorDiffDecorations } from '../adapters/EditorAdapter';
 
 import { useEditorScrollbarMetrics, useScrollbarState, useThumbPointerHandlers, useTrackPointerHandler } from './markdownEditorScrollbar';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
@@ -22,6 +22,7 @@ interface MarkdownEditorProps {
   contentPaddingBottom?: string;
   debugId?: string;
   hideTitleHeading?: boolean;
+  lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
   nodeViewState?: EditorViewState;
   readOnly?: boolean;
@@ -87,7 +88,8 @@ function useEditorLayoutEffects(
   nodeViewState: EditorViewState | undefined,
   syncScrollMetrics: () => void,
   value: string,
-  hideTitleHeading: boolean
+  hideTitleHeading: boolean,
+  lineDiffDecorations: EditorDiffDecorations | null | undefined
 ) {
   useEffect(() => {
     const adapter = adapterRef.current;
@@ -111,6 +113,11 @@ function useEditorLayoutEffects(
     adapterRef.current?.setContent(value);
     requestAnimationFrame(syncScrollMetrics);
   }, [adapterRef, syncScrollMetrics, value]);
+
+  useEffect(() => {
+    adapterRef.current?.setDiffDecorations(lineDiffDecorations ?? null);
+    requestAnimationFrame(syncScrollMetrics);
+  }, [adapterRef, lineDiffDecorations, syncScrollMetrics]);
 
   useEffect(() => {
     adapterRef.current?.setHideTitleHeading(hideTitleHeading);
@@ -176,6 +183,7 @@ export function MarkdownEditor({
   contentPaddingBottom,
   debugId,
   hideTitleHeading = false,
+  lineDiffDecorations,
   nodeId,
   nodeViewState,
   readOnly,
@@ -189,7 +197,7 @@ export function MarkdownEditor({
   const adapterRef = useEditorAdapter(hostRef, debugId, onChange, onReady, value, hideTitleHeading, readOnly);
   const { scrollMetrics, syncScrollMetrics } = useEditorScrollbarMetrics(adapterRef);
 
-  useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, hideTitleHeading);
+  useEditorLayoutEffects(adapterRef, hostRef, nodeId, nodeViewState, syncScrollMetrics, value, hideTitleHeading, lineDiffDecorations);
 
   const scrollbar = useScrollbarState(scrollMetrics);
   const thumbStyle = useMemo(() => scrollbar.thumbStyle, [scrollbar.thumbStyle]);

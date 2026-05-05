@@ -8,6 +8,7 @@ const {
   mockUpdateListenerExtension,
   mockHighlightActiveLine,
   mockKeymapOf,
+  mockDecorationsOf,
   mockEditorView,
   mockEditorStateCreate,
   mockReadOnlyOf,
@@ -20,6 +21,7 @@ const {
   mockUpdateListenerExtension: Symbol('updateListener'),
   mockHighlightActiveLine: vi.fn(() => 'highlight-active-line'),
   mockKeymapOf: vi.fn(() => 'keymap-extension'),
+  mockDecorationsOf: vi.fn((value) => value),
   mockEditorView: vi.fn(),
   mockEditorStateCreate: vi.fn((config) => config),
   mockReadOnlyOf: vi.fn(() => 'read-only-extension'),
@@ -54,6 +56,9 @@ vi.mock('@codemirror/state', () => ({
 }));
 
 vi.mock('@codemirror/view', () => ({
+  Decoration: {
+    none: 'decoration-none'
+  },
   drawSelection: mockDrawSelection,
   EditorView: Object.assign(
     function EditorView(this: Record<string, unknown>, config: unknown) {
@@ -67,6 +72,9 @@ vi.mock('@codemirror/view', () => ({
     {
       editable: {
         of: mockEditableOf
+      },
+      decorations: {
+        of: mockDecorationsOf
       },
       lineWrapping: mockLineWrapping,
       scrollIntoView: mockScrollIntoView,
@@ -88,6 +96,10 @@ vi.mock('./anchorStructureGuard', () => ({
 
 vi.mock('./liveMarkdown', () => ({
   createLiveMarkdown: vi.fn(() => 'live-markdown-extension')
+}));
+
+vi.mock('./lineDiffDecorations', () => ({
+  buildEditorDiffDecorations: vi.fn(() => 'line-diff-decorations')
 }));
 
 vi.mock('./markdownInputAssist', () => ({
@@ -133,6 +145,7 @@ describe('CodeMirrorEditorAdapter', () => {
           scrollHeight: 500,
           scrollTop: 0
         },
+        lineBlockAt: vi.fn(() => ({ height: 24 })),
         coordsAtPos: vi.fn(() => null),
         dispatch,
         focus

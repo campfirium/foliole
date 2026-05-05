@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { beforeEach, vi } from 'vitest';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
@@ -19,6 +20,7 @@ export const mockEditorAdapter: EditorAdapter = {
     mockEditorState.content = content;
   },
   getSelection: () => ({ from: mockEditorState.selectionFrom, to: mockEditorState.selectionTo }),
+  getLineBlockHeight: () => 24,
   revealPosition: (position) => {
     mockEditorState.selectionFrom = position;
     mockEditorState.selectionTo = position;
@@ -42,6 +44,7 @@ export const mockEditorAdapter: EditorAdapter = {
     mockEditorState.selectionFrom = nextCursor;
     mockEditorState.selectionTo = nextCursor;
   },
+  setDiffDecorations: () => undefined,
   onContentChange: () => () => undefined,
   onScroll: () => () => undefined
 };
@@ -59,7 +62,10 @@ vi.mock('../features/editor/components/MarkdownEditor', () => ({
     onReady?: (adapter: EditorAdapter | null) => void;
   }) => {
     mockEditorState.content = value;
-    onReady?.(mockEditorAdapter);
+    useEffect(() => {
+      onReady?.(mockEditorAdapter);
+      return () => onReady?.(null);
+    }, [onReady]);
     return (
       <textarea
         aria-label={ariaLabel ?? 'Mock editor'}

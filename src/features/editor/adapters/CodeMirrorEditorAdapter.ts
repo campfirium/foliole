@@ -1,12 +1,13 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { Compartment, EditorState } from '@codemirror/state';
-import { drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
+import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
 import { alignScrollTopToViewportRatio } from '../model/scrollAlignment';
 
 import { anchorStructureGuard, bypassAnchorStructureGuard } from './anchorStructureGuard';
 import type { EditorAdapter, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
+import { buildEditorDiffDecorations } from './lineDiffDecorations';
 import { createLiveMarkdown } from './liveMarkdown';
 import { markdownInputAssist } from './markdownInputAssist';
 
@@ -18,6 +19,7 @@ interface CodeMirrorEditorAdapterOptions {
 }
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
+  private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
   private liveMarkdownCompartment = new Compartment();
   private onChange?: (content: string) => void;
@@ -40,6 +42,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
           EditorView.lineWrapping,
           highlightActiveLine(),
           markdownInputAssist,
+          this.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
           this.liveMarkdownCompartment.of(createLiveMarkdown(options.hideTitleHeading === true)),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged || !this.onChange || this.isApplyingExternalContent) {
@@ -160,6 +163,14 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     return this.view.scrollDOM.scrollTop;
   }
 
+  getLineBlockHeight(lineNumber: number) {
+    if (lineNumber < 1 || lineNumber > this.view.state.doc.lines) {
+      return 0;
+    }
+    const line = this.view.state.doc.line(lineNumber);
+    return this.view.lineBlockAt(line.from).height;
+  }
+
   setScrollTop(scrollTop: number) {
     if (!Number.isFinite(scrollTop)) {
       return;
@@ -183,6 +194,19 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       changes: { from, to, insert: content },
       selection: { anchor: from + content.length }
     });
+  }
+
+  setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null) {
+    try {
+      this.view.dispatch({
+        effects: this.diffDecorationsCompartment.reconfigure(EditorView.decorations.of(buildEditorDiffDecorations(this.view, diffDecorations)))
+      });
+    } catch (error) {
+      console.error('[editor] failed to apply diff decorations, falling back to plain view', error);
+      this.view.dispatch({
+        effects: this.diffDecorationsCompartment.reconfigure(EditorView.decorations.of(Decoration.none))
+      });
+    }
   }
 
   onContentChange(listener: (content: string) => void) {

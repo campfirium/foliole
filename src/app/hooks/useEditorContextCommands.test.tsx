@@ -19,6 +19,7 @@ it('reapplies the current selection when opening the editor context menu', () =>
     focus: vi.fn(),
     getContent: vi.fn(() => 'Welcome to Foliole'),
     getDocumentPositionAtViewportY: vi.fn(() => 0),
+    getLineBlockHeight: vi.fn(() => 24),
     getScrollMetrics: vi.fn(),
     getScrollTop: vi.fn(),
     getSelection: vi.fn(() => ({ from: 2, to: 9 })),
@@ -28,6 +29,7 @@ it('reapplies the current selection when opening the editor context menu', () =>
     revealPosition: vi.fn(),
     revealSelection: vi.fn(),
     setContent: vi.fn(),
+    setDiffDecorations: vi.fn(),
     setScrollTop: vi.fn(),
     setSelection: vi.fn()
   };

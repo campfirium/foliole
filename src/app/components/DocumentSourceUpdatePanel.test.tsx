@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
 
@@ -17,20 +17,41 @@ vi.mock('./DocumentPanelBody', () => ({
   }
 }));
 
-describe('DocumentSourceUpdatePanel', () => {
+interface PanelBodyCall {
+  editorDiffDecorations?: unknown;
+  onEditorReady?: (adapter: unknown) => void;
+}
+
+function renderPanel(currentContent: string, updatedContent: string) {
+  render(
+    <DocumentSourceUpdatePanel
+      currentContent={currentContent}
+      currentNodeId="node-1"
+      documentMaxWidth={760}
+      editorAppearanceKey="appearance-1"
+      onCurrentContentChange={() => undefined}
+      onOpenChange={() => undefined}
+      open
+      updatedContent={updatedContent}
+    />
+  );
+}
+
+function getPanelBodyCall(callNumber: number) {
+  return (documentPanelBodyMock.mock.calls[callNumber]?.[0] ?? {}) as PanelBodyCall;
+}
+
+function resetPanelBodyMock() {
+  beforeEach(() => {
+    documentPanelBodyMock.mockClear();
+  });
+}
+
+describe('DocumentSourceUpdatePanel rendering', () => {
+  resetPanelBodyMock();
+
   it('renders both sides with the same document surface and keeps the right side read-only', () => {
-    render(
-      <DocumentSourceUpdatePanel
-        currentContent={'alpha\nbeta'}
-        currentNodeId="node-1"
-        documentMaxWidth={760}
-        editorAppearanceKey="appearance-1"
-        onCurrentContentChange={() => undefined}
-        onOpenChange={() => undefined}
-        open
-        updatedContent={'alpha\ngamma'}
-      />
-    );
+    renderPanel('alpha\nbeta', 'alpha\ngamma');
 
     expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
       1,
@@ -54,22 +75,119 @@ describe('DocumentSourceUpdatePanel', () => {
   });
 
   it('shows the revised panel copy that matches the main document framing', () => {
-    render(
-      <DocumentSourceUpdatePanel
-        currentContent={'first\nsecond\nfourth'}
-        currentNodeId="node-1"
-        documentMaxWidth={760}
-        editorAppearanceKey="appearance-1"
-        onCurrentContentChange={() => undefined}
-        onOpenChange={() => undefined}
-        open
-        updatedContent={'first\nsecond\nthird\nfourth changed'}
-      />
-    );
+    renderPanel('first\nsecond\nfourth', 'first\nsecond\nthird\nfourth changed');
 
     expect(
-      screen.getByText('This side keeps the same reading and editing feel as the main document, but scrolls independently inside the panel.')
+      screen.getByText(
+        'This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines.'
+      )
     ).toBeInTheDocument();
-    expect(screen.getByText('This side uses the same document rendering, but stays read-only.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines.'
+      )
+    ).toBeInTheDocument();
+  });
+
+});
+
+describe('DocumentSourceUpdatePanel diff hints', () => {
+  resetPanelBodyMock();
+
+  it('pairs one-for-one changed lines without inserting extra gaps', () => {
+    renderPanel('title\nsame\nleft only\nend', 'title\nsame\nright only\nend');
+
+    expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        editorDiffDecorations: {
+          lineDecorations: [{ kind: 'removed', lineNumber: 3 }],
+          spacerDecorations: []
+        }
+      })
+    );
+    expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        editorDiffDecorations: {
+          lineDecorations: [{ kind: 'added', lineNumber: 3 }],
+          spacerDecorations: []
+        }
+      })
+    );
+  });
+
+  it('adds a gap only on the side missing unmatched extra lines', () => {
+    renderPanel('title\nsame\nleft only\nend', 'title\nsame\nend');
+
+    expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        editorDiffDecorations: {
+          lineDecorations: [{ kind: 'removed', lineNumber: 3 }],
+          spacerDecorations: []
+        }
+      })
+    );
+    expect(documentPanelBodyMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        editorDiffDecorations: {
+          lineDecorations: [],
+          spacerDecorations: [{ beforeLineNumber: 3, kind: 'removed', lines: [{ className: null, lineNumber: 3, text: 'left only' }] }]
+        }
+      })
+    );
+  });
+});
+
+describe('DocumentSourceUpdatePanel scroll sync', () => {
+  resetPanelBodyMock();
+
+  it('syncs vertical scrolling between the two editors', () => {
+    const currentScrollListeners: Array<() => void> = [];
+    const updatedScrollListeners: Array<() => void> = [];
+    let currentScrollTop = 120;
+    let updatedScrollTop = 0;
+
+    renderPanel('current', 'updated');
+
+    const currentReady = getPanelBodyCall(0).onEditorReady;
+    const updatedReady = getPanelBodyCall(1).onEditorReady;
+
+    const currentAdapter = {
+      getLineBlockHeight: () => 24,
+      getScrollTop: () => currentScrollTop,
+      onScroll: (listener: () => void) => {
+        currentScrollListeners.push(listener);
+        return () => undefined;
+      },
+      setScrollTop: vi.fn()
+    };
+    const updatedAdapter = {
+      getLineBlockHeight: () => 24,
+      getScrollTop: () => updatedScrollTop,
+      onScroll: (listener: () => void) => {
+        updatedScrollListeners.push(listener);
+        return () => undefined;
+      },
+      setScrollTop: vi.fn((scrollTop: number) => {
+        updatedScrollTop = scrollTop;
+      })
+    };
+
+    act(() => {
+      currentReady?.(currentAdapter as never);
+      updatedReady?.(updatedAdapter as never);
+    });
+
+    expect(updatedAdapter.setScrollTop).toHaveBeenCalledWith(120);
+
+    act(() => {
+      currentScrollTop = 260;
+      currentScrollListeners[0]?.();
+    });
+
+    expect(updatedAdapter.setScrollTop).toHaveBeenLastCalledWith(260);
   });
 });

@@ -23,6 +23,13 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
   '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-line-title-heading-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
+  '.cm-line.cm-diff-line': { borderRadius: '0.35rem' },
+  '.cm-line.cm-diff-line-added': { backgroundColor: 'rgba(34, 197, 94, 0.16)' },
+  '.cm-line.cm-diff-line-removed': { backgroundColor: 'rgba(239, 68, 68, 0.14)' },
+  '.cm-diff-spacer': { pointerEvents: 'none' },
+  '.cm-diff-spacer-added': { backgroundColor: 'rgba(34, 197, 94, 0.12)', borderRadius: '0.35rem' },
+  '.cm-diff-spacer-removed': { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.35rem' },
+  '.cm-diff-spacer-line': { color: 'transparent', userSelect: 'none' },
   '.cm-md-syntax-visible': { color: 'var(--app-accent-color)', opacity: '0.74' },
   '.cm-md-frontmatter-summary': {
     color: 'color-mix(in srgb, var(--color-text-secondary) 82%, transparent)',
