@@ -12,7 +12,7 @@ final class FolioleCompanionNodeAttachmentStore {
 
     static void backfillNodeAttachmentsFromVersions(Context context, SQLiteDatabase database) {
         try {
-            JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "nodeAttachmentBackfillSnapshots").getJSONArray("snapshots");
+            JSONArray rows = FolioleCompanionNamedQueryStore.loadRows(context, database, "nodeAttachmentBackfillSnapshots", "snapshots");
             for (int index = 0; index < rows.length(); index += 1) {
                 JSONObject row = rows.getJSONObject(index);
                 JSONObject snapshot = new JSONObject(row.getString("snapshot_json"));

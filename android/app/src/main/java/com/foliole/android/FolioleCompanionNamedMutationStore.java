@@ -4,7 +4,6 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionNamedMutationStore {
@@ -54,17 +53,20 @@ final class FolioleCompanionNamedMutationStore {
     }
 
     private static ExistingState loadExistingState(Context context, SQLiteDatabase database, String objectType, String objectId) throws Exception {
-        JSONArray rows = FolioleCompanionNamedQueryStore
-            .loadArray(context, database, "syncStateExistingForMutation", new String[] { objectType, objectId })
-            .getJSONArray("rows");
-        if (rows.length() == 0) return null;
-        JSONObject row = rows.getJSONObject(0);
+        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(
+            context,
+            database,
+            "syncStateExistingForMutation",
+            "rows",
+            new String[] { objectType, objectId }
+        );
+        if (row == null) return null;
         return new ExistingState(row.getString("content_hash"), row.isNull("base_content_hash") ? null : row.getString("base_content_hash"), row.getInt("sync_dirty"));
     }
 
     private static long nextStateSeq(Context context, SQLiteDatabase database) throws Exception {
-        JSONArray rows = FolioleCompanionNamedQueryStore.loadArray(context, database, "syncStateNextSeqForMutation").getJSONArray("rows");
-        return rows.length() == 0 ? 1L : rows.getJSONObject(0).getLong("next_state_seq");
+        JSONObject row = FolioleCompanionNamedQueryStore.loadFirstRow(context, database, "syncStateNextSeqForMutation", "rows", null);
+        return row == null ? 1L : row.getLong("next_state_seq");
     }
 
     private static String statement(Context context, String name) throws Exception {
