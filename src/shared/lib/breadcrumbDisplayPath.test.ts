@@ -24,7 +24,10 @@ describe('buildBreadcrumbDisplayPath', () => {
       current: createNode('current', 'Current item', 'article', 'item')
     };
 
-    expect(buildBreadcrumbDisplayPath('current', nodesById).map((item) => item.title)).toEqual(['Inbox', 'Article title']);
+    expect(buildBreadcrumbDisplayPath('current', nodesById)).toEqual([
+      { id: 'folder', targetNodeId: 'folder', title: 'Inbox' },
+      { id: 'article', targetNodeId: 'article', title: 'Article title' }
+    ]);
   });
 
   it('abbreviates ancestor titles after the article node', () => {
@@ -36,11 +39,11 @@ describe('buildBreadcrumbDisplayPath', () => {
       current: createNode('current', '当前节点', 'nestedItem', 'item')
     };
 
-    expect(buildBreadcrumbDisplayPath('current', nodesById).map((item) => item.title)).toEqual([
-      'Inbox',
-      'Article title',
-      '标注...',
-      '挖空...'
+    expect(buildBreadcrumbDisplayPath('current', nodesById)).toEqual([
+      { id: 'folder', targetNodeId: 'folder', title: 'Inbox' },
+      { id: 'article', targetNodeId: 'article', title: 'Article title' },
+      { id: 'nestedTopic', targetNodeId: 'article', title: '标注...' },
+      { id: 'nestedItem', targetNodeId: 'article', title: '挖空...' }
     ]);
   });
 });

@@ -94,10 +94,12 @@ async function renderShellWithSurface(surface: MockSurface) {
 function createReviewEmptySurface() {
   return {
     activeAction: 'review',
+    browsedFolder: null,
     handleGradeReview: vi.fn(),
     handleCompleteReviewItem: vi.fn(),
     handleDeferReviewItem: vi.fn(),
     handleDismissReviewItem: vi.fn(),
+    handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
     handleTopBarAction: vi.fn(),
@@ -120,17 +122,20 @@ function createReviewEmptySurface() {
       scheduledFsrsCount: 9,
       scheduledReadingCount: 2,
       totalCount: 0
-    }
+    },
+    selectedBrowseNodeId: null
   };
 }
 
 function createReadingReviewSurface() {
   return {
     activeAction: 'review',
+    browsedFolder: null,
     handleCompleteReviewItem: vi.fn(),
     handleDeferReviewItem: vi.fn(),
     handleDismissReviewItem: vi.fn(),
     handleGradeReview: vi.fn(),
+    handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
     handleTopBarAction: vi.fn(),
@@ -159,7 +164,8 @@ function createReadingReviewSurface() {
       scheduledFsrsCount: 0,
       scheduledReadingCount: 1,
       totalCount: 1
-    }
+    },
+    selectedBrowseNodeId: null
   };
 }
 

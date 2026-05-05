@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 
 import {
   resolveCompanionRecentArticles,
-  resolveReadableCompanionArticleByNodeId
 } from '../shared/platform/companionReadableArticle';
 
 import type { BottomBarGrade, TopBarAction } from './CompanionFloatingBars';
@@ -13,40 +12,12 @@ import {
   gradeCompanionReviewCard,
   resolveCompanionReviewSession
 } from './companionReviewSession';
+import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
 type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
-
-function useReadableArticleSelection(
-  recentArticles: ReturnType<typeof resolveCompanionRecentArticles>,
-  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'],
-  readableArticle: CompanionWorkspaceSyncApi['readableArticle']
-) {
-  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
-  const resolvedReadableArticle = useMemo(
-    () =>
-      resolveReadableCompanionArticleByNodeId(snapshot, selectedArticleId) ??
-      readableArticle,
-    [readableArticle, selectedArticleId, snapshot]
-  );
-
-  useEffect(() => {
-    if (!resolvedReadableArticle) {
-      setSelectedArticleId(null);
-      return;
-    }
-    if (!selectedArticleId || !recentArticles.some((article) => article.nodeId === selectedArticleId)) {
-      setSelectedArticleId(resolvedReadableArticle.nodeId);
-    }
-  }, [recentArticles, resolvedReadableArticle, selectedArticleId]);
-
-  return {
-    readableArticle: resolvedReadableArticle,
-    setSelectedArticleId
-  };
-}
 
 function useCompanionReviewGradeAction(
   floatingBar: FloatingBarVisibilityApi,
@@ -165,36 +136,61 @@ function useCompanionActionState(args: {
   setActiveAction: (action: TopBarAction) => void;
   setReadingError: (value: string | null) => void;
   setReviewError: (value: string | null) => void;
-  setSelectedArticleId: (nodeId: string | null) => void;
+  setSelectedBrowseNodeId: (nodeId: string | null) => void;
 }) {
   function handleTopBarAction(action: TopBarAction) {
     args.setActiveAction(action);
     args.setReviewError(null);
     args.setReadingError(null);
     if (action === 'recent') {
+      args.setSelectedBrowseNodeId(null);
       args.floatingBar.revealBar();
     }
   }
 
   function handleSelectRecentArticle(nodeId: string) {
-    args.setSelectedArticleId(nodeId);
-    args.setActiveAction('review');
+    args.setSelectedBrowseNodeId(nodeId);
+    args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }
 
-  return { handleSelectRecentArticle, handleTopBarAction };
+  function handleSelectBrowseNode(nodeId: string) {
+    args.setSelectedBrowseNodeId(nodeId);
+    args.setActiveAction('recent');
+    args.floatingBar.revealBar();
+  }
+
+  return { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction };
 }
 
-export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSyncApi, floatingBar: FloatingBarVisibilityApi) {
+function useCompanionBrowseState(workspaceSync: CompanionWorkspaceSyncApi) {
   const snapshot = workspaceSync.state.workspace_snapshot;
   const recentArticles = useMemo(() => resolveCompanionRecentArticles(snapshot), [snapshot]);
   const reviewSession = useMemo(() => resolveCompanionReviewSession(snapshot), [snapshot]);
-  const [activeAction, setActiveAction] = useState<TopBarAction>('review');
-  const { readableArticle, setSelectedArticleId } = useReadableArticleSelection(
-    recentArticles,
+  const { browsedFolder, readableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId } = useCompanionBrowseSelection(
     snapshot,
     workspaceSync.readableArticle
   );
+
+  return {
+    browsedFolder,
+    readableArticle,
+    recentArticles,
+    reviewSession,
+    selectedBrowseNodeId,
+    setSelectedBrowseNodeId,
+    snapshot
+  };
+}
+
+function useCompanionInteractionState(
+  floatingBar: FloatingBarVisibilityApi,
+  reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
+  setActiveAction: (action: TopBarAction) => void,
+  setSelectedBrowseNodeId: (nodeId: string | null) => void,
+  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'],
+  workspaceSync: CompanionWorkspaceSyncApi
+) {
   const {
     handleGradeReview,
     handleCompleteReviewItem,
@@ -213,12 +209,12 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
     workspaceSync
   });
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
-  const { handleSelectRecentArticle, handleTopBarAction } = useCompanionActionState({
+  const { handleSelectBrowseNode, handleSelectRecentArticle, handleTopBarAction } = useCompanionActionState({
     floatingBar,
     setActiveAction,
     setReadingError,
     setReviewError,
-    setSelectedArticleId
+    setSelectedBrowseNodeId
   });
 
   useEffect(() => {
@@ -230,21 +226,41 @@ export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSync
   }
 
   return {
-    activeAction,
     handleCompleteReviewItem,
     handleDeferReviewItem,
     handleDismissReviewItem,
-    handleSelectRecentArticle,
     handleGradeReview,
     handleRevealAnswer,
+    handleSelectBrowseNode,
+    handleSelectRecentArticle,
     handleTopBarAction,
     isAnswerRevealed,
     isSubmittingGrade,
     isSubmittingReadingAction,
-    readableArticle,
-    recentArticles,
     readingError,
-    reviewError,
-    reviewSession
+    reviewError
+  };
+}
+
+export function useCompanionArticleSurface(workspaceSync: CompanionWorkspaceSyncApi, floatingBar: FloatingBarVisibilityApi) {
+  const [activeAction, setActiveAction] = useState<TopBarAction>('review');
+  const browseState = useCompanionBrowseState(workspaceSync);
+  const interactionState = useCompanionInteractionState(
+    floatingBar,
+    browseState.reviewSession,
+    setActiveAction,
+    browseState.setSelectedBrowseNodeId,
+    browseState.snapshot,
+    workspaceSync
+  );
+
+  return {
+    activeAction,
+    browsedFolder: browseState.browsedFolder,
+    readableArticle: browseState.readableArticle,
+    recentArticles: browseState.recentArticles,
+    reviewSession: browseState.reviewSession,
+    selectedBrowseNodeId: browseState.selectedBrowseNodeId,
+    ...interactionState
   };
 }

@@ -9,6 +9,7 @@ export interface BreadcrumbDisplayPathNode {
 
 export interface BreadcrumbDisplayPathItem {
   id: string;
+  targetNodeId: string;
   title: string;
 }
 
@@ -67,6 +68,20 @@ function findArticleIndex(
   });
 }
 
+function resolveTargetNodeId(
+  node: BreadcrumbDisplayPathNode,
+  isNestedUnderArticle: boolean,
+  articleNodeId: string | null
+) {
+  if (node.kind === 'folder') {
+    return node.id;
+  }
+  if (articleNodeId && isNestedUnderArticle) {
+    return articleNodeId;
+  }
+  return node.id;
+}
+
 export function buildBreadcrumbDisplayPath(
   nodeId: string | null,
   nodesById: Record<string, BreadcrumbDisplayPathNode | undefined>
@@ -74,9 +89,11 @@ export function buildBreadcrumbDisplayPath(
   const fullPath = collectPath(nodeId, nodesById);
   const ancestorPath = fullPath.slice(0, -1);
   const articleIndex = findArticleIndex(ancestorPath, nodesById);
+  const articleNodeId = articleIndex >= 0 ? ancestorPath[articleIndex]?.id ?? null : null;
 
   return ancestorPath.map((node, index) => ({
     id: node.id,
+    targetNodeId: resolveTargetNodeId(node, index > articleIndex, articleNodeId),
     title: articleIndex >= 0 && index > articleIndex ? abbreviateTitle(node.title) : normalizeTitle(node.title)
   }));
 }

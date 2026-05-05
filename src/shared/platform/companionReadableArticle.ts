@@ -16,6 +16,19 @@ export interface CompanionRecentArticle {
   updatedAt: string;
 }
 
+export interface CompanionFolderListEntry {
+  kind: CompanionReadableNode['kind'];
+  nodeId: string;
+  preview: string | null;
+  title: string;
+}
+
+export interface CompanionFolderView {
+  items: CompanionFolderListEntry[];
+  nodeId: string;
+  title: string;
+}
+
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
 
 function hasReadableContent(node: CompanionReadableNode | undefined) {
@@ -46,6 +59,19 @@ function buildReadableArticle(node: CompanionReadableNode) {
     nodeId: node.id,
     title: resolveCompanionArticleTitle(node)
   };
+}
+
+function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFolderListEntry {
+  return {
+    kind: node.kind,
+    nodeId: node.id,
+    preview: node.kind === 'folder' ? null : resolveNodeOpeningText(node.content, node.title),
+    title: node.kind === 'topic' ? resolveCompanionArticleTitle(node) : node.title.trim() || 'Untitled'
+  };
+}
+
+function isActiveFolderNode(node: CompanionReadableNode | undefined) {
+  return Boolean(node && node.kind === 'folder');
 }
 
 export function resolveCompanionArticleTitle(node: CompanionReadableNode) {
@@ -89,6 +115,30 @@ export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | nu
   }
 
   return null;
+}
+
+export function resolveCompanionFolderViewByNodeId(
+  snapshot: WorkspaceSnapshot | null,
+  nodeId: string | null
+): CompanionFolderView | null {
+  if (!snapshot || !nodeId || snapshot.trashedNodeIds.includes(nodeId)) {
+    return null;
+  }
+
+  const folderNode = snapshot.nodesById[nodeId];
+  if (!isActiveFolderNode(folderNode)) {
+    return null;
+  }
+
+  return {
+    items: snapshot.nodeOrder
+      .filter((childNodeId) => !snapshot.trashedNodeIds.includes(childNodeId))
+      .map((childNodeId) => snapshot.nodesById[childNodeId])
+      .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId))
+      .map(buildCompanionFolderListEntry),
+    nodeId: folderNode.id,
+    title: folderNode.title.trim() || 'Untitled'
+  };
 }
 
 export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | null): CompanionRecentArticle[] {

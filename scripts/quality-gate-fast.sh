@@ -125,8 +125,10 @@ run_parallel_lint_and_typecheck() {
   local lint_targets="$2"
   local lint_log typecheck_log lint_ok typecheck_ok
 
-  lint_log="$(mktemp)"
-  typecheck_log="$(mktemp)"
+  lint_log="$(create_quality_gate_log_file "lint.parallel")"
+  typecheck_log="$(create_quality_gate_log_file "typecheck.parallel")"
+  : >"${lint_log}"
+  : >"${typecheck_log}"
 
   if quality_gate_should_print_step; then
     echo "[quality-gate-fast] running: ${lint_mode} + typecheck (parallel)"
@@ -159,14 +161,14 @@ run_parallel_lint_and_typecheck() {
 
   if [[ "${lint_ok}" -ne 0 ]]; then
     echo "[quality-gate-fast] lint failed:"
+    echo "[quality-gate-fast] full log: ${lint_log}"
     cat "${lint_log}"
   fi
   if [[ "${typecheck_ok}" -ne 0 ]]; then
     echo "[quality-gate-fast] typecheck failed:"
+    echo "[quality-gate-fast] full log: ${typecheck_log}"
     cat "${typecheck_log}"
   fi
-
-  rm -f "${lint_log}" "${typecheck_log}"
   cleanup_pids=()
 
   if [[ "${lint_ok}" -ne 0 || "${typecheck_ok}" -ne 0 ]]; then

@@ -39,9 +39,9 @@ describe('CompanionReviewCard', () => {
     render(
       <CompanionReviewCard
         breadcrumbItems={[
-          { id: 'folder-1', label: 'Projects' },
-          { id: 'folder-2', label: 'Reading' },
-          { id: 'topic-1', isCurrent: true, label: 'Article title' }
+          { id: 'folder-1', label: 'Projects', targetNodeId: 'folder-1' },
+          { id: 'folder-2', label: 'Reading', targetNodeId: 'folder-2' },
+          { id: 'topic-1', isCurrent: true, label: 'Article title', targetNodeId: 'topic-1' }
         ]}
         card={createCard()}
       />

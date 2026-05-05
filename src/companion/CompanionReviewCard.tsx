@@ -20,7 +20,7 @@ function ReviewBreadcrumb(props: {
             <button
               aria-current={item.isCurrent ? 'page' : undefined}
               className="inline rounded-sm border-0 bg-transparent p-0 text-left text-[12px] leading-5 text-companion-text-secondary hover:text-foreground aria-[current=page]:cursor-default"
-              onClick={() => props.onSelectItem?.(item.id)}
+              onClick={() => props.onSelectItem?.(item.targetNodeId)}
               type="button"
             >
               {item.label}

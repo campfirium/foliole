@@ -7,6 +7,7 @@ export interface CompanionReviewBreadcrumbItem {
   id: string;
   isCurrent?: boolean;
   label: string;
+  targetNodeId: string;
 }
 
 export function buildReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, currentNodeId: string | null): CompanionReviewBreadcrumbItem[] {
@@ -16,7 +17,8 @@ export function buildReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, c
 
   return buildBreadcrumbDisplayPath(currentNodeId, snapshot.nodesById).map((item) => ({
     id: item.id,
-    label: item.title
+    label: item.title,
+    targetNodeId: item.targetNodeId
   }));
 }
 

@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -231,6 +231,54 @@ describe('quality-gate-target.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('[quality-gate:android] missing script: android:host:lint');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('prints a compact failure excerpt instead of dumping the whole log', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
+    try {
+      await writePackageJson(tempRoot, {
+        'lint:desktop': 'node -e "console.log(\'desktop lint ok\')"',
+        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
+        'test:desktop':
+          'node -e "for (let i = 1; i <= 220; i += 1) console.log(\'test-line-\' + i); process.exit(1)"',
+        build: 'node -e "console.log(\'desktop build ok\')"',
+        'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
+      });
+
+      const result = await runTargetGate(tempRoot, 'desktop');
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('[quality-gate:desktop] failed: test:desktop');
+      expect(result.stdout).toContain('showing first 20 and last 120 lines');
+      expect(result.stdout).toContain('test-line-1');
+      expect(result.stdout).toContain('test-line-220');
+      expect(result.stdout).toContain('[quality-gate:desktop] ... output trimmed ...');
+      expect(result.stdout).not.toContain('test-line-60');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('keeps the full failure log on disk and prints its absolute path', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
+    try {
+      await writePackageJson(tempRoot, {
+        'lint:desktop': 'node -e "console.log(\'desktop lint ok\')"',
+        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
+        'test:desktop': 'node -e "console.log(\'deep failure details\'); process.exit(1)"',
+        build: 'node -e "console.log(\'desktop build ok\')"',
+        'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
+      });
+
+      const result = await runTargetGate(tempRoot, 'desktop');
+      const match = result.stdout.match(/\[quality-gate:desktop\] full log: (.+\.log)/);
+
+      expect(result.code).toBe(1);
+      expect(match).not.toBeNull();
+      await access(match[1]);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

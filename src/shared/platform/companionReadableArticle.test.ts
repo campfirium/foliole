@@ -6,6 +6,7 @@ type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 
 import {
   resolveCompanionArticleTitle,
+  resolveCompanionFolderViewByNodeId,
   resolveCompanionRecentArticles,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
@@ -157,7 +158,7 @@ function createExplicitArticleSnapshot() {
   return snapshot;
 }
 
-describe('companionReadableArticle helpers', () => {
+describe('companionReadableArticle title and reading helpers', () => {
   it('prefers the article heading over the topic node title', () => {
     const articleNode = createNodeRecord({
       content: '# Imported article title\n\nBody',
@@ -194,6 +195,9 @@ describe('companionReadableArticle helpers', () => {
     expect(result?.hideTitleHeading).toBe(true);
   });
 
+});
+
+describe('companionReadableArticle browse helpers', () => {
   it('builds recent articles in descending updated time order', () => {
     const result = resolveCompanionRecentArticles(createSnapshot());
 
@@ -217,5 +221,19 @@ describe('companionReadableArticle helpers', () => {
 
     expect(result.some((article) => article.nodeId === 'node-1')).toBe(true);
     expect(result.some((article) => article.nodeId === 'node-2')).toBe(true);
+  });
+
+  it('builds a direct-child folder view for companion browsing', () => {
+    const result = resolveCompanionFolderViewByNodeId(createSnapshot(), 'folder-1');
+
+    expect(result).toEqual({
+      items: [
+        { kind: 'folder', nodeId: 'folder-2', preview: null, title: 'Nested folder' },
+        { kind: 'topic', nodeId: 'node-1', preview: 'Older body', title: 'Older' },
+        { kind: 'topic', nodeId: 'node-3', preview: null, title: 'Empty note' }
+      ],
+      nodeId: 'folder-1',
+      title: 'Reading folder'
+    });
   });
 });

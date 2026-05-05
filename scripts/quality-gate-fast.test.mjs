@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -139,6 +139,28 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('[quality-gate-fast] typecheck failed:');
       expect(result.stdout).not.toContain('lint ok');
       expect(result.stdout).not.toContain('test ok');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('prints the full failure log path and preserves the log file', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'lint ok\')"',
+        typecheck: 'node -e "console.log(\'saved failure details\'); process.exit(1)"',
+        test: 'node -e "console.log(\'test ok\')"'
+      });
+
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_LOG_MODE: 'fail-only'
+      });
+      const match = result.stdout.match(/\[quality-gate-fast\] full log: (.+\.log)/);
+
+      expect(result.code).toBe(1);
+      expect(match).not.toBeNull();
+      await access(match[1]);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -21,10 +21,12 @@ vi.mock('./useFloatingBarVisibility', () => ({
 
 vi.mock('./CompanionReviewCard', () => ({
   CompanionReviewAnswer: () => <div data-testid="companion-review-answer" />,
-  CompanionReviewCard: (props: { breadcrumbItems?: Array<{ label: string }> }) => (
+  CompanionReviewCard: (props: { breadcrumbItems?: Array<{ label: string; targetNodeId: string }>; onSelectBreadcrumbItem?: (id: string) => void }) => (
     <div data-testid="companion-review-card">
       {(props.breadcrumbItems ?? []).map((item) => (
-        <span key={item.label}>{item.label}</span>
+        <button key={item.label} onClick={() => props.onSelectBreadcrumbItem?.(item.targetNodeId)} type="button">
+          {item.label}
+        </button>
       ))}
     </div>
   )
@@ -109,10 +111,12 @@ function createBreadcrumbSnapshot(): WorkspaceSnapshot {
 function createItemReviewSurface() {
   return {
     activeAction: 'review',
+    browsedFolder: null,
     handleCompleteReviewItem: vi.fn(),
     handleDeferReviewItem: vi.fn(),
     handleDismissReviewItem: vi.fn(),
     handleGradeReview: vi.fn(),
+    handleSelectBrowseNode: vi.fn(),
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
     handleTopBarAction: vi.fn(),
@@ -142,36 +146,68 @@ function createItemReviewSurface() {
       scheduledFsrsCount: 0,
       scheduledReadingCount: 1,
       totalCount: 1
-    }
+    },
+    selectedBrowseNodeId: null
   };
+}
+
+function mockBreadcrumbEnvironment(snapshot: WorkspaceSnapshot) {
+  useFloatingBarVisibility.mockReturnValue({
+    handleContainerScroll: vi.fn(),
+    handleTouchEnd: vi.fn(),
+    handleTouchMove: vi.fn(),
+    handleTouchStart: vi.fn(),
+    isVisible: true,
+    revealBar: vi.fn()
+  });
+  useCompanionWorkspaceSync.mockReturnValue({
+    error: null,
+    readableArticle: null,
+    state: {
+      endpoint_url: 'http://10.0.2.2:38641',
+      last_synced_at: '2026-04-22T09:00:00.000Z',
+      workspace_snapshot: snapshot
+    }
+  });
+}
+
+async function renderBreadcrumbShell(surface = createItemReviewSurface()) {
+  mockBreadcrumbEnvironment(createBreadcrumbSnapshot());
+  useCompanionArticleSurface.mockReturnValue(surface);
+
+  const { CompanionShell } = await import('./CompanionShell');
+  render(<CompanionShell />);
+
+  return { surface };
 }
 
 describe('CompanionShell review breadcrumb', () => {
   it('stops at the article topic under the folder instead of showing the nested review topic title', async () => {
-    useFloatingBarVisibility.mockReturnValue({
-      handleContainerScroll: vi.fn(),
-      handleTouchEnd: vi.fn(),
-      handleTouchMove: vi.fn(),
-      handleTouchStart: vi.fn(),
-      isVisible: true,
-      revealBar: vi.fn()
-    });
-    useCompanionWorkspaceSync.mockReturnValue({
-      error: null,
-      readableArticle: null,
-      state: {
-        endpoint_url: 'http://10.0.2.2:38641',
-        last_synced_at: '2026-04-22T09:00:00.000Z',
-        workspace_snapshot: createBreadcrumbSnapshot()
-      }
-    });
-    useCompanionArticleSurface.mockReturnValue(createItemReviewSurface());
-
-    const { CompanionShell } = await import('./CompanionShell');
-    render(<CompanionShell />);
+    await renderBreadcrumbShell();
 
     expect(screen.getByText('Inbox')).toBeInTheDocument();
     expect(screen.getByText('Topic node title')).toBeInTheDocument();
     expect(screen.queryByText('Inner review topic')).not.toBeInTheDocument();
+  });
+
+  it('routes folder breadcrumbs to the folder browse surface target', async () => {
+    const { surface } = await renderBreadcrumbShell();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inbox' }));
+
+    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('folder-1');
+  });
+
+  it('routes nested breadcrumb labels back to the article target', async () => {
+    const surface = createItemReviewSurface();
+    surface.reviewSession.currentCard = {
+      ...surface.reviewSession.currentCard,
+      nodeId: 'item-1'
+    };
+    await renderBreadcrumbShell(surface);
+
+    fireEvent.click(screen.getByRole('button', { name: 'In...' }));
+
+    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1');
   });
 });

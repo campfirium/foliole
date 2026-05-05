@@ -11,6 +11,7 @@ ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-a
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
 ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD:-${FOLIOLE_ANDROID_AVD:-${DEFAULT_ANDROID_AVD}}}"
+ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS:-600}"
 PREVIEW_TOTAL_STEPS=3
 
 if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
@@ -19,11 +20,36 @@ fi
 
 cd "${REPO_ROOT}"
 
+run_preview_step() {
+  local label="$1"
+  shift
+
+  local started_at finished_at elapsed
+  started_at="$(date +%s)"
+  echo "[android-preview] begin: ${label}"
+  "$@"
+  finished_at="$(date +%s)"
+  elapsed=$((finished_at - started_at))
+  echo "[android-preview] done: ${label} (${elapsed}s)"
+}
+
+run_with_timeout() {
+  local timeout_seconds="$1"
+  shift
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --foreground "${timeout_seconds}" "$@"
+    return $?
+  fi
+
+  "$@"
+}
+
 echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to windows mirror"
-bash "${WINDOWS_SYNC_SCRIPT}"
+run_preview_step "windows-sync" bash "${WINDOWS_SYNC_SCRIPT}"
 
 echo "[android-preview] step 2/${PREVIEW_TOTAL_STEPS}: sync capacitor android host"
-if ! ANDROID_SKIP_WINDOWS_SYNC=1 bash "${ANDROID_SYNC_SCRIPT}"; then
+if ! run_preview_step "android-cap-sync" env ANDROID_SKIP_WINDOWS_SYNC=1 bash "${ANDROID_SYNC_SCRIPT}"; then
   echo "[android-preview] failed at: android host sync"
   echo "[android-preview] status: FAILED"
   exit 1
@@ -31,13 +57,14 @@ fi
 
 if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
   echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: start emulator"
-  if ! bash "${ANDROID_EMULATOR_SCRIPT}" "${ANDROID_PREVIEW_AVD}"; then
+  if ! run_preview_step "android-emulator" bash "${ANDROID_EMULATOR_SCRIPT}" "${ANDROID_PREVIEW_AVD}"; then
     echo "[android-preview] failed at: emulator startup"
     echo "[android-preview] status: FAILED"
     exit 1
   fi
   echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: deploy app"
-  if ! bash "${ANDROID_DEPLOY_SCRIPT}"; then
+  echo "[android-preview] deploy timeout: ${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}s"
+  if ! run_preview_step "android-deploy" run_with_timeout "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" bash "${ANDROID_DEPLOY_SCRIPT}"; then
     echo "[android-preview] failed at: app deploy"
     echo "[android-preview] status: FAILED"
     exit 1

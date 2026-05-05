@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
-
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { TopFloatingBar } from './CompanionFloatingBars';
@@ -11,6 +9,8 @@ import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCar
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import { useFloatingBarVisibility } from './useFloatingBarVisibility';
+
+import { NodeBrowseList } from '@/shared/ui';
 
 function formatDueLabel(timestamp: string | null) {
   if (!timestamp) {
@@ -62,45 +62,87 @@ function renderMainContent(
   surface: ReturnType<typeof useCompanionArticleSurface>,
   workspaceError: string | null,
   hasSnapshot: boolean,
-  reviewBreadcrumbItems: { id: string; isCurrent?: boolean; label: string }[],
+  reviewBreadcrumbItems: { id: string; isCurrent?: boolean; label: string; targetNodeId: string }[],
   onSelectReviewBreadcrumbItem: (id: string) => void
 ) {
   if (surface.activeAction === 'recent') {
-    return (
-      <RecentArticleList
-        currentArticleId={surface.readableArticle?.nodeId ?? null}
-        onSelectArticle={surface.handleSelectRecentArticle}
-        recentArticles={surface.recentArticles}
-      />
-    );
+    return renderRecentBrowseContent(surface);
   }
   if (surface.activeAction === 'review') {
-    if (surface.reviewSession.currentCard) {
-      return (
-        <>
-          <CompanionReviewCard
-            breadcrumbItems={reviewBreadcrumbItems}
-            card={surface.reviewSession.currentCard}
-            onSelectBreadcrumbItem={onSelectReviewBreadcrumbItem}
-          />
-          {surface.reviewSession.currentCard.itemKind === 'fsrs' && surface.isAnswerRevealed ? (
-            <CompanionReviewAnswer card={surface.reviewSession.currentCard} />
-          ) : null}
-          {surface.readingError ? <p className="mt-3 text-sm text-red-700">{surface.readingError}</p> : null}
-          {surface.reviewError ? <p className="mt-3 text-sm text-red-700">{surface.reviewError}</p> : null}
-        </>
-      );
-    }
-    return renderReviewFallback(hasSnapshot, workspaceError, surface.reviewSession);
+    return renderReviewContent(surface, workspaceError, hasSnapshot, reviewBreadcrumbItems, onSelectReviewBreadcrumbItem);
   }
-  if (surface.readableArticle) {
+  return renderReadableArticleOrFallback(surface, workspaceError, hasSnapshot);
+}
+
+function renderRecentBrowseContent(surface: ReturnType<typeof useCompanionArticleSurface>) {
+  if (surface.browsedFolder) {
     return (
-      <CompanionArticleDocument
-        content={surface.readableArticle.content}
-        hideTitleHeading={surface.readableArticle.hideTitleHeading}
-        nodeId={surface.readableArticle.nodeId}
+      <NodeBrowseList
+        currentNodeId={surface.selectedBrowseNodeId}
+        emptyLabel="This folder does not have any synced children yet."
+        items={surface.browsedFolder.items}
+        onSelectNode={surface.handleSelectBrowseNode}
       />
     );
+  }
+  if (surface.readableArticle && surface.selectedBrowseNodeId) {
+    return renderReadableArticleDocument(surface.readableArticle);
+  }
+  return (
+    <RecentArticleList
+      currentArticleId={surface.readableArticle?.nodeId ?? null}
+      onSelectArticle={surface.handleSelectRecentArticle}
+      recentArticles={surface.recentArticles}
+    />
+  );
+}
+
+function renderReviewContent(
+  surface: ReturnType<typeof useCompanionArticleSurface>,
+  workspaceError: string | null,
+  hasSnapshot: boolean,
+  reviewBreadcrumbItems: { id: string; isCurrent?: boolean; label: string; targetNodeId: string }[],
+  onSelectReviewBreadcrumbItem: (id: string) => void
+) {
+  if (!surface.reviewSession.currentCard) {
+    return renderReviewFallback(hasSnapshot, workspaceError, surface.reviewSession);
+  }
+
+  return (
+    <>
+      <CompanionReviewCard
+        breadcrumbItems={reviewBreadcrumbItems}
+        card={surface.reviewSession.currentCard}
+        onSelectBreadcrumbItem={onSelectReviewBreadcrumbItem}
+      />
+      {surface.reviewSession.currentCard.itemKind === 'fsrs' && surface.isAnswerRevealed ? (
+        <CompanionReviewAnswer card={surface.reviewSession.currentCard} />
+      ) : null}
+      {surface.readingError ? <p className="mt-3 text-sm text-red-700">{surface.readingError}</p> : null}
+      {surface.reviewError ? <p className="mt-3 text-sm text-red-700">{surface.reviewError}</p> : null}
+    </>
+  );
+}
+
+function renderReadableArticleDocument(
+  readableArticle: NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>
+) {
+  return (
+    <CompanionArticleDocument
+      content={readableArticle.content}
+      hideTitleHeading={readableArticle.hideTitleHeading}
+      nodeId={readableArticle.nodeId}
+    />
+  );
+}
+
+function renderReadableArticleOrFallback(
+  surface: ReturnType<typeof useCompanionArticleSurface>,
+  workspaceError: string | null,
+  hasSnapshot: boolean
+) {
+  if (surface.readableArticle) {
+    return renderReadableArticleDocument(surface.readableArticle);
   }
   return renderReviewFallback(hasSnapshot, workspaceError, surface.reviewSession);
 }
@@ -139,18 +181,6 @@ function useImmersiveReviewToolbar(
   };
 }
 
-function buildBreadcrumbSelectionHandler(
-  snapshot: ReturnType<typeof useCompanionWorkspaceSync>['state']['workspace_snapshot'],
-  onSelectArticle: (nodeId: string) => void
-) {
-  return (nodeId: string) => {
-    if (!snapshot || !resolveReadableCompanionArticleByNodeId(snapshot, nodeId)) {
-      return;
-    }
-    onSelectArticle(nodeId);
-  };
-}
-
 export function CompanionShell() {
   const floatingBar = useFloatingBarVisibility('companion-top-bar');
   const workspaceSync = useCompanionWorkspaceSync();
@@ -165,11 +195,6 @@ export function CompanionShell() {
     floatingBar,
     isImmersiveReview,
     surface.reviewSession.currentCard?.nodeId
-  );
-
-  const handleReviewBreadcrumbItemSelect = buildBreadcrumbSelectionHandler(
-    workspaceSync.state.workspace_snapshot,
-    surface.handleSelectRecentArticle
   );
 
   return (
@@ -193,7 +218,7 @@ export function CompanionShell() {
               workspaceSync.error,
               Boolean(workspaceSync.state.workspace_snapshot),
               reviewBreadcrumbItems,
-              handleReviewBreadcrumbItemSelect
+              surface.handleSelectBrowseNode
             )}
           </div>
         </div>

@@ -24,7 +24,10 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
     <AppBreadcrumb
       ariaLabel="Node breadcrumbs"
       items={items}
-      onSelect={onSelectNode}
+      onSelect={(id) => {
+        const selectedItem = sourceItems.find((item) => item.id === id);
+        onSelectNode(selectedItem?.targetNodeId ?? id);
+      }}
     />
   );
 }
