@@ -56,7 +56,7 @@ async function testRecordsPushConflictWithoutCompleting() {
 
   expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; 2 device change(s) need review before they can be sent.',
+    message: 'Sync checked; 2 device changes need review before sending.',
     status: 'skipped'
   }));
 }

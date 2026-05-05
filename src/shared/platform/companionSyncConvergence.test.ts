@@ -52,7 +52,7 @@ function testBlocksFinishedPassWithDirtyWork() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync check was recorded while 1 device change(s), 1 desktop confirmation(s), 0 change issue(s), 0 topic body file(s), 0 attachment file(s), and 0 topic list change(s) remain.',
+      detail: 'A finished sync check was recorded while 1 device change, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files, 0 topic list changes were still present.',
       severity: 'error'
     })
   ]));
@@ -110,7 +110,7 @@ function testBlocksStalePendingAck() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'pending_ack_survived_finished_pass',
-      detail: '1 desktop confirmation(s) remained pending after a later sync check.',
+      detail: '1 desktop confirmation remained pending after a later sync check.',
       severity: 'error'
     })
   ]));
@@ -120,7 +120,7 @@ function testBlocksPushConflicts() {
   const report = buildSyncConvergenceReport(result({
     android: {
       ...result().android!,
-      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync checked; 2 device change(s) need review before they can be sent.', occurred_at: '2026-05-01T00:03:00.000Z', status: 'skipped' }]
+      events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync checked; 2 device changes need review before sending.', occurred_at: '2026-05-01T00:03:00.000Z', status: 'skipped' }]
     }
   }));
 
@@ -128,7 +128,7 @@ function testBlocksPushConflicts() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'push_conflict_or_rejection_waiting',
-      detail: 'Sync checked; 2 device change(s) need review before they can be sent.',
+      detail: 'Sync checked; 2 device changes need review before sending.',
       severity: 'error'
     })
   ]));
@@ -146,7 +146,7 @@ function testBlocksPersistedPushIssues() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'push_issue_not_converged',
-      detail: '1 device change(s) were rejected or conflicted during push.',
+      detail: '1 device change was rejected or conflicted during push.',
       severity: 'error'
     })
   ]));
@@ -166,7 +166,7 @@ function testBlocksFinishedPassWithResourceBacklog() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync check was recorded while 0 device change(s), 0 desktop confirmation(s), 0 change issue(s), 3 topic body file(s), 2 attachment file(s), and 1 topic list change(s) remain.',
+      detail: 'A finished sync check was recorded while 0 device changes, 0 desktop confirmations, 0 change issues, 3 topic body files, 2 attachment files, 1 topic list change were still present.',
       severity: 'error'
     })
   ]));
@@ -185,7 +185,7 @@ function testKeepsBodyBacklogPending() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'content_backlog_exists',
-      detail: '3 topic body file(s) remain to download: 2 topic, 1 external document.'
+      detail: '3 topic body files remain to download: 2 topics, 1 external document.'
     })
   ]));
   expect(report.checks.map((item) => item.code)).toEqual(expect.arrayContaining([

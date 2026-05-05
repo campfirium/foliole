@@ -17,6 +17,7 @@ export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
 export const ATTACHMENT_RESOURCE_BATCH_LIMIT = 64;
 export const ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC = 20;
 export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS = 5 * 60_000;
+export const COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS = 45_000;
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
 
@@ -77,6 +78,9 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
   let syncedBytes = 0;
   onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, elapsedMs: 0, phase: 'content', total, totalBytes });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
+    if (batchIndex > 0 && Date.now() - startedAt >= COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS) {
+      break;
+    }
     const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
     if (blobs.length === 0) break;
     const hashes = blobs.map((blob) => blob.hash);
@@ -104,6 +108,9 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
   let syncedBytes = 0;
   onProgress?.({ attachmentBreakdown, completed: 0, completedBytes: 0, elapsedMs: 0, phase: 'attachment', total, totalBytes });
   for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
+    if (batchIndex > 0 && Date.now() - startedAt >= COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS) {
+      break;
+    }
     const resources = await loadCompanionMissingAttachmentResources(ATTACHMENT_RESOURCE_BATCH_LIMIT);
     if (resources.length === 0) break;
     const syncedBatchIds = await syncCompanionAttachmentResourceRequestsFromDesktop(

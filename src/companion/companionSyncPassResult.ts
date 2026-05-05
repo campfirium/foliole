@@ -53,9 +53,13 @@ function formatBacklogLabel(label: string, count: number | null, bytes?: number 
   return typeof bytes === 'number' && bytes > 0 ? `${countLabel} (${formatBytes(bytes)})` : countLabel;
 }
 
+function formatCount(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function formatDownloadLabel(count: number, singular: string, plural: string, bytes?: number | null) {
-  const label = count === 1 ? singular : plural;
-  return typeof bytes === 'number' && bytes > 0 ? `${count} ${label} (${formatBytes(bytes)})` : `${count} ${label}`;
+  const label = formatCount(count, singular, plural);
+  return typeof bytes === 'number' && bytes > 0 ? `${label} (${formatBytes(bytes)})` : label;
 }
 
 function joinBacklogSuffix(prefix: string, suffix: string) {
@@ -94,7 +98,7 @@ function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
   const suffixes: string[] = [];
   if (typeof remainingStructure === 'number' && remainingStructure > 0) {
-    suffixes.push(`${remainingStructure} topic list change(s) still applying`);
+    suffixes.push(`${formatCount(remainingStructure, 'topic list change is', 'topic list changes are')} still applying`);
   } else if (remainingStructure === null) {
     suffixes.push('topic list confirmation is still pending');
   }
@@ -131,7 +135,13 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
-      appendBacklogSuffix(appendDownloadSuffix(`${syncCheckedPrefix(result)}; ${rejectedOrConflicted} device change(s) need review before they can be sent.`, result), result),
+      appendBacklogSuffix(
+        appendDownloadSuffix(
+          `${syncCheckedPrefix(result)}; ${formatCount(rejectedOrConflicted, 'device change', 'device changes')} ${rejectedOrConflicted === 1 ? 'needs' : 'need'} review before sending.`,
+          result
+        ),
+        result
+      ),
       'skipped'
     );
   }

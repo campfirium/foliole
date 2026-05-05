@@ -136,7 +136,7 @@ function expectDiagnosticSummary() {
   expect(screen.getByText('Sync check')).toBeInTheDocument();
   expect(screen.getByText('Needs attention')).toBeInTheDocument();
   expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
-  expect(screen.getByText('A finished sync check was recorded while 1 device change(s), 1 desktop confirmation(s), 1 change issue(s), 5 topic body file(s), 2 attachment file(s), and 3 topic list change(s) remain.')).toBeInTheDocument();
+  expect(screen.getByText('A finished sync check was recorded while 1 device change, 1 desktop confirmation, 1 change issue, 5 topic body files, 2 attachment files, 3 topic list changes were still present.')).toBeInTheDocument();
 }
 
 function expectStageCheckpoint() {
@@ -210,7 +210,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
         status: 'blocked',
         checks: [{
           code: 'completed_event_with_local_work',
-          detail: 'A finished sync check was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.',
+          detail: 'A finished sync check was recorded while 1 device change and 1 desktop confirmation were still present.',
           severity: 'error',
           title: 'Latest sync check still has work left'
         }]
@@ -241,7 +241,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     await waitFor(() => expect(screen.getByText('Sync check')).toBeInTheDocument());
     expect(screen.getByText('Needs attention')).toBeInTheDocument();
     expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
-    expect(screen.getByText('A finished sync check was recorded while 1 device change(s) and 1 desktop confirmation(s) remain.')).toBeInTheDocument();
+    expect(screen.getByText('A finished sync check was recorded while 1 device change and 1 desktop confirmation were still present.')).toBeInTheDocument();
     expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });
 

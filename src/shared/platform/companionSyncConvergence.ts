@@ -35,6 +35,28 @@ function check(
   return { code, detail, severity, title };
 }
 
+function formatCount(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function formatRemainingSegments(args: {
+  dirtyCount: number;
+  lag: number;
+  missingAttachments: number;
+  missingBodies: number;
+  pendingAckCount: number;
+  pushIssueCount: number;
+}) {
+  return [
+    formatCount(args.dirtyCount, 'device change', 'device changes'),
+    formatCount(args.pendingAckCount, 'desktop confirmation', 'desktop confirmations'),
+    formatCount(args.pushIssueCount, 'change issue', 'change issues'),
+    formatCount(args.missingBodies, 'topic body file', 'topic body files'),
+    formatCount(args.missingAttachments, 'attachment file', 'attachment files'),
+    formatCount(args.lag, 'topic list change', 'topic list changes')
+  ].join(', ');
+}
+
 function structureLag(result: CombinedSyncDiagnosticResult) {
   const cursor = result.android?.sync_state.pack_cursor;
   const desktopSeq = result.desktop?.sync_state.max_state_seq;
@@ -78,7 +100,12 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
   const pushIssueCount = result.android?.sync_state.push_issue_count ?? 0;
   const checks: SyncConvergenceCheck[] = [];
   if (dirtyCount > 0) {
-    checks.push(check('local_dirty_not_converged', 'warning', 'Device changes still need to send', `${dirtyCount} device change(s) are waiting to send.`));
+    checks.push(check(
+      'local_dirty_not_converged',
+      'warning',
+      'Device changes still need to send',
+      `${formatCount(dirtyCount, 'device change is', 'device changes are')} waiting to send.`
+    ));
   }
   if (pendingAckCount > 0) {
     checks.push(buildPendingAckCheck(result));
@@ -88,7 +115,7 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
       'push_issue_not_converged',
       'error',
       'Device changes need review before sending',
-      `${pushIssueCount} device change(s) were rejected or conflicted during push.`
+      `${formatCount(pushIssueCount, 'device change was', 'device changes were')} rejected or conflicted during push.`
     ));
   }
   return checks;
@@ -126,14 +153,14 @@ function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {
       'pending_ack_survived_finished_pass',
       'error',
       'Desktop confirmation was not pulled back',
-      `${staleCount} desktop confirmation(s) remained pending after a later sync check.`
+      `${formatCount(staleCount, 'desktop confirmation remained', 'desktop confirmations remained')} pending after a later sync check.`
     );
   }
   return check(
     'pending_ack_not_confirmed',
     'warning',
     'Desktop confirmations are still pending',
-    `${pendingAckCount} desktop confirmation(s) still need to come back from the next topic list sync.`
+    `${formatCount(pendingAckCount, 'desktop confirmation still needs', 'desktop confirmations still need')} to come back from the next topic list sync.`
   );
 }
 
@@ -143,14 +170,19 @@ function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
     return [check('structure_lag_unknown', 'warning', 'Topic list sync is unknown', 'Android or desktop sync position is missing.')];
   }
   return lag > 0
-    ? [check('structure_lag_exists', 'info', 'Desktop topic list changes are still available', `${lag} desktop change(s) have not reached this device.`)]
+    ? [check(
+      'structure_lag_exists',
+      'info',
+      'Desktop topic list changes are still available',
+      `${formatCount(lag, 'desktop change has', 'desktop changes have')} not reached this device.`
+    )]
     : [];
 }
 
 function buildEventStateChecks(result: CombinedSyncDiagnosticResult) {
   const latest = latestEvent(result.android?.events ?? []);
   if (latest?.status !== 'skipped') return [];
-  if (!latest.message.includes('need review before they can be sent')) return [];
+  if (!latest.message.includes('need review before')) return [];
   return [check(
     'push_conflict_or_rejection_waiting',
     'error',
@@ -170,11 +202,16 @@ function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
       'content_backlog_exists',
       'info',
       'Topic bodies are still downloading',
-      `${missing} topic body file(s) remain to download: ${topicBodies} topic, ${externalBodies} external document.`
+      `${formatCount(missing, 'topic body file remains', 'topic body files remain')} to download: ${formatCount(topicBodies, 'topic', 'topics')}, ${formatCount(externalBodies, 'external document', 'external documents')}.`
     ));
   }
   if (missingAttachments > 0) {
-    checks.push(check('attachment_backlog_exists', 'info', 'Attachment files are still downloading', `${missingAttachments} attachment file(s) remain to download.`));
+    checks.push(check(
+      'attachment_backlog_exists',
+      'info',
+      'Attachment files are still downloading',
+      `${formatCount(missingAttachments, 'attachment file remains', 'attachment files remain')} to download.`
+    ));
   }
   return checks;
 }
@@ -193,7 +230,14 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
     'completed_event_with_local_work',
     'error',
     'Latest sync check still has work left',
-    `A finished sync check was recorded while ${dirtyCount} device change(s), ${pendingAckCount} desktop confirmation(s), ${pushIssueCount} change issue(s), ${missingBodies} topic body file(s), ${missingAttachments} attachment file(s), and ${lag} topic list change(s) remain.`
+    `A finished sync check was recorded while ${formatRemainingSegments({
+      dirtyCount,
+      lag,
+      missingAttachments,
+      missingBodies,
+      pendingAckCount,
+      pushIssueCount
+    })} were still present.`
   )];
 }
 

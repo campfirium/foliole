@@ -100,7 +100,7 @@ describe('describeCompanionSyncPassResult', () => {
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Sync checked; 1 device change(s) need review before they can be sent; 3 topic bodies still downloading.',
+      message: 'Sync checked; 1 device change needs review before sending; 3 topic bodies still downloading.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -110,7 +110,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushIssueCount: 1
     }))).toEqual({
-      message: 'Sync checked; 1 device change(s) need review before they can be sent.',
+      message: 'Sync checked; 1 device change needs review before sending.',
       outcome: 'skipped',
       status: 'skipped'
     });
@@ -120,7 +120,7 @@ describe('describeCompanionSyncPassResult', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: 4
     }))).toEqual({
-      message: 'Sync checked; 4 topic list change(s) still applying.',
+      message: 'Sync checked; 4 topic list changes are still applying.',
       outcome: 'skipped',
       status: 'skipped'
     });
