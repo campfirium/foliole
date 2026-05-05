@@ -101,6 +101,41 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     );
   });
 
+  it('ignores content edits until the node document is fully loaded', () => {
+    const harness = createSetStateHarness(createWorkspaceFixture());
+    const node = harness.getState().nodesById['node-1'];
+    if (!node) throw new Error('missing seed node');
+    harness.setState({
+      nodesById: {
+        ...harness.getState().nodesById,
+        'node-1': {
+          ...node,
+          content: '',
+          hasContent: true,
+          reveal: null,
+          hasReveal: true
+        }
+      }
+    });
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    actions.updateNodeContent('node-1', 'Typed too early');
+
+    expect(harness.getState().nodesById['node-1']).toMatchObject({
+      content: '',
+      hasContent: true,
+      reveal: null,
+      hasReveal: true
+    });
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+  });
+});
+
+describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('syncs create qa nodes through runtime command bridge', () => {
     const harness = createSetStateHarness(createWorkspaceFixture());
     const actions = createWorkspaceNodeActions(harness.setState);

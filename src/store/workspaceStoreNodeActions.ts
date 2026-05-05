@@ -6,6 +6,7 @@ import { isInboxNode } from '../features/nodes/model/specialNodes';
 import { isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import {
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
@@ -90,6 +91,7 @@ function createUpdateNodeContentAction(set: WorkspaceSet): WorkspaceNodeActions[
       const node = state.nodesById[nodeId];
       if (
         !node ||
+        !isNodeDocumentLoaded(node) ||
         isInboxNode(node) ||
         isNodeContentLocked(nodeId, state.nodeOrder, state.nodesById, new Set(state.trashedNodeIds))
       ) {
