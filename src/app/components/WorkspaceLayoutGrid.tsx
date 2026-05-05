@@ -225,7 +225,10 @@ function WorkspaceGridContent({
           <WorkspaceRightSidebar
             activePanelId={activeRightPanelId}
             activeNodeId={documentNodeId}
+            nodeOrder={props.nodeOrder}
+            trashedNodeIds={props.trashedNodeIds}
             nodesById={props.nodesById}
+            onSelectNode={onSelectNode}
             onRevealAnchorInDocument={props.onRevealAnchorInDocument}
             reviewCurrentNodeId={props.reviewCurrentNodeId}
             reviewQueueNodeIds={props.reviewPanelQueueNodeIds}

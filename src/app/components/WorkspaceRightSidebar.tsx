@@ -23,7 +23,14 @@ function getPanelTitle(panelId: WorkspaceRightPanelId) {
 function renderPanel(
   props: Pick<
     WorkspaceLayoutProps,
-    'activeNodeId' | 'nodesById' | 'reviewCurrentNodeId' | 'reviewQueueNodeIds' | 'reviewSchedulerSettings'
+    | 'activeNodeId'
+    | 'nodeOrder'
+    | 'trashedNodeIds'
+    | 'nodesById'
+    | 'onSelectNode'
+    | 'reviewCurrentNodeId'
+    | 'reviewQueueNodeIds'
+    | 'reviewSchedulerSettings'
   > & {
     activePanelId: WorkspaceRightPanelId;
     onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
@@ -45,8 +52,10 @@ function renderPanel(
     return (
       <WorkspaceRightSidebarHighlightsPanel
         activeNodeId={props.activeNodeId}
+        nodeOrder={props.nodeOrder}
+        trashedNodeIds={props.trashedNodeIds}
         nodesById={props.nodesById}
-        onRevealHighlight={(highlightId) => props.onRevealAnchorInDocument({ id: highlightId, kind: 'highlight' })}
+        onRevealHighlight={(nodeId) => props.onSelectNode(nodeId)}
       />
     );
   }
@@ -62,7 +71,10 @@ function renderPanel(
 export function WorkspaceRightSidebar(props: Pick<
   WorkspaceLayoutProps,
   | 'activeNodeId'
+  | 'nodeOrder'
+  | 'trashedNodeIds'
   | 'nodesById'
+  | 'onSelectNode'
   | 'reviewCurrentNodeId'
   | 'reviewQueueNodeIds'
   | 'reviewSchedulerSettings'

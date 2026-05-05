@@ -67,6 +67,7 @@ export interface WorkspaceLayoutProps {
   listWidth: number;
   rightSidebarWidth: number;
   nodeOrder: string[];
+  trashedNodeIds: string[];
   nodesById: Record<string, Node>;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
