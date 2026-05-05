@@ -44,9 +44,13 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
     }
   }, [requestedCategory]);
   const title = SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.label ?? 'Settings';
+  const description =
+    SETTINGS_CATEGORIES.find((category) => category.id === activeCategory)?.description ??
+    'Adjust how Foliole looks and behaves.';
 
   return {
     activeCategory,
+    description,
     setActiveCategory,
     title,
     ...libraryPathSettings
@@ -62,6 +66,7 @@ type SettingsPanelBodyProps = {
   isRebuildingMirrorLinks: boolean;
   isRebuildingMirrorOutput: boolean;
   libraryHomePath: string;
+  description: string;
   mirrorLinkRebuildError: string | null;
   mirrorLinkRebuildFeedback: string | null;
   mirrorOutputRebuildError: string | null;
@@ -116,13 +121,14 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
         <AppDialogContent
           aria-label="Settings dialog"
           aria-describedby={undefined}
-          className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1180px,calc(100vw-36px))] max-w-none overflow-hidden grid-cols-[260px_minmax(0,1fr)] rounded-lg shadow-panel"
+          className="grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[300px_minmax(0,1fr)] overflow-hidden rounded-2xl border-settings-outline bg-settings-shell shadow-settings"
         >
           <SettingsSidebar activeCategory={props.activeCategory} setActiveCategory={props.setActiveCategory} />
-          <div className="app-scrollbar overflow-auto bg-background p-4 pb-5">
-            <header className="mb-2 min-h-[48px] px-1 py-2">
+          <div className="app-scrollbar overflow-auto bg-settings-shell px-7 pb-7 pt-6">
+            <header className="mb-3 min-h-[48px] border-b border-settings-divider px-1 pb-5">
               <AppDialogTitle className="sr-only">Settings dialog</AppDialogTitle>
               <h2 className="text-[1.16rem] font-semibold text-foreground">{props.title}</h2>
+              <p className="mt-2 max-w-[720px] text-[0.96rem] text-foreground/62">{props.description}</p>
             </header>
             <SettingsCategoryContent {...categoryProps} {...hotkeys} />
           </div>

@@ -32,4 +32,4 @@ export { AppToolbar } from './Toolbar';
 export { ToolbarActionGroup } from './ToolbarActionGroup';
 export { AppTooltip, AppTooltipContent, AppTooltipPortal, AppTooltipProvider, AppTooltipTrigger } from './Tooltip';
 export { appFloatingSurfaceClassName } from './FloatingSurface';
-export { SettingsControlSlot, SettingsRow, SettingsSection } from './SettingsLayout';
+export { SettingsControlSlot, SettingsGroup, SettingsRow, SettingsSection } from './SettingsLayout';

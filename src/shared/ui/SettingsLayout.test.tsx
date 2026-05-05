@@ -1,16 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
-import { SettingsControlSlot, SettingsRow, SettingsSection } from './SettingsLayout';
+import { SettingsControlSlot, SettingsGroup, SettingsRow, SettingsSection } from './SettingsLayout';
 
 it('renders settings pattern structure with shared copy and action slot', () => {
   render(
     <SettingsSection actions={<button type="button">Reset all</button>} description="Shared settings layout." title="Hotkeys">
-      <SettingsRow description="Controls the main action." title="Primary shortcut">
-        <SettingsControlSlot>
-          <button type="button">Save</button>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <SettingsGroup>
+        <SettingsRow description="Controls the main action." title="Primary shortcut">
+          <SettingsControlSlot>
+            <button type="button">Save</button>
+          </SettingsControlSlot>
+        </SettingsRow>
+      </SettingsGroup>
     </SettingsSection>
   );
 
@@ -20,4 +22,5 @@ it('renders settings pattern structure with shared copy and action slot', () => 
   expect(screen.getByText('Controls the main action.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reset all' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save' }).closest('.bg-settings-group')).not.toBeNull();
 });

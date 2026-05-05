@@ -28,7 +28,7 @@ export function SettingsSection({
   title
 }: SettingsSectionProps) {
   return (
-    <section aria-label={ariaLabel} className={cn('mb-7 space-y-3 last:mb-0', className)}>
+    <section aria-label={ariaLabel} className={cn('mb-8 space-y-4 last:mb-0', className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-semibold text-foreground">{title}</h3>
@@ -36,8 +36,23 @@ export function SettingsSection({
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
-      {children}
+      <div className="[&>[data-settings-row]+[data-settings-row]]:border-t [&>[data-settings-row]+[data-settings-row]]:border-settings-divider">
+        {children}
+      </div>
     </section>
+  );
+}
+
+export function SettingsGroup({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'overflow-hidden rounded-xl border border-settings-outline bg-settings-group [&>[data-settings-row]+[data-settings-row]]:border-t [&>[data-settings-row]+[data-settings-row]]:border-settings-divider',
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -45,10 +60,11 @@ export function SettingsRow({ children, className, description, readonly = false
   return (
     <div
       className={cn(
-        'flex min-h-[64px] items-start justify-between gap-4 py-2 max-[1080px]:flex-col max-[1080px]:items-start',
+        'flex min-h-[78px] items-start justify-between gap-5 py-5 max-[1080px]:flex-col max-[1080px]:items-start',
         readonly && 'text-foreground/80',
         className
       )}
+      data-settings-row
     >
       <div className="min-w-0 flex-1">
         <h4 className="text-[0.95rem] font-semibold text-foreground">{title}</h4>

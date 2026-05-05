@@ -50,17 +50,20 @@ export function SettingsSidebar(props: {
     <AppPanel
       as="aside"
       ariaLabel="Settings categories"
-      bodyClassName="px-2.5 pb-3.5"
-      className="border-r border-border bg-bg-subtle"
-      title={<span className="text-foreground/50">Options</span>}
+      bodyClassName="px-4 pb-5"
+      headerClassName="px-9 pb-4 pt-6"
+      surfaceClassName="bg-settings-sidebar border-r border-settings-outline"
+      title="Settings"
     >
-      <nav aria-label="Settings navigation" className="flex flex-col gap-0.5">
+      <nav aria-label="Settings navigation" className="flex flex-col gap-1">
         {SETTINGS_CATEGORIES.map((category) => (
           <AppButton
             active={category.id === props.activeCategory}
             className={cn(
-              'min-h-0 rounded-md px-2.5 py-[7px] text-[0.96rem]',
-              category.id !== props.activeCategory && 'border-transparent'
+              'min-h-0 rounded-lg px-5 py-[10px] text-[0.98rem]',
+              category.id === props.activeCategory
+                ? 'bg-settings-selected font-semibold'
+                : 'border-transparent bg-transparent text-foreground/72 hover:bg-settings-selected/70'
             )}
             key={category.id}
             onClick={() => props.setActiveCategory(category.id)}

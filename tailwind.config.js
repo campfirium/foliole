@@ -2,6 +2,16 @@
 export default {
   darkMode: ['class'],
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  safelist: [
+    'bg-settings-shell',
+    'bg-settings-sidebar',
+    'bg-settings-group',
+    'bg-settings-selected',
+    'hover:bg-settings-selected/70',
+    'border-settings-outline',
+    'border-settings-divider',
+    'shadow-settings'
+  ],
   theme: {
     extend: {
       colors: {
@@ -9,6 +19,14 @@ export default {
         'bg-subtle': '#fcfcfc',
         'bg-panel': '#f6f6f6',
         'bg-elevated': '#ffffff',
+        divider: 'rgba(32, 33, 36, 0.08)',
+        'panel-outline': 'rgba(32, 33, 36, 0.14)',
+        'settings-shell': '#ffffff',
+        'settings-sidebar': '#f6f6f4',
+        'settings-group': '#f7f7f5',
+        'settings-selected': '#ecece8',
+        'settings-divider': 'rgba(32, 33, 36, 0.08)',
+        'settings-outline': 'rgba(32, 33, 36, 0.14)',
         border: {
           DEFAULT: 'rgba(32, 33, 36, 0.18)',
           strong: 'rgba(32, 33, 36, 0.34)'
@@ -53,7 +71,8 @@ export default {
       },
       boxShadow: {
         popover: '0 18px 40px rgba(15, 17, 19, 0.12)',
-        panel: '0 10px 24px rgba(15, 17, 19, 0.08)'
+        panel: '0 10px 24px rgba(15, 17, 19, 0.08)',
+        settings: '0 18px 42px rgba(15, 17, 19, 0.08), 0 2px 6px rgba(15, 17, 19, 0.03)'
       },
       borderRadius: {
         sm: '4px',

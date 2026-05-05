@@ -15,6 +15,7 @@ interface PanelProps<T extends PanelElement = 'section'> {
   className?: string;
   headerClassName?: string;
   surfaceClassName?: string;
+  surfaceStyle?: ComponentPropsWithoutRef<'div'>['style'];
   bodyClassName?: string;
   ariaLabel?: string;
   scrollBody?: boolean;
@@ -31,6 +32,7 @@ export function AppPanel<T extends PanelElement = 'section'>({
   className,
   headerClassName,
   surfaceClassName,
+  surfaceStyle,
   bodyClassName,
   ariaLabel,
   scrollBody = false,
@@ -45,7 +47,10 @@ export function AppPanel<T extends PanelElement = 'section'>({
       className={cn('min-h-0', className)}
       {...rest}
     >
-      <div className={cn('flex h-full min-h-0 flex-col overflow-hidden bg-transparent p-0 text-foreground', surfaceClassName)}>
+      <div
+        className={cn('flex h-full min-h-0 flex-col overflow-hidden bg-transparent p-0 text-foreground', surfaceClassName)}
+        style={surfaceStyle}
+      >
         <header
           className={cn(
             'flex min-h-[48px] items-center justify-start gap-3 px-4 py-2',
