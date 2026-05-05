@@ -64,21 +64,26 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
-it('groups settings sidebar entries by workspace, storage, and connections', async () => {
+it('groups settings sidebar entries by general, workspace, input, storage, and connections', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="library" />);
 
   const buttons = screen.getAllByRole('button');
   const labels = buttons.map((button) => button.textContent).filter(Boolean);
 
+  expect(screen.getByText('General')).toBeInTheDocument();
   expect(screen.getByText('Workspace')).toBeInTheDocument();
+  expect(screen.getByText('Input')).toBeInTheDocument();
   expect(screen.getByText('Storage')).toBeInTheDocument();
   expect(screen.getByText('Connections')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 6)).toEqual(['General', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures']);
+  expect(labels.slice(0, 6)).toEqual(['About', 'Appearance', 'Editor', 'Review', 'Hotkeys', 'Mouse gestures']);
   expect(labels).toContain('Library');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
   expect(labels).toContain('External sources');
+  expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('About'));
+  expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
+  expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Mouse gestures'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
   expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('Backups'));
@@ -208,7 +213,7 @@ it('updates appearance settings from the dedicated sections and persists them', 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
-  expect(screen.getByRole('switch', { name: 'Save remote images locally' }).className).toContain('bg-settings-switch-off');
+  expect(screen.getByRole('switch', { name: 'Save remote images locally' }).className).toContain('bg-settings-switch-on');
   expect(screen.getByRole('radiogroup', { name: 'Markdown syntax visibility' }).className).toContain('bg-settings-control');
   fireEvent.click(screen.getByRole('radio', { name: 'Active line' }));
   fireEvent.click(screen.getByLabelText('Save remote images locally'));
@@ -222,7 +227,7 @@ it('updates appearance settings from the dedicated sections and persists them', 
   fireEvent.click(screen.getByLabelText('Reset accent color'));
 
   await waitFor(() => {
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('true');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('false');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility)).toBe('visible');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.accentColor)).toBe('#3f8f68');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('22');

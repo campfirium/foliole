@@ -39,8 +39,8 @@ it('skips menu section building while the command palette is closed', () => {
 it('keeps tab focus inside the command palette dialog', async () => {
   menuModelMocks.buildCommandMenuSections.mockReturnValue([
     {
-      id: 'commands',
-      title: 'Commands',
+      id: 'navigation',
+      title: 'Navigation',
       items: [{ enabled: true, id: 'open-topic', title: 'Open topic' }]
     }
   ]);
@@ -60,6 +60,7 @@ it('keeps tab focus inside the command palette dialog', async () => {
   const result = screen.getByRole('button', { name: 'Open topic' });
 
   expect(dialog).toHaveAttribute('aria-modal', 'true');
+  expect(screen.getByText('Navigation')).toBeInTheDocument();
   await waitFor(() => expect(input).toHaveFocus());
 
   result.focus();

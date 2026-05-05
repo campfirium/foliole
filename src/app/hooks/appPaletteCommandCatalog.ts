@@ -38,13 +38,13 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => ({
     id: command.appCommandId,
     title: command.paletteTitle,
-    section: 'Workspace',
+    section: 'Create',
     keywords: ['create', command.kind]
   })),
   {
     id: VIRTUAL_NODE_COMMAND.appCommandId,
     title: VIRTUAL_NODE_COMMAND.paletteTitle,
-    section: 'Workspace',
+    section: 'Create',
     keywords: ['create', 'virtual', 'saved', 'view']
   },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
@@ -58,16 +58,16 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
-  { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Workspace', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
+  { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   {
     id: APP_COMMAND_IDS.mergeHighlightsIntoTopic,
     title: 'Merge Highlights',
-    section: 'Workspace',
+    section: 'Editor',
     keywords: ['merge', 'highlights', 'topic', 'append', 'file']
   },
   { id: APP_COMMAND_IDS.restartApp, title: 'Restart App', section: 'Workspace', keywords: ['restart', 'relaunch'] },
   { id: APP_COMMAND_IDS.toggleList, title: 'Toggle List', section: 'Workspace', keywords: ['sidebar'] },
-  { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Workspace', keywords: ['developer', 'inspect'] },
+  { id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools', section: 'Developer', keywords: ['developer', 'inspect'] },
   { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Settings' },
   {
     id: APP_COMMAND_IDS.openReadwiseReaderSettings,
@@ -89,7 +89,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.goParent, title: 'Go to Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
   { id: APP_COMMAND_IDS.toggleImmersiveMode, title: 'Toggle Immersive Reading', section: 'Editor', keywords: ['immersive', 'reading', 'focus', 'fullscreen'] },
-  { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority…', section: 'Navigation', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },
+  { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority…', section: 'Editor', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },
   { id: APP_COMMAND_IDS.startStudyMode, title: 'Enter Review Mode', section: 'Review' },
   { id: APP_COMMAND_IDS.revealReviewAnswer, title: 'Reveal Review Answer', section: 'Review' },

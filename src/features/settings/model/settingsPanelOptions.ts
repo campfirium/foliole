@@ -18,7 +18,7 @@ export type SettingsCategoryId =
   | 'hotkeys';
 
 export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCategoryId; label: string }> = [
-  { id: 'about', label: 'General', description: 'View version, diagnostics, and support tools.' },
+  { id: 'about', label: 'About', description: 'View version, diagnostics, and support tools.' },
   { id: 'appearance', label: 'Appearance', description: 'Adjust the look and density of the workspace.' },
   { id: 'editor', label: 'Editor', description: 'Configure editing and writing behavior.' },
   { id: 'review', label: 'Review', description: 'Tune the scheduler and review queue.' },
@@ -34,8 +34,16 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
 
 export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [
   {
+    label: 'General',
+    categoryIds: ['about']
+  },
+  {
     label: 'Workspace',
-    categoryIds: ['about', 'appearance', 'editor', 'review', 'hotkeys', 'mouse-gestures']
+    categoryIds: ['appearance', 'editor', 'review']
+  },
+  {
+    label: 'Input',
+    categoryIds: ['hotkeys', 'mouse-gestures']
   },
   {
     label: 'Storage',

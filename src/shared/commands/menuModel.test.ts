@@ -13,23 +13,19 @@ describe('buildCommandMenuSections', () => {
   it('keeps the last used command first and sorts the rest by title', () => {
     const sections = buildCommandMenuSections(baseItems, ['workspace.openSettings']);
 
-    expect(sections[0]?.title).toBe('Commands');
-    expect(sections[0]?.items.map((item) => item.id)).toEqual([
-      'workspace.openSettings',
-      'navigation.goBack',
-      'editor.toggleDisplayMode'
-    ]);
+    expect(sections.map((section) => section.title)).toEqual(['Recent', 'Navigation', 'Editor']);
+    expect(sections[0]?.items.map((item) => item.id)).toEqual(['workspace.openSettings']);
   });
 
   it('filters sections by query', () => {
     const sections = buildCommandMenuSections(baseItems, [], 'preview');
 
     expect(sections).toHaveLength(1);
-    expect(sections[0]?.title).toBe('Commands');
+    expect(sections[0]?.title).toBe('Editor');
     expect(sections[0]?.items[0]?.id).toBe('editor.toggleDisplayMode');
   });
 
-  it('uses one flat section and sorts matching commands alphabetically', () => {
+  it('groups commands by product section order and sorts items alphabetically inside each section', () => {
     const sections = buildCommandMenuSections(
       [
         { id: 'workspace.z', title: 'Z Workspace', section: 'Workspace', enabled: true },
@@ -40,13 +36,19 @@ describe('buildCommandMenuSections', () => {
       []
     );
 
-    expect(sections).toHaveLength(1);
-    expect(sections[0]?.title).toBe('Commands');
-    expect(sections[0]?.items.map((item) => item.id)).toEqual([
-      'navigation.a',
-      'workspace.a',
-      'import.b',
-      'workspace.z'
-    ]);
+    expect(sections.map((section) => section.title)).toEqual(['Navigation', 'Workspace', 'Import']);
+    expect(sections[1]?.items.map((item) => item.id)).toEqual(['workspace.a', 'workspace.z']);
+  });
+
+  it('sorts unknown sections after known command sections', () => {
+    const sections = buildCommandMenuSections(
+      [
+        { id: 'unknown.a', title: 'A Unknown', section: 'Z Custom', enabled: true },
+        { id: 'settings.a', title: 'A Settings', section: 'Settings', enabled: true }
+      ],
+      []
+    );
+
+    expect(sections.map((section) => section.title)).toEqual(['Settings', 'Z Custom']);
   });
 });

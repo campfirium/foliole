@@ -28,6 +28,7 @@ interface CommandPaletteProps {
 interface CommandPaletteListProps {
   activeIndex: number;
   activeItems: CommandPaletteItem[];
+  displaySections: ReturnType<typeof buildCommandMenuSections>;
   emptyLabel: string;
   onRunItem: (item: CommandPaletteItem | undefined) => void;
 }
@@ -42,6 +43,7 @@ function runItem(onRunCommand: (id: string) => void, item: CommandPaletteItem | 
 function CommandPaletteList({
   activeIndex,
   activeItems,
+  displaySections,
   emptyLabel,
   onRunItem
 }: CommandPaletteListProps) {
@@ -53,27 +55,38 @@ function CommandPaletteList({
     );
   }
 
+  let enabledIndex = -1;
   return (
     <ul className={appFloatingListClassName()}>
-      {activeItems.map((item, itemIndex) => (
-        <li key={item.id}>
-          <button
-            className={appFloatingItemClassName('flex items-center justify-between text-sm')}
-            data-active={itemIndex === activeIndex}
-            data-disabled={!item.enabled}
-            disabled={!item.enabled}
-            onClick={() => onRunItem(item)}
-            type="button"
-          >
-            <span className="min-w-0 truncate font-medium text-foreground">{item.title}</span>
-            {item.shortcuts ? (
-              <span className="ml-4 text-xs text-foreground/55">
-                {formatShortcutSetLabel(item.shortcuts)}
-              </span>
-            ) : null}
-          </button>
-        </li>
-      ))}
+      {displaySections.flatMap((section) => [
+        <li className="px-3 pb-1 pt-2 text-xs font-semibold text-foreground/45 first:pt-1" key={section.id}>
+          {section.title}
+        </li>,
+        ...section.items.map((item) => {
+          if (item.enabled) {
+            enabledIndex += 1;
+          }
+          return (
+            <li key={item.id}>
+              <button
+                className={appFloatingItemClassName('flex items-center justify-between text-sm')}
+                data-active={item.enabled && enabledIndex === activeIndex}
+                data-disabled={!item.enabled}
+                disabled={!item.enabled}
+                onClick={() => onRunItem(item)}
+                type="button"
+              >
+                <span className="min-w-0 truncate font-medium text-foreground">{item.title}</span>
+                {item.shortcuts ? (
+                  <span className="ml-4 text-xs text-foreground/55">
+                    {formatShortcutSetLabel(item.shortcuts)}
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })
+      ])}
     </ul>
   );
 }
@@ -115,6 +128,7 @@ function useCommandPaletteState(
   return {
     activeIndex,
     activeItems,
+    displaySections,
     query,
     setActiveIndex,
     setQuery
@@ -141,7 +155,7 @@ export function CommandPalette({
   onRunCommand
 }: CommandPaletteProps) {
   const focusTrap = useFloatingDialogFocusTrap();
-  const { activeIndex, activeItems, query, setActiveIndex, setQuery } =
+  const { activeIndex, activeItems, displaySections, query, setActiveIndex, setQuery } =
     useCommandPaletteState({
       isOpen,
       items,
@@ -183,6 +197,7 @@ export function CommandPalette({
         <CommandPaletteList
           activeIndex={activeIndex}
           activeItems={activeItems}
+          displaySections={displaySections}
           emptyLabel="No matching commands"
           onRunItem={runPaletteItem}
         />

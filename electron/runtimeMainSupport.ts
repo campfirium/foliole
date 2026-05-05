@@ -1,8 +1,10 @@
-import type { BrowserWindowConstructorOptions, WebContents } from 'electron';
+import type { BrowserWindowConstructorOptions, Session, WebContents } from 'electron';
 
 import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import type { RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
+
+const guardedEmbeddedLinkPanelSessions = new WeakSet<Session>();
 
 export function createMainWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
   return {
@@ -44,11 +46,33 @@ export function installMainRuntimeDiagnostics() {
 }
 
 export function bindEmbeddedLinkPanelContents(contents: WebContents) {
+  if (contents.getType() === 'webview') {
+    installEmbeddedLinkPanelSessionGuards(contents.session);
+  }
   contents.setWindowOpenHandler(({ url }) => {
     if (contents.getType() === 'webview' && isAllowedEmbeddedLinkPanelUrl(url)) {
       void contents.loadURL(url);
     }
     return { action: 'deny' };
+  });
+}
+
+function installEmbeddedLinkPanelSessionGuards(session: Session | undefined) {
+  if (!session || guardedEmbeddedLinkPanelSessions.has(session)) {
+    return;
+  }
+  guardedEmbeddedLinkPanelSessions.add(session);
+  session.setPermissionRequestHandler((webContents, _permission, callback) => {
+    if (webContents?.getType() === 'webview') {
+      callback(false);
+      return;
+    }
+    callback(false);
+  });
+  session.on('will-download', (event, _item, webContents) => {
+    if (webContents?.getType() === 'webview') {
+      event.preventDefault();
+    }
   });
 }
 
