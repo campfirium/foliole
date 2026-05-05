@@ -129,6 +129,45 @@ function Remove-TrackedRuntimeHead {
   Remove-Item -Path $RuntimeHeadFile -Force -ErrorAction SilentlyContinue
 }
 
+function New-BootSession {
+  return [guid]::NewGuid().ToString("N")
+}
+
+function Resolve-ExpectedRuntimePath {
+  param([string]$WorkDir = "")
+
+  if ([string]::IsNullOrWhiteSpace($WorkDir)) {
+    return ""
+  }
+
+  return [System.IO.Path]::GetFullPath((Join-Path $WorkDir "node_modules\electron\dist\electron.exe"))
+}
+
+function Test-ProcessMatchesExpectedRuntime {
+  param(
+    $Process,
+    [string]$ExpectedRuntimePath = ""
+  )
+
+  if ([string]::IsNullOrWhiteSpace($ExpectedRuntimePath) -or $null -eq $Process) {
+    return $true
+  }
+
+  try {
+    $processPath = $Process.Path
+    if ([string]::IsNullOrWhiteSpace($processPath)) {
+      return $false
+    }
+    return [string]::Equals(
+      [System.IO.Path]::GetFullPath($processPath),
+      $ExpectedRuntimePath,
+      [System.StringComparison]::OrdinalIgnoreCase
+    )
+  } catch {
+    return $false
+  }
+}
+
 function Get-ProcessById {
   param([int]$ProcessId)
   if ($ProcessId -le 0) {
@@ -152,77 +191,85 @@ function Get-TrackedProcess {
 }
 
 function Get-TrackedRuntimeProcess {
+  param([string]$WorkDir = "")
+
   $trackedPid = Get-TrackedRuntimePid
   if ($null -eq $trackedPid) {
     return $null
   }
+
+  $expectedRuntimePath = Resolve-ExpectedRuntimePath -WorkDir $WorkDir
   $proc = Get-ProcessById -ProcessId $trackedPid
   if ($null -eq $proc) {
     Remove-TrackedRuntimePid
+    Remove-TrackedRuntimeHead
+    return $null
+  }
+  if (-not (Test-ProcessMatchesExpectedRuntime -Process $proc -ExpectedRuntimePath $expectedRuntimePath)) {
+    Remove-TrackedRuntimePid
+    Remove-TrackedRuntimeHead
     return $null
   }
   return $proc
 }
 
-function Get-ElectronRuntimeProcess {
+function Get-ElectronRuntimeCandidates {
+  param([string]$WorkDir = "")
+
+  $expectedRuntimePath = Resolve-ExpectedRuntimePath -WorkDir $WorkDir
+
+  $matched = @()
   $mainCandidates = @(Get-CimInstance Win32_Process -Filter "Name='electron.exe'" -ErrorAction SilentlyContinue)
   foreach ($candidate in $mainCandidates) {
     $commandLine = $candidate.CommandLine
     if ([string]::IsNullOrWhiteSpace($commandLine)) {
       continue
     }
-    if ($commandLine -match 'electron-dist[\\/]+main\.js') {
-      $mainProc = Get-ProcessById -ProcessId ([int]$candidate.ProcessId)
-      if ($null -ne $mainProc) {
-        return $mainProc
-      }
+    if ($commandLine -notmatch 'electron-dist[\\/]+main\.js') {
+      continue
+    }
+    $mainProc = Get-ProcessById -ProcessId ([int]$candidate.ProcessId)
+    if ($null -ne $mainProc -and (Test-ProcessMatchesExpectedRuntime -Process $mainProc -ExpectedRuntimePath $expectedRuntimePath)) {
+      $matched += $mainProc
     }
   }
 
-  $matched = @()
-  $withWindow = @()
-  $candidates = @(Get-Process -Name "electron" -ErrorAction SilentlyContinue)
-  foreach ($proc in $candidates) {
-    $procPath = ""
-    try {
-      $procPath = $proc.Path
-    } catch {
-      $procPath = ""
-    }
-
-    if ([string]::IsNullOrWhiteSpace($procPath) -or $procPath -match '[\\/]foliole[\\/]node_modules[\\/]electron[\\/]dist[\\/]electron\.exe$') {
-      $matched += $proc
-      if ($proc.MainWindowHandle -ne 0) {
-        $withWindow += $proc
-      }
-    }
+  if ($matched.Count -eq 0) {
+    return @()
   }
 
-  function Select-EarliestProcess {
-    param([System.Object[]]$List)
-    if ($null -eq $List -or $List.Count -eq 0) {
-      return $null
-    }
-    try {
-      return $List | Sort-Object StartTime | Select-Object -First 1
-    } catch {
-      return $List[0]
-    }
+  try {
+    return @($matched | Sort-Object StartTime)
+  } catch {
+    return @($matched)
+  }
+}
+
+function Get-ElectronRuntimeProcess {
+  param([string]$WorkDir = "")
+
+  $tracked = Get-TrackedRuntimeProcess -WorkDir $WorkDir
+  if ($null -ne $tracked) {
+    return $tracked
   }
 
-  if ($withWindow.Count -gt 0) {
-    return Select-EarliestProcess -List $withWindow
-  }
-
-  if ($matched.Count -gt 0) {
-    return Select-EarliestProcess -List $matched
-  }
-
-  if ($candidates.Count -gt 0) {
-    return Select-EarliestProcess -List $candidates
+  $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
+  if ($candidates.Count -eq 1) {
+    return $candidates[0]
   }
 
   return $null
+}
+
+function Get-StaleElectronRuntimeProcesses {
+  param([string]$WorkDir = "")
+
+  $trackedPid = Get-TrackedRuntimePid
+  $candidates = @(Get-ElectronRuntimeCandidates -WorkDir $WorkDir)
+  if ($null -eq $trackedPid) {
+    return $candidates
+  }
+  return @($candidates | Where-Object { $_.Id -ne $trackedPid })
 }
 
 function Stop-ProcessTree {
@@ -257,6 +304,7 @@ function Stop-StaleFolioleDevProcesses {
   param([string]$WorkDir)
 
   $escapedWorkDir = [regex]::Escape($WorkDir)
+  Stop-MatchingProcesses -NamePattern '^electron(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*electron-dist[\\/]+main\.js')
   Stop-MatchingProcesses -NamePattern '^foliole-tauri-core(?:\.exe)?$' -CommandPattern ''
   Stop-MatchingProcesses -NamePattern '^cargo(?:\.exe)?$' -CommandPattern $escapedWorkDir
   Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*vite(?:\.js)?')
@@ -291,14 +339,21 @@ function Resolve-NpmCommand {
 }
 
 function Start-ElectronShell {
-  param([string]$WorkDir)
+  param(
+    [string]$WorkDir,
+    [string]$BootSession = ""
+  )
   if (!(Test-Path -Path $WorkDir)) {
     throw "Workdir not found: $WorkDir"
   }
 
   $npmCmd = Resolve-NpmCommand
   $nodeDir = Split-Path -Path $npmCmd -Parent
-  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
+  $bootSessionValue = $BootSession
+  if ([string]::IsNullOrWhiteSpace($bootSessionValue)) {
+    $bootSessionValue = New-BootSession
+  }
+  $command = "cd /d `"$WorkDir`" && set PATH=$nodeDir;%PATH% && set FOLIOLE_BOOT_SESSION=$bootSessionValue && set ELECTRON_RUN_AS_NODE= && call `"$npmCmd`" run electron:dev"
 
   $proc = Start-Process `
     -FilePath "cmd.exe" `
@@ -314,6 +369,7 @@ function Start-ElectronShell {
 function Wait-ElectronHealthy {
   param(
     [int]$ShellPid,
+    [string]$WorkDir = "",
     [int]$MaxSeconds = 10
   )
 
@@ -323,7 +379,7 @@ function Wait-ElectronHealthy {
       return @{ ok = $false; reason = "shell-exited" }
     }
 
-    $runtime = Get-ElectronRuntimeProcess
+    $runtime = Get-ElectronRuntimeProcess -WorkDir $WorkDir
     if ($null -ne $runtime) {
       return @{ ok = $true; runtimePid = $runtime.Id }
     }
@@ -336,15 +392,17 @@ function Wait-ElectronHealthy {
 
 function Start-ElectronWithHealthCheck {
   param([string]$WorkDir)
+  $bootSession = New-BootSession
   Reset-ReadyMarker -WorkDir $WorkDir
   Stop-StaleFolioleDevProcesses -WorkDir $WorkDir
-  $started = Start-ElectronShell -WorkDir $WorkDir
-  $health = Wait-ElectronHealthy -ShellPid $started.Id -MaxSeconds (Get-HealthCheckSeconds)
+  $started = Start-ElectronShell -WorkDir $WorkDir -BootSession $bootSession
+  $health = Wait-ElectronHealthy -ShellPid $started.Id -WorkDir $WorkDir -MaxSeconds (Get-HealthCheckSeconds)
   if (-not $health.ok) {
     throw "startup health check failed: $($health.reason)"
   }
-  if (-not (Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -MaxSeconds (Get-HealthCheckSeconds))) {
-    throw "startup health check failed: app-ready-timeout"
+  $ready = Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $ready.ok) {
+    throw "startup health check failed: $($ready.reason)"
   }
 
   return @{ shellPid = $started.Id; runtimePid = $health.runtimePid }
@@ -437,23 +495,48 @@ function Wait-AppReadyMarker {
   param(
     [string]$WorkDir,
     [int]$RuntimePid,
+    [string]$ExpectedSession = "",
     [int]$MaxSeconds = 10
   )
 
   $markerPath = Resolve-ReadyMarkerPath -WorkDir $WorkDir
   for ($second = 0; $second -lt $MaxSeconds; $second += 1) {
+    $runtime = Get-ProcessById -ProcessId $RuntimePid
+    if ($null -eq $runtime) {
+      return @{ ok = $false; reason = "runtime-exited-before-app-ready" }
+    }
     if (Test-Path -Path $markerPath) {
       try {
         $event = Get-Content -Path $markerPath -Raw | ConvertFrom-Json
-        if ($event.stage -eq "app_ready" -and [int]$event.pid -eq $RuntimePid) {
-          return $true
+        if ($event.stage -ne "app_ready") {
+          Start-Sleep -Seconds 1
+          continue
         }
+
+        $markerPid = 0
+        try {
+          $markerPid = [int]$event.pid
+        } catch {
+          $markerPid = 0
+        }
+        $markerSession = ""
+        if ($null -ne $event.session) {
+          $markerSession = "$($event.session)".Trim()
+        }
+
+        if ($markerPid -ne $RuntimePid) {
+          return @{ ok = $false; reason = "app-ready-pid-mismatch"; markerPid = $markerPid; markerSession = $markerSession }
+        }
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedSession) -and $markerSession -ne $ExpectedSession) {
+          return @{ ok = $false; reason = "app-ready-session-mismatch"; markerPid = $markerPid; markerSession = $markerSession }
+        }
+        return @{ ok = $true; runtimePid = $RuntimePid; markerSession = $markerSession }
       } catch {
       }
     }
     Start-Sleep -Seconds 1
   }
-  return $false
+  return @{ ok = $false; reason = "app-ready-timeout" }
 }
 
 function Wait-ProcessExit {
@@ -508,7 +591,11 @@ function Restart-ElectronRuntimeOnly {
   $previousRendererUrl = $env:ELECTRON_RENDERER_URL
   $hadRunAsNode = Test-Path Env:ELECTRON_RUN_AS_NODE
   $previousRunAsNode = $env:ELECTRON_RUN_AS_NODE
+  $hadBootSession = Test-Path Env:FOLIOLE_BOOT_SESSION
+  $previousBootSession = $env:FOLIOLE_BOOT_SESSION
+  $bootSession = New-BootSession
   $env:ELECTRON_RENDERER_URL = $rendererUrl
+  $env:FOLIOLE_BOOT_SESSION = $bootSession
   Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
   try {
     $started = Start-Process `
@@ -520,6 +607,11 @@ function Restart-ElectronRuntimeOnly {
       -RedirectStandardError $stderrLog
   } finally {
     $env:ELECTRON_RENDERER_URL = $previousRendererUrl
+    if ($hadBootSession) {
+      $env:FOLIOLE_BOOT_SESSION = $previousBootSession
+    } else {
+      Remove-Item Env:FOLIOLE_BOOT_SESSION -ErrorAction SilentlyContinue
+    }
     if ($hadRunAsNode) {
       $env:ELECTRON_RUN_AS_NODE = $previousRunAsNode
     } else {
@@ -531,8 +623,9 @@ function Restart-ElectronRuntimeOnly {
   if (-not $health.ok) {
     return @{ ok = $false; reason = $health.reason; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
-  if (-not (Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -MaxSeconds (Get-HealthCheckSeconds))) {
-    return @{ ok = $false; reason = "app-ready-timeout"; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
+  $ready = Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $ready.ok) {
+    return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
@@ -561,7 +654,11 @@ function Start-ElectronRuntimeOnly {
   $previousRendererUrl = $env:ELECTRON_RENDERER_URL
   $hadRunAsNode = Test-Path Env:ELECTRON_RUN_AS_NODE
   $previousRunAsNode = $env:ELECTRON_RUN_AS_NODE
+  $hadBootSession = Test-Path Env:FOLIOLE_BOOT_SESSION
+  $previousBootSession = $env:FOLIOLE_BOOT_SESSION
+  $bootSession = New-BootSession
   $env:ELECTRON_RENDERER_URL = $rendererUrl
+  $env:FOLIOLE_BOOT_SESSION = $bootSession
   Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
   try {
     $started = Start-Process `
@@ -573,6 +670,11 @@ function Start-ElectronRuntimeOnly {
       -RedirectStandardError $stderrLog
   } finally {
     $env:ELECTRON_RENDERER_URL = $previousRendererUrl
+    if ($hadBootSession) {
+      $env:FOLIOLE_BOOT_SESSION = $previousBootSession
+    } else {
+      Remove-Item Env:FOLIOLE_BOOT_SESSION -ErrorAction SilentlyContinue
+    }
     if ($hadRunAsNode) {
       $env:ELECTRON_RUN_AS_NODE = $previousRunAsNode
     } else {
@@ -584,8 +686,9 @@ function Start-ElectronRuntimeOnly {
   if (-not $health.ok) {
     return @{ ok = $false; reason = $health.reason; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
-  if (-not (Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -MaxSeconds (Get-HealthCheckSeconds))) {
-    return @{ ok = $false; reason = "app-ready-timeout"; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
+  $ready = Wait-AppReadyMarker -WorkDir $WorkDir -RuntimePid $health.runtimePid -ExpectedSession $bootSession -MaxSeconds (Get-HealthCheckSeconds)
+  if (-not $ready.ok) {
+    return @{ ok = $false; reason = $ready.reason; runtimePid = $health.runtimePid; stdoutLog = $stdoutLog; stderrLog = $stderrLog }
   }
   Save-TrackedRuntimePid -ProcessId $health.runtimePid
   Save-TrackedRuntimeHead -Head (Get-RepoHead -WorkDir $WorkDir)
@@ -605,13 +708,16 @@ function Stop-Electron {
     Write-Info "stopped tracked shell pid=$($tracked.Id)"
   }
 
-  $runtime = Get-TrackedRuntimeProcess
-  if ($null -eq $runtime) {
-    $runtime = Get-ElectronRuntimeProcess
-  }
+  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
   if ($null -ne $runtime) {
     Stop-ProcessTree -ProcessId $runtime.Id
     Write-Info "stopped runtime pid=$($runtime.Id)"
+  }
+
+  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+  foreach ($staleRuntime in $staleRuntimes) {
+    Stop-ProcessTree -ProcessId $staleRuntime.Id
+    Write-Info "stopped stale runtime pid=$($staleRuntime.Id)"
   }
 
   Remove-TrackedPid
@@ -622,13 +728,13 @@ function Stop-Electron {
 
 if ($Action -eq "status") {
   $tracked = Get-TrackedProcess
-  $runtime = Get-TrackedRuntimeProcess
+  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
   $runtimeHead = Get-TrackedRuntimeHead
-  if ($null -eq $runtime) {
-    $runtime = Get-ElectronRuntimeProcess
-  }
+  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
   if ($null -ne $tracked) {
-    if ($null -ne $runtime) {
+    if ($staleRuntimes.Count -gt 0) {
+      Write-Info "status: STOPPED reason=stale-runtime-detected shell_pid=$($tracked.Id) runtime_pid=$($staleRuntimes[0].Id)"
+    } elseif ($null -ne $runtime) {
       $headInfo = ""
       if ($null -ne $runtimeHead) {
         $headInfo = " head=$runtimeHead"
@@ -637,6 +743,11 @@ if ($Action -eq "status") {
     } else {
       Write-Info "status: STOPPED reason=runtime-missing shell_pid=$($tracked.Id)"
     }
+    exit 0
+  }
+
+  if ($staleRuntimes.Count -gt 0) {
+    Write-Info "status: STOPPED reason=stale-runtime-detected runtime_pid=$($staleRuntimes[0].Id)"
     exit 0
   }
 
@@ -661,26 +772,30 @@ if ($Action -eq "stop") {
 if ($Action -eq "start") {
   $tracked = Get-TrackedProcess
   if ($null -ne $tracked) {
-    $runtime = Get-TrackedRuntimeProcess
-    if ($null -eq $runtime) {
-      $runtime = Get-ElectronRuntimeProcess
+    $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+    $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+    if ($staleRuntimes.Count -gt 0) {
+      foreach ($staleRuntime in $staleRuntimes) {
+        Stop-ProcessTree -ProcessId $staleRuntime.Id
+      }
     }
     if ($null -ne $runtime) {
       Write-Info "status: RUNNING pid=$($tracked.Id) runtime_pid=$($runtime.Id)"
     } else {
       $startedOnly = Start-ElectronRuntimeOnly -WorkDir $WindowsWorkDir
-    if (-not $startedOnly.ok) {
-      Write-Info "status: START_FAILED mode=runtime-only reason=$($startedOnly.reason) shell_pid=$($tracked.Id) stdout_log=$($startedOnly.stdoutLog) stderr_log=$($startedOnly.stderrLog)"
-      exit 1
-    }
+      if (-not $startedOnly.ok) {
+        Write-Info "status: START_FAILED mode=runtime-only reason=$($startedOnly.reason) shell_pid=$($tracked.Id) stdout_log=$($startedOnly.stdoutLog) stderr_log=$($startedOnly.stderrLog)"
+        exit 1
+      }
       Write-Info "status: STARTED mode=runtime-start-only runtime_pid=$($startedOnly.runtimePid) renderer_url=$($startedOnly.rendererUrl) shell_pid=$($tracked.Id)"
     }
     exit 0
   }
 
-  $runtime = Get-TrackedRuntimeProcess
-  if ($null -eq $runtime) {
-    $runtime = Get-ElectronRuntimeProcess
+  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+  if ($staleRuntimes.Count -gt 0) {
+    Stop-StaleFolioleDevProcesses -WorkDir $WindowsWorkDir
   }
   if ($null -ne $runtime) {
     Write-Info "status: RUNNING runtime_pid=$($runtime.Id)"
@@ -696,9 +811,12 @@ if ($Action -eq "start") {
 
 if ($Action -eq "restart") {
   $tracked = Get-TrackedProcess
-  $runtime = Get-TrackedRuntimeProcess
-  if ($null -eq $runtime) {
-    $runtime = Get-ElectronRuntimeProcess
+  $runtime = Get-TrackedRuntimeProcess -WorkDir $WindowsWorkDir
+  $staleRuntimes = @(Get-StaleElectronRuntimeProcesses -WorkDir $WindowsWorkDir)
+  if ($staleRuntimes.Count -gt 0) {
+    foreach ($staleRuntime in $staleRuntimes) {
+      Stop-ProcessTree -ProcessId $staleRuntime.Id
+    }
   }
   if ($null -eq $runtime) {
     if ($null -eq $tracked) {

@@ -224,6 +224,82 @@ describe('windows-preview script', () => {
     }
   });
 
+  it('treats stale runtime status as untrusted and starts a fresh client instead of accepting RUNNING', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: STOPPED reason=stale-runtime-detected runtime_pid=42"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  echo "[windows-restart-client] status: STARTED runtime_pid=77"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('windows client: STOPPED; starting');
+      expect(result.stdout).toContain('windows client: RUNNING (after start)');
+      const actions = (await readFile(actionLog, 'utf8'))
+        .split('\n')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      expect(actions).toEqual(['status', 'start']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('fails fast when start reports current runtime never reached its own app_ready', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, actionLog } = await createMockScripts(
+        tempRoot,
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: STOPPED"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "start" ]; then',
+          '  echo "[windows-restart-client] status: START_FAILED reason=runtime-exited-before-app-ready"',
+          '  exit 1',
+          'fi',
+          'exit 1'
+        ].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('windows client: failed to start');
+      expect(result.stdout).toContain('reason=runtime-exited-before-app-ready');
+      const actions = (await readFile(actionLog, 'utf8'))
+        .split('\n')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      expect(actions).toEqual(['status', 'start']);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('restarts when runtime head is behind committed electron changes even without local electron diff', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
