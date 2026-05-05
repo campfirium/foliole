@@ -30,6 +30,7 @@ const HOST_API_CONSUMERS = [
   'FolioleCompanionBootstrapState.java',
   'FolioleCompanionDesktopHttpClient.java',
   'FolioleCompanionNetworkPluginActions.java',
+  'FolioleCompanionNsdDiscovery.java',
   'FolioleCompanionSyncPackTransferPlugin.java',
   'FolioleCompanionWorkspaceSyncPluginActions.java'
 ].map((fileName) => path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android', fileName));
@@ -41,8 +42,12 @@ describe('Android host bridge contract metadata', () => {
     expect(definitions.hostApi).toEqual(ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS.hostApi);
     expect(definitions.hostApi.network.discoveryDefaults).toMatchObject({
       emulatorHost: '10.0.2.2',
-      endpointTemplate: 'http://{host}:38641',
-      hostToken: '{host}'
+      endpointTemplate: 'http://{host}:{port}',
+      hostToken: '{host}',
+      port: 38641,
+      portToken: '{port}',
+      serviceType: '_foliole-sync._tcp.',
+      timeoutMs: 1500
     });
     expect(definitions.hostApi.workspaceSync.requestKeys).toMatchObject({
       endpointUrl: 'endpoint_url',
@@ -62,6 +67,8 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.bootstrapBootedAtOutputKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)');
+    expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)');
+    expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkDiscoveryTimeoutMs(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext())');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey');
     expect(combinedSource).not.toContain('getString("endpoint_url"');
@@ -74,5 +81,7 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).not.toContain('"10.0.2.2"');
     expect(combinedSource).not.toContain('"http://"');
     expect(combinedSource).not.toContain('":38641"');
+    expect(combinedSource).not.toContain('"_foliole-sync._tcp."');
+    expect(combinedSource).not.toContain('DISCOVERY_TIMEOUT_MS');
   });
 });

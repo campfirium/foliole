@@ -62,8 +62,25 @@ final class FolioleCompanionHostBridgeContractDefinitions {
     }
 
     static String networkEndpointUrl(Context context, String hostAddress) throws Exception {
+        return networkEndpointUrl(context, hostAddress, networkPort(context));
+    }
+
+    static String networkEndpointUrl(Context context, String hostAddress, int port) throws Exception {
         return networkDiscoveryDefault(context, "endpointTemplate")
-            .replace(networkDiscoveryDefault(context, "hostToken"), hostAddress);
+            .replace(networkDiscoveryDefault(context, "hostToken"), hostAddress)
+            .replace(networkDiscoveryDefault(context, "portToken"), String.valueOf(port));
+    }
+
+    static int networkPort(Context context) throws Exception {
+        return networkDiscoveryDefaultInt(context, "port");
+    }
+
+    static String networkServiceType(Context context) throws Exception {
+        return networkDiscoveryDefault(context, "serviceType");
+    }
+
+    static int networkDiscoveryTimeoutMs(Context context) throws Exception {
+        return networkDiscoveryDefaultInt(context, "timeoutMs");
     }
 
     static String networkStatusResponseKey(Context context) throws Exception {
@@ -120,6 +137,12 @@ final class FolioleCompanionHostBridgeContractDefinitions {
 
     private static String networkDiscoveryDefault(Context context, String key) throws Exception {
         return hostApiString(context, "network", "discoveryDefaults", key);
+    }
+
+    private static int networkDiscoveryDefaultInt(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.hostApiGroup(context, "network")
+            .getJSONObject("discoveryDefaults")
+            .getInt(key);
     }
 
     private static String networkRequestKey(Context context, String key) throws Exception {

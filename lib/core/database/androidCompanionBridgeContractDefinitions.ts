@@ -14,8 +14,12 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     network: {
       discoveryDefaults: {
         emulatorHost: '10.0.2.2',
-        endpointTemplate: 'http://{host}:38641',
-        hostToken: '{host}'
+        endpointTemplate: 'http://{host}:{port}',
+        hostToken: '{host}',
+        port: 38641,
+        portToken: '{port}',
+        serviceType: '_foliole-sync._tcp.',
+        timeoutMs: 1500
       },
       discoveryResponseKeys: {
         endpointUrls: 'endpoint_urls'
