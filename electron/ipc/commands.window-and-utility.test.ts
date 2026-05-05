@@ -47,7 +47,12 @@ const {
     isMaximized: vi.fn(() => false),
     maximize: vi.fn(),
     minimize: vi.fn(),
-    webContents: { send: vi.fn(), toggleDevTools: vi.fn() },
+    webContents: {
+      executeJavaScript: vi.fn().mockResolvedValue(false),
+      isDestroyed: vi.fn(() => false),
+      send: vi.fn(),
+      toggleDevTools: vi.fn()
+    },
     unmaximize: vi.fn()
   },
   openExternal: vi.fn().mockResolvedValue(undefined),
