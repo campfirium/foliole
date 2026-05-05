@@ -8,6 +8,7 @@ import {
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
 import { applyReviewGrade } from '../database/reviewMutations.js';
+import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { bootReport } from './boot.js';
 import type { InvokeRequest } from './contracts.js';
@@ -140,6 +141,9 @@ async function handleWindowCommand(command: string, context?: InvokeContext): Pr
 }
 
 async function handleStorageCommand(command: string, args: Record<string, unknown>): Promise<unknown> {
+  if (command === 'load_workspace_snapshot') {
+    return loadWorkspaceSnapshot();
+  }
   if (command === 'load_app_settings_state') {
     return loadAppSettingsState();
   }
