@@ -40,15 +40,15 @@ it('builds content blob metadata upsert for referenced body blobs', () => {
 
 it('builds node and attachment pack apply statements against an incoming alias', () => {
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
-    'FROM incoming.nodes WHERE id IN'
+    'FROM incoming.nodes incoming'
   );
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming', incomingHasCurrentVersionId: false })).toContain(
-    'SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.nodes.id'
+    'SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id'
   );
   expect(buildSyncPackNodeAttachmentDeleteSql({ incomingAlias: 'incoming' })).toContain(
     'DELETE FROM main.node_attachments WHERE node_id IN'
   );
   expect(buildSyncPackNodeAttachmentInsertSql({ incomingAlias: 'incoming' })).toContain(
-    'SELECT node_id, attachment_id, role FROM incoming.node_attachments'
+    'INNER JOIN main.attachments attachment ON attachment.id = incoming.attachment_id'
   );
 });

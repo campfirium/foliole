@@ -60,17 +60,18 @@ public class FolioleCompanionWebViewBridgeSmokeTest {
                  FolioleCompanionSyncPackContainer.prepare(packFile)) {
             WebView webView = activity.findViewById(R.id.webview);
             assertNotNull(webView);
+            waitForBridge(instrumentation, webView);
             loadProbeUrl(instrumentation, webView);
             waitForProbe(instrumentation, webView);
 
             JSONObject applyResult = applyPackPath(instrumentation, webView, preparedPack.incomingFile.getAbsolutePath());
 
-            assertTrue(applyResult.optBoolean("ok"));
+            assertTrue(applyResult.toString(), applyResult.optBoolean("ok"));
             JSONObject result = applyResult.getJSONObject("result");
             assertEquals(3, result.getInt("applied_object_count"));
             assertEquals(2, result.getInt("applied_blob_count"));
             assertEquals(3, result.getInt("to_state_seq"));
-            assertEquals(3, countRows(context, "sync_object_state"));
+            assertEquals(3, countPackStateRows(context));
         } finally {
             instrumentation.runOnMainSync(activity::finish);
             deleteFile(packFile);
@@ -119,7 +120,8 @@ public class FolioleCompanionWebViewBridgeSmokeTest {
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Companion sync apply probe was not installed.");
+        throw new IllegalStateException("Companion sync apply probe was not installed at " +
+            evaluateRaw(instrumentation, webView, "window.location.href"));
     }
 
     private static JSONObject applyPackPath(
@@ -191,14 +193,20 @@ public class FolioleCompanionWebViewBridgeSmokeTest {
         }
     }
 
-    private static int countRows(Context context, String table) {
+    private static int countPackStateRows(Context context) {
         try (
             SQLiteDatabase database = SQLiteDatabase.openDatabase(
                 context.getDatabasePath(FolioleCompanionDatabaseHelper.DATABASE_NAME).getAbsolutePath(),
                 null,
                 SQLiteDatabase.OPEN_READONLY
             );
-            Cursor cursor = database.rawQuery("SELECT COUNT(*) FROM " + table, null)
+            Cursor cursor = database.rawQuery(
+                "SELECT COUNT(*) FROM sync_object_state WHERE " +
+                    "(object_type = 'node' AND object_id = 'node-1') OR " +
+                    "(object_type = 'external_document' AND object_id = 'folder-1:doc.md') OR " +
+                    "(object_type = 'setting' AND object_id = 'user_space:windows:desktop:*:app_settings')",
+                null
+            )
         ) {
             cursor.moveToFirst();
             return cursor.getInt(0);

@@ -3,7 +3,7 @@ import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSync
 import { loadCompanionBootstrapState } from './companionBootstrap';
 import { applyCompanionSyncPackPathWithSharedCore } from './companionSyncPackNodes';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import { FolioleCompanionSync, isNativeAndroidCompanionRuntime } from './companionWorkspaceSyncBridge';
+import { FolioleCompanionSync } from './companionWorkspaceSyncBridge';
 
 const PROBE_QUERY_KEY = 'foliole-sync-probe';
 
@@ -27,7 +27,7 @@ export function installCompanionSyncInstrumentationProbe() {
 }
 
 function shouldInstallCompanionSyncInstrumentationProbe() {
-  if (typeof window === 'undefined' || !isNativeAndroidCompanionRuntime()) {
+  if (typeof window === 'undefined') {
     return false;
   }
   return new URL(window.location.href).searchParams.get(PROBE_QUERY_KEY) === '1';

@@ -67,6 +67,23 @@ it('applies nodes and node attachments from an attached sync pack', async () => 
   }]);
 });
 
+it('skips pack node attachment links when the attachment metadata is missing locally', async () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.prepare('DELETE FROM attachments WHERE id = ?').run('att-1');
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-missing-attachment-test' });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await applySyncPackNodesWithDbPort(port);
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+
+  expect(connection.sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get('node-1')).toEqual({
+    title: 'Packed Node'
+  });
+  expect(connection.sqlite.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all()).toEqual([]);
+});
+
 it('applies pack nodes only when the attached pack cursor is contiguous', async () => {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-surface-test' });

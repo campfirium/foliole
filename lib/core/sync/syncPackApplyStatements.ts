@@ -34,14 +34,27 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
 export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {}) {
   const alias = incomingAlias(options);
   const versionExpr = options.incomingHasCurrentVersionId === false
-    ? `(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = ${alias}.nodes.id)`
+    ? `(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id)`
     : 'current_version_id';
-  return `INSERT OR REPLACE INTO main.nodes (` +
+  return `WITH RECURSIVE applyable_nodes(id, parent_id, depth) AS (` +
+    `SELECT incoming.id, incoming.parent_id, 0 FROM ${alias}.nodes incoming ` +
+    `WHERE incoming.id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      incomingAlias: alias,
+      objectType: 'node'
+    })}) AND (incoming.parent_id IS NULL OR incoming.parent_id NOT IN (SELECT id FROM ${alias}.nodes)) ` +
+    `UNION ALL SELECT child.id, child.parent_id, applyable_nodes.depth + 1 FROM ${alias}.nodes child ` +
+    `INNER JOIN applyable_nodes ON child.parent_id = applyable_nodes.id ` +
+    `WHERE child.id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      incomingAlias: alias,
+      objectType: 'node'
+    })})) ` +
+    `INSERT OR REPLACE INTO main.nodes (` +
     `id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, ` +
     `opening_text, content, current_version_id, created_at, updated_at, deleted_at) ` +
-    `SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, ` +
-    `opening_text, content, ${versionExpr}, created_at, updated_at, deleted_at FROM ${alias}.nodes ` +
-    `WHERE id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })})`;
+    `SELECT incoming.id, incoming.parent_id, incoming.kind, incoming.title, incoming.is_title_manual, ` +
+    `incoming.hide_title_heading, incoming.body_blob_hash, incoming.opening_text, incoming.content, ` +
+    `${versionExpr}, incoming.created_at, incoming.updated_at, incoming.deleted_at FROM ${alias}.nodes incoming ` +
+    `INNER JOIN applyable_nodes ON applyable_nodes.id = incoming.id ORDER BY applyable_nodes.depth ASC`;
 }
 
 export function buildSyncPackNodeAttachmentDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
@@ -52,8 +65,9 @@ export function buildSyncPackNodeAttachmentDeleteSql(options: SyncPackApplyableR
 export function buildSyncPackNodeAttachmentInsertSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
   return `INSERT OR REPLACE INTO main.node_attachments (node_id, attachment_id, role) ` +
-    `SELECT node_id, attachment_id, role FROM ${alias}.node_attachments ` +
-    `WHERE node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })})`;
+    `SELECT incoming.node_id, incoming.attachment_id, incoming.role FROM ${alias}.node_attachments incoming ` +
+    `INNER JOIN main.attachments attachment ON attachment.id = incoming.attachment_id ` +
+    `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })})`;
 }
 
 export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRowsOptions = {}) {

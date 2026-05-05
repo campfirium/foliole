@@ -31,7 +31,21 @@ export async function applySyncPackNodesWithDbPort(
   port: DbPort,
   options: SyncPackNodeApplyOptions = {}
 ) {
+  await applySyncPackNodeRowsWithDbPort(port, options);
+  await applySyncPackNodeAttachmentsWithDbPort(port, options);
+}
+
+async function applySyncPackNodeRowsWithDbPort(
+  port: DbPort,
+  options: SyncPackNodeApplyOptions = {}
+) {
   await port.run(buildSyncPackNodeUpsertSql(options));
+}
+
+async function applySyncPackNodeAttachmentsWithDbPort(
+  port: DbPort,
+  options: SyncPackNodeApplyOptions = {}
+) {
   await port.run(buildSyncPackNodeAttachmentDeleteSql(options));
   await port.run(buildSyncPackNodeAttachmentInsertSql(options));
 }
@@ -47,12 +61,13 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   let appliedReviewOpIds: string[] = [];
   if (shouldApply) {
     appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
-    await applySyncPackNodesWithDbPort(port, options);
+    await applySyncPackNodeRowsWithDbPort(port, options);
     await applySyncPackExternalDocumentsWithDbPort(port, options);
     await applySyncPackSettingObjectsWithDbPort(port, options);
     await applySyncPackMetadataObjectsWithDbPort(port, options);
     await applySyncPackLearningObjectsWithDbPort(port, options);
     await applySyncPackAttachmentObjectsWithDbPort(port, options);
+    await applySyncPackNodeAttachmentsWithDbPort(port, options);
     await applySyncPackViewStateObjectsWithDbPort(port, options);
     appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {

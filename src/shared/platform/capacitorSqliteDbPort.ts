@@ -23,7 +23,7 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
         const result = await runStatement(connection, sql, params);
         return normalizeRunResult(result);
       } catch (error) {
-        throw normalizeSqliteError(error);
+        throw normalizeSqliteError(error, sql);
       }
     },
     async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
@@ -95,13 +95,22 @@ function isByteArray(value: unknown): value is number[] {
   return Array.isArray(value) && value.every((item) => Number.isInteger(item) && item >= 0 && item <= 255);
 }
 
-function normalizeSqliteError(error: unknown) {
+function normalizeSqliteError(error: unknown, sql?: string) {
   if (error instanceof DbPortError) return error;
   if (hasSqliteCode(error)) {
-    return new DbPortError(error.message, normalizeSqliteCode(error.code), error);
+    return new DbPortError(withSqlContext(error.message, sql), normalizeSqliteCode(error.code), error);
   }
   const message = error instanceof Error ? error.message : String(error);
-  return new DbPortError(message, inferSqliteCode(message), error);
+  return new DbPortError(withSqlContext(message, sql), inferSqliteCode(message), error);
+}
+
+function withSqlContext(message: string, sql?: string) {
+  if (!sql) return message;
+  return `${message} while running: ${summarizeSql(sql)}`;
+}
+
+function summarizeSql(sql: string) {
+  return sql.trim().replace(/\s+/g, ' ').slice(0, 240);
 }
 
 function hasSqliteCode(error: unknown): error is { code: string; message: string } {
