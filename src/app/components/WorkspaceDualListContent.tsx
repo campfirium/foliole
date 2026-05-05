@@ -2,18 +2,19 @@ import { useMemo } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { useDualListResizer } from '../hooks/useDualListResizer';
+import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
-import { WorkspaceFolderContentsList } from './WorkspaceFolderContentsList';
 import {
   buildFolderNavigationNodeOrder,
   buildFolderNavigationNodesById,
-  collectFolderColumnNodeIds,
+  buildTopicNavigationNodesById,
+  collectTopicColumnNodeIds,
   resolveActiveFolderColumnNodeId,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
+import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
@@ -47,35 +48,43 @@ function useWorkspaceDualListState(args: WorkspaceDualListContentProps) {
       args.listNodesById,
       args.trashedNodeIds
     );
+    const folderNodeOrder = buildFolderNavigationNodeOrder(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
+
+    const topicNodeOrder = collectTopicColumnNodeIds(
+      activeFolderColumnId,
+      args.nodeOrder,
+      args.listNodesById,
+      args.trashedNodeIds
+    );
 
     return {
       activeFolderColumnId,
       activeFolderId,
-      folderItemIds: collectFolderColumnNodeIds(
-        activeFolderColumnId,
-        args.nodeOrder,
-        args.listNodesById,
-        args.trashedNodeIds
-      ),
-      folderNodeOrder: buildFolderNavigationNodeOrder(
-        args.nodeOrder,
-        args.listNodesById,
-        args.trashedNodeIds
-      ),
+      folderNodeOrder,
       folderNodesById: buildFolderNavigationNodesById(
         args.nodeOrder,
         args.listNodesById,
         args.trashedNodeIds
-      )
+      ),
+      topicNodeOrder,
+      topicNodesById: buildTopicNavigationNodesById(topicNodeOrder, args.listNodesById)
     };
-  }, [args]);
+  }, [
+    args.activeNodeId,
+    args.isTrashViewOpen,
+    args.isVirtualViewOpen,
+    args.listNodesById,
+    args.nodeOrder,
+    args.trashedNodeIds
+  ]);
 }
 
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const dualListState = useWorkspaceDualListState(props);
-  const folderListResize = useDualListResizer();
+  const folderListResize = useDualListResizer(DUAL_LIST_WIDTH_DEFAULT);
+  const topicRootId = dualListState?.activeFolderColumnId ?? dualListState?.activeFolderId ?? null;
 
-  if (!dualListState) {
+  if (!dualListState || !topicRootId) {
     return (
       <NodeListTree
         activeNodeId={props.activeNodeId}
@@ -117,11 +126,12 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         onPointerDown={folderListResize.handlePointerDown}
         width={folderListResize.width}
       />
-      <WorkspaceFolderContentsList
-        activeFolderId={dualListState.activeFolderColumnId}
+      <WorkspaceTopicTree
+        activeFolderId={topicRootId}
         activeNodeId={props.activeNodeId}
-        itemIds={dualListState.folderItemIds}
-        nodesById={props.listNodesById}
+        itemIds={dualListState.topicNodeOrder}
+        nodesById={dualListState.topicNodesById}
+        onOpenMoveToNode={props.onOpenMoveToNode}
         onSelectNode={props.onSelectNode}
       />
     </div>

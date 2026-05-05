@@ -1,4 +1,4 @@
-import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 function isVisibleFolderNode(
@@ -8,7 +8,45 @@ function isVisibleFolderNode(
   if (!node || trashedNodeIds.includes(node.id)) {
     return false;
   }
-  return node.kind === 'folder';
+  return node.kind === 'folder' && !isVirtualRootNode(node) && !isVirtualNode(node);
+}
+
+function isVisibleTopicNode(
+  node: WorkspaceListNode | undefined,
+  trashedNodeIds: readonly string[]
+) {
+  if (!node || trashedNodeIds.includes(node.id)) {
+    return false;
+  }
+  return node.kind !== 'folder';
+}
+
+function buildVisibleChildMap(
+  nodeOrder: string[],
+  nodesById: WorkspaceListNodesById,
+  trashedNodeIds: readonly string[]
+) {
+  const visibleChildrenByParent = new Map<string | null, string[]>();
+
+  for (const nodeId of nodeOrder) {
+    if (trashedNodeIds.includes(nodeId)) {
+      continue;
+    }
+    const node = nodesById[nodeId];
+    if (!node) {
+      continue;
+    }
+
+    const parentId = node.parentNodeId ?? null;
+    const siblings = visibleChildrenByParent.get(parentId);
+    if (siblings) {
+      siblings.push(nodeId);
+      continue;
+    }
+    visibleChildrenByParent.set(parentId, [nodeId]);
+  }
+
+  return visibleChildrenByParent;
 }
 
 export function buildFolderNavigationNodeOrder(
@@ -108,4 +146,52 @@ export function collectFolderColumnNodeIds(
     }
     return (nodesById[nodeId]?.parentNodeId ?? null) === folderNodeId;
   });
+}
+
+export function collectTopicColumnNodeIds(
+  folderNodeId: string | null,
+  nodeOrder: string[],
+  nodesById: WorkspaceListNodesById,
+  trashedNodeIds: readonly string[]
+) {
+  if (!folderNodeId) {
+    return [];
+  }
+
+  const visibleChildrenByParent = buildVisibleChildMap(nodeOrder, nodesById, trashedNodeIds);
+  const topicNodeIds: string[] = [];
+  const topicNodeIdSet = new Set<string>();
+  const directTopicRootIds = (visibleChildrenByParent.get(folderNodeId) ?? []).filter((nodeId) =>
+    isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)
+  );
+  const queue = [...directTopicRootIds];
+  let queueIndex = 0;
+
+  while (queueIndex < queue.length) {
+    const currentNodeId = queue[queueIndex];
+    queueIndex += 1;
+
+    if (topicNodeIdSet.has(currentNodeId)) {
+      continue;
+    }
+
+    topicNodeIdSet.add(currentNodeId);
+    topicNodeIds.push(currentNodeId);
+    const childIds = (visibleChildrenByParent.get(currentNodeId) ?? []).filter((nodeId) =>
+      isVisibleTopicNode(nodesById[nodeId], trashedNodeIds)
+    );
+    queue.push(...childIds);
+  }
+
+  return nodeOrder.filter((nodeId) => topicNodeIdSet.has(nodeId));
+}
+
+export function buildTopicNavigationNodesById(
+  topicNodeIds: string[],
+  nodesById: WorkspaceListNodesById
+) {
+  const visibleTopicIds = new Set(topicNodeIds);
+  return Object.fromEntries(
+    Object.entries(nodesById).map(([nodeId, node]) => [nodeId, visibleTopicIds.has(nodeId) ? node : undefined])
+  );
 }
