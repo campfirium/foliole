@@ -3,7 +3,6 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -22,6 +21,7 @@ import { createAttachmentRecord } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
+import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
 import { resolveAttachmentResource, resolveAttachmentStoragePath } from './resourceResolver.js';
 
 let tempRoot = '';
@@ -59,7 +59,7 @@ it('returns a unified attachment resource URL when the record and file both exis
   expect(resolveAttachmentResource('attachment-1', mockedAppDataDir)).toEqual({
     status: 'ready',
     mime_type: 'image/png',
-    resource_url: pathToFileURL(storedFilePath).toString()
+    resource_url: buildAttachmentAssetUrl('attachment-1')
   });
 });
 

@@ -11,11 +11,11 @@ import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js
 import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordByHash } from '../database/attachments.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { rewriteInlineImageReferences } from './inlineImageReferences.js';
 
 export type { PersistedImportRecord, PreparedImportRecord };
 
 const IMAGE_ATTACHMENT_ROLE = 'image';
-const MARKDOWN_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Map([
   ['.gif', 'image/gif'],
@@ -27,30 +27,6 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Map([
 
 function createContentHash(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
-}
-
-function parseMarkdownImageTarget(target: string) {
-  const trimmedTarget = target.trim();
-  if (!trimmedTarget) {
-    return null;
-  }
-  if (trimmedTarget.startsWith('<')) {
-    const closingIndex = trimmedTarget.indexOf('>');
-    if (closingIndex > 0) {
-      return {
-        destination: trimmedTarget.slice(1, closingIndex),
-        suffix: trimmedTarget.slice(closingIndex + 1).trim()
-      };
-    }
-  }
-  const match = /^(\S+)(?:\s+(.+))?$/.exec(trimmedTarget);
-  if (!match) {
-    return null;
-  }
-  return {
-    destination: match[1],
-    suffix: match[2]?.trim() ?? ''
-  };
 }
 
 function decodeMarkdownPath(destination: string) {
@@ -158,18 +134,17 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
 
   const nodeId = record.nodeId;
   const degradedMessages: string[] = [];
-  const rewrittenContent = prepared.content.replace(MARKDOWN_IMAGE_PATTERN, (fullMatch, altText: string, rawTarget: string) => {
-    const parsedTarget = parseMarkdownImageTarget(rawTarget);
-    if (!parsedTarget) {
-      return fullMatch;
-    }
-    if (isRemoteImageDestination(parsedTarget.destination) || parsedTarget.destination.startsWith('attachment://')) {
-      return fullMatch;
+  const rewrittenContent = rewriteInlineImageReferences(prepared.content, (reference) => {
+    if (isRemoteImageDestination(reference.destination) || reference.destination.startsWith('attachment://')) {
+      return reference.fullMatch;
     }
 
-    const sourcePath = resolveLocalImageSourcePath(parsedTarget.destination, prepared.sourceLocator);
+    const sourcePath = resolveLocalImageSourcePath(reference.destination, prepared.sourceLocator);
     if (!sourcePath) {
-      return fullMatch;
+      return reference.fullMatch;
+    }
+    if (reference.syntax === 'obsidian' && !resolveMimeType(sourcePath)) {
+      return reference.fullMatch;
     }
 
     const importResult = importLocalImageAttachment(nodeId, sourcePath);
@@ -178,8 +153,8 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
       return `[${importResult.message}]`;
     }
 
-    const suffix = parsedTarget.suffix ? ` ${parsedTarget.suffix}` : '';
-    return `![${altText}](attachment://${importResult.attachmentId}${suffix})`;
+    const suffix = reference.suffix ? ` ${reference.suffix}` : '';
+    return `![${reference.altText}](attachment://${importResult.attachmentId}${suffix})`;
   });
 
   if (rewrittenContent === prepared.content && degradedMessages.length === 0) {

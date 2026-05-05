@@ -10,6 +10,7 @@ import {
   type BrowserWindowConstructorOptions
 } from 'electron';
 
+import { registerAttachmentProtocol, registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
 import { initializeDatabase } from './database/migrate.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
@@ -28,13 +29,12 @@ import {
 import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { bindMenuToWindow, installAppMenu } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
+import { loadRenderer, logActiveRuntimeDiagnostics } from './rendererLoader.js';
 import {
   collectRuntimeDiagnosticsSnapshot,
   configureRuntimeAppIdentity,
-  formatRuntimeDiagnosticsSnapshot,
-  resolveRendererTargetUrl
+  formatRuntimeDiagnosticsSnapshot
 } from './runtimeIdentity.js';
-import { resolveRendererIndexPath } from './runtimePaths.js';
 import { bindWindowRuntimeDiagnostics } from './windowRuntimeDiagnostics.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
@@ -51,14 +51,7 @@ const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
 
 console.info('[electron-main] app identity configured', configuredIdentity);
 console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
-
-function resolveRendererUrl() {
-  return process.env.ELECTRON_RENDERER_URL ?? null;
-}
-
-function resolveRendererFilePath() {
-  return resolveRendererIndexPath(__dirname, fs.existsSync);
-}
+registerAttachmentProtocolScheme();
 
 function createWindowOptions(): BrowserWindowConstructorOptions {
   return {
@@ -91,46 +84,6 @@ function focusFirstWindow() {
   firstWindow.focus();
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, ms);
-  });
-}
-
-async function loadRenderer(window: ElectronBrowserWindow) {
-  const devUrl = resolveRendererUrl();
-  if (devUrl) {
-    await loadRendererUrlWithRetry(window, devUrl);
-    return;
-  }
-  await window.loadFile(resolveRendererFilePath());
-}
-
-function resolveActiveRendererUrl(window: ElectronBrowserWindow) {
-  const activeUrl = window.webContents.getURL();
-  if (activeUrl) {
-    return activeUrl;
-  }
-  return resolveRendererTargetUrl(__dirname, fs.existsSync);
-}
-
-async function loadRendererUrlWithRetry(
-  window: ElectronBrowserWindow,
-  url: string,
-  maxAttempts = 30
-) {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      await window.loadURL(url);
-      return;
-    } catch (error) {
-      lastError = error;
-      await wait(300);
-    }
-  }
-  throw lastError;
-}
 
 function installRuntimeDiagnostics() {
   app.on('render-process-gone', (_, webContents, details) => {
@@ -204,14 +157,8 @@ async function createMainWindow() {
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);
-  await loadRenderer(window);
-  console.info(
-    '[electron-main] active runtime diagnostics',
-    formatRuntimeDiagnosticsSnapshot({
-      ...runtimeDiagnostics,
-      rendererUrl: resolveActiveRendererUrl(window)
-    })
-  );
+  await loadRenderer(window, __dirname);
+  logActiveRuntimeDiagnostics(window, __dirname, runtimeDiagnostics);
 }
 
 function installInvokeHandler() {
@@ -248,6 +195,7 @@ app.on('before-quit', () => {
 app.whenReady().then(async () => {
   installRuntimeDiagnostics();
   initializeDatabase();
+  registerAttachmentProtocol();
   installInvokeHandler();
   installAppMenu();
   await migrateLegacyWebviewStorage();

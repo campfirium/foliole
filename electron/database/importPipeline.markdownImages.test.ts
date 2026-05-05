@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentResource } from '../attachments/resourceResolver.js';
 
 import { listNodeAttachments } from './attachments.js';
@@ -43,12 +44,14 @@ async function createMarkdownImportFixture(rootDir: string) {
   const subdirectoryPath = path.join(rootDir, 'images');
   const nestedImagePath = path.join(subdirectoryPath, 'chart.webp');
   const absoluteImagePath = path.join(rootDir, 'absolute.jpg');
+  const spacedEmbedPath = path.join(rootDir, 'Pasted image 2026-03-30 100000.png');
   const sourceMarkdownPath = path.join(rootDir, 'note.md');
 
   await fs.mkdir(subdirectoryPath, { recursive: true });
   await fs.writeFile(relativeImagePath, Buffer.from('cover-image'));
   await fs.writeFile(nestedImagePath, Buffer.from('chart-image'));
   await fs.writeFile(absoluteImagePath, Buffer.from('absolute-image'));
+  await fs.writeFile(spacedEmbedPath, Buffer.from('obsidian-embed-image'));
   await fs.writeFile(
     sourceMarkdownPath,
     [
@@ -57,6 +60,9 @@ async function createMarkdownImportFixture(rootDir: string) {
       'Relative image: ![Cover](cover.png)',
       'Nested image: ![Chart](images/chart.webp)',
       `Absolute image: ![Absolute](${absoluteImagePath})`,
+      'Obsidian image embed: ![[Pasted image 2026-03-30 100000.png]]',
+      'Obsidian nested embed: ![[images/chart.webp|Chart alias]]',
+      'Obsidian note embed: ![[Linked note]]',
       'Remote image: ![Remote](https://example.com/remote.png)',
       'Missing image: ![Missing](missing.png)'
     ].join('\n')
@@ -97,14 +103,18 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   expect(nodeRow.content).toContain('![Cover](attachment://');
   expect(nodeRow.content).toContain('![Chart](attachment://');
   expect(nodeRow.content).toContain('![Absolute](attachment://');
+  expect(nodeRow.content).toContain('![Pasted image 2026-03-30 100000](attachment://');
+  expect(nodeRow.content).toContain('![Chart alias](attachment://');
+  expect(nodeRow.content).toContain('![[Linked note]]');
   expect(nodeRow.content).toContain('![Remote](https://example.com/remote.png)');
   expect(nodeRow.content).toContain('[Missing local image:');
   expect(nodeRow.content).not.toContain('cover.png)');
   expect(nodeRow.content).not.toContain('images/chart.webp)');
   expect(nodeRow.content).not.toContain(`${absoluteImagePath})`);
-  expect(attachments).toHaveLength(3);
+  expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
+  expect(attachments).toHaveLength(4);
   expect(new Set(attachments.map((entry) => entry.attachment.originalName))).toEqual(
-    new Set(['absolute.jpg', 'chart.webp', 'cover.png'])
+    new Set(['absolute.jpg', 'chart.webp', 'cover.png', 'Pasted image 2026-03-30 100000.png'])
   );
 
   await fs.rm(sourceRoot, { recursive: true, force: true });
@@ -112,7 +122,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   for (const entry of attachments) {
     expect(resolveAttachmentResource(entry.attachmentId, mockedAppDataDir)).toEqual({
       mime_type: entry.attachment.mimeType,
-      resource_url: `attachment://${entry.attachmentId}`,
+      resource_url: buildAttachmentAssetUrl(entry.attachmentId),
       status: 'ready'
     });
   }
