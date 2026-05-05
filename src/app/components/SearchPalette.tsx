@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import {
+  hasAppRuntimeCommandRepository,
+  searchWorkspaceInRuntime
+} from '../../shared/platform/appRuntimeCommandRepository';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
@@ -34,8 +36,7 @@ function useSearchResults(
   const [runtimeError, setRuntimeError] = useState(false);
 
   useEffect(() => {
-    const runtimeInvoke = getRuntimeInvoke();
-    if (!props.isOpen || !runtimeInvoke || !query.trim()) {
+    if (!props.isOpen || !hasAppRuntimeCommandRepository() || !query.trim()) {
       setRuntimeResults([]);
       setRuntimeError(false);
       return;
@@ -44,7 +45,7 @@ function useSearchResults(
     let cancelled = false;
     setRuntimeResults([]);
     setRuntimeError(false);
-    void runtimeInvoke(NATIVE_COMMANDS.searchWorkspace, { query })
+    void searchWorkspaceInRuntime(query)
       .then((results) => {
         if (!cancelled) {
           setRuntimeResults(results);
@@ -61,7 +62,8 @@ function useSearchResults(
     };
   }, [props.isOpen, query]);
 
-  return { error: getRuntimeInvoke() ? runtimeError : false, results: getRuntimeInvoke() ? runtimeResults : localResults };
+  const hasRuntime = hasAppRuntimeCommandRepository();
+  return { error: hasRuntime ? runtimeError : false, results: hasRuntime ? runtimeResults : localResults };
 }
 
 function useOrderedSearchResults(

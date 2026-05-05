@@ -1,15 +1,16 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeReadwiseContract';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import {
+  hasAppRuntimeCommandRepository,
+  inspectReadwiseReaderSetupInRuntime,
+  type RuntimeReadwiseDetectionResult
+} from '../../shared/platform/appRuntimeCommandRepository';
 
 export async function inspectReadwiseReaderSetup(input: {
   articleDirectoryPath: string;
   config: ReadwiseReaderConfig;
   fullDocumentDirectoryPath: string;
-}): Promise<NativeReadwiseDetectionResult> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
+}): Promise<RuntimeReadwiseDetectionResult> {
+  if (!hasAppRuntimeCommandRepository()) {
     return {
       checkedSourceCount: 0,
       detectedHighlightCount: 0,
@@ -21,7 +22,7 @@ export async function inspectReadwiseReaderSetup(input: {
     };
   }
 
-  return runtimeInvoke(NATIVE_COMMANDS.inspectReadwiseReaderSetup, {
+  const result = await inspectReadwiseReaderSetupInRuntime({
     articleDirectoryPath: input.articleDirectoryPath,
     fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
     highlightsHeading: input.config.highlightsHeading,
@@ -30,4 +31,13 @@ export async function inspectReadwiseReaderSetup(input: {
     noteKeyword: input.config.noteKeyword,
     tagKeyword: input.config.tagKeyword
   });
+  return result ?? {
+    checkedSourceCount: 0,
+    detectedHighlightCount: 0,
+    matchedHighlightCount: 0,
+    message: 'Readwise detection is only available in the desktop app.',
+    sampleCount: 0,
+    samples: [],
+    success: false
+  };
 }

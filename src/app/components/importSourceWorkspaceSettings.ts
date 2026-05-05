@@ -3,31 +3,30 @@ import {
   normalizeImportManagerSettings,
   type ImportManagerSettings
 } from '../../../lib/core/import/importManagerSettings';
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import { getRuntimeInvoke } from '../../shared/platform/bridge';
+import {
+  hasAppRuntimeCommandRepository,
+  loadImportManagerSettingsFromRuntime,
+  saveImportManagerSettingsToRuntime
+} from '../../shared/platform/appRuntimeCommandRepository';
 
 export async function loadImportSourceWorkspaceSettings(): Promise<ImportManagerSettings> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasAppRuntimeCommandRepository()) {
     return createDefaultImportManagerSettings();
   }
   try {
-    return normalizeImportManagerSettings(await runtimeInvoke(NATIVE_COMMANDS.loadImportManagerSettings));
+    return normalizeImportManagerSettings(await loadImportManagerSettingsFromRuntime());
   } catch {
     return createDefaultImportManagerSettings();
   }
 }
 
 export async function saveImportSourceWorkspaceSettings(settings: ImportManagerSettings) {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
+  if (!hasAppRuntimeCommandRepository()) {
     return settings;
   }
   try {
     return normalizeImportManagerSettings(
-      await runtimeInvoke(NATIVE_COMMANDS.saveImportManagerSettings, {
-        settings
-      })
+      await saveImportManagerSettingsToRuntime(settings)
     );
   } catch {
     return settings;

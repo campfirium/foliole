@@ -11,6 +11,9 @@ const BANNED_IMPORT_PATTERN =
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
 const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/store/', 'src/features/review/', 'src/features/settings/'];
 const RUNTIME_COMMAND_BOUNDARY_FILES = new Set([
+  'src/app/components/SearchPalette.tsx',
+  'src/app/components/importSourceWorkspaceSettings.ts',
+  'src/app/components/readwiseReaderConfigBridge.ts',
   'src/app/hooks/appRestartPersistence.ts',
   'src/app/hooks/useAppRuntime.ts',
   'src/app/hooks/usePreparedNodeSelectionActions.ts',
