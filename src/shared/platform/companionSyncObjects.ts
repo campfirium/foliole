@@ -18,6 +18,8 @@ import {
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceSyncBridge';
 
+type SyncPushAck = import('./companionSyncPushProtocol').SyncPushAck;
+
 export interface CompanionPdfPageTextEntry {
   page: number;
   page_height: number | null;
@@ -253,6 +255,20 @@ export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncCha
     return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
   }
   return (await FolioleCompanionSync.saveSyncReviewLogPushCursor({ cursor })).cursor;
+}
+
+export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
+  if (!isNativeAndroidCompanionRuntime()) {
+    return [] as string[];
+  }
+  return (await FolioleCompanionSync.saveSyncPushAcks({
+    acks: acks.map((ack) => ({
+      client_op_id: ack.clientOpId,
+      identity: ack.identity,
+      state_seq: ack.stateSeq,
+      status: ack.status
+    }))
+  })).saved_client_op_ids;
 }
 
 export async function loadCompanionSyncStateChanges(cursor: number | null, limit = 500) {

@@ -5,6 +5,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
+  saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 

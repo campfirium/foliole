@@ -7,8 +7,8 @@ import {
   ATTACHMENT_RESOURCE_PATH,
   loadCompanionAttachmentResource
 } from './companionLanAttachmentResources.js';
+import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 import {
-  acknowledgeCompanionContentBlobs,
   CONTENT_BLOB_ACK_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
   loadCompanionContentBlobResource
@@ -19,7 +19,6 @@ import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
-import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import {
   isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
@@ -30,6 +29,7 @@ import {
 } from './companionLanSyncObjects.js';
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
+import { SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 const ALLOWED_CORS_PROTOCOLS = new Set(['capacitor:', 'http:', 'https:']);
@@ -48,6 +48,7 @@ export {
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
   SYNC_PACK_PATH,
+  SYNC_PUSH_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 };
@@ -199,34 +200,6 @@ async function handleAuthenticatedGet(
   writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.peerId, snapshot));
 }
 
-async function handleAuthenticatedPost(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  parsedRequestUrl: URL
-) {
-  const bodyText = await readCompanionRequestBody(request);
-  const auth = authenticateCompanionRequest({ bodyText, request });
-  if (!auth.ok) {
-    writeJson(request, response, auth.status_code, { error: auth.error });
-    return true;
-  }
-  if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) {
-    const ack = acknowledgeCompanionContentBlobs(bodyText);
-    if (ack.status === 'ok') {
-      writeJson(request, response, 200, ack, 'POST, OPTIONS');
-    } else {
-      writeJson(request, response, ack.statusCode, { error: ack.error }, 'POST, OPTIONS');
-    }
-    return true;
-  }
-  if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
-    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS');
-    return true;
-  }
-  writeJson(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
-  return true;
-}
-
 export function createLanWorkspaceSyncRequestHandler(args: {
   appVersion: string;
   getSyncStatus?: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
@@ -246,7 +219,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
     }
     if (request.method === 'POST') {
       if (await handlePostRequest(request, response, parsedRequestUrl, args)) return;
-      if (await handleAuthenticatedPost(request, response, parsedRequestUrl)) return;
+      if (await handleAuthenticatedPost(request, response, parsedRequestUrl, writeJson)) return;
     }
     if (request.method !== 'GET') {
       writeJson(request, response, 405, { error: 'method_not_allowed' });

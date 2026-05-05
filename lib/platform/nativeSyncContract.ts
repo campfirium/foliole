@@ -37,6 +37,7 @@ export interface NativeSyncObjectRecord {
 }
 
 export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
+  base_content_hash?: string | null;
   state_seq: number;
 }
 

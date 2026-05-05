@@ -56,8 +56,6 @@ function MetricRow(props: { label: string; value: string; wrap?: boolean }) {
 
 export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncDiagnosticResult }) {
   const latestAndroidEvent = latestEvent(props.result.android?.events ?? []);
-  const cursor = props.result.android?.sync_state.pack_cursor;
-  const desktopSeq = props.result.desktop?.sync_state.max_state_seq;
   return (
     <section>
       <h3 className="text-sm font-semibold text-foreground">Sync status</h3>

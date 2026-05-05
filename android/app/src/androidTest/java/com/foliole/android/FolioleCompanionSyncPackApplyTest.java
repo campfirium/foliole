@@ -105,6 +105,25 @@ public class FolioleCompanionSyncPackApplyTest {
         ));
     }
 
+    @Test
+    public void clearsDirtyNodeReviewAfterPackConfirmsAcceptedPushAck() throws Exception {
+        createIncomingStateOnlyPack("node_review", "node-1", 7, "review-hash");
+        mainDatabase.execSQL("INSERT INTO sync_object_state (" +
+            "object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, base_content_hash) " +
+            "VALUES ('node_review', 'node-1', 4, 'review-hash', 'android-local', '2026-04-27T00:04:00.000Z', 1, 'base-hash')");
+        mainDatabase.execSQL("INSERT INTO sync_push_ack (" +
+            "client_op_id, object_type, object_id, state_seq, status, acked_at) VALUES (" +
+            "'node_review:node-1:4', 'node_review', 'node-1', 7, 'accepted', '2026-04-27T00:05:00.000Z')");
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test", 4);
+
+        assertEquals(0, result.getInt("applied_object_count"));
+        assertEquals(0, selectInt(
+            "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'"
+        ));
+        assertEquals(0, countRows("sync_push_ack"));
+    }
+
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
             "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
@@ -128,8 +147,11 @@ public class FolioleCompanionSyncPackApplyTest {
         mainDatabase.execSQL("CREATE TABLE sync_object_state (" +
             "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
             "current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL, " +
-            "updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, " +
+            "updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0, base_content_hash TEXT, " +
             "PRIMARY KEY (object_type, object_id), UNIQUE (state_seq))");
+        mainDatabase.execSQL("CREATE TABLE sync_push_ack (" +
+            "client_op_id TEXT PRIMARY KEY NOT NULL, object_type TEXT NOT NULL, object_id TEXT NOT NULL, " +
+            "state_seq INTEGER, status TEXT NOT NULL, acked_at TEXT NOT NULL)");
     }
 
     private void createIncomingPack() {
@@ -205,10 +227,54 @@ public class FolioleCompanionSyncPackApplyTest {
         }
     }
 
+    private void createIncomingStateOnlyPack(String objectType, String objectId, int stateSeq, String contentHash) {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openOrCreateDatabase(packFile, null);
+        try {
+            String now = "2026-04-27T00:05:00.000Z";
+            packDatabase.execSQL("CREATE TABLE pack_manifest (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+            packDatabase.execSQL("CREATE TABLE nodes (" +
+                "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL, title TEXT NOT NULL, " +
+                "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
+                "body_blob_hash TEXT, content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, " +
+                "updated_at TEXT NOT NULL, deleted_at TEXT)");
+            packDatabase.execSQL("CREATE TABLE external_documents (" +
+                "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +
+                "file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL, " +
+                "source_modified_at TEXT NOT NULL, source_modified_ms INTEGER NOT NULL, content_hash TEXT NOT NULL, " +
+                "title TEXT, opening_text TEXT, body_blob_hash TEXT, content TEXT NOT NULL DEFAULT '', " +
+                "indexed_at TEXT NOT NULL, is_present INTEGER NOT NULL DEFAULT 1, missing_at TEXT, " +
+                "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+            packDatabase.execSQL("CREATE TABLE content_blobs (" +
+                "hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT, " +
+                "compression TEXT NOT NULL DEFAULT 'none', original_size_bytes INTEGER NOT NULL, " +
+                "stored_size_bytes INTEGER NOT NULL, original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL, " +
+                "availability TEXT NOT NULL DEFAULT 'missing', source_device_id TEXT, created_at TEXT NOT NULL, " +
+                "cached_at TEXT, last_verified_at TEXT)");
+            packDatabase.execSQL("CREATE TABLE sync_object_state (" +
+                "object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL, " +
+                "content_hash TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, " +
+                "PRIMARY KEY (object_type, object_id))");
+            packDatabase.execSQL("INSERT INTO pack_manifest (key, value) VALUES (" +
+                "'manifest_json', '{\"from_state_seq\":4,\"to_state_seq\":" + stateSeq + "}')");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'" + objectType + "', '" + objectId + "', " + stateSeq + ", '" + contentHash + "', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
     private String selectString(String sql) {
         try (Cursor cursor = mainDatabase.rawQuery(sql, null)) {
             cursor.moveToFirst();
             return cursor.getString(0);
+        }
+    }
+
+    private int selectInt(String sql) {
+        try (Cursor cursor = mainDatabase.rawQuery(sql, null)) {
+            cursor.moveToFirst();
+            return cursor.getInt(0);
         }
     }
 

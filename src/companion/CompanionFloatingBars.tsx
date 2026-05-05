@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
+
 import {
   resolveCompanionTabs,
   type CompanionResolvedTab,
@@ -10,6 +12,43 @@ import {
 
 export type { CompanionTabAction } from './CompanionTabsConfig';
 export type BottomBarGrade = 1 | 2 | 3 | 4;
+
+function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
+  if (progress.phase === 'structure') {
+    return 'Structure pack';
+  }
+  return 'Topic body cache';
+}
+
+function CompanionBottomSyncStatus(props: {
+  progress: CompanionDesktopSyncProgress | null;
+}) {
+  if (!props.progress) {
+    return null;
+  }
+  const total = props.progress.total ?? 0;
+  const completed = Math.min(props.progress.completed, total);
+  const ratio = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+  const countLabel = props.progress.total === null
+    ? `${props.progress.completed} synced`
+    : `${completed}/${total}`;
+  return (
+    <section
+      aria-label="Sync progress"
+      className="mx-auto mb-2 w-full max-w-[760px] rounded-md border border-companion-divider bg-companion-subtle px-3 py-2 text-xs leading-5 text-companion-text-secondary"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-medium text-foreground">{formatSyncPhase(props.progress)}</span>
+        <span className="shrink-0 tabular-nums">{countLabel}</span>
+      </div>
+      {props.progress.total === null ? null : (
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-companion-divider">
+          <div className="h-full rounded-full bg-companion-accent" style={{ width: `${ratio}%` }} />
+        </div>
+      )}
+    </section>
+  );
+}
 
 function TabButton(props: {
   active?: boolean;
@@ -40,6 +79,7 @@ export function CompanionBottomTabBar(props: {
   config: CompanionTabConfig;
   onAction(action: CompanionTabAction): void;
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
+  syncProgress?: CompanionDesktopSyncProgress | null;
   visible: boolean;
 }) {
   if (!props.visible) {
@@ -51,6 +91,7 @@ export function CompanionBottomTabBar(props: {
       className="fixed inset-x-0 bottom-0 z-20 border-t border-companion-divider bg-companion-content px-4 pb-5 pt-2 shadow-panel"
       data-testid="companion-bottom-tab-bar"
     >
+      <CompanionBottomSyncStatus progress={props.syncProgress ?? null} />
       <div className="mx-auto flex w-full max-w-[760px] items-center gap-1">
         {renderTabButtons(resolveCompanionTabs(props.config), props)}
       </div>

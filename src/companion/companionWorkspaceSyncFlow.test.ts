@@ -8,7 +8,10 @@ const syncPlatformMock = vi.hoisted(() => ({
 }));
 
 const syncObjectsMock = vi.hoisted(() => ({
-  syncCompanionObjectsFromDesktop: vi.fn(async () => undefined)
+  syncCompanionObjectsFromDesktop: vi.fn(async () => ({
+    contentBlobError: null,
+    remainingContentBlobCount: 0
+  }))
 }));
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
@@ -36,6 +39,7 @@ async function testUsesStreamSyncDirectly() {
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
     setState,
+    setSyncProgress: vi.fn(),
     setStatus,
     state: createSyncState()
   });
@@ -44,10 +48,10 @@ async function testUsesStreamSyncDirectly() {
     'http://10.0.2.2:38641',
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
-  expect(outcome).toBe('completed');
+  expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Auto sync completed.',
-    status: 'completed'
+    message: 'Sync pass finished; topic bodies are cached.',
+    status: 'skipped'
   }));
   expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
   expect(setStatus).toHaveBeenLastCalledWith('idle');
@@ -61,6 +65,7 @@ async function testUsesRememberedSyncTarget() {
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
     setState: vi.fn(),
+    setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
     state: createSyncState({
       endpoint_url: null,
@@ -72,7 +77,7 @@ async function testUsesRememberedSyncTarget() {
     'http://192.168.1.44:38641',
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
-  expect(outcome).toBe('completed');
+  expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     endpointUrl: 'http://192.168.1.44:38641',
     status: 'started'
@@ -90,6 +95,7 @@ async function testKeepsUnreachableDesktopQuiet() {
     setError,
     setReadableArticle: vi.fn(),
     setState: vi.fn(),
+    setSyncProgress: vi.fn(),
     setStatus,
     state: createSyncState()
   });
@@ -106,7 +112,10 @@ async function testKeepsUnreachableDesktopQuiet() {
 describe('tryForegroundAutoSync', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(undefined);
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue({
+      contentBlobError: null,
+      remainingContentBlobCount: 0
+    });
     syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
   });
 

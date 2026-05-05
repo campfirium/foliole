@@ -4,7 +4,12 @@ const syncBridgeMock = vi.hoisted(() => ({
   applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async () => null),
+  loadCompanionSyncReviewLog: vi.fn(async () => []),
+  loadCompanionSyncReviewLogPushCursor: vi.fn(async () => null),
+  loadCompanionSyncStateChanges: vi.fn(async () => []),
+  loadCompanionSyncStatePushCursor: vi.fn(async () => null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
+  saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 

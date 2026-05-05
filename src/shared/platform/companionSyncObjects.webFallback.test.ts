@@ -107,5 +107,6 @@ describe('companion sync objects web fallback', () => {
     });
     await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual([]);
     await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
+    await expect(api.saveCompanionSyncPushAcks([])).resolves.toEqual([]);
   });
 });

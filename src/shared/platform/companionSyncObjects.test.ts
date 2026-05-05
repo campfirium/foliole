@@ -52,6 +52,7 @@ const capacitorMock = vi.hoisted(() => ({
     saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
+    saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] })),
     saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
     syncContentBlob: vi.fn(async ({ hash }) => ({ availability: 'cached', hash })),
     syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' }))

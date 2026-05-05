@@ -4,14 +4,14 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 
-import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
+import { writeStoredZip } from '../diagnostics/zipStore.js';
 
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { buildSyncPackManifest } from './syncPackManifest.js';
 import { loadMaxStateSeq, loadPackRows, type LoadedSyncPackRows } from './syncPackRows.js';
 import { PACK_SCHEMA } from './syncPackSchema.js';
-import { writeStoredZip } from '../diagnostics/zipStore.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');

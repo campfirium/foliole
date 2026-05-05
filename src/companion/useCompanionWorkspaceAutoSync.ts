@@ -3,6 +3,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceSyncBridge';
 
 import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
@@ -19,6 +20,7 @@ type TryForegroundAutoSync = (args: {
   setError(error: string | null): void;
   setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
+  setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
 }) => Promise<ForegroundAutoSyncOutcome>;
@@ -40,6 +42,7 @@ function createForegroundSyncRunner(args: {
   setError: (error: string | null) => void;
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
   setStatus: (status: CompanionWorkspaceSyncStatus) => void;
   stateRef: MutableRefObject<NativeCompanionWorkspaceSyncState>;
   tryForegroundAutoSync: TryForegroundAutoSync;
@@ -81,6 +84,7 @@ function createForegroundSyncRunner(args: {
       setError: args.setError,
       setReadableArticle: args.setReadableArticle,
       setState: args.setState,
+      setSyncProgress: args.setSyncProgress,
       setStatus: args.setStatus,
       state
     })
@@ -107,6 +111,7 @@ export function useForegroundAutoSync(
   setError: (error: string | null) => void,
   setReadableArticle: (article: CompanionReadableArticle | null) => void,
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
+  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void,
   state: NativeCompanionWorkspaceSyncState,
   tryForegroundAutoSync: TryForegroundAutoSync
@@ -140,6 +145,7 @@ export function useForegroundAutoSync(
       setError,
       setReadableArticle,
       setState,
+      setSyncProgress,
       setStatus,
       stateRef,
       tryForegroundAutoSync

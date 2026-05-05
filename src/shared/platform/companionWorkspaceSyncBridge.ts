@@ -21,6 +21,8 @@ import type {
 } from '../../../lib/platform/nativeSyncContract';
 import type { SyncDiagnosticSnapshot } from '../../../lib/platform/syncDiagnosticsContract';
 
+import type { SyncPushAck } from './companionSyncPushProtocol';
+
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
 export const PAIR_REQUESTS_ENDPOINT_PATH = '/companion/pair-requests';
@@ -155,6 +157,12 @@ export interface CompanionWorkspaceSyncPlugin {
   saveSyncNodeVersionPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   saveSyncReviewLogCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   saveSyncReviewLogPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
+  saveSyncPushAcks(args: { acks: Array<{
+    client_op_id: string;
+    identity: SyncPushAck['identity'];
+    state_seq?: number | null;
+    status: SyncPushAck['status'];
+  }> }): Promise<{ saved_client_op_ids: string[] }>;
   saveSyncSettingRecord(args: {
     device_id?: string;
     form_factor?: string;

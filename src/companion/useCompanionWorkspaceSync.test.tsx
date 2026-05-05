@@ -7,7 +7,10 @@ import type { CompanionReadableArticle } from '../shared/platform/companionReada
 
 const syncObjectsMock = vi.hoisted(() => ({
   loadCompanionSyncNodeConflicts: vi.fn<() => Promise<NativeSyncNodeConflictRecord[]>>(async () => []),
-  syncCompanionObjectsFromDesktop: vi.fn(async () => undefined)
+  syncCompanionObjectsFromDesktop: vi.fn(async () => ({
+    contentBlobError: null,
+    remainingContentBlobCount: 0
+  }))
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
   loadCompanionReadableArticle: vi.fn<() => Promise<CompanionReadableArticle | null>>(async () => null),

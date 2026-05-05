@@ -3,6 +3,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { openDatabaseConnection } from './connection.js';
 import {
   isSyncPackObjectType,
+  isSyncPackStateObjectType,
   SYNC_PACK_OBJECT_TYPE_TABLES,
   type SyncPackObjectType
 } from './syncPackManifest.js';
@@ -17,7 +18,7 @@ interface RawSyncStatePackRow extends DatabaseRow {
 }
 
 export interface SyncStatePackRow extends RawSyncStatePackRow {
-  object_type: SyncPackObjectType;
+  object_type: string;
 }
 
 export interface NodePackRow extends DatabaseRow {
@@ -100,12 +101,13 @@ function collectBodyBlobHashes(nodes: NodePackRow[], documents: ExternalDocument
 
 function idsForObjectTable(rows: SyncStatePackRow[], table: 'external_documents' | 'nodes') {
   return rows
+    .filter((row): row is SyncStatePackRow & { object_type: SyncPackObjectType } => isSyncPackObjectType(row.object_type))
     .filter((row) => SYNC_PACK_OBJECT_TYPE_TABLES[row.object_type] === table)
     .map((row) => row.object_id);
 }
 
 function isSyncStatePackRow(row: RawSyncStatePackRow): row is SyncStatePackRow {
-  return isSyncPackObjectType(row.object_type);
+  return isSyncPackStateObjectType(row.object_type);
 }
 
 export function loadMaxStateSeq() {

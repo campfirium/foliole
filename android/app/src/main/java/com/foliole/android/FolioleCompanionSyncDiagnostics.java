@@ -83,6 +83,9 @@ final class FolioleCompanionSyncDiagnostics {
         state.put("pack_cursor", cursor <= 0 ? JSONObject.NULL : cursor);
         state.put("max_state_seq", maxStateSeq <= 0 ? JSONObject.NULL : maxStateSeq);
         state.put("local_dirty_count", count(database, "SELECT COUNT(*) FROM sync_object_state WHERE sync_dirty = 1"));
+        state.put("pending_ack_count", count(database, "SELECT COUNT(*) FROM sync_push_ack"));
+        state.put("dirty_objects", loadDirtyObjects(database));
+        state.put("pending_acks", loadPendingAcks(database));
         state.put("state_counts", loadStateCounts(database));
         return state;
     }
@@ -127,7 +130,7 @@ final class FolioleCompanionSyncDiagnostics {
     private static JSArray loadStateCounts(SQLiteDatabase database) throws Exception {
         JSArray items = new JSArray();
         try (Cursor cursor = database.rawQuery(
-            "SELECT object_type, COUNT(*), MIN(state_seq), MAX(state_seq) " +
+            "SELECT object_type, COUNT(*), SUM(CASE WHEN sync_dirty = 1 THEN 1 ELSE 0 END), MIN(state_seq), MAX(state_seq) " +
                 "FROM sync_object_state GROUP BY object_type ORDER BY object_type ASC",
             null
         )) {
@@ -135,8 +138,52 @@ final class FolioleCompanionSyncDiagnostics {
                 JSObject row = new JSObject();
                 row.put("object_type", cursor.getString(0));
                 row.put("count", cursor.getLong(1));
-                row.put("min_state_seq", cursor.isNull(2) ? JSONObject.NULL : cursor.getLong(2));
-                row.put("max_state_seq", cursor.isNull(3) ? JSONObject.NULL : cursor.getLong(3));
+                row.put("dirty_count", cursor.getLong(2));
+                row.put("min_state_seq", cursor.isNull(3) ? JSONObject.NULL : cursor.getLong(3));
+                row.put("max_state_seq", cursor.isNull(4) ? JSONObject.NULL : cursor.getLong(4));
+                items.put(row);
+            }
+        }
+        return items;
+    }
+
+    private static JSArray loadDirtyObjects(SQLiteDatabase database) throws Exception {
+        JSArray items = new JSArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash " +
+                "FROM sync_object_state WHERE sync_dirty = 1 " +
+                "ORDER BY state_seq DESC LIMIT 50",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                JSObject row = new JSObject();
+                row.put("object_type", cursor.getString(0));
+                row.put("object_id", cursor.getString(1));
+                row.put("content_hash", cursor.isNull(2) ? JSONObject.NULL : cursor.getString(2));
+                row.put("state_seq", cursor.isNull(3) ? JSONObject.NULL : cursor.getLong(3));
+                row.put("updated_at", cursor.isNull(4) ? JSONObject.NULL : cursor.getString(4));
+                row.put("base_content_hash", cursor.isNull(5) ? JSONObject.NULL : cursor.getString(5));
+                items.put(row);
+            }
+        }
+        return items;
+    }
+
+    private static JSArray loadPendingAcks(SQLiteDatabase database) throws Exception {
+        JSArray items = new JSArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT client_op_id, object_type, object_id, state_seq, status, acked_at " +
+                "FROM sync_push_ack ORDER BY acked_at ASC LIMIT 50",
+            null
+        )) {
+            while (cursor.moveToNext()) {
+                JSObject row = new JSObject();
+                row.put("client_op_id", cursor.getString(0));
+                row.put("object_type", cursor.getString(1));
+                row.put("object_id", cursor.getString(2));
+                row.put("state_seq", cursor.isNull(3) ? JSONObject.NULL : cursor.getLong(3));
+                row.put("status", cursor.getString(4));
+                row.put("acked_at", cursor.getString(5));
                 items.put(row);
             }
         }
@@ -205,6 +252,9 @@ final class FolioleCompanionSyncDiagnostics {
         }
         if (syncState.optLong("local_dirty_count", 0) > 0) {
             addVerdict(verdicts, "android_has_local_dirty_state", "info", "This device has changes waiting to send.", syncState);
+        }
+        if (syncState.optLong("pending_ack_count", 0) > 0) {
+            addVerdict(verdicts, "android_has_pending_push_ack", "info", "Desktop accepted changes that are waiting for pull confirmation.", syncState);
         }
         if (verdicts.length() == 0) {
             addVerdict(verdicts, "android_ready", "ok", "Android sync state is readable.", storage);

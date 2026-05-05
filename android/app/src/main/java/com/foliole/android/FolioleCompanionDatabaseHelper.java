@@ -20,7 +20,7 @@ import java.util.UUID;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companion.db";
-    private static final int DATABASE_VERSION = 12;
+    private static final int DATABASE_VERSION = 14;
     private static final String META_TABLE = "companion_meta";
     private static final String DEVICE_ID_KEY = "device_id";
     private static final String WORKSPACE_SYNC_ENDPOINT_URL_KEY = "workspace_sync_endpoint_url";
@@ -53,6 +53,8 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         );
         try {
             FolioleCompanionSchemaInstaller.install(context, database);
+            addSyncBaseContentHashIfMissing(database);
+            createSyncPushAckTable(database);
         } catch (Exception exception) {
             throw new IllegalStateException("Failed to install companion schema.", exception);
         }
@@ -126,17 +128,59 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
                 throw new IllegalStateException("Failed to upgrade companion view state source schema.", exception);
             }
         }
+        if (oldVersion < 13) {
+            try {
+                FolioleCompanionSchemaInstaller.install(context, database);
+                addSyncBaseContentHashIfMissing(database);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Failed to upgrade companion push base reference schema.", exception);
+            }
+        }
+        if (oldVersion < 14) {
+            createSyncPushAckTable(database);
+        }
+    }
+
+    private static void addSyncBaseContentHashIfMissing(SQLiteDatabase database) {
+        if (columnExists(database, "sync_object_state", "base_content_hash")) {
+            return;
+        }
+        database.execSQL("ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT");
+    }
+
+    private static void createSyncPushAckTable(SQLiteDatabase database) {
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS sync_push_ack (" +
+                "client_op_id TEXT PRIMARY KEY NOT NULL," +
+                "object_type TEXT NOT NULL," +
+                "object_id TEXT NOT NULL," +
+                "state_seq INTEGER," +
+                "status TEXT NOT NULL," +
+                "acked_at TEXT NOT NULL" +
+                ")"
+        );
+        database.execSQL(
+            "CREATE INDEX IF NOT EXISTS idx_sync_push_ack_identity " +
+                "ON sync_push_ack (object_type, object_id, state_seq)"
+        );
     }
 
     private static void addNodeViewStateSourceIfMissing(SQLiteDatabase database) {
-        try (Cursor cursor = database.rawQuery("PRAGMA table_info(node_view_state)", null)) {
+        if (columnExists(database, "node_view_state", "source")) {
+            return;
+        }
+        database.execSQL("ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'");
+    }
+
+    private static boolean columnExists(SQLiteDatabase database, String table, String column) {
+        try (Cursor cursor = database.rawQuery("PRAGMA table_info(" + table + ")", null)) {
             while (cursor.moveToNext()) {
-                if ("source".equals(cursor.getString(cursor.getColumnIndexOrThrow("name")))) {
-                    return;
+                if (column.equals(cursor.getString(cursor.getColumnIndexOrThrow("name")))) {
+                    return true;
                 }
             }
         }
-        database.execSQL("ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'");
+        return false;
     }
 
     FolioleCompanionBootstrapState loadBootstrapState(Context context) {
@@ -379,6 +423,11 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     JSObject saveSyncReviewLogPushCursor(JSONObject cursor) throws Exception {
         return saveSyncEventCursor(SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
+    }
+
+    JSObject saveSyncPushAcks(JSONArray acks) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        return FolioleCompanionSyncPushAckStore.saveAcks(database, acks);
     }
 
     JSObject saveSyncSettingRecord(JSONObject record) throws Exception {

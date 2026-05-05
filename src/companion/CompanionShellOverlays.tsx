@@ -3,6 +3,7 @@ import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 import { CompanionBottomTabBar, type CompanionTabAction } from './CompanionFloatingBars';
 import type { CompanionSecondaryDestinationId, CompanionTabConfig } from './CompanionTabsConfig';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export function CompanionShellOverlays(props: {
   activeSecondaryDestinationId: CompanionSecondaryDestinationId | null;
@@ -14,6 +15,7 @@ export function CompanionShellOverlays(props: {
   onNavigationAction(action: CompanionTabAction): void;
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
+  syncProgress?: ReturnType<typeof useCompanionWorkspaceSync>['syncProgress'];
 }) {
   const isReadableArticleImmersive = props.surface.activeAction === 'recent'
     && Boolean(props.surface.readableArticle)
@@ -28,6 +30,7 @@ export function CompanionShellOverlays(props: {
         config={props.companionTabConfig}
         onAction={props.onNavigationAction}
         onSecondaryDestination={props.onSecondaryDestination}
+        syncProgress={props.syncProgress}
         visible={props.isNavigationVisible && !isReadableArticleImmersive}
       />
       <CompanionCaptureSheet onOpenChange={props.onCaptureSheetOpenChange} open={props.isCaptureSheetOpen} />

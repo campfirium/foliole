@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import { syncCompanionObjectsFromDesktop } from '../shared/platform/companionDesktopSyncObjects';
+import {
+  syncCompanionObjectsFromDesktop,
+  type CompanionDesktopSyncProgress
+} from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
 import {
@@ -23,6 +26,29 @@ import {
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
 
+function describeManualSyncPassResult(result: {
+  contentBlobError: string | null;
+  remainingContentBlobCount: number | null;
+}) {
+  if (result.contentBlobError) {
+    return {
+      message: `Topic body cache failed: ${result.contentBlobError}`,
+      status: 'failed' as const
+    };
+  }
+  if (result.remainingContentBlobCount === 0) {
+    return {
+      message: 'Sync pass finished; topic bodies are cached.',
+      status: 'skipped' as const
+    };
+  }
+  const remaining = result.remainingContentBlobCount === null ? 'some' : String(result.remainingContentBlobCount);
+  return {
+    message: `Sync pass finished; ${remaining} topic bodies still caching.`,
+    status: 'skipped' as const
+  };
+}
+
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
   last_synced_at: null,
@@ -37,6 +63,7 @@ interface WorkspaceSnapshotActionArgs {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
   setStatus: (status: CompanionWorkspaceSyncStatus) => void;
   state: NativeCompanionWorkspaceSyncState;
 }
@@ -63,6 +90,7 @@ async function syncDesktopStreams(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
 }) {
   async function refreshAfterStructureSync() {
     const structureState = await loadCompanionWorkspaceSyncState();
@@ -77,15 +105,22 @@ async function syncDesktopStreams(args: {
     status: 'started'
   });
   args.setState(startedState);
-  await syncCompanionObjectsFromDesktop(args.endpointUrl, { onStructureSynced: refreshAfterStructureSync });
+  const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+    onProgress: args.setSyncProgress,
+    onStructureSynced: refreshAfterStructureSync
+  });
+  const passResult = describeManualSyncPassResult(result);
   const nextState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
-    message: 'Sync completed.',
-    status: 'completed'
+    message: passResult.message,
+    status: passResult.status
   });
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  if (result.contentBlobError || result.remainingContentBlobCount === 0) {
+    args.setSyncProgress(null);
+  }
   return nextState;
 }
 
@@ -125,13 +160,15 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         endpointUrl,
         setReadableArticle: args.setReadableArticle,
         setSyncConflictCount: args.setSyncConflictCount,
-        setState: args.setState
+        setState: args.setState,
+        setSyncProgress: args.setSyncProgress
       });
       args.setStatus('idle');
       return nextState;
     } catch (syncError) {
       const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
       args.setStatus('idle');
+      args.setSyncProgress(null);
       args.setError(message);
       await recordManualSyncFailure({ endpointUrl, message, setState: args.setState });
       throw syncError;
@@ -235,11 +272,12 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(EMPTY_SYNC_STATE);
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [syncConflictCount, setSyncConflictCount] = useState(0);
+  const [syncProgress, setSyncProgress] = useState<CompanionDesktopSyncProgress | null>(null);
   const [status, setStatus] = useState<CompanionWorkspaceSyncStatus>('loading');
   const [error, setError] = useState<string | null>(null);
 
   useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
-  useForegroundAutoSync(setError, setReadableArticle, setState, setStatus, state, tryForegroundAutoSync);
+  useForegroundAutoSync(setError, setReadableArticle, setState, setSyncProgress, setStatus, state, tryForegroundAutoSync);
 
   function clearError() {
     setError(null);
@@ -250,6 +288,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     setReadableArticle,
     setSyncConflictCount,
     setState,
+    setSyncProgress,
     setStatus,
     state
   });
@@ -266,6 +305,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     readableArticle,
     state,
     syncConflictCount,
+    syncProgress,
     status,
     pullFromDesktop: snapshotActions.pullFromDesktop,
     refreshFromDevice: snapshotActions.refreshFromDevice,

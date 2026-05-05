@@ -1,4 +1,6 @@
 import { postDesktopJson } from './companionDesktopSyncHttp';
+import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
+import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionMissingContentBlobHashes,
@@ -17,7 +19,14 @@ export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
 export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
 
 export interface CompanionDesktopSyncOptions {
+  onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: () => Promise<void> | void;
+}
+
+export interface CompanionDesktopSyncProgress {
+  completed: number;
+  phase: 'content' | 'structure';
+  total: number | null;
 }
 
 export interface CompanionDesktopSyncResult {
@@ -33,6 +42,7 @@ export interface CompanionDesktopSyncResult {
   requestedObjectIds: string[];
   syncedAttachmentIds: string[];
   contentBlobError: string | null;
+  remainingContentBlobCount: number | null;
   syncedContentBlobHashes: string[];
 }
 
@@ -74,9 +84,16 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   };
 }
 
-async function pullMissingContentBlobs(endpointUrl: string) {
+async function loadMissingContentBlobCount() {
+  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
+  return diagnostics?.content.missing_content_blob_count ?? null;
+}
+
+async function pullMissingContentBlobs(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const syncedContentBlobHashes: string[] = [];
+  const total = await loadMissingContentBlobCount();
+  onProgress?.({ completed: 0, phase: 'content', total });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     const hashes = await loadCompanionMissingContentBlobHashes(CONTENT_BLOB_BATCH_LIMIT);
     if (hashes.length === 0) {
@@ -84,6 +101,7 @@ async function pullMissingContentBlobs(endpointUrl: string) {
     }
     const syncedBatchHashes = await pullContentBlobBatch(endpoint, hashes);
     syncedContentBlobHashes.push(...syncedBatchHashes);
+    onProgress?.({ completed: syncedContentBlobHashes.length, phase: 'content', total });
     if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) {
       break;
     }
@@ -146,16 +164,20 @@ async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
+  const pushed = await withSyncStepTimeout('pushing local review changes', pushLocalDirtyObjects(endpointUrl))
+    .catch(() => ({ pushedObjectIds: [], pushedReviewOpIds: [] }));
   const pack = await withSyncStepTimeout('applying the structure pack', pullRemoteStructurePack(endpointUrl));
+  options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
   await options.onStructureSynced?.();
   let contentBlobError: string | null = null;
   let syncedContentBlobHashes: string[] = [];
   try {
-    const blobs = await withSyncStepTimeout('fetching a content blob batch', pullMissingContentBlobs(endpointUrl));
+    const blobs = await withSyncStepTimeout('fetching topic bodies', pullMissingContentBlobs(endpointUrl, options.onProgress));
     syncedContentBlobHashes = blobs.syncedContentBlobHashes;
   } catch (error) {
     contentBlobError = errorMessage(error);
   }
+  const remainingContentBlobCount = await loadMissingContentBlobCount();
   return {
     appliedNodeIds: [],
     appliedPackBlobCount: pack.appliedPackBlobCount,
@@ -164,11 +186,12 @@ async function runCompanionObjectsSync(
     appliedReviewOpIds: [],
     changedObjectIds: [],
     pushedNodeIds: [],
-    pushedObjectIds: [],
-    pushedReviewOpIds: [],
+    pushedObjectIds: pushed.pushedObjectIds,
+    pushedReviewOpIds: pushed.pushedReviewOpIds,
     requestedObjectIds: [],
     syncedAttachmentIds: [],
     contentBlobError,
+    remainingContentBlobCount,
     syncedContentBlobHashes
   };
 }

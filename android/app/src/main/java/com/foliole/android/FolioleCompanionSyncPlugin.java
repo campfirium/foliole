@@ -498,6 +498,15 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void saveSyncPushAcks(PluginCall call) {
+        resolveWithDatabase(
+            call,
+            "Failed to save companion sync push acknowledgements.",
+            databaseHelper -> databaseHelper.saveSyncPushAcks(call.getData().optJSONArray("acks"))
+        );
+    }
+
+    @PluginMethod
     public void saveSyncSettingRecord(PluginCall call) {
         resolveWithDatabase(
             call,

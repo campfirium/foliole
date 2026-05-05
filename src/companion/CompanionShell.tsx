@@ -253,6 +253,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
         onNavigationAction={model.handleNavigationAction}
         onSecondaryDestination={model.handleSecondaryDestination}
         surface={model.surface}
+        syncProgress={model.workspaceSync.syncProgress}
       />
     </>
   );

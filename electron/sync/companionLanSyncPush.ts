@@ -1,0 +1,58 @@
+import {
+  applyCompanionSyncPush,
+  type CompanionSyncPushPayload
+} from '../database/companionSyncPushApply.js';
+
+import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
+
+export const SYNC_PUSH_PATH = '/companion/sync-push';
+
+interface CompanionSyncPushResponse {
+  acks: Array<{
+    client_op_id: string;
+    conflict_reason?: string;
+    identity: CompanionSyncPushPayload['identity'];
+    state_seq?: number | null;
+    status: 'accepted' | 'already_applied' | 'conflict' | 'rejected';
+  }>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isPushItem(value: unknown): value is CompanionSyncPushPayload {
+  if (!isRecord(value) || !isRecord(value.identity) || !isRecord(value.base)) return false;
+  return typeof value.clientOpId === 'string'
+    && typeof value.identity.objectId === 'string'
+    && typeof value.identity.objectType === 'string'
+    && typeof value.identity.scope === 'string'
+    && (value.payloadJson === null || typeof value.payloadJson === 'string');
+}
+
+function readPushItems(bodyText: string): CompanionSyncPushPayload[] {
+  const payload = JSON.parse(bodyText) as unknown;
+  if (!isRecord(payload) || !Array.isArray(payload.items) || payload.items.some((item) => !isPushItem(item))) {
+    throw new Error('invalid_sync_push_payload');
+  }
+  return payload.items;
+}
+
+export function handleCompanionSyncPush(bodyText: string) {
+  const items = readPushItems(bodyText);
+  const result = applyCompanionSyncPush(items);
+  notifyWorkspaceSyncApplied({
+    appliedNodeIds: [],
+    appliedObjectIds: result.appliedObjectIds,
+    appliedReviewOpIds: result.appliedReviewOpIds
+  });
+  return {
+    acks: result.acks.map((ack) => ({
+      client_op_id: ack.clientOpId,
+      conflict_reason: ack.conflictReason,
+      identity: ack.identity,
+      state_seq: ack.stateSeq,
+      status: ack.status
+    }))
+  } satisfies CompanionSyncPushResponse;
+}

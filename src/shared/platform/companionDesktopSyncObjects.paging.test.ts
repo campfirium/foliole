@@ -31,6 +31,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
+  saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
@@ -98,7 +99,7 @@ describe('companion desktop sync object paging', () => {
     expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501);
   });
 
-  it('keeps legacy local change paging disabled while pack sync is active', async () => {
+  it('does not page legacy local state changes while pack sync is active', async () => {
     const firstPage = Array.from({ length: 500 }, (_, index) => createStateObject(index));
     const secondPage = [createStateObject(500)];
     syncBridgeMock.loadCompanionSyncStateChanges
@@ -118,7 +119,8 @@ describe('companion desktop sync object paging', () => {
     const result = await runSync();
 
     expect(result.pushedObjectIds).toEqual([]);
-    expect(syncBridgeMock.loadCompanionSyncStateChanges).not.toHaveBeenCalled();
+    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledTimes(1);
+    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledWith(null, 100);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 

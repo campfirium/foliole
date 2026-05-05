@@ -11,6 +11,7 @@ import {
 } from '../shared/platform/companionSyncDiagnostics';
 
 import { CompanionSyncDiagnosticCheckpoint } from './CompanionSyncDiagnosticCheckpoint';
+import { DirtyObjectRows, ObjectTypeRows, PendingAckRows } from './CompanionSyncDiagnosticsRows';
 
 function severityClass(severity: SyncDiagnosticSeverity) {
   if (severity === 'error') return 'text-error';
@@ -36,6 +37,12 @@ function friendlyVerdict(verdict: SyncDiagnosticVerdict) {
     return {
       description: 'They will be sent to desktop during sync.',
       title: 'Device changes are waiting to send'
+    };
+  }
+  if (verdict.code === 'android_has_pending_push_ack') {
+    return {
+      description: 'A later structure pack must confirm these changes before they are marked clean.',
+      title: 'Desktop accepted changes; waiting for confirmation'
     };
   }
   if (verdict.code === 'desktop_ready') {
@@ -66,6 +73,7 @@ function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       <MetricRow label="Topics" value={formatNumber(snapshot.storage.active_node_count)} />
       <MetricRow label={isAndroid ? 'Device changes' : 'Desktop changes'} value={formatNumber(snapshot.sync_state.max_state_seq)} />
       {isAndroid ? <MetricRow label="Last desktop sync" value={formatNumber(snapshot.sync_state.pack_cursor)} /> : null}
+      {isAndroid ? <MetricRow label="Waiting for confirmation" value={formatNumber(snapshot.sync_state.pending_ack_count)} /> : null}
       <MetricRow label="Bodies still caching" value={formatNumber(snapshot.content.missing_content_blob_count)} />
     </div>
   );
@@ -105,11 +113,31 @@ function SnapshotSection(props: {
   snapshot: SyncDiagnosticSnapshot | null;
   title: string;
 }) {
+  const dirtyObjects = props.snapshot?.sync_state.dirty_objects ?? [];
+  const pendingAcks = props.snapshot?.sync_state.pending_acks ?? [];
   return (
     <section>
       <h3 className="text-sm font-semibold text-foreground">{props.title}</h3>
       {props.snapshot ? (
-        <SnapshotMetrics snapshot={props.snapshot} />
+        <div className="space-y-4">
+          <SnapshotMetrics snapshot={props.snapshot} />
+          <section>
+            <h4 className="text-xs font-semibold text-companion-text-secondary">Object types</h4>
+            <ObjectTypeRows rows={props.snapshot.sync_state.state_counts} />
+          </section>
+          {props.snapshot.host === 'android' ? (
+            <>
+              <section>
+                <h4 className="text-xs font-semibold text-companion-text-secondary">Device changes waiting</h4>
+                <DirtyObjectRows rows={dirtyObjects} />
+              </section>
+              <section>
+                <h4 className="text-xs font-semibold text-companion-text-secondary">Desktop confirmations waiting</h4>
+                <PendingAckRows rows={pendingAcks} />
+              </section>
+            </>
+          ) : null}
+        </div>
       ) : (
         <p className="mt-3 text-sm leading-6 text-companion-text-secondary">{props.empty}</p>
       )}

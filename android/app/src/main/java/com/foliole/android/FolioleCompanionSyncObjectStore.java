@@ -53,7 +53,7 @@ final class FolioleCompanionSyncObjectStore {
     static JSObject loadSyncStateChanges(SQLiteDatabase database, int cursor, int limit) throws Exception {
         JSArray objects = new JSArray();
         try (Cursor row = database.rawQuery(
-            "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at " +
+            "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash " +
                 "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? ORDER BY state_seq ASC LIMIT ?",
             new String[] { String.valueOf(Math.max(0, cursor)), String.valueOf(normalizeLimit(limit)) }
         )) {
@@ -64,7 +64,8 @@ final class FolioleCompanionSyncObjectStore {
                     row.getString(3),
                     row.getString(4),
                     row.isNull(5) ? null : row.getString(5),
-                    row.getInt(2)
+                    row.getInt(2),
+                    row.isNull(6) ? null : row.getString(6)
                 ), true));
             }
         }
@@ -218,7 +219,8 @@ final class FolioleCompanionSyncObjectStore {
                     cursor.getString(2),
                     cursor.getString(3),
                     cursor.isNull(4) ? null : cursor.getString(4),
-                    0
+                    0,
+                    null
                 ));
             }
         }
@@ -235,6 +237,7 @@ final class FolioleCompanionSyncObjectStore {
         object.put("payload_json", row.deletedAt == null ? readPayloadJson(database, row.objectType, row.objectId) : JSONObject.NULL);
         if (includeStateSeq) {
             object.put("state_seq", row.stateSeq);
+            object.put("base_content_hash", row.baseContentHash == null ? JSONObject.NULL : row.baseContentHash);
         }
         return object;
     }
@@ -344,14 +347,24 @@ final class FolioleCompanionSyncObjectStore {
         final String updatedAt;
         final String deletedAt;
         final int stateSeq;
+        final String baseContentHash;
 
-        SyncStateRow(String objectType, String objectId, String contentHash, String updatedAt, String deletedAt, int stateSeq) {
+        SyncStateRow(
+            String objectType,
+            String objectId,
+            String contentHash,
+            String updatedAt,
+            String deletedAt,
+            int stateSeq,
+            String baseContentHash
+        ) {
             this.objectType = objectType;
             this.objectId = objectId;
             this.contentHash = contentHash;
             this.updatedAt = updatedAt;
             this.deletedAt = deletedAt;
             this.stateSeq = stateSeq;
+            this.baseContentHash = baseContentHash;
         }
     }
 }

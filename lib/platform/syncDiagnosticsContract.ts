@@ -4,9 +4,28 @@ export type SyncDiagnosticSeverity = 'error' | 'info' | 'ok' | 'warning';
 
 export interface SyncDiagnosticCountRange {
   count: number;
+  dirty_count?: number;
   max_state_seq: number | null;
   min_state_seq: number | null;
   object_type: string;
+}
+
+export interface SyncDiagnosticDirtyObject {
+  base_content_hash?: string | null;
+  content_hash: string | null;
+  object_id: string;
+  object_type: string;
+  state_seq: number | null;
+  updated_at: string | null;
+}
+
+export interface SyncDiagnosticPendingAck {
+  acked_at: string;
+  client_op_id: string;
+  object_id: string;
+  object_type: string;
+  state_seq: number | null;
+  status: string;
 }
 
 export interface SyncDiagnosticIdentity {
@@ -35,9 +54,12 @@ export interface SyncDiagnosticStorage {
 }
 
 export interface SyncDiagnosticState {
+  dirty_objects?: SyncDiagnosticDirtyObject[];
   local_dirty_count: number;
   max_state_seq: number | null;
   pack_cursor: number | null;
+  pending_ack_count?: number;
+  pending_acks?: SyncDiagnosticPendingAck[];
   state_counts: SyncDiagnosticCountRange[];
 }
 

@@ -34,7 +34,30 @@ const diagnosticResult = {
     host: 'android',
     identity: { app_version: null, device_id: 'android-device' },
     storage: { active_node_count: 2 },
-    sync_state: { max_state_seq: 4, pack_cursor: 4, local_dirty_count: 1, state_counts: [] },
+    sync_state: {
+      dirty_objects: [{
+        content_hash: 'hash-review',
+        object_id: 'node-1',
+        object_type: 'node_review',
+        state_seq: 4,
+        updated_at: '2026-04-29T01:24:00.000Z'
+      }],
+      max_state_seq: 4,
+      pack_cursor: 4,
+      local_dirty_count: 1,
+      pending_ack_count: 1,
+      pending_acks: [{
+        acked_at: '2026-04-29T01:25:00.000Z',
+        client_op_id: 'node_review:node-1:4',
+        object_id: 'node-1',
+        object_type: 'node_review',
+        state_seq: 7,
+        status: 'accepted'
+      }],
+      state_counts: [
+        { count: 1, dirty_count: 1, max_state_seq: 4, min_state_seq: 4, object_type: 'node_review' }
+      ]
+    },
     verdicts: []
   },
   desktop: {
@@ -50,8 +73,8 @@ const diagnosticResult = {
       pack_cursor: null,
       local_dirty_count: 2,
       state_counts: [
-        { count: 2, max_state_seq: 3, min_state_seq: 2, object_type: 'node' },
-        { count: 1, max_state_seq: 7, min_state_seq: 7, object_type: 'view_state' }
+        { count: 2, dirty_count: 0, max_state_seq: 3, min_state_seq: 2, object_type: 'node' },
+        { count: 1, dirty_count: 0, max_state_seq: 7, min_state_seq: 7, object_type: 'view_state' }
       ]
     },
     verdicts: []
@@ -91,6 +114,15 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();
     expect(screen.queryByText('A completed event exists, but the Android cursor is still behind desktop.')).not.toBeInTheDocument();
     expect(screen.getByText('Android')).toBeInTheDocument();
+    expect(screen.getAllByText('Object types')).toHaveLength(2);
+    expect(screen.getAllByText('node_review')).toHaveLength(3);
+    expect(screen.getByText('1 waiting')).toBeInTheDocument();
+    expect(screen.getByText('Device changes waiting')).toBeInTheDocument();
+    expect(screen.getByText('Desktop confirmations waiting')).toBeInTheDocument();
+    expect(screen.getByText('accepted')).toBeInTheDocument();
+    expect(screen.getByText('seq 7')).toBeInTheDocument();
+    expect(screen.getAllByText('node-1').length).toBeGreaterThan(0);
+    expect(screen.getByText('seq 4')).toBeInTheDocument();
     expect(screen.getByText('Desktop')).toBeInTheDocument();
     expect(diagnosticsMock.runCombinedSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });

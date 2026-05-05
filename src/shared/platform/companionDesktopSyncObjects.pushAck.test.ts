@@ -30,6 +30,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
+  saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
@@ -45,6 +46,7 @@ vi.mock('./companionWorkspacePairing', () => ({
 
 function createLocalStateChange(): NativeSyncStateObjectRecord {
   return {
+    base_content_hash: null,
     content_hash: 'local-hash',
     deleted_at: null,
     object_id: 'node-1',
@@ -55,24 +57,107 @@ function createLocalStateChange(): NativeSyncStateObjectRecord {
   };
 }
 
+function createLocalNodeReviewChange(): NativeSyncStateObjectRecord {
+  return {
+    base_content_hash: 'desktop-base',
+    content_hash: 'local-review-hash',
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_review',
+    payload_json: '{"reps":2}',
+    state_seq: 10,
+    updated_at: '2026-04-25T00:05:00.000Z'
+  };
+}
+
+function createLocalReviewLog(): NativeSyncReviewLogRecord {
+  return {
+    device_id: 'android-test-device',
+    difficulty_after: 3,
+    difficulty_before: 2,
+    due_after: '2026-04-26T00:00:00.000Z',
+    due_before: '2026-04-25T00:00:00.000Z',
+    grade: 3,
+    id: 'review-op-1',
+    node_id: 'node-1',
+    op_id: 'op-1',
+    reviewed_at: '2026-04-25T00:05:00.000Z',
+    scheduler_version: 'ts-fsrs@4',
+    stability_after: 4,
+    stability_before: 3
+  };
+}
+
+function parsePushItems(init: RequestInit | undefined) {
+  return JSON.parse(String(init?.body ?? '{}')) as {
+    items: Array<{ clientOpId: string; identity: { objectId: string; objectType: string } }>;
+  };
+}
+
 describe('companion desktop sync push acknowledgements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalStateChange()]);
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => ({
-      json: async () => init?.method === 'POST' && url.includes('/companion/sync-objects')
-        ? { applied_object_ids: [] }
-        : { nodes: [], objects: [], reviews: [] },
+      json: async () => {
+        if (init?.method === 'POST' && url.includes('/companion/sync-push')) {
+          return {
+            acks: parsePushItems(init).items.map((item) => ({
+              client_op_id: item.clientOpId,
+              identity: item.identity,
+              status: 'accepted'
+            }))
+          };
+        }
+        return { nodes: [], objects: [], reviews: [] };
+      },
       ok: true
     })));
   });
 
-  it('keeps the local push cursor when desktop rejects a state object', async () => {
+  it('does not push non-review state dirty through the new push endpoint', async () => {
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
     expect(result.pushedObjectIds).toEqual([]);
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
+  });
+
+  it('pushes node_review and review_log, storing state acks and advancing accepted review log cursor', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
+    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
+      body: expect.stringContaining('"baseContentHash":"desktop-base"'),
+      method: 'POST'
+    }));
+    expect(result.pushedObjectIds).toEqual(['node_review:node-1']);
+    expect(result.pushedReviewOpIds).toEqual(['op-1']);
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+      expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'accepted' })
+    ]);
+    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).toHaveBeenCalledWith({
+      change_id: 'op-1',
+      created_at: '2026-04-25T00:05:00.000Z'
+    });
+  });
+
+  it('skips legacy node_review dirty rows that do not have a base reference', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
+      ...createLocalNodeReviewChange(),
+      base_content_hash: null
+    }]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedObjectIds).toEqual([]);
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
   });
 });
