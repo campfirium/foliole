@@ -215,6 +215,24 @@ public class FolioleCompanionSyncPackApplyTest {
     }
 
     @Test
+    public void appliesNodeReviewPayloadRowsFromIncomingPack() throws Exception {
+        createIncomingPack();
+        appendIncomingNodeReviewRows();
+
+        JSObject result = FolioleCompanionSyncPackApply.applyPack(mainDatabase, packFile, "android-test");
+
+        assertEquals(2, result.getInt("applied_object_count"));
+        assertEquals(2, selectInt("SELECT reps FROM node_review WHERE node_id = 'node-review-1'"));
+        assertEquals("2026-04-27T00:12:00.000Z", selectString(
+            "SELECT last_review_at FROM node_review WHERE node_id = 'node-review-1'"
+        ));
+        assertEquals("review-hash", selectString(
+            "SELECT content_hash FROM sync_object_state " +
+            "WHERE object_type = 'node_review' AND object_id = 'node-review-1'"
+        ));
+    }
+
+    @Test
     public void appliesExternalFolderPayloadRowsFromIncomingPack() throws Exception {
         createIncomingPack();
         appendIncomingExternalFolderRows();
@@ -494,6 +512,25 @@ public class FolioleCompanionSyncPackApplyTest {
             packDatabase.execSQL("INSERT INTO sync_object_state (" +
                 "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
                 "'node_reading', 'node-reading-1', 2, 'reading-hash', '" + now + "', NULL)");
+        } finally {
+            packDatabase.close();
+        }
+    }
+
+    private void appendIncomingNodeReviewRows() {
+        SQLiteDatabase packDatabase = SQLiteDatabase.openDatabase(packFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+        try {
+            String now = "2026-04-27T00:12:00.000Z";
+            String payload = "{\"node_id\":\"node-review-1\",\"due\":\"2026-04-28T00:12:00.000Z\"," +
+                "\"last_review_at\":\"" + now + "\",\"state\":2,\"stability\":3.0," +
+                "\"difficulty\":4.0,\"elapsed_days\":1,\"scheduled_days\":1,\"reps\":2,\"lapses\":0}";
+            packDatabase.execSQL("UPDATE pack_manifest SET value = '{\"to_state_seq\":2}' WHERE key = 'manifest_json'");
+            packDatabase.execSQL("INSERT INTO sync_objects (" +
+                "object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (" +
+                "'node_review', 'node-review-1', 'review-hash', '" + payload + "', '" + now + "', NULL)");
+            packDatabase.execSQL("INSERT INTO sync_object_state (" +
+                "object_type, object_id, state_seq, content_hash, updated_at, deleted_at) VALUES (" +
+                "'node_review', 'node-review-1', 2, 'review-hash', '" + now + "', NULL)");
         } finally {
             packDatabase.close();
         }

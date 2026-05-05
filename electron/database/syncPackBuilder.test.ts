@@ -102,6 +102,24 @@ function insertNodeReviewSyncState() {
      VALUES ('node-review-1', 'topic', 'Review Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
   );
   driver.execute(
+    `INSERT INTO node_review (
+       node_id, due, last_review_at, state, stability, difficulty,
+       elapsed_days, scheduled_days, reps, lapses
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'node-review-1',
+      '2026-04-28T00:00:00.000Z',
+      '2026-04-27T00:05:00.000Z',
+      2,
+      3,
+      4,
+      1,
+      1,
+      2,
+      0
+    ]
+  );
+  driver.execute(
     `INSERT INTO review_log (
        id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
@@ -499,7 +517,12 @@ it('packs review log rows with changed node review state', async () => {
       tables: expect.arrayContaining([{ name: 'review_log', row_count: 1 }])
     }),
     reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
-    stateRows: [{ object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }]
+    stateRows: [{ object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'node-review-1',
+      object_type: 'node_review',
+      payload_json: expect.stringContaining('last_review_at')
+    })]
   });
 });
 
