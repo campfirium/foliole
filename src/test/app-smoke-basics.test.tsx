@@ -31,7 +31,7 @@ it('shows editor display mode entrypoint inside more menu trigger', () => {
   expect(localStorage.getItem(EDITOR_DISPLAY_MODE_KEY)).toBeNull();
 });
 
-it('runs study flow as Study -> Show Answer -> Grade buttons enabled', async () => {
+it('runs study flow with FSRS cards consumed before queued reading cards', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1', 'node-2'],
@@ -62,29 +62,28 @@ it('runs study flow as Study -> Show Answer -> Grade buttons enabled', async () 
 
   expect(screen.getByRole('button', { name: 'Study' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
-  expect(screen.getByText(/Reviewing · 1 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
+  await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2', 'node-1']));
+  expect(screen.getByText(/Reviewing · 2 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Again' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Show Answer' }));
-  expect(screen.getByText(/Reviewing · 1 left · 0 done · Answer revealed/i)).toBeInTheDocument();
+  expect(screen.getByText(/Reviewing · 2 left · 0 done · Answer revealed/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
-  await waitFor(() => {
-    expect(screen.getByText('3d')).toBeInTheDocument();
-  });
+  await waitFor(() => expect(screen.getByText('3d')).toBeInTheDocument());
   expect(screen.getByLabelText('Cloze answer section')).toBeInTheDocument();
 });
 
-it('enters review mode and shows complete state when no due cards exist', async () => {
+it('enters review mode with the reading queue when no FSRS cards are due', async () => {
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Study' }));
 
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Review complete' })).toBeInTheDocument();
-  });
+  await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-1']));
+  expect(screen.getByText(/Reviewing · 1 left · 0 done · Awaiting answer/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Review complete' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Study' }));
   await waitFor(() => {
     expect(screen.queryByLabelText('Review mode toolbar')).not.toBeInTheDocument();
   });

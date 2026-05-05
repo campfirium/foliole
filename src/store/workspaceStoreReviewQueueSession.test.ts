@@ -116,33 +116,42 @@ const schedulerStub: ReviewSchedulerAdapter = {
   }
 };
 
-it('starts a session from the planned mixed queue order', () => {
+it('starts a session from the unified FSRS/reading mixed queue order', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([
-      createReviewNode('new-1', now),
-      createReviewNode('review-2', '2026-03-08T08:00:00.000Z', {
+      createReviewNode('fsrs-1', '2026-03-01T08:00:00.000Z', {
+        reps: 4,
+        state: 2,
+        lastReviewAt: '2026-02-24T08:00:00.000Z'
+      }),
+      createReadingNode('reading-1', '2026-03-02T08:00:00.000Z'),
+      createReviewNode('fsrs-2', '2026-03-02T08:00:00.000Z', {
         reps: 2,
         state: 2,
-        lastReviewAt: '2026-03-07T08:00:00.000Z'
+        lastReviewAt: '2026-02-25T08:00:00.000Z'
       }),
-      createReadingNode('reading-1', now),
-      createReviewNode('review-3', '2026-03-09T07:00:00.000Z', {
+      createReviewNode('fsrs-3', '2026-03-03T07:00:00.000Z', {
+        reps: 2,
+        state: 2,
+        lastReviewAt: '2026-02-26T07:00:00.000Z'
+      }),
+      createReviewNode('fsrs-4', '2026-03-04T06:00:00.000Z', {
+        reps: 2,
+        state: 2,
+        lastReviewAt: '2026-02-27T06:00:00.000Z'
+      }),
+      createReviewNode('fsrs-5', '2026-03-05T09:00:00.000Z', {
+        reps: 2,
+        state: 2,
+        lastReviewAt: '2026-02-28T09:00:00.000Z'
+      }),
+      createReadingNode('reading-2', '2026-03-06T08:00:00.000Z'),
+      createReviewNode('fsrs-6', '2026-03-06T10:00:00.000Z', {
         reps: 1,
         state: 1,
-        lastReviewAt: '2026-03-06T07:00:00.000Z'
-      }),
-      createReviewNode('review-1', '2026-03-07T06:00:00.000Z', {
-        reps: 5,
-        state: 2,
-        lastReviewAt: '2026-03-01T06:00:00.000Z'
-      }),
-      createReviewNode('review-4', '2026-03-10T09:00:00.000Z', {
-        reps: 3,
-        state: 2,
-        lastReviewAt: '2026-03-08T09:00:00.000Z'
-      }),
-      createReviewNode('new-2', now)
+        lastReviewAt: '2026-03-01T10:00:00.000Z'
+      })
     ])
   );
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
@@ -150,13 +159,15 @@ it('starts a session from the planned mixed queue order', () => {
   const started = actions.startReviewSession(now);
 
   expect(started).toBe(true);
-  expect(harness.getState().reviewSession.currentNodeId).toBe('review-1');
+  expect(harness.getState().reviewSession.currentNodeId).toBe('fsrs-1');
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([
-    'review-1',
-    'review-2',
-    'review-3',
-    'new-1',
-    'review-4',
-    'new-2'
+    'fsrs-1',
+    'fsrs-2',
+    'fsrs-3',
+    'fsrs-4',
+    'fsrs-5',
+    'reading-1',
+    'fsrs-6',
+    'reading-2'
   ]);
 });

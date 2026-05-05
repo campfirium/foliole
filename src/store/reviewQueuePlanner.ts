@@ -1,101 +1,109 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
-
-export const DAILY_REVIEW_QUEUE_LIMIT = 20;
-
-const REVIEWS_PER_NEW_CARD = 3;
-const MIXED_QUEUE_NEW_CARD_RATIO = 0.25;
-
-interface ReviewQueueCandidate {
-  due: string;
-  id: string;
-  isNew: boolean;
-  order: number;
-}
+import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
+import {
+  buildQueueMixCycle,
+  DEFAULT_UNIFIED_PUSH_QUEUE_RULES
+} from '../features/review/model/unifiedPushQueueRules';
 
 export interface ReviewQueuePlan {
-  newCardCount: number;
+  fsrsCandidateCount: number;
+  fsrsQueueNodeIds: string[];
   overflowCount: number;
   queueNodeIds: string[];
   readingCandidateCount: number;
-  reviewCardCount: number;
+  readingQueueNodeIds: string[];
 }
 
-function isReadingCandidate(node: Node | undefined) {
-  return Boolean(node && node.reveal === null);
-}
-
-function isReviewCandidate(node: Node | undefined, now: string) {
-  if (!node || node.reveal === null) {
-    return false;
+function parseTimestamp(timestamp: string) {
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) {
+    throw new TypeError(`Invalid timestamp: ${timestamp}`);
   }
-  const due = node.review?.due ?? now;
-  return due <= now;
+  return parsed;
 }
 
-function isNewReviewCard(node: Node) {
-  if (!node.review) {
-    return true;
+function createSeededRandom(seedInput: string) {
+  let hash = 2166136261;
+  for (const character of seedInput) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
   }
-  return node.review.state === 0 && node.review.reps === 0 && node.review.lastReviewAt === null;
-}
-
-function compareCandidates(left: ReviewQueueCandidate, right: ReviewQueueCandidate) {
-  if (left.due !== right.due) {
-    return left.due.localeCompare(right.due);
-  }
-  return left.order - right.order;
-}
-
-function toReviewQueueCandidate(node: Node, order: number, now: string): ReviewQueueCandidate {
-  return {
-    due: node.review?.due ?? now,
-    id: node.id,
-    isNew: isNewReviewCard(node),
-    order
+  let state = hash >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 2 ** 32;
   };
 }
 
-function takeMixedQueue(reviewIds: string[], newIds: string[], limit: number) {
+function isQueueableReadingNode(node: Node | undefined) {
+  return Boolean(node && node.reveal === null && node.content.trim().length > 0);
+}
+
+function isDueFsrsNode(node: Node | undefined, now: string) {
+  if (!node || node.reveal === null) {
+    return false;
+  }
+  return (node.review?.due ?? now) <= now;
+}
+
+function resolveFsrsQueueNodeIds(args: {
+  candidates: Node[];
+  nodeOrder: string[];
+  now: string;
+}) {
+  const random = createSeededRandom(`fsrs|${args.nodeOrder.join('|')}`);
+  return assembleFsrsPushQueue(
+    args.candidates.map((node) => ({
+      id: node.id,
+      priority: DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority,
+      retrievability: parseTimestamp(node.review?.due ?? args.now)
+    })),
+    { random }
+  ).map((entry) => entry.id);
+}
+
+function resolveReadingQueueNodeIds(args: {
+  candidates: Node[];
+  nodeOrder: string[];
+}) {
+  const random = createSeededRandom(`reading|${args.nodeOrder.join('|')}`);
+  return assembleReadingPushQueue(
+    args.candidates.map((node) => ({
+      id: node.id,
+      priority: DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority,
+      nextAt: node.createdAt
+    })),
+    { random }
+  ).map((entry) => entry.id);
+}
+
+function mixUnifiedPushQueues(args: {
+  fsrsQueueNodeIds: string[];
+  limit?: number;
+  readingQueueNodeIds: string[];
+}) {
   const queueNodeIds: string[] = [];
-  const maxNewCards = reviewIds.length === 0 ? limit : Math.max(1, Math.floor(limit * MIXED_QUEUE_NEW_CARD_RATIO));
-  let insertedNewCards = 0;
-  let reviewStreak = 0;
-  let reviewIndex = 0;
-  let newIndex = 0;
+  const limit = args.limit ?? Number.POSITIVE_INFINITY;
+  const cycle = buildQueueMixCycle();
+  let fsrsIndex = 0;
+  let readingIndex = 0;
+  let cycleIndex = 0;
 
-  while (queueNodeIds.length < limit) {
-    const hasReview = reviewIndex < reviewIds.length;
-    const hasNew = newIndex < newIds.length;
-    if (!hasReview && !hasNew) {
-      break;
+  while (
+    queueNodeIds.length < limit &&
+    (fsrsIndex < args.fsrsQueueNodeIds.length || readingIndex < args.readingQueueNodeIds.length)
+  ) {
+    const nextKind = cycle[cycleIndex % cycle.length];
+    cycleIndex += 1;
+
+    const nextId =
+      nextKind === 'fsrs'
+        ? args.fsrsQueueNodeIds[fsrsIndex++]
+        : args.readingQueueNodeIds[readingIndex++];
+
+    if (nextId) {
+      queueNodeIds.push(nextId);
     }
-
-    const canInsertNew = hasNew && insertedNewCards < maxNewCards;
-    const shouldInsertNew = canInsertNew && (!hasReview || reviewStreak >= REVIEWS_PER_NEW_CARD);
-    if (shouldInsertNew) {
-      queueNodeIds.push(newIds[newIndex] as string);
-      newIndex += 1;
-      insertedNewCards += 1;
-      reviewStreak = 0;
-      continue;
-    }
-
-    if (hasReview) {
-      queueNodeIds.push(reviewIds[reviewIndex] as string);
-      reviewIndex += 1;
-      reviewStreak += 1;
-      continue;
-    }
-
-    if (canInsertNew) {
-      queueNodeIds.push(newIds[newIndex] as string);
-      newIndex += 1;
-      insertedNewCards += 1;
-      reviewStreak = 0;
-      continue;
-    }
-
-    break;
   }
 
   return queueNodeIds;
@@ -108,45 +116,47 @@ export function buildReviewQueuePlan(args: {
   now: string;
   trashedNodeIds: string[];
 }): ReviewQueuePlan {
-  const reviewCandidates: ReviewQueueCandidate[] = [];
-  const newCandidates: ReviewQueueCandidate[] = [];
-  let readingCandidateCount = 0;
+  const fsrsCandidates: Node[] = [];
+  const readingCandidates: Node[] = [];
+  const trashedNodeIds = new Set(args.trashedNodeIds);
 
-  args.nodeOrder.forEach((nodeId, order) => {
-    if (args.trashedNodeIds.includes(nodeId)) {
+  args.nodeOrder.forEach((nodeId) => {
+    if (trashedNodeIds.has(nodeId)) {
       return;
     }
+
     const node = args.nodesById[nodeId];
-    if (isReadingCandidate(node)) {
-      readingCandidateCount += 1;
-      return;
-    }
-    if (!node || !isReviewCandidate(node, args.now)) {
+    if (isQueueableReadingNode(node)) {
+      readingCandidates.push(node);
       return;
     }
 
-    const candidate = toReviewQueueCandidate(node, order, args.now);
-    if (candidate.isNew) {
-      newCandidates.push(candidate);
-      return;
+    if (isDueFsrsNode(node, args.now)) {
+      fsrsCandidates.push(node);
     }
-    reviewCandidates.push(candidate);
   });
 
-  reviewCandidates.sort(compareCandidates);
-  newCandidates.sort(compareCandidates);
-
-  const queueNodeIds = takeMixedQueue(
-    reviewCandidates.map((candidate) => candidate.id),
-    newCandidates.map((candidate) => candidate.id),
-    args.limit ?? DAILY_REVIEW_QUEUE_LIMIT
-  );
+  const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
+    candidates: fsrsCandidates,
+    nodeOrder: args.nodeOrder,
+    now: args.now
+  });
+  const readingQueueNodeIds = resolveReadingQueueNodeIds({
+    candidates: readingCandidates,
+    nodeOrder: args.nodeOrder
+  });
+  const queueNodeIds = mixUnifiedPushQueues({
+    fsrsQueueNodeIds,
+    limit: args.limit,
+    readingQueueNodeIds
+  });
 
   return {
-    newCardCount: queueNodeIds.filter((nodeId) => newCandidates.some((candidate) => candidate.id === nodeId)).length,
-    overflowCount: reviewCandidates.length + newCandidates.length - queueNodeIds.length,
+    fsrsCandidateCount: fsrsQueueNodeIds.length,
+    fsrsQueueNodeIds,
+    overflowCount: fsrsQueueNodeIds.length + readingQueueNodeIds.length - queueNodeIds.length,
     queueNodeIds,
-    readingCandidateCount,
-    reviewCardCount: queueNodeIds.filter((nodeId) => reviewCandidates.some((candidate) => candidate.id === nodeId)).length
+    readingCandidateCount: readingQueueNodeIds.length,
+    readingQueueNodeIds
   };
 }
