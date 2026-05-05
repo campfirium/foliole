@@ -4,6 +4,38 @@ export interface AnchoredImportedHighlightRecord extends PreparedImportHighlight
   anchorId: string;
 }
 
+function normalizeLineEndings(value: string) {
+  return value.replace(/\r\n?/g, '\n');
+}
+
+function normalizeLooseWhitespaceWithMap(value: string) {
+  const raw = normalizeLineEndings(value);
+  let normalized = '';
+  const rawIndexes: number[] = [];
+  let pendingWhitespaceStart: number | null = null;
+
+  for (let index = 0; index < raw.length; index += 1) {
+    const character = raw[index];
+    if (/\s/.test(character)) {
+      if (pendingWhitespaceStart === null) {
+        pendingWhitespaceStart = index;
+      }
+      continue;
+    }
+
+    if (pendingWhitespaceStart !== null && normalized.length > 0) {
+      normalized += ' ';
+      rawIndexes.push(pendingWhitespaceStart);
+      pendingWhitespaceStart = null;
+    }
+
+    normalized += character;
+    rawIndexes.push(index);
+  }
+
+  return { normalized: normalized.trim(), rawIndexes };
+}
+
 export function collectAnchoredImportedHighlights(content: string) {
   const pattern = /<highlight id="([1-9]\d*)">([\s\S]*?)<\/highlight id="\1">/g;
   return [...content.matchAll(pattern)]
@@ -53,6 +85,34 @@ function findAvailableOccurrence(
         return candidate;
       }
       startIndex = foundAt + 1;
+    }
+  }
+  const normalizedContent = normalizeLooseWhitespaceWithMap(content);
+  const normalizedExcerpt = normalizeLooseWhitespaceWithMap(excerpt).normalized;
+  if (!normalizedContent.normalized || !normalizedExcerpt) {
+    return null;
+  }
+  for (const startFrom of attempts) {
+    let normalizedStartIndex = normalizedContent.rawIndexes.findIndex((index) => index >= startFrom);
+    if (normalizedStartIndex < 0) {
+      normalizedStartIndex = 0;
+    }
+    while (normalizedStartIndex <= normalizedContent.normalized.length) {
+      const foundAt = normalizedContent.normalized.indexOf(normalizedExcerpt, normalizedStartIndex);
+      if (foundAt < 0) {
+        break;
+      }
+      const rawStart = normalizedContent.rawIndexes[foundAt];
+      const rawEnd = normalizedContent.rawIndexes[foundAt + normalizedExcerpt.length - 1];
+      if (rawStart === undefined || rawEnd === undefined) {
+        break;
+      }
+      const candidate = { from: rawStart, to: rawEnd + 1 };
+      const overlaps = occupiedRanges.some((range) => candidate.from < range.to && candidate.to > range.from);
+      if (!overlaps) {
+        return candidate;
+      }
+      normalizedStartIndex = foundAt + 1;
     }
   }
   return null;

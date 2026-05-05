@@ -106,3 +106,26 @@ it('treats a plain highlight file as a single manual highlight block', async () 
     status: 'merged'
   });
 });
+
+it('merges the GTD article case with the full set of highlights', async () => {
+  const articlePath = '/mnt/d/X/Dropbox/obs/clip/Full Document Contents/Articles/GTD 项目管理方法.md';
+  const highlightPath = '/mnt/d/X/Dropbox/obs/clip/Articles/GTD 项目管理方法.md';
+  const articleContent = await fs.readFile(articlePath, 'utf8');
+
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: articleContent,
+      fileName: 'GTD 项目管理方法.md',
+      filePath: articlePath,
+      importedAt: '2026-04-11T10:00:00.000Z',
+      kind: 'markdown'
+    })
+  );
+
+  const result = await mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, highlightPath);
+  const state = readMergedState(imported.nodeId as string);
+
+  expect(result.status).toBe('merged');
+  expect(result.merged_highlight_count).toBe(34);
+  expect(state.children.filter((child) => child.anchor_link !== null)).toHaveLength(34);
+});

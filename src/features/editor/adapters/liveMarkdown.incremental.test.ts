@@ -87,6 +87,31 @@ describe('liveMarkdown incremental static decorations', () => {
     adapter.destroy();
   });
 
+  it('renders imported multi-line table highlights in preview mode', () => {
+    const content = [
+      '# GTD 项目管理方法',
+      '',
+      '<highlight id="5">你提到的一些 GTD 元素你没用过，但恰恰它们是 GTD 有效运行的关键环节</highlight id="5">：',
+      '',
+      '<highlight id="6">| 要素 | GTD 原理 | Todoist 中的对应操作 |',
+      '| --- | --- | --- |',
+      '| **每周回顾** | 保持系统清空 & 当前 | 每周打开「Someday/Waiting/Projects」重新评估 |',
+      '| **拖动排序** | 明确今日任务顺序（非重要性排序） | 用拖动或优先级字段安排今日计划 |',
+      '| **统一调度到今天** | 临时任务快速执行（反向推导优先级） | Inbox → 今天清空 or 用 Filter 扫描 |</highlight id="6">'
+    ].join('\n');
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
+
+    const highlightTexts = Array.from(host.querySelectorAll('.cm-md-highlight, .cm-md-highlight-overlap')).map((node) =>
+      (node.textContent ?? '').trim()
+    );
+
+    expect(highlightTexts.some((text) => text.includes('你提到的一些 GTD 元素你没用过'))).toBe(true);
+    expect(highlightTexts.some((text) => text.includes('每周回顾'))).toBe(true);
+
+    adapter.destroy();
+  });
+
   it('skips frontmatter rebuilds when edits stay below the inspected header region', () => {
     const content = ['---', 'author: Jane', '---', '', '# Title', '', 'Paragraph'].join('\n');
     const host = createHost();
