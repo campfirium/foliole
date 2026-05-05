@@ -15,20 +15,14 @@ final class FolioleCompanionSyncStateWriteStore {
 
     static JSObject saveSetting(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
         String now = Instant.now().toString();
-        String key = input.optString("key");
-        String scope = input.optString("scope", "device");
-        String platform = input.optString("platform", "android");
-        String formFactor = input.optString("form_factor", "phone");
-        String deviceId = input.optString("device_id", "*");
-        String valueJson = input.optString("value_json", "null");
-        String objectId = scope + ":" + platform + ":" + formFactor + ":" + deviceId + ":" + key;
-        JSONObject payload = new JSONObject();
-        payload.put("device_id", deviceId);
-        payload.put("form_factor", formFactor);
-        payload.put("key", key);
-        payload.put("platform", platform);
-        payload.put("scope", scope);
-        payload.put("value_json", valueJson);
+        String key = FolioleCompanionSyncSettingPayloadRules.key(context, input);
+        String scope = FolioleCompanionSyncSettingPayloadRules.scope(context, input);
+        String platform = FolioleCompanionSyncSettingPayloadRules.platform(context, input);
+        String formFactor = FolioleCompanionSyncSettingPayloadRules.formFactor(context, input);
+        String deviceId = FolioleCompanionSyncSettingPayloadRules.deviceId(context, input);
+        String valueJson = FolioleCompanionSyncSettingPayloadRules.valueJson(context, input);
+        String objectId = FolioleCompanionSyncSettingPayloadRules.objectId(context, scope, platform, formFactor, deviceId, key);
+        JSONObject payload = FolioleCompanionSyncSettingPayloadRules.payload(context, key, scope, platform, formFactor, deviceId, valueJson);
         String contentHash = FolioleCompanionSyncContentHash.hash(payload);
 
         database.beginTransaction();

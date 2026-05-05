@@ -86,9 +86,17 @@ final class FolioleCompanionSyncPayloadQueryStore {
         return metadata(context, "syncPayloadViewActiveNode", "scope");
     }
 
+    static String settingMetadata(Context context, String key) throws Exception {
+        return metadata(context, "syncPayloadSetting", key);
+    }
+
     static String viewObjectId(Context context, String deviceId, String key) throws Exception {
+        return scopedObjectId(context, viewScope(context), viewPlatform(context), viewFormFactor(context), deviceId, key);
+    }
+
+    static String scopedObjectId(Context context, String scope, String platform, String formFactor, String deviceId, String key) throws Exception {
         String delimiter = routingString(context, "objectIdDelimiter");
-        return viewScope(context) + delimiter + viewPlatform(context) + delimiter + viewFormFactor(context) + delimiter + deviceId + delimiter + key;
+        return scope + delimiter + platform + delimiter + formFactor + delimiter + deviceId + delimiter + key;
     }
 
     static String viewObjectIdKey(Context context, String objectId) throws Exception {

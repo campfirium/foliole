@@ -58,7 +58,21 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "FROM pdf_page_text WHERE attachment_id || ':' || page = ? LIMIT 1"
   },
   syncPayloadSetting: {
-    syncPayload: { argMode: 'object_id', objectType: 'setting' },
+    syncPayload: {
+      argMode: 'object_id',
+      defaultDeviceId: '*',
+      defaultFormFactor: 'phone',
+      defaultPlatform: 'android',
+      defaultScope: 'device',
+      defaultValueJson: 'null',
+      deviceIdPayloadKey: 'device_id',
+      formFactorPayloadKey: 'form_factor',
+      keyPayloadKey: 'key',
+      objectType: 'setting',
+      platformPayloadKey: 'platform',
+      scopePayloadKey: 'scope',
+      valueJsonPayloadKey: 'value_json'
+    },
     sql:
       "SELECT json_object('key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor, " +
       "'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, " +

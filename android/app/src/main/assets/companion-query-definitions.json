@@ -1260,7 +1260,18 @@
     "syncPayloadSetting": {
       "syncPayload": {
         "argMode": "object_id",
-        "objectType": "setting"
+        "defaultDeviceId": "*",
+        "defaultFormFactor": "phone",
+        "defaultPlatform": "android",
+        "defaultScope": "device",
+        "defaultValueJson": "null",
+        "deviceIdPayloadKey": "device_id",
+        "formFactorPayloadKey": "form_factor",
+        "keyPayloadKey": "key",
+        "objectType": "setting",
+        "platformPayloadKey": "platform",
+        "scopePayloadKey": "scope",
+        "valueJsonPayloadKey": "value_json"
       },
       "sql": "SELECT json_object('key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor, 'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, 'deleted_at', deleted_at) AS payload_json FROM setting_records WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ? LIMIT 1"
     },
