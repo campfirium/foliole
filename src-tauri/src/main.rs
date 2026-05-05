@@ -46,6 +46,16 @@ fn main() {
               "app_version": app.package_info().version.to_string()
             });
             let _ = foliole_tauri_core::boot::record_boot_stage("tauri_setup", Some(payload));
+            let _ = foliole_tauri_core::menu::install_app_menu(app).map_err(|error| {
+                let _ = foliole_tauri_core::boot::record_boot_stage(
+                    "tauri_menu_install_failed",
+                    Some(json!({
+                      "source": "tauri_setup",
+                      "error": error.to_string()
+                    })),
+                );
+                error
+            })?;
             Ok(())
         })
         .on_page_load(|window, payload| {

@@ -39,10 +39,15 @@ import {
   type InterfaceFontPreset,
   type MonospaceFontPreset
 } from '../features/settings/model/appearanceSettings';
+import { APP_COMMAND_IDS, type AppCommandId } from '../shared/commands/ids';
+import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../shared/commands/recentCommands';
 import { createCommandRegistry } from '../shared/commands/registry';
+import type { CommandRegistration } from '../shared/commands/types';
+import { onNativeMenuCommand, syncNativeMenuState } from '../shared/platform/commandMenu';
 import { onWindowKeydown } from '../shared/platform/keyboard';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
+import { CommandPalette } from './components/CommandPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useDocumentWidthResizer } from './hooks/useDocumentWidthResizer';
 import { useEditorContextCommands } from './hooks/useEditorContextCommands';
@@ -50,6 +55,12 @@ import { useListResizer } from './hooks/useListResizer';
 import { useStudyMode } from './hooks/useStudyMode';
 import { useTrashView } from './hooks/useTrashView';
 import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
+
+const APP_COMMAND_ID_SET = new Set<string>(Object.values(APP_COMMAND_IDS));
+
+function isAppCommandId(value: string): value is AppCommandId {
+  return APP_COMMAND_ID_SET.has(value);
+}
 
 export function App() {
   const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
@@ -97,6 +108,8 @@ export function App() {
   });
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [recentCommandIds, setRecentCommandIdsState] = useState<string[]>(() => getRecentCommandIds());
   const [markdownSyntaxVisibility, setMarkdownSyntaxVisibilityState] = useState<MarkdownSyntaxVisibility>(() =>
     getMarkdownSyntaxVisibility()
   );
@@ -281,10 +294,6 @@ export function App() {
     setIsSettingsOpen(true);
   };
 
-  const handleCloseSettings = () => {
-    setIsSettingsOpen(false);
-  };
-
   const handleMarkdownSyntaxVisibilityChange = (value: MarkdownSyntaxVisibility) => {
     setMarkdownSyntaxVisibility(value);
     setMarkdownSyntaxVisibilityState(value);
@@ -389,26 +398,249 @@ export function App() {
     };
   }, []);
 
-  const appCommandRegistry = useMemo(
-    () =>
-      createCommandRegistry([
-        {
-          id: 'ui.closeSettings',
-          shortcut: { key: 'Escape' },
-          isEnabled: () => isSettingsOpen,
-          execute: () => {
-            setIsSettingsOpen(false);
-          }
-        },
-        {
-          id: 'ui.closeContextMenu',
-          shortcut: { key: 'Escape' },
-          execute: () => {
-            closeContextMenu();
-          }
+  const commandContext = useMemo(
+    () => ({
+      canGoBack,
+      canGoForward,
+      canGoParent,
+      canStartStudyMode,
+      isCommandPaletteOpen,
+      isSettingsOpen,
+      isStudyMode,
+      isAnswerRevealed: reviewSession.isAnswerRevealed
+    }),
+    [
+      canGoBack,
+      canGoForward,
+      canGoParent,
+      canStartStudyMode,
+      isCommandPaletteOpen,
+      isSettingsOpen,
+      isStudyMode,
+      reviewSession.isAnswerRevealed
+    ]
+  );
+
+  const appCommands = useMemo<CommandRegistration[]>(
+    () => [
+      {
+        id: APP_COMMAND_IDS.toggleCommandPaletteMac,
+        title: 'Toggle Command Palette',
+        section: 'System',
+        keywords: ['commands', 'search'],
+        shortcut: { key: 'p', metaKey: true },
+        execute: () => {
+          setIsCommandPaletteOpen((open) => !open);
         }
-      ]),
-    [closeContextMenu, isSettingsOpen]
+      },
+      {
+        id: APP_COMMAND_IDS.toggleCommandPaletteWin,
+        title: 'Toggle Command Palette',
+        section: 'System',
+        keywords: ['commands', 'search'],
+        palette: false,
+        shortcut: { key: 'p', ctrlKey: true },
+        execute: () => {
+          setIsCommandPaletteOpen((open) => !open);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.closeCommandPalette,
+        title: 'Close Command Palette',
+        section: 'System',
+        shortcut: { key: 'Escape' },
+        isEnabled: (context) => Boolean(context.isCommandPaletteOpen),
+        execute: () => {
+          setIsCommandPaletteOpen(false);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.closeSettings,
+        title: 'Close Settings',
+        section: 'System',
+        shortcut: { key: 'Escape' },
+        isEnabled: (context) => Boolean(context.isSettingsOpen),
+        execute: () => {
+          setIsSettingsOpen(false);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.closeContextMenu,
+        title: 'Close Context Menu',
+        section: 'System',
+        shortcut: { key: 'Escape' },
+        execute: () => {
+          closeContextMenu();
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.goBack,
+        title: 'Go Back',
+        section: 'Navigation',
+        shortcut: { key: 'ArrowLeft', altKey: true },
+        isEnabled: (context) => Boolean(context.canGoBack),
+        execute: handleGoBack
+      },
+      {
+        id: APP_COMMAND_IDS.goForward,
+        title: 'Go Forward',
+        section: 'Navigation',
+        shortcut: { key: 'ArrowRight', altKey: true },
+        isEnabled: (context) => Boolean(context.canGoForward),
+        execute: handleGoForward
+      },
+      {
+        id: APP_COMMAND_IDS.goParent,
+        title: 'Go to Parent Node',
+        section: 'Navigation',
+        isEnabled: (context) => Boolean(context.canGoParent),
+        execute: handleGoParent
+      },
+      {
+        id: APP_COMMAND_IDS.toggleEditorDisplayMode,
+        title: editorDisplayMode === 'preview' ? 'Switch to Source Mode' : 'Switch to Live Preview',
+        section: 'Editor',
+        keywords: ['preview', 'source', 'markdown'],
+        execute: handleToggleEditorDisplayMode
+      },
+      {
+        id: APP_COMMAND_IDS.startStudyMode,
+        title: 'Start Study Mode',
+        section: 'Review',
+        isEnabled: (context) => Boolean(context.canStartStudyMode) && !context.isStudyMode,
+        execute: handleStartStudyMode
+      },
+      {
+        id: APP_COMMAND_IDS.revealReviewAnswer,
+        title: 'Show Answer',
+        section: 'Review',
+        shortcut: { key: ' ', shiftKey: true },
+        isEnabled: (context) => Boolean(context.isStudyMode) && !context.isAnswerRevealed,
+        execute: handleRevealAnswer
+      },
+      {
+        id: APP_COMMAND_IDS.gradeReviewAgain,
+        title: 'Grade: Again (1)',
+        section: 'Review',
+        shortcut: { key: '1' },
+        isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
+        execute: () => {
+          void handleGradeReview(1);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.gradeReviewHard,
+        title: 'Grade: Hard (2)',
+        section: 'Review',
+        shortcut: { key: '2' },
+        isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
+        execute: () => {
+          void handleGradeReview(2);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.gradeReviewGood,
+        title: 'Grade: Good (3)',
+        section: 'Review',
+        shortcut: { key: '3' },
+        isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
+        execute: () => {
+          void handleGradeReview(3);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.gradeReviewEasy,
+        title: 'Grade: Easy (4)',
+        section: 'Review',
+        shortcut: { key: '4' },
+        isEnabled: (context) => Boolean(context.isStudyMode) && Boolean(context.isAnswerRevealed),
+        execute: () => {
+          void handleGradeReview(4);
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.openNotes,
+        title: 'Open Notes',
+        section: 'Workspace',
+        execute: handleOpenNotesView
+      },
+      {
+        id: APP_COMMAND_IDS.openTrash,
+        title: 'Open Trash',
+        section: 'Workspace',
+        execute: handleOpenTrashView
+      },
+      {
+        id: APP_COMMAND_IDS.openSettings,
+        title: 'Open Settings',
+        section: 'Workspace',
+        execute: () => {
+          setIsCommandPaletteOpen(false);
+          handleOpenSettings();
+        }
+      },
+      {
+        id: APP_COMMAND_IDS.toggleList,
+        title: 'Toggle Left Panel',
+        section: 'Workspace',
+        execute: handleToggleListVisibility
+      }
+    ],
+    [
+      canGoBack,
+      canGoForward,
+      canGoParent,
+      closeContextMenu,
+      handleGoBack,
+      handleGoForward,
+      handleGoParent,
+      handleOpenNotesView,
+      handleOpenSettings,
+      handleOpenTrashView,
+      handleRevealAnswer,
+      handleGradeReview,
+      handleStartStudyMode,
+      handleToggleEditorDisplayMode,
+      handleToggleListVisibility,
+      canStartStudyMode,
+      editorDisplayMode,
+      isStudyMode
+    ]
+  );
+  const appCommandRegistry = useMemo(() => createCommandRegistry(appCommands, () => commandContext), [appCommands, commandContext]);
+  const enabledCommandIds = useMemo(
+    () =>
+      appCommandRegistry
+        .getCommandStates()
+        .filter((item) => item.enabled)
+        .map((item) => item.id),
+    [appCommandRegistry]
+  );
+  const commandPaletteItems = useMemo(() => appCommandRegistry.getPaletteItems(), [appCommandRegistry]);
+
+  const trackCommandUsage = useCallback((commandId: string) => {
+    setRecentCommandIdsState((current) => {
+      const next = pushRecentCommandId(current, commandId);
+      setRecentCommandIds(next);
+      return next;
+    });
+  }, []);
+
+  const handleRunPaletteCommand = useCallback(
+    (commandId: string) => {
+      const handled = appCommandRegistry.runById(commandId);
+      if (handled) {
+        trackCommandUsage(commandId);
+        setIsCommandPaletteOpen(false);
+      }
+    },
+    [appCommandRegistry, trackCommandUsage]
+  );
+  const runCommand = useCallback(
+    (commandId: AppCommandId) => {
+      appCommandRegistry.runById(commandId);
+    },
+    [appCommandRegistry]
   );
 
   useEffect(() => {
@@ -421,6 +653,29 @@ export function App() {
 
     return onWindowKeydown(handleAppHotkeys);
   }, [appCommandRegistry]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    void onNativeMenuCommand((commandId) => {
+      if (!isAppCommandId(commandId)) {
+        return;
+      }
+      runCommand(commandId);
+    })
+      .then((dispose) => {
+        unlisten = dispose;
+      })
+      .catch(() => {
+        unlisten = null;
+      });
+    return () => {
+      unlisten?.();
+    };
+  }, [runCommand]);
+
+  useEffect(() => {
+    void syncNativeMenuState(enabledCommandIds);
+  }, [enabledCommandIds]);
 
   useEffect(() => {
     applyAppearanceSettings({
@@ -447,78 +702,101 @@ export function App() {
   ]);
 
   return (
-    <WorkspaceLayout
-      activeNodeId={activeNodeId}
-      canGoBack={canGoBack}
-      canGoForward={canGoForward}
-      canGoParent={canGoParent}
-      contextMenu={contextMenu}
-      canStartStudyMode={canStartStudyMode}
-      documentMaxWidth={documentMaxWidth}
-      editorContent={editorContent}
-      editorNodeId={editorNodeId}
-      editorNodeViewState={activeNodeViewState}
-      isStudyMode={isStudyMode}
-      isSettingsOpen={isSettingsOpen}
-      isDocumentResizing={documentResize.isResizingDocument}
-      isResizingList={listResize.isResizingList}
-      isTrashViewOpen={isTrashViewOpen}
-      isViewingTrashNode={isViewingTrashNode}
-      isAnswerRevealed={reviewSession.isAnswerRevealed}
-      listWidth={listWidth}
-      nodeOrder={nodeOrder}
-      nodesById={nodesById}
-      onAnswerChange={handleAnswerChange}
-      onCloseContextMenu={closeContextMenu}
-      onCreateCloze={handleCreateCloze}
-      onCreateHighlight={handleCreateHighlight}
-      onEditorChange={handleEditorChange}
-      onEditorContextMenu={handleEditorContextMenu}
-      onEditorReady={handleEditorReady}
-      onGoBack={handleGoBack}
-      onGoForward={handleGoForward}
-      onGoParent={handleGoParent}
-      onGradeReview={handleGradeReview}
-      onResetLayout={resetLayout}
-      onRevealAnswer={handleRevealAnswer}
-      onSelectBreadcrumbNode={handleSelectBreadcrumbNode}
-      onSelectNode={handleSelectNode}
-      onSelectTrashNode={handleSelectTrashNode}
-      onSplitterKeyDown={listResize.handleSplitterKeyDown}
-      onSplitterPointerDown={listResize.handleSplitterPointerDown}
-      onStartDocumentResize={documentResize.startResize}
-      onStartStudyMode={handleStartStudyMode}
-      onOpenSettings={handleOpenSettings}
-      onCloseSettings={handleCloseSettings}
-      onBaseColorModeChange={handleBaseColorModeChange}
-      onAccentColorPresetChange={handleAccentColorPresetChange}
-      onAccentColorPresetReset={handleAccentColorPresetReset}
-      onInterfaceFontPresetChange={handleInterfaceFontPresetChange}
-      onUiFontPresetChange={handleUiFontPresetChange}
-      onCustomUiFontChange={handleCustomUiFontChange}
-      onCustomInterfaceFontChange={handleCustomInterfaceFontChange}
-      onMonospaceFontPresetChange={handleMonospaceFontPresetChange}
-      onCustomMonospaceFontChange={handleCustomMonospaceFontChange}
-      onInterfaceFontSizeChange={handleInterfaceFontSizeChange}
-      onInterfaceFontSizeReset={handleInterfaceFontSizeReset}
-      onMarkdownSyntaxVisibilityChange={handleMarkdownSyntaxVisibilityChange}
-      onToggleEditorDisplayMode={handleToggleEditorDisplayMode}
-      onOpenNotesView={handleOpenNotesView}
-      onOpenTrashView={handleOpenTrashView}
-      onToggleListVisibility={handleToggleListVisibility}
-      customUiFont={customUiFont}
-      customInterfaceFont={customInterfaceFont}
-      customMonospaceFont={customMonospaceFont}
-      baseColorMode={baseColorMode}
-      accentColorPreset={accentColorPreset}
-      uiFontPreset={uiFontPreset}
-      interfaceFontPreset={interfaceFontPreset}
-      interfaceFontSize={interfaceFontSize}
-      markdownSyntaxVisibility={markdownSyntaxVisibility}
-      editorDisplayMode={editorDisplayMode}
-      monospaceFontPreset={monospaceFontPreset}
-      selectedTrashNodeId={selectedTrashNodeId}
-      showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}
-    />
+    <>
+      <WorkspaceLayout
+        activeNodeId={activeNodeId}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        canGoParent={canGoParent}
+        contextMenu={contextMenu}
+        canStartStudyMode={canStartStudyMode}
+        documentMaxWidth={documentMaxWidth}
+        editorContent={editorContent}
+        editorNodeId={editorNodeId}
+        editorNodeViewState={activeNodeViewState}
+        isStudyMode={isStudyMode}
+        isSettingsOpen={isSettingsOpen}
+        isDocumentResizing={documentResize.isResizingDocument}
+        isResizingList={listResize.isResizingList}
+        isTrashViewOpen={isTrashViewOpen}
+        isViewingTrashNode={isViewingTrashNode}
+        isAnswerRevealed={reviewSession.isAnswerRevealed}
+        listWidth={listWidth}
+        nodeOrder={nodeOrder}
+        nodesById={nodesById}
+        onAnswerChange={handleAnswerChange}
+        onCloseContextMenu={closeContextMenu}
+        onCreateCloze={handleCreateCloze}
+        onCreateHighlight={handleCreateHighlight}
+        onEditorChange={handleEditorChange}
+        onEditorContextMenu={handleEditorContextMenu}
+        onEditorReady={handleEditorReady}
+        onGoBack={() => runCommand(APP_COMMAND_IDS.goBack)}
+        onGoForward={() => runCommand(APP_COMMAND_IDS.goForward)}
+        onGoParent={() => runCommand(APP_COMMAND_IDS.goParent)}
+        onGradeReview={(grade) => {
+          if (grade === 1) {
+            runCommand(APP_COMMAND_IDS.gradeReviewAgain);
+            return;
+          }
+          if (grade === 2) {
+            runCommand(APP_COMMAND_IDS.gradeReviewHard);
+            return;
+          }
+          if (grade === 3) {
+            runCommand(APP_COMMAND_IDS.gradeReviewGood);
+            return;
+          }
+          runCommand(APP_COMMAND_IDS.gradeReviewEasy);
+        }}
+        onResetLayout={resetLayout}
+        onRevealAnswer={() => runCommand(APP_COMMAND_IDS.revealReviewAnswer)}
+        onSelectBreadcrumbNode={handleSelectBreadcrumbNode}
+        onSelectNode={handleSelectNode}
+        onSelectTrashNode={handleSelectTrashNode}
+        onSplitterKeyDown={listResize.handleSplitterKeyDown}
+        onSplitterPointerDown={listResize.handleSplitterPointerDown}
+        onStartDocumentResize={documentResize.startResize}
+        onStartStudyMode={() => runCommand(APP_COMMAND_IDS.startStudyMode)}
+        onOpenSettings={() => runCommand(APP_COMMAND_IDS.openSettings)}
+        onCloseSettings={() => runCommand(APP_COMMAND_IDS.closeSettings)}
+        onBaseColorModeChange={handleBaseColorModeChange}
+        onAccentColorPresetChange={handleAccentColorPresetChange}
+        onAccentColorPresetReset={handleAccentColorPresetReset}
+        onInterfaceFontPresetChange={handleInterfaceFontPresetChange}
+        onUiFontPresetChange={handleUiFontPresetChange}
+        onCustomUiFontChange={handleCustomUiFontChange}
+        onCustomInterfaceFontChange={handleCustomInterfaceFontChange}
+        onMonospaceFontPresetChange={handleMonospaceFontPresetChange}
+        onCustomMonospaceFontChange={handleCustomMonospaceFontChange}
+        onInterfaceFontSizeChange={handleInterfaceFontSizeChange}
+        onInterfaceFontSizeReset={handleInterfaceFontSizeReset}
+        onMarkdownSyntaxVisibilityChange={handleMarkdownSyntaxVisibilityChange}
+        onToggleEditorDisplayMode={() => runCommand(APP_COMMAND_IDS.toggleEditorDisplayMode)}
+        onOpenNotesView={() => runCommand(APP_COMMAND_IDS.openNotes)}
+        onOpenTrashView={() => runCommand(APP_COMMAND_IDS.openTrash)}
+        onToggleListVisibility={() => runCommand(APP_COMMAND_IDS.toggleList)}
+        customUiFont={customUiFont}
+        customInterfaceFont={customInterfaceFont}
+        customMonospaceFont={customMonospaceFont}
+        baseColorMode={baseColorMode}
+        accentColorPreset={accentColorPreset}
+        uiFontPreset={uiFontPreset}
+        interfaceFontPreset={interfaceFontPreset}
+        interfaceFontSize={interfaceFontSize}
+        markdownSyntaxVisibility={markdownSyntaxVisibility}
+        editorDisplayMode={editorDisplayMode}
+        monospaceFontPreset={monospaceFontPreset}
+        selectedTrashNodeId={selectedTrashNodeId}
+        showAnswerSection={!isStudyMode || reviewSession.isAnswerRevealed}
+      />
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        items={commandPaletteItems}
+        recentCommandIds={recentCommandIds}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onRunCommand={handleRunPaletteCommand}
+      />
+    </>
   );
 }

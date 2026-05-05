@@ -10,7 +10,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   accentColor: 'foliole-accent-color',
   interfaceFontSize: 'foliole-interface-font-size',
   customInterfaceFont: 'foliole-custom-interface-font-family',
-  customMonospaceFont: 'foliole-custom-monospace-font-family'
+  customMonospaceFont: 'foliole-custom-monospace-font-family',
+  commandRecents: 'foliole-command-recents'
 } as const;
 
 export const APP_SETTINGS_OPTIONS = {

@@ -12,7 +12,8 @@ const LOCAL_STORAGE_WHITELIST = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.accentColor,
   APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
   APP_SETTINGS_STORAGE_KEYS.customInterfaceFont,
-  APP_SETTINGS_STORAGE_KEYS.customMonospaceFont
+  APP_SETTINGS_STORAGE_KEYS.customMonospaceFont,
+  APP_SETTINGS_STORAGE_KEYS.commandRecents
 ]);
 
 function assertLocalStorageWhitelist(key: string) {

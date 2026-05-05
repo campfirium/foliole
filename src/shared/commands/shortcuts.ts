@@ -15,3 +15,25 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: CommandShortcut)
     event.shiftKey === normalizeShortcutFlag(shortcut.shiftKey)
   );
 }
+
+export function formatShortcutLabel(shortcut: CommandShortcut) {
+  const parts: string[] = [];
+  if (shortcut.metaKey) {
+    parts.push('Cmd');
+  }
+  if (shortcut.ctrlKey) {
+    parts.push('Ctrl');
+  }
+  if (shortcut.altKey) {
+    parts.push('Alt');
+  }
+  if (shortcut.shiftKey) {
+    parts.push('Shift');
+  }
+  if (shortcut.key === ' ') {
+    parts.push('Space');
+  } else {
+    parts.push(shortcut.key.length === 1 ? shortcut.key.toUpperCase() : shortcut.key);
+  }
+  return parts.join('+');
+}
