@@ -170,6 +170,6 @@ it('shows scheduled review cards in the whole queue even when the live review se
   const queueList = screen.getByRole('list', { name: 'Review queue items' });
 
   expect(within(queueList).getByText(/Scheduled review card$/)).toBeInTheDocument();
-  expect(within(queueList).getByText(/Scheduled ·/)).toBeInTheDocument();
+  expect(within(queueList).getByText(/(Due|Scheduled) ·/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();
 });

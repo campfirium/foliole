@@ -16,6 +16,8 @@ import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection'
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 
+import { cn } from '@/shared/lib/utils';
+
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
   accentColorInputRef: RefObject<HTMLInputElement>;
@@ -75,7 +77,24 @@ export function SettingsSidebar(props: {
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
   return (
-    <aside aria-label="Settings categories" className="settings-sidebar"><p className="settings-sidebar-title">Options</p><nav aria-label="Settings navigation" className="settings-nav">{SETTINGS_CATEGORIES.map((category) => <button className={`settings-nav-item${category.id === props.activeCategory ? ' settings-nav-item-active' : ''}`} key={category.id} onClick={() => props.setActiveCategory(category.id)} type="button">{category.label}</button>)}</nav></aside>
+    <aside aria-label="Settings categories" className="flex flex-col border-r border-border bg-bg-subtle px-2.5 py-3.5">
+      <p className="mb-2.5 px-2.5 text-[0.9rem] font-semibold text-foreground/50">Options</p>
+      <nav aria-label="Settings navigation" className="flex flex-col gap-0.5">
+        {SETTINGS_CATEGORIES.map((category) => (
+          <button
+            className={cn(
+              'rounded-md px-2.5 py-[7px] text-left text-[0.96rem] text-foreground/80 transition-colors hover:bg-foreground/[0.05]',
+              category.id === props.activeCategory && 'bg-foreground/[0.08] font-semibold text-foreground'
+            )}
+            key={category.id}
+            onClick={() => props.setActiveCategory(category.id)}
+            type="button"
+          >
+            {category.label}
+          </button>
+        ))}
+      </nav>
+    </aside>
   );
 }
 

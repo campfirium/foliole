@@ -7,3 +7,5 @@ export { AppInput } from './Input';
 export { AppPanel } from './Panel';
 export { AppStatusBadge } from './StatusBadge';
 export { AppToolbar } from './Toolbar';
+export { appFloatingSurfaceClassName } from './FloatingSurface';
+export { SettingsControlSlot, SettingsRow, SettingsSection } from './SettingsLayout';

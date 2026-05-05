@@ -1,6 +1,8 @@
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import * as React from 'react';
 
+import { appFloatingSurfaceClassName } from './FloatingSurface';
+
 import { cn } from '@/shared/lib/utils';
 
 const AppDropdownMenu = DropdownMenuPrimitive.Root;
@@ -16,7 +18,8 @@ const AppDropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 min-w-[188px] overflow-hidden border border-border bg-bg-elevated p-1 text-foreground',
+        appFloatingSurfaceClassName('popover'),
+        'z-50 min-w-[188px] overflow-hidden p-1 text-foreground',
         className
       )}
       {...props}

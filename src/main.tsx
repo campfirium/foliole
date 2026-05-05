@@ -93,7 +93,7 @@ function mountApp() {
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <Theme accentColor="gray" appearance="light" grayColor="sand" panelBackground="solid" radius="none" scaling="105%">
+      <Theme accentColor="gray" appearance="light" grayColor="sand" panelBackground="solid" radius="large" scaling="105%">
         <App />
       </Theme>
     </React.StrictMode>

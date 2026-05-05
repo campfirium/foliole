@@ -1,3 +1,4 @@
+import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import type { MarkdownSyntaxVisibility } from '../../../editor/model/markdownSyntaxSetting';
 
 export function SettingsEditorSection({
@@ -8,21 +9,23 @@ export function SettingsEditorSection({
   onMarkdownSyntaxVisibilityChange: (value: MarkdownSyntaxVisibility) => void;
 }) {
   return (
-    <section aria-label="Editor settings section" className="settings-group">
-      <h3 className="settings-group-title">Live markdown</h3>
-      <div className="settings-row">
-        <div className="settings-row-copy">
-          <h4>Markdown syntax visibility</h4>
-          <p>Show markdown markers on active line, or keep them hidden.</p>
-        </div>
-        <label className="settings-select-wrap">
+    <SettingsSection ariaLabel="Editor settings section" title="Live markdown">
+      <SettingsRow
+        description="Show markdown markers on active line, or keep them hidden."
+        title="Markdown syntax visibility"
+      >
+        <SettingsControlSlot>
           <span className="sr-only">Markdown syntax visibility</span>
-          <select className="settings-select" onChange={(event) => onMarkdownSyntaxVisibilityChange(event.target.value as MarkdownSyntaxVisibility)} value={markdownSyntaxVisibility}>
+          <select
+            className="w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground"
+            onChange={(event) => onMarkdownSyntaxVisibilityChange(event.target.value as MarkdownSyntaxVisibility)}
+            value={markdownSyntaxVisibility}
+          >
             <option value="hidden">Hidden</option>
             <option value="visible">Visible on active line</option>
           </select>
-        </label>
-      </div>
-    </section>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
   );
 }

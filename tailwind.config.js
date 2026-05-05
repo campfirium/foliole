@@ -51,10 +51,15 @@ export default {
         sans: ['var(--font-family-interface)'],
         mono: ['var(--font-family-mono)']
       },
+      boxShadow: {
+        popover: '0 18px 40px rgba(15, 17, 19, 0.12)',
+        panel: '0 22px 56px rgba(15, 17, 19, 0.16)'
+      },
       borderRadius: {
-        lg: '0',
-        md: '0',
-        sm: '0'
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px'
       }
     }
   },

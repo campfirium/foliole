@@ -1,3 +1,4 @@
+import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import {
   DEFAULT_ACCENT_COLOR_PRESET,
   INTERFACE_FONT_SIZE_MAX,
@@ -13,6 +14,120 @@ import {
 } from '../../model/settingsPanelOptions';
 
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
+
+function settingsFieldClassName() {
+  return 'w-full min-w-0 rounded-md border border-border bg-bg-elevated px-2 py-1.5 text-sm text-foreground';
+}
+
+function buildFontOptions<T extends string>(prefix: string, values: T[], labelForValue: (value: T) => string) {
+  return values.map((value) => ({ label: labelForValue(value), value: `${prefix}:${value}` }));
+}
+
+function SettingsSelectRow(props: {
+  ariaLabel?: string;
+  description: string;
+  disabled?: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  value: string;
+}) {
+  return (
+    <SettingsRow description={props.description} title={props.label}>
+      <SettingsControlSlot>
+        <select
+          aria-label={props.ariaLabel ?? props.label}
+          className={settingsFieldClassName()}
+          disabled={props.disabled}
+          onChange={(event) => props.onChange(event.target.value)}
+          value={props.value}
+        >
+          {props.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
+function AccentColorRow(props: {
+  accentColorInputRef: React.RefObject<HTMLInputElement>;
+  onAccentColorPresetChange: (value: AccentColorPreset) => void;
+  onAccentColorPresetReset: () => void;
+  onOpenAccentColorPicker: () => void;
+  safeAccentColor: AccentColorPreset;
+}) {
+  return (
+    <SettingsRow description="Choose accent color for selected states, links, and quote rendering." title="Accent color">
+      <SettingsControlSlot>
+        <button
+          aria-label="Reset accent color"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground disabled:cursor-default disabled:opacity-55"
+          disabled={props.safeAccentColor === DEFAULT_ACCENT_COLOR_PRESET}
+          onClick={props.onAccentColorPresetReset}
+          type="button"
+        >
+          ↺
+        </button>
+        <button
+          aria-label="Pick accent color"
+          className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full"
+          onClick={props.onOpenAccentColorPicker}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className="inline-flex h-[30px] w-[30px] rounded-full border border-foreground/20"
+            style={{ backgroundColor: props.safeAccentColor }}
+          />
+        </button>
+        <input
+          aria-label="Accent color picker"
+          className="pointer-events-none absolute h-0 w-0 opacity-0"
+          onChange={(event) => props.onAccentColorPresetChange(event.target.value as AccentColorPreset)}
+          ref={props.accentColorInputRef}
+          type="color"
+          value={props.safeAccentColor}
+        />
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
+function FontSizeRow(props: {
+  interfaceFontSize: number;
+  onInterfaceFontSizeChange: (value: number) => void;
+  onInterfaceFontSizeReset: () => void;
+}) {
+  return (
+    <SettingsRow description="Adjust main content panel font size in pixels." title="Font size">
+      <SettingsControlSlot className="justify-end">
+        <button
+          aria-label="Reset font size"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground/65 transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          onClick={props.onInterfaceFontSizeReset}
+          type="button"
+        >
+          ↺
+        </button>
+        <input
+          aria-label="Interface font size"
+          className="w-[136px]"
+          max={INTERFACE_FONT_SIZE_MAX}
+          min={INTERFACE_FONT_SIZE_MIN}
+          onChange={(event) => props.onInterfaceFontSizeChange(Number(event.target.value))}
+          step={1}
+          type="range"
+          value={props.interfaceFontSize}
+        />
+        <span className="min-w-[38px] text-right text-[0.86rem] text-foreground/65">{props.interfaceFontSize}px</span>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
 
 export function SettingsAppearanceSection(props: {
   baseColorMode: BaseColorMode;
@@ -36,14 +151,29 @@ export function SettingsAppearanceSection(props: {
   onInterfaceFontSizeReset: () => void;
   accentColorInputRef: React.RefObject<HTMLInputElement>;
 }) {
+  const baseColorOptions = [{ label: 'Light', value: 'light' }];
+
   return (
     <>
-      <section aria-label="Appearance fonts section" className="settings-group">
-        <h3 className="settings-group-title">Color</h3>
-        <div className="settings-row"><div className="settings-row-copy"><h4>Base color</h4><p>Choose the foundation color mode for the interface.</p></div><label className="settings-select-wrap"><span className="sr-only">Base color</span><select className="settings-select" onChange={(event) => props.onBaseColorModeChange(event.target.value as BaseColorMode)} value={props.baseColorMode}><option value="light">Light</option></select></label></div>
-        <div className="settings-row"><div className="settings-row-copy"><h4>Accent color</h4><p>Choose accent color for selected states, links, and quote rendering.</p></div><div className="settings-accent-controls"><button aria-label="Reset accent color" className="settings-reset" disabled={props.safeAccentColor === DEFAULT_ACCENT_COLOR_PRESET} onClick={props.onAccentColorPresetReset} type="button">↺</button><button aria-label="Pick accent color" className="settings-accent-trigger" onClick={props.onOpenAccentColorPicker} type="button"><span aria-hidden="true" className="settings-accent-swatch" style={{ backgroundColor: props.safeAccentColor }} /></button><input aria-label="Accent color picker" className="settings-accent-native-input" onChange={(event) => props.onAccentColorPresetChange(event.target.value as AccentColorPreset)} ref={props.accentColorInputRef} type="color" value={props.safeAccentColor} /></div></div>
-        <div className="settings-row settings-row-readonly"><div className="settings-row-copy"><h4>Theme</h4><p>Theme package management will be added in a follow-up task.</p></div><span className="settings-pill">Planned</span></div>
-      </section>
+      <SettingsSection ariaLabel="Appearance color section" title="Color">
+        <SettingsSelectRow
+          description="Choose the foundation color mode for the interface."
+          label="Base color"
+          onChange={(value) => props.onBaseColorModeChange(value as BaseColorMode)}
+          options={baseColorOptions}
+          value={props.baseColorMode}
+        />
+        <AccentColorRow
+          accentColorInputRef={props.accentColorInputRef}
+          onAccentColorPresetChange={props.onAccentColorPresetChange}
+          onAccentColorPresetReset={props.onAccentColorPresetReset}
+          onOpenAccentColorPicker={props.onOpenAccentColorPicker}
+          safeAccentColor={props.safeAccentColor}
+        />
+        <SettingsRow description="Theme package management will be added in a follow-up task." readonly title="Theme">
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.82rem] text-foreground/70">Planned</span>
+        </SettingsRow>
+      </SettingsSection>
       <NodeIconSettingsSection />
       <FontSection {...props} />
     </>
@@ -65,11 +195,44 @@ function FontSection(props: {
   onInterfaceFontSizeChange: (value: number) => void;
   onInterfaceFontSizeReset: () => void;
 }) {
-  return <section aria-label="Appearance fonts section" className="settings-group">
-    <h3 className="settings-group-title">Fonts</h3>
-    <div className="settings-row"><div className="settings-row-copy"><h4>Interface font</h4><p>Font used for app chrome and UI controls.</p></div><label className="settings-select-wrap"><span className="sr-only">Interface font</span><select className="settings-select" disabled={!props.areFontOptionsReady} onChange={(event) => props.onUiFontSelectionChange(event.target.value)} value={props.selectedUiFontValue}>{INTERFACE_PRESET_OPTION_VALUES.map((preset) => <option key={preset} value={`ui-preset:${preset}`}>{presetLabel(preset)}</option>)}{props.uiFontOptions.map((font) => <option key={font} value={`ui-font:${font}`}>{font}</option>)}</select></label></div>
-    <div className="settings-row"><div className="settings-row-copy"><h4>Text font</h4><p>Font used in main content text.</p></div><label className="settings-select-wrap"><span className="sr-only">Text font</span><select className="settings-select" disabled={!props.areFontOptionsReady} onChange={(event) => props.onInterfaceFontSelectionChange(event.target.value)} value={props.selectedInterfaceFontValue}>{INTERFACE_PRESET_OPTION_VALUES.map((preset) => <option key={preset} value={`preset:${preset}`}>{presetLabel(preset)}</option>)}{props.interfaceFontOptions.map((font) => <option key={font} value={`font:${font}`}>{font}</option>)}</select></label></div>
-    <div className="settings-row"><div className="settings-row-copy"><h4>Monospace font</h4><p>Code font in fenced blocks and inline code. Monospaced fonts are listed first.</p></div><label className="settings-select-wrap"><span className="sr-only">Monospace font preset</span><select className="settings-select" disabled={!props.areFontOptionsReady} onChange={(event) => props.onMonospaceFontSelectionChange(event.target.value)} value={props.selectedMonospaceFontValue}>{MONOSPACE_PRESET_OPTION_VALUES.map((preset) => <option key={preset} value={`mono-preset:${preset}`}>{monospacePresetLabel(preset)}</option>)}{props.monospaceFontOptions.map((font) => <option key={font} value={`mono-font:${font}`}>{font}</option>)}</select></label></div>
-    <div className="settings-row"><div className="settings-row-copy"><h4>Font size</h4><p>Adjust main content panel font size in pixels.</p></div><div className="settings-slider-wrap"><button aria-label="Reset font size" className="settings-reset" onClick={props.onInterfaceFontSizeReset} type="button">↺</button><input aria-label="Interface font size" className="settings-range" max={INTERFACE_FONT_SIZE_MAX} min={INTERFACE_FONT_SIZE_MIN} onChange={(event) => props.onInterfaceFontSizeChange(Number(event.target.value))} step={1} type="range" value={props.interfaceFontSize} /><span className="settings-range-value">{props.interfaceFontSize}px</span></div></div>
-  </section>;
+  const interfaceOptions = [...buildFontOptions('ui-preset', INTERFACE_PRESET_OPTION_VALUES, presetLabel), ...buildFontOptions('ui-font', props.uiFontOptions, (font) => font)];
+  const textOptions = [...buildFontOptions('preset', INTERFACE_PRESET_OPTION_VALUES, presetLabel), ...buildFontOptions('font', props.interfaceFontOptions, (font) => font)];
+  const monospaceOptions = [...buildFontOptions('mono-preset', MONOSPACE_PRESET_OPTION_VALUES, monospacePresetLabel), ...buildFontOptions('mono-font', props.monospaceFontOptions, (font) => font)];
+
+  return (
+    <SettingsSection ariaLabel="Appearance fonts section" title="Fonts">
+      <SettingsSelectRow
+        ariaLabel="Interface font"
+        description="Font used for app chrome and UI controls."
+        disabled={!props.areFontOptionsReady}
+        label="Interface font"
+        onChange={props.onUiFontSelectionChange}
+        options={interfaceOptions}
+        value={props.selectedUiFontValue}
+      />
+      <SettingsSelectRow
+        ariaLabel="Text font"
+        description="Font used in main content text."
+        disabled={!props.areFontOptionsReady}
+        label="Text font"
+        onChange={props.onInterfaceFontSelectionChange}
+        options={textOptions}
+        value={props.selectedInterfaceFontValue}
+      />
+      <SettingsSelectRow
+        ariaLabel="Monospace font preset"
+        description="Code font in fenced blocks and inline code. Monospaced fonts are listed first."
+        disabled={!props.areFontOptionsReady}
+        label="Monospace font"
+        onChange={props.onMonospaceFontSelectionChange}
+        options={monospaceOptions}
+        value={props.selectedMonospaceFontValue}
+      />
+      <FontSizeRow
+        interfaceFontSize={props.interfaceFontSize}
+        onInterfaceFontSizeChange={props.onInterfaceFontSizeChange}
+        onInterfaceFontSizeReset={props.onInterfaceFontSizeReset}
+      />
+    </SettingsSection>
+  );
 }

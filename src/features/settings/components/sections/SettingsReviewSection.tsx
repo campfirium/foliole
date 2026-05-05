@@ -1,5 +1,15 @@
 import type { ReactNode } from 'react';
 
+import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+
+import {
+  DefaultPriorityControl,
+  QueueMixRatioControl,
+  ReadingGrowthFactorRangeControl,
+  ReviewNumberInput,
+  ReviewToggleControl
+} from './reviewSettingsControls';
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 interface SettingsReviewSectionProps {
@@ -28,112 +38,13 @@ interface SettingsReviewSectionProps {
 }
 
 interface ReviewSettingRowProps {
-  title: string;
-  description: string;
   control: ReactNode;
+  description: string;
+  title: string;
 }
 
 function ReviewSettingRow({ title, description, control }: ReviewSettingRowProps) {
-  return (
-    <div className="settings-row">
-      <div className="settings-row-copy">
-        <h4>{title}</h4>
-        <p>{description}</p>
-      </div>
-      {control}
-    </div>
-  );
-}
-
-function ReviewToggleControl(props: {
-  ariaLabel: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="settings-select-wrap">
-      <span className="sr-only">{props.ariaLabel}</span>
-      <select
-        aria-label={props.ariaLabel}
-        className="settings-select"
-        onChange={(event) => props.onChange(event.target.value === 'on')}
-        value={props.value ? 'on' : 'off'}
-      >
-        <option value="off">Off</option>
-        <option value="on">On</option>
-      </select>
-    </label>
-  );
-}
-
-function ReviewNumberInputControl(props: {
-  ariaLabel: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="settings-select-wrap">
-      <span className="sr-only">{props.ariaLabel}</span>
-      <input
-        aria-label={props.ariaLabel}
-        className="settings-select"
-        max={props.max}
-        min={props.min}
-        onChange={(event) => props.onChange(Number(event.target.value))}
-        step={props.step}
-        type="number"
-        value={props.value}
-      />
-    </label>
-  );
-}
-
-function DefaultPriorityControl(props: {
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="settings-select-wrap">
-      <span className="sr-only">Default node priority</span>
-      <select aria-label="Default node priority" className="settings-select" onChange={(event) => props.onChange(Number(event.target.value))} value={String(props.value)}>
-        {Array.from({ length: 10 }, (_, index) => <option key={index} value={index}>{index === 0 ? 'P0 · Absolute privilege' : `P${index}`}</option>)}
-      </select>
-    </label>
-  );
-}
-
-function QueueMixRatioControl(props: {
-  reading: number;
-  fsrs: number;
-  onReadingChange: (value: number) => void;
-  onFsrsChange: (value: number) => void;
-}) {
-  return (
-    <div className="settings-slider-wrap">
-      <ReviewNumberInputControl ariaLabel="Reading queue mix ratio" min={1} onChange={props.onReadingChange} step={1} value={props.reading} />
-      <span className="settings-range-value">:</span>
-      <ReviewNumberInputControl ariaLabel="FSRS queue mix ratio" min={1} onChange={props.onFsrsChange} step={1} value={props.fsrs} />
-      <span className="settings-range-value">{`${props.reading}:${props.fsrs}`}</span>
-    </div>
-  );
-}
-
-function ReadingGrowthFactorRangeControl(props: {
-  minValue: number;
-  maxValue: number;
-  onMinChange: (value: number) => void;
-  onMaxChange: (value: number) => void;
-}) {
-  return (
-    <div className="settings-slider-wrap">
-      <ReviewNumberInputControl ariaLabel="Reading growth factor min" min={1} onChange={props.onMinChange} step={0.01} value={props.minValue} />
-      <span className="settings-range-value">to</span>
-      <ReviewNumberInputControl ariaLabel="Reading growth factor max" min={1} onChange={props.onMaxChange} step={0.01} value={props.maxValue} />
-    </div>
-  );
+  return <SettingsRow description={description} title={title}>{control}</SettingsRow>;
 }
 
 function SchedulerCoreRows(props: Pick<
@@ -152,12 +63,31 @@ function SchedulerCoreRows(props: Pick<
       <ReviewSettingRow
         title="Desired retention"
         description="Lower values shorten intervals. Recommended around 0.80-0.95. Review previews update after each change."
-        control={<div className="settings-slider-wrap"><input aria-label="Desired retention" className="settings-range" max={0.99} min={0.01} onChange={(event) => props.onDesiredRetentionChange(Number(event.target.value))} step={0.01} type="range" value={props.desiredRetention} /><span className="settings-range-value">{props.desiredRetention.toFixed(2)}</span></div>}
+        control={
+          <SettingsControlSlot className="justify-end">
+            <input
+              aria-label="Desired retention"
+              className="w-[136px]"
+              max={0.99}
+              min={0.01}
+              onChange={(event) => props.onDesiredRetentionChange(Number(event.target.value))}
+              step={0.01}
+              type="range"
+              value={props.desiredRetention}
+            />
+            <span className="min-w-[38px] text-right text-[0.86rem] text-foreground/65">{props.desiredRetention.toFixed(2)}</span>
+          </SettingsControlSlot>
+        }
       />
       <ReviewSettingRow
         title="Maximum interval"
         description="Cap long-term intervals in days. Lower values make future review previews shorten sooner."
-        control={<label className="settings-select-wrap"><span className="sr-only">Maximum interval days</span><input aria-label="Maximum interval days" className="settings-select" min={1} onChange={(event) => props.onMaximumIntervalDaysChange(Number(event.target.value))} step={1} type="number" value={props.maximumIntervalDays} /></label>}
+        control={
+          <SettingsControlSlot>
+            <span className="sr-only">Maximum interval days</span>
+            <ReviewNumberInput ariaLabel="Maximum interval days" min={1} onChange={props.onMaximumIntervalDaysChange} step={1} value={props.maximumIntervalDays} />
+          </SettingsControlSlot>
+        }
       />
       <ReviewSettingRow
         title="Interval fuzz"
@@ -207,12 +137,12 @@ function PushQueueRows(props: Pick<
       <ReviewSettingRow
         title="Priority strength (`priorityRatio`)"
         description="Set `priorityRatio` directly as the roulette weight multiple of P1 relative to P9. This is a weight ratio, not a percentage scale. The default `5` means P1 is weighted 5× P9."
-        control={<ReviewNumberInputControl ariaLabel="Priority strength (P1 relative to P9)" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} />}
+        control={<SettingsControlSlot><ReviewNumberInput ariaLabel="Priority strength (P1 relative to P9)" min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
       />
       <ReviewSettingRow
         title="Reading initial interval"
         description="Set `readingInitialIntervalMs`, the first delay after a reading card is handled before it can re-enter the reading queue."
-        control={<ReviewNumberInputControl ariaLabel="Reading initial interval days" min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} />}
+        control={<SettingsControlSlot><ReviewNumberInput ariaLabel="Reading initial interval days" min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} /></SettingsControlSlot>}
       />
       <ReviewSettingRow
         title="Reading growth factor range"
@@ -248,10 +178,9 @@ export function SettingsReviewSection({
   onReadingIntervalGrowthFactorMaxChange
 }: SettingsReviewSectionProps) {
   return (
-    <section aria-label="Review settings section" className="settings-group">
-      <h3 className="settings-group-title">Scheduler</h3>
+    <SettingsSection ariaLabel="Review settings section" title="Scheduler">
       <SchedulerCoreRows desiredRetention={desiredRetention} enableFuzz={enableFuzz} enableShortTerm={enableShortTerm} maximumIntervalDays={maximumIntervalDays} onDesiredRetentionChange={onDesiredRetentionChange} onEnableFuzzChange={onEnableFuzzChange} onEnableShortTermChange={onEnableShortTermChange} onMaximumIntervalDaysChange={onMaximumIntervalDaysChange} />
       <PushQueueRows defaultPriority={defaultPriority} onDefaultPriorityChange={onDefaultPriorityChange} onPriorityRatioChange={onPriorityRatioChange} onQueueMixRatioFsrsChange={onQueueMixRatioFsrsChange} onQueueMixRatioReadingChange={onQueueMixRatioReadingChange} onReadingInitialIntervalDaysChange={onReadingInitialIntervalDaysChange} onReadingIntervalGrowthFactorMaxChange={onReadingIntervalGrowthFactorMaxChange} onReadingIntervalGrowthFactorMinChange={onReadingIntervalGrowthFactorMinChange} priorityRatio={priorityRatio} queueMixRatioFsrs={queueMixRatioFsrs} queueMixRatioReading={queueMixRatioReading} readingInitialIntervalMs={readingInitialIntervalMs} readingIntervalGrowthFactorMax={readingIntervalGrowthFactorMax} readingIntervalGrowthFactorMin={readingIntervalGrowthFactorMin} />
-    </section>
+    </SettingsSection>
   );
 }

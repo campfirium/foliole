@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
 import { formatShortcutSetLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -174,11 +175,14 @@ export function CommandPalette({ isOpen, items, recentCommandIds, onClose, onRun
   return (
     <div
       aria-label="Command palette"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 px-4 pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/20 px-4 pt-[12vh]"
       onClick={onClose}
       role="dialog"
     >
-      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <div
+        className={appFloatingSurfaceClassName('panel', 'w-full max-w-xl overflow-hidden')}
+        onClick={(event) => event.stopPropagation()}
+      >
         <PaletteInput
           activeIndex={activeIndex}
           onClose={onClose}
