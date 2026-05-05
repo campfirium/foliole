@@ -7,6 +7,7 @@ import type {
   NativeDirectoryImportSourceAdapter
 } from '../../lib/platform/nativeContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
+import { runEpubImport } from '../ipc/epubImport.js';
 import {
   buildPreparedImportRecord,
   loadPreparedImportRecord,
@@ -53,6 +54,9 @@ async function runSingleDirectoryImport(
 ) {
   const importedAt = new Date().toISOString();
   try {
+    if (source.kind === 'epub') {
+      return toNativeDirectoryImportEntry(source.adapterId, await runEpubImport(source, importedAt));
+    }
     return toNativeDirectoryImportEntry(
       source.adapterId,
       runPreparedImport(

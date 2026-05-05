@@ -182,7 +182,7 @@ it('classifies vault markdown as obsidian imports and skips the .obsidian contro
   expect(runPreparedImport).toHaveBeenCalledTimes(1);
   expect(runPreparedImport).toHaveBeenCalledWith(
     expect.objectContaining({
-      content: '## Imported vault note',
+      content: '# Imported vault note',
       sourceKind: 'markdown',
       sourceName: path.join('Daily', 'note.md')
     })

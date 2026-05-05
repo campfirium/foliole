@@ -55,6 +55,12 @@ const { failingSources, runDirectoryImportBatch } = vi.hoisted(() => ({
 const { loadLibraryPathSettings } = vi.hoisted(() => ({
   loadLibraryPathSettings: vi.fn()
 }));
+const { loadLibraryPathSettingsSync } = vi.hoisted(() => ({
+  loadLibraryPathSettingsSync: vi.fn()
+}));
+const { ensureLibraryPathLayout } = vi.hoisted(() => ({
+  ensureLibraryPathLayout: vi.fn()
+}));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -66,7 +72,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 vi.mock('./directoryImportBatch.js', () => ({ runDirectoryImportBatch }));
-vi.mock('../ipc/libraryPaths.js', () => ({ loadLibraryPathSettings }));
+vi.mock('../ipc/libraryPaths.js', () => ({
+  ensureLibraryPathLayout,
+  loadLibraryPathSettings,
+  loadLibraryPathSettingsSync
+}));
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -82,11 +92,22 @@ async function delay(ms: number) {
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-watch-import-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
   failingSources.clear();
   runDirectoryImportBatch.mockClear();
   loadLibraryPathSettings.mockReset();
+  loadLibraryPathSettingsSync.mockReset();
   loadLibraryPathSettings.mockResolvedValue({ inbox: path.join(mockedAppDataDir, 'Inbox') });
+  loadLibraryPathSettingsSync.mockReturnValue({
+    assets_dir: path.join(mockedAppDataDir, 'assets'),
+    attachments_dir: path.join(mockedAppDataDir, 'attachments'),
+    data_dir: path.join(mockedAppDataDir, 'data'),
+    database_path: path.join(mockedAppDataDir, 'data', 'foliole.db'),
+    inbox: path.join(mockedAppDataDir, 'Inbox'),
+    library_home: path.join(mockedAppDataDir, 'library-home'),
+    mirror: path.join(mockedAppDataDir, 'mirror')
+  });
+  await fs.mkdir(path.join(mockedAppDataDir, 'data'), { recursive: true });
+  initializeDatabase();
 });
 
 afterEach(async () => {

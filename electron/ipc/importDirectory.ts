@@ -7,6 +7,7 @@ import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 
 import {
+  MANAGED_INBOX_SUPPORTED_KINDS,
   discoverDirectoryImportSources,
   resolveImportHighlightPolicy,
   resolveImportNodeTitleStrategy
@@ -70,7 +71,7 @@ export async function runDirectoryImport(
     const titleStrategy = args?.title_strategy ? resolveImportNodeTitleStrategy(args) : loadImportManagerSettings().titleStrategy;
     const sources = await discoverDirectoryImportSources(
       rootPath,
-      sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
+      sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS } : undefined
     );
     const result = await runDirectoryImportBatch({
       consumePolicy,
@@ -100,7 +101,7 @@ export async function runManagedInboxImport(rootPath: string) {
       highlightPolicy: 'reference_only',
       rootPath,
       sourceAdapter: 'foliole_managed_inbox_folder',
-      sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: ['markdown', 'text'] }),
+      sources: await discoverDirectoryImportSources(rootPath, { supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }),
       titleStrategy
     });
     await logDirectoryImportCompleted(result);

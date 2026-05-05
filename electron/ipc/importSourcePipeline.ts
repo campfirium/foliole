@@ -42,6 +42,8 @@ const EPUB_EXTENSIONS = new Set(['.epub']);
 const TEXT_EXTENSIONS = new Set(['.txt']);
 const SKIPPED_DIRECTORY_NAMES = new Set(['.git', '.obsidian', 'node_modules']);
 
+export const MANAGED_INBOX_SUPPORTED_KINDS: ImportSourceKind[] = ['epub', 'markdown', 'text'];
+
 function stripUtf8Bom(content: string) {
   return content.startsWith('\uFEFF') ? content.slice(1) : content;
 }
@@ -51,6 +53,9 @@ function resolveDirectoryAdapter(
   extension: string,
   supportedKinds: ReadonlySet<ImportSourceKind>
 ): DirectoryImportAdapterId | null {
+  if (EPUB_EXTENSIONS.has(extension) && supportedKinds.has('epub')) {
+    return 'text_directory';
+  }
   if (HTML_EXTENSIONS.has(extension) && supportedKinds.has('html')) {
     return 'html_directory';
   }

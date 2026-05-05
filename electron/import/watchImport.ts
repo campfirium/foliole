@@ -4,7 +4,11 @@ import type {
   NativeDirectoryImportSourceAdapter,
   NativeManagedInboxConsumePolicy
 } from '../../lib/platform/nativeContract.js';
-import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
+import {
+  MANAGED_INBOX_SUPPORTED_KINDS,
+  discoverDirectoryImportSources,
+  type DirectoryImportSourceDescriptor
+} from '../ipc/importSourcePipeline.js';
 import { loadLibraryPathSettings } from '../ipc/libraryPaths.js';
 import {
   ensureManagedInboxRoot,
@@ -100,7 +104,7 @@ async function runSingleWatchImport(config: WatchImportAdapterConfig): Promise<W
   const previousCursor = loadedCursor?.rootPath === rootPath ? loadedCursor : null;
   const discoveredSources = await discoverDirectoryImportSources(
     rootPath,
-    sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: ['markdown', 'text'] } : undefined
+    sourceAdapter === 'foliole_managed_inbox_folder' ? { supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS } : undefined
   );
   const pendingSources = discoveredSources.filter((source) => isSourceChanged(source, previousCursor?.entries[source.sourceName]));
   const batchResult =
