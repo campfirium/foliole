@@ -13,10 +13,16 @@ import {
 } from '../../features/nodes/model/workspaceListNode';
 
 interface FolderListViewProps {
-  folderNodeId: string;
-  nodeOrder: string[];
+  folderNodeId?: string;
+  nodeOrder?: string[];
+  nodes?: Node[];
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
+  emptyState?: {
+    description: string;
+    title: string;
+  };
+  regionLabel?: string;
 }
 
 function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesById: Record<string, Node>) {
@@ -28,6 +34,11 @@ function getDirectChildNodes(folderNodeId: string, nodeOrder: string[], nodesByI
 function formatItemCount(count: number) {
   return `${count} ${count === 1 ? 'item' : 'items'}`;
 }
+
+const DEFAULT_EMPTY_STATE = {
+  description: 'Direct children will appear here after you add notes, folders, or items to this folder.',
+  title: 'This folder is empty'
+} as const;
 
 function renderAuthorSlot(nodeId: string) {
   return (
@@ -95,14 +106,12 @@ function FolderListHeader({
   );
 }
 
-function FolderListEmptyState() {
+function FolderListEmptyState({ description, title }: { description: string; title: string }) {
   return (
     <div className="flex flex-1 items-center justify-center px-6 py-10">
       <div className="max-w-md text-center">
-        <p className="text-base font-semibold text-foreground">This folder is empty</p>
-        <p className="mt-2 text-sm leading-6 text-foreground/68">
-          Direct children will appear here after you add notes, folders, or items to this folder.
-        </p>
+        <p className="text-base font-semibold text-foreground">{title}</p>
+        <p className="mt-2 text-sm leading-6 text-foreground/68">{description}</p>
       </div>
     </div>
   );
@@ -153,23 +162,34 @@ function FolderListItem(props: { node: Node; onSelectNode: (nodeId: string) => v
   );
 }
 
-export function FolderListView({ folderNodeId, nodeOrder, nodesById, onSelectNode }: FolderListViewProps) {
+function resolveListedNodes(props: FolderListViewProps) {
+  if (props.nodes) {
+    return props.nodes;
+  }
+  if (!props.folderNodeId || !props.nodeOrder) {
+    return [];
+  }
+  return getDirectChildNodes(props.folderNodeId, props.nodeOrder, props.nodesById);
+}
+
+export function FolderListView({ emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel }: FolderListViewProps) {
   const [sortKey, setSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
   const childNodes = useMemo(
-    () => sortFolderListNodes(getDirectChildNodes(folderNodeId, nodeOrder, nodesById), sortKey),
-    [folderNodeId, nodeOrder, nodesById, sortKey]
+    () => sortFolderListNodes(resolveListedNodes({ emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel }), sortKey),
+    [emptyState, folderNodeId, nodeOrder, nodes, nodesById, onSelectNode, regionLabel, sortKey]
   );
+  const resolvedEmptyState = emptyState ?? DEFAULT_EMPTY_STATE;
 
   return (
     <div className="flex min-h-0 flex-1 px-4 pt-4 pb-4 max-[1080px]:px-2 max-[1080px]:pt-2">
       <section
-        aria-label="Folder list view"
+        aria-label={regionLabel ?? 'Folder list view'}
         className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col overflow-hidden rounded-[var(--radius-3)] border border-border bg-bg-panel"
       >
         <FolderListHeader itemCount={childNodes.length} onChangeSortKey={setSortKey} sortKey={sortKey} />
 
         {childNodes.length === 0 ? (
-          <FolderListEmptyState />
+          <FolderListEmptyState description={resolvedEmptyState.description} title={resolvedEmptyState.title} />
         ) : (
           <ul aria-label="Folder contents" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-2">
             {childNodes.map((node) => (

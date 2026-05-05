@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
@@ -127,7 +127,11 @@ function getDocumentPanelView(props: DocumentPanelSectionProps, editorDisplayMod
     bodyProps: getDocumentPanelBodyProps(props, editorContentPaddingBottom, emptyState, hasAnswerSection, reveal),
     documentLayoutStyle: { '--document-max-width': `${props.documentMaxWidth}px` } as CSSProperties,
     isFolderListView: Boolean(
-      activeNode && activeNode.kind === 'folder' && !isInboxNode(activeNode) && props.editorNodeId === props.activeNodeId
+      activeNode &&
+        activeNode.kind === 'folder' &&
+        !isInboxNode(activeNode) &&
+        !isVirtualNode(activeNode) &&
+        props.editorNodeId === props.activeNodeId
     )
   };
 }
@@ -224,6 +228,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           nodeOrder={props.nodeOrder}
           nodesById={props.nodesById}
           onSelectNode={props.onSelectNode}
+          onNodeContentChange={props.onNodeContentChange}
         />
       </section>
       {sourceUpdatePreview.value ? (

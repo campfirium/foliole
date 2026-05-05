@@ -34,6 +34,7 @@ export function createVirtualNodeAction(
         kind: 'folder' as const,
         specialKind: 'virtual' as const,
         title: untitledState.title,
+        isTitleManual: true,
         content: '',
         anchorLink: null,
         reveal: null,

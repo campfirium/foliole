@@ -1,6 +1,8 @@
 import type { ComponentProps } from 'react';
 
+import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { EditorContextMenu } from './EditorContextMenu';
@@ -13,6 +15,7 @@ interface DocumentPanelContentProps {
   isFolderListView: boolean;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
+  onNodeContentChange: (nodeId: string, content: string) => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -27,7 +30,27 @@ interface DocumentPanelContextMenuProps {
   onExportImage: () => void;
 }
 
-export function DocumentPanelContent({ activeNodeId, bodyProps, isFolderListView, nodeOrder, nodesById, onSelectNode }: DocumentPanelContentProps) {
+export function DocumentPanelContent({
+  activeNodeId,
+  bodyProps,
+  isFolderListView,
+  nodeOrder,
+  nodesById,
+  onNodeContentChange,
+  onSelectNode
+}: DocumentPanelContentProps) {
+  const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
+  if (activeNode && isVirtualNode(activeNode)) {
+    return (
+      <VirtualNodeDetailView
+        node={activeNode}
+        nodesById={nodesById}
+        onSelectNode={onSelectNode}
+        onUpdateFilter={onNodeContentChange}
+      />
+    );
+  }
+
   if (isFolderListView && activeNodeId) {
     return (
       <FolderListView

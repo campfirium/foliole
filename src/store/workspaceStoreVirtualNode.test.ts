@@ -18,7 +18,20 @@ it('creates virtual nodes under the fixed virtual root', () => {
 
   expect(useWorkspaceStore.getState().nodesById[createdId]).toMatchObject({
     kind: 'folder',
+    isTitleManual: true,
     parentNodeId: VIRTUAL_ROOT_NODE_ID,
     specialKind: 'virtual'
+  });
+});
+
+it('keeps the virtual node title stable when saving filter text into content', () => {
+  const createdId = useWorkspaceStore.getState().createVirtualNode();
+  const initialTitle = useWorkspaceStore.getState().nodesById[createdId]?.title;
+
+  useWorkspaceStore.getState().updateNodeContent(createdId, 'reader');
+
+  expect(useWorkspaceStore.getState().nodesById[createdId]).toMatchObject({
+    content: 'reader',
+    title: initialTitle
   });
 });
