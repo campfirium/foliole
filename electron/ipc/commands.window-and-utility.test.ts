@@ -131,6 +131,20 @@ it('returns null when native import selection is cancelled', async () => {
   expect(readFile).not.toHaveBeenCalled();
 });
 
+it('classifies TXT imports as text through the native import command', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.txt'] });
+  readFile.mockResolvedValue('Plain text body');
+
+  await expect(handleInvokeRequest({ command: 'select_import_text_file' })).resolves.toEqual({
+    content: 'Plain text body',
+    file_name: 'inbox.txt',
+    file_path: '/tmp/inbox.txt',
+    kind: 'text'
+  });
+
+  expect(readFile).toHaveBeenCalledWith('/tmp/inbox.txt', 'utf8');
+});
+
 it('handles window commands through invoke channel', async () => {
   await expect(handleInvokeRequest({ command: 'window_minimize' })).resolves.toBeNull();
   await expect(handleInvokeRequest({ command: 'window_toggle_dev_tools' })).resolves.toBeNull();

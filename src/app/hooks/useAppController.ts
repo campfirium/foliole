@@ -25,6 +25,7 @@ import {
   useCommandShortcutState
 } from './reviewHotkeysState';
 import { useFormalImport } from './useFormalImport';
+import { useNativeCommandMenu } from './useNativeCommandMenu';
 import { useReviewKeyboardShortcuts } from './useReviewKeyboardShortcuts';
 import { useReviewSchedulerSettingsState } from './useReviewSchedulerSettingsState';
 import { useWorkspaceHydration } from './useWorkspaceHydration';
@@ -192,9 +193,22 @@ export function useAppController(): AppControllerResult {
     trash: controller.trash,
     ws
   });
+  const paletteState = buildControllerPaletteState({
+    formalImport,
+    isStudyMode,
+    layoutProps,
+    nav: controller.nav,
+    paletteItems,
+    runtime: controller.runtime,
+    study: controller.study,
+    trash: controller.trash,
+    ws
+  });
+
+  useNativeCommandMenu(paletteState.items, paletteState.onRunCommand);
 
   return {
     layoutProps: { ...layoutProps, onHotkeyReset: hotkeys.resetShortcut, onHotkeyResetAll: hotkeys.resetAllShortcuts },
-    paletteState: buildControllerPaletteState({ formalImport, isStudyMode, layoutProps, nav: controller.nav, paletteItems, runtime: controller.runtime, study: controller.study, trash: controller.trash, ws })
+    paletteState
   };
 }

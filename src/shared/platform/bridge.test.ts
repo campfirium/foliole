@@ -9,7 +9,8 @@ import {
   reportRuntimeAppReady,
   reportRuntimeBridgeReady,
   reportRuntimeBootStage,
-  resolveRuntimeAppPaths
+  resolveRuntimeAppPaths,
+  syncNativeMenuState
 } from './bridge';
 import type { ElectronAPI } from './electronApi';
 
@@ -186,4 +187,15 @@ it('filters empty native menu events before reaching the handler', async () => {
 
   expect(handler).toHaveBeenCalledTimes(1);
   expect(handler).toHaveBeenCalledWith('workspace.open-command-palette');
+});
+
+it('syncs unique enabled native menu commands through typed invoke', async () => {
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await syncNativeMenuState(['import.singleFileToInbox', 'import.singleFileToInbox', 'workspace.openNotes']);
+
+  expect(invoke).toHaveBeenCalledWith('sync_app_menu_state', {
+    enabledCommandIds: ['import.singleFileToInbox', 'workspace.openNotes']
+  });
 });

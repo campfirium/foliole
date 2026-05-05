@@ -9,6 +9,7 @@ import {
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
 
 const MENU_COMMAND_IDS = [
+  'import.singleFileToInbox',
   'workspace.openNotes',
   'workspace.openTrash',
   'workspace.openSettings',
@@ -58,6 +59,8 @@ export function installAppMenu() {
     {
       label: 'Workspace',
       submenu: [
+        commandItem('Import Markdown / TXT to Inbox…', 'import.singleFileToInbox'),
+        { type: 'separator' },
         commandItem('Open Notes', 'workspace.openNotes'),
         commandItem('Open Trash', 'workspace.openTrash'),
         { type: 'separator' },
