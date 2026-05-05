@@ -21,7 +21,17 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-quote': { borderLeft: '2px solid var(--app-accent-color)', color: 'var(--color-text-primary)', paddingBottom: '0.15rem', paddingTop: '0.15rem', paddingLeft: '0.75rem' },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': { backgroundColor: 'rgba(15, 23, 42, 0.06)', borderRadius: 0, fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.5rem' },
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
+  '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-md-syntax-visible': { color: 'var(--app-accent-color)', opacity: '0.74' },
+  '.cm-md-frontmatter-summary': {
+    color: 'color-mix(in srgb, var(--color-text-secondary) 82%, transparent)',
+    fontSize: '0.82rem',
+    fontWeight: '500',
+    letterSpacing: '0.02em',
+    lineHeight: '1.5',
+    margin: '0.48rem 0 0.32rem',
+    textAlign: 'center'
+  },
   '.cm-md-strong': { fontWeight: '700' },
   '.cm-md-inline-code': { backgroundColor: 'rgba(15, 23, 42, 0.08)', borderRadius: '0.25rem', fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.15rem' },
   '.cm-md-link-text': { color: 'var(--app-accent-color)', cursor: 'pointer', textDecoration: 'underline' },

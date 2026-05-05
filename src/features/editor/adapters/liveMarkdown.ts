@@ -12,6 +12,7 @@ import {
   getCursorLineNumber,
   INLINE_ANCHOR_TAG_PATTERN
 } from './liveMarkdownAnchors';
+import { addFrontmatterDecorations, isLineWithinFrontmatter, resolveFrontmatterBounds } from './liveMarkdownFrontmatter';
 import {
   addImageDecorations,
   addInlineCodeDecorations,
@@ -44,6 +45,8 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const content = view.state.doc.toString();
   addAnchorTagDecorations(ranges, content);
+  addFrontmatterDecorations(ranges, view);
+  const frontmatterBounds = resolveFrontmatterBounds(content);
 
   const showMarkdownSyntax = getMarkdownSyntaxVisibility() === 'visible';
   const cursorLineNumber = getCursorLineNumber(view);
@@ -51,6 +54,9 @@ function buildLineDecorations(view: EditorView): DecorationSet {
 
   for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber);
+    if (isLineWithinFrontmatter(frontmatterBounds, lineNumber)) {
+      continue;
+    }
     const isCodeFenceLine = CODE_FENCE_PATTERN.test(line.text);
     const lineClass = createLineClass(line.text, inCodeBlock);
     const isCursorLine = cursorLineNumber !== null && lineNumber === cursorLineNumber;
