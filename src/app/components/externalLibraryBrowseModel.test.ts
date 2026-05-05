@@ -24,7 +24,9 @@ const entries = [
     folderId: 'folder-1',
     folderPath: '/library/two think',
     modifiedAt: '2026-04-21T00:00:00.000Z',
-    relativePath: 'a.md'
+    openingText: 'Alpha opening',
+    relativePath: 'a.md',
+    title: 'Alpha'
   },
   {
     absolutePath: '/library/two think/sub/b.md',
@@ -33,7 +35,9 @@ const entries = [
     folderId: 'folder-1',
     folderPath: '/library/two think',
     modifiedAt: '2026-04-21T00:00:00.000Z',
-    relativePath: 'sub/b.md'
+    openingText: 'Beta opening',
+    relativePath: 'sub/b.md',
+    title: 'Beta'
   },
   {
     absolutePath: '/library/two think/sub/deep/c.txt',
@@ -42,7 +46,9 @@ const entries = [
     folderId: 'folder-1',
     folderPath: '/library/two think',
     modifiedAt: '2026-04-21T00:00:00.000Z',
-    relativePath: 'sub/deep/c.txt'
+    openingText: 'Gamma opening',
+    relativePath: 'sub/deep/c.txt',
+    title: 'Gamma'
   }
 ];
 

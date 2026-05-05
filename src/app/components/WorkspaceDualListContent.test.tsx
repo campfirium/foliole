@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
@@ -76,7 +77,9 @@ const externalEntriesByFolderId = {
       folderId: 'folder-ext',
       folderPath: '/library/two think',
       modifiedAt: '2026-04-21T00:00:00.000Z',
-      relativePath: 'a.md'
+      openingText: 'Alpha opening',
+      relativePath: 'a.md',
+      title: 'Alpha'
     },
     {
       absolutePath: '/library/two think/sub/b.md',
@@ -85,7 +88,9 @@ const externalEntriesByFolderId = {
       folderId: 'folder-ext',
       folderPath: '/library/two think',
       modifiedAt: '2026-04-21T00:00:00.000Z',
-      relativePath: 'sub/b.md'
+      openingText: 'Beta opening',
+      relativePath: 'sub/b.md',
+      title: 'Beta'
     }
   ]
 };
@@ -95,15 +100,29 @@ const simpleNodesById = {
   'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' })
 };
 
-function renderExternalWorkspaceContent() {
+function createExternalEntry(args: {
+  absolutePath: string;
+  fileName: string;
+  folderId: string;
+  folderPath: string;
+  openingText: string;
+  relativePath: string;
+  title: string;
+}) {
+  return { ...args, extension: 'md' as const, modifiedAt: '2026-04-21T00:00:00.000Z' };
+}
+
+function renderWorkspaceContent(
+  overrides: Partial<ComponentProps<typeof WorkspaceDualListContent>> = {}
+) {
   render(
     <WorkspaceDualListContent
-      activeNodeId="folder-a"
+      activeNodeId={null}
       activeVirtualNodeId={null}
-      externalEntriesByFolderId={externalEntriesByFolderId}
-      externalFolders={externalFolders}
-      externalSelection={{ folderId: 'folder-ext', kind: 'folder' }}
-      isExternalViewOpen
+      externalEntriesByFolderId={{}}
+      externalFolders={[]}
+      externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       nodesById={simpleNodesById}
@@ -119,46 +138,27 @@ function renderExternalWorkspaceContent() {
       onSelectTrashNode={vi.fn()}
       selectedTrashNodeId={null}
       trashedNodeIds={[]}
+      {...overrides}
     />
   );
 }
 
 it('keeps the dual-column layout when opening trash search', () => {
-  render(
-    <WorkspaceDualListContent
-      activeNodeId={null}
-      activeVirtualNodeId={null}
-      externalEntriesByFolderId={{}}
-      externalFolders={[]}
-      externalSelection={{ kind: 'root' }}
-      isExternalViewOpen={false}
-      isTrashViewOpen
-      isVirtualViewOpen={false}
-      nodesById={{
-        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
-        'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
-        'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
-        'item-a': createNode({ id: 'item-a', kind: 'item', parentNodeId: 'topic-a', title: 'Alpha Note' })
-      }}
-      listNodesById={{
-        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
-        'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
-        'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
-        'item-a': createNode({ id: 'item-a', kind: 'item', parentNodeId: 'topic-a', title: 'Alpha Note' })
-      }}
-      nodeOrder={[INBOX_NODE_ID, 'folder-a', 'topic-a', 'item-a']}
-      onOpenMoveToNode={vi.fn()}
-      onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
-      onOpenTrashView={vi.fn()}
-      onOpenVirtualView={vi.fn()}
-      onSelectNode={vi.fn()}
-      onSelectNodeInVirtualView={vi.fn()}
-      onSelectTrashNode={vi.fn()}
-      selectedTrashNodeId="item-a"
-      trashedNodeIds={['item-a']}
-    />
-  );
+  const trashNodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
+    'item-a': createNode({ id: 'item-a', kind: 'item', parentNodeId: 'topic-a', title: 'Alpha Note' })
+  };
+
+  renderWorkspaceContent({
+    isTrashViewOpen: true,
+    listNodesById: trashNodesById,
+    nodeOrder: [INBOX_NODE_ID, 'folder-a', 'topic-a', 'item-a'],
+    nodesById: trashNodesById,
+    selectedTrashNodeId: 'item-a',
+    trashedNodeIds: ['item-a']
+  });
 
   expect(screen.getAllByRole('complementary', { name: 'Node list panel' })).toHaveLength(2);
 
@@ -175,7 +175,13 @@ it('keeps the dual-column layout when opening trash search', () => {
 });
 
 it('renders external folders in the left section and only documents in the right list', () => {
-  renderExternalWorkspaceContent();
+  renderWorkspaceContent({
+    activeNodeId: 'folder-a',
+    externalEntriesByFolderId: externalEntriesByFolderId,
+    externalFolders,
+    externalSelection: { folderId: 'folder-ext', kind: 'folder' },
+    isExternalViewOpen: true
+  });
 
   expect(screen.queryByRole('separator', { name: 'Resize external section' })).toBeNull();
   expect(screen.queryByRole('region', { name: 'External folders' })).toBeNull();
@@ -185,37 +191,21 @@ it('renders external folders in the left section and only documents in the right
   expect(screen.getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('aria-selected', 'false');
   expect(screen.queryByRole('treeitem', { name: /^sub$/i })).toBeNull();
   expect(screen.getByRole('button', { name: /expand .*think \*/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /a\.md/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /b\.md/i })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Alpha' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Beta' })).toBeInTheDocument();
   expect(screen.queryByText('sub/b.md')).toBeNull();
+  expect(screen.queryByText('Alpha opening')).toBeNull();
+  expect(screen.queryByText('Beta opening')).toBeNull();
+  expect(screen.queryByText('2026-04-21')).toBeNull();
 });
 
 it('shows an expand toggle for external folders before their entries finish loading', () => {
-  render(
-    <WorkspaceDualListContent
-      activeNodeId="folder-a"
-      activeVirtualNodeId={null}
-      externalEntriesByFolderId={{}}
-      externalFolders={externalFolders}
-      externalSelection={{ folderId: 'folder-ext', kind: 'folder' }}
-      isExternalViewOpen
-      isTrashViewOpen={false}
-      isVirtualViewOpen={false}
-      nodesById={simpleNodesById}
-      listNodesById={simpleNodesById}
-      nodeOrder={[INBOX_NODE_ID, 'folder-a']}
-      onOpenMoveToNode={vi.fn()}
-      onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
-      onOpenTrashView={vi.fn()}
-      onOpenVirtualView={vi.fn()}
-      onSelectNode={vi.fn()}
-      onSelectNodeInVirtualView={vi.fn()}
-      onSelectTrashNode={vi.fn()}
-      selectedTrashNodeId={null}
-      trashedNodeIds={[]}
-    />
-  );
+  renderWorkspaceContent({
+    activeNodeId: 'folder-a',
+    externalFolders,
+    externalSelection: { folderId: 'folder-ext', kind: 'folder' },
+    isExternalViewOpen: true
+  });
 
   expect(screen.getByRole('button', { name: /expand .*think \*/i })).toBeInTheDocument();
 });
@@ -223,52 +213,26 @@ it('shows an expand toggle for external folders before their entries finish load
 it('restores persisted external collapse state without affecting sibling roots', () => {
   saveExternalCollapsedRowIds([]);
 
-  render(
-    <WorkspaceDualListContent
-      activeNodeId="folder-a"
-      activeVirtualNodeId={null}
-      externalEntriesByFolderId={{
-        'folder-ext': externalEntriesByFolderId['folder-ext'],
-        'folder-ext-2': [
-          {
-            absolutePath: '/library/to sync/x.md',
-            extension: 'md' as const,
-            fileName: 'x.md',
-            folderId: 'folder-ext-2',
-            folderPath: '/library/to sync',
-            modifiedAt: '2026-04-21T00:00:00.000Z',
-            relativePath: 'sync/x.md'
-          }
-        ]
-      }}
-      externalFolders={[
-        ...externalFolders,
-        {
-          ...externalFolders[0],
-          documentCount: 1,
+  renderWorkspaceContent({
+    activeNodeId: 'folder-a',
+    externalEntriesByFolderId: {
+      'folder-ext': externalEntriesByFolderId['folder-ext'],
+      'folder-ext-2': [
+        createExternalEntry({
+          absolutePath: '/library/to sync/x.md',
+          fileName: 'x.md',
+          folderId: 'folder-ext-2',
           folderPath: '/library/to sync',
-          id: 'folder-ext-2'
-        }
-      ]}
-      externalSelection={{ folderId: 'folder-ext', kind: 'folder' }}
-      isExternalViewOpen
-      isTrashViewOpen={false}
-      isVirtualViewOpen={false}
-      nodesById={simpleNodesById}
-      listNodesById={simpleNodesById}
-      nodeOrder={[INBOX_NODE_ID, 'folder-a']}
-      onOpenMoveToNode={vi.fn()}
-      onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
-      onOpenTrashView={vi.fn()}
-      onOpenVirtualView={vi.fn()}
-      onSelectNode={vi.fn()}
-      onSelectNodeInVirtualView={vi.fn()}
-      onSelectTrashNode={vi.fn()}
-      selectedTrashNodeId={null}
-      trashedNodeIds={[]}
-    />
-  );
+          openingText: 'Sync opening',
+          relativePath: 'sync/x.md',
+          title: 'Sync note'
+        })
+      ]
+    },
+    externalFolders: [...externalFolders, { ...externalFolders[0], documentCount: 1, folderPath: '/library/to sync', id: 'folder-ext-2' }],
+    externalSelection: { folderId: 'folder-ext', kind: 'folder' },
+    isExternalViewOpen: true
+  });
 
   expect(screen.getByRole('treeitem', { name: /^sub$/i })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: /^sync$/i })).toBeInTheDocument();

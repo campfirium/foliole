@@ -40,7 +40,9 @@ export interface RuntimeExternalSearchBrowseEntry {
   folderId: string;
   folderPath: string;
   modifiedAt: string;
+  openingText: string | null;
   relativePath: string;
+  title: string;
 }
 
 function toFolder(value: NativeExternalSearchFolder): RuntimeExternalSearchFolder {
@@ -79,7 +81,9 @@ function toBrowseEntry(value: NativeExternalSearchBrowseEntry): RuntimeExternalS
     folderId: value.folder_id,
     folderPath: value.folder_path,
     modifiedAt: value.modified_at,
-    relativePath: value.relative_path
+    openingText: value.opening_text,
+    relativePath: value.relative_path,
+    title: value.title
   };
 }
 

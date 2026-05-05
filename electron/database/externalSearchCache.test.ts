@@ -163,13 +163,17 @@ it('returns browse entries ordered by relative path for a configured folder', as
       absolute_path: topLevelPath,
       file_name: 'alpha.md',
       folder_id: 'folder-1',
-      relative_path: 'alpha.md'
+      opening_text: null,
+      relative_path: 'alpha.md',
+      title: 'Alpha'
     }),
     expect.objectContaining({
       absolute_path: nestedPath,
       file_name: 'beta.txt',
       folder_id: 'folder-1',
-      relative_path: 'nested/beta.txt'
+      opening_text: 'beta body',
+      relative_path: 'nested/beta.txt',
+      title: 'nested/beta'
     })
   ]);
 });

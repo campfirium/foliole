@@ -9,7 +9,9 @@ export interface ExternalLibraryDocumentItem {
   fileName: string;
   folderId: string;
   modifiedAt: string;
+  openingText: string | null;
   relativePath: string;
+  title: string;
 }
 
 export interface ExternalLibraryDirectoryNode {
@@ -57,7 +59,9 @@ function toDocumentItem(entry: RuntimeExternalSearchBrowseEntry): ExternalLibrar
     fileName: entry.fileName,
     folderId: entry.folderId,
     modifiedAt: entry.modifiedAt,
-    relativePath: entry.relativePath
+    openingText: entry.openingText,
+    relativePath: entry.relativePath,
+    title: entry.title
   };
 }
 

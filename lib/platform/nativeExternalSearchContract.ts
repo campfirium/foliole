@@ -34,5 +34,7 @@ export interface NativeExternalSearchBrowseEntry {
   folder_id: string;
   folder_path: string;
   modified_at: string;
+  opening_text: string | null;
   relative_path: string;
+  title: string;
 }

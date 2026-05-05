@@ -173,7 +173,6 @@ function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   const itemIds = collectVirtualContentItemIds(props);
   const items = itemIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
-  const folderTitle = props.nodesById[activeVirtualNodeId]?.title ?? 'Virtual';
 
   return (
     <VirtualResultListPanel
@@ -185,7 +184,6 @@ function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
             : 'No items match this virtual folder yet.',
         title: activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID ? 'No virtual folders yet' : 'No items in this virtual folder'
       }}
-      folderTitle={folderTitle}
       nodes={items}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNodeInVirtualView}

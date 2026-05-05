@@ -16,12 +16,17 @@ export function WorkspaceDocumentSurface(args: {
   if (args.props.isExternalViewOpen) {
     return (
       <ExternalLibraryDocumentSurface
+        documentMaxWidth={args.props.documentMaxWidth}
+        entriesByFolderId={args.props.externalEntriesByFolderId}
         folders={args.props.externalFolders}
         onOpenImportedNode={(result) => {
           if (result.node_id) {
             args.props.onSelectNode(result.node_id);
           }
         }}
+        onOpenSelection={args.props.onOpenExternalSelection}
+        onResetLayout={args.props.onResetLayout}
+        onStartDocumentResize={args.props.onStartDocumentResize}
         selection={args.props.externalSelection}
       />
     );

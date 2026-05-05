@@ -17,6 +17,7 @@ import {
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { ResizeSide } from '../hooks/useDocumentWidthResizer';
 
+import { FolderListTextItem } from './FolderListItemRow';
 import { resolveFolderListLocationPath } from './folderListLocationPath';
 import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListViewState } from './useFolderListViewState';
@@ -117,48 +118,6 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
   );
 }
 
-function renderDefaultListItem(props: FolderListItemProps & { author: string | null; dateLabel: string; summary: string }) {
-  return (
-    <li>
-      <button
-        aria-label={`Open ${props.node.title}`}
-        className="flex w-full flex-col gap-3 py-5 text-left transition-colors hover:bg-bg-subtle focus-visible:bg-bg-subtle focus-visible:outline-none"
-        onClick={() => props.onSelectNode(props.node.id)}
-        type="button"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <span
-            className="line-clamp-2 block min-w-0 flex-1 break-words text-[17px] font-normal leading-7 text-foreground"
-            data-testid={`folder-list-title-${props.node.id}`}
-          >
-            {props.node.title}
-          </span>
-          <span
-            className="shrink-0 pt-1 text-[13px] leading-5 text-foreground/56"
-            data-testid={`folder-list-date-${props.node.id}`}
-          >
-            {props.dateLabel}
-          </span>
-        </div>
-        <span
-          className="block min-h-14 line-clamp-2 text-[15px] leading-7 text-foreground/74"
-          data-testid={`folder-list-excerpt-${props.node.id}`}
-        >
-          {props.summary}
-        </span>
-        {props.author ? (
-          <span
-            className="block min-h-5 min-w-0 truncate text-[13px] leading-5 text-foreground/56"
-            data-testid={`folder-list-meta-${props.node.id}`}
-          >
-            {props.author}
-          </span>
-        ) : null}
-      </button>
-    </li>
-  );
-}
-
 function FolderListItem(props: FolderListItemProps) {
   const author = getWorkspaceListNodeAuthor(props.node);
   const opening = getWorkspaceListNodeOpening(props.node);
@@ -173,7 +132,17 @@ function FolderListItem(props: FolderListItemProps) {
     return renderVirtualResultItem({ ...props, dateLabel, locationPath });
   }
 
-  return renderDefaultListItem({ ...props, author, dateLabel, summary });
+  return (
+    <FolderListTextItem
+      ariaLabel={`Open ${props.node.title}`}
+      author={author}
+      dateLabel={dateLabel}
+      nodeId={props.node.id}
+      onClick={() => props.onSelectNode(props.node.id)}
+      summary={summary}
+      title={props.node.title}
+    />
+  );
 }
 
 function resolveListedNodes(props: FolderListViewProps) {

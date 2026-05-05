@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
 
+import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
+import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
 } from '../../shared/platform/externalSearchBridge';
-import { AppEmptyState } from '../../shared/ui';
+import { AppEmptyState, AppToolbar } from '../../shared/ui';
 
 import {
   buildExternalLibraryFolderBrowseState,
-  resolveExternalFolderLabel,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
 
@@ -27,13 +28,16 @@ function containsQuery(value: string, query: string) {
 export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const panelState = useExternalDocumentListState(props, searchQuery);
+  const documents = useExternalDocumentListState(props, searchQuery);
 
   return (
     <aside aria-label="Current folder contents" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-panel text-foreground">
-      <div className="relative flex min-h-[var(--workspace-top-toolbar-height)] items-center justify-between px-4">
+      <AppToolbar
+        as="header"
+        className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4"
+      >
         {renderSearchLauncher(() => setIsSearchOpen(true))}
-        <div className="min-w-0 truncate text-sm font-medium text-foreground">{panelState.title}</div>
+        <span aria-hidden="true" className="size-8" />
         <span aria-hidden="true" className="size-8" />
         {isSearchOpen ? (
           <NodeListSearchOverlay
@@ -45,10 +49,10 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
             searchQuery={searchQuery}
           />
         ) : null}
-      </div>
-      <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto bg-bg-panel px-4 py-2">
+      </AppToolbar>
+      <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-bg-panel px-2 pb-2 pt-2">
         <ExternalDocumentListBody
-          documents={panelState.documents}
+          documents={documents}
           onOpenExternalSelection={props.onOpenExternalSelection}
           selection={props.selection}
         />
@@ -66,22 +70,14 @@ function useExternalDocumentListState(props: ExternalLibraryListPanelProps, sear
     [folderEntries, props.selection, selectedFolder]
   );
 
-  return {
-    documents: (browseState?.documentItems ?? []).filter(
-      (document) => !searchQuery.trim() || containsQuery(document.relativePath, searchQuery) || containsQuery(document.fileName, searchQuery)
-    ),
-    title: resolvePanelTitle(selectedFolder, browseState?.selectedDirectoryPath ?? null)
-  };
-}
-
-function resolvePanelTitle(folder: RuntimeExternalSearchFolder | null, selectedDirectoryPath: string | null) {
-  if (!folder) {
-    return 'External';
-  }
-  if (!selectedDirectoryPath) {
-    return resolveExternalFolderLabel(folder.folderPath);
-  }
-  return selectedDirectoryPath.split('/').filter(Boolean).at(-1) ?? resolveExternalFolderLabel(folder.folderPath);
+  return (browseState?.documentItems ?? []).filter(
+    (document) =>
+      !searchQuery.trim() ||
+      containsQuery(document.relativePath, searchQuery) ||
+      containsQuery(document.fileName, searchQuery) ||
+      containsQuery(document.title, searchQuery) ||
+      containsQuery(document.openingText ?? '', searchQuery)
+  );
 }
 
 function ExternalDocumentListBody(props: {
@@ -89,37 +85,43 @@ function ExternalDocumentListBody(props: {
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   selection: ExternalLibrarySelection;
 }) {
+  const rowSpacing = getNodeListRowSpacing();
+
   if (props.documents.length === 0) {
     return (
-      <div className="flex min-h-full items-center justify-center py-6">
+      <div className="flex min-h-full items-center justify-center px-3 py-6">
         <AppEmptyState description="No documents are available in the selected folder." title="No documents" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <section aria-label="External folder contents" className="flex flex-col" role="tree">
       {props.documents.map((document) => {
         const isActive = props.selection.kind === 'document' && props.selection.absolutePath === document.absolutePath;
         return (
-          <button
-            className={`rounded-md px-3 py-2 text-left ${
-              isActive ? 'bg-bg-subtle text-foreground' : 'text-foreground/80 hover:bg-bg-subtle hover:text-foreground'
-            }`}
+          <NodeTreeRow
+            depth={0}
+            hasChildren={false}
+            isActive={isActive}
+            isCollapsed={false}
+            isSelected={isActive}
             key={document.absolutePath}
-            onClick={() =>
+            label={document.title}
+            nodeId={document.absolutePath}
+            rowSpacing={rowSpacing}
+            showIcon={false}
+            onSelect={() =>
               props.onOpenExternalSelection({
                 absolutePath: document.absolutePath,
                 folderId: document.folderId,
                 kind: 'document'
               })
             }
-            type="button"
-          >
-            <div className="text-sm font-medium text-foreground">{document.fileName}</div>
-          </button>
+            onToggleCollapse={() => undefined}
+          />
         );
       })}
-    </div>
+    </section>
   );
 }
