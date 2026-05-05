@@ -14,6 +14,7 @@ import {
 
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
 import { WindowTitleBarViewButtons } from './WindowTitleBarViewButtons';
+import { WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
@@ -124,7 +125,7 @@ function WindowLeadingActions({
 }: WindowTitleBarProps) {
   if (isListCollapsed) {
     return (
-      <div className="window-titlebar-left-zone" data-collapsed="true">
+      <div className="window-titlebar-left-zone relative z-[3]" data-collapsed="true">
         <div className="window-titlebar-collapsed-left-action">
           <SidebarToggleButton active={false} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
         </div>
@@ -133,7 +134,7 @@ function WindowLeadingActions({
   }
 
   return (
-    <div className="window-titlebar-left-zone" data-collapsed="false">
+    <div className="window-titlebar-left-zone relative z-[3]" data-collapsed="false">
       <div className="window-titlebar-leading">
         <div className="window-titlebar-leading-primary">
           <SidebarToggleButton active={!isListCollapsed} label="Toggle left panel" onClick={onToggleListVisibility} side="left" />
@@ -188,12 +189,29 @@ function WindowCenterTitle({ onDoubleClick, title }: { onDoubleClick: () => void
   return (
     <div
       aria-hidden="true"
-      className="window-titlebar-center-slot window-titlebar-drag-fill"
+      className="window-titlebar-center-slot window-titlebar-drag-fill relative z-[3]"
       onDoubleClick={onDoubleClick}
     >
       {title ? <span className="window-titlebar-center-title" title={title}>{title}</span> : null}
     </div>
   );
+}
+
+function getWindowTitleBarStyle(props: WindowTitleBarProps): CSSProperties {
+  return {
+    '--window-titlebar-left-width': props.isListCollapsed
+      ? 'var(--workspace-rail-width)'
+      : `calc(var(--workspace-rail-width) + ${props.listWidth + 1}px)`,
+    '--window-titlebar-controls-width': `${WINDOW_CONTROLS_WIDTH}px`,
+    '--window-titlebar-right-width': props.isRightSidebarCollapsed
+      ? `${WINDOW_CONTROLS_WIDTH + 40}px`
+      : `${props.rightSidebarWidth}px`,
+    '--workspace-list-width': `${props.listWidth}px`,
+    '--workspace-titlebar-folder-column-width': props.isListCollapsed ? '0px' : 'var(--workspace-folder-column-width)',
+    '--workspace-titlebar-list-current-width': props.isListCollapsed
+      ? '0px'
+      : 'var(--workspace-list-current-width, 300px)'
+  } as CSSProperties;
 }
 
 export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBarProps) {
@@ -227,17 +245,13 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
     <header
       className="window-titlebar"
       data-window-maximized={isMaximized}
-      style={{
-        '--window-titlebar-left-width': props.isListCollapsed
-          ? 'var(--workspace-rail-width)'
-          : `calc(var(--workspace-rail-width) + ${props.listWidth + 1}px)`,
-        '--window-titlebar-controls-width': `${WINDOW_CONTROLS_WIDTH}px`,
-        '--window-titlebar-right-width': props.isRightSidebarCollapsed
-          ? `${WINDOW_CONTROLS_WIDTH + 40}px`
-          : `${props.rightSidebarWidth}px`,
-        '--workspace-list-width': `${props.listWidth}px`
-      } as CSSProperties}
+      style={getWindowTitleBarStyle(props)}
     >
+      <WorkspaceSurfaceRowOverlay row="titlebar" />
+      <WorkspaceTitlebarDividers
+        isListCollapsed={props.isListCollapsed}
+        isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+      />
       <WindowLeadingActions {...props} />
       <WindowCenterTitle onDoubleClick={handleToggleMaximize} title={props.centerTitle} />
       <WindowTitleBarRightSidebarAnchor

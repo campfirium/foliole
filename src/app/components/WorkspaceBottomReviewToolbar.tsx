@@ -2,16 +2,17 @@ import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
+import { WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
 
 function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayoutProps }) {
   return (
     <div
-      className={`workspace-bottom-region-grid grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
+      className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-hidden ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
     >
       <div className="flex min-w-0 items-center border-t border-border bg-transparent px-4 text-sm font-medium text-foreground/70 max-[1080px]:hidden">
         {Math.max(props.reviewQueueCount, 0)} left · {Math.max(props.reviewCompletedCount, 0)} done
       </div>
-      <div aria-hidden="true" className="bg-border max-[1080px]:hidden" />
+      <div aria-hidden="true" className="bg-transparent max-[1080px]:hidden" />
       <ReviewModeToolbar
         className="h-full border-t border-border bg-transparent px-6"
         showSummary={false}
@@ -31,7 +32,7 @@ function WorkspaceBottomReviewToolbarContent({ props }: { props: WorkspaceLayout
       />
       {props.isImmersiveMode ? null : (
         <>
-          <div aria-hidden="true" className="hidden bg-border xl:block" />
+          <div aria-hidden="true" className="hidden bg-transparent xl:block" />
           <div aria-hidden="true" className="hidden border-t border-border bg-transparent xl:block" />
         </>
       )}
@@ -45,20 +46,31 @@ export function WorkspaceBottomReviewToolbar({ props }: { props: WorkspaceLayout
   }
 
   return (
-    <>
-      {props.isImmersiveMode ? null : (
-        <div className="row-start-2">
-          <WorkspaceStudyDockTrigger
-            canStartStudyMode={props.canStartStudyMode}
-            isStudyMode={props.isStudyMode}
-            onToggleReviewSession={props.onToggleReviewSession}
-            reviewDueCount={props.reviewDueCount}
-          />
+    <div
+      className={`${props.isImmersiveMode ? 'col-start-1' : 'col-span-2'} row-start-2 min-w-0`}
+    >
+      <div
+        className={`relative grid min-w-0 ${
+          props.isImmersiveMode
+            ? 'grid-cols-1'
+            : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'
+        }`}
+      >
+        {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
+        {props.isImmersiveMode ? null : (
+          <div className="relative z-[1]">
+            <WorkspaceStudyDockTrigger
+              canStartStudyMode={props.canStartStudyMode}
+              isStudyMode={props.isStudyMode}
+              onToggleReviewSession={props.onToggleReviewSession}
+              reviewDueCount={props.reviewDueCount}
+            />
+          </div>
+        )}
+        <div className="relative z-[1] min-w-0">
+          <WorkspaceBottomReviewToolbarContent props={props} />
         </div>
-      )}
-      <div className={`${props.isImmersiveMode ? 'col-start-1' : 'col-start-2'} row-start-2 min-w-0`}>
-        <WorkspaceBottomReviewToolbarContent props={props} />
       </div>
-    </>
+    </div>
   );
 }

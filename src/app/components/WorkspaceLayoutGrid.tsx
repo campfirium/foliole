@@ -11,7 +11,59 @@ import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './WorkspaceLayout';
 import { renderWorkspaceGridColumns } from './workspaceLayoutGridContentColumns';
 import { WorkspaceLeftRail } from './WorkspaceLeftRail';
+import {
+  WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT,
+  WORKSPACE_LIST_DIVIDER_LEFT,
+  WORKSPACE_RAIL_DIVIDER_LEFT,
+  WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT
+} from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
+
+function WorkspaceGridDivider({
+  bottom = '0',
+  left,
+  top = '0'
+}: {
+  bottom?: string;
+  left: string;
+  top?: string;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute z-[2] w-px -translate-x-1/2 bg-border max-[1080px]:hidden"
+      style={{ bottom, left, top }}
+    />
+  );
+}
+
+function WorkspaceGridDividerOverlay({
+  isStudyMode,
+  isListCollapsed,
+  isRightSidebarCollapsed
+}: {
+  isStudyMode: boolean;
+  isListCollapsed: boolean;
+  isRightSidebarCollapsed: boolean;
+}) {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[2]">
+      <WorkspaceGridDivider left={WORKSPACE_RAIL_DIVIDER_LEFT} />
+      {isListCollapsed ? null : (
+        <>
+          <WorkspaceGridDivider
+            bottom={isStudyMode ? 'var(--workspace-bottom-toolbar-height)' : '0'}
+            left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
+          />
+          <WorkspaceGridDivider left={WORKSPACE_LIST_DIVIDER_LEFT} />
+        </>
+      )}
+      {isRightSidebarCollapsed ? null : (
+        <WorkspaceGridDivider left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT} />
+      )}
+    </div>
+  );
+}
 
 export function WorkspaceLayoutGrid({
   activeRightPanelId,
@@ -40,15 +92,13 @@ export function WorkspaceLayoutGrid({
 }) {
   recordComponentRender('workspaceGrid');
   const listNodesById = useProjectedListNodesById(props.nodesById);
+  const gridTemplateColumns = props.isImmersiveMode
+    ? 'minmax(0, 1fr)'
+    : 'var(--workspace-rail-width) minmax(0, 1fr)';
+
   return (
-    <div
-      className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
-      style={{
-        gridTemplateColumns: props.isImmersiveMode
-          ? 'minmax(0, 1fr)'
-          : 'var(--workspace-rail-width) minmax(0, 1fr)'
-      }}
-    >
+    <WorkspaceLayoutGridShell gridTemplateColumns={gridTemplateColumns}>
+      {renderWorkspaceGridDividerOverlay(props)}
       {props.isImmersiveMode ? null : (
         <WorkspaceLeftRail
           isImportManagementOpen={isImportManagementOpen}
@@ -70,7 +120,42 @@ export function WorkspaceLayoutGrid({
         props={props}
       />
       <WorkspaceBottomReviewToolbar props={props} />
+    </WorkspaceLayoutGridShell>
+  );
+}
+
+function WorkspaceLayoutGridShell({
+  children,
+  gridTemplateColumns
+}: {
+  children: ReactNode;
+  gridTemplateColumns: string;
+}) {
+  return (
+    <div
+      className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden max-[1080px]:[grid-template-columns:minmax(0,1fr)]"
+      style={{ gridTemplateColumns }}
+    >
+      {children}
     </div>
+  );
+}
+
+function renderWorkspaceGridDividerOverlay(
+  props: Pick<
+    WorkspaceLayoutProps,
+    'isImmersiveMode' | 'isListCollapsed' | 'isRightSidebarCollapsed' | 'isStudyMode'
+  >
+) {
+  if (props.isImmersiveMode) {
+    return null;
+  }
+  return (
+    <WorkspaceGridDividerOverlay
+      isStudyMode={props.isStudyMode}
+      isListCollapsed={props.isListCollapsed}
+      isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+    />
   );
 }
 

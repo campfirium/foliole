@@ -211,7 +211,7 @@ export function WorkspaceRightSidebar(props: Pick<
       aria-label="Inspector"
       as="aside"
       bodyClassName="app-scrollbar overflow-y-auto px-3 py-3"
-      className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col overflow-hidden border-l border-border text-foreground xl:flex"
+      className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col overflow-hidden text-foreground xl:flex"
       headerClassName="min-h-[var(--workspace-top-toolbar-height)] px-4 py-2"
       title={<span className="text-sm font-semibold uppercase tracking-[0.04em]">{getPanelTitle(props.activePanelId)}</span>}
     >

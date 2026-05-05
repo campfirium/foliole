@@ -136,7 +136,7 @@ export function WorkspaceSideToolbar({
   return (
     <AppToolbar
       aria-label="Workspace side toolbar"
-      className="workspace-region-main-rail flex h-full w-[var(--workspace-rail-width)] flex-col border-r border-border"
+      className="workspace-region-main-rail flex h-full w-[var(--workspace-rail-width)] flex-col"
     >
       <div className="flex min-h-0 flex-1 flex-col items-center">
         <ImportActions
@@ -190,7 +190,7 @@ export function WorkspaceStudyDockTrigger({
 
   return (
     <div
-      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-r border-t border-border"
+      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center border-t border-border"
       style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
     >
       <StudyAction

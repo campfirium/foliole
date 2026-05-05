@@ -108,10 +108,10 @@ body {
       var(--workspace-region-titlebar-rail-bg) 0,
       var(--workspace-region-titlebar-rail-bg) var(--workspace-rail-width),
       var(--workspace-region-titlebar-folder-bg) var(--workspace-rail-width),
-      var(--workspace-region-titlebar-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-folder-column-width)),
-      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-folder-column-width)),
-      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      var(--workspace-region-titlebar-document-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--workspace-region-titlebar-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
+      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
+      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
+      var(--workspace-region-titlebar-document-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
       var(--workspace-region-titlebar-document-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
       var(--workspace-region-titlebar-sidebar-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
       var(--workspace-region-titlebar-sidebar-bg) 100%
@@ -191,7 +191,6 @@ body {
 }
 
 .window-titlebar-left-zone[data-collapsed='false'] {
-  border-right: 1px solid rgba(32, 33, 36, 0.18);
   flex: 0 0 calc(40px + var(--workspace-list-width, 300px));
 }
 
@@ -324,7 +323,7 @@ body {
 
 .window-titlebar-right-divider {
   align-self: stretch;
-  background: rgba(32, 33, 36, 0.18);
+  background: transparent;
   pointer-events: none;
 }
 

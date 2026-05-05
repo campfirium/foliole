@@ -30,8 +30,7 @@ export function WorkspaceDualListSplitter({
         aria-hidden="true"
         className={cn(
           'absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 cursor-col-resize',
-          'before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border',
-          isResizing && 'before:bg-border-strong'
+          isResizing && 'before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border-strong'
         )}
       />
     </div>
