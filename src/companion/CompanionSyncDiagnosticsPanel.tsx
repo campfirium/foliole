@@ -6,10 +6,15 @@ import type {
   SyncDiagnosticVerdict
 } from '../../lib/platform/syncDiagnosticsContract';
 import {
+  runSyncConvergenceCheck,
+  type SyncConvergenceReport
+} from '../shared/platform/companionSyncConvergence';
+import {
   runCombinedSyncDiagnostics,
   type CombinedSyncDiagnosticResult
 } from '../shared/platform/companionSyncDiagnostics';
 
+import { CompanionSyncConvergenceReport } from './CompanionSyncConvergenceReport';
 import { CompanionSyncDiagnosticCheckpoint } from './CompanionSyncDiagnosticCheckpoint';
 import { DirtyObjectRows, ObjectTypeRows, PendingAckRows } from './CompanionSyncDiagnosticsRows';
 
@@ -153,20 +158,94 @@ function buildSummary(result: CombinedSyncDiagnosticResult) {
   }, null, 2);
 }
 
+function DiagnosticActions(props: {
+  onCopy: () => void;
+  onRunConvergence: () => void;
+  onRunDiagnostic: () => void;
+  hasResult: boolean;
+  copied: boolean;
+  status: 'checking' | 'idle' | 'running';
+}) {
+  return (
+    <>
+      <button
+        className="w-full rounded-companion border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel disabled:opacity-45"
+        disabled={props.status === 'running'}
+        onClick={props.onRunDiagnostic}
+        type="button"
+      >
+        {props.status === 'running' ? 'Running...' : 'Run sync diagnostic'}
+      </button>
+      <button
+        className="w-full rounded-companion border border-border px-4 py-3 text-sm font-medium text-foreground disabled:opacity-45"
+        disabled={props.status !== 'idle'}
+        onClick={props.onRunConvergence}
+        type="button"
+      >
+        {props.status === 'checking' ? 'Checking...' : 'Run convergence check'}
+      </button>
+      {props.hasResult ? (
+        <button
+          className="w-full rounded-companion border border-border px-4 py-3 text-sm font-medium text-foreground"
+          onClick={props.onCopy}
+          type="button"
+        >
+          {props.copied ? 'Copied' : 'Copy diagnostic summary'}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
+function DiagnosticResultSections(props: {
+  convergenceReport: SyncConvergenceReport | null;
+  result: CombinedSyncDiagnosticResult;
+}) {
+  return (
+    <>
+      <CompanionSyncDiagnosticCheckpoint result={props.result} />
+      {props.convergenceReport ? <CompanionSyncConvergenceReport report={props.convergenceReport} /> : null}
+      <section>
+        <h3 className="text-sm font-semibold text-foreground">What this means</h3>
+        <VerdictList verdicts={props.result.verdicts} />
+      </section>
+      <SnapshotSection empty="Android diagnostics are only available in the native app." snapshot={props.result.android} title="Android" />
+      <SnapshotSection empty="Desktop diagnostics need a paired desktop address." snapshot={props.result.desktop} title="Desktop" />
+    </>
+  );
+}
+
 export function CompanionSyncDiagnosticsPanel(props: { endpointUrl: string | null }) {
   const [copied, setCopied] = useState(false);
+  const [convergenceReport, setConvergenceReport] = useState<SyncConvergenceReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CombinedSyncDiagnosticResult | null>(null);
-  const [status, setStatus] = useState<'idle' | 'running'>('idle');
+  const [status, setStatus] = useState<'checking' | 'idle' | 'running'>('idle');
 
   async function runDiagnostic() {
     setCopied(false);
+    setConvergenceReport(null);
     setError(null);
     setStatus('running');
     try {
       setResult(await runCombinedSyncDiagnostics(props.endpointUrl));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Sync diagnostic failed.');
+    } finally {
+      setStatus('idle');
+    }
+  }
+
+  async function runConvergence() {
+    setCopied(false);
+    setError(null);
+    setStatus('checking');
+    try {
+      const nextResult = await runSyncConvergenceCheck(props.endpointUrl);
+      setResult(nextResult.diagnostics);
+      setConvergenceReport(nextResult.report);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Sync convergence check failed.');
     } finally {
       setStatus('idle');
     }
@@ -180,32 +259,17 @@ export function CompanionSyncDiagnosticsPanel(props: { endpointUrl: string | nul
 
   return (
     <section className="space-y-6 border-t border-companion-divider pt-4">
-      <button
-        className="w-full rounded-companion border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel disabled:opacity-45"
-        disabled={status === 'running'}
-        onClick={() => void runDiagnostic()}
-        type="button"
-      >
-        {status === 'running' ? 'Running...' : 'Run sync diagnostic'}
-      </button>
+      <DiagnosticActions
+        copied={copied}
+        hasResult={Boolean(result)}
+        onCopy={() => void copySummary()}
+        onRunConvergence={() => void runConvergence()}
+        onRunDiagnostic={() => void runDiagnostic()}
+        status={status}
+      />
       {error ? <p className="text-sm leading-6 text-error">{error}</p> : null}
       {result ? (
-        <>
-          <CompanionSyncDiagnosticCheckpoint result={result} />
-          <section>
-            <h3 className="text-sm font-semibold text-foreground">What this means</h3>
-            <VerdictList verdicts={result.verdicts} />
-          </section>
-          <SnapshotSection empty="Android diagnostics are only available in the native app." snapshot={result.android} title="Android" />
-          <SnapshotSection empty="Desktop diagnostics need a paired desktop address." snapshot={result.desktop} title="Desktop" />
-          <button
-            className="w-full rounded-companion border border-border px-4 py-3 text-sm font-medium text-foreground"
-            onClick={() => void copySummary()}
-            type="button"
-          >
-            {copied ? 'Copied' : 'Copy diagnostic summary'}
-          </button>
-        </>
+        <DiagnosticResultSections convergenceReport={convergenceReport} result={result} />
       ) : null}
     </section>
   );

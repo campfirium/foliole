@@ -4,10 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const diagnosticsMock = vi.hoisted(() => ({
   runCombinedSyncDiagnostics: vi.fn()
 }));
+const convergenceMock = vi.hoisted(() => ({
+  runSyncConvergenceCheck: vi.fn()
+}));
 
 vi.mock('../shared/platform/companionSyncDiagnostics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../shared/platform/companionSyncDiagnostics')>()),
   runCombinedSyncDiagnostics: diagnosticsMock.runCombinedSyncDiagnostics
+}));
+vi.mock('../shared/platform/companionSyncConvergence', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/platform/companionSyncConvergence')>()),
+  runSyncConvergenceCheck: convergenceMock.runSyncConvergenceCheck
 }));
 
 import { CompanionSyncDiagnosticsPanel } from './CompanionSyncDiagnosticsPanel';
@@ -91,6 +98,19 @@ describe('CompanionSyncDiagnosticsPanel', () => {
   beforeEach(() => {
     diagnosticsMock.runCombinedSyncDiagnostics.mockReset();
     diagnosticsMock.runCombinedSyncDiagnostics.mockResolvedValue(diagnosticResult);
+    convergenceMock.runSyncConvergenceCheck.mockReset();
+    convergenceMock.runSyncConvergenceCheck.mockResolvedValue({
+      diagnostics: diagnosticResult,
+      report: {
+        status: 'blocked',
+        checks: [{
+          code: 'completed_event_with_local_work',
+          detail: 'Completed was recorded while 1 dirty change(s) and 1 pending ack(s) remain.',
+          severity: 'error',
+          title: 'Latest completed event is not fully converged'
+        }]
+      }
+    });
   });
 
   it('runs diagnostics on demand and shows checkpoint evidence', async () => {
@@ -125,5 +145,17 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     expect(screen.getByText('seq 4')).toBeInTheDocument();
     expect(screen.getByText('Desktop')).toBeInTheDocument();
     expect(diagnosticsMock.runCombinedSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  });
+
+  it('runs convergence check on demand and shows invariant failures', async () => {
+    render(<CompanionSyncDiagnosticsPanel endpointUrl="http://10.0.2.2:38641" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run convergence check' }));
+
+    await waitFor(() => expect(screen.getByText('Convergence check')).toBeInTheDocument());
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.getByText('Latest completed event is not fully converged')).toBeInTheDocument();
+    expect(screen.getByText('Completed was recorded while 1 dirty change(s) and 1 pending ack(s) remain.')).toBeInTheDocument();
+    expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');
   });
 });

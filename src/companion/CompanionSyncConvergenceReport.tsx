@@ -1,0 +1,37 @@
+import type {
+  SyncConvergenceCheck,
+  SyncConvergenceReport
+} from '../shared/platform/companionSyncConvergence';
+
+function statusLabel(status: SyncConvergenceReport['status']) {
+  if (status === 'blocked') return 'Blocked';
+  if (status === 'converged') return 'Converged';
+  if (status === 'pending') return 'Pending';
+  return 'Unknown';
+}
+
+function severityClass(severity: SyncConvergenceCheck['severity']) {
+  if (severity === 'error') return 'text-error';
+  if (severity === 'warning') return 'text-foreground';
+  if (severity === 'ok') return 'text-companion-accent';
+  return 'text-companion-text-secondary';
+}
+
+export function CompanionSyncConvergenceReport(props: { report: SyncConvergenceReport }) {
+  return (
+    <section>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">Convergence check</h3>
+        <span className="text-xs font-medium text-companion-text-secondary">{statusLabel(props.report.status)}</span>
+      </div>
+      <div className="mt-2 border-t border-companion-divider">
+        {props.report.checks.map((check) => (
+          <div className="border-b border-companion-divider py-3 last:border-b-0" key={check.code}>
+            <div className={`text-sm font-medium ${severityClass(check.severity)}`}>{check.title}</div>
+            <div className="mt-1 text-xs leading-5 text-companion-text-secondary">{check.detail}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
