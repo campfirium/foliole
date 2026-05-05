@@ -33,6 +33,13 @@ export interface CompanionDesktopSyncProgress {
   totalBytes?: number | null;
 }
 
+export interface CompanionContentBlobNativeTiming {
+  dbElapsedMs: number;
+  httpElapsedMs: number;
+  parseElapsedMs: number;
+  totalElapsedMs: number;
+}
+
 export interface CompanionDesktopSyncResult {
   appliedNodeIds: string[];
   appliedPackBlobCount: number;
@@ -49,6 +56,7 @@ export interface CompanionDesktopSyncResult {
   syncedAttachmentResourceBytes: number;
   syncedAttachmentResourceElapsedMs?: number;
   syncedContentBlobElapsedMs?: number;
+  syncedContentBlobNativeTiming?: CompanionContentBlobNativeTiming;
   syncedResourceElapsedMs: number;
   syncedStructureElapsedMs?: number;
   attachmentResourceError: string | null;

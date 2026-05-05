@@ -1,7 +1,10 @@
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
 import { syncCompanionAttachmentResourceRequestsFromDesktop } from './companionDesktopAttachmentResources';
 import { postDesktopJson } from './companionDesktopSyncHttp';
-import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
+import type {
+  CompanionContentBlobNativeTiming,
+  CompanionDesktopSyncProgress
+} from './companionDesktopSyncTypes';
 import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   loadCompanionMissingAttachmentResources,
@@ -23,8 +26,14 @@ export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS = 5 * 60_000;
 export const COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS = 45_000;
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
+type MissingContentBlob = { hash: string; size_bytes?: number };
+type ContentBlobBatchResult = {
+  failedContentBlobCount: number;
+  nativeTiming?: CompanionContentBlobNativeTiming;
+  syncedContentBlobHashes: string[];
+};
 
-function knownNumber(value: number | null) {
+function knownNumber(value: number | null | undefined) {
   return typeof value === 'number' ? value : undefined;
 }
 
@@ -35,6 +44,20 @@ async function ackContentBlobs(endpointUrl: string, hashes: string[]) {
 
 function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
+}
+
+function sumNativeTiming(
+  current: CompanionContentBlobNativeTiming | undefined,
+  next: CompanionContentBlobNativeTiming | undefined
+) {
+  if (!next) return current;
+  if (!current) return next;
+  return {
+    dbElapsedMs: current.dbElapsedMs + next.dbElapsedMs,
+    httpElapsedMs: current.httpElapsedMs + next.httpElapsedMs,
+    parseElapsedMs: current.parseElapsedMs + next.parseElapsedMs,
+    totalElapsedMs: current.totalElapsedMs + next.totalElapsedMs
+  };
 }
 
 function buildContentBlobPath(hash: string) {
@@ -87,24 +110,32 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
   const syncedContentBlobHashes: string[] = [];
   const { contentBreakdown, failed, failedBytes, total, totalBytes } = await loadMissingContentBlobSummary();
   let contentBacklogRemaining = true;
+  let nativeTiming: CompanionContentBlobNativeTiming | undefined;
   let syncedBytes = 0;
+  let nextBlobsPromise: Promise<MissingContentBlob[]> | null = loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
   onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, elapsedMs: 0, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     if (batchIndex > 0 && Date.now() - startedAt >= COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS) {
       break;
     }
-    const blobs = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
+    const blobs = await (nextBlobsPromise ?? loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT));
+    nextBlobsPromise = null;
     if (blobs.length === 0) {
       contentBacklogRemaining = false;
       break;
     }
     const hashes = blobs.map((blob) => blob.hash);
     const sizeByHash = new Map(blobs.map((blob) => [blob.hash, Math.max(0, blob.size_bytes ?? 0)]));
-    const batch = await pullContentBlobBatch(endpoint, hashes, (syncedChunkHashes) => {
+    const batchPromise = pullContentBlobBatch(endpoint, hashes, (syncedChunkHashes) => {
       syncedContentBlobHashes.push(...syncedChunkHashes);
       syncedBytes += syncedChunkHashes.reduce((sum, hash) => sum + (sizeByHash.get(hash) ?? 0), 0);
       onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
     });
+    if (hashes.length >= CONTENT_BLOB_BATCH_LIMIT) {
+      nextBlobsPromise = loadNextMissingContentBlobs(hashes);
+    }
+    const batch = await batchPromise;
+    nativeTiming = sumNativeTiming(nativeTiming, batch.nativeTiming);
     const syncedBatchHashes = batch.syncedContentBlobHashes;
     await ackContentBlobs(endpoint, syncedBatchHashes);
     if (syncedBatchHashes.length === 0 && batch.failedContentBlobCount > 0) {
@@ -116,7 +147,15 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       break;
     }
   }
-  return { contentBacklogRemaining, syncedContentBlobBytes: syncedBytes, syncedContentBlobHashes };
+  return { contentBacklogRemaining, syncedContentBlobBytes: syncedBytes, syncedContentBlobHashes, syncedContentBlobNativeTiming: nativeTiming };
+}
+
+async function loadNextMissingContentBlobs(inFlightHashes: string[]) {
+  const inFlightHashSet = new Set(inFlightHashes);
+  const candidates = await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT * 2);
+  return candidates
+    .filter((blob) => !inFlightHashSet.has(blob.hash))
+    .slice(0, CONTENT_BLOB_BATCH_LIMIT);
 }
 
 export async function pullMissingAttachmentResources(endpointUrl: string, onProgress?: ProgressHandler) {
@@ -169,14 +208,16 @@ async function pullContentBlobBatch(
   endpoint: string,
   hashes: string[],
   onSyncedChunk?: (hashes: string[]) => void
-) {
+): Promise<ContentBlobBatchResult> {
   try {
-    const syncedContentBlobHashes = await pullContentBlobNativeBatch(endpoint, hashes);
+    const batch = await pullContentBlobNativeBatch(endpoint, hashes);
+    const syncedContentBlobHashes = batch.syncedContentBlobHashes;
     if (syncedContentBlobHashes.length > 0) {
       onSyncedChunk?.(syncedContentBlobHashes);
     }
     return {
       failedContentBlobCount: hashes.length - syncedContentBlobHashes.length,
+      nativeTiming: batch.nativeTiming,
       syncedContentBlobHashes
     };
   } catch {
@@ -210,7 +251,19 @@ async function pullContentBlobNativeBatch(endpoint: string, hashes: string[]) {
     headers: await createSignedRequestHeaders({ bodyText: body, method: 'POST', pathWithQuery }),
     url: `${endpoint}${pathWithQuery}`
   });
-  return result.synced_hashes;
+  return {
+    nativeTiming: normalizeNativeTiming(result),
+    syncedContentBlobHashes: result.synced_hashes
+  };
+}
+
+function normalizeNativeTiming(result: Awaited<ReturnType<typeof syncCompanionContentBlobs>>) {
+  const httpElapsedMs = knownNumber(result.http_elapsed_ms) ?? 0;
+  const parseElapsedMs = knownNumber(result.parse_elapsed_ms) ?? 0;
+  const dbElapsedMs = knownNumber(result.db_elapsed_ms) ?? 0;
+  const totalElapsedMs = knownNumber(result.total_elapsed_ms) ?? httpElapsedMs + parseElapsedMs + dbElapsedMs;
+  if (httpElapsedMs <= 0 && parseElapsedMs <= 0 && dbElapsedMs <= 0 && totalElapsedMs <= 0) return undefined;
+  return { dbElapsedMs, httpElapsedMs, parseElapsedMs, totalElapsedMs };
 }
 
 async function pullContentBlob(endpoint: string, hash: string) {

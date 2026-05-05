@@ -141,6 +141,7 @@ async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDes
     syncedAttachmentIds: attachmentValue?.syncedAttachmentIds ?? [],
     syncedAttachmentResourceBytes: attachmentValue?.syncedAttachmentResourceBytes ?? 0,
     syncedContentBlobElapsedMs: contentValue?.syncedContentBlobElapsedMs ?? 0,
+    syncedContentBlobNativeTiming: contentValue?.syncedContentBlobNativeTiming,
     syncedContentBlobBytes: contentValue?.syncedContentBlobBytes ?? 0,
     syncedContentBlobHashes: contentValue?.syncedContentBlobHashes ?? [],
     syncedResourceElapsedMs: Date.now() - startedAt
@@ -200,6 +201,7 @@ async function runCompanionObjectsSync(
     remainingStructureChangeCount: finalSummary.remainingStructureChangeCount,
     syncedContentBlobHashes: resources.syncedContentBlobHashes,
     syncedContentBlobElapsedMs: resources.syncedContentBlobElapsedMs,
+    syncedContentBlobNativeTiming: resources.syncedContentBlobNativeTiming,
     syncedContentBlobBytes: resources.syncedContentBlobBytes,
     pushRejectedCount: pushed.pushRejectedCount
   };

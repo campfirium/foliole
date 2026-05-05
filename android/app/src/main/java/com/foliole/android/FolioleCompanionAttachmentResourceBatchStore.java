@@ -2,7 +2,9 @@ package com.foliole.android;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -13,7 +15,9 @@ import org.json.JSONObject;
 import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -100,15 +104,24 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             return;
         }
         String now = Instant.now().toString();
+        Map<String, String> contentHashes = loadContentHashes(database, attachmentIds);
         database.beginTransaction();
         try {
+            SQLiteStatement updateCached = database.compileStatement(
+                "UPDATE attachment_blobs SET storage_key = ?, availability = 'cached', cached_at = ?, last_verified_at = ? " +
+                    "WHERE attachment_id = ?"
+            );
             for (String attachmentId : attachmentIds) {
-                ContentValues values = new ContentValues();
-                values.put("storage_key", loadContentHash(database, attachmentId));
-                values.put("availability", "cached");
-                values.put("cached_at", now);
-                values.put("last_verified_at", now);
-                int updated = database.update("attachment_blobs", values, "attachment_id = ?", new String[] { attachmentId });
+                String contentHash = contentHashes.get(attachmentId);
+                if (contentHash == null) {
+                    throw new IllegalStateException("Attachment manifest is missing.");
+                }
+                updateCached.clearBindings();
+                updateCached.bindString(1, contentHash);
+                updateCached.bindString(2, now);
+                updateCached.bindString(3, now);
+                updateCached.bindString(4, attachmentId);
+                int updated = updateCached.executeUpdateDelete();
                 if (updated <= 0) {
                     throw new IllegalStateException("Attachment manifest is missing.");
                 }
@@ -119,16 +132,24 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         }
     }
 
-    private static String loadContentHash(SQLiteDatabase database, String attachmentId) {
-        try (android.database.Cursor cursor = database.rawQuery(
-            "SELECT content_hash FROM attachment_blobs WHERE attachment_id = ? LIMIT 1",
-            new String[] { attachmentId }
-        )) {
-            if (!cursor.moveToFirst()) {
-                throw new IllegalStateException("Attachment manifest is missing.");
-            }
-            return requireText(cursor.getString(0), "content_hash");
+    private static Map<String, String> loadContentHashes(SQLiteDatabase database, List<String> attachmentIds) {
+        Map<String, String> hashes = new HashMap<>();
+        StringBuilder placeholders = new StringBuilder();
+        String[] args = new String[attachmentIds.size()];
+        for (int index = 0; index < attachmentIds.size(); index += 1) {
+            if (index > 0) placeholders.append(", ");
+            placeholders.append("?");
+            args[index] = attachmentIds.get(index);
         }
+        try (Cursor cursor = database.rawQuery(
+            "SELECT attachment_id, content_hash FROM attachment_blobs WHERE attachment_id IN (" + placeholders + ")",
+            args
+        )) {
+            while (cursor.moveToNext()) {
+                hashes.put(cursor.getString(0), requireText(cursor.getString(1), "content_hash"));
+            }
+        }
+        return hashes;
     }
 
     private static void markFailed(SQLiteDatabase database, String attachmentId) {

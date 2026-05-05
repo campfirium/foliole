@@ -118,6 +118,22 @@ describe('describeCompanionSyncPassResult timing', () => {
       status: 'completed'
     });
   });
+
+  it('records native topic body timing when Android reports batch internals', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      syncedContentBlobHashes: ['hash-1'],
+      syncedContentBlobNativeTiming: {
+        dbElapsedMs: 450,
+        httpElapsedMs: 1200,
+        parseElapsedMs: 80,
+        totalElapsedMs: 1800
+      }
+    }))).toEqual({
+      message: 'Sync fully completed; downloaded 1 topic body in this sync; body internals: http 1s, parse 0.1s, db 0.5s',
+      outcome: 'completed',
+      status: 'completed'
+    });
+  });
 });
 
 describe('describeCompanionSyncPassResult errors', () => {

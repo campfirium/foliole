@@ -13,6 +13,12 @@ export interface CompanionSyncPassInput {
   syncedContentBlobElapsedMs?: number;
   syncedContentBlobBytes?: number;
   syncedContentBlobHashes?: string[];
+  syncedContentBlobNativeTiming?: {
+    dbElapsedMs: number;
+    httpElapsedMs: number;
+    parseElapsedMs: number;
+    totalElapsedMs: number;
+  };
   syncedResourceElapsedMs?: number;
   syncedStructureElapsedMs?: number;
   remainingAttachmentBreakdown?: {
@@ -121,6 +127,20 @@ function appendStageTimingSuffix(prefix: string, result: CompanionSyncPassInput)
   return timings.length === 0 ? prefix : joinBacklogSuffix(prefix, `timing: ${timings.join(', ')}`);
 }
 
+function appendNativeBodyTimingSuffix(prefix: string, result: CompanionSyncPassInput) {
+  const timing = result.syncedContentBlobNativeTiming;
+  if (!timing || (result.syncedContentBlobHashes?.length ?? 0) === 0) return prefix;
+  const timings = ([
+    ['http', timing.httpElapsedMs],
+    ['parse', timing.parseElapsedMs],
+    ['db', timing.dbElapsedMs]
+  ] satisfies Array<[string, number]>).flatMap(([label, elapsedMs]) => {
+    const elapsed = formatElapsedTime(elapsedMs);
+    return elapsed ? [`${label} ${elapsed}`] : [];
+  });
+  return timings.length === 0 ? prefix : joinBacklogSuffix(prefix, `body internals: ${timings.join(', ')}`);
+}
+
 function syncCheckedPrefix(result: CompanionSyncPassInput) {
   return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0
     ? 'Sync made progress'
@@ -174,7 +194,7 @@ function isKnownBacklog(count: number | null) {
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
-  const withTiming = (message: string) => appendStageTimingSuffix(message, result);
+  const withTiming = (message: string) => appendNativeBodyTimingSuffix(appendStageTimingSuffix(message, result), result);
   if (result.attachmentResourceError) {
     if (hasRemainingResourceBacklog(result)) {
       return createPassResult(

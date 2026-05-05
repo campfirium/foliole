@@ -45,7 +45,13 @@ export interface CompanionWorkspaceSyncPlugin {
   loadMissingContentBlobHashes(args: {
     limit?: number;
   }): Promise<{ blobs?: Array<{ hash: string; size_bytes?: number }>; hashes: string[] }>;
-  syncContentBlobs(args: { body: string; headers: Record<string, string>; url: string }): Promise<{ synced_hashes: string[] }>;
+  syncContentBlobs(args: { body: string; headers: Record<string, string>; url: string }): Promise<{
+    db_elapsed_ms?: number;
+    http_elapsed_ms?: number;
+    parse_elapsed_ms?: number;
+    synced_hashes: string[];
+    total_elapsed_ms?: number;
+  }>;
   loadMissingAttachmentResources(args: {
     limit?: number;
   }): Promise<{ resources: Array<{ attachment_id: string; content_hash: string; size_bytes?: number }> }>;

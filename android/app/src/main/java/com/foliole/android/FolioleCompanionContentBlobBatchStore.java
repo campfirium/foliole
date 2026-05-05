@@ -20,23 +20,34 @@ final class FolioleCompanionContentBlobBatchStore {
     private FolioleCompanionContentBlobBatchStore() {}
 
     static JSObject syncBlobs(SQLiteDatabase database, String url, JSONObject headers, String body) throws Exception {
+        long startedAt = System.nanoTime();
+        long httpStartedAt = System.nanoTime();
         FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
             requireText(url, "url"),
             "POST",
             headers,
             body
         );
+        long httpElapsedMs = elapsedMs(httpStartedAt);
+        long parseStartedAt = System.nanoTime();
         List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs =
             FolioleCompanionContentBlobMultipartBatch.parse(response.body, response.contentType);
+        long parseElapsedMs = elapsedMs(parseStartedAt);
         JSArray syncedHashes = new JSArray();
         List<CachedBlob> cachedBlobs = new ArrayList<>();
+        long databaseStartedAt = System.nanoTime();
         Map<String, ContentBlobManifest> manifests = loadManifests(database, blobs);
         for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
             addBatchBlob(blob, manifests, cachedBlobs, syncedHashes);
         }
         storeCachedBlobs(database, cachedBlobs);
+        long databaseElapsedMs = elapsedMs(databaseStartedAt);
         JSObject result = new JSObject();
         result.put("synced_hashes", syncedHashes);
+        result.put("http_elapsed_ms", httpElapsedMs);
+        result.put("parse_elapsed_ms", parseElapsedMs);
+        result.put("db_elapsed_ms", databaseElapsedMs);
+        result.put("total_elapsed_ms", elapsedMs(startedAt));
         return result;
     }
 
@@ -166,6 +177,10 @@ final class FolioleCompanionContentBlobBatchStore {
             builder.append(String.format("%02x", value));
         }
         return builder.toString();
+    }
+
+    private static long elapsedMs(long startedAt) {
+        return Math.max(0L, (System.nanoTime() - startedAt) / 1_000_000L);
     }
 
     private static final class CachedBlob {
