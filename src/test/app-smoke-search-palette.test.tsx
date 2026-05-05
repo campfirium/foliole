@@ -58,7 +58,7 @@ function seedSearchNodes() {
   }));
 }
 
-it('opens workspace search with Ctrl+K and searches node titles and content', async () => {
+it('keeps search results lightweight until the chosen node is opened', async () => {
   const invoke = createSearchRuntimeInvoke();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
@@ -85,6 +85,7 @@ it('opens workspace search with Ctrl+K and searches node titles and content', as
   });
   expect(within(dialog).getByText(searchExcerpt)).toBeInTheDocument();
   expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([]);
 
   fireEvent.keyDown(input, { key: 'ArrowDown' });
   fireEvent.keyDown(input, { key: 'Enter' });
@@ -107,5 +108,8 @@ it('opens workspace search with Ctrl+K and searches node titles and content', as
   expect(JSON.stringify(useWorkspaceStore.getState().nodesById)).not.toContain(searchExcerpt);
   expect(invoke).toHaveBeenCalledWith('search_workspace', { query: 'Atlas' });
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-3' });
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
+    ['load_node_document', { nodeId: 'node-3' }]
+  ]);
   expect(screen.queryByRole('dialog', { name: 'Workspace search' })).not.toBeInTheDocument();
 });
