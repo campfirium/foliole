@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -78,6 +78,16 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
 
     expect(lifecycle.documentUnmounts).toBe(1);
   });
+
+  it('renders only the document area while immersive mode is active', () => {
+    renderGrid(buildProps(true));
+
+    expect(screen.getByTestId('document-area')).toBeInTheDocument();
+    expect(screen.queryByTestId('list-area')).toBeNull();
+    expect(screen.queryByTestId('list-splitter')).toBeNull();
+    expect(screen.queryByTestId('right-sidebar')).toBeNull();
+    expect(screen.queryByTestId('right-sidebar-splitter')).toBeNull();
+  });
 });
 
 describe('WorkspaceLayoutGrid right sidebar wiring', () => {
@@ -86,6 +96,13 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
 
     expect(getByTestId('right-sidebar')).toHaveAttribute('data-breadcrumb-type', 'function');
     expect(getByTestId('right-sidebar')).toHaveAttribute('data-select-type', 'function');
+  });
+
+  it('keeps right sidebar wrappers gated behind the xl desktop breakpoint', () => {
+    const { getByTestId } = renderGrid(buildProps(false));
+
+    expect(getByTestId('right-sidebar').parentElement).toHaveClass('hidden', 'xl:flex');
+    expect(getByTestId('right-sidebar-splitter').parentElement).toHaveClass('hidden', 'xl:flex');
   });
 
   it('keeps the list projection stable when only document body fields change', () => {
