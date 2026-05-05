@@ -76,26 +76,36 @@ function useClipboardImportNotice(onStartClipboardImport: () => boolean | Promis
   return { notice, startClipboardImport };
 }
 
+function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrome']) {
+  return {
+    '--workspace-list-width': `${layoutChrome.listWidth}px`,
+    '--workspace-list-folder-current-width': layoutChrome.isListCollapsed
+      ? '0px'
+      : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
+    '--workspace-list-current-width': layoutChrome.isListCollapsed ? '0px' : `${layoutChrome.listWidth}px`,
+    '--workspace-list-splitter-width': layoutChrome.isListCollapsed ? '0px' : '1px',
+    '--workspace-right-sidebar-current-width': layoutChrome.isRightSidebarCollapsed ? '0px' : `${layoutChrome.rightSidebarWidth}px`,
+    '--workspace-right-sidebar-splitter-width': layoutChrome.isRightSidebarCollapsed ? '0px' : '1px',
+    '--workspace-right-sidebar-width': `${layoutChrome.rightSidebarWidth}px`
+  } as CSSProperties;
+}
+
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
+  const { imports, layoutChrome, navigation, nodeList, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
   );
   const immersive = useImmersiveReadingMode(flatProps);
-  const clipboardImportNotice = useClipboardImportNotice(flatProps.onStartClipboardImport);
-  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions(flatProps);
-  const workspaceGridStyle = {
-    '--workspace-list-width': `${flatProps.listWidth}px`,
-    '--workspace-list-folder-current-width': flatProps.isListCollapsed
-      ? '0px'
-      : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
-    '--workspace-list-current-width': flatProps.isListCollapsed ? '0px' : `${flatProps.listWidth}px`,
-    '--workspace-list-splitter-width': flatProps.isListCollapsed ? '0px' : '1px',
-    '--workspace-right-sidebar-current-width': flatProps.isRightSidebarCollapsed ? '0px' : `${flatProps.rightSidebarWidth}px`,
-    '--workspace-right-sidebar-splitter-width': flatProps.isRightSidebarCollapsed ? '0px' : '1px',
-    '--workspace-right-sidebar-width': `${flatProps.rightSidebarWidth}px`
-  } as CSSProperties;
-  const documentNodeId = flatProps.isViewingTrashNode ? flatProps.selectedTrashNodeId : flatProps.activeNodeId;
+  const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport);
+  const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions({
+    onCloseImportManagement: imports.onCloseImportManagement,
+    onOpenNotesView: nodeList.onOpenNotesView,
+    onOpenTrashView: trash.onOpenTrashView,
+    onSelectNode: navigation.onSelectNode
+  });
+  const workspaceGridStyle = buildWorkspaceGridStyle(layoutChrome);
+  const documentNodeId = trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId;
 
   useEffect(() => {
     saveWorkspaceRightPanelPreference(activeRightPanelId);
@@ -103,10 +113,10 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
 
   const handleSelectRightPanel = useCallback((panelId: WorkspaceRightPanelId) => {
     setActiveRightPanelId(panelId);
-    if (flatProps.isRightSidebarCollapsed) {
-      flatProps.onToggleRightSidebarVisibility();
+    if (layoutChrome.isRightSidebarCollapsed) {
+      layoutChrome.onToggleRightSidebarVisibility();
     }
-  }, [flatProps.isRightSidebarCollapsed, flatProps.onToggleRightSidebarVisibility]);
+  }, [layoutChrome.isRightSidebarCollapsed, layoutChrome.onToggleRightSidebarVisibility]);
 
   return (
     <main aria-label="Foliole workspace" className="relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
@@ -114,25 +124,25 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         activeRightPanelId={activeRightPanelId}
         onOpenNotesView={handleOpenNotesView}
         onOpenTrashView={handleOpenTrashView}
-        isImportManagementOpen={flatProps.isImportManagementOpen}
+        isImportManagementOpen={imports.isImportManagementOpen}
         onSelectRightPanel={handleSelectRightPanel}
         documentNodeId={documentNodeId}
-        onOpenImportManagement={flatProps.onOpenImportManagement}
+        onOpenImportManagement={imports.onOpenImportManagement}
         onStartClipboardImport={clipboardImportNotice.startClipboardImport}
-        onStartImport={() => void flatProps.onRunImportFile()}
+        onStartImport={() => void imports.onRunImportFile()}
         onSelectNode={handleSelectNode}
         immersive={immersive}
         gridProps={props}
         titleBarProps={props}
       />
       {clipboardImportNotice.notice ? <ClipboardImportNotice message={clipboardImportNotice.notice.message} tone={clipboardImportNotice.notice.tone} /> : null}
-      <ImmersiveShortcutsOverlay visible={flatProps.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
+      <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
-        onOpenChange={(open) => (open ? flatProps.onOpenImportManagement() : flatProps.onCloseImportManagement())}
+        onOpenChange={(open) => (open ? imports.onOpenImportManagement() : imports.onCloseImportManagement())}
         onSelectNode={handleSelectNode}
-        open={flatProps.isImportManagementOpen}
+        open={imports.isImportManagementOpen}
       />
-      <WorkspaceSettingsOverlay {...selectWorkspaceSettingsOverlayProps(flatProps)} />
+      <WorkspaceSettingsOverlay {...selectWorkspaceSettingsOverlayProps(settings)} />
     </main>
   );
 }
