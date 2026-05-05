@@ -154,19 +154,6 @@ function renderStudyDock(props: {
   );
 }
 
-function RailDivider({ visible }: { visible: boolean }) {
-  if (!visible) {
-    return null;
-  }
-  return (
-    <div
-      aria-hidden="true"
-      className="mx-auto my-1 w-6 shrink-0 border-t"
-      style={{ borderTopColor: getWorkspaceSurfaceDividerColor('main', 'rail') }}
-    />
-  );
-}
-
 export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
   const state = useWorkspaceRailToolbarState(props);
   const reviewStatusText = props.isStudyMode
@@ -192,7 +179,6 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           onRun={state.runRailCommand}
         />
         <div className="flex-1" />
-        <RailDivider visible={state.topItems.length > 0 && state.bottomItems.length > 0} />
         <RailActionGroup
           ariaLabel="Workspace bottom rail actions"
           isImportManagementOpen={props.isImportManagementOpen}
