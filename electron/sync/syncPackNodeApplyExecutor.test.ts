@@ -37,6 +37,7 @@ beforeEach(async () => {
   initializeDatabaseConnection(openDatabaseConnection());
   installSyncPushAckTable();
   insertAttachment();
+  insertPendingPushAck();
   createIncomingPack(incomingPath);
 });
 
@@ -100,6 +101,7 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     last_modified_by_device_id: 'android-device',
     sync_dirty: 0
   });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 0 });
 });
 
 function createIncomingPack(filePath: string) {
@@ -147,4 +149,17 @@ function insertAttachment() {
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
      VALUES ('att-1', 'att-1.pdf', 'application/pdf', 128, '2026-05-04T00:00:00.000Z')`
   ).run();
+}
+
+function insertPendingPushAck() {
+  openDatabaseConnection().sqlite.exec(`
+    INSERT INTO sync_object_state (
+      object_type, object_id, state_seq, current_version_id, content_hash,
+      last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+    ) VALUES ('node', 'node-1', 1, 'android#local', 'hash-node-1', 'android-device',
+      '2026-05-04T00:30:00.000Z', NULL, 1);
+    INSERT INTO sync_push_ack (
+      client_op_id, object_type, object_id, state_seq, status, acked_at
+    ) VALUES ('op-1', 'node', 'node-1', 1, 'accepted', '2026-05-04T01:00:00.000Z');
+  `);
 }

@@ -9,6 +9,7 @@ import {
   assertContiguousSyncPackCursor,
   readSyncPackCursorWithDbPort
 } from './syncPackCursor.js';
+import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
@@ -36,6 +37,10 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     await applySyncPackNodesWithDbPort(port, options);
     appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, options);
   }
+  await clearConfirmedSyncPushAcksWithDbPort(port, {
+    incomingAlias: options.incomingAlias,
+    toStateSeq: cursor.toStateSeq
+  });
   return {
     applied: shouldApply,
     appliedObjectCount,
