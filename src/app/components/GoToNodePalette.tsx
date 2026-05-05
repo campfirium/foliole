@@ -10,6 +10,7 @@ import {
 } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
+import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { buildNodeSearchResults } from './workspaceNodeSearch';
 
 interface GoToNodePaletteProps {
@@ -44,6 +45,7 @@ export function GoToNodePalette({
   trashedNodeIds
 }: GoToNodePaletteProps) {
   const handleSelectNode = onSelectNode ?? onOpenNode;
+  const focusTrap = useFloatingDialogFocusTrap();
   const { activeIndex, query, results, setActiveIndex, setQuery } = useGoToNodePaletteState({
     isOpen,
     nodeOrder,
@@ -55,7 +57,6 @@ export function GoToNodePalette({
   if (!isOpen) {
     return null;
   }
-
   const openActiveNode = () => {
     const result = results[activeIndex];
     if (result && handleSelectNode) {
@@ -75,6 +76,7 @@ export function GoToNodePalette({
     placeholder,
     query,
     results,
+    focusTrap,
     setActiveIndex,
     setQuery
   });
@@ -92,19 +94,23 @@ function renderGoToNodeDialog(args: {
   placeholder: string;
   query: string;
   results: ReturnType<typeof buildNodeSearchResults>;
+  focusTrap: ReturnType<typeof useFloatingDialogFocusTrap>;
   setActiveIndex: (update: (current: number) => number) => void;
   setQuery: (value: string) => void;
 }) {
   return (
     <div
       aria-label={args.dialogLabel}
+      aria-modal="true"
       className={appFloatingOverlayClassName()}
       onClick={args.onClose}
       role="dialog"
     >
       <div
         className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')}
+        onKeyDown={args.focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
+        ref={args.focusTrap.containerRef}
       >
         <FloatingPaletteInput
           inputLabel={args.inputLabel}
@@ -194,7 +200,6 @@ function GoToNodeResults({
       </ul>
     );
   }
-
   return (
     <ul aria-label="Search results" className={appFloatingListClassName()}>
       {results.map((item, index) => (

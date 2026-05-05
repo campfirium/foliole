@@ -37,6 +37,7 @@ it('clears stale runtime results immediately when the query changes', async () =
     />
   );
 
+  expect(screen.getByRole('dialog', { name: 'Workspace search' })).toHaveAttribute('aria-modal', 'true');
   const input = screen.getByRole('textbox', { name: 'Search workspace' });
   fireEvent.change(input, { target: { value: '确定信噪比' } });
   firstSearch.resolve([{ externalMatch: null, id: 'pdf-1', title: 'SuperMemoGuru 学习的乐趣.pdf', excerpt: 'Page 13 · ...Search for ExtraTerrestrial Intelligence 的缩写。', kind: 'pdf', nodeMatch: null, pdfMatch: { attachmentId: 'att-1', matchStart: 32, page: 13, pageTextLength: 300, query: 'ce' }, updatedAt: '2026-03-30T00:00:00.000Z' }]);

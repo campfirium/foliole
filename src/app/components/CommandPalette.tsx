@@ -12,6 +12,7 @@ import {
 } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
+import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 
 const EMPTY_COMMAND_ITEMS: CommandPaletteItem[] = [];
 const EMPTY_RECENT_COMMAND_IDS: string[] = [];
@@ -139,6 +140,7 @@ export function CommandPalette({
   onClose,
   onRunCommand
 }: CommandPaletteProps) {
+  const focusTrap = useFloatingDialogFocusTrap();
   const { activeIndex, activeItems, query, setActiveIndex, setQuery } =
     useCommandPaletteState({
       isOpen,
@@ -157,13 +159,16 @@ export function CommandPalette({
   return (
     <div
       aria-label="Command palette"
+      aria-modal="true"
       className={appFloatingOverlayClassName()}
       onClick={onClose}
       role="dialog"
     >
       <div
         className={appFloatingSurfaceClassName('panel', 'w-full max-w-xl overflow-hidden')}
+        onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
+        ref={focusTrap.containerRef}
       >
         <FloatingPaletteInput
           inputLabel="Search commands"

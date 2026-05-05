@@ -9,6 +9,7 @@ import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
+import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -87,6 +88,7 @@ function useOrderedSearchResults(
 }
 
 export function SearchPalette(props: SearchPaletteProps) {
+  const focusTrap = useFloatingDialogFocusTrap();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const searchState = useSearchResults(props, query);
@@ -109,13 +111,16 @@ export function SearchPalette(props: SearchPaletteProps) {
   return (
     <div
       aria-label="Workspace search"
+      aria-modal="true"
       className={appFloatingOverlayClassName()}
       onClick={props.onClose}
       role="dialog"
     >
       <div
         className={appFloatingSurfaceClassName('panel', 'w-full max-w-2xl overflow-hidden')}
+        onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
+        ref={focusTrap.containerRef}
       >
         <FloatingPaletteInput
           inputLabel="Search workspace"
@@ -127,23 +132,47 @@ export function SearchPalette(props: SearchPaletteProps) {
           query={query}
           totalItems={results.length}
         />
-        {searchState.error ? (
-          <SearchPaletteErrorState />
-        ) : results.length ? (
-          <SearchPaletteList
-            activeIndex={activeIndex}
-            nodesById={props.nodesById}
-            onOpenResult={props.onOpenResult}
-            query={query}
-            externalSectionStatus={externalSectionStatus}
-            results={results}
-            sourceDetailsByNodeId={sourceDetailsByNodeId}
-          />
-        ) : (
-          <SearchPaletteEmptyState query={query} />
-        )}
+        <SearchPaletteBody
+          activeIndex={activeIndex}
+          externalSectionStatus={externalSectionStatus}
+          hasError={searchState.error}
+          nodesById={props.nodesById}
+          onOpenResult={props.onOpenResult}
+          query={query}
+          results={results}
+          sourceDetailsByNodeId={sourceDetailsByNodeId}
+        />
       </div>
     </div>
+  );
+}
+
+function SearchPaletteBody(props: {
+  activeIndex: number;
+  externalSectionStatus: string | null;
+  hasError: boolean;
+  nodesById: WorkspaceListNodesById;
+  onOpenResult: (result: WorkspaceSearchResult) => void;
+  query: string;
+  results: WorkspaceSearchResult[];
+  sourceDetailsByNodeId: ReturnType<typeof useSearchResultSourceDetails>;
+}) {
+  if (props.hasError) {
+    return <SearchPaletteErrorState />;
+  }
+  if (!props.results.length) {
+    return <SearchPaletteEmptyState query={props.query} />;
+  }
+  return (
+    <SearchPaletteList
+      activeIndex={props.activeIndex}
+      externalSectionStatus={props.externalSectionStatus}
+      nodesById={props.nodesById}
+      onOpenResult={props.onOpenResult}
+      query={props.query}
+      results={props.results}
+      sourceDetailsByNodeId={props.sourceDetailsByNodeId}
+    />
   );
 }
 
