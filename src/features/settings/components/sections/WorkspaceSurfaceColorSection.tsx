@@ -1,34 +1,25 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { AppButton, SettingsSection } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
-import { formatWorkspaceSurfaceColorCss, parseWorkspaceSurfaceColor } from '../../model/workspaceSurfaceColor';
-import { WORKSPACE_SURFACE_REGION_IDS, type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
+import {
+  applyWorkspaceSurfaceAutoPalette,
+  buildWorkspaceSurfaceAutoAssignments,
+  buildWorkspaceSurfaceAutoColumnPalette,
+  type WorkspaceSurfaceAutoPaletteOptions
+} from '../../model/workspaceSurfaceAutoPalette';
+import {
+  formatWorkspaceSurfaceColorCss,
+  parseWorkspaceSurfaceColor,
+  type WorkspaceSurfaceColorValue
+} from '../../model/workspaceSurfaceColor';
+import { getWorkspaceSurfaceRecommendationFamilies } from '../../model/workspaceSurfaceColorRecommendations';
+import { type WorkspaceSurfaceRegionId } from '../../model/workspaceSurfaceSettings';
 
-import { WorkspaceSurfaceColorEditor } from './WorkspaceSurfaceColorEditor';
-
-import { cn } from '@/shared/lib/utils';
-
-const GRID_TEMPLATE_COLUMNS = '40fr 120fr 180fr 627fr 213fr';
-const GRID_TEMPLATE_ROWS = '40fr 420fr 56fr';
-const COMPACT_CELLS = new Set<WorkspaceSurfaceRegionId>(['titlebar-rail', 'main-rail', 'footer-rail']);
-const GRID_CELLS: Array<{ id: WorkspaceSurfaceRegionId; label: string; row: number; column: number }> = [
-  { column: 1, id: 'titlebar-rail', label: 'Top rail', row: 1 },
-  { column: 2, id: 'titlebar-folder', label: 'Top folder', row: 1 },
-  { column: 3, id: 'titlebar-topic', label: 'Top topic', row: 1 },
-  { column: 4, id: 'titlebar-document', label: 'Top doc', row: 1 },
-  { column: 5, id: 'titlebar-sidebar', label: 'Top sidebar', row: 1 },
-  { column: 1, id: 'main-rail', label: 'Main rail', row: 2 },
-  { column: 2, id: 'main-folder', label: 'Main folder', row: 2 },
-  { column: 3, id: 'main-topic', label: 'Main topic', row: 2 },
-  { column: 4, id: 'main-document', label: 'Main doc', row: 2 },
-  { column: 5, id: 'main-sidebar', label: 'Main sidebar', row: 2 },
-  { column: 1, id: 'footer-rail', label: 'Bottom rail', row: 3 },
-  { column: 2, id: 'footer-folder', label: 'Bottom folder', row: 3 },
-  { column: 3, id: 'footer-topic', label: 'Bottom topic', row: 3 },
-  { column: 4, id: 'footer-document', label: 'Bottom doc', row: 3 },
-  { column: 5, id: 'footer-sidebar', label: 'Bottom sidebar', row: 3 }
-];
+import { WorkspaceSurfaceColorModePanel } from './WorkspaceSurfaceColorModePanel';
+import { WorkspaceSurfaceColorPaletteStrip } from './WorkspaceSurfaceColorPaletteStrip';
+import { WorkspaceSurfaceGrid } from './WorkspaceSurfaceGrid';
+import { WorkspaceSurfacePaletteEditor } from './WorkspaceSurfacePaletteEditor';
 
 function clampBrushIndex(value: number, paletteLength: number) {
   return Math.min(Math.max(value, 0), Math.max(paletteLength - 1, 0));
@@ -37,6 +28,15 @@ function clampBrushIndex(value: number, paletteLength: number) {
 function useWorkspaceSurfaceEditor() {
   const appearance = useAppearanceSettings();
   const [activeBrushIndex, setActiveBrushIndex] = useState(0);
+  const [activeRecommendationId, setActiveRecommendationId] = useState<string | null>(null);
+  const [autoSeedColor, setAutoSeedColor] = useState<WorkspaceSurfaceColorValue>(() => (
+    parseWorkspaceSurfaceColor(appearance.workspaceSurfacePalette[0] ?? '#f5f5f3') ?? { a: 1, b: 243, g: 245, r: 245 }
+  ));
+  const [autoOptions, setAutoOptions] = useState<WorkspaceSurfaceAutoPaletteOptions>({
+    documentPureWhite: false,
+    folderTopicSharedTone: false
+  });
+  const [generatedMode, setGeneratedMode] = useState<'automatic' | 'recommended' | 'manual' | null>(null);
   const [editorState, setEditorState] = useState<{ bounds: { height: number; width: number }; index: number; x: number; y: number } | null>(null);
   const editorHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -44,7 +44,22 @@ function useWorkspaceSurfaceEditor() {
     setActiveBrushIndex((current) => clampBrushIndex(current, appearance.workspaceSurfacePalette.length));
   }, [appearance.workspaceSurfacePalette.length]);
 
-  return { activeBrushIndex, appearance, editorHostRef, editorState, setActiveBrushIndex, setEditorState };
+  return {
+    activeBrushIndex,
+    activeRecommendationId,
+    appearance,
+    autoOptions,
+    autoSeedColor,
+    editorHostRef,
+    editorState,
+    generatedMode,
+    setActiveBrushIndex,
+    setActiveRecommendationId,
+    setAutoOptions,
+    setAutoSeedColor,
+    setGeneratedMode,
+    setEditorState
+  };
 }
 
 function useWorkspaceSurfacePainting(
@@ -76,67 +91,18 @@ function useWorkspaceSurfacePainting(
   return { isPainting, setIsPainting };
 }
 
-function WorkspaceSurfaceGrid(props: {
-  appearance: ReturnType<typeof useWorkspaceSurfaceEditor>['appearance'];
-  isPainting: boolean;
-  onPaintStart: (event: ReactPointerEvent<HTMLButtonElement>, regionId: WorkspaceSurfaceRegionId) => void;
-  paintRegion: (regionId: WorkspaceSurfaceRegionId) => void;
-}) {
-  return (
-    <div className="overflow-hidden rounded-sm border border-settings-divider/30 bg-settings-divider/30">
-      <div className="grid gap-px bg-settings-divider/30 p-px" style={{ aspectRatio: '1180 / 516', gridTemplateColumns: GRID_TEMPLATE_COLUMNS, gridTemplateRows: GRID_TEMPLATE_ROWS }}>
-        {GRID_CELLS.map((cell) => {
-          const swatchIndex = props.appearance.workspaceSurfaceAssignments[cell.id];
-          const backgroundColor = props.appearance.workspaceSurfacePalette[swatchIndex] ?? props.appearance.workspaceSurfacePalette[0];
-          return (
-            <button
-              aria-label={cell.label}
-              className="group relative min-h-0 min-w-0 bg-bg-elevated text-left transition-colors"
-              data-workspace-region-id={cell.id}
-              key={cell.id}
-              onPointerDown={(event) => props.onPaintStart(event, cell.id)}
-              onPointerEnter={() => props.isPainting && props.paintRegion(cell.id)}
-              style={{ backgroundColor, gridColumn: cell.column, gridRow: cell.row }}
-              type="button"
-            >
-              <span className={cn('absolute left-3 top-2 text-[11px] text-foreground/55', COMPACT_CELLS.has(cell.id) && 'left-2 text-[10px]')}>
-                {WORKSPACE_SURFACE_REGION_IDS.indexOf(cell.id) + 1}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WorkspaceSurfacePalette(props: ReturnType<typeof useWorkspaceSurfaceEditor> & { onAddPaletteColor: () => void }) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2.5">
-      {props.appearance.workspaceSurfacePalette.map((color, index) => (
-        <button
-          aria-label={`Palette color ${index + 1}`}
-          className={cn('h-9 w-9 rounded-sm border transition-transform hover:scale-[1.04]', index === props.activeBrushIndex ? 'border-foreground/85' : 'border-border/55')}
-          key={`${color}-${index}`}
-          onClick={() => props.setActiveBrushIndex(index)}
-          onDoubleClick={(event) => {
-            const hostRect = props.editorHostRef.current?.getBoundingClientRect();
-            props.setEditorState({
-              bounds: hostRect ? { height: hostRect.height, width: hostRect.width } : { height: window.innerHeight, width: window.innerWidth },
-              index,
-              x: hostRect ? event.clientX - hostRect.left + 12 : event.clientX,
-              y: hostRect ? event.clientY - hostRect.top + 12 : event.clientY
-            });
-          }}
-          style={{ backgroundColor: color }}
-          type="button"
-        />
-      ))}
-      <button aria-label="Add palette color" className="flex h-9 w-9 items-center justify-center rounded-sm border border-dashed border-border/55 bg-bg-elevated text-lg text-foreground/70" onClick={props.onAddPaletteColor} type="button">
-        +
-      </button>
-    </div>
-  );
+function openWorkspaceSurfaceColorEditor(
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>,
+  event: ReactMouseEvent<HTMLButtonElement>,
+  index: number
+) {
+  const hostRect = editor.editorHostRef.current?.getBoundingClientRect();
+  editor.setEditorState({
+    bounds: hostRect ? { height: hostRect.height, width: hostRect.width } : { height: window.innerHeight, width: window.innerWidth },
+    index,
+    x: hostRect ? event.clientX - hostRect.left + 12 : event.clientX,
+    y: hostRect ? event.clientY - hostRect.top + 12 : event.clientY
+  });
 }
 
 export function WorkspaceSurfaceColorSection(props: { onEnterPreview: () => void }) {
@@ -151,50 +117,140 @@ export function WorkspaceSurfaceColorSection(props: { onEnterPreview: () => void
   return <WorkspaceSurfaceColorSectionBody editor={editor} onEnterPreview={props.onEnterPreview} paintRegion={paintRegion} painting={painting} />;
 }
 
+function applyAutoModeToWorkspace(editor: ReturnType<typeof useWorkspaceSurfaceEditor>) {
+  const nextState = {
+    assignments: buildWorkspaceSurfaceAutoAssignments(),
+    palette: applyWorkspaceSurfaceAutoPalette(
+      editor.appearance.workspaceSurfacePalette,
+      buildWorkspaceSurfaceAutoColumnPalette(editor.autoSeedColor, editor.autoOptions)
+    )
+  };
+  editor.appearance.setWorkspaceSurfacePalette(nextState.palette);
+  editor.appearance.setWorkspaceSurfaceAssignments(nextState.assignments);
+  editor.setActiveBrushIndex(3);
+}
+
+function applyRecommendedPaletteToWorkspace(
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>,
+  palette: string[]
+) {
+  editor.appearance.setWorkspaceSurfacePalette(
+    applyWorkspaceSurfaceAutoPalette(editor.appearance.workspaceSurfacePalette, palette)
+  );
+  editor.appearance.setWorkspaceSurfaceAssignments(buildWorkspaceSurfaceAutoAssignments());
+  editor.setActiveBrushIndex(3);
+}
+
+function resolveRecommendedPalette(
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>,
+  familyId: string
+) {
+  return getWorkspaceSurfaceRecommendationFamilies(editor.autoSeedColor, editor.autoOptions)
+    .find((family) => family.id === familyId)
+    ?.tones.map((tone) => formatWorkspaceSurfaceColorCss(tone));
+}
+
 function WorkspaceSurfaceColorSectionBody(props: {
   editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
   onEnterPreview: () => void;
   paintRegion: (regionId: WorkspaceSurfaceRegionId) => void;
   painting: ReturnType<typeof useWorkspaceSurfacePainting>;
 }) {
+  useEffect(() => {
+    if (props.editor.generatedMode === 'automatic') {
+      applyAutoModeToWorkspace(props.editor);
+      return;
+    }
+    if (props.editor.generatedMode === 'recommended' && props.editor.activeRecommendationId) {
+      const palette = resolveRecommendedPalette(props.editor, props.editor.activeRecommendationId);
+      if (palette) {
+        applyRecommendedPaletteToWorkspace(props.editor, palette);
+      }
+    }
+  }, [
+    props.editor.activeRecommendationId,
+    props.editor.autoOptions,
+    props.editor.autoSeedColor,
+    props.editor.generatedMode
+  ]);
+
   return (
     <SettingsSection
-      actions={
-        <div className="flex items-center gap-2">
-          <AppButton onClick={props.onEnterPreview} variant="primary">Preview</AppButton>
-          <AppButton onClick={props.editor.appearance.resetWorkspaceSurfaceSettings} variant="primary">Reset</AppButton>
-        </div>
-      }
+      actions={<WorkspaceSurfaceSectionActions editor={props.editor} onEnterPreview={props.onEnterPreview} />}
       ariaLabel="Workspace surface color section"
       description="Paint the real workspace shell using the same rough proportions as the desktop client."
       title="Workspace surface colors"
     >
-      <div className="relative" ref={props.editor.editorHostRef}>
-        <WorkspaceSurfaceGrid
-          appearance={props.editor.appearance}
-          isPainting={props.painting.isPainting}
-          onPaintStart={(event, regionId) => {
-            event.preventDefault();
-            props.paintRegion(regionId);
-            props.painting.setIsPainting(true);
-          }}
-          paintRegion={props.paintRegion}
-        />
-        <WorkspaceSurfacePalette
-          {...props.editor}
-          onAddPaletteColor={() => {
-            const fallbackColor = props.editor.appearance.workspaceSurfacePalette[props.editor.activeBrushIndex] ?? '#d8d8d8';
-            props.editor.appearance.setWorkspaceSurfacePalette([...props.editor.appearance.workspaceSurfacePalette, fallbackColor]);
-            props.editor.setActiveBrushIndex(props.editor.appearance.workspaceSurfacePalette.length);
-          }}
-        />
-        <WorkspaceSurfacePaletteEditor editor={props.editor} />
-      </div>
+      <WorkspaceSurfaceSectionContent editor={props.editor} paintRegion={props.paintRegion} painting={props.painting} />
     </SettingsSection>
   );
 }
 
-function WorkspaceSurfacePaletteEditor(props: { editor: ReturnType<typeof useWorkspaceSurfaceEditor> }) {
+function WorkspaceSurfaceSectionActions(props: {
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
+  onEnterPreview: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2"><AppButton onClick={props.onEnterPreview} variant="primary">Preview</AppButton><AppButton onClick={props.editor.appearance.resetWorkspaceSurfaceSettings} variant="primary">Reset</AppButton></div>
+  );
+}
+
+function WorkspaceSurfaceSectionContent(props: {
+  editor: ReturnType<typeof useWorkspaceSurfaceEditor>;
+  paintRegion: (regionId: WorkspaceSurfaceRegionId) => void;
+  painting: ReturnType<typeof useWorkspaceSurfacePainting>;
+}) {
+  return (
+    <div className="relative" ref={props.editor.editorHostRef}>
+      <WorkspaceSurfaceGrid
+        appearance={props.editor.appearance}
+        isPainting={props.painting.isPainting}
+        onPaintStart={(event, regionId) => {
+          event.preventDefault();
+          props.paintRegion(regionId);
+          props.painting.setIsPainting(true);
+        }}
+        paintRegion={props.paintRegion}
+      />
+      <WorkspaceSurfaceColorModePanel
+        activeRecommendationId={props.editor.activeRecommendationId}
+        autoOptions={props.editor.autoOptions}
+        autoSeedColor={props.editor.autoSeedColor}
+        onApplyRecommendedPalette={(familyId, palette) => {
+          props.editor.setGeneratedMode('recommended');
+          props.editor.setActiveRecommendationId(familyId);
+          applyRecommendedPaletteToWorkspace(props.editor, palette);
+        }}
+        onAutoOptionsChange={(options) => props.editor.setAutoOptions(options)}
+        onAutoSeedColorChange={(color) => {
+          props.editor.setGeneratedMode('automatic');
+          props.editor.setActiveRecommendationId(null);
+          props.editor.setAutoSeedColor(color);
+        }}
+      />
+      <div className="mt-3 space-y-1">
+        <h4 className="text-sm font-medium text-foreground">Free palette</h4>
+        <p className="text-xs text-foreground/58">Double-click any swatch below to fine-tune the generated set or paint the workspace manually.</p>
+      </div>
+      <WorkspaceSurfaceColorPaletteStrip
+        activeBrushIndex={props.editor.activeBrushIndex}
+        colors={props.editor.appearance.workspaceSurfacePalette}
+        onAddPaletteColor={() => {
+          const fallbackColor = props.editor.appearance.workspaceSurfacePalette[props.editor.activeBrushIndex] ?? '#d8d8d8';
+          props.editor.setGeneratedMode('manual');
+          props.editor.setActiveRecommendationId(null);
+          props.editor.appearance.setWorkspaceSurfacePalette([...props.editor.appearance.workspaceSurfacePalette, fallbackColor]);
+          props.editor.setActiveBrushIndex(props.editor.appearance.workspaceSurfacePalette.length);
+        }}
+        onEditColor={(event, index) => openWorkspaceSurfaceColorEditor(props.editor, event, index)}
+        onSelectColor={(index) => props.editor.setActiveBrushIndex(index)}
+      />
+      <WorkspaceSurfacePaletteEditorHost editor={props.editor} />
+    </div>
+  );
+}
+
+function WorkspaceSurfacePaletteEditorHost(props: { editor: ReturnType<typeof useWorkspaceSurfaceEditor> }) {
   const activeEditorState = props.editor.editorState;
   if (!activeEditorState) {
     return null;
@@ -204,22 +260,21 @@ function WorkspaceSurfacePaletteEditor(props: { editor: ReturnType<typeof useWor
     props.editor.appearance.workspaceSurfacePalette[0];
 
   return (
-    <WorkspaceSurfaceColorEditor
-      anchorPoint={{ x: activeEditorState.x, y: activeEditorState.y }}
+    <WorkspaceSurfacePaletteEditor
+      activeColor={activeEditorColor}
       bounds={activeEditorState.bounds}
+      index={activeEditorState.index}
       onClose={() => props.editor.setEditorState(null)}
-      onCommit={(value) => {
-        const parsed = parseWorkspaceSurfaceColor(value);
-        if (!parsed) {
-          return;
-        }
+      onCommit={(index, nextColor) => {
+        props.editor.setGeneratedMode('manual');
+        props.editor.setActiveRecommendationId(null);
         props.editor.appearance.setWorkspaceSurfacePalette(
           props.editor.appearance.workspaceSurfacePalette.map((color, paletteIndex) => (
-            paletteIndex === activeEditorState.index ? formatWorkspaceSurfaceColorCss(parsed) : color
+            paletteIndex === index ? nextColor : color
           ))
         );
       }}
-      value={activeEditorColor}
+      position={{ x: activeEditorState.x, y: activeEditorState.y }}
     />
   );
 }

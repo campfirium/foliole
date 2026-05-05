@@ -2,6 +2,9 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { buildWorkspaceSurfaceAutoColumnPalette } from '../model/workspaceSurfaceAutoPalette';
+import { parseWorkspaceSurfaceColor } from '../model/workspaceSurfaceColor';
+import { WORKSPACE_SURFACE_RECOMMENDATION_SEEDS } from '../model/workspaceSurfaceColorRecommendations';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -26,6 +29,83 @@ it('persists workspace surface palette and region assignments from appearance se
     const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments) ?? '{}');
     expect(palette[5]).toBe('#c9d4e7');
     expect(assignments['main-document']).toBe(5);
+  });
+});
+
+it('applies a recommended palette row into the leading workspace palette slots', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Apply recommended palette sage' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments) ?? '{}');
+    const sageSeed = parseWorkspaceSurfaceColor(WORKSPACE_SURFACE_RECOMMENDATION_SEEDS.find((family) => family.id === 'sage')!.seed);
+    expect(sageSeed).not.toBeNull();
+    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(sageSeed!, {
+      documentPureWhite: false,
+      folderTopicSharedTone: false
+    }));
+    expect(assignments['main-document']).toBe(3);
+  });
+});
+
+it('maps an automatic column palette into free-mode palette slots', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Automatic workspace seed hex'), { target: { value: '#8a962f' } });
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments) ?? '{}');
+    const seed = parseWorkspaceSurfaceColor('#8a962f');
+    expect(seed).not.toBeNull();
+    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(seed!, {
+      documentPureWhite: false,
+      folderTopicSharedTone: false
+    }));
+    expect(assignments['main-document']).toBe(3);
+    expect(screen.getByText('Free palette')).toBeInTheDocument();
+  });
+});
+
+it('applies auto palette options before writing into the free palette slots', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Automatic workspace seed hex'), { target: { value: '#8a962f' } });
+  fireEvent.click(screen.getByLabelText('Document stays white'));
+  fireEvent.click(screen.getByLabelText('Folder and topic match'));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const seed = parseWorkspaceSurfaceColor('#8a962f');
+    expect(seed).not.toBeNull();
+    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(seed!, {
+      documentPureWhite: true,
+      folderTopicSharedTone: true
+    }));
+  });
+});
+
+it('applies recommended palette rows with current preferences', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByLabelText('Document stays white'));
+  fireEvent.click(screen.getByLabelText('Folder and topic match'));
+  fireEvent.click(screen.getByRole('button', { name: 'Apply recommended palette sage' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const sageSeed = parseWorkspaceSurfaceColor(WORKSPACE_SURFACE_RECOMMENDATION_SEEDS.find((family) => family.id === 'sage')!.seed);
+    expect(sageSeed).not.toBeNull();
+    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(sageSeed!, {
+      documentPureWhite: true,
+      folderTopicSharedTone: true
+    }));
   });
 });
 
