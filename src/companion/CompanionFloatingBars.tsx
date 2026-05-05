@@ -54,7 +54,7 @@ export function TopFloatingBar(props: {
 }) {
   return (
     <header
-      className={`sticky top-4 z-20 mb-6 flex justify-center px-1 transition-all duration-200 ${
+      className={`sticky top-4 z-20 flex justify-center transition-all duration-200 ${
         props.visible ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0'
       }`}
       data-testid="companion-top-floating-bar"

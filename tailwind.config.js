@@ -19,6 +19,15 @@ export default {
         'bg-subtle': '#fcfcfc',
         'bg-panel': '#f6f6f6',
         'bg-elevated': '#ffffff',
+        'companion-base': '#ffffff',
+        'companion-content': '#ffffff',
+        'companion-subtle': '#f7f7f5',
+        'companion-divider': 'rgba(31, 35, 40, 0.08)',
+        'companion-divider-strong': 'rgba(31, 35, 40, 0.12)',
+        'companion-accent': '#2f7d6b',
+        'companion-accent-soft': 'rgba(47, 125, 107, 0.12)',
+        'companion-text-secondary': '#6b7280',
+        'companion-text-tertiary': '#9ca3af',
         divider: 'rgba(32, 33, 36, 0.08)',
         'panel-outline': 'rgba(32, 33, 36, 0.14)',
         'settings-shell': '#ffffff',
@@ -78,7 +87,8 @@ export default {
         sm: '4px',
         md: '8px',
         lg: '12px',
-        xl: '16px'
+        xl: '16px',
+        companion: '10px'
       }
     }
   },

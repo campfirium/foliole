@@ -56,13 +56,13 @@ export function ReadingReviewActions({
 }) {
   return (
     <ToolbarActionGroup ariaLabel="Reading review actions" className="gap-2" data-review-toolbar-kind="reading">
-      <AppButton aria-label="Later" className="min-w-24 px-4" onClick={onDeferReviewItem} size="md" variant="primary">
+      <AppButton aria-label="Later" className="min-w-24 border-border px-4" onClick={onDeferReviewItem} size="md" variant="primary">
         Later
       </AppButton>
-      <AppButton aria-label="Read" className="min-w-24 px-4" onClick={onCompleteReviewItem} size="md" variant="primary">
+      <AppButton aria-label="Read" className="min-w-24 border-border px-4" onClick={onCompleteReviewItem} size="md" variant="primary">
         Read
       </AppButton>
-      <AppButton aria-label="Dismiss" className="min-w-24 px-4" onClick={onDismissReviewItem} size="md" variant="primary">
+      <AppButton aria-label="Dismiss" className="min-w-24 border-border px-4" onClick={onDismissReviewItem} size="md" variant="primary">
         Dismiss
       </AppButton>
     </ToolbarActionGroup>

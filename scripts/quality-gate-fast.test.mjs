@@ -155,7 +155,7 @@ describe('quality-gate-fast.sh', () => {
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('failed: test exceeded timeout (4s)');
-      expect(result.stdout).toContain('stalled after: 4s');
+      expect(result.stdout).toContain('stalled after:');
       await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));

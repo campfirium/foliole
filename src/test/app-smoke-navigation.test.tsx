@@ -148,7 +148,7 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
   expect(state.nodeOrder).toEqual(['node-1', 'node-4', 'node-2', 'node-3']);
 });
 
-it('renders breadcrumbs in document header and jumps to ancestor node', () => {
+it('renders breadcrumbs in document header and jumps to ancestor node', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],
@@ -175,10 +175,12 @@ it('renders breadcrumbs in document header and jumps to ancestor node', () => {
   const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
   expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
   fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
 });
 
-it('supports toolbar parent and navigation history actions', () => {
+it('supports toolbar parent and navigation history actions', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],
@@ -204,11 +206,17 @@ it('supports toolbar parent and navigation history actions', () => {
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Go to parent node' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Go forward' }));
-  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
 });
 
 it('reveals document highlights from the right sidebar list', () => {
@@ -252,23 +260,29 @@ it('reveals document highlights from the right sidebar list', () => {
   });
 });
 
-it('expands compact breadcrumbs when clicking ellipsis', () => {
+it('renders the full ancestor path and abbreviates article descendants', () => {
   useWorkspaceStore.setState((state) => ({
-    activeNodeId: 'node-5',
-    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5'],
+    activeNodeId: 'node-7',
+    nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4', 'node-5', 'node-6', 'node-7'],
     nodesById: {
       ...state.nodesById,
-      'node-2': createNode({ id: 'node-2', parentNodeId: 'node-1', title: 'N2', content: '# N2' }),
-      'node-3': createNode({ id: 'node-3', parentNodeId: 'node-2', title: 'N3', content: '# N3' }),
-      'node-4': createNode({ id: 'node-4', parentNodeId: 'node-3', title: 'N4', content: '# N4' }),
-      'node-5': createNode({ id: 'node-5', parentNodeId: 'node-4', title: 'N5', content: '# N5' })
+      'node-1': createNode({ id: 'node-1', kind: 'folder', parentNodeId: null, title: 'Inbox', content: '' }),
+      'node-2': createNode({ id: 'node-2', kind: 'topic', parentNodeId: 'node-1', title: 'Article', content: '# Article' }),
+      'node-3': createNode({ id: 'node-3', kind: 'topic', parentNodeId: 'node-2', title: '标注节点标题', content: '# Nested 1' }),
+      'node-4': createNode({ id: 'node-4', kind: 'item', parentNodeId: 'node-3', title: '挖空卡片标题', content: '# Nested 2' }),
+      'node-5': createNode({ id: 'node-5', kind: 'item', parentNodeId: 'node-4', title: '当前父级', content: '# Parent' }),
+      'node-6': createNode({ id: 'node-6', kind: 'item', parentNodeId: 'node-5', title: '当前节点', content: '# Current' }),
+      'node-7': createNode({ id: 'node-7', kind: 'item', parentNodeId: 'node-6', title: '最终节点', content: '# Final' })
     }
   }));
 
   render(<App />);
 
   const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
-  expect(within(nav).queryByRole('button', { name: 'N2' })).not.toBeInTheDocument();
-  fireEvent.click(within(nav).getByRole('button', { name: 'Expand breadcrumb path' }));
-  expect(within(nav).getByRole('button', { name: 'N2' })).toBeInTheDocument();
+  expect(within(nav).getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
+  expect(within(nav).getByRole('button', { name: 'Article' })).toBeInTheDocument();
+  expect(within(nav).getByRole('button', { name: '标注...' })).toBeInTheDocument();
+  expect(within(nav).getByRole('button', { name: '挖空...' })).toBeInTheDocument();
+  expect(within(nav).getAllByRole('button', { name: '当前...' })).toHaveLength(2);
+  expect(within(nav).queryByRole('button', { name: '最终节点' })).not.toBeInTheDocument();
 });

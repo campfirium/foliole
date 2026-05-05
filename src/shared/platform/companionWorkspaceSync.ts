@@ -99,6 +99,7 @@ function normalizeReadableArticlePayload(value: unknown): CompanionReadableArtic
   }
   return {
     content: raw.content,
+    hideTitleHeading: raw.hide_title_heading === true,
     nodeId: raw.node_id,
     title: raw.title
   };

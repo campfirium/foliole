@@ -1,7 +1,12 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
+
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { TopFloatingBar } from './CompanionFloatingBars';
 import { RecentArticleList } from './CompanionRecentArticleList';
+import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -24,7 +29,7 @@ function renderReviewFallback(
   const hasScheduledReviews = reviewSession.scheduledFsrsCount > 0 || reviewSession.scheduledReadingCount > 0;
 
   return (
-    <section className="rounded-3xl border border-dashed border-border bg-bg-panel px-5 py-8 text-sm leading-6 text-accent">
+    <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
       {hasSnapshot ? (
         <>
           <p>{hasScheduledReviews ? 'No review items are due right now.' : 'No review items have been scheduled on this device yet.'}</p>
@@ -56,7 +61,9 @@ function renderReviewFallback(
 function renderMainContent(
   surface: ReturnType<typeof useCompanionArticleSurface>,
   workspaceError: string | null,
-  hasSnapshot: boolean
+  hasSnapshot: boolean,
+  reviewBreadcrumbItems: { id: string; isCurrent?: boolean; label: string }[],
+  onSelectReviewBreadcrumbItem: (id: string) => void
 ) {
   if (surface.activeAction === 'recent') {
     return (
@@ -71,7 +78,11 @@ function renderMainContent(
     if (surface.reviewSession.currentCard) {
       return (
         <>
-          <CompanionReviewCard card={surface.reviewSession.currentCard} />
+          <CompanionReviewCard
+            breadcrumbItems={reviewBreadcrumbItems}
+            card={surface.reviewSession.currentCard}
+            onSelectBreadcrumbItem={onSelectReviewBreadcrumbItem}
+          />
           {surface.reviewSession.currentCard.itemKind === 'fsrs' && surface.isAnswerRevealed ? (
             <CompanionReviewAnswer card={surface.reviewSession.currentCard} />
           ) : null}
@@ -83,9 +94,61 @@ function renderMainContent(
     return renderReviewFallback(hasSnapshot, workspaceError, surface.reviewSession);
   }
   if (surface.readableArticle) {
-    return <CompanionArticleDocument content={surface.readableArticle.content} nodeId={surface.readableArticle.nodeId} />;
+    return (
+      <CompanionArticleDocument
+        content={surface.readableArticle.content}
+        hideTitleHeading={surface.readableArticle.hideTitleHeading}
+        nodeId={surface.readableArticle.nodeId}
+      />
+    );
   }
   return renderReviewFallback(hasSnapshot, workspaceError, surface.reviewSession);
+}
+
+function useImmersiveReviewToolbar(
+  floatingBar: ReturnType<typeof useFloatingBarVisibility>,
+  isImmersiveReview: boolean,
+  currentCardNodeId: string | undefined
+) {
+  const [isReviewToolbarArmed, setIsReviewToolbarArmed] = useState(false);
+
+  useEffect(() => {
+    if (isImmersiveReview) {
+      setIsReviewToolbarArmed(false);
+      return;
+    }
+    setIsReviewToolbarArmed(true);
+  }, [currentCardNodeId, isImmersiveReview]);
+
+  const isTopBarVisible = useMemo(
+    () => (isImmersiveReview ? isReviewToolbarArmed && floatingBar.isVisible : floatingBar.isVisible),
+    [floatingBar.isVisible, isImmersiveReview, isReviewToolbarArmed]
+  );
+
+  const handleContentTap = () => {
+    if (!isImmersiveReview || isReviewToolbarArmed) {
+      return;
+    }
+    setIsReviewToolbarArmed(true);
+    floatingBar.revealBar();
+  };
+
+  return {
+    handleContentTap,
+    isTopBarVisible
+  };
+}
+
+function buildBreadcrumbSelectionHandler(
+  snapshot: ReturnType<typeof useCompanionWorkspaceSync>['state']['workspace_snapshot'],
+  onSelectArticle: (nodeId: string) => void
+) {
+  return (nodeId: string) => {
+    if (!snapshot || !resolveReadableCompanionArticleByNodeId(snapshot, nodeId)) {
+      return;
+    }
+    onSelectArticle(nodeId);
+  };
 }
 
 export function CompanionShell() {
@@ -93,20 +156,45 @@ export function CompanionShell() {
   const workspaceSync = useCompanionWorkspaceSync();
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar);
   const isBottomBarDisabled = surface.isSubmittingGrade || surface.isSubmittingReadingAction;
+  const isImmersiveReview = surface.activeAction === 'review' && Boolean(surface.reviewSession.currentCard);
+  const reviewBreadcrumbItems = useReviewBreadcrumbItems(
+    workspaceSync.state.workspace_snapshot,
+    surface.reviewSession.currentCard?.nodeId ?? null
+  );
+  const { handleContentTap, isTopBarVisible } = useImmersiveReviewToolbar(
+    floatingBar,
+    isImmersiveReview,
+    surface.reviewSession.currentCard?.nodeId
+  );
+
+  const handleReviewBreadcrumbItemSelect = buildBreadcrumbSelectionHandler(
+    workspaceSync.state.workspace_snapshot,
+    surface.handleSelectRecentArticle
+  );
 
   return (
     <>
-      <main className="h-dvh bg-canvas text-foreground">
+      <main className="h-dvh bg-companion-base text-foreground">
         <div
           className="h-dvh overflow-y-auto"
+          data-testid="companion-scroll-container"
+          onClick={handleContentTap}
           onScroll={floatingBar.handleContainerScroll}
           onTouchEnd={floatingBar.handleTouchEnd}
           onTouchMove={floatingBar.handleTouchMove}
           onTouchStart={floatingBar.handleTouchStart}
         >
-          <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-4 pb-24 pt-4 sm:px-6">
-            <TopFloatingBar activeAction={surface.activeAction} onAction={surface.handleTopBarAction} visible={floatingBar.isVisible} />
-            {renderMainContent(surface, workspaceSync.error, Boolean(workspaceSync.state.workspace_snapshot))}
+          <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
+            <div className={isImmersiveReview ? 'h-20' : 'h-auto'}>
+              <TopFloatingBar activeAction={surface.activeAction} onAction={surface.handleTopBarAction} visible={isTopBarVisible} />
+            </div>
+            {renderMainContent(
+              surface,
+              workspaceSync.error,
+              Boolean(workspaceSync.state.workspace_snapshot),
+              reviewBreadcrumbItems,
+              handleReviewBreadcrumbItemSelect
+            )}
           </div>
         </div>
       </main>
@@ -119,13 +207,7 @@ export function CompanionShell() {
         onDismissReviewItem={surface.handleDismissReviewItem}
         onGrade={surface.handleGradeReview}
         onRevealAnswer={surface.handleRevealAnswer}
-        statusLabel={
-          surface.reviewSession.currentCard
-            ? isBottomBarDisabled
-              ? 'Saving'
-              : `${surface.reviewSession.currentCard.remainingCount} due`
-            : null
-        }
+        statusLabel={null}
         visible={surface.activeAction === 'review' && Boolean(surface.reviewSession.currentCard)}
       />
     </>

@@ -1,8 +1,10 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
+import { extractImportedHeadingTitle } from '../lib/importedHeadingTitle';
 
 export interface CompanionReadableArticle {
   content: string;
+  hideTitleHeading: boolean;
   nodeId: string;
   title: string;
 }
@@ -40,9 +42,18 @@ function isArticleNode(snapshot: WorkspaceSnapshot, node: CompanionReadableNode 
 function buildReadableArticle(node: CompanionReadableNode) {
   return {
     content: node.content,
+    hideTitleHeading: Boolean(node.hideTitleHeading),
     nodeId: node.id,
-    title: node.title.trim() || 'Untitled'
+    title: resolveCompanionArticleTitle(node)
   };
+}
+
+export function resolveCompanionArticleTitle(node: CompanionReadableNode) {
+  const headingTitle = extractImportedHeadingTitle(node.content);
+  if (headingTitle) {
+    return headingTitle;
+  }
+  return node.title.trim() || 'Untitled';
 }
 
 export function resolveReadableCompanionArticleByNodeId(
@@ -106,7 +117,7 @@ export function resolveCompanionRecentArticles(snapshot: WorkspaceSnapshot | nul
     .map((node) => ({
       nodeId: node.id,
       preview: resolveNodeOpeningText(node.content, node.title),
-      title: node.title.trim() || 'Untitled',
+      title: resolveCompanionArticleTitle(node),
       updatedAt: node.updatedAt
     }));
 }

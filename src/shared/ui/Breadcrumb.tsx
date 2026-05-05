@@ -28,7 +28,7 @@ export function AppBreadcrumb({
     <nav aria-label={ariaLabel} className={cn('block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap', className)}>
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
-        const isCurrent = Boolean(item.isCurrent || isLast);
+        const isCurrent = Boolean(item.isCurrent);
 
         if (item.isEllipsis) {
           return (

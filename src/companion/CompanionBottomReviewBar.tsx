@@ -19,11 +19,11 @@ export function CompanionBottomReviewBar(props: {
   }
 
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-20 px-4 pb-5">
+    <footer className="fixed inset-x-0 bottom-0 z-20 bg-companion-content px-4 pb-5 pt-3">
       <div className="mx-auto w-full max-w-[760px]">
         <ReviewActionBar
           ariaLabel="Companion review toolbar"
-          className="rounded-3xl border border-border shadow-panel"
+          className="h-auto border-0 bg-transparent px-0"
           mode="study"
           primary={
             props.itemKind === 'reading' ? (
@@ -44,7 +44,7 @@ export function CompanionBottomReviewBar(props: {
           }
           reviewInputMode="hotkeys"
           reviewItemKind={props.itemKind}
-          secondary={props.statusLabel ?? null}
+          secondary={null}
         />
       </div>
     </footer>

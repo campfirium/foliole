@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -21,7 +21,13 @@ vi.mock('./useFloatingBarVisibility', () => ({
 
 vi.mock('./CompanionReviewCard', () => ({
   CompanionReviewAnswer: () => <div data-testid="companion-review-answer" />,
-  CompanionReviewCard: () => <div data-testid="companion-review-card" />
+  CompanionReviewCard: (props: { breadcrumbItems?: Array<{ label: string }> }) => (
+    <div data-testid="companion-review-card">
+      {(props.breadcrumbItems ?? []).map((item) => (
+        <span key={item.label}>{item.label}</span>
+      ))}
+    </div>
+  )
 }));
 
 type MockSurface = Record<string, unknown>;
@@ -53,14 +59,16 @@ function createSnapshot(): WorkspaceSnapshot {
 }
 
 function mockFloatingBar() {
+  const revealBar = vi.fn();
   useFloatingBarVisibility.mockReturnValue({
     handleContainerScroll: vi.fn(),
     handleTouchEnd: vi.fn(),
     handleTouchMove: vi.fn(),
     handleTouchStart: vi.fn(),
     isVisible: true,
-    revealBar: vi.fn()
+    revealBar
   });
+  return { revealBar };
 }
 
 function mockWorkspaceSync(snapshot = createSnapshot()) {
@@ -75,11 +83,12 @@ function mockWorkspaceSync(snapshot = createSnapshot()) {
 }
 
 async function renderShellWithSurface(surface: MockSurface) {
-  mockFloatingBar();
+  const floatingBar = mockFloatingBar();
   mockWorkspaceSync();
   useCompanionArticleSurface.mockReturnValue(surface);
   const { CompanionShell } = await import('./CompanionShell');
   render(<CompanionShell />);
+  return { floatingBar };
 }
 
 function createReviewEmptySurface() {
@@ -154,7 +163,7 @@ function createReadingReviewSurface() {
   };
 }
 
-describe('CompanionShell', () => {
+describe('CompanionShell review surfaces', () => {
   it('shows the review empty state instead of falling back to reading content', async () => {
     await renderShellWithSurface(createReviewEmptySurface());
 
@@ -170,5 +179,15 @@ describe('CompanionShell', () => {
     expect(screen.getByLabelText('Read')).toBeInTheDocument();
     expect(screen.getByLabelText('Dismiss')).toBeInTheDocument();
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
+  });
+
+  it('hides the top toolbar by default during immersive review and reveals it on tap', async () => {
+    const { floatingBar } = await renderShellWithSurface(createReadingReviewSurface());
+
+    expect(screen.getByTestId('companion-top-floating-bar').className).toContain('opacity-0');
+
+    fireEvent.click(screen.getByTestId('companion-scroll-container'));
+
+    expect(floatingBar.revealBar).toHaveBeenCalled();
   });
 });

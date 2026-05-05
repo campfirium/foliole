@@ -166,6 +166,7 @@ function registerReadableArticleTest() {
 
     expect(article).toEqual({
       content: 'Readable from local snapshot',
+      hideTitleHeading: false,
       nodeId: 'node-1',
       title: 'Synced article'
     });

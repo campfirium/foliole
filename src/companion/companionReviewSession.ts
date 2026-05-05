@@ -14,6 +14,7 @@ import {
 export interface CompanionReviewCard {
   content: string;
   due: string;
+  hideTitleHeading: boolean;
   itemKind: 'fsrs' | 'reading';
   nodeId: string;
   queuePosition: number;
@@ -54,6 +55,7 @@ function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {
   return {
     content: node.content,
     due: node.review?.due ?? node.reading?.nextAt ?? node.updatedAt,
+    hideTitleHeading: Boolean(node.hideTitleHeading),
     itemKind: getReviewItemKind(node as unknown as Node) === 'fsrs' ? 'fsrs' : 'reading',
     nodeId: currentNodeId,
     queuePosition: 1,
