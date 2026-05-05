@@ -114,7 +114,7 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.closeSettings, title: 'Close Settings', section: 'Settings' },
   { id: APP_COMMAND_IDS.goBack, title: 'Go Back', section: 'Navigation' },
   { id: APP_COMMAND_IDS.goForward, title: 'Go Forward', section: 'Navigation' },
-  { id: APP_COMMAND_IDS.goToNode, title: 'Go to Node', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump'] },
+  { id: APP_COMMAND_IDS.goToNode, title: 'Go to…', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump', 'folder', 'topic', 'item'] },
   { id: APP_COMMAND_IDS.moveToNode, title: 'Move to', section: 'Navigation', keywords: ['move', 'reparent', 'node'] },
   { id: APP_COMMAND_IDS.goParent, title: 'Go Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.toggleEditorDisplayMode, title: 'Toggle Editor Display Mode', section: 'Editor' },

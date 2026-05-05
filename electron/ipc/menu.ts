@@ -85,7 +85,7 @@ export function installAppMenu() {
       submenu: [
         commandItem('Go Back', 'navigation.goBack'),
         commandItem('Go Forward', 'navigation.goForward'),
-        commandItem('Go to Node…', 'navigation.goToNode'),
+        commandItem('Go to…', 'navigation.goToNode'),
         commandItem('Go to Parent', 'navigation.goParent')
       ]
     },

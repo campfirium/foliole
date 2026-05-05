@@ -113,10 +113,10 @@ function NoteMenuItems({
       ))}
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showImportIntoNodeAction ? <AppDropdownMenuItem onSelect={onImportIntoNode}>Import to this node *</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showPasteIntoNodeAction ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Pass to this node *</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showImportIntoNodeAction ? <AppDropdownMenuItem onSelect={onImportIntoNode}>Import here *</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showPasteIntoNodeAction ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here *</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete Node</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete</AppDropdownMenuItem> : null}
     </>
   );
 }

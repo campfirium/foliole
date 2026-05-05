@@ -72,6 +72,7 @@ describe('buildAppPaletteItems', () => {
     expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleDevTools)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goBack)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.goToNode)).toBe(true);
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.goToNode)?.title).toBe('Go to…');
     expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
     expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);

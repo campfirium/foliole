@@ -62,17 +62,17 @@ function handleInputKeyDown(
 }
 
 export function GoToNodePalette({
-  dialogLabel = 'Go to node',
-  emptyLabel = 'Search node titles',
+  dialogLabel = 'Go to',
+  emptyLabel = 'Search folders, topics, and items',
   isOpen,
-  inputLabel = 'Go to node',
+  inputLabel = 'Go to',
   nodeOrder,
   nodesById,
   onClose,
   onOpenNode,
   onSelectNode,
-  noResultsLabel = 'No matching nodes',
-  placeholder = 'Type a node title...',
+  noResultsLabel = 'No matching results',
+  placeholder = 'Type a title...',
   recentNodeIds,
   trashedNodeIds
 }: GoToNodePaletteProps) {
@@ -247,7 +247,7 @@ function GoToNodeResults({
   }
 
   return (
-    <ul aria-label="Node search results" className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
+    <ul aria-label="Search results" className="app-scrollbar max-h-[50vh] overflow-y-auto p-1">
       {results.map((item, index) => (
         <li key={item.id}>
           <button
