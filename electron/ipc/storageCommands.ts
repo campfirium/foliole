@@ -24,6 +24,7 @@ import { loadImportManagerSettings, saveImportManagerSettings } from '../import/
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
+import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
 import {
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
@@ -111,6 +112,9 @@ async function handleSettingsStorageCommand(command: string, args: Record<string
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) {
     return loadLibraryPathSettings();
+  }
+  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) {
+    return rebuildMirrorAttachmentLinks();
   }
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     const result = await updateLibraryPathSetting({

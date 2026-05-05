@@ -18,6 +18,7 @@ export const NATIVE_COMMANDS = {
   resolveAttachmentResource: 'resolve_attachment_resource',
   resolveAppPaths: 'resolve_app_paths',
   loadLibraryPathSettings: 'load_library_path_settings',
+  rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
   updateLibraryPathSetting: 'update_library_path_setting',
   reviewGrade: 'review_grade',
   reviewPreview: 'review_preview',

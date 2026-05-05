@@ -15,6 +15,13 @@ export interface RuntimeLibraryPaths {
   updatedAt: string;
 }
 
+export interface RuntimeMirrorAttachmentLinkRebuildResult {
+  scannedDocumentCount: number;
+  rewrittenDocumentCount: number;
+  rewrittenLinkCount: number;
+  updatedAt: string;
+}
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -44,6 +51,31 @@ function toRuntimeLibraryPaths(payload: unknown): RuntimeLibraryPaths | null {
     inbox: value.inbox,
     libraryHome: value.library_home,
     mirror: value.mirror,
+    updatedAt: value.updated_at
+  };
+}
+
+function toRuntimeMirrorAttachmentLinkRebuildResult(
+  payload: unknown
+): RuntimeMirrorAttachmentLinkRebuildResult | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+
+  const value = payload as Record<string, unknown>;
+  if (
+    typeof value.scanned_document_count !== 'number' ||
+    typeof value.rewritten_document_count !== 'number' ||
+    typeof value.rewritten_link_count !== 'number' ||
+    !isNonEmptyString(value.updated_at)
+  ) {
+    return null;
+  }
+
+  return {
+    scannedDocumentCount: value.scanned_document_count,
+    rewrittenDocumentCount: value.rewritten_document_count,
+    rewrittenLinkCount: value.rewritten_link_count,
     updatedAt: value.updated_at
   };
 }
@@ -105,6 +137,32 @@ export async function updateRuntimeLibraryPathSetting(
       fallback: 'rethrow_to_ui',
       error,
       location
+    });
+    throw error;
+  }
+}
+
+export async function rebuildRuntimeMirrorAttachmentLinks(): Promise<RuntimeMirrorAttachmentLinkRebuildResult> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    throw new Error('desktop runtime unavailable');
+  }
+
+  try {
+    const result = toRuntimeMirrorAttachmentLinkRebuildResult(
+      await runtimeInvoke(NATIVE_COMMANDS.rebuildMirrorAttachmentLinks)
+    );
+    if (!result) {
+      throw new Error('native mirror rebuild payload invalid');
+    }
+    return result;
+  } catch (error) {
+    logRuntimeWarning('native mirror link rebuild failed', {
+      action: 'rebuild_runtime_mirror_attachment_links',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.rebuildMirrorAttachmentLinks,
+      fallback: 'rethrow_to_ui',
+      error
     });
     throw error;
   }

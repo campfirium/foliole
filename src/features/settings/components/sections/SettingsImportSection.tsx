@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
+
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
 type LibraryPathLocation = 'inbox' | 'library_home' | 'mirror';
 
 function LibraryLocationRow(props: {
+  children?: ReactNode;
   description: string;
   errorMessage: string | null;
   isDesktopRuntime: boolean;
@@ -38,8 +41,73 @@ function LibraryLocationRow(props: {
           </button>
         </div>
         {props.errorMessage ? <p className="text-sm text-red-700">{props.errorMessage}</p> : null}
+        {props.children}
       </SettingsControlSlot>
     </SettingsRow>
+  );
+}
+
+function MirrorRebuildControls(props: {
+  isDesktopRuntime: boolean;
+  isRebuildingMirrorLinks: boolean;
+  mirrorLinkRebuildError: string | null;
+  mirrorLinkRebuildFeedback: string | null;
+  onRebuildMirrorLinks: () => void;
+  pendingLocation: LibraryPathLocation | null;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="rounded-md border border-border bg-bg-panel px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={!props.isDesktopRuntime || props.isRebuildingMirrorLinks || props.pendingLocation !== null}
+          onClick={props.onRebuildMirrorLinks}
+          type="button"
+        >
+          Rebuild mirror links
+        </button>
+      </div>
+      {props.mirrorLinkRebuildFeedback ? (
+        <p className="text-sm text-foreground/70">{props.mirrorLinkRebuildFeedback}</p>
+      ) : null}
+      {props.mirrorLinkRebuildError ? <p className="text-sm text-red-700">{props.mirrorLinkRebuildError}</p> : null}
+    </>
+  );
+}
+
+function MirrorLocationRow(props: {
+  errorMessage: string | null;
+  isDesktopRuntime: boolean;
+  isRebuildingMirrorLinks: boolean;
+  mirrorLinkRebuildError: string | null;
+  mirrorLinkRebuildFeedback: string | null;
+  mirrorPath: string;
+  onChangeLocation: (location: LibraryPathLocation) => void;
+  onRebuildMirrorLinks: () => void;
+  onRestoreDefault: (location: LibraryPathLocation) => void;
+  pendingLocation: LibraryPathLocation | null;
+}) {
+  return (
+    <LibraryLocationRow
+      description="Read-only Markdown mirror generated from library data. It is not the source of truth and can be rebuilt at any time."
+      errorMessage={props.errorMessage}
+      isDesktopRuntime={props.isDesktopRuntime}
+      isPending={props.pendingLocation === 'mirror' || props.isRebuildingMirrorLinks}
+      location="mirror"
+      onChangeLocation={props.onChangeLocation}
+      onRestoreDefault={props.onRestoreDefault}
+      path={props.mirrorPath}
+      title="Mirror"
+    >
+      <MirrorRebuildControls
+        isDesktopRuntime={props.isDesktopRuntime}
+        isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
+        mirrorLinkRebuildError={props.mirrorLinkRebuildError}
+        mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
+        onRebuildMirrorLinks={props.onRebuildMirrorLinks}
+        pendingLocation={props.pendingLocation}
+      />
+    </LibraryLocationRow>
   );
 }
 
@@ -47,9 +115,13 @@ export function SettingsImportSection(props: {
   errorByLocation: Record<LibraryPathLocation, string | null>;
   inboxPath: string;
   isDesktopRuntime: boolean;
+  isRebuildingMirrorLinks: boolean;
   libraryHomePath: string;
+  mirrorLinkRebuildError: string | null;
+  mirrorLinkRebuildFeedback: string | null;
   mirrorPath: string;
   onChangeLocation: (location: LibraryPathLocation) => void;
+  onRebuildMirrorLinks: () => void;
   onRestoreDefault: (location: LibraryPathLocation) => void;
   pendingLocation: LibraryPathLocation | null;
 }) {
@@ -84,16 +156,17 @@ export function SettingsImportSection(props: {
       {!props.isDesktopRuntime ? (
         <p className="text-sm text-foreground/60">Library folder settings are available in the desktop app.</p>
       ) : null}
-      <LibraryLocationRow
-        description="Read-only Markdown mirror generated from library data. It is not the source of truth and can be rebuilt at any time."
+      <MirrorLocationRow
         errorMessage={props.errorByLocation.mirror}
         isDesktopRuntime={props.isDesktopRuntime}
-        isPending={props.pendingLocation === 'mirror'}
-        location="mirror"
+        isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
+        mirrorLinkRebuildError={props.mirrorLinkRebuildError}
+        mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
+        mirrorPath={props.mirrorPath}
         onChangeLocation={props.onChangeLocation}
+        onRebuildMirrorLinks={props.onRebuildMirrorLinks}
         onRestoreDefault={props.onRestoreDefault}
-        path={props.mirrorPath}
-        title="Mirror"
+        pendingLocation={props.pendingLocation}
       />
     </SettingsSection>
   );

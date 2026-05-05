@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
 import {
   loadRuntimeLibraryPathSettings,
+  rebuildRuntimeMirrorAttachmentLinks,
   updateRuntimeLibraryPathSetting,
   type RuntimeLibraryPathLocation,
   type RuntimeLibraryPaths
@@ -60,6 +61,47 @@ function clearLocationError(
   };
 }
 
+function clearMirrorRebuildState(
+  setMirrorLinkRebuildFeedback: (value: string | null) => void,
+  setMirrorLinkRebuildError: (value: string | null) => void
+) {
+  setMirrorLinkRebuildFeedback(null);
+  setMirrorLinkRebuildError(null);
+}
+
+function toMirrorRebuildFeedback(scannedDocumentCount: number, rewrittenDocumentCount: number, rewrittenLinkCount: number) {
+  if (rewrittenLinkCount > 0) {
+    return `Rebuilt ${rewrittenLinkCount} mirror attachment links across ${rewrittenDocumentCount} documents.`;
+  }
+  return `Mirror attachment links are already up to date across ${scannedDocumentCount} documents.`;
+}
+
+async function runLocationUpdate(args: {
+  getErrorMessage: (location: RuntimeLibraryPathLocation) => string;
+  location: RuntimeLibraryPathLocation;
+  performUpdate: () => Promise<RuntimeLibraryPaths>;
+  resetMirrorRebuildState: () => void;
+  setErrors: (value: (current: LibraryPathErrorState) => LibraryPathErrorState) => void;
+  setPaths: (value: RuntimeLibraryPaths) => void;
+  setPendingLocation: (value: RuntimeLibraryPathLocation | null) => void;
+}) {
+  args.setErrors((current) => clearLocationError(current, args.location));
+  if (args.location === 'mirror') {
+    args.resetMirrorRebuildState();
+  }
+  args.setPendingLocation(args.location);
+  try {
+    args.setPaths(await args.performUpdate());
+  } catch {
+    args.setErrors((current) => ({
+      ...current,
+      [args.location]: args.getErrorMessage(args.location)
+    }));
+  } finally {
+    args.setPendingLocation(null);
+  }
+}
+
 function useInitialLibraryPathSettings(
   setIsDesktopRuntime: (value: boolean) => void,
   setPaths: (value: RuntimeLibraryPaths) => void
@@ -79,46 +121,81 @@ function useInitialLibraryPathSettings(
   }, [setIsDesktopRuntime, setPaths]);
 }
 
+function useMirrorLinkRebuildState() {
+  const [isRebuildingMirrorLinks, setIsRebuildingMirrorLinks] = useState(false);
+  const [mirrorLinkRebuildFeedback, setMirrorLinkRebuildFeedback] = useState<string | null>(null);
+  const [mirrorLinkRebuildError, setMirrorLinkRebuildError] = useState<string | null>(null);
+
+  function resetMirrorRebuildState() {
+    clearMirrorRebuildState(setMirrorLinkRebuildFeedback, setMirrorLinkRebuildError);
+  }
+
+  async function rebuildMirrorLinks() {
+    resetMirrorRebuildState();
+    setIsRebuildingMirrorLinks(true);
+    try {
+      const result = await rebuildRuntimeMirrorAttachmentLinks();
+      setMirrorLinkRebuildFeedback(
+        toMirrorRebuildFeedback(result.scannedDocumentCount, result.rewrittenDocumentCount, result.rewrittenLinkCount)
+      );
+    } catch {
+      setMirrorLinkRebuildError('Could not rebuild mirror attachment links.');
+    } finally {
+      setIsRebuildingMirrorLinks(false);
+    }
+  }
+
+  return {
+    isRebuildingMirrorLinks,
+    mirrorLinkRebuildError,
+    mirrorLinkRebuildFeedback,
+    onRebuildMirrorLinks: rebuildMirrorLinks,
+    resetMirrorRebuildState
+  };
+}
+
 export function useLibraryPathSettings() {
   const [paths, setPaths] = useState<RuntimeLibraryPaths>(() => createUnavailablePaths());
   const [errors, setErrors] = useState<LibraryPathErrorState>(() => createEmptyErrors());
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<RuntimeLibraryPathLocation | null>(null);
+  const mirrorLinkRebuildState = useMirrorLinkRebuildState();
 
   useInitialLibraryPathSettings(setIsDesktopRuntime, setPaths);
 
   async function handleChangeRequest(location: RuntimeLibraryPathLocation) {
-    setErrors((current) => clearLocationError(current, location));
-    setPendingLocation(location);
     try {
       const selectedPath = await selectRuntimeImportDirectory();
       if (!selectedPath) {
         return;
       }
-      setPaths(await updateRuntimeLibraryPathSetting(location, selectedPath));
+      await runLocationUpdate({
+        getErrorMessage: getChangeErrorMessage,
+        location,
+        performUpdate: () => updateRuntimeLibraryPathSetting(location, selectedPath),
+        resetMirrorRebuildState: mirrorLinkRebuildState.resetMirrorRebuildState,
+        setErrors,
+        setPaths,
+        setPendingLocation
+      });
     } catch {
       setErrors((current) => ({
         ...current,
         [location]: getChangeErrorMessage(location)
       }));
-    } finally {
-      setPendingLocation(null);
     }
   }
 
   async function handleRestoreDefault(location: RuntimeLibraryPathLocation) {
-    setErrors((current) => clearLocationError(current, location));
-    setPendingLocation(location);
-    try {
-      setPaths(await updateRuntimeLibraryPathSetting(location, null));
-    } catch {
-      setErrors((current) => ({
-        ...current,
-        [location]: getRestoreErrorMessage(location)
-      }));
-    } finally {
-      setPendingLocation(null);
-    }
+    await runLocationUpdate({
+      getErrorMessage: getRestoreErrorMessage,
+      location,
+      performUpdate: () => updateRuntimeLibraryPathSetting(location, null),
+      resetMirrorRebuildState: mirrorLinkRebuildState.resetMirrorRebuildState,
+      setErrors,
+      setPaths,
+      setPendingLocation
+    });
   }
 
   return {
@@ -129,6 +206,7 @@ export function useLibraryPathSettings() {
     pendingLocation,
     inboxPath: paths.inbox,
     onChangeLocation: handleChangeRequest,
-    onRestoreDefault: handleRestoreDefault
+    onRestoreDefault: handleRestoreDefault,
+    ...mirrorLinkRebuildState
   };
 }

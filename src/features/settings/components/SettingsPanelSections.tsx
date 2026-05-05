@@ -17,9 +17,13 @@ export interface SettingsCategoryContentProps {
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
+  isRebuildingMirrorLinks: boolean;
   libraryHomePath: string;
+  mirrorLinkRebuildError: string | null;
+  mirrorLinkRebuildFeedback: string | null;
   mirrorPath: string;
   onChangeLocation: (location: 'inbox' | 'library_home' | 'mirror') => void;
+  onRebuildMirrorLinks: () => void;
   onRestoreDefault: (location: 'inbox' | 'library_home' | 'mirror') => void;
   pendingLocation: 'inbox' | 'library_home' | 'mirror' | null;
   onHotkeyReset: (commandId: string) => void;
@@ -73,9 +77,13 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
         errorByLocation={props.errorByLocation}
         inboxPath={props.inboxPath}
         isDesktopRuntime={props.isDesktopRuntime}
+        isRebuildingMirrorLinks={props.isRebuildingMirrorLinks}
         libraryHomePath={props.libraryHomePath}
+        mirrorLinkRebuildError={props.mirrorLinkRebuildError}
+        mirrorLinkRebuildFeedback={props.mirrorLinkRebuildFeedback}
         mirrorPath={props.mirrorPath}
         onChangeLocation={props.onChangeLocation}
+        onRebuildMirrorLinks={props.onRebuildMirrorLinks}
         onRestoreDefault={props.onRestoreDefault}
         pendingLocation={props.pendingLocation}
       />

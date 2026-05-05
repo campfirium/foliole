@@ -52,6 +52,14 @@ vi.mock('./libraryPaths.js', () => ({
     updated_at: '2026-03-30T00:05:00.000Z'
   }))
 }));
+vi.mock('../mirror/rebuildAttachmentLinks.js', () => ({
+  rebuildMirrorAttachmentLinks: vi.fn().mockResolvedValue({
+    scanned_document_count: 2,
+    rewritten_document_count: 1,
+    rewritten_link_count: 3,
+    updated_at: '2026-03-30T00:20:00.000Z'
+  })
+}));
 vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings: vi.fn().mockReturnValue({
     detailsOpen: true,
@@ -122,6 +130,11 @@ async function expectLibraryPathCommands() {
     library_home: '/library',
     inbox: '/library/Inbox',
     mirror: '/library/Mirror'
+  });
+  await expect(handleInvokeRequest({ command: 'rebuild_mirror_attachment_links' })).resolves.toMatchObject({
+    scanned_document_count: 2,
+    rewritten_document_count: 1,
+    rewritten_link_count: 3
   });
   await expect(
     handleInvokeRequest({

@@ -14,16 +14,17 @@ import type {
   NativeWorkspaceSearchResult,
   NativeWorkspaceSnapshot
 } from './nativeStorageContract.js';
+import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type {
-  NativeAttachmentResourceResolution, NativeLibraryPaths, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
+  NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult,
   NativeReviewPreviewArgs, NativeReviewPreviewResult,
-  NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog, NativeUpdateLibraryPathSettingArgs
+  NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog
 } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js';
 export type * from './nativeImportContract.js';
 export type * from './nativeReadwiseContract.js';
 export type * from './nativeUtilityContract.js';
-export type NativeCommandMap = {
+export type NativeCommandMap = NativeUtilityCommandMap & {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
@@ -109,14 +110,6 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.resolveAppPaths]: {
     args: undefined;
     result: NativeResolvedAppPaths;
-  };
-  [NATIVE_COMMANDS.loadLibraryPathSettings]: {
-    args: undefined;
-    result: NativeLibraryPaths;
-  };
-  [NATIVE_COMMANDS.updateLibraryPathSetting]: {
-    args: NativeUpdateLibraryPathSettingArgs;
-    result: NativeLibraryPaths;
   };
   [NATIVE_COMMANDS.reviewGrade]: {
     args: NativeReviewGradeArgs;

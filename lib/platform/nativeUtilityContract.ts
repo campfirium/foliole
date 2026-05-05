@@ -22,6 +22,13 @@ export interface NativeUpdateLibraryPathSettingArgs {
   path: string | null;
 }
 
+export interface NativeMirrorAttachmentLinkRebuildResult {
+  scanned_document_count: number;
+  rewritten_document_count: number;
+  rewritten_link_count: number;
+  updated_at: string;
+}
+
 export type NativeAttachmentResourceResolution =
   | {
       status: 'ready';

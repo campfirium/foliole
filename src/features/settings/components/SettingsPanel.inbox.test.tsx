@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { selectRuntimeImportDirectory } from '../../../shared/platform/importBridge';
 import {
   loadRuntimeLibraryPathSettings,
+  rebuildRuntimeMirrorAttachmentLinks,
   updateRuntimeLibraryPathSetting
 } from '../../../shared/platform/libraryPathsBridge';
 import { listAvailableSystemFonts } from '../model/systemFonts';
@@ -30,6 +31,7 @@ vi.mock('../../../shared/platform/libraryPathsBridge', async () => {
   return {
     ...actual,
     loadRuntimeLibraryPathSettings: vi.fn(),
+    rebuildRuntimeMirrorAttachmentLinks: vi.fn(),
     updateRuntimeLibraryPathSetting: vi.fn()
   };
 });
@@ -37,6 +39,7 @@ vi.mock('../../../shared/platform/libraryPathsBridge', async () => {
 const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
 const mockedSelectRuntimeImportDirectory = vi.mocked(selectRuntimeImportDirectory);
 const mockedLoadRuntimeLibraryPathSettings = vi.mocked(loadRuntimeLibraryPathSettings);
+const mockedRebuildRuntimeMirrorAttachmentLinks = vi.mocked(rebuildRuntimeMirrorAttachmentLinks);
 const mockedUpdateRuntimeLibraryPathSetting = vi.mocked(updateRuntimeLibraryPathSetting);
 
 const defaultLibraryPaths = {
@@ -56,6 +59,13 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
   mockedLoadRuntimeLibraryPathSettings.mockReset();
   mockedLoadRuntimeLibraryPathSettings.mockResolvedValue(defaultLibraryPaths);
+  mockedRebuildRuntimeMirrorAttachmentLinks.mockReset();
+  mockedRebuildRuntimeMirrorAttachmentLinks.mockResolvedValue({
+    scannedDocumentCount: 2,
+    rewrittenDocumentCount: 2,
+    rewrittenLinkCount: 3,
+    updatedAt: '2026-03-30T00:20:00.000Z'
+  });
   mockedUpdateRuntimeLibraryPathSetting.mockReset();
   mockedUpdateRuntimeLibraryPathSetting.mockImplementation(async (location, nextPath) => {
     if (location === 'library_home') {
@@ -170,4 +180,21 @@ it('updates Library Home and Mirror through the same runtime interface', async (
 
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(1, 'library_home', 'E:\\LibraryRoot');
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(2, 'mirror', 'F:\\MirrorVault');
+});
+
+it('runs the explicit mirror link rebuild flow from settings', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('C:\\Users\\Tester\\Documents\\Foliole\\Mirror')).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rebuild mirror links' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('Rebuilt 3 mirror attachment links across 2 documents.')).toBeInTheDocument();
+  });
+  expect(mockedRebuildRuntimeMirrorAttachmentLinks).toHaveBeenCalledTimes(1);
 });
