@@ -1,7 +1,7 @@
-import { useAppPaletteItems } from './useAppPaletteItems';
-import { useFormalImport } from './useFormalImport';
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { useCommandShortcutState } from './reviewHotkeysState';
+import { useAppPaletteItems } from './useAppPaletteItems';
+import { useFormalImport } from './useFormalImport';
 
 export function useControllerPaletteItems(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;

@@ -48,28 +48,19 @@ function createPendingTaskHarness() {
   return { pending, recorder };
 }
 
-it('mounts immediately and keeps settings sync and bridge reporting non-blocking after mount', async () => {
+it('waits for settings sync before mounting and keeps bridge reporting non-blocking after mount', async () => {
   const harness = createPendingTaskHarness();
 
   expect(harness.recorder.events).toEqual([
     'boot_start',
-    'mount_start',
-    'mount'
+    'settings_sync_failed_started'
   ]);
 
   await flushBootstrapWork();
 
-  expect(harness.recorder.events).toEqual([
-    'boot_start',
-    'mount_start',
-    'mount',
-    'mount_complete',
-    'settings_sync_failed_started',
-    'bridge_ready_report_failed_started'
-  ]);
+  expect(harness.recorder.events).toEqual(['boot_start', 'settings_sync_failed_started']);
 
   const releaseSettingsFn = harness.pending.releaseSettings;
-  const releaseBridgeFn = harness.pending.releaseBridge;
   if (typeof releaseSettingsFn === 'function') {
     releaseSettingsFn();
   }
@@ -77,14 +68,15 @@ it('mounts immediately and keeps settings sync and bridge reporting non-blocking
 
   expect(harness.recorder.events).toEqual([
     'boot_start',
+    'settings_sync_failed_started',
+    'settings_sync_failed_completed',
     'mount_start',
     'mount',
     'mount_complete',
-    'settings_sync_failed_started',
-    'bridge_ready_report_failed_started',
-    'settings_sync_failed_completed'
+    'bridge_ready_report_failed_started'
   ]);
 
+  const releaseBridgeFn = harness.pending.releaseBridge;
   if (typeof releaseBridgeFn === 'function') {
     releaseBridgeFn();
   }
@@ -92,12 +84,12 @@ it('mounts immediately and keeps settings sync and bridge reporting non-blocking
 
   expect(harness.recorder.events).toEqual([
     'boot_start',
+    'settings_sync_failed_started',
+    'settings_sync_failed_completed',
     'mount_start',
     'mount',
     'mount_complete',
-    'settings_sync_failed_started',
     'bridge_ready_report_failed_started',
-    'settings_sync_failed_completed',
     'bridge_ready_report_failed_completed'
   ]);
 });
@@ -119,12 +111,12 @@ it('still mounts when settings sync fails', async () => {
 
   expect(recorder.events).toEqual([
     'boot_start',
+    'settings_sync_failed_started',
+    'settings_sync_failed',
     'mount_start',
     'mount',
     'mount_complete',
-    'settings_sync_failed_started',
     'bridge_ready_report_failed_started',
-    'settings_sync_failed',
     'bridge_ready_report_failed_completed'
   ]);
 });
@@ -146,8 +138,10 @@ it('renders the startup error when mounting throws', async () => {
   await flushBootstrapWork();
 
   expect(reportBootStage).toHaveBeenNthCalledWith(1, 'boot_start');
-  expect(reportBootStage).toHaveBeenNthCalledWith(2, 'mount_start');
-  expect(reportBootStage).toHaveBeenNthCalledWith(3, 'fatal_bootstrap_error', {
+  expect(reportBootStage).toHaveBeenNthCalledWith(2, 'settings_sync_failed_started');
+  expect(reportBootStage).toHaveBeenNthCalledWith(3, 'settings_sync_failed_completed');
+  expect(reportBootStage).toHaveBeenNthCalledWith(4, 'mount_start');
+  expect(reportBootStage).toHaveBeenNthCalledWith(5, 'fatal_bootstrap_error', {
     message: 'mount failed'
   });
   expect(renderStartupError).toHaveBeenCalledWith('mount failed');

@@ -23,8 +23,10 @@ function setLayoutWidth(
     saveDocumentWidthPreference(normalizedWidth);
   } else if (key === 'listWidth') {
     saveListWidthPreference(normalizedWidth);
+    saveListCollapsedPreference(false);
   } else {
     saveRightSidebarWidthPreference(normalizedWidth);
+    saveRightSidebarCollapsedPreference(false);
   }
   set((state) => ({
     layout: {

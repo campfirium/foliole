@@ -34,6 +34,7 @@ export function bootstrapApp(args: StartupBootstrapArgs) {
     args.reportBootStage('boot_start');
 
     try {
+      await runBackgroundTask(args.syncAppSettings, args.reportBootStage, 'settings_sync_failed');
       args.reportBootStage('mount_start');
       await args.mountApp();
       args.reportBootStage('mount_complete');
@@ -46,7 +47,6 @@ export function bootstrapApp(args: StartupBootstrapArgs) {
       return;
     }
 
-    void runBackgroundTask(args.syncAppSettings, args.reportBootStage, 'settings_sync_failed');
     void runBackgroundTask(args.reportBridgeReady, args.reportBootStage, 'bridge_ready_report_failed');
   })();
 }

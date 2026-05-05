@@ -51,3 +51,16 @@ it('hydrates sidebar collapsed flags from persisted app settings', () => {
   expect(initial.layout.documentMaxWidth).toBe(1024);
   expect(initial.layout.rightSidebarWidth).toBe(448);
 });
+
+it('persists expanded sidebars when width restore reopens them', () => {
+  useWorkspaceStore.getState().setListCollapsed(true);
+  useWorkspaceStore.getState().setRightSidebarCollapsed(true);
+
+  useWorkspaceStore.getState().setListWidth(512);
+  useWorkspaceStore.getState().setRightSidebarWidth(448);
+
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(false);
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.listCollapsed)).toBe('false');
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarCollapsed)).toBe('false');
+});
