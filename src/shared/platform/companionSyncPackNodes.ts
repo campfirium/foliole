@@ -22,7 +22,10 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
       currentCursor: args.currentCursor,
       deviceId: args.deviceId,
       incomingAlias: INCOMING_PACK_ALIAS
-    });
+    }).then((result) => ({
+      ...result,
+      appliedPackObjectCount: result.appliedObjectCount
+    }));
   } finally {
     await port.run(`DETACH DATABASE ${INCOMING_PACK_ALIAS}`);
   }

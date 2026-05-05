@@ -18,6 +18,7 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     packPath: '/tmp/incoming pack.db'
   }, manager as never)).resolves.toEqual({
     applied: true,
+    appliedPackObjectCount: 0,
     appliedObjectCount: 0,
     fromStateSeq: 0,
     toStateSeq: 4
