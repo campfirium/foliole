@@ -92,7 +92,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
       if (isCodeFenceLine && !showSyntaxOnLine) addLine(ranges, line.from, 'cm-line-code-fence-hidden');
       else addLine(ranges, line.from, lineClass);
     }
-    if (!showSyntaxOnLine && !isCursorLine && !inCodeBlock) addImageDecorations(ranges, imageMatches);
+    if (!inCodeBlock) addImageDecorations(ranges, imageMatches, isCursorLine);
 
     addPrefixDecoration(ranges, line.from, line.text, showSyntaxOnLine);
     addCodeFenceDecoration(ranges, line.from, line.text, showSyntaxOnLine);

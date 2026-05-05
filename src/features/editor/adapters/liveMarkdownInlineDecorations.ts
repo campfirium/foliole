@@ -48,14 +48,23 @@ class MarkdownImageWidget extends WidgetType {
 
 export { collectImageMatches };
 
-export function addImageDecorations(ranges: Range<Decoration>[], imageMatches: ReadonlyArray<MarkdownImageMatch>) {
+export function addImageDecorations(
+  ranges: Range<Decoration>[],
+  imageMatches: ReadonlyArray<MarkdownImageMatch>,
+  preserveSource = false
+) {
   for (const imageMatch of imageMatches) {
-    ranges.push(
-      Decoration.replace({ widget: new MarkdownImageWidget(imageMatch), inclusive: false }).range(
-        imageMatch.from,
-        imageMatch.to
-      )
-    );
+    if (preserveSource) {
+      ranges.push(
+        Decoration.widget({
+          side: 1,
+          widget: new MarkdownImageWidget(imageMatch)
+        }).range(imageMatch.to)
+      );
+      continue;
+    }
+
+    ranges.push(Decoration.replace({ widget: new MarkdownImageWidget(imageMatch), inclusive: false }).range(imageMatch.from, imageMatch.to));
   }
 }
 

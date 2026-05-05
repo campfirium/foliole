@@ -1,6 +1,8 @@
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+
 const resolveRuntimeAttachmentResource = vi.fn();
 
 vi.mock('../../../shared/platform/bridge', () => ({
@@ -40,9 +42,35 @@ function expectRemoteImageRendered(host: HTMLElement, source: string) {
   expect(resolveRuntimeAttachmentResource).not.toHaveBeenCalled();
 }
 
+async function expectUnavailableInternalImage(host: HTMLElement) {
+  await waitFor(() => {
+    const placeholder = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder?.textContent).toContain('Image unavailable');
+  });
+}
+
+function expectBlockAndInlineImageLayout(host: HTMLElement) {
+  const widgets = Array.from(host.querySelectorAll('.cm-md-image-widget'));
+  const images = Array.from(host.querySelectorAll('.cm-md-image-element'));
+
+  expect(widgets[0]).toHaveAttribute('data-md-image-display', 'block');
+  expect(widgets[1]).toHaveAttribute('data-md-image-display', 'inline');
+  expect(images[0]).toHaveClass('cm-md-image-element-block');
+  expect(images[1]).toHaveClass('cm-md-image-element-inline');
+  expect(getComputedStyle(widgets[1] as HTMLElement).height).toBe('1lh');
+}
+
+async function expectImageStillRenderedOnSelection(host: HTMLElement, source: string) {
+  await waitFor(() => {
+    expect(host.querySelector('.cm-md-image-element')?.getAttribute('src')).toBe(source);
+  });
+}
+
 describe('live markdown image rendering', () => {
   beforeEach(() => {
     resolveRuntimeAttachmentResource.mockReset();
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 
   afterEach(() => {
@@ -73,11 +101,7 @@ describe('live markdown image rendering', () => {
 
     const { adapter, host } = createAdapterHost('![Cover](asset://hash-1.png)');
 
-    await waitFor(() => {
-      const placeholder = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
-      expect(placeholder).not.toBeNull();
-      expect(placeholder?.textContent).toContain('Image unavailable');
-    });
+    await expectUnavailableInternalImage(host);
 
     adapter.destroy();
   });
@@ -103,14 +127,20 @@ describe('live markdown image rendering', () => {
       '![Block](https://example.com/block.png)\nText ![Inline](https://example.com/inline.png) tail'
     );
 
-    const widgets = Array.from(host.querySelectorAll('.cm-md-image-widget'));
-    const images = Array.from(host.querySelectorAll('.cm-md-image-element'));
+    expectBlockAndInlineImageLayout(host);
 
-    expect(widgets[0]).toHaveAttribute('data-md-image-display', 'block');
-    expect(widgets[1]).toHaveAttribute('data-md-image-display', 'inline');
-    expect(images[0]).toHaveClass('cm-md-image-element-block');
-    expect(images[1]).toHaveClass('cm-md-image-element-inline');
-    expect(getComputedStyle(widgets[1] as HTMLElement).height).toBe('1lh');
+    adapter.destroy();
+  });
+
+  it('shows source text and image preview together when the cursor is on the image line', async () => {
+    const source = 'https://example.com/focus.png';
+    const { adapter, host } = createAdapterHost(`![Focus](${source})`);
+
+    adapter.focus();
+    adapter.setSelection({ from: 1, to: 1 });
+
+    await expectImageStillRenderedOnSelection(host, source);
+    expect(host.querySelector('.cm-content')?.textContent ?? '').toContain(`![Focus](${source})`);
 
     adapter.destroy();
   });

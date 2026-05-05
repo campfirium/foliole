@@ -1,7 +1,5 @@
 import type { EditorView, ViewUpdate } from '@codemirror/view';
 
-import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
-
 export interface VisibleLineWindow {
   endLineNumber: number;
   startLineNumber: number;
@@ -24,9 +22,13 @@ export function resolveVisibleLineWindow(view: EditorView): VisibleLineWindow {
 }
 
 export function shouldRefreshLineDecorations(update: ViewUpdate) {
-  return (
-    update.docChanged ||
-    update.viewportChanged ||
-    ((update.selectionSet || update.focusChanged) && getMarkdownSyntaxVisibility() === 'visible')
-  );
+  if (update.docChanged || update.viewportChanged) {
+    return true;
+  }
+
+  if (update.selectionSet || update.focusChanged) {
+    return true;
+  }
+
+  return false;
 }

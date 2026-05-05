@@ -175,7 +175,7 @@ describe('CodeMirrorEditorAdapter', () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
-  it('skips line-decoration refresh when only focus changes and markdown syntax stays hidden', () => {
+  it('refreshes line decorations when focus changes so cursor-line image previews can update', () => {
     expect(
       shouldRefreshLineDecorations({
         docChanged: false,
@@ -183,6 +183,6 @@ describe('CodeMirrorEditorAdapter', () => {
         selectionSet: false,
         viewportChanged: false
       } as never)
-    ).toBe(false);
+    ).toBe(true);
   });
 });
