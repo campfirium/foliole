@@ -58,6 +58,7 @@ export function DocumentPanelSection({
   const documentLayoutStyle = {
     '--document-max-width': `${documentMaxWidth}px`
   } as CSSProperties;
+
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
   const reveal = activeNode?.reveal ?? '';
   const hasAnswerSection = activeNode?.reveal !== null;
@@ -66,15 +67,15 @@ export function DocumentPanelSection({
     <section aria-label="Document area" className="panel-document-shell">
       <Panel
         ariaLabel="Document panel"
-        bodyClassName="editor-body"
-        className="panel-editor"
-        style={documentLayoutStyle}
-        title={
-          <div className="document-header-title">
-            <span className="document-header-label">Path</span>
+        actions={
+          <div className="document-header-breadcrumbs">
             <NodeBreadcrumbs activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
           </div>
         }
+        bodyClassName="editor-body"
+        className="panel-editor"
+        style={documentLayoutStyle}
+        title="Note"
       >
         <div className="document-width-shell" data-resizing={isDocumentResizing}>
           <DocumentWidthHandle

@@ -87,7 +87,8 @@ describe('App', () => {
 
   it('renders note list and single document panel', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Nodes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Note' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Workspace toolbar' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Node breadcrumbs' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Review' })).not.toBeInTheDocument();
@@ -224,7 +225,6 @@ describe('App', () => {
     render(<App />);
 
     const nav = screen.getByRole('navigation', { name: 'Node breadcrumbs' });
-    expect(screen.getByText('Path')).toBeInTheDocument();
     expect(nav).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Parent' })).toBeInTheDocument();
     fireEvent.click(within(nav).getByRole('button', { name: 'Parent' }));
@@ -520,12 +520,12 @@ describe('App', () => {
     const trashButton = within(nodePanel).getByRole('button', { name: 'Trash' });
     expect(trashButton).toHaveTextContent('Trash');
     fireEvent.click(trashButton);
-    expect(within(nodePanel).getByRole('heading', { name: 'Trash' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('region', { name: 'Trash section' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'New' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('button', { name: 'Empty Trash' })).toBeInTheDocument();
     expect(within(nodePanel).getByRole('button', { name: 'Child' })).toBeInTheDocument();
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Child' }));
-    expect(within(nodePanel).getByLabelText('Trash item preview')).toBeInTheDocument();
-    expect(within(nodePanel).getByRole('button', { name: 'Restore' })).toBeInTheDocument();
-    expect(within(nodePanel).getByRole('button', { name: 'Delete Permanently' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Document area' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Prompt editor')).toBeInTheDocument();
   });
 
   it('deletes all selected nodes from node-list context menu', () => {
@@ -580,12 +580,12 @@ describe('App', () => {
     const trashButton = within(nodePanel).getByRole('button', { name: 'Trash' });
     expect(trashButton).toHaveTextContent('Trash');
     fireEvent.click(trashButton);
-    expect(within(nodePanel).getByRole('heading', { name: 'Trash' })).toBeInTheDocument();
+    expect(within(nodePanel).getByRole('region', { name: 'Trash section' })).toBeInTheDocument();
     expect(within(nodePanel).getByRole('button', { name: 'Node 2' })).toBeInTheDocument();
     expect(within(nodePanel).getByRole('button', { name: 'Node 3' })).toBeInTheDocument();
   });
 
-  it('restores and permanently deletes nodes from trash preview actions', () => {
+  it('restores and permanently deletes nodes from trash context menu actions', () => {
     const timestamp = '2026-02-25T00:00:00.000Z';
     const childNode: Node = {
       id: 'node-2',
@@ -612,18 +612,103 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
 
     fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Child' }));
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Restore' }));
+    const trashedChildButton = within(nodePanel).getByRole('button', { name: 'Child' });
+    fireEvent.contextMenu(trashedChildButton, { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
     expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
     fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Child' }));
-    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Delete Permanently' }));
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Child' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
     expect(useWorkspaceStore.getState().nodesById['node-2']).toBeUndefined();
     expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
+  });
+
+  it('supports multi-select permanent delete inside trash', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const node2: Node = {
+      id: 'node-2',
+      parentNodeId: null,
+      title: 'Node 2',
+      content: '# Node 2',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const node3: Node = {
+      id: 'node-3',
+      parentNodeId: null,
+      title: 'Node 3',
+      content: '# Node 3',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2', 'node-3'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': node2,
+        'node-3': node3
+      }
+    }));
+
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 3' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
+    const trashedNode2 = within(nodePanel).getByRole('button', { name: 'Node 2' });
+    const trashedNode3 = within(nodePanel).getByRole('button', { name: 'Node 3' });
+    fireEvent.click(trashedNode2);
+    fireEvent.click(trashedNode3, { ctrlKey: true });
+    fireEvent.contextMenu(trashedNode3, { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.nodesById['node-3']).toBeUndefined();
+    expect(workspace.trashedNodeIds).not.toEqual(expect.arrayContaining(['node-2', 'node-3']));
+  });
+
+  it('empties all trash items from trash header action', () => {
+    const timestamp = '2026-02-25T00:00:00.000Z';
+    const node2: Node = {
+      id: 'node-2',
+      parentNodeId: null,
+      title: 'Node 2',
+      content: '# Node 2',
+      reveal: null,
+      review: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['node-1', 'node-2'],
+      nodesById: {
+        ...state.nodesById,
+        'node-2': node2
+      }
+    }));
+
+    render(<App />);
+    const nodePanel = screen.getByRole('complementary', { name: 'Node list panel' });
+    fireEvent.contextMenu(within(nodePanel).getByRole('button', { name: 'Node 2' }), { clientX: 56, clientY: 64 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Node' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Trash' }));
+    fireEvent.click(within(nodePanel).getByRole('button', { name: 'Empty Trash' }));
+
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodesById['node-2']).toBeUndefined();
+    expect(workspace.trashedNodeIds).toEqual([]);
   });
 
   it('does not render save badge in document header', () => {

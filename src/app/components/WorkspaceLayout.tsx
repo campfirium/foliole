@@ -27,6 +27,8 @@ export interface WorkspaceLayoutProps {
   editorNodeViewState?: NodeViewState;
   isDocumentResizing: boolean;
   isResizingList: boolean;
+  isTrashViewOpen: boolean;
+  isViewingTrashNode: boolean;
   listWidth: number;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
@@ -37,8 +39,10 @@ export interface WorkspaceLayoutProps {
   onResetLayout: () => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
+  onSelectTrashNode: (nodeId: string) => void;
   onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onToggleTrashView: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
@@ -49,6 +53,7 @@ export interface WorkspaceLayoutProps {
     side: ResizeSide,
     event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
   ) => void;
+  selectedTrashNodeId: string | null;
 }
 
 export function WorkspaceLayout({
@@ -63,6 +68,8 @@ export function WorkspaceLayout({
   editorNodeViewState,
   isDocumentResizing,
   isResizingList,
+  isTrashViewOpen,
+  isViewingTrashNode,
   listWidth,
   nodeOrder,
   nodesById,
@@ -73,19 +80,23 @@ export function WorkspaceLayout({
   onResetLayout,
   onSelectBreadcrumbNode,
   onSelectNode,
+  onSelectTrashNode,
   onSplitterKeyDown,
   onSplitterPointerDown,
+  onToggleTrashView,
   onGoBack,
   onGoForward,
   onGoParent,
   onCloseContextMenu,
   onCreateHighlight,
   onCreateCloze,
-  onStartDocumentResize
+  onStartDocumentResize,
+  selectedTrashNodeId
 }: WorkspaceLayoutProps) {
   const workspaceGridStyle = {
     '--workspace-list-width': `${listWidth}px`
   } as CSSProperties;
+  const documentNodeId = isViewingTrashNode ? selectedTrashNodeId : activeNodeId;
 
   return (
     <main aria-label="Foliole workspace" className="workspace-shell">
@@ -100,9 +111,13 @@ export function WorkspaceLayout({
       <div className="workspace-grid" data-resizing={isResizingList} style={workspaceGridStyle}>
         <NodeListTree
           activeNodeId={activeNodeId}
+          isTrashViewOpen={isTrashViewOpen}
           nodeOrder={nodeOrder}
           nodesById={nodesById}
           onSelectNode={onSelectNode}
+          onSelectTrashNode={onSelectTrashNode}
+          onToggleTrashView={onToggleTrashView}
+          selectedTrashNodeId={selectedTrashNodeId}
         />
         <ListSplitter
           listWidth={listWidth}
@@ -111,24 +126,24 @@ export function WorkspaceLayout({
           onSplitterPointerDown={onSplitterPointerDown}
         />
         <DocumentPanelSection
-          activeNodeId={activeNodeId}
+          activeNodeId={documentNodeId}
+          contextMenu={contextMenu}
           documentMaxWidth={documentMaxWidth}
           editorContent={editorContent}
-          contextMenu={contextMenu}
           editorNodeId={editorNodeId}
           editorNodeViewState={editorNodeViewState}
           isDocumentResizing={isDocumentResizing}
+          nodesById={nodesById}
           onAnswerChange={onAnswerChange}
+          onCloseContextMenu={onCloseContextMenu}
+          onCreateCloze={onCreateCloze}
+          onCreateHighlight={onCreateHighlight}
           onEditorChange={onEditorChange}
           onEditorContextMenu={onEditorContextMenu}
           onEditorReady={onEditorReady}
-          onCloseContextMenu={onCloseContextMenu}
-          onCreateHighlight={onCreateHighlight}
-          onCreateCloze={onCreateCloze}
           onResetLayout={onResetLayout}
           onSelectNode={onSelectBreadcrumbNode}
           onStartDocumentResize={onStartDocumentResize}
-          nodesById={nodesById}
         />
       </div>
     </main>

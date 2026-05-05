@@ -1,53 +1,72 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { WorkspaceLayout } from './components/WorkspaceLayout';
-import {
-  applySelectionMarkup,
-  getSelectionCommandPayload,
-  normalizeContextMenuPosition,
-  type SelectionCommandPayload
-} from './contextCommands';
 import { useDocumentWidthResizer } from './hooks/useDocumentWidthResizer';
+import { useEditorContextCommands } from './hooks/useEditorContextCommands';
 import { useListResizer } from './hooks/useListResizer';
+import { useTrashView } from './hooks/useTrashView';
 import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 
 export function App() {
   const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
+  const createHighlightNodeFromSelection = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
+  const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
+  const createRootNode = useWorkspaceStore((state) => state.createRootNode);
+  const documentMaxWidth = useWorkspaceStore((state) => state.layout.documentMaxWidth);
   const goBack = useWorkspaceStore((state) => state.goBack);
   const goForward = useWorkspaceStore((state) => state.goForward);
   const goToParent = useWorkspaceStore((state) => state.goToParent);
   const jumpToAncestorNode = useWorkspaceStore((state) => state.jumpToAncestorNode);
-  const navigation = useWorkspaceStore((state) => state.navigation);
-  const openNode = useWorkspaceStore((state) => state.openNode);
-  const createHighlightNodeFromSelection = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
-  const createRootNode = useWorkspaceStore((state) => state.createRootNode);
-  const createQANodeFromSelection = useWorkspaceStore((state) => state.createQANodeFromSelection);
-  const documentMaxWidth = useWorkspaceStore((state) => state.layout.documentMaxWidth);
   const listWidth = useWorkspaceStore((state) => state.layout.listWidth);
-  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
+  const navigation = useWorkspaceStore((state) => state.navigation);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
+  const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
+  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const openNode = useWorkspaceStore((state) => state.openNode);
   const resetLayout = useWorkspaceStore((state) => state.resetLayout);
-  const setNodeViewState = useWorkspaceStore((state) => state.setNodeViewState);
   const setDocumentMaxWidth = useWorkspaceStore((state) => state.setDocumentMaxWidth);
   const setListWidth = useWorkspaceStore((state) => state.setListWidth);
+  const setNodeViewState = useWorkspaceStore((state) => state.setNodeViewState);
+  const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
   const updateNodeContent = useWorkspaceStore((state) => state.updateNodeContent);
   const updateNodeReveal = useWorkspaceStore((state) => state.updateNodeReveal);
+
   const editorRef = useRef<EditorAdapter | null>(null);
-  const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
 
   const listResize = useListResizer(listWidth, setListWidth);
   const documentResize = useDocumentWidthResizer(documentMaxWidth, setDocumentMaxWidth);
+  const {
+    isTrashViewOpen,
+    selectedTrashNodeId,
+    setSelectedTrashNodeId,
+    toggleTrashView
+  } = useTrashView({
+    nodeOrder,
+    trashedNodeIds
+  });
+  const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const activeNode = activeNodeId ? nodesById[activeNodeId] : undefined;
-  const editorContent = activeNode?.content ?? '';
-  const activeNodeViewState = activeNodeId ? nodeViewById[activeNodeId] : undefined;
+  const selectedTrashNode = selectedTrashNodeId ? nodesById[selectedTrashNodeId] : undefined;
+  const documentNode = isViewingTrashNode ? selectedTrashNode : activeNode;
+  const editorContent = documentNode?.content ?? '';
+  const editorNodeId = isViewingTrashNode ? null : activeNodeId;
+  const activeNodeViewState = !isViewingTrashNode && activeNodeId ? nodeViewById[activeNodeId] : undefined;
+  const { closeContextMenu, contextMenu, handleCreateCloze, handleCreateHighlight, handleEditorContextMenu } =
+    useEditorContextCommands({
+      activeNode,
+      activeNodeId,
+      createHighlightNodeFromSelection,
+      createQANodeFromSelection,
+      editorRef,
+      isTrashViewOpen: isViewingTrashNode,
+      updateNodeContent
+    });
 
   const saveActiveNodeView = useCallback(() => {
-    if (!activeNodeId || !editorRef.current) {
+    if (isViewingTrashNode || !activeNodeId || !editorRef.current) {
       return;
     }
 
@@ -55,30 +74,7 @@ export function App() {
       scrollTop: editorRef.current.getScrollTop(),
       selection: editorRef.current.getSelection()
     });
-  }, [activeNodeId, setNodeViewState]);
-
-  const handleEditorChange = (content: string) => {
-    if (!activeNode) {
-      createRootNode(content);
-      return;
-    }
-    updateNodeContent(activeNode.id, content);
-  };
-
-  const handleEditorReady = (adapter: EditorAdapter | null) => {
-    editorRef.current = adapter;
-  };
-
-  const handleAnswerChange = (answer: string) => {
-    if (!activeNodeId) {
-      return;
-    }
-    updateNodeReveal(activeNodeId, answer);
-  };
-
-  const closeContextMenu = () => {
-    setContextMenu(null);
-  };
+  }, [activeNodeId, isViewingTrashNode, setNodeViewState]);
 
   const {
     canGoBack,
@@ -87,8 +83,8 @@ export function App() {
     handleGoBack,
     handleGoForward,
     handleGoParent,
-    handleSelectBreadcrumbNode,
-    handleSelectNode
+    handleSelectBreadcrumbNode: handleSelectBreadcrumbNodeRaw,
+    handleSelectNode: handleSelectNoteNode
   } = useWorkspaceNavigation({
     activeNodeContent: activeNode?.content ?? null,
     activeNodeId,
@@ -105,58 +101,57 @@ export function App() {
     saveActiveNodeView
   });
 
-  const handleEditorContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    if (!activeNodeId || !activeNode) {
+  const handleEditorChange = (content: string) => {
+    if (isViewingTrashNode) {
       return;
     }
-
-    const commandPayload = getSelectionCommandPayload(activeNodeId, editorRef.current);
-    const position = normalizeContextMenuPosition(event.clientX, event.clientY);
-    setContextMenu({
-      canRunCommands: !!commandPayload,
-      left: position.left,
-      payload: commandPayload,
-      top: position.top
-    });
+    if (!activeNode) {
+      createRootNode(content);
+      return;
+    }
+    updateNodeContent(activeNode.id, content);
   };
 
-  const syncActiveNodeContentFromEditor = () => {
-    if (!activeNodeId || !editorRef.current) {
-      return;
-    }
-    updateNodeContent(activeNodeId, editorRef.current.getContent());
+  const handleEditorReady = (adapter: EditorAdapter | null) => {
+    editorRef.current = adapter;
   };
 
-  const handleCreateHighlight = () => {
-    const payload = contextMenu?.payload;
-    if (!payload) {
+  const handleAnswerChange = (answer: string) => {
+    if (isViewingTrashNode || !activeNodeId) {
       return;
     }
-    const applied = applySelectionMarkup(editorRef.current, 'highlight', payload.anchorId);
-    if (!applied) {
-      closeContextMenu();
-      return;
-    }
-    syncActiveNodeContentFromEditor();
-    createHighlightNodeFromSelection(payload.parentNodeId, payload.selectionText, payload.anchorId);
+    updateNodeReveal(activeNodeId, answer);
+  };
+
+  const handleToggleTrashView = () => {
+    setIsViewingTrashNode(false);
+    toggleTrashView();
     closeContextMenu();
   };
 
-  const handleCreateCloze = () => {
-    const payload = contextMenu?.payload;
-    if (!payload) {
-      return;
-    }
-    const applied = applySelectionMarkup(editorRef.current, 'cloze', payload.anchorId);
-    if (!applied) {
-      closeContextMenu();
-      return;
-    }
-    syncActiveNodeContentFromEditor();
-    createQANodeFromSelection(payload.parentNodeId, payload.clozeContent, payload.selectionText, payload.anchorId);
-    closeContextMenu();
+  const handleSelectNode = (nodeId: string) => {
+    setIsViewingTrashNode(false);
+    handleSelectNoteNode(nodeId);
   };
+
+  const handleSelectTrashNode = (nodeId: string) => {
+    setIsViewingTrashNode(true);
+    setSelectedTrashNodeId(nodeId);
+  };
+
+  const handleSelectBreadcrumbNode = (nodeId: string) => {
+    setIsViewingTrashNode(false);
+    handleSelectBreadcrumbNodeRaw(nodeId);
+  };
+
+  useEffect(() => {
+    if (!isViewingTrashNode) {
+      return;
+    }
+    if (!isTrashViewOpen || !selectedTrashNodeId || !trashedNodeIds.includes(selectedTrashNodeId)) {
+      setIsViewingTrashNode(false);
+    }
+  }, [isTrashViewOpen, isViewingTrashNode, selectedTrashNodeId, trashedNodeIds]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -199,20 +194,22 @@ export function App() {
       canGoBack={canGoBack}
       canGoForward={canGoForward}
       canGoParent={canGoParent}
-      contextMenu={contextMenu ? { canRunCommands: contextMenu.canRunCommands, left: contextMenu.left, top: contextMenu.top } : null}
+      contextMenu={contextMenu}
       documentMaxWidth={documentMaxWidth}
       editorContent={editorContent}
-      editorNodeId={activeNodeId}
+      editorNodeId={editorNodeId}
       editorNodeViewState={activeNodeViewState}
       isDocumentResizing={documentResize.isResizingDocument}
       isResizingList={listResize.isResizingList}
+      isTrashViewOpen={isTrashViewOpen}
+      isViewingTrashNode={isViewingTrashNode}
       listWidth={listWidth}
       nodeOrder={nodeOrder}
       nodesById={nodesById}
-      onCloseContextMenu={closeContextMenu}
-      onCreateHighlight={handleCreateHighlight}
-      onCreateCloze={handleCreateCloze}
       onAnswerChange={handleAnswerChange}
+      onCloseContextMenu={closeContextMenu}
+      onCreateCloze={handleCreateCloze}
+      onCreateHighlight={handleCreateHighlight}
       onEditorChange={handleEditorChange}
       onEditorContextMenu={handleEditorContextMenu}
       onEditorReady={handleEditorReady}
@@ -221,17 +218,13 @@ export function App() {
       onGoParent={handleGoParent}
       onResetLayout={resetLayout}
       onSelectBreadcrumbNode={handleSelectBreadcrumbNode}
-      onStartDocumentResize={documentResize.startResize}
       onSelectNode={handleSelectNode}
+      onSelectTrashNode={handleSelectTrashNode}
       onSplitterKeyDown={listResize.handleSplitterKeyDown}
       onSplitterPointerDown={listResize.handleSplitterPointerDown}
+      onStartDocumentResize={documentResize.startResize}
+      onToggleTrashView={handleToggleTrashView}
+      selectedTrashNodeId={selectedTrashNodeId}
     />
   );
-}
-
-interface EditorContextMenuState {
-  canRunCommands: boolean;
-  left: number;
-  payload: SelectionCommandPayload | null;
-  top: number;
 }
