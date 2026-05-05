@@ -121,6 +121,17 @@ describe('liveMarkdown block rendering', () => {
     adapter.destroy();
   });
 
+  it('renders strong-wrapped ATX compatibility headings as headings', () => {
+    const host = createHost();
+    const adapter = new CodeMirrorEditorAdapter(host, { initialContent: '**# Article Title**\n\n**## Deep dive**' });
+
+    expect(host.querySelector('.cm-line-h1 .cm-md-heading-syntax-hidden')?.textContent).toBe('**# ');
+    expect(host.querySelector('.cm-line-h2 .cm-md-heading-syntax-hidden')?.textContent).toBe('**## ');
+    expect(host.querySelectorAll('.cm-md-heading-syntax-hidden')).toHaveLength(4);
+
+    adapter.destroy();
+  });
+
   it('renders wiki aliases, callout labels, and plain Obsidian tags', () => {
     const host = createHost();
     const adapter = new CodeMirrorEditorAdapter(host, {

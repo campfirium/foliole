@@ -48,7 +48,7 @@ export function resolveDisplayItems(content: string): OutlineDisplayItem[] {
 }
 
 export function mayHaveOutline(content: string) {
-  return /^\s{0,3}#{1,6}[ \t]+/m.test(content);
+  return /^\s{0,3}(?:#{1,6}[ \t]+|\*\*#{1,6}[ \t]+\S.*\*\*\s*$)/m.test(content);
 }
 
 export function resolveActiveIndex(items: OutlineDisplayItem[], anchorPosition: number) {

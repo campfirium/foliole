@@ -18,6 +18,19 @@ describe('markdownHeadingProjection', () => {
     expect(collectMarkdownHeadingRanges(content)[0]?.text).toBe('Linked detail');
   });
 
+  it('collects whole-line strong-wrapped ATX headings as compatibility headings', () => {
+    const content = '**# Android Sync Performance Analysis**\nBody\n**### Later**';
+
+    expect(collectMarkdownHeadingRanges(content)).toEqual([
+      { contentFrom: 4, contentTo: 37, from: 0, level: 1, text: 'Android Sync Performance Analysis', to: 39 },
+      { contentFrom: 51, contentTo: 56, from: 45, level: 3, text: 'Later', to: 58 }
+    ]);
+  });
+
+  it('does not collect inline strong-wrapped hashes as compatibility headings', () => {
+    expect(collectMarkdownHeadingRanges('Intro **# tag** text')).toEqual([]);
+  });
+
   it('collects parser-backed setext heading ranges', () => {
     const content = ['Title **One**', '===', 'Section', '---'].join('\n');
 

@@ -30,4 +30,13 @@ describe('extractDocumentOutline', () => {
       { from: 10, level: 2, text: 'Section', to: 21 }
     ]);
   });
+
+  it('collects whole-line strong-wrapped ATX compatibility headings', () => {
+    const content = ['**# Article Title**', '**## Deep dive**'].join('\n');
+
+    expect(extractDocumentOutline(content)).toEqual([
+      { from: 4, level: 1, text: 'Article Title', to: 19 },
+      { from: 25, level: 2, text: 'Deep dive', to: 36 }
+    ]);
+  });
 });

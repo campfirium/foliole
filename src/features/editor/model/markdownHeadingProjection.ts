@@ -30,6 +30,13 @@ function resolveHeadingLevel(nodeName: string) {
   return Number.isInteger(level) && level >= 1 && level <= 6 ? level : null;
 }
 
+function resolveLenientStrongATXHeadingLevel(node: MarkdownSyntaxNode, source: string) {
+  const mark = collectChildRanges(node, 'HeaderMark')[0];
+  if (!mark) return null;
+  const level = source.slice(mark.from, mark.to).length;
+  return level >= 1 && level <= 6 ? level : null;
+}
+
 function normalizeHeadingText(source: string, from: number, to: number) {
   const inlineRanges = collectMarkdownInlineRanges(source.slice(from, to), from);
   const linkRanges = collectMarkdownInlineLinkRanges(source.slice(from, to), from);
@@ -52,12 +59,20 @@ function sliceWithoutRanges(source: string, from: number, to: number, ranges: Re
 }
 
 function createHeadingRange(node: MarkdownSyntaxNode, source: string, offset: number): MarkdownHeadingRange | null {
-  const level = resolveHeadingLevel(node.name);
+  const level = node.name === 'LenientStrongATXHeading' ? resolveLenientStrongATXHeadingLevel(node, source) : resolveHeadingLevel(node.name);
   if (!level) return null;
   const marks = collectChildRanges(node, 'HeaderMark');
+  const strongMarks = collectChildRanges(node, 'EmphasisMark');
   const isSetext = node.name.startsWith('SetextHeading');
+  const isLenientStrongATX = node.name === 'LenientStrongATXHeading';
   const contentFrom = isSetext ? node.from : skipInlineWhitespace(source, marks[0]?.to ?? node.from, node.to);
-  const contentTo = isSetext ? trimSetextHeadingContentTo(source, marks[0]?.from ?? node.to) : marks.length > 1 ? marks[marks.length - 1]?.from ?? node.to : node.to;
+  const contentTo = isSetext
+    ? trimSetextHeadingContentTo(source, marks[0]?.from ?? node.to)
+    : isLenientStrongATX
+      ? strongMarks[strongMarks.length - 1]?.from ?? node.to
+      : marks.length > 1
+        ? marks[marks.length - 1]?.from ?? node.to
+        : node.to;
   const text = normalizeHeadingText(source, contentFrom, contentTo);
   return text
     ? {
@@ -91,7 +106,7 @@ function visitHeadingNodes(args: {
   offset: number;
   source: string;
 }) {
-  if (args.node.name.startsWith('ATXHeading') || args.node.name.startsWith('SetextHeading')) {
+  if (args.node.name.startsWith('ATXHeading') || args.node.name.startsWith('SetextHeading') || args.node.name === 'LenientStrongATXHeading') {
     const heading = createHeadingRange(args.node, args.source, args.offset);
     if (heading) args.headings.push(heading);
     return;

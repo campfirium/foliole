@@ -51,4 +51,17 @@ describe('markdownBlockProjection', () => {
       { checked: undefined, from: 45, kind: 'ordered-list', lineFrom: 45, markerText: '1. ', to: 48 }
     ]);
   });
+
+  it('collects line classes and hidden syntax ranges for strong-wrapped ATX compatibility headings', () => {
+    const text = '**# Article Title**\n**## Deep dive**';
+
+    expect(collectMarkdownLineClassRanges(text).map(({ className, from }) => ({ className, from }))).toEqual([
+      { className: 'cm-line-h1', from: 0 },
+      { className: 'cm-line-h2', from: 20 }
+    ]);
+    expect(collectMarkdownPrefixRanges(text).map(({ hiddenRanges, kind, lineFrom }) => ({ hiddenRanges, kind, lineFrom }))).toEqual([
+      { hiddenRanges: [{ from: 0, to: 4 }, { from: 17, to: 19 }], kind: 'heading', lineFrom: 0 },
+      { hiddenRanges: [{ from: 20, to: 25 }, { from: 34, to: 36 }], kind: 'heading', lineFrom: 20 }
+    ]);
+  });
 });

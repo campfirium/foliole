@@ -94,6 +94,17 @@ describe('DocumentOutlineLayer content', () => {
     expect(screen.getByRole('button', { name: 'Deep dive' })).toBeInTheDocument();
   });
 
+  it('opens for strong-wrapped ATX compatibility headings', () => {
+    vi.useFakeTimers();
+    renderOutline('**# Article Title**\n**## Deep dive**', 20);
+
+    fireEvent.mouseEnter(screen.getByLabelText('Document outline hover zone'));
+    advanceOutlineOpenDelay();
+
+    expect(screen.queryByRole('button', { name: 'Article Title' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deep dive' })).toBeInTheDocument();
+  });
+
   it('anchors the outline to the hover position on the right edge', () => {
     vi.useFakeTimers();
     renderOutline('# Article Title\n## Deep dive\n### Detail', 30);

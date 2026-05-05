@@ -7,7 +7,6 @@ const SourceHighlightDelimiter = {
   resolve: 'SourceHighlight'
 };
 
-const MAX_LENIENT_STRONG_CONTENT_LENGTH = 80;
 const WIKI_LINK_CLOSE = ']]';
 
 function isWhitespaceCode(value: number) {
@@ -95,24 +94,6 @@ function parseEmbed(cx: InlineContext, pos: number) {
   return cx.addElement(cx.elt('Embed', pos, closeFrom + WIKI_LINK_CLOSE.length, children));
 }
 
-function parseLenientStrongEmphasis(cx: InlineContext, pos: number) {
-  if (cx.char(pos + 1) !== 42) return -1;
-  if (!isLenientStrongClosing(cx, pos)) return -1;
-  const searchFrom = Math.max(cx.offset, pos - MAX_LENIENT_STRONG_CONTENT_LENGTH - 2);
-
-  for (let cursor = pos - 2; cursor >= searchFrom; cursor -= 1) {
-    const char = cx.char(cursor);
-    if (char === 10 || char === 13) return -1;
-    if (!isLenientStrongOpening(cx, cursor, pos)) continue;
-    return cx.addElement(cx.elt('LenientStrongEmphasis', cursor, pos + 2, [
-      cx.elt('EmphasisMark', cursor, cursor + 2),
-      cx.elt('EmphasisMark', pos, pos + 2)
-    ]));
-  }
-
-  return -1;
-}
-
 function findClosingChar(cx: InlineContext, from: number, closeCode: number) {
   for (let cursor = from; cursor < cx.end; cursor += 1) {
     const char = cx.char(cursor);
@@ -141,28 +122,6 @@ function isCalloutKindCode(value: number) {
   return isAsciiLetter(value) || (value >= 48 && value <= 57) || value === 45 || value === 95;
 }
 
-function isLenientStrongClosing(cx: InlineContext, closeFrom: number) {
-  const after = cx.char(closeFrom + 2);
-  if (!isValidCode(after) || after === 42 || isWhitespaceCode(after)) return false;
-  return isPunctuationCode(cx.char(closeFrom - 1));
-}
-
-function isLenientStrongOpening(cx: InlineContext, openFrom: number, closeFrom: number) {
-  if (openFrom < cx.offset || closeFrom - openFrom <= 2) return false;
-  if (cx.char(openFrom) !== 42 || cx.char(openFrom + 1) !== 42) return false;
-  if (cx.char(openFrom - 1) === 42 || cx.char(openFrom - 1) === 92) return false;
-  return !isWhitespaceCode(cx.char(openFrom + 2));
-}
-
-function isPunctuationCode(value: number) {
-  if (!isValidCode(value)) return false;
-  return /\p{P}/u.test(String.fromCodePoint(value));
-}
-
-function isValidCode(value: number) {
-  return Number.isFinite(value) && value >= 0;
-}
-
 export const folioleMarkdownExtensions: MarkdownConfig[] = [
   {
     defineNodes: [
@@ -181,7 +140,6 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
       { name: 'Frontmatter', block: true },
       'FrontmatterContent',
       'FrontmatterDelimiter',
-      'LenientStrongEmphasis',
       'SourceHighlight',
       'SourceHighlightMark',
       'WikiLink',
@@ -199,13 +157,6 @@ export const folioleMarkdownExtensions: MarkdownConfig[] = [
       }
     ],
     parseInline: [
-      {
-        name: 'LenientStrongEmphasis',
-        parse(cx, next, pos) {
-          return next === 42 ? parseLenientStrongEmphasis(cx, pos) : -1;
-        },
-        before: 'Emphasis'
-      },
       {
         name: 'Embed',
         parse(cx, next, pos) {

@@ -1,13 +1,16 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import {
+  createMarkdownHeadingPrefixRange,
+  findLineStart,
+  resolveMarkdownHeadingLineClass,
+  type MarkdownHeadingPrefixRange
+} from './markdownBlockHeadingProjection';
+import { collectMarkdownThematicBreakNodes, type MarkdownThematicBreakRange } from './markdownThematicBreakProjection';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
-export interface MarkdownBlockRange {
-  from: number;
-  kind: 'thematicBreak';
-  to: number;
-}
+export type MarkdownBlockRange = MarkdownThematicBreakRange;
 
 export interface MarkdownLineClassRange {
   className: string;
@@ -20,6 +23,7 @@ export type MarkdownPrefixKind = 'heading' | 'quote' | 'unordered-list' | 'order
 export interface MarkdownPrefixRange {
   checked?: boolean;
   from: number;
+  hiddenRanges?: MarkdownHeadingPrefixRange['hiddenRanges'];
   kind: MarkdownPrefixKind;
   lineFrom: number;
   markerText: string;
@@ -61,10 +65,6 @@ function findDescendant(node: MarkdownSyntaxNode, name: string): MarkdownSyntaxN
   return null;
 }
 
-function findLineStart(source: string, position: number) {
-  return source.lastIndexOf('\n', Math.max(0, position - 1)) + 1;
-}
-
 function extendTrailingSpaces(source: string, position: number) {
   let cursor = position;
   while (cursor < source.length && (source[cursor] === ' ' || source[cursor] === '\t')) cursor += 1;
@@ -85,29 +85,6 @@ function addPrefixRange(
   });
 }
 
-function visitThematicBreakNodes(args: {
-  blocks: MarkdownBlockRange[];
-  node: MarkdownSyntaxNode;
-  offset: number;
-}) {
-  if (args.node.name === 'HorizontalRule') {
-    args.blocks.push({
-      from: args.offset + args.node.from,
-      kind: 'thematicBreak',
-      to: args.offset + args.node.to
-    });
-    return;
-  }
-
-  for (let child = args.node.firstChild; child; child = child.nextSibling) {
-    visitThematicBreakNodes({
-      blocks: args.blocks,
-      node: child,
-      offset: args.offset
-    });
-  }
-}
-
 function visitPrefixNodes(args: {
   node: MarkdownSyntaxNode;
   offset: number;
@@ -115,24 +92,8 @@ function visitPrefixNodes(args: {
   prefixes: MarkdownPrefixRange[];
   source: string;
 }) {
-  const headerMark = args.node.name.startsWith('ATXHeading') ? findChild(args.node, 'HeaderMark') : null;
-  if (headerMark) {
-    addPrefixRange(args.prefixes, args.source, args.offset, {
-      from: args.node.from,
-      kind: 'heading',
-      markerText: '',
-      to: extendTrailingSpaces(args.source, headerMark.to)
-    });
-  }
-  const setextHeaderMark = args.node.name.startsWith('SetextHeading') ? findChild(args.node, 'HeaderMark') : null;
-  if (setextHeaderMark) {
-    addPrefixRange(args.prefixes, args.source, args.offset, {
-      from: findLineStart(args.source, setextHeaderMark.from),
-      kind: 'heading',
-      markerText: '',
-      to: extendTrailingSpaces(args.source, setextHeaderMark.to)
-    });
-  }
+  const headingPrefixRange = createMarkdownHeadingPrefixRange(args.node, args.source, args.offset);
+  if (headingPrefixRange) args.prefixes.push(headingPrefixRange);
 
   if (args.node.name === 'QuoteMark') {
     addPrefixRange(args.prefixes, args.source, args.offset, {
@@ -199,13 +160,11 @@ function visitLineClassNodes(args: {
   node: MarkdownSyntaxNode;
   offset: number;
   parentName: string | null;
+  source: string;
 }) {
-  const from = args.offset + args.node.from;
-  if (args.node.name === 'ATXHeading1') setLineClass(args.lineClasses, from, 'cm-line-h1', LINE_CLASS_PRIORITIES.heading);
-  if (args.node.name === 'ATXHeading2') setLineClass(args.lineClasses, from, 'cm-line-h2', LINE_CLASS_PRIORITIES.heading);
-  if (args.node.name === 'ATXHeading3') setLineClass(args.lineClasses, from, 'cm-line-h3', LINE_CLASS_PRIORITIES.heading);
-  if (args.node.name === 'SetextHeading1') setLineClass(args.lineClasses, from, 'cm-line-h1', LINE_CLASS_PRIORITIES.heading);
-  if (args.node.name === 'SetextHeading2') setLineClass(args.lineClasses, from, 'cm-line-h2', LINE_CLASS_PRIORITIES.heading);
+  const from = args.offset + (args.node.name === 'LenientStrongATXHeading' ? findLineStart(args.source, args.node.from) : args.node.from);
+  const headingLineClass = resolveMarkdownHeadingLineClass(args.node, args.source);
+  if (headingLineClass) setLineClass(args.lineClasses, from, headingLineClass, LINE_CLASS_PRIORITIES.heading);
   if (args.node.name === 'Blockquote') setLineClass(args.lineClasses, from, 'cm-line-quote', LINE_CLASS_PRIORITIES.quote);
   if (args.node.name === 'ListItem' && args.parentName === 'BulletList') {
     const className = findChild(args.node, 'Task') ? 'cm-line-list-unordered cm-line-task-list' : 'cm-line-list-unordered';
@@ -220,20 +179,15 @@ function visitLineClassNodes(args: {
       lineClasses: args.lineClasses,
       node: child,
       offset: args.offset,
-      parentName: args.node.name
+      parentName: args.node.name,
+      source: args.source
     });
   }
 }
 
 export function collectMarkdownThematicBreakRanges(text: string, offset = 0): MarkdownBlockRange[] {
   const tree = folioleMarkdownParser.parse(text);
-  const blocks: MarkdownBlockRange[] = [];
-  visitThematicBreakNodes({
-    blocks,
-    node: tree.topNode,
-    offset
-  });
-  return blocks;
+  return collectMarkdownThematicBreakNodes(tree.topNode, offset);
 }
 
 export function collectMarkdownLineClassRanges(text: string, offset = 0): MarkdownLineClassRange[] {
@@ -243,7 +197,8 @@ export function collectMarkdownLineClassRanges(text: string, offset = 0): Markdo
     lineClasses,
     node: tree.topNode,
     offset,
-    parentName: null
+    parentName: null,
+    source: text
   });
   return Array.from(lineClasses.values()).sort((left, right) => left.from - right.from);
 }
