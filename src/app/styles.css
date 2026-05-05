@@ -85,7 +85,7 @@ body {
 
 .window-titlebar {
   align-items: center;
-  background: #f6f6f6;
+  background: #fcfcfc;
   border-bottom: 1px solid rgba(32, 33, 36, 0.18);
   display: grid;
   grid-template-columns: var(--window-titlebar-left-width, 40px) minmax(0, 1fr) var(--window-titlebar-right-width, 40px);
@@ -124,6 +124,7 @@ body {
 }
 
 .window-titlebar-left-zone[data-collapsed='false'] {
+  border-right: 1px solid rgba(32, 33, 36, 0.18);
   flex: 0 0 calc(40px + var(--workspace-list-width, 300px));
 }
 

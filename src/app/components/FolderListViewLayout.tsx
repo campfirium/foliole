@@ -67,7 +67,7 @@ function FolderListHeaderSummary({
 }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
-      <h2 className="truncate text-base font-semibold text-foreground">{folderTitle}</h2>
+      <h2 className="truncate text-[13px] font-medium text-foreground">{folderTitle}</h2>
       <p
         aria-label={`Folder result count ${itemCountLabel}`}
         className="shrink-0 text-sm font-medium text-foreground/58"

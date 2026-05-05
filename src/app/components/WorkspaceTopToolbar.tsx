@@ -93,7 +93,7 @@ export function WorkspaceTopToolbar({
   onToggleListVisibility
 }: WorkspaceTopToolbarProps) {
   return (
-    <AppToolbar aria-label="Workspace top toolbar" className="min-h-[40px] border-b border-border bg-canvas px-3">
+    <AppToolbar aria-label="Workspace top toolbar" className="min-h-[40px] border-b border-border bg-bg-subtle px-3">
       <ToolbarActionGroup ariaLabel="Workspace primary navigation actions">
         <AppIconButton
           className={toolbarButtonClassName}

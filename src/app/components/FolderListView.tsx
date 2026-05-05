@@ -89,7 +89,7 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
         <div className="flex items-start justify-between gap-4">
           <button
             aria-label={`Open ${props.node.title}`}
-            className="min-w-0 flex-1 text-left text-[17px] font-semibold leading-7 text-foreground transition-colors hover:text-accent-strong focus-visible:outline-none"
+            className="min-w-0 flex-1 text-left text-[17px] font-normal leading-7 text-foreground transition-colors hover:text-accent-strong focus-visible:outline-none"
             onClick={() => props.onSelectNode(props.node.id)}
             type="button"
           >
@@ -128,7 +128,7 @@ function renderDefaultListItem(props: FolderListItemProps & { author: string | n
       >
         <div className="flex items-start justify-between gap-4">
           <span
-            className="line-clamp-2 block min-w-0 flex-1 break-words text-[17px] font-semibold leading-7 text-foreground"
+            className="line-clamp-2 block min-w-0 flex-1 break-words text-[17px] font-normal leading-7 text-foreground"
             data-testid={`folder-list-title-${props.node.id}`}
           >
             {props.node.title}

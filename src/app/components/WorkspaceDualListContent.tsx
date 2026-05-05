@@ -227,7 +227,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         onPointerDown={folderListResize.handlePointerDown}
         width={folderListResize.width}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-panel">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-canvas">
         {props.isVirtualViewOpen
           ? renderVirtualContentColumn(props)
           : topicRootId
