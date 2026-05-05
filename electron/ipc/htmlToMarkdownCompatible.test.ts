@@ -30,7 +30,7 @@ describe('convertHtmlToMarkdownCompatible', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it('keeps degraded structures visible instead of dropping them silently', () => {
+  it('converts simple HTML tables to GFM tables and keeps embedded placeholders visible', () => {
     const result = convertHtmlToMarkdownCompatible(`
       <table>
         <tr><th>Name</th><th>Value</th></tr>
@@ -39,11 +39,25 @@ describe('convertHtmlToMarkdownCompatible', () => {
       <iframe src="https://example.com/embed"></iframe>
     `);
 
+    expect(result.content).toContain('| Name | Value |');
+    expect(result.content).toContain('| --- | --- |');
+    expect(result.content).toContain('| Alpha | Beta |');
+    expect(result.content).toContain('[Embedded iframe: https://example.com/embed]');
+    expect(result.warnings).toEqual(['embedded_content_replaced']);
+  });
+
+  it('keeps complex table fallbacks visible instead of dropping them silently', () => {
+    const result = convertHtmlToMarkdownCompatible(`
+      <table>
+        <tr><th>Name</th><th>Value</th></tr>
+        <tr><td colspan="2">Merged</td></tr>
+      </table>
+    `);
+
     expect(result.content).toContain('[Table degraded]');
     expect(result.content).toContain('Name | Value');
-    expect(result.content).toContain('Alpha | Beta');
-    expect(result.content).toContain('[Embedded iframe: https://example.com/embed]');
-    expect(result.warnings).toEqual(['table_degraded', 'embedded_content_replaced']);
+    expect(result.content).toContain('Merged');
+    expect(result.warnings).toEqual(['table_degraded']);
   });
 
   it('uses body content when given a full html document', () => {

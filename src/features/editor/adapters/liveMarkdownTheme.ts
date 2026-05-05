@@ -37,6 +37,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-line.cm-line-quote': { borderLeft: '2px solid var(--app-accent-color)', color: 'var(--color-text-primary)', paddingBottom: '0.15rem', paddingTop: '0.15rem', paddingLeft: '0.75rem' },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': { backgroundColor: 'rgb(var(--color-foreground) / 0.06)', borderRadius: 0, fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: '0 0.5rem' },
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
+  '.cm-line.cm-md-table-source-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', overflow: 'hidden', padding: '0 !important' },
   '.cm-line.cm-line-frontmatter-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-line-title-heading-hidden': { fontSize: '0', lineHeight: '0', margin: 0, minHeight: '0', padding: '0 !important' },
   '.cm-line.cm-diff-line': { borderRadius: '0.35rem' },
@@ -101,6 +102,33 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-anchor-tag-id': { color: 'var(--app-accent-color)', fontWeight: '700', opacity: '1' },
   '.cm-md-prefix-widget': { color: 'var(--color-text-secondary)', display: 'inline-block', whiteSpace: 'pre' },
   '.cm-md-prefix-unordered-list, .cm-md-prefix-ordered-list': { color: 'var(--color-text-secondary)', fontWeight: '500', opacity: '0.95' },
+  '.cm-md-table-widget': {
+    boxSizing: 'border-box',
+    marginBottom: '0.45rem',
+    marginTop: '0.45rem',
+    maxWidth: '100%',
+    overflowX: 'auto'
+  },
+  '.cm-md-table': {
+    borderCollapse: 'collapse',
+    fontSize: '0.94em',
+    lineHeight: '1.45',
+    minWidth: '100%',
+    tableLayout: 'auto',
+    width: 'max-content'
+  },
+  '.cm-md-table-cell': {
+    border: '1px solid color-mix(in srgb, var(--color-border-strong) 42%, transparent)',
+    maxWidth: '24rem',
+    padding: '0.34rem 0.52rem',
+    textAlign: 'left',
+    verticalAlign: 'top',
+    whiteSpace: 'normal'
+  },
+  '.cm-md-table-row-header .cm-md-table-cell': {
+    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-subtle)) 84%, var(--color-foreground) 6%)',
+    fontWeight: '650'
+  },
   '.cm-md-image-widget': { maxWidth: '100%' },
   '.cm-md-image-widget-block': {
     display: 'flex',

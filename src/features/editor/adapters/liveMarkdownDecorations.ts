@@ -8,6 +8,7 @@ import {
   collectSourceViewportPlans,
   type ViewportLineInput
 } from '../model/liveMarkdownViewportPlans';
+import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
 
 import { resolveCodeBlockStateBeforeLine } from './liveMarkdownCodeBlocks';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
@@ -19,9 +20,12 @@ import {
   addPrefixDecoration,
   addReplace
 } from './liveMarkdownPrimitives';
+import { getTextAnchorDecorations } from './liveMarkdownState';
+import { addTableDecorations } from './liveMarkdownTables';
 import { resolveVisibleLineWindow } from './liveMarkdownViewport';
 
 interface DecorationBuildContext {
+  activePosition: number | null;
   cursorLineNumber: number | null;
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
@@ -53,6 +57,14 @@ function collectViewportLines(view: EditorView, startLineNumber: number, endLine
 export function buildPreviewDecorationSet(view: EditorView, context: DecorationBuildContext): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
+  const startLine = view.state.doc.line(startLineNumber);
+  const endLine = view.state.doc.line(endLineNumber);
+  const tablePlans = collectMarkdownTablePlans({
+    activePosition: context.activePosition,
+    anchorDecorations: getTextAnchorDecorations(view),
+    from: startLine.from,
+    text: view.state.sliceDoc(startLine.from, endLine.to)
+  });
   const viewportPlans = collectPreviewViewportPlans({
     cursorLineNumber: context.cursorLineNumber,
     hideTitleHeading: context.hideTitleHeading,
@@ -61,7 +73,12 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     startInCodeBlock: resolveCodeBlockStateBeforeLine(view.state, startLineNumber)
   });
 
+  addTableDecorations(ranges, tablePlans, view.state.doc);
+
   for (const { lineFrom, lineText, plan } of viewportPlans) {
+    if (isPositionInsideInactiveTable(lineFrom, tablePlans)) {
+      continue;
+    }
     if (plan.lineClass) addLine(ranges, lineFrom, plan.lineClass);
     if (plan.imageVisible) {
       addImageDecorations(ranges, plan.imageMatches, false, context.nodeId, context.imageClozePresentationVersion);

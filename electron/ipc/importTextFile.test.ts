@@ -44,6 +44,8 @@ import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
 
 const DEGRADED_HTML =
   '<table><tr><th>Name</th><th>Value</th></tr><tr><td>Alpha</td><td>Beta</td></tr></table><iframe src="https://example.com/embed"></iframe>';
+const DEGRADED_HTML_MARKDOWN =
+  '| Name | Value |\n| --- | --- |\n| Alpha | Beta |\n\n[Embedded iframe: https://example.com/embed]';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -86,7 +88,7 @@ it('converts HTML selection into markdown-compatible text with visible degraded 
   readFile.mockResolvedValue(DEGRADED_HTML);
 
   await expect(selectImportTextFile()).resolves.toEqual({
-    content: '[Table degraded]\nName | Value\nAlpha | Beta\n\n[Embedded iframe: https://example.com/embed]',
+    content: DEGRADED_HTML_MARKDOWN,
     file_name: 'inbox.html',
     file_path: '/tmp/inbox.html',
     kind: 'html'
@@ -97,7 +99,7 @@ it('marks HTML file imports as degraded when conversion had to fall back', async
   readFile.mockResolvedValue(DEGRADED_HTML);
   runPreparedImport.mockReturnValue({
     contentFingerprint: 'content-fingerprint',
-    degradedReason: 'HTML conversion degraded: table, embedded content',
+    degradedReason: 'HTML conversion degraded: embedded content',
     duplicateSemantic: 'new',
     failureReason: null,
     importId: 'import-2',
@@ -113,7 +115,7 @@ it('marks HTML file imports as degraded when conversion had to fall back', async
 
   await expect(runTextFileImport()).resolves.toEqual({
     content_fingerprint: 'content-fingerprint',
-    degraded_reason: 'HTML conversion degraded: table, embedded content',
+    degraded_reason: 'HTML conversion degraded: embedded content',
     duplicate_semantic: 'new',
     failure_reason: null,
     import_id: 'import-2',
@@ -129,8 +131,8 @@ it('marks HTML file imports as degraded when conversion had to fall back', async
 
   expect(runPreparedImport).toHaveBeenCalledWith(
     expect.objectContaining({
-      content: '[Table degraded]\nName | Value\nAlpha | Beta\n\n[Embedded iframe: https://example.com/embed]',
-      degradedReason: 'HTML conversion degraded: table, embedded content',
+      content: DEGRADED_HTML_MARKDOWN,
+      degradedReason: 'HTML conversion degraded: embedded content',
       sourceKind: 'html',
       sourceLocator: '/tmp/inbox.html',
       sourceName: 'inbox.html'

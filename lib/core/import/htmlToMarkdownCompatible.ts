@@ -7,13 +7,13 @@ import {
   renderInlineSuperscriptFootnote,
   type HtmlFootnoteDefinitions
 } from './htmlToMarkdownCompatibleFootnotes.js';
+import { renderTable } from './htmlToMarkdownCompatibleTables.js';
 import {
   buildEmbedPlaceholder,
   buildImageMarkdown,
   CONTENT_STRIP_TAGS,
   EMBEDDED_TAGS,
   findElement,
-  findElements,
   getAttribute,
   indentLines,
   isBlockNode,
@@ -106,7 +106,7 @@ function renderBlockNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, f
   if (node.tagName === 'hr') return ['---'];
   if (node.tagName === 'pre') return [renderCodeFence(node)];
   if (node.tagName === 'blockquote') return [prefixLines(joinBlocks(node.childNodes, warnings, footnoteDefinitions), '> ')];
-  if (node.tagName === 'table') return [renderDegradedTable(node, warnings)];
+  if (node.tagName === 'table') return [renderTable(node, warnings, footnoteDefinitions, renderInlineNodes)];
   if (node.tagName === 'ul' || node.tagName === 'ol') return renderList(node, warnings, footnoteDefinitions);
   const footnoteDefinition = renderFootnoteDefinitionBlock(node);
   if (footnoteDefinition) return [footnoteDefinition.markdown];
@@ -187,18 +187,6 @@ function renderInlineNode(node: HtmlNode, warnings: Set<HtmlConversionWarning>, 
   return applyInlineFormatting(node, inline);
 }
 
-function renderDegradedTable(table: HtmlElement, warnings: Set<HtmlConversionWarning>) {
-  warnings.add('table_degraded');
-  const rows = findDescendantElements(table, 'tr').map((row) =>
-    findElements(row.childNodes, ['td', 'th'])
-      .map((cell) => normalizeInline(getTextContent(cell)))
-      .filter(Boolean)
-      .join(' | ')
-  );
-  const lines = rows.filter(Boolean);
-  return lines.length > 0 ? ['[Table degraded]', ...lines].join('\n') : '[Table degraded]';
-}
-
 function renderCodeFence(node: HtmlElement) {
   const code = getTextContent(node, true).replace(/^\n+|\n+$/g, '');
   return ['```', code, '```'].join('\n');
@@ -228,22 +216,6 @@ function getTextContent(node: HtmlParentNode | HtmlNode, preserveWhitespace = fa
 
 function joinBlocks(nodes: HtmlNode[], warnings: Set<HtmlConversionWarning>, footnoteDefinitions: HtmlFootnoteDefinitions) {
   return renderBlockNodes(nodes, warnings, footnoteDefinitions).join('\n\n');
-}
-
-function findDescendantElements(node: HtmlParentNode, tagName: string): HtmlElement[] {
-  if (!('childNodes' in node)) {
-    return [];
-  }
-  const matches: HtmlElement[] = [];
-  for (const child of node.childNodes) {
-    if ('tagName' in child && child.tagName === tagName) {
-      matches.push(child);
-    }
-    if ('childNodes' in child) {
-      matches.push(...findDescendantElements(child, tagName));
-    }
-  }
-  return matches;
 }
 
 function isTextNode(node: HtmlParentNode | HtmlNode): node is HtmlTextNode {

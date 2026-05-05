@@ -121,6 +121,7 @@ function runHtmlDegradedCase() {
   const view = createPasteView();
   const html =
     '<table><tr><th>Name</th><th>Value</th></tr><tr><td>Alpha</td><td>Beta</td></tr></table><iframe src="https://example.com/embed"></iframe>';
+  const insert = '| Name | Value |\n| --- | --- |\n| Alpha | Beta |\n\n[Embedded iframe: https://example.com/embed]';
 
   expect(handleMarkdownCompatibleHtmlPaste({ getData: (format: string) => (format === 'text/html' ? html : '') }, view)).toBe(
     true
@@ -129,10 +130,10 @@ function runHtmlDegradedCase() {
     view,
     {
       from: 0,
-      insert: '[Table degraded]\nName | Value\nAlpha | Beta\n\n[Embedded iframe: https://example.com/embed]',
+      insert,
       to: 0
     },
-    88
+    insert.length
   );
 }
 

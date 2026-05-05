@@ -7,7 +7,8 @@ import { buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkd
 import {
   activeNodeIdFacet,
   hideTitleHeadingFacet,
-  imageClozePresentationVersionFacet
+  imageClozePresentationVersionFacet,
+  textAnchorDecorationsFacet
 } from './liveMarkdownState';
 import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
@@ -21,6 +22,7 @@ function buildLineDecorations(view: EditorView): DecorationSet {
   if (getEditorDisplayMode() === 'source') return buildSourceDecorationSet(view);
 
   return buildPreviewDecorationSet(view, {
+    activePosition: view.hasFocus ? view.state.selection.main.head : null,
     cursorLineNumber: getCursorLineNumber(view),
     hideTitleHeading: view.state.facet(hideTitleHeadingFacet),
     imageClozePresentationVersion: view.state.facet(imageClozePresentationVersionFacet),
@@ -45,12 +47,15 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
       const imageClozePresentationChanged =
         update.startState.facet(imageClozePresentationVersionFacet) !==
         update.state.facet(imageClozePresentationVersionFacet);
+      const textAnchorDecorationsChanged =
+        update.startState.facet(textAnchorDecorationsFacet) !== update.state.facet(textAnchorDecorationsFacet);
       const nextCursorLineNumber = getCursorLineNumber(update.view);
 
       if (
         shouldRefreshLineDecorations(update, this.cursorLineNumber, nextCursorLineNumber) ||
         nodeIdChanged ||
-        imageClozePresentationChanged
+        imageClozePresentationChanged ||
+        textAnchorDecorationsChanged
       ) {
         this.decorations = buildLineDecorations(update.view);
       }

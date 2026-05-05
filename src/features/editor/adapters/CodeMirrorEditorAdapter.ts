@@ -171,6 +171,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       textAnchorDecorations,
       view: this.view
     });
+    this.reconfigureLiveMarkdown();
   }
   getSelection(): EditorSelection {
     const { from, to } = this.view.state.selection.main;

@@ -100,8 +100,8 @@ function expectGenericImportResult(result: Awaited<ReturnType<typeof runDirector
       }),
       expect.objectContaining({
         adapter: 'html_directory',
-        degraded_reason: 'HTML conversion degraded: table',
-        result_status: 'degraded',
+        degraded_reason: null,
+        result_status: 'imported',
         source_name: path.join('b-web', 'embed.html')
       })
     ],
@@ -127,8 +127,8 @@ function expectGenericPreparedImports() {
       ],
       [
         expect.objectContaining({
-          content: '[Table degraded]\nName | Value\nAlpha | Beta',
-          degradedReason: 'HTML conversion degraded: table',
+          content: '| Name | Value |\n| --- | --- |\n| Alpha | Beta |',
+          degradedReason: null,
           sourceKind: 'html',
           sourceName: path.join('b-web', 'embed.html')
         })

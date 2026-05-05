@@ -1,3 +1,4 @@
+import { markdown } from '@codemirror/lang-markdown';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -55,7 +56,8 @@ vi.mock('@codemirror/commands', () => ({
 }));
 
 vi.mock('@codemirror/lang-markdown', () => ({
-  markdown: vi.fn(() => 'markdown-extension')
+  markdown: vi.fn(() => 'markdown-extension'),
+  markdownLanguage: 'markdown-language'
 }));
 
 vi.mock('@codemirror/state', () => ({
@@ -196,6 +198,14 @@ describe('CodeMirrorEditorAdapter construction', () => {
     const extensions = mockEditorStateCreate.mock.calls[0]?.[0]?.extensions;
     expect(extensions).toContain('draw-selection-extension');
     expect(extensions).toContain('allow-multiple-selections-extension');
+  });
+
+  it('uses the maintained GFM markdown language baseline', () => {
+    new CodeMirrorEditorAdapter(document.createElement('div'), {
+      initialContent: 'abc'
+    });
+
+    expect(markdown).toHaveBeenCalledWith({ base: 'markdown-language' });
   });
 
   it('keeps read-only editors selectable so comparison panes can copy text', () => {

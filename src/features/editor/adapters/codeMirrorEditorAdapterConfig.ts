@@ -1,5 +1,5 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { markdown } from '@codemirror/lang-markdown';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
 
@@ -33,7 +33,7 @@ export function createCodeMirrorEditorExtensions(args: {
   textAnchorDecorationsCompartment: import('@codemirror/state').Compartment;
 }): Extension[] {
   return [
-    markdown(),
+    markdown({ base: markdownLanguage }),
     history(),
     EditorState.allowMultipleSelections.of(true),
     keymap.of([...defaultKeymap, ...historyKeymap]),
