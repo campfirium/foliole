@@ -1,8 +1,9 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsBridge';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
-import { AppButton, AppListItem, AppStatusBadge } from '../../shared/ui';
+import { AppButton, AppStatusBadge } from '../../shared/ui';
 
+import { ImportCatalogListItem } from './ImportCatalogListItem';
 import { renderImportDate, renderImportMeta, renderImportOpening, renderImportTitle } from './ImportNodeListBits';
 import {
   buildImportNodePresentation
@@ -194,18 +195,13 @@ export function ReadwiseBookInventoryItem({
   });
 
   return (
-    <AppListItem
-      actionsSeparated={false}
+    <ImportCatalogListItem
       actions={renderReadwiseBookActions({
         book,
         generatedNodeId,
         isResetting,
         onResetBookImport
       })}
-      className="gap-4 py-5"
-      divided={false}
-      interactive={false}
-      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(title)}
@@ -234,18 +230,13 @@ export function PdfInventoryItem({
   });
 
   return (
-    <AppListItem
-      actionsSeparated={false}
+    <ImportCatalogListItem
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <AppStatusBadge label={formatPdfLoadedStatus(item)} tone={resolvePdfLoadedTone(item)} />
           <AppStatusBadge label={formatPdfRetrievalStatus(item)} tone={resolvePdfRetrievalTone(item)} />
         </div>
       }
-      className="gap-4 py-5"
-      divided={false}
-      interactive={false}
-      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}

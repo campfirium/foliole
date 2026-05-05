@@ -74,7 +74,7 @@ export function ImportOverviewPage({
           onChangeSortKey={(value) => state.setSortKey(value as typeof state.sortKey)}
           query={state.query}
           searchLabel="Search all imports"
-          searchPlaceholder="Search in imports"
+          searchPlaceholder="Search in this folder"
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
           sortOptions={overviewSortOptions}

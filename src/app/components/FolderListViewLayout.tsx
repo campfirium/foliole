@@ -54,11 +54,15 @@ function FolderListHeader({
   );
 }
 
-function FolderListSearchBox({
+export function FolderListSearchBox({
+  ariaLabel = 'Search folder contents',
   onChangeSearchQuery,
+  placeholder = 'Search in this folder',
   searchQuery,
   searchResultLabel
 }: {
+  ariaLabel?: string;
+  placeholder?: string;
   searchQuery: string;
   searchResultLabel: string | null;
   onChangeSearchQuery: (value: string) => void;
@@ -67,10 +71,10 @@ function FolderListSearchBox({
     <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-transparent bg-bg-subtle/70 px-3 transition-colors hover:border-border/10 hover:bg-bg-subtle focus-within:border-border/20 focus-within:bg-bg-subtle">
       <Search aria-hidden="true" className="shrink-0 text-foreground/38" size={14} strokeWidth={1.8} />
       <AppInput
-        aria-label="Search folder contents"
+        aria-label={ariaLabel}
         className="h-8 min-w-0 appearance-none !border-0 !bg-transparent px-0 text-sm shadow-none placeholder:text-foreground/38 hover:!bg-transparent focus-visible:!bg-transparent focus-visible:!ring-0 [&::-webkit-search-cancel-button]:appearance-none"
         onChange={(event) => onChangeSearchQuery(event.target.value)}
-        placeholder="Search in this folder"
+        placeholder={placeholder}
         type="search"
         value={searchQuery}
       />

@@ -1,8 +1,9 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { RuntimeTextImportResult } from '../../shared/platform/importBridge';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksBridge';
-import { AppButton, AppListItem, AppListSectionHeader, AppListSurface, AppStatusBadge } from '../../shared/ui';
+import { AppButton, AppListSectionHeader, AppListSurface, AppStatusBadge } from '../../shared/ui';
 
+import { ImportCatalogListItem } from './ImportCatalogListItem';
 import { ReadwiseBookInventoryItem } from './ImportInventoryListItems';
 import { renderImportDate, renderImportMeta, renderImportOpening, renderImportTitle } from './ImportNodeListBits';
 import {
@@ -111,13 +112,8 @@ export function InboxImportedNodeRow({
   const presentation = buildRunPresentation(entry, nodesById);
 
   return (
-    <AppListItem
-      actionsSeparated={false}
+    <ImportCatalogListItem
       actions={renderImportActions({ canOpenNode: true, nodeId: entry.nodeId, onOpenNode, status: entry.resultStatus, tone: resolveTone(entry) })}
-      className="gap-4 py-5"
-      divided={false}
-      interactive={false}
-      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
@@ -139,13 +135,8 @@ export function InboxRecentRunRow({
   const presentation = buildRunPresentation(entry, nodesById);
 
   return (
-    <AppListItem
-      actionsSeparated={false}
+    <ImportCatalogListItem
       actions={renderImportActions({ canOpenNode, nodeId: entry.nodeId, onOpenNode, status: entry.resultStatus, tone: resolveTone(entry) })}
-      className="gap-4 py-5"
-      divided={false}
-      interactive={false}
-      metaAfterSummary
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
@@ -183,7 +174,7 @@ export function ReadwiseBooksInventorySection({
       }
       isEmpty={books.length === 0}
     >
-      <div className="flex flex-col">
+      <ul className="flex flex-col">
         {books.map((book) => (
           <ReadwiseBookInventoryItem
             book={book}
@@ -195,7 +186,7 @@ export function ReadwiseBooksInventorySection({
             resettingNodeId={resettingNodeId}
           />
         ))}
-      </div>
+      </ul>
     </AppListSurface>
   );
 }
@@ -227,14 +218,14 @@ export function InboxImportsSection({
       }
       isEmpty={itemCount === 0}
     >
-      <div className="flex flex-col gap-3 px-1 py-1">
+      <ul className="flex flex-col gap-3 px-1 py-1">
         {recentNodes.map((entry) => (
           <InboxImportedNodeRow entry={entry} key={`linked-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
         ))}
         {entries.map((entry) => (
           <InboxRecentRunRow entry={entry} key={`run-${entry.importId}`} nodesById={nodesById} onOpenNode={onOpenNode} />
         ))}
-      </div>
+      </ul>
     </AppListSurface>
   );
 }

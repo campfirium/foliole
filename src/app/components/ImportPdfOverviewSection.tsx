@@ -31,7 +31,7 @@ export function PdfImportsInventorySection({
       }
       isEmpty={items.length === 0}
     >
-      <div className="flex flex-col">
+      <ul className="flex flex-col">
         {items.map((item) => (
           <PdfInventoryItem
             importedAt={formatImportTime(item.lastImportedAt)}
@@ -40,7 +40,7 @@ export function PdfImportsInventorySection({
             nodesById={nodesById}
           />
         ))}
-      </div>
+      </ul>
     </AppListSurface>
   );
 }

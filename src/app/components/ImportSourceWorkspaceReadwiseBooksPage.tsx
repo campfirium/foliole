@@ -191,7 +191,7 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <div className="flex w-full flex-col gap-3">
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-3">
         <ReadwiseBooksCatalogPanel
           books={catalog.filteredBooks}
           countLabel={catalog.countLabel}

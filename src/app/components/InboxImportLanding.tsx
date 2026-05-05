@@ -122,7 +122,7 @@ export function InboxImportLanding({
         onChangeSortKey={(value) => state.setSortKey(value as InboxSortKey)}
         query={state.query}
         searchLabel="Search inbox imports"
-        searchPlaceholder="Search in imports"
+        searchPlaceholder="Search in this folder"
         sortDirection={state.sortDirection}
         sortKey={state.sortKey}
         sortOptions={[...inboxSortOptions]}

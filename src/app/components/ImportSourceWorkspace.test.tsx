@@ -98,7 +98,9 @@ it('switches the content container when a navigation item is selected', async ()
   expect(screen.queryByText('Book A')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
-  expect(screen.getByText('Readwise article content will appear here once the list view is ready.')).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search imported articles' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort imports by Date saved' })).toBeInTheDocument();
+  expect(screen.getByText('Readwise Articles is empty')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
   await waitFor(() => {
@@ -180,7 +182,7 @@ it('restores the last active import management page from persistent settings', a
   await act(() => Promise.resolve());
 });
 
-it('closes import management from the header close button', async () => {
+it('does not render a header close button in import management', async () => {
   const onOpenChange = vi.fn();
 
   render(<ImportSourceWorkspace onOpenChange={onOpenChange} open />);
@@ -188,7 +190,7 @@ it('closes import management from the header close button', async () => {
     expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalled();
     expect(loadRuntimePdfImportsInventory).toHaveBeenCalled();
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
 
-  expect(onOpenChange).toHaveBeenCalledWith(false);
+  expect(screen.queryByRole('button', { name: 'Close import management' })).not.toBeInTheDocument();
+  expect(onOpenChange).not.toHaveBeenCalled();
 });
