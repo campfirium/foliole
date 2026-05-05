@@ -16,6 +16,10 @@ export type WorkspaceSurfaceAutoPaletteOptions = {
   folderTopicSharedTone: boolean;
 };
 
+export type WorkspaceSurfaceAutoPaletteTuning = {
+  saturationRange?: { max: number; min: number };
+};
+
 function resolveColumnRecipe(options: WorkspaceSurfaceAutoPaletteOptions) {
   if (options.documentPureWhite) {
     return {
@@ -37,13 +41,17 @@ function clampChannel(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function buildSafeSeedTone(seedColor: WorkspaceSurfaceColorValue) {
+function buildSafeSeedTone(
+  seedColor: WorkspaceSurfaceColorValue,
+  tuning?: WorkspaceSurfaceAutoPaletteTuning
+) {
   const seedHsl = workspaceSurfaceColorToHsl(seedColor);
+  const saturationRange = tuning?.saturationRange ?? { max: 42, min: 18 };
   return {
     a: seedColor.a,
     h: seedHsl.h,
     l: clampChannel(seedHsl.l, 36, 72),
-    s: clampChannel(seedHsl.s, 18, 42)
+    s: seedHsl.s <= 8 ? 0 : clampChannel(seedHsl.s, saturationRange.min, saturationRange.max)
   };
 }
 
@@ -56,9 +64,10 @@ function resolveColumnSaturation(sourceSaturation: number, factor: number) {
 
 export function buildWorkspaceSurfaceAutoColumnPalette(
   seedColor: WorkspaceSurfaceColorValue,
-  options: WorkspaceSurfaceAutoPaletteOptions
+  options: WorkspaceSurfaceAutoPaletteOptions,
+  tuning?: WorkspaceSurfaceAutoPaletteTuning
 ): WorkspaceSurfacePalette {
-  const seedHsl = buildSafeSeedTone(seedColor);
+  const seedHsl = buildSafeSeedTone(seedColor, tuning);
   const recipe = resolveColumnRecipe(options);
   const palette = recipe.lightness.map((lightness, index) => (
     formatWorkspaceSurfaceColorCss(workspaceSurfaceColorFromHsl({

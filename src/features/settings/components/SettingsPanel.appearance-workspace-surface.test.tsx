@@ -4,7 +4,6 @@ import { beforeEach, expect, it } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { buildWorkspaceSurfaceAutoColumnPalette } from '../model/workspaceSurfaceAutoPalette';
 import { parseWorkspaceSurfaceColor } from '../model/workspaceSurfaceColor';
-import { WORKSPACE_SURFACE_RECOMMENDATION_SEEDS } from '../model/workspaceSurfaceColorRecommendations';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -32,30 +31,12 @@ it('persists workspace surface palette and region assignments from appearance se
   });
 });
 
-it('applies a recommended palette row into the leading workspace palette slots', async () => {
-  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Apply recommended palette sage' }));
-
-  await waitFor(() => {
-    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
-    const assignments = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments) ?? '{}');
-    const sageSeed = parseWorkspaceSurfaceColor(WORKSPACE_SURFACE_RECOMMENDATION_SEEDS.find((family) => family.id === 'sage')!.seed);
-    expect(sageSeed).not.toBeNull();
-    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(sageSeed!, {
-      documentPureWhite: false,
-      folderTopicSharedTone: false
-    }));
-    expect(assignments['main-document']).toBe(3);
-  });
-});
-
 it('maps an automatic column palette into free-mode palette slots', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.change(screen.getByLabelText('Automatic workspace seed hex'), { target: { value: '#8a962f' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Olive' }));
 
   await waitFor(() => {
     const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
@@ -67,7 +48,72 @@ it('maps an automatic column palette into free-mode palette slots', async () => 
       folderTopicSharedTone: false
     }));
     expect(assignments['main-document']).toBe(3);
+  });
+});
+
+it('keeps automatic seed hex editable while also supporting the popover swatches', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.change(screen.getByLabelText('Automatic workspace seed hex'), { target: { value: '#8a962f' } });
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#8a962f');
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Gray' }));
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#7a7a7a');
+  });
+});
+
+it('applies the current automatic palette when clicking the automatic preview card', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Olive' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Apply automatic palette' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    const seed = parseWorkspaceSurfaceColor('#8a962f');
+    expect(seed).not.toBeNull();
+    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(seed!, {
+      documentPureWhite: false,
+      folderTopicSharedTone: false
+    }));
+    expect(screen.getByRole('button', { name: 'Apply automatic palette' }).className).toContain('border-border-strong');
+  });
+});
+
+it('refreshes random palettes while keeping the current theme card in the first slot', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  const firstRandomCard = screen.getByRole('button', { name: 'Current random palette' });
+  const before = firstRandomCard.innerHTML;
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh random palettes' }));
+
+  await waitFor(() => {
+    const refreshedFirstCard = screen.getByRole('button', { name: 'Current random palette' });
+    expect(refreshedFirstCard.innerHTML).toBe(before);
+  });
+});
+
+it('applies a random palette into the leading workspace palette slots', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Random palette 2' }));
+
+  await waitFor(() => {
+    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
+    expect(palette.slice(0, 5)).toHaveLength(5);
     expect(screen.getByText('Free palette')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Current random palette' }).className).toContain('border-border-strong');
   });
 });
 
@@ -75,7 +121,8 @@ it('applies auto palette options before writing into the free palette slots', as
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.change(screen.getByLabelText('Automatic workspace seed hex'), { target: { value: '#8a962f' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Olive' }));
   fireEvent.click(screen.getByLabelText('Document stays white'));
   fireEvent.click(screen.getByLabelText('Folder and topic match'));
 
@@ -90,22 +137,34 @@ it('applies auto palette options before writing into the free palette slots', as
   });
 });
 
-it('applies recommended palette rows with current preferences', async () => {
+it('resets workspace surface settings back to the gray automatic default', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  fireEvent.click(screen.getByLabelText('Document stays white'));
-  fireEvent.click(screen.getByLabelText('Folder and topic match'));
-  fireEvent.click(screen.getByRole('button', { name: 'Apply recommended palette sage' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Automatic workspace seed color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use automatic seed Olive' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
 
   await waitFor(() => {
-    const palette = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette) ?? '[]');
-    const sageSeed = parseWorkspaceSurfaceColor(WORKSPACE_SURFACE_RECOMMENDATION_SEEDS.find((family) => family.id === 'sage')!.seed);
-    expect(sageSeed).not.toBeNull();
-    expect(palette.slice(0, 5)).toEqual(buildWorkspaceSurfaceAutoColumnPalette(sageSeed!, {
-      documentPureWhite: true,
-      folderTopicSharedTone: true
-    }));
+    expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#7a7a7a');
+  });
+});
+
+it('restores workspace surface generator preferences and active mode from storage', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceGeneratorMode, 'automatic');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoSeed, '#8a962f');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAutoOptions, JSON.stringify({
+    documentPureWhite: true,
+    folderTopicSharedTone: true
+  }));
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Document stays white')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Folder and topic match')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Automatic workspace seed hex')).toHaveValue('#8a962f');
   });
 });
 
