@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+node scripts/check-commit-sequence.mjs pre-push

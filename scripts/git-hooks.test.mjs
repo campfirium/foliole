@@ -9,10 +9,11 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const HOOK_PATH = path.join(REPO_ROOT, '.githooks', 'pre-commit');
+const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push'];
+const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-commit-sequence.mjs');
 const tempDirs = [];
 
-function runCommand(command, args, cwd) {
+function runCommand(command, args, cwd, options = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, { cwd });
     let stdout = '';
@@ -26,6 +27,10 @@ function runCommand(command, args, cwd) {
     child.on('close', (code) => {
       resolve({ code: code ?? 1, stdout, stderr });
     });
+    if (options.input) {
+      child.stdin.write(options.input);
+    }
+    child.stdin.end();
   });
 }
 
@@ -36,10 +41,24 @@ async function createRepo() {
   await runCommand('git', ['config', 'user.name', 'Hook Test'], repoDir);
   await runCommand('git', ['config', 'user.email', 'hooks@example.com'], repoDir);
   await mkdir(path.join(repoDir, '.githooks'), { recursive: true });
-  await copyFile(HOOK_PATH, path.join(repoDir, '.githooks', 'pre-commit'));
-  await chmod(path.join(repoDir, '.githooks', 'pre-commit'), 0o755);
+  await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
+  await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'));
+  await chmod(path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'), 0o755);
+  await Promise.all(
+    HOOK_NAMES.map(async (name) => {
+      const hookPath = path.join(repoDir, '.githooks', name);
+      await copyFile(path.join(REPO_ROOT, '.githooks', name), hookPath);
+      await chmod(hookPath, 0o755);
+    })
+  );
   await runCommand('git', ['config', 'core.hooksPath', '.githooks'], repoDir);
   return repoDir;
+}
+
+async function commitFile(repoDir, file, body, message) {
+  await writeFile(path.join(repoDir, file), body);
+  await runCommand('git', ['add', file], repoDir);
+  return runCommand('git', ['commit', '-m', message], repoDir);
 }
 
 afterEach(async () => {
@@ -52,7 +71,7 @@ describe('git hooks', () => {
     await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n');
     await writeFile(path.join(repoDir, 'tracked.txt'), 'seed\n');
     await runCommand('git', ['add', '.gitignore', 'tracked.txt'], repoDir);
-    await expect(runCommand('git', ['commit', '-m', 'seed'], repoDir)).resolves.toMatchObject({ code: 0 });
+    await expect(runCommand('git', ['commit', '-m', '000001 seed'], repoDir)).resolves.toMatchObject({ code: 0 });
 
     await mkdir(path.join(repoDir, '.lab'), { recursive: true });
     await writeFile(path.join(repoDir, '.lab', 'memo.md'), 'local memo\n');
@@ -63,5 +82,49 @@ describe('git hooks', () => {
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('refusing to commit .lab files');
     expect(result.stderr).toContain('.lab/memo.md');
+  });
+
+  it('blocks commit messages that skip the next sequence', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+
+    const result = await commitFile(repoDir, 'b.txt', 'b\n', '000003 skip');
+
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain('commit subject must start with next sequence 000002');
+  });
+
+  it('blocks branch pushes with non-continuous numbered history', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await writeFile(path.join(repoDir, 'b.txt'), 'b\n');
+    await runCommand('git', ['add', 'b.txt'], repoDir);
+    await runCommand('git', ['commit', '--no-verify', '-m', '000003 skip'], repoDir);
+
+    const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
+    const hook = path.join(repoDir, '.githooks', 'pre-push');
+    const result = await runCommand('bash', [hook], repoDir, {
+      input: `refs/heads/main ${head} refs/heads/main ${'0'.repeat(40)}\n`
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain('sequence must be 000002');
+  });
+
+  it('blocks branch pushes with unnumbered new commit subjects', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await writeFile(path.join(repoDir, 'b.txt'), 'b\n');
+    await runCommand('git', ['add', 'b.txt'], repoDir);
+    await runCommand('git', ['commit', '--no-verify', '-m', 'missing number'], repoDir);
+
+    const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
+    const hook = path.join(repoDir, '.githooks', 'pre-push');
+    const result = await runCommand('bash', [hook], repoDir, {
+      input: `refs/heads/main ${head} refs/heads/main ${'0'.repeat(40)}\n`
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain('contains an unnumbered commit subject');
   });
 });
