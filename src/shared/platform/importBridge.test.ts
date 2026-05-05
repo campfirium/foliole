@@ -101,6 +101,7 @@ const IMPORT_OVERVIEW_RESULT = {
     }
   ]
 };
+
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,

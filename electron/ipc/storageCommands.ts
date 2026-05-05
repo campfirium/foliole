@@ -41,6 +41,7 @@ import {
   parseRestoreNodesArgs,
   parseSoftDeleteNodesArgs
 } from './nodeCommandArgs.js';
+import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 
@@ -188,6 +189,9 @@ export async function handleStorageCommand(
   }
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();
+  }
+  if (command === NATIVE_COMMANDS.loadNodeSourceDetails) {
+    return toNativeNodeSourceDetails(asString(args.node_id, 'node_id'));
   }
   if (command === NATIVE_COMMANDS.resetImportData) {
     return resetImportData();

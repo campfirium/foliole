@@ -159,6 +159,51 @@ function useReviewEditingState(args: {
   });
 }
 
+function buildControllerLayoutState(args: {
+  appearance: ReturnType<typeof useAppearanceState>;
+  controller: ReturnType<typeof useWorkspaceControllerState>;
+  exitStudyMode: () => void;
+  formalImport: ReturnType<typeof useFormalImport>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
+  isReviewEditing: boolean;
+  isStudyMode: boolean;
+  nowIso: string;
+  paletteItems: CommandPaletteItem[];
+  reviewDueCount: number;
+  reviewPreview: ReturnType<typeof useCurrentReviewPreview>;
+  reviewSettings: ReturnType<typeof useReviewSchedulerSettingsState>;
+  startStudyMode: () => void;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return buildAppControllerLayoutProps({
+    activeNode: args.controller.activeNode,
+    appearance: args.appearance,
+    blockedHotkeyUpdate: args.hotkeys.updateShortcut,
+    canStartStudyMode: args.controller.study.canStartStudyMode,
+    documentResize: args.controller.documentResize,
+    editorCtx: args.controller.editorCtx,
+    exitStudyMode: args.exitStudyMode,
+    hotkeyItems: args.paletteItems,
+    isReviewEditing: args.isReviewEditing,
+    isStudyMode: args.isStudyMode,
+    listResize: args.controller.listResize,
+    mapPaletteItemsToHotkeyItems: (items) => mapPaletteItemsToHotkeyItems(items, args.hotkeys.overrides),
+    nav: args.controller.nav,
+    nowIso: args.nowIso,
+    reviewDueCount: args.reviewDueCount,
+    reviewPreview: args.reviewPreview,
+    reviewSettings: args.reviewSettings,
+    rightSidebarResize: args.controller.rightSidebarResize,
+    runtime: args.controller.runtime,
+    runImportDirectory: args.formalImport.startImportDirectory,
+    runImportFile: args.formalImport.startImportFile,
+    selectedTrashNode: args.controller.selectedTrashNode,
+    startStudyMode: args.startStudyMode,
+    trash: args.controller.trash,
+    ws: args.ws
+  });
+}
+
 export function useAppController(): AppControllerResult {
   const ws = useWorkspaceSelectors();
   const appearance = useAppearanceState();
@@ -175,31 +220,20 @@ export function useAppController(): AppControllerResult {
   const isReviewEditing = useReviewEditingState({ hotkeys, isCurrentReviewItemGradable, isStudyMode, runtime: controller.runtime, ws });
   const reviewDueCount = useMemo(() => countDueReviewNodes(ws.nodeOrder, ws.nodesById, ws.trashedNodeIds, nowIso, reviewSettings.reviewSchedulerSettings.pushQueue), [nowIso, reviewSettings.reviewSchedulerSettings.pushQueue, ws.nodeOrder, ws.nodesById, ws.trashedNodeIds]);
   const paletteItems = useReviewPaletteItems({ formalImportAvailable: formalImport.isAvailable && !formalImport.isImporting, hasReviewCard: Boolean(ws.reviewSession.currentNodeId), hotkeys, isCurrentReviewItemGradable, isStudyMode, nav: controller.nav, reviewSession: ws.reviewSession, study: controller.study });
-  const layoutProps = buildAppControllerLayoutProps({
-    activeNode: controller.activeNode,
+  const layoutProps = buildControllerLayoutState({
     appearance,
-    blockedHotkeyUpdate: hotkeys.updateShortcut,
-    canStartStudyMode: controller.study.canStartStudyMode,
-    documentResize: controller.documentResize,
-    editorCtx: controller.editorCtx,
+    controller,
     exitStudyMode,
-    hotkeyItems: paletteItems,
+    formalImport,
+    hotkeys,
     isReviewEditing,
     isStudyMode,
-    listResize: controller.listResize,
-    mapPaletteItemsToHotkeyItems: (items) => mapPaletteItemsToHotkeyItems(items, hotkeys.overrides),
-    nav: controller.nav,
     nowIso,
+    paletteItems,
     reviewDueCount,
     reviewPreview,
     reviewSettings,
-    rightSidebarResize: controller.rightSidebarResize,
-    runtime: controller.runtime,
-    runImportDirectory: formalImport.startImportDirectory,
-    runImportFile: formalImport.startImportFile,
-    selectedTrashNode: controller.selectedTrashNode,
     startStudyMode,
-    trash: controller.trash,
     ws
   });
   const paletteState = buildControllerPaletteState({

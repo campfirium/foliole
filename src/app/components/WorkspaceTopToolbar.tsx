@@ -1,8 +1,8 @@
-import { Bug, FileText, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
+import { Bug, FileSearch, FileText, ListOrdered, PanelLeft, Trash2 } from 'lucide-react';
 
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
-export type WorkspaceRightPanelId = 'review-queue' | 'dev';
+export type WorkspaceRightPanelId = 'review-queue' | 'source-info' | 'dev';
 
 const toolbarButtonClassName = 'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 const activeToolbarButtonClassName = `${toolbarButtonClassName} data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground`;
@@ -80,6 +80,12 @@ export function WorkspaceTopToolbar({
           icon={<ListOrdered aria-hidden="true" size={16} strokeWidth={1.75} />}
           label="Review queue panel"
           onClick={() => onSelectRightPanel('review-queue')}
+        />
+        <InspectorActionButton
+          active={!isRightSidebarCollapsed && activeRightPanelId === 'source-info'}
+          icon={<FileSearch aria-hidden="true" size={16} strokeWidth={1.75} />}
+          label="Source info panel"
+          onClick={() => onSelectRightPanel('source-info')}
         />
         <InspectorActionButton
           active={!isRightSidebarCollapsed && activeRightPanelId === 'dev'}

@@ -1,17 +1,17 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import {
-  toRuntimeKeepImportPreviewResult,
   toRuntimeDirectoryImportResult,
   toRuntimeImportedTextFile,
   toRuntimeImportOverview,
   toRuntimeTextImportResult,
   type RuntimeDirectoryImportResult,
-  type RuntimeKeepImportPreviewResult,
   type RuntimeImportOverview,
   type RuntimeImportedTextFile,
   type RuntimeTextImportResult
 } from './importBridgePayloads';
+import { toRuntimeKeepImportPreviewResult, type RuntimeKeepImportPreviewResult } from './keepImportPreviewPayloads';
+import { toRuntimeNodeSourceDetails, type RuntimeNodeSourceDetails } from './nodeSourceBridgePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
@@ -19,11 +19,12 @@ export type ImportHighlightPolicy = 'adopt' | 'reference_only';
 export type {
   RuntimeDirectoryImportEntry,
   RuntimeDirectoryImportResult,
-  RuntimeKeepImportPreviewResult,
   RuntimeImportOverview,
   RuntimeImportedTextFile,
   RuntimeTextImportResult
 } from './importBridgePayloads';
+export type { RuntimeKeepImportPreviewEntry, RuntimeKeepImportPreviewResult } from './keepImportPreviewPayloads';
+export type { RuntimeKeepImportItemDetails, RuntimeNodeImportSource, RuntimeNodeSourceDetails } from './nodeSourceBridgePayloads';
 
 export async function selectRuntimeImportDirectory(): Promise<string | null> {
   const runtimeInvoke = getRuntimeInvoke();
@@ -212,6 +213,39 @@ export async function loadRuntimeImportOverview(): Promise<RuntimeImportOverview
       action: 'load_runtime_import_overview',
       area: 'bridge',
       command: NATIVE_COMMANDS.loadImportOverview,
+      fallback: 'return_null',
+      error
+    });
+    return null;
+  }
+}
+
+export async function loadRuntimeNodeSourceDetails(nodeId: string): Promise<RuntimeNodeSourceDetails | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+
+  try {
+    const details = toRuntimeNodeSourceDetails(
+      await runtimeInvoke(NATIVE_COMMANDS.loadNodeSourceDetails, {
+        node_id: nodeId
+      })
+    );
+    if (!details) {
+      logRuntimeWarning('native node source payload invalid', {
+        action: 'load_runtime_node_source_details',
+        area: 'bridge',
+        command: NATIVE_COMMANDS.loadNodeSourceDetails,
+        fallback: 'return_null'
+      });
+    }
+    return details;
+  } catch (error) {
+    logRuntimeWarning('native node source loading failed', {
+      action: 'load_runtime_node_source_details',
+      area: 'bridge',
+      command: NATIVE_COMMANDS.loadNodeSourceDetails,
       fallback: 'return_null',
       error
     });

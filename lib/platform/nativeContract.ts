@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS, isTypedNativeCommand } from './nativeCommands.js';
 import type {
   NativeDirectoryImportArgs,
   NativeDirectoryImportResult,
+  NativeNodeSourceDetails,
   NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewResult,
   NativeImportedTextFile,
@@ -45,6 +46,7 @@ export type {
   NativeDirectoryImportEntry,
   NativeDirectoryImportResult,
   NativeDirectoryImportSourceAdapter,
+  NativeNodeSourceDetails,
   NativeKeepImportPreviewArgs,
   NativeKeepImportPreviewEntry,
   NativeKeepImportPreviewResult,
@@ -53,22 +55,8 @@ export type {
   NativeTextImportArgs,
   NativeTextImportResult
 } from './nativeImportContract.js';
-export type {
-  NativeReadwiseDetectionResult,
-  NativeReadwiseDetectionSample
-} from './nativeReadwiseContract.js';
-export type {
-  NativeResolvedAppPaths,
-  NativeReviewGradeArgs,
-  NativeReviewGradeResult,
-  NativeReviewPreviewArgs,
-  NativeReviewPreviewResult,
-  NativeSchedulerCard,
-  NativeSqliteBackupResult,
-  NativeSqliteRestoreResult,
-  NativeSystemFontCatalog
-} from './nativeUtilityContract.js';
-
+export type { NativeReadwiseDetectionResult, NativeReadwiseDetectionSample } from './nativeReadwiseContract.js';
+export type { NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSchedulerCard, NativeSqliteBackupResult, NativeSqliteRestoreResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
 export type NativeCommandMap = {
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
@@ -114,6 +102,10 @@ export type NativeCommandMap = {
   [NATIVE_COMMANDS.previewKeepImportRule]: {
     args: NativeKeepImportPreviewArgs;
     result: NativeKeepImportPreviewResult;
+  };
+  [NATIVE_COMMANDS.loadNodeSourceDetails]: {
+    args: { node_id: string };
+    result: NativeNodeSourceDetails | null;
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;

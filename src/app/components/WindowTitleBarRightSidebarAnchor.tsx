@@ -1,4 +1,4 @@
-import { ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
+import { FileSearch, ListOrdered, PanelRight, SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -30,6 +30,7 @@ interface WindowTitleBarRightSidebarAnchorProps {
 
 export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSidebarAnchorProps) {
   const isReviewQueuePanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'review-queue';
+  const isSourceInfoPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'source-info';
   const isDevPanelActive = !props.isRightSidebarCollapsed && props.activeRightPanelId === 'dev';
 
   if (props.isRightSidebarCollapsed) {
@@ -59,6 +60,16 @@ export function WindowTitleBarRightSidebarAnchor(props: WindowTitleBarRightSideb
             type="button"
           >
             <ListOrdered aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          </button>
+          <button
+            aria-label="Source info panel"
+            aria-pressed={isSourceInfoPanelActive}
+            className="window-titlebar-leading-button"
+            data-active={isSourceInfoPanelActive}
+            onClick={() => props.onSelectRightPanel('source-info')}
+            type="button"
+          >
+            <FileSearch aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
           </button>
           <button
             aria-label="Dev panel"
