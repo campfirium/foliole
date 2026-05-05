@@ -129,9 +129,21 @@ export function ReadwiseParserFields(props: {
   const fields: Array<{ field: keyof ReadwiseReaderConfig; label: string; description: string }> = [
     { field: 'highlightsHeading', label: 'Highlights heading', description: 'The heading that starts the normal highlights section.' },
     { field: 'newHighlightsHeading', label: 'New highlights heading', description: 'The heading that starts the new-highlights section.' },
-    { field: 'highlightSeparator', label: 'Highlight separator', description: 'The text that separates one highlight block from the next. Use \\n for line breaks.' },
-    { field: 'tagKeyword', label: 'Tag keyword', description: 'The keyword used before tags inside a highlight block.' },
-    { field: 'noteKeyword', label: 'Note keyword', description: 'The keyword used before notes inside a highlight block.' }
+    {
+      field: 'highlightSeparator',
+      label: 'Highlight starter',
+      description: 'How each highlight usually starts, for example - or >. Leave it empty only if your highlights are split by blank lines instead. Use \\n for line breaks.'
+    },
+    {
+      field: 'tagKeyword',
+      label: 'Tag starter',
+      description: 'The tag line starter, for example Tags:. Fill only the core starter text, not the leading spaces or list marker.'
+    },
+    {
+      field: 'noteKeyword',
+      label: 'Note starter',
+      description: 'The note line starter, for example Note:. Fill only the core starter text, not the leading spaces or list marker.'
+    }
   ];
 
   return (

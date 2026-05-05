@@ -15,7 +15,10 @@ function stripMarkdown(value: string) {
 }
 
 function compactWhitespace(value: string) {
-  return value.replace(/\s+/g, ' ').trim();
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.;:!?，。！？；：、)\]])/g, '$1')
+    .trim();
 }
 
 function decodeSeparator(value: string) {
@@ -24,6 +27,10 @@ function decodeSeparator(value: string) {
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function escapeLinePrefixWhitespace(value: string) {
+  return value.replace(/[ \t]+/g, '[ \\t]+');
 }
 
 function extractReadwiseDocumentTitle(markdown: string) {
@@ -82,11 +89,12 @@ function trimHighlightMetadata(block: string, tagKeyword: string, noteKeyword: s
     .reduce(
       (current, keyword) =>
         current
-          .replace(new RegExp(`\\s+${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '')
-          .replace(new RegExp(`(^|\\n)\\s*${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '$1')
+          .replace(new RegExp(`\\s+-?\\s*${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '')
+          .replace(new RegExp(`(^|\\n)\\s*-?\\s*${escapeRegex(keyword)}\\s*[\\s\\S]*$`, 'i'), '$1')
           .trim(),
       block
         .replace(/\s+\[\.\.\.]\s*\([^)]+\)/g, '')
+        .replace(/\s+\(\[[^\]]+]\([^)]+\)\)\s*$/g, '')
         .replace(/\s+\([^()\n]+\)\s*$/g, '')
         .trim()
     )
@@ -96,10 +104,25 @@ function trimHighlightMetadata(block: string, tagKeyword: string, noteKeyword: s
 function splitHighlightBlocks(content: string, separator: string) {
   const normalizedContent = normalizeLineEndings(content);
   const divider = separator.trim().length > 0 ? normalizeLineEndings(decodeSeparator(separator)) : '\n\n';
-  return normalizedContent
+  const trimmedDivider = divider.trimStart();
+  const trimmedContent = normalizedContent.trimStart();
+  const linePrefixPattern = new RegExp(`^${escapeLinePrefixWhitespace(escapeRegex(trimmedDivider))}`, 'gm');
+  const matches = [...normalizedContent.matchAll(linePrefixPattern)];
+  if (!divider.includes('\n') && trimmedDivider && trimmedContent.startsWith(trimmedDivider) && matches.length > 1) {
+    return matches
+      .map((match, index) => {
+        const start = match.index ?? 0;
+        const end = matches[index + 1]?.index ?? normalizedContent.length;
+        const block = normalizedContent.slice(start, end).trim();
+        return block.replace(new RegExp(`^${escapeLinePrefixWhitespace(escapeRegex(trimmedDivider))}`), '').trim();
+      })
+      .filter(Boolean);
+  }
+  const literalBlocks = normalizedContent
     .split(divider)
     .map((part) => part.trim())
     .filter(Boolean);
+  return literalBlocks;
 }
 
 export function extractReadwiseHighlightsSection(markdown: string, headings: string[]) {

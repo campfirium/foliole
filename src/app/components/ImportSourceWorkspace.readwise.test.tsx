@@ -104,6 +104,10 @@ it('opens the readwise settings panel with all parser fields and keeps preview d
   expect(await screen.findByRole('heading', { name: 'Readwise Reader settings' })).toBeInTheDocument();
   expect(screen.getByLabelText('Readwise import scope')).toHaveValue('highlights_only');
   expect(screen.getByRole('option', { name: 'Only with highlights' })).toBeInTheDocument();
+  expect(screen.getByText('Highlight starter')).toBeInTheDocument();
+  expect(screen.getByText('Tag starter')).toBeInTheDocument();
+  expect(screen.getByText('Note starter')).toBeInTheDocument();
+  expect(screen.getAllByText(/Fill only the core starter text/).length).toBeGreaterThan(0);
   expect(screen.getByDisplayValue('## Highlights')).toBeInTheDocument();
   expect(screen.getByDisplayValue('## New highlights added')).toBeInTheDocument();
   expect(screen.getByDisplayValue('\\n\\n')).toBeInTheDocument();
