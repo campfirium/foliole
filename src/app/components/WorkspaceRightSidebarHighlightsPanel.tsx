@@ -17,7 +17,7 @@ function EmptyHighlightsState({ description }: { description: string }) {
 }
 
 interface NodeHighlightItem {
-  kind: 'highlight' | 'cloze';
+  kind: 'highlight';
   nodeId: string;
   text: string;
 }
@@ -59,7 +59,7 @@ function normalizeNodeHighlightText(node: Node) {
 }
 
 function isSidebarAnchorKind(node: Node) {
-  return node.anchorLink?.kind === 'highlight' || node.anchorLink?.kind === 'cloze';
+  return node.anchorLink?.kind === 'highlight';
 }
 
 function shouldIncludeHighlightInSidebar(node: Node, nodesById: Record<string, Node>) {
@@ -94,6 +94,9 @@ function collectSubtreeHighlights(
   const highlights: NodeHighlightItem[] = [];
 
   for (const nodeId of subtreeNodeIds) {
+    if (nodeId === activeNodeId) {
+      continue;
+    }
     const node = nodesById[nodeId];
     if (!node || !shouldIncludeHighlightInSidebar(node, nodesById)) {
       continue;
@@ -105,7 +108,7 @@ function collectSubtreeHighlights(
     }
 
     highlights.push({
-      kind: node.anchorLink?.kind === 'cloze' ? 'cloze' : 'highlight',
+      kind: 'highlight',
       nodeId: node.id,
       text
     });
@@ -143,7 +146,7 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
               type="button"
             >
               <span className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">
-                {highlight.kind === 'cloze' ? 'Cloze' : 'Highlight'}
+                Highlight
               </span>
               <span className="text-sm leading-7 text-foreground">{highlight.text}</span>
             </button>

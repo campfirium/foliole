@@ -77,6 +77,112 @@ it('queues pdf jump for parent node when highlight parent is not active yet', ()
   expect(requestPdfAnchorJump).toHaveBeenCalledWith('node-parent', { page: 4, x: 0.3, y: 0.6 });
 });
 
+it('opens parent node with text highlight focus when highlight parent is not active yet', () => {
+  const onSelectNode = vi.fn();
+  const onRevealAnchorInDocument = vi.fn();
+
+  const rootNode = createNode({
+    id: 'node-root',
+    content: 'Root content',
+    title: 'Root'
+  });
+  const parentNode = createNode({
+    id: 'node-parent',
+    content: 'Alpha Beta Gamma',
+    title: 'Parent',
+    parentNodeId: 'node-root'
+  });
+  const highlightNode = createNode({
+    anchorLink: {
+      id: 'text-hl-1',
+      kind: 'highlight',
+      locator: { from: 6, originalText: 'Beta', to: 10 }
+    },
+    content: 'Beta',
+    id: 'node-highlight',
+    parentNodeId: 'node-parent',
+    title: 'Highlight'
+  });
+
+  render(
+    <WorkspaceRightSidebar
+      activeNodeId="node-root"
+      activePanelId="highlights"
+      nodeOrder={['node-root', 'node-parent', 'node-highlight']}
+      nodesById={{ 'node-highlight': highlightNode, 'node-parent': parentNode, 'node-root': rootNode }}
+      onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectNode={onSelectNode}
+      reviewCurrentNodeId={null}
+      reviewQueueNodeIds={[]}
+      reviewSchedulerSettings={{} as never}
+      trashedNodeIds={[]}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /highlight beta/i }));
+
+  expect(onSelectNode).toHaveBeenCalledWith(
+    'node-parent',
+    expect.objectContaining({
+      id: 'text-hl-1',
+      kind: 'highlight',
+      locator: { from: 6, originalText: 'Beta', to: 10 }
+    })
+  );
+  expect(onRevealAnchorInDocument).not.toHaveBeenCalled();
+  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+});
+
+it('does not list cloze nodes in the highlights panel', () => {
+  const onSelectNode = vi.fn();
+  const onRevealAnchorInDocument = vi.fn();
+
+  const rootNode = createNode({
+    id: 'node-root',
+    content: 'Root content',
+    title: 'Root'
+  });
+  const parentNode = createNode({
+    id: 'node-parent',
+    content: 'Alpha Beta Gamma',
+    title: 'Parent',
+    parentNodeId: 'node-root'
+  });
+  const clozeNode = createNode({
+    anchorLink: {
+      id: 'text-cloze-1',
+      kind: 'cloze',
+      locator: { from: 6, originalText: 'Beta', to: 10 }
+    },
+    content: 'Alpha [...] Gamma',
+    reveal: 'Beta',
+    id: 'node-cloze',
+    parentNodeId: 'node-parent',
+    title: 'Cloze'
+  });
+
+  render(
+    <WorkspaceRightSidebar
+      activeNodeId="node-root"
+      activePanelId="highlights"
+      nodeOrder={['node-root', 'node-parent', 'node-cloze']}
+      nodesById={{ 'node-cloze': clozeNode, 'node-parent': parentNode, 'node-root': rootNode }}
+      onRevealAnchorInDocument={onRevealAnchorInDocument}
+      onSelectNode={onSelectNode}
+      reviewCurrentNodeId={null}
+      reviewQueueNodeIds={[]}
+      reviewSchedulerSettings={{} as never}
+      trashedNodeIds={[]}
+    />
+  );
+
+  expect(screen.getByText('This node and its child nodes have no highlight nodes yet.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Alpha \[\.\.\.\] Gamma/i })).not.toBeInTheDocument();
+  expect(onSelectNode).not.toHaveBeenCalled();
+  expect(onRevealAnchorInDocument).not.toHaveBeenCalled();
+  expect(requestPdfAnchorJump).not.toHaveBeenCalled();
+});
+
 it('reveals pdf locator without re-opening when parent document is already active', () => {
   const onSelectNode = vi.fn();
   const onRevealAnchorInDocument = vi.fn();
