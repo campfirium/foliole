@@ -1,7 +1,7 @@
 import { Button as RadixButton } from '@radix-ui/themes';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 type ButtonVariant = 'primary' | 'ghost' | 'subtle' | 'list';
 type ButtonSize = 'sm' | 'md';

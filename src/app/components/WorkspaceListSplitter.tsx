@@ -1,6 +1,6 @@
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 
-import { cn } from '../../lib/utils';
+import { cn } from '../../shared/lib/utils';
 
 interface WorkspaceListSplitterProps {
   isResizingList: boolean;

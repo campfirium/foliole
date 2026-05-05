@@ -18,6 +18,19 @@ Foliole 当前处于从 0 到 1 的实现阶段，采用 **Trunk-Based Vibe Codi
 2. 一次只做一个可验证任务。
 3. 优先稳定主链路，再扩展外围能力。
 
+## 当前目录边界
+根据 `.lab/specs/31-platform-architecture-decision-v1.md`，仓库最终会收敛到 `apps/ + packages/ + native/`，但当前阶段按过渡结构执行，不做全量目录搬家。
+
+- `src/app/`：renderer app shell 与页面装配
+- `src/features/`：按业务 feature 组织的 UI 与 model
+- `src/shared/`：跨 feature 复用的 UI primitive、前端 bridge 适配、共享前端工具
+- `src/store/`：workspace 状态与运行时同步
+- `electron/`：Electron main、preload、IPC 与宿主 glue
+- `lib/core/`：未来 `packages/core` / `packages/storage` 的过渡共享核心
+- `lib/platform/`：未来 `packages/platform-bridge` 的过渡平台契约
+
+新增共享前端工具统一放入 `src/shared/`，不要再新增 `src/lib/` 这类游离目录。
+
 ## Playwright E2E
 1. 首次安装浏览器运行时：`npx playwright install chromium`
 2. 列出 E2E 用例：`npm run test:e2e -- --list`

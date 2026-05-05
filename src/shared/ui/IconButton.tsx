@@ -1,7 +1,7 @@
 import { IconButton as RadixIconButton } from '@radix-ui/themes';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'color'> {
   icon: ReactNode;

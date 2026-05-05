@@ -1,6 +1,6 @@
 import { Badge } from '@radix-ui/themes';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 

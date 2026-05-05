@@ -5,7 +5,7 @@ import type {
   MouseEvent as ReactMouseEvent
 } from 'react';
 
-import { cn } from '../../../lib/utils';
+import { cn } from '../../../shared/lib/utils';
 import { AppButton } from '../../../shared/ui';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';

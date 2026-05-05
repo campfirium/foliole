@@ -1,5 +1,5 @@
-import { expect, test } from './harness/fixtures';
 import { expectBridgeBackedControlEnabled } from './harness/bridgeBackedControls';
+import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openBackupsSection } from './harness/settings';
 
 test.describe('desktop smoke', () => {
