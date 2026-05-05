@@ -173,6 +173,48 @@ it('wires readwise keep import into existing highlight-derived child creation', 
   });
 });
 
+it('treats sidecar highlight changes as a separate refresh trigger when the body file is unchanged', async () => {
+  const fixture = await seedReadwiseArticleFixture(tempRoot);
+  saveReadwiseKeepImportSettings(fixture);
+
+  await runKeepImportRule({
+    directoryPath: fixture.fullDocumentDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  });
+
+  await fs.writeFile(
+    path.join(fixture.highlightDir, 'Sample Article.md'),
+    [
+      '# Sample Article',
+      '',
+      '## Highlights',
+      'This is the highlighted sentence. [...] (https://example.com)',
+      '',
+      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]',
+      '',
+      'After the quote.'
+    ].join('\n'),
+    'utf8'
+  );
+
+  const preview = await previewKeepImportRule({
+    directoryPath: fixture.fullDocumentDir,
+    highlightPolicy: 'reference_only',
+    ruleId: 'draft-import-source-1',
+    sourceType: 'readwise'
+  });
+
+  expect(preview.entries).toEqual([
+    expect.objectContaining({
+      detail: 'Highlight file changed and will refresh highlight updates.',
+      source_path: 'Sample Article.md',
+      status: 'updated'
+    })
+  ]);
+});
+
 it('notifies the renderer after keep imports write a new record', async () => {
   await fs.writeFile(path.join(tempRoot, 'entry.md'), '# Imported\nBody\n', 'utf8');
 

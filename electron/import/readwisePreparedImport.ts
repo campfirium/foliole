@@ -5,6 +5,39 @@ import { extractReadwiseSidecarHighlights, transformReadwiseFullDocument } from 
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
+export interface ReadwiseSourceSignature {
+  highlight: { mtimeMs: number; sizeBytes: number } | null;
+  primary: { mtimeMs: number; sizeBytes: number };
+}
+
+export async function resolveReadwiseSourceSignature(
+  source: DirectoryImportSourceDescriptor,
+  options: { highlightDirectoryPath: string }
+): Promise<ReadwiseSourceSignature> {
+  const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
+  try {
+    const articleStats = await fs.stat(articlePath);
+    return {
+      highlight: {
+        mtimeMs: articleStats.mtimeMs,
+        sizeBytes: articleStats.size
+      },
+      primary: {
+        mtimeMs: source.mtimeMs,
+        sizeBytes: source.sizeBytes
+      }
+    };
+  } catch {
+    return {
+      highlight: null,
+      primary: {
+        mtimeMs: source.mtimeMs,
+        sizeBytes: source.sizeBytes
+      }
+    };
+  }
+}
+
 export async function shouldImportReadwiseSource(
   source: DirectoryImportSourceDescriptor,
   options: {

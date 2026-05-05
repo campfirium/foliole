@@ -36,6 +36,19 @@ function normalizeImportedContent(content: string) {
   return content.replace(/\r\n?/g, '\n');
 }
 
+function serializeHighlightSidecar(highlightSidecar: ImportSidecarHighlight[] | undefined) {
+  if (!highlightSidecar || highlightSidecar.length === 0) {
+    return '';
+  }
+  return highlightSidecar
+    .map((highlight) => {
+      const text = normalizeImportedContent(highlight.text).trim();
+      const label = normalizeImportedContent(highlight.label ?? '').trim();
+      return `${label}\u001e${text}`;
+    })
+    .join('\u001d');
+}
+
 export function createPreparedDesktopTextImport(
   input: CreatePreparedDesktopTextImportInput
 ): PreparedImportRecord {
@@ -56,7 +69,8 @@ export function createPreparedDesktopTextImport(
       'content',
       IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
       input.kind,
-      normalizedContent
+      normalizedContent,
+      serializeHighlightSidecar(input.highlightSidecar)
     ),
     degradedReason: contextResult.degradedReason,
     importedAt: input.importedAt,

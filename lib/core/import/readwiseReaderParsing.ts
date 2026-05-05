@@ -122,7 +122,27 @@ function splitHighlightBlocks(content: string, separator: string) {
     .split(divider)
     .map((part) => part.trim())
     .filter(Boolean);
+  if (literalBlocks.length === 1) {
+    const listBlocks = splitTopLevelListHighlights(normalizedContent);
+    if (listBlocks.length > 1) {
+      return listBlocks;
+    }
+  }
   return literalBlocks;
+}
+
+function splitTopLevelListHighlights(content: string) {
+  const matches = [...content.matchAll(/^(?:-\s+|>\s+)/gm)];
+  if (matches.length <= 1) {
+    return [];
+  }
+  return matches
+    .map((match, index) => {
+      const start = match.index ?? 0;
+      const end = matches[index + 1]?.index ?? content.length;
+      return content.slice(start, end).trim();
+    })
+    .filter(Boolean);
 }
 
 export function extractReadwiseHighlightsSection(markdown: string, headings: string[]) {

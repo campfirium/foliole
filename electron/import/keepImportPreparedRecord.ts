@@ -2,7 +2,11 @@ import { loadPreparedImportRecord, type DirectoryImportSourceDescriptor } from '
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
-import { loadPreparedReadwiseImportRecord, shouldImportReadwiseSource } from './readwisePreparedImport.js';
+import {
+  loadPreparedReadwiseImportRecord,
+  resolveReadwiseSourceSignature,
+  shouldImportReadwiseSource
+} from './readwisePreparedImport.js';
 
 export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
   if (config.sourceType !== 'readwise') {
@@ -41,4 +45,24 @@ export async function loadPreparedKeepImportRecord(
     highlightPolicy: config.highlightPolicy,
     importedAt
   });
+}
+
+export async function resolveKeepImportSourceSignature(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
+  if (config.sourceType === 'readwise') {
+    const settings = loadImportManagerSettings();
+    const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
+    if (readwiseSource?.highlightPath.trim()) {
+      return resolveReadwiseSourceSignature(source, {
+        highlightDirectoryPath: readwiseSource.highlightPath.trim()
+      });
+    }
+  }
+
+  return {
+    highlight: null,
+    primary: {
+      mtimeMs: source.mtimeMs,
+      sizeBytes: source.sizeBytes
+    }
+  };
 }

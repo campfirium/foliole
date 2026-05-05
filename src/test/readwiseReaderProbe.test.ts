@@ -154,6 +154,36 @@ it('ignores trailing Readwise view links when matching bullet highlights', () =>
   ]);
 });
 
+it('supports readwise list-style highlights with the default blank-line separator setting', () => {
+  const result = probeReadwiseArticleContent({
+    articleMarkdown: READWISE_LINK_ARTICLE_MARKDOWN,
+    fullDocumentMarkdown: READWISE_LINK_FULL_DOCUMENT_MARKDOWN,
+    highlightsHeading: '## Highlights',
+    highlightSeparator: '\n\n',
+    newHighlightsHeading: '## New highlights added',
+    noteKeyword: 'Note:',
+    sourceName: 'Open Minis',
+    tagKeyword: 'Tags:'
+  });
+
+  expect(result.success).toBe(true);
+  expect(result.detectedHighlightCount).toBe(3);
+  expect(result.samples).toMatchObject([
+    {
+      highlightText: 'Manus，它能在其云端运行虚拟机或者有头浏览器',
+      matched: true
+    },
+    {
+      highlightText: '这样你就可以在本地来让 AI 进行作业了',
+      matched: true
+    },
+    {
+      highlightText: '但这终究有局限性',
+      matched: true
+    }
+  ]);
+});
+
 it('moves metadata into Obsidian frontmatter and removes the full document heading', () => {
   expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN, ARTICLE_MARKDOWN)).toBe(`---
 author: Someone

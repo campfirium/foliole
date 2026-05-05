@@ -117,6 +117,8 @@ export const keepImportItems = sqliteTable('keep_import_items', {
   sourcePath: text('source_path').notNull(),
   sourceMtimeMs: integer('source_mtime_ms').notNull(),
   sourceSizeBytes: integer('source_size_bytes').notNull(),
+  highlightSourceMtimeMs: integer('highlight_source_mtime_ms'),
+  highlightSourceSizeBytes: integer('highlight_source_size_bytes'),
   lastNodeId: text('last_node_id'),
   lastStatus: text('last_status').notNull(),
   firstSeenAt: text('first_seen_at').notNull(),

@@ -23,7 +23,7 @@ interface KeepImportSourceState {
   debounceTimer: ReturnType<typeof setTimeout> | null;
   importInFlight: boolean;
   rerunRequested: boolean;
-  watcher: KeepImportWatchHandle | null;
+  watchers: KeepImportWatchHandle[];
 }
 
 export interface KeepImportMonitor {
@@ -75,7 +75,7 @@ function createSourceState(config: KeepImportSourceConfig): KeepImportSourceStat
     debounceTimer: null,
     importInFlight: false,
     rerunRequested: false,
-    watcher: null
+    watchers: []
   };
 }
 
@@ -88,8 +88,8 @@ function clearScheduledRun(state: KeepImportSourceState) {
 }
 
 function closeWatcher(state: KeepImportSourceState) {
-  state.watcher?.close();
-  state.watcher = null;
+  state.watchers.forEach((watcher) => watcher.close());
+  state.watchers = [];
 }
 
 async function ensureWatcher(
@@ -97,16 +97,18 @@ async function ensureWatcher(
   state: KeepImportSourceState,
   scheduleRun: () => void
 ) {
-  if (state.watcher) {
+  if (state.watchers.length > 0) {
     return;
   }
-  state.watcher = deps.watch(state.config.directoryPath, () => {
-    if (state.importInFlight) {
-      state.rerunRequested = true;
-      return;
-    }
-    scheduleRun();
-  });
+  state.watchers = state.config.watchPaths.map((watchPath) =>
+    deps.watch(watchPath, () => {
+      if (state.importInFlight) {
+        state.rerunRequested = true;
+        return;
+      }
+      scheduleRun();
+    })
+  );
 }
 
 async function runImportCycle(
@@ -189,7 +191,8 @@ export function createKeepImportMonitor(
       if (
         existingState &&
         existingState.config.directoryPath === config.directoryPath &&
-        existingState.config.highlightPolicy === config.highlightPolicy
+        existingState.config.highlightPolicy === config.highlightPolicy &&
+        existingState.config.watchPaths.join('\u001f') === config.watchPaths.join('\u001f')
       ) {
         continue;
       }

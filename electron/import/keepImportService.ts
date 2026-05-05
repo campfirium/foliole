@@ -1,16 +1,17 @@
-import type { ImportHighlightPolicy, PersistedImportRecord } from '../../lib/core/import/contract.js';
+import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeImportContract.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
-import { readKeepImportItem, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
-import {
-  buildPreparedImportRecord,
-  discoverDirectoryImportSources,
-  type DirectoryImportSourceDescriptor
-} from '../ipc/importSourcePipeline.js';
+import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
+import { buildPreparedImportRecord, discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
-import { loadPreparedKeepImportRecord, shouldKeepImportReadwiseSource } from './keepImportPreparedRecord.js';
+import {
+  loadPreparedKeepImportRecord,
+  resolveKeepImportSourceSignature,
+  shouldKeepImportReadwiseSource
+} from './keepImportPreparedRecord.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
+import { createBlockedRecord, persistKeepImportState } from './keepImportServiceState.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
 
 type KeepImportPreviewStatus = NativeKeepImportPreviewResult['entries'][number]['status'];
@@ -19,6 +20,27 @@ interface KeepImportPreviewEntry {
   detail: string | null;
   sourcePath: string;
   status: KeepImportPreviewStatus;
+}
+
+function hasPrimarySourceChanged(
+  existingItem: ReturnType<typeof isBlockedByDeletedNode>['existingItem'],
+  sourceSignature: Awaited<ReturnType<typeof resolveKeepImportSourceSignature>>
+) {
+  return (
+    !existingItem ||
+    existingItem.source_mtime_ms !== sourceSignature.primary.mtimeMs ||
+    existingItem.source_size_bytes !== sourceSignature.primary.sizeBytes
+  );
+}
+
+function hasHighlightSourceChanged(
+  existingItem: ReturnType<typeof isBlockedByDeletedNode>['existingItem'],
+  sourceSignature: Awaited<ReturnType<typeof resolveKeepImportSourceSignature>>
+) {
+  return (
+    (existingItem?.highlight_source_mtime_ms ?? null) !== (sourceSignature.highlight?.mtimeMs ?? null) ||
+    (existingItem?.highlight_source_size_bytes ?? null) !== (sourceSignature.highlight?.sizeBytes ?? null)
+  );
 }
 
 export interface KeepImportRuleConfig {
@@ -45,6 +67,7 @@ async function classifySource(
   source: DirectoryImportSourceDescriptor
 ): Promise<KeepImportPreviewEntry> {
   const sourcePath = source.sourceName;
+  const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   const { blocked, existingItem } = isBlockedByDeletedNode(config.ruleId, sourcePath);
   if (blocked) {
     return {
@@ -53,17 +76,20 @@ async function classifySource(
       status: 'blocked_deleted'
     };
   }
-  if (
-    existingItem &&
-    existingItem.source_mtime_ms === source.mtimeMs &&
-    existingItem.source_size_bytes === source.sizeBytes
-  ) {
+  const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
+  const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
+  if (existingItem && !primaryChanged && !highlightChanged) {
     return { detail: 'No file changes detected since the last keep scan.', sourcePath, status: 'unchanged' };
   }
   try {
     await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
     return {
-      detail: existingItem ? 'File changed and will be refreshed when enabled.' : 'New file will be imported when enabled.',
+      detail:
+        !existingItem
+          ? 'New file will be imported when enabled.'
+          : highlightChanged && !primaryChanged
+            ? 'Highlight file changed and will refresh highlight updates.'
+            : 'Content file changed and will be refreshed when enabled.',
       sourcePath,
       status: existingItem ? 'updated' : 'new'
     };
@@ -106,56 +132,13 @@ export async function previewKeepImportRule(config: KeepImportRuleConfig): Promi
   return buildPreviewResult(config.directoryPath, previewedAt, entries);
 }
 
-function persistKeepImportState(
-  config: KeepImportRuleConfig,
-  source: DirectoryImportSourceDescriptor,
-  record: PersistedImportRecord,
-  status: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported'
-) {
-  upsertKeepImportItem({
-    lastImportedAt: status === 'blocked_deleted' ? null : record.importedAt,
-    lastNodeId: record.nodeId,
-    lastSeenAt: record.importedAt,
-    lastStatus: status,
-    ruleId: config.ruleId,
-    sourceMtimeMs: source.mtimeMs,
-    sourcePath: source.sourceName,
-    sourceSizeBytes: source.sizeBytes
-  });
-}
-
-function createBlockedRecord(
-  source: DirectoryImportSourceDescriptor,
-  importedAt: string,
-  lastNodeId: string | null
-): PersistedImportRecord {
-  const prepared = buildPreparedImportRecord(source, {
-    content: '',
-    importedAt
-  });
-  return {
-    contentFingerprint: prepared.contentFingerprint,
-    degradedReason: null,
-    duplicateSemantic: 'updated',
-    failureReason: 'blocked_deleted',
-    importId: `keep-blocked-${prepared.contentFingerprint}`,
-    importedAt,
-    nodeId: lastNodeId,
-    provider: prepared.provider,
-    resultStatus: 'failed',
-    sourceFingerprint: prepared.sourceFingerprint,
-    sourceKind: prepared.sourceKind,
-    sourceLocator: prepared.sourceLocator,
-    sourceName: prepared.sourceName
-  };
-}
-
 async function runKeepImportSource(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
   const importedAt = new Date().toISOString();
+  const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
   if (blockedState.blocked) {
     const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
-    persistKeepImportState(config, source, blockedRecord, 'blocked_deleted');
+    persistKeepImportState(config, source, sourceSignature, blockedRecord, 'blocked_deleted');
     return {
       detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
       failureReason: blockedRecord.failureReason,
@@ -168,6 +151,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
     persistKeepImportState(
       config,
       source,
+      sourceSignature,
       record,
       record.resultStatus === 'degraded' ? 'degraded' : record.duplicateSemantic === 'duplicate' ? 'duplicate' : 'imported'
     );
@@ -190,7 +174,7 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
       buildPreparedImportRecord(source, { content: '', highlightPolicy: config.highlightPolicy, importedAt }),
       failureReason
     );
-    persistKeepImportState(config, source, record, 'failed');
+    persistKeepImportState(config, source, sourceSignature, record, 'failed');
     return {
       detail: failureReason,
       failureReason,
@@ -215,12 +199,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
     for (const source of importableSources) {
       const preview = await classifySource(config, source);
       if (preview.status === 'unchanged' || preview.status === 'failed' || preview.status === 'blocked_deleted') {
-        if (preview.status === 'blocked_deleted') {
-          const importedAt = new Date().toISOString();
-          const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
-          const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
-          persistKeepImportState(config, source, blockedRecord, 'blocked_deleted');
-        }
+        await persistBlockedKeepImportState(config, preview.status, source);
         runEntries.push({
           action: 'skipped',
           detail: preview.detail,
@@ -259,4 +238,19 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
     }
     throw error;
   }
+}
+
+async function persistBlockedKeepImportState(
+  config: KeepImportRuleConfig,
+  previewStatus: KeepImportPreviewStatus,
+  source: DirectoryImportSourceDescriptor
+) {
+  if (previewStatus !== 'blocked_deleted') {
+    return;
+  }
+  const importedAt = new Date().toISOString();
+  const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+  const sourceSignature = await resolveKeepImportSourceSignature(config, source);
+  const blockedRecord = createBlockedRecord(source, importedAt, blockedState.existingItem?.last_node_id ?? null);
+  persistKeepImportState(config, source, sourceSignature, blockedRecord, 'blocked_deleted');
 }

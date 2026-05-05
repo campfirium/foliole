@@ -100,3 +100,35 @@ it('adds only newly anchored readwise highlights during keep import updates', as
   expect(parentRow.content).toContain('## Unmatched Sidecar Highlights');
   expect(parentRow.content).toContain('- Highlight 1: Missing new quote.');
 });
+
+it('refreshes the node when only the readwise highlight file changes', async () => {
+  const fixture = await seedReadwiseArticleFixture(tempRoot);
+  saveReadwiseKeepImportSettings(fixture);
+  await runReadwiseKeepImport(fixture.fullDocumentDir);
+
+  await fs.writeFile(
+    path.join(fixture.highlightDir, 'Sample Article.md'),
+    [
+      '# Sample Article',
+      '',
+      '## Highlights',
+      'This is the highlighted sentence. [...] (https://example.com)',
+      '',
+      'Another matching excerpt. Tags: [[tag-a]] [[tag-b]]',
+      '',
+      'After the quote.'
+    ].join('\n'),
+    'utf8'
+  );
+  await runReadwiseKeepImport(fixture.fullDocumentDir);
+
+  const { childRows, parentRow } = readImportedChildRows();
+
+  expect(childRows).toHaveLength(3);
+  expect(parentRow.content).toContain('<highlight id="3">After the quote.</highlight id="3">');
+  expect(childRows[2]).toEqual({
+    anchor_link: JSON.stringify({ id: '3', kind: 'highlight' }),
+    content: 'After the quote.',
+    title: 'After the quote.'
+  });
+});

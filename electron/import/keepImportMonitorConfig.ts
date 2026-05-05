@@ -6,6 +6,7 @@ export interface KeepImportConfig {
   directoryPath: string;
   highlightPolicy: ImportHighlightPolicy;
   sourceType: 'generic' | 'readwise';
+  watchPaths: string[];
 }
 
 export interface KeepImportSourceConfig extends KeepImportConfig {
@@ -22,15 +23,21 @@ function toKeepImportConfig(
   sourceType: 'generic' | 'readwise'
 ): KeepImportSourceConfig | null {
   const directoryPath = normalizeKeepDirectoryPath(source.primaryPath);
+  const highlightPath = normalizeKeepDirectoryPath(source.highlightPath);
   if (source.keepState !== 'enabled' || !directoryPath) {
     return null;
+  }
+  const watchPaths = [directoryPath];
+  if (sourceType === 'readwise' && highlightPath && highlightPath !== directoryPath) {
+    watchPaths.push(highlightPath);
   }
   return {
     adapterConfigId: source.id,
     directoryPath,
     highlightPolicy,
     sourceId: source.id,
-    sourceType
+    sourceType,
+    watchPaths
   };
 }
 
