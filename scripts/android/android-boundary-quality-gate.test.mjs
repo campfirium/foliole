@@ -51,6 +51,7 @@ const ANDROID_GATE_SCRIPTS = {
   'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
   'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
   'test:android': 'node -e "console.log(\'android test ok\')"',
+  'test:quality': 'node -e "console.log(\'quality test ok\')"',
   'android:sync': 'node -e "console.log(\'android sync ok\')"',
   'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
   'android:host:test': 'node -e "console.log(\'android host test ok\')"'
@@ -61,6 +62,7 @@ const SHARED_GATE_SCRIPTS = {
   'lint:shared:full': 'node -e "console.log(\'shared full lint ok\')"',
   'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
   'test:shared': 'node -e "console.log(\'shared test ok\')"',
+  'test:quality': 'node -e "console.log(\'quality test ok\')"',
   build: 'node -e "console.log(\'shared build ok\')"',
   'electron:compile': 'node -e "console.log(\'shared electron compile ok\')"',
   'android:web:build': 'node -e "console.log(\'shared android build ok\')"'

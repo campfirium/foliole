@@ -75,6 +75,7 @@ describe('quality-gate-target.sh', () => {
         'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop': 'node -e "console.log(\'desktop test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         build: 'node -e "console.log(\'desktop build ok\')"',
         'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
       });
@@ -89,6 +90,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('desktop full lint ok');
       expect(result.stdout).toContain('desktop typecheck ok');
       expect(result.stdout).toContain('desktop test ok');
+      expect(result.stdout).toContain('quality test ok');
       expect(result.stdout).toContain('desktop build ok');
       expect(result.stdout).toContain('electron compile ok');
       expect(result.stdout).toContain('repository root boundary ok');
@@ -106,6 +108,7 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"'
@@ -118,6 +121,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('android full lint ok');
       expect(result.stdout).toContain('android typecheck ok');
       expect(result.stdout).toContain('android test ok');
+      expect(result.stdout).toContain('quality test ok');
       expect(result.stdout).toContain('android sync ok');
       expect(result.stdout).toContain('android host lint ok');
       expect(result.stdout).toContain('android host test ok');
@@ -135,6 +139,7 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"',
@@ -149,6 +154,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('android full lint ok');
       expect(result.stdout).toContain('android typecheck ok');
       expect(result.stdout).toContain('android test ok');
+      expect(result.stdout).toContain('quality test ok');
       expect(result.stdout).toContain('android sync ok');
       expect(result.stdout).toContain('android host lint ok');
       expect(result.stdout).toContain('android host test ok');
@@ -168,6 +174,7 @@ describe('quality-gate-target.sh', () => {
         'lint:shared:full': 'node -e "console.log(\'shared full lint ok\')"',
         'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
         'test:shared': 'node -e "console.log(\'shared test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         build: 'node -e "console.log(\'shared build ok\')"',
         'electron:compile': 'node -e "console.log(\'shared electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'shared android build ok\')"'
@@ -181,6 +188,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('shared full lint ok');
       expect(result.stdout).toContain('shared typecheck ok');
       expect(result.stdout).toContain('shared test ok');
+      expect(result.stdout).toContain('quality test ok');
       expect(result.stdout).toContain('shared build ok');
       expect(result.stdout).toContain('shared electron compile ok');
       expect(result.stdout).toContain('shared android build ok');
@@ -369,6 +377,7 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"'
       });

@@ -347,6 +347,14 @@ if quality_gate_should_print_step; then
   echo "[quality-gate-fast] selected level: ${level}"
 fi
 
+if [[ "${level}" == "full" ]]; then
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
+fi
+
+if [[ "${level}" == "android" ]]; then
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" android
+fi
+
 if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
   run_quality_gate_script "quality-gate-fast" "${pm}" "copy:guard"
 fi
@@ -367,14 +375,6 @@ if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
     node scripts/check-layer-dependency-boundary.mjs
 fi
 [[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "quality-gate-fast" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
-
-if [[ "${level}" == "full" ]]; then
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
-fi
-
-if [[ "${level}" == "android" ]]; then
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" android
-fi
 
 lint_targets="$(collect_lint_targets "${all_changed}")"
 if [[ "${level}" == "mid" ]]; then

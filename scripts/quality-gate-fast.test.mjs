@@ -531,6 +531,7 @@ describe('quality-gate-fast.sh', () => {
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"'

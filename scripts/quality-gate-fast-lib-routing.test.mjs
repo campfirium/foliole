@@ -51,7 +51,7 @@ describe('quality-gate-fast lib routing', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'full lint ok\')"',
+        'lint:full': 'node -e "console.log(\'full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'full test ok\')"',
@@ -68,6 +68,7 @@ describe('quality-gate-fast lib routing', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: full');
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
+      expect(result.stdout.match(/boundary ok/g)).toHaveLength(1);
       expect(result.stdout).toContain('full test ok');
       expect(result.stdout).toContain('android web build ok');
     } finally {
