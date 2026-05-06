@@ -43,7 +43,14 @@ describe('check-ui-copy-guard', () => {
     const fixtureRoot = await createFixtureRoot({
       'src/app/components/EmptyState.tsx': `
         export function EmptyState() {
-          return <section aria-label="Folder details">No topics in this folder</section>;
+          return (
+            <section aria-label="Folder details">
+              <h2>Inbox</h2>
+              <p>No topics in this folder</p>
+              <p>Review queue</p>
+              <p>Review item</p>
+            </section>
+          );
         }
       `
     });
@@ -57,11 +64,17 @@ describe('check-ui-copy-guard', () => {
     expect(stderr.chunks.join('')).toBe('');
   });
 
-  it('warns on banned user-facing terminology and Chinese UI copy', async () => {
+  it('warns on banned user-facing terminology, product object drift, and Chinese UI copy', async () => {
     const fixtureRoot = await createFixtureRoot({
       'src/app/components/EmptyState.tsx': `
         export function EmptyState() {
-          return <section title="Node details">Direct children will appear here</section>;
+          return (
+            <section title="Node details">
+              <p>Direct children will appear here</p>
+              <p>No notes in this folder</p>
+              <p>Recent entries</p>
+            </section>
+          );
         }
       `,
       'src/features/nodes/components/Menu.tsx': `
@@ -81,11 +94,14 @@ describe('check-ui-copy-guard', () => {
     expect(output).toContain('status: WARNING');
     expect(output).toContain('next step:');
     expect(output).toContain('1. Read .lab/specs/_product/terminology-and-copy.md.');
-    expect(output).toContain('do not mechanically replace matched words');
-    expect(output).toContain('EmptyState.tsx:3 terminology "Node details"');
-    expect(output).toContain('EmptyState.tsx:3 terminology "Direct children will appear here"');
+    expect(output).toContain('approved product terms:');
+    expect(output).toContain('Do not mechanically replace matched words');
+    expect(output).toContain('EmptyState.tsx:4 internal-structure-term "Node details"');
+    expect(output).toContain('EmptyState.tsx:5 internal-structure-term "Direct children will appear here"');
+    expect(output).toContain('EmptyState.tsx:6 product-object-term "No notes in this folder"');
+    expect(output).toContain('EmptyState.tsx:7 product-object-term "Recent entries"');
     expect(output).toContain('Menu.tsx:3 non-english-copy "合并失败。"');
-    expect(output).toContain('Menu.tsx:4 terminology "Open child node"');
+    expect(output).toContain('Menu.tsx:4 internal-structure-term "Open child node"');
   });
 
   it('fails only in strict mode', async () => {

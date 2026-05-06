@@ -25,7 +25,36 @@ const UI_PROPERTY_NAMES = new Set([
   'subtitle',
   'title'
 ]);
-const BANNED_UI_TERMS = /\b(?:child|children|node|nodes)\b/i;
+const PRODUCT_TERMINOLOGY_RULES = [
+  {
+    kind: 'internal-structure-term',
+    pattern: /\b(?:child|children|node|nodes)\b/i
+  },
+  {
+    kind: 'product-object-term',
+    pattern: /\b(?:note|notes|entry|entries)\b/i
+  },
+  {
+    kind: 'product-object-term',
+    pattern: /\bcontent\s+items?\b/i
+  }
+];
+const APPROVED_PRODUCT_TERMS = [
+  'All topics',
+  'Cloze',
+  'Derived Topic',
+  'Excerpt',
+  'Folder',
+  'Highlight',
+  'Import',
+  'Inbox',
+  'Item',
+  'Review item',
+  'Review queue',
+  'Source Topic',
+  'Today',
+  'Topic'
+];
 const CJK_TEXT = /[\p{Script=Han}]/u;
 const TERMINOLOGY_DOC_PATH = '.lab/specs/_product/terminology-and-copy.md';
 
@@ -103,8 +132,11 @@ function inspectUiText(sourceFile, node, text, violations) {
   if (!normalizedText) {
     return;
   }
-  if (BANNED_UI_TERMS.test(normalizedText)) {
-    violations.push(createViolation(sourceFile, node, 'terminology', normalizedText));
+  for (const rule of PRODUCT_TERMINOLOGY_RULES) {
+    if (rule.pattern.test(normalizedText)) {
+      violations.push(createViolation(sourceFile, node, rule.kind, normalizedText));
+      break;
+    }
   }
   if (CJK_TEXT.test(normalizedText)) {
     violations.push(createViolation(sourceFile, node, 'non-english-copy', normalizedText));
@@ -164,9 +196,10 @@ function printResult(result, { stderr = process.stderr, stdout = process.stdout 
     `[check-ui-copy-guard] 2. Decide whether each warning is user-facing copy, debug/dev text, or legacy wording.\n`
   );
   stderr.write(
-    `[check-ui-copy-guard] 3. Rewrite user-facing copy with approved terms; do not mechanically replace matched words.\n`
+    `[check-ui-copy-guard] 3. Rewrite user-facing copy with approved product terms: ${APPROVED_PRODUCT_TERMS.join(', ')}.\n`
   );
-  stderr.write(`[check-ui-copy-guard] 4. Use npm run copy:guard:strict only for terminology cleanup tasks.\n`);
+  stderr.write(`[check-ui-copy-guard] 4. Do not mechanically replace matched words.\n`);
+  stderr.write(`[check-ui-copy-guard] 5. Use npm run copy:guard:strict only for terminology cleanup tasks.\n`);
   for (const violation of result.violations) {
     stderr.write(
       `[check-ui-copy-guard] ${violation.file}:${violation.line} ${violation.kind} "${violation.text}"\n`
