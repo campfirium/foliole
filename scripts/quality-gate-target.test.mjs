@@ -103,7 +103,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:android': 'node -e "console.log(\'android lint ok\')"',
+        'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
@@ -115,7 +115,7 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'android');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('android lint ok');
+      expect(result.stdout).toContain('android full lint ok');
       expect(result.stdout).toContain('android typecheck ok');
       expect(result.stdout).toContain('android test ok');
       expect(result.stdout).toContain('android sync ok');
@@ -132,7 +132,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:android': 'node -e "console.log(\'android lint ok\')"',
+        'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
@@ -146,7 +146,7 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'android-device');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('android lint ok');
+      expect(result.stdout).toContain('android full lint ok');
       expect(result.stdout).toContain('android typecheck ok');
       expect(result.stdout).toContain('android test ok');
       expect(result.stdout).toContain('android sync ok');
@@ -366,7 +366,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:android': 'node -e "console.log(\'android lint ok\')"',
+        'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',

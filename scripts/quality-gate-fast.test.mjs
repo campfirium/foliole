@@ -528,7 +528,7 @@ describe('quality-gate-fast.sh', () => {
     try {
       await writePackageJson(tempRoot, {
         lint: 'node -e "console.log(\'full lint should stay unused\')"',
-        'lint:android': 'node -e "console.log(\'android lint ok\')"',
+        'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
@@ -544,7 +544,7 @@ describe('quality-gate-fast.sh', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: android');
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
-      expect(result.stdout).toContain('android lint ok');
+      expect(result.stdout).toContain('android full lint ok');
       expect(result.stdout).toContain('android host test ok');
       expect(result.stdout).not.toContain('full lint should stay unused');
     } finally {

@@ -195,13 +195,13 @@ case "${target}" in
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
     run_android_boundary_check_if_present
-    run_gate_steps lint:android typecheck:android test:android android:sync android:host:lint android:host:test
+    run_gate_steps lint:android:full typecheck:android test:android android:sync android:host:lint android:host:test
     ;;
   android-device)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
     run_android_boundary_check_if_present
-    run_gate_steps lint:android typecheck:android test:android android:sync android:host:lint android:host:test android:emulator android:host:device-test
+    run_gate_steps lint:android:full typecheck:android test:android android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
     run_copy_guard_if_present

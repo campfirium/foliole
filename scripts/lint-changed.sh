@@ -10,18 +10,47 @@ collect_changed_files() {
   printf '%s\n%s\n%s\n' "${staged}" "${unstaged}" "${untracked}" | grep -v '^\s*$' | sort -u || true
 }
 
+scope=""
+if [[ "${1:-}" == "--scope" ]]; then
+  scope="${2:-}"
+  if [[ -z "${scope}" ]]; then
+    echo "[lint-changed] --scope requires a value"
+    exit 1
+  fi
+  shift 2
+fi
+
+filter_by_scope() {
+  case "${scope}" in
+    "")
+      cat
+      ;;
+    android)
+      grep -E '^(src/companion/|src/shared/(platform|ui|lib|commands|config)/|scripts/android/|android/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)' || true
+      ;;
+    *)
+      echo "[lint-changed] unknown scope: ${scope}" >&2
+      exit 1
+      ;;
+  esac
+}
+
 collect_lint_targets() {
   if [[ "$#" -gt 0 ]]; then
-    printf '%s\n' "$@" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | grep -v '^\s*$' || true
+    printf '%s\n' "$@" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | filter_by_scope | grep -v '^\s*$' || true
     return 0
   fi
 
-  collect_changed_files | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | grep -v '^\s*$' || true
+  collect_changed_files | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | filter_by_scope | grep -v '^\s*$' || true
 }
 
 lint_targets="$(collect_lint_targets "$@")"
 if [[ -z "${lint_targets}" ]]; then
-  echo "[lint-changed] no lintable changed files detected"
+  if [[ -n "${scope}" ]]; then
+    echo "[lint-changed] no lintable changed files detected for scope: ${scope}"
+  else
+    echo "[lint-changed] no lintable changed files detected"
+  fi
   exit 0
 fi
 

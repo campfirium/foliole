@@ -48,7 +48,7 @@ async function writeFixtureScript(rootDir, relativePath, message) {
 
 const ANDROID_GATE_SCRIPTS = {
   'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-  'lint:android': 'node -e "console.log(\'android lint ok\')"',
+  'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
   'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
   'test:android': 'node -e "console.log(\'android test ok\')"',
   'android:sync': 'node -e "console.log(\'android sync ok\')"',
@@ -102,7 +102,7 @@ describe('Android boundary quality gate routing', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('android boundary ok');
-      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('android lint ok'));
+      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('android full lint ok'));
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

@@ -69,4 +69,27 @@ describe('lint-changed.sh', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('filters changed files by android scope', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    const marker = path.join(tempRoot, 'eslint.args');
+    try {
+      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+
+      const result = await runBash([
+        LINT_CHANGED_SCRIPT,
+        '--scope',
+        'android',
+        'src/companion/App.tsx',
+        'src/app/App.tsx',
+        'vite.companion.config.ts',
+        'README.md'
+      ], tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(await readFile(marker, 'utf8')).toBe('src/companion/App.tsx\nvite.companion.config.ts\n');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
