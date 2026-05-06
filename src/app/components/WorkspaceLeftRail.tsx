@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 export interface WorkspaceLeftRailProps {
@@ -17,43 +18,28 @@ export interface WorkspaceLeftRailProps {
   showStudyDock?: boolean;
 }
 
-export interface WorkspaceLeftRailSource {
-  canStartStudyMode: boolean;
-  isSettingsOpen: boolean;
-  isStudyMode: boolean;
-  onOpenSettings: () => void;
-  onRunRailAction?: (commandId: string) => void;
-  onToggleReviewSession: () => void;
-  reviewDueCount: number;
-}
+export type WorkspaceLeftRailSource = Pick<WorkspaceLayoutProps, 'imports' | 'review' | 'settings'>;
 
 export function selectWorkspaceLeftRailProps({
-  isImportManagementOpen,
-  onOpenImportManagement,
-  onStartClipboardImport,
-  onStartImport,
   props,
   showStudyDock
 }: {
-  isImportManagementOpen: boolean;
-  onOpenImportManagement: () => void;
-  onStartClipboardImport: () => void;
-  onStartImport: () => void;
   props: WorkspaceLeftRailSource;
   showStudyDock?: boolean;
 }): WorkspaceLeftRailProps {
+  const { imports, review, settings } = props;
   return {
-    canStartStudyMode: props.canStartStudyMode,
-    isImportManagementOpen,
-    isSettingsOpen: props.isSettingsOpen,
-    isStudyMode: props.isStudyMode,
-    onOpenImportManagement,
-    onOpenSettings: props.onOpenSettings,
-    onRunRailAction: props.onRunRailAction,
-    onStartClipboardImport,
-    onStartImport,
-    onToggleReviewSession: props.onToggleReviewSession,
-    reviewDueCount: props.reviewDueCount,
+    canStartStudyMode: review.canStartStudyMode,
+    isImportManagementOpen: imports.isImportManagementOpen,
+    isSettingsOpen: settings.isSettingsOpen,
+    isStudyMode: review.isStudyMode,
+    onOpenImportManagement: imports.onOpenImportManagement,
+    onOpenSettings: settings.onOpenSettings,
+    onRunRailAction: settings.onRunRailAction,
+    onStartClipboardImport: imports.onStartClipboardImport,
+    onStartImport: () => void imports.onRunImportFile(),
+    onToggleReviewSession: review.onToggleReviewSession,
+    reviewDueCount: review.reviewDueCount,
     showStudyDock
   };
 }

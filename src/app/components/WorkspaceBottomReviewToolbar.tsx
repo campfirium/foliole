@@ -2,6 +2,7 @@ import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
 import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
 
@@ -26,49 +27,31 @@ export interface WorkspaceBottomReviewToolbarProps {
   onToggleReviewSession: () => void;
 }
 
-export interface WorkspaceBottomReviewToolbarSource {
-  canStartStudyMode: boolean;
-  isAnswerRevealed: boolean;
-  isCurrentReviewItemGradable: boolean;
-  isImmersiveMode: boolean;
-  isListCollapsed: boolean;
-  isReviewEditing: boolean;
-  isStudyMode: boolean;
-  onCompleteReviewItem: () => boolean;
-  onDeferReviewItem: () => boolean;
-  onDismissReviewItem: () => boolean;
-  onExitReviewMode: () => void;
-  onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
-  onRevealAnswer: () => void;
-  onToggleReviewSession: () => void;
-  reviewCompletedCount: number;
-  reviewCurrentNodeId: string | null;
-  reviewDueCount: number;
-  reviewQueueCount: number;
-}
+export type WorkspaceBottomReviewToolbarSource = Pick<WorkspaceLayoutProps, 'layoutChrome' | 'review'>;
 
 export function selectWorkspaceBottomReviewToolbarProps(
   props: WorkspaceBottomReviewToolbarSource
 ): WorkspaceBottomReviewToolbarProps {
+  const { layoutChrome, review } = props;
   return {
-    canStartStudyMode: props.canStartStudyMode,
-    isAnswerRevealed: props.isAnswerRevealed,
-    isCurrentReviewItemGradable: props.isCurrentReviewItemGradable,
-    isImmersiveMode: props.isImmersiveMode,
-    isListCollapsed: props.isListCollapsed,
-    isReviewEditing: props.isReviewEditing,
-    isStudyMode: props.isStudyMode,
-    onCompleteReviewItem: props.onCompleteReviewItem,
-    onDeferReviewItem: props.onDeferReviewItem,
-    onDismissReviewItem: props.onDismissReviewItem,
-    onExitReviewMode: props.onExitReviewMode,
-    onGradeReview: props.onGradeReview,
-    onRevealAnswer: props.onRevealAnswer,
-    onToggleReviewSession: props.onToggleReviewSession,
-    reviewCompletedCount: props.reviewCompletedCount,
-    reviewCurrentNodeId: props.reviewCurrentNodeId,
-    reviewDueCount: props.reviewDueCount,
-    reviewQueueCount: props.reviewQueueCount
+    canStartStudyMode: review.canStartStudyMode,
+    isAnswerRevealed: review.isAnswerRevealed,
+    isCurrentReviewItemGradable: review.isCurrentReviewItemGradable,
+    isImmersiveMode: layoutChrome.isImmersiveMode,
+    isListCollapsed: layoutChrome.isListCollapsed,
+    isReviewEditing: review.isReviewEditing,
+    isStudyMode: review.isStudyMode,
+    onCompleteReviewItem: review.onCompleteReviewItem,
+    onDeferReviewItem: review.onDeferReviewItem,
+    onDismissReviewItem: review.onDismissReviewItem,
+    onExitReviewMode: review.onExitReviewMode,
+    onGradeReview: review.onGradeReview,
+    onRevealAnswer: review.onRevealAnswer,
+    onToggleReviewSession: review.onToggleReviewSession,
+    reviewCompletedCount: review.reviewCompletedCount,
+    reviewCurrentNodeId: review.reviewCurrentNodeId,
+    reviewDueCount: review.reviewDueCount,
+    reviewQueueCount: review.reviewQueueCount
   };
 }
 

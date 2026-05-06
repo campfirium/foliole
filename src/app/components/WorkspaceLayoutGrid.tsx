@@ -4,8 +4,7 @@ import { recordComponentRender } from '../../shared/platform/performanceDiagnost
 
 import {
   selectWorkspaceBottomReviewToolbarProps,
-  WorkspaceBottomReviewToolbar,
-  type WorkspaceBottomReviewToolbarSource
+  WorkspaceBottomReviewToolbar
 } from './WorkspaceBottomReviewToolbar';
 import { WorkspaceGridContent, type WorkspaceGridContentSource } from './WorkspaceGridContent';
 import {
@@ -15,14 +14,11 @@ import {
 import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import {
   selectWorkspaceLeftRailProps,
-  WorkspaceLeftRail,
-  type WorkspaceLeftRailSource
+  WorkspaceLeftRail
 } from './WorkspaceLeftRail';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 type WorkspaceLayoutGridFlatSource = WorkspaceGridContentSource &
-  WorkspaceBottomReviewToolbarSource &
-  WorkspaceLeftRailSource &
   WorkspaceGridDividerOverlayProps;
 
 export type WorkspaceLayoutGridSource = WorkspaceLayoutProps;
@@ -30,24 +26,16 @@ export type WorkspaceLayoutGridSource = WorkspaceLayoutProps;
 export function WorkspaceLayoutGrid({
   activeRightPanelId,
   documentNodeId,
-  isImportManagementOpen,
   onEnterImmersiveEdit,
-  onOpenImportManagement,
   onShouldSuppressSelectionRestore,
-  onStartClipboardImport,
-  onStartImport,
   onSelectNode,
   isImmersiveEditing,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
-  isImportManagementOpen: boolean;
   onEnterImmersiveEdit: () => void;
-  onOpenImportManagement: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
-  onStartClipboardImport: () => void;
-  onStartImport: () => void;
   onSelectNode: WorkspaceGridContentSource['onSelectNode'];
   isImmersiveEditing: boolean;
   props: WorkspaceLayoutGridSource;
@@ -64,11 +52,7 @@ export function WorkspaceLayoutGrid({
       {flatProps.isImmersiveMode ? null : (
         <WorkspaceLeftRail
           {...selectWorkspaceLeftRailProps({
-            isImportManagementOpen,
-            onOpenImportManagement,
-            onStartClipboardImport,
-            onStartImport,
-            props: flatProps,
+            props,
             showStudyDock: !flatProps.isStudyMode
           })}
         />
@@ -82,7 +66,7 @@ export function WorkspaceLayoutGrid({
         onSelectNode={onSelectNode}
         props={flatProps}
       />
-      <WorkspaceBottomReviewToolbar {...selectWorkspaceBottomReviewToolbarProps(flatProps)} />
+      <WorkspaceBottomReviewToolbar {...selectWorkspaceBottomReviewToolbarProps(props)} />
     </WorkspaceLayoutGridShell>
   );
 }
