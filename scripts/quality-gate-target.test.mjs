@@ -105,6 +105,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
+        'check:android-boundary': 'node -e "console.log(\'android boundary duplicate should stay unused\')"',
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
@@ -126,6 +127,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('android host lint ok');
       expect(result.stdout).toContain('android host test ok');
       expect(result.stdout).toContain('repository root boundary ok');
+      expect(result.stdout).not.toContain('android boundary duplicate should stay unused');
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
