@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import {
@@ -24,8 +24,8 @@ import {
 import { ExternalLibrarySetupRow } from './ExternalLibrarySetupRow';
 
 interface ExternalLibrarySectionProps {
-  entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  folders: RuntimeExternalSearchFolder[];
+  entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
+  folders: ExternalLibraryFolder[];
   isExternalViewOpen: boolean;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;
@@ -96,7 +96,7 @@ function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
   );
 }
 
-function useExternalCollapsedIds(folders: RuntimeExternalSearchFolder[]) {
+function useExternalCollapsedIds(folders: ExternalLibraryFolder[]) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => loadInitialCollapsedIds(folders));
   const previousFolderIdsRef = useRef<string[]>(folders.map((folder) => folder.id));
 
@@ -151,7 +151,7 @@ function useExternalRowKeyDown(
   );
 }
 
-function loadInitialCollapsedIds(folders: RuntimeExternalSearchFolder[]) {
+function loadInitialCollapsedIds(folders: ExternalLibraryFolder[]) {
   const storedRowIds = loadExternalCollapsedRowIds();
   if (storedRowIds !== null) {
     return new Set(storedRowIds);

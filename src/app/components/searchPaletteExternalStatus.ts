@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
+import { loadExternalLibraryFolders } from '../../shared/platform/externalLibraryBrowseRepository';
 import { resolveExternalSectionStatusLabel } from '../../shared/platform/externalSearchStatus';
 
 export function useExternalSectionStatus(isOpen: boolean) {
@@ -13,7 +13,7 @@ export function useExternalSectionStatus(isOpen: boolean) {
     }
 
     let cancelled = false;
-    loadRuntimeExternalSearchFolders()
+    loadExternalLibraryFolders()
       .then((folders) => {
         if (cancelled || folders === null) {
           return;

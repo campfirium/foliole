@@ -4,9 +4,9 @@ import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListR
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 import { AppEmptyState, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
@@ -18,8 +18,8 @@ import { normalizeWorkspaceContentSort, sortExternalDocuments } from './workspac
 import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
 
 interface ExternalLibraryListPanelProps {
-  entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  folders: RuntimeExternalSearchFolder[];
+  entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
+  folders: ExternalLibraryFolder[];
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   selection: ExternalLibrarySelection;
 }

@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import type {
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 import {
   importRuntimeExternalSearchDocument,
-  type RuntimeExternalSearchBrowseEntry,
-  type RuntimeExternalSearchFolder,
   type RuntimeExternalSearchPreview
 } from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
@@ -27,8 +29,8 @@ interface ExternalLibraryDocumentSurfaceProps {
   canGoBack: boolean;
   canGoForward: boolean;
   documentMaxWidth: number;
-  entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  folders: RuntimeExternalSearchFolder[];
+  entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
+  folders: ExternalLibraryFolder[];
   onOpenImportedNode: (result: NativeTextImportResult) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   onGoBack: () => void;
@@ -36,7 +38,7 @@ interface ExternalLibraryDocumentSurfaceProps {
   selection: ExternalLibrarySelection;
 }
 
-function toExternalDocumentNode(entry: Pick<RuntimeExternalSearchBrowseEntry, 'absolutePath' | 'folderId' | 'modifiedAt' | 'openingText' | 'title'>): Node {
+function toExternalDocumentNode(entry: Pick<ExternalLibraryBrowseEntry, 'absolutePath' | 'folderId' | 'modifiedAt' | 'openingText' | 'title'>): Node {
   return {
     content: '',
     createdAt: entry.modifiedAt,
@@ -82,7 +84,7 @@ function ExternalFolderListSurface(args: {
   documentNodes: Node[];
   documentNodesById: Record<string, Node>;
   onOpenSelection: ExternalLibraryDocumentSurfaceProps['onOpenSelection'];
-  selectedFolder: RuntimeExternalSearchFolder | null;
+  selectedFolder: ExternalLibraryFolder | null;
   selection: Extract<ExternalLibrarySelection, { kind: 'folder' | 'directory' }>;
 }) {
   return (
@@ -112,7 +114,7 @@ function ExternalFolderListSurface(args: {
 }
 
 function ExternalEmptySurface(args: {
-  selectedFolder: RuntimeExternalSearchFolder | null;
+  selectedFolder: ExternalLibraryFolder | null;
   selection: Exclude<ExternalLibrarySelection, { kind: 'document' }>;
 }) {
   return (

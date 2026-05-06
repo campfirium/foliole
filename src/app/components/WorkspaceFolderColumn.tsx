@@ -2,9 +2,9 @@ import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
@@ -13,8 +13,8 @@ import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 interface WorkspaceFolderColumnProps {
   activeFolderId: string | null;
   activeVirtualNodeId?: string | null;
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  externalFolders: RuntimeExternalSearchFolder[];
+  externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
+  externalFolders: ExternalLibraryFolder[];
   externalSelection: ExternalLibrarySelection;
   isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;

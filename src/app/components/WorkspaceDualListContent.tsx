@@ -14,9 +14,9 @@ import {
 } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
@@ -38,8 +38,8 @@ import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
   activeVirtualNodeId?: string | null;
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  externalFolders: RuntimeExternalSearchFolder[];
+  externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
+  externalFolders: ExternalLibraryFolder[];
   externalSelection: ExternalLibrarySelection;
   isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;

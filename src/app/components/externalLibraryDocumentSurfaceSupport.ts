@@ -1,10 +1,10 @@
-import type { RuntimeExternalSearchFolder } from '../../shared/platform/externalSearchRuntimeRepository';
+import type { ExternalLibraryFolder } from '../../shared/platform/externalLibraryBrowseRepository';
 
 import { resolveExternalFolderLabel, type ExternalLibrarySelection } from './externalLibraryBrowseModel';
 
 export function resolveExternalSurfaceTitle(
   selection: ExternalLibrarySelection,
-  selectedFolder: RuntimeExternalSearchFolder | null
+  selectedFolder: ExternalLibraryFolder | null
 ) {
   if (selection.kind === 'root') {
     return 'External library';
@@ -20,7 +20,7 @@ export function resolveExternalSurfaceTitle(
 
 export function resolveExternalSurfaceDescription(
   selection: ExternalLibrarySelection,
-  selectedFolder: RuntimeExternalSearchFolder | null,
+  selectedFolder: ExternalLibraryFolder | null,
   error: string | null
 ) {
   if (error) {

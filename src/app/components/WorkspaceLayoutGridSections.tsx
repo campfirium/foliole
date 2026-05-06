@@ -4,9 +4,9 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
@@ -35,8 +35,8 @@ export interface WorkspaceListAreaProps {
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  externalFolders: RuntimeExternalSearchFolder[];
+  externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
+  externalFolders: ExternalLibraryFolder[];
   externalSelection: ExternalLibrarySelection;
 }
 

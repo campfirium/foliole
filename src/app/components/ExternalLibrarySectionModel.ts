@@ -3,9 +3,9 @@ import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, SetStateAction } fr
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type { NodeTreeRow as NodeTreeRowModel } from '../../features/nodes/model/nodeTree';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 
 import {
   buildExternalLibraryFolderBrowseState,
@@ -69,8 +69,8 @@ function buildDirectoryTreeRow(
 }
 
 function buildFolderTreeRows(
-  folder: RuntimeExternalSearchFolder,
-  entries: RuntimeExternalSearchBrowseEntry[],
+  folder: ExternalLibraryFolder,
+  entries: ExternalLibraryBrowseEntry[],
   selection: ExternalLibrarySelection,
   isExternalViewOpen: boolean,
   collapsedIds: Set<string>
@@ -96,8 +96,8 @@ function buildFolderTreeRows(
 }
 
 export function buildExternalTreeRows(
-  folders: RuntimeExternalSearchFolder[],
-  entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>,
+  folders: ExternalLibraryFolder[],
+  entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>,
   selection: ExternalLibrarySelection,
   isExternalViewOpen: boolean,
   collapsedIds: Set<string>

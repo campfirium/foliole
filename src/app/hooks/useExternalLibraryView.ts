@@ -1,12 +1,12 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
-  loadRuntimeExternalSearchBrowseEntries,
-  loadRuntimeExternalSearchFolders,
-  subscribeRuntimeExternalSearchFolders,
-  type RuntimeExternalSearchBrowseEntry,
-  type RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  loadExternalLibraryBrowseEntries,
+  loadExternalLibraryFolders,
+  subscribeExternalLibraryFolders,
+  type ExternalLibraryBrowseEntry,
+  type ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 import type { ExternalLibrarySelection } from '../components/externalLibraryBrowseModel';
 
 export function useExternalLibraryView() {
@@ -37,7 +37,7 @@ export function useExternalLibraryView() {
       setIsExternalViewOpen(false);
     },
     refreshActiveFolderEntries: async (folderId: string) => {
-      const result = await loadRuntimeExternalSearchBrowseEntries(folderId);
+      const result = await loadExternalLibraryBrowseEntries(folderId);
       if (result === null) {
         return;
       }
@@ -52,9 +52,9 @@ export function useExternalLibraryView() {
 }
 
 function usePreloadExternalFolderEntries(
-  folders: RuntimeExternalSearchFolder[],
-  entriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>,
-  setEntriesByFolderId: Dispatch<SetStateAction<Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>>>
+  folders: ExternalLibraryFolder[],
+  entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>,
+  setEntriesByFolderId: Dispatch<SetStateAction<Record<string, ExternalLibraryBrowseEntry[] | undefined>>>
 ) {
   useEffect(() => {
     const missingFolderIds = folders
@@ -67,7 +67,7 @@ function usePreloadExternalFolderEntries(
     void Promise.all(
       missingFolderIds.map(async (folderId) => ({
         folderId,
-        result: await loadRuntimeExternalSearchBrowseEntries(folderId)
+        result: await loadExternalLibraryBrowseEntries(folderId)
       }))
     ).then((results) => {
       if (!alive) {
@@ -94,13 +94,13 @@ function usePreloadExternalFolderEntries(
 
 function useExternalFoldersState(
   setSelection: (update: (current: ExternalLibrarySelection) => ExternalLibrarySelection) => void,
-  setEntriesByFolderId: Dispatch<SetStateAction<Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>>>
+  setEntriesByFolderId: Dispatch<SetStateAction<Record<string, ExternalLibraryBrowseEntry[] | undefined>>>
 ) {
-  const [folders, setFolders] = useState<RuntimeExternalSearchFolder[]>([]);
+  const [folders, setFolders] = useState<ExternalLibraryFolder[]>([]);
 
   useEffect(() => {
     let alive = true;
-    void loadRuntimeExternalSearchFolders().then((result) => {
+    void loadExternalLibraryFolders().then((result) => {
       if (!alive || result === null) {
         return;
       }
@@ -120,7 +120,7 @@ function useExternalFoldersState(
 
   useEffect(
     () =>
-      subscribeRuntimeExternalSearchFolders((nextFolders) => {
+      subscribeExternalLibraryFolders((nextFolders) => {
         setEntriesByFolderId((current) => retainEntriesForCurrentFolders(current, folders, nextFolders));
         setFolders(nextFolders);
         setSelection((current) => resolveExternalSelectionAfterFoldersChanged(current, nextFolders));
@@ -132,12 +132,12 @@ function useExternalFoldersState(
 }
 
 function retainEntriesForCurrentFolders(
-  current: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>,
-  previousFolders: RuntimeExternalSearchFolder[],
-  nextFolders: RuntimeExternalSearchFolder[]
+  current: Record<string, ExternalLibraryBrowseEntry[] | undefined>,
+  previousFolders: ExternalLibraryFolder[],
+  nextFolders: ExternalLibraryFolder[]
 ) {
   const previousById = new Map(previousFolders.map((folder) => [folder.id, folder]));
-  const next: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined> = {};
+  const next: Record<string, ExternalLibraryBrowseEntry[] | undefined> = {};
   let changed = false;
 
   nextFolders.forEach((folder) => {
@@ -161,8 +161,8 @@ function retainEntriesForCurrentFolders(
 }
 
 function isExternalFolderEntryCacheCurrent(
-  previousFolder: RuntimeExternalSearchFolder,
-  nextFolder: RuntimeExternalSearchFolder
+  previousFolder: ExternalLibraryFolder,
+  nextFolder: ExternalLibraryFolder
 ) {
   return (
     previousFolder.documentCount === nextFolder.documentCount &&
@@ -174,7 +174,7 @@ function isExternalFolderEntryCacheCurrent(
 
 function resolveExternalSelectionAfterFoldersChanged(
   current: ExternalLibrarySelection,
-  folders: RuntimeExternalSearchFolder[]
+  folders: ExternalLibraryFolder[]
 ): ExternalLibrarySelection {
   if (current.kind === 'root') {
     return current;
@@ -183,7 +183,7 @@ function resolveExternalSelectionAfterFoldersChanged(
 }
 
 function useExternalFolderEntries(selection: ExternalLibrarySelection) {
-  const [entriesByFolderId, setEntriesByFolderId] = useState<Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>>({});
+  const [entriesByFolderId, setEntriesByFolderId] = useState<Record<string, ExternalLibraryBrowseEntry[] | undefined>>({});
   const activeFolderId = selection.kind === 'root' ? null : selection.folderId;
 
   useEffect(() => {
@@ -191,7 +191,7 @@ function useExternalFolderEntries(selection: ExternalLibrarySelection) {
       return;
     }
     let alive = true;
-    void loadRuntimeExternalSearchBrowseEntries(activeFolderId).then((result) => {
+    void loadExternalLibraryBrowseEntries(activeFolderId).then((result) => {
       if (!alive || result === null) {
         return;
       }

@@ -1,5 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { RuntimeExternalSearchBrowseEntry } from '../../shared/platform/externalSearchRuntimeRepository';
+import type { ExternalLibraryBrowseEntry } from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WindowTitleBar } from './WindowTitleBar';
@@ -12,7 +12,7 @@ export type WorkspaceTitleBarSource = Pick<
 >;
 
 function resolveExternalTitleBarTitle(props: {
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
+  externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   externalSelection: ExternalLibrarySelection;
   isExternalViewOpen: boolean;
 }) {

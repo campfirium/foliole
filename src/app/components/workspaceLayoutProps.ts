@@ -9,9 +9,9 @@ import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  ExternalLibraryBrowseEntry,
+  ExternalLibraryFolder
+} from '../../shared/platform/externalLibraryBrowseRepository';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
@@ -87,8 +87,8 @@ export interface WorkspaceLayoutFlatProps {
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
-  externalFolders: RuntimeExternalSearchFolder[];
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
+  externalFolders: ExternalLibraryFolder[];
+  externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   externalSelection: ExternalLibrarySelection;
   nodeViewById: Record<string, NodeViewState | undefined>;
   onAnswerChange: (answer: string) => void;
