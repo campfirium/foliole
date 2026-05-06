@@ -83,9 +83,6 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     setSyncProgress((previous) => mergeCompanionSyncProgressSession(previous, progress));
   }, []);
 
-  useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
-  useForegroundAutoSync(setError, setReadableArticle, setState, setMergedSyncProgress, setStatus, state, tryForegroundAutoSync);
-
   function clearError() {
     setError(null);
   }
@@ -104,6 +101,17 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     onError: setError,
     onSaveEndpoint: snapshotActions.saveEndpoint
   });
+  useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
+  useForegroundAutoSync(
+    setError,
+    setReadableArticle,
+    setState,
+    setMergedSyncProgress,
+    setStatus,
+    pairing.pairingState.is_paired,
+    state,
+    tryForegroundAutoSync
+  );
 
   return {
     bootstrapState,

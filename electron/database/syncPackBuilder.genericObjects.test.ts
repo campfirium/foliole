@@ -113,11 +113,14 @@ it('packs review log rows with changed node review state', async () => {
 
   const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-review-log-1', fromStateSeq: 0 });
 
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-review-log-1', toStateSeq: 6 });
+  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-review-log-1', toStateSeq: 6 });
   expect(readPackRows(packPath)).toMatchObject({
     manifest: expect.objectContaining({ tables: expect.arrayContaining([{ name: 'review_log', row_count: 1 }]) }),
     reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
-    stateRows: [{ object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }],
+    stateRows: [
+      { object_id: 'node-review-1', object_type: 'node', state_seq: 1 },
+      { object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }
+    ],
     syncObjects: [expect.objectContaining({
       object_id: 'node-review-1',
       object_type: 'node_review',
@@ -132,9 +135,13 @@ it('packs node reading state as a generic sync object', async () => {
 
   const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-node-reading-1', fromStateSeq: 0 });
 
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-node-reading-1', toStateSeq: 8 });
+  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-node-reading-1', toStateSeq: 8 });
   expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 }],
+    nodes: [expect.objectContaining({ id: 'node-reading-1' })],
+    stateRows: [
+      { object_id: 'node-reading-1', object_type: 'node', state_seq: 1 },
+      { object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 }
+    ],
     syncObjects: [expect.objectContaining({
       object_id: 'node-reading-1',
       object_type: 'node_reading',

@@ -10,6 +10,7 @@ import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../li
 
 import { openDatabaseConnection } from './connection.js';
 import { loadSyncObjects } from './syncObjects.js';
+import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syncPackLearningRows.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
   content_hash: string;
@@ -97,6 +98,9 @@ function listChangedStateRows(fromStateSeq: number, toStateSeq: number) {
     `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
      FROM sync_object_state
      WHERE state_seq > ? AND state_seq <= ?
+     AND (object_type NOT IN ('node_reading', 'node_review') OR EXISTS (
+       SELECT 1 FROM nodes WHERE nodes.id = sync_object_state.object_id
+     ))
      ORDER BY state_seq ASC`,
     [fromStateSeq, toStateSeq]
   );
@@ -168,8 +172,18 @@ export function loadMaxStateSeq() {
 }
 
 export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
-  const stateRows = listChangedStateRows(fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
-  const nodeIds = idsForObjectTable(stateRows, 'nodes');
+  const changedStateRows = listChangedStateRows(fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+  const stateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
+    isSyncStatePackRow,
+    nodeIds: learningNodeIds(changedStateRows),
+    placeholders,
+    query: (sql, params) => openDatabaseConnection().driver.queryAll<RawSyncStatePackRow>(sql, params),
+    toStateSeq
+  }));
+  const nodeIds = [...new Set([
+    ...idsForObjectTable(stateRows, 'nodes'),
+    ...learningNodeIds(stateRows)
+  ])];
   const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
   const nodes = queryRowsByIds<NodePackRow>(
     `SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash,

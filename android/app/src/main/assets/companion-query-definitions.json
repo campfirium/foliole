@@ -280,7 +280,7 @@
         }
       ]
     },
-    "existingState": {
+    "syncStateExistingForMutation": {
       "resultKey": "rows",
       "sql": "SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1",
       "columns": [
@@ -301,7 +301,7 @@
         }
       ]
     },
-    "nextStateSeq": {
+    "syncStateNextSeqForMutation": {
       "resultKey": "rows",
       "sql": "SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state",
       "columns": [

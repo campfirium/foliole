@@ -145,7 +145,13 @@ function createConflictSnapshot(title: string): NativeSyncNodeConflictRecord['sn
 
 function resetCompanionWorkspaceSyncMocks() {
   vi.resetAllMocks();
-  workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState(null));
+  workspaceSyncMock.loadCompanionWorkspaceSyncState
+    .mockResolvedValueOnce(createSyncState(null))
+    .mockResolvedValue(createSyncState(createSnapshot()));
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async (_endpointUrl, options) => {
+    await options?.onStructureSynced?.();
+    return createSyncObjectsResult();
+  });
   syncObjectsMock.loadCompanionSyncNodeConflicts.mockResolvedValue([]);
   workspaceSyncMock.recordCompanionWorkspaceSyncEvent
     .mockResolvedValueOnce(createSyncState(null))
@@ -182,15 +188,16 @@ async function testManualSyncRefreshesReadableArticle() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641',
-    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
   );
-  expect(result.current.state.workspace_snapshot?.activeNodeId).toBe('topic-1');
+  expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(1);
   expect(result.current.readableArticle?.nodeId).toBe('topic-1');
   expect(result.current.status).toBe('idle');
 }
 
 async function testManualSyncRefreshesConflictCount() {
   syncObjectsMock.loadCompanionSyncNodeConflicts
+    .mockResolvedValueOnce([])
     .mockResolvedValueOnce([])
     .mockResolvedValueOnce([
       {
@@ -223,7 +230,7 @@ async function testManualSyncRefreshesConflictCount() {
   expect(result.current.syncConflictCount).toBe(2);
 }
 
-async function testManualSyncContinuesResourceBacklog() {
+async function testManualSyncRecordsOneBoundedResourceBacklogPass() {
   syncObjectsMock.syncCompanionObjectsFromDesktop
     .mockResolvedValueOnce(createSyncObjectsResult({
       remainingContentBlobCount: 1,
@@ -240,7 +247,7 @@ async function testManualSyncContinuesResourceBacklog() {
     await result.current.pullFromDesktop('http://10.0.2.2:38641');
   });
 
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(1);
   expect(result.current.status).toBe('idle');
 }
 
@@ -251,5 +258,5 @@ describe('useCompanionWorkspaceSync', () => {
 
   it('refreshes the visible sync conflict count after manual sync', testManualSyncRefreshesConflictCount);
 
-  it('continues manual sync while resource backlog is making progress', testManualSyncContinuesResourceBacklog);
+  it('records one bounded manual resource backlog pass', testManualSyncRecordsOneBoundedResourceBacklogPass);
 });

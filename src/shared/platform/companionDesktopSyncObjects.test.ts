@@ -52,15 +52,29 @@ async function testFailsWhenStageNeverReturns() {
   syncBridgeMock.applyCompanionDesktopSyncPack.mockReturnValue(new Promise(() => undefined));
 
   const {
-    COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS,
+    COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS,
     syncCompanionObjectsFromDesktop
   } = await import('./companionDesktopSyncObjects');
   const sync = syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  let settled = false;
+  sync.finally(() => {
+    settled = true;
+  }).catch(() => undefined);
   const assertion = expect(sync).rejects.toThrow('Desktop sync timed out while applying the structure pack.');
-  await vi.advanceTimersByTimeAsync(COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS);
+  await vi.advanceTimersByTimeAsync(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS - 1);
+  expect(settled).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
 
   await assertion;
   vi.useRealTimers();
+}
+
+async function testStructureTimeoutStaysBelowMinute() {
+  const {
+    COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS
+  } = await import('./companionDesktopSyncObjects');
+
+  expect(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS).toBeLessThan(60_000);
 }
 
 async function testReportsRemainingStructureLagFromFinalDiagnostics() {
@@ -102,6 +116,8 @@ describe('companion desktop sync objects', () => {
   it('does not run legacy JSON state, topic, or review streams on the normal pull path', testNoLegacyJsonStreams);
 
   it('fails instead of staying in sync when a desktop sync stage never returns', testFailsWhenStageNeverReturns);
+
+  it('keeps structure sync timeout below a minute', testStructureTimeoutStaysBelowMinute);
 
   it('reports remaining structure lag from final diagnostics', testReportsRemainingStructureLagFromFinalDiagnostics);
 });

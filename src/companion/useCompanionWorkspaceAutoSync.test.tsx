@@ -15,7 +15,8 @@ function createSyncState(endpointUrl: string | null) {
 async function renderAutoSyncHook(
   isNativeRuntime: boolean,
   endpointUrl: string | null = 'http://10.0.2.2:38641',
-  tryForegroundAutoSync: (args: unknown) => Promise<'backlog' | 'completed' | 'failed' | 'skipped'> = vi.fn(async () => 'completed' as const)
+  tryForegroundAutoSync: (args: unknown) => Promise<'backlog' | 'completed' | 'failed' | 'skipped'> = vi.fn(async () => 'completed' as const),
+  isPairingReady = true
 ) {
   vi.doMock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
@@ -29,9 +30,9 @@ async function renderAutoSyncHook(
     subscribeNativeAppForeground
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
-  const hook = renderHook(({ syncState }) =>
-    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), syncState, tryForegroundAutoSync),
-    { initialProps: { syncState: createSyncState(endpointUrl) } }
+  const hook = renderHook(({ pairingReady, syncState }) =>
+    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), pairingReady, syncState, tryForegroundAutoSync),
+    { initialProps: { pairingReady: isPairingReady, syncState: createSyncState(endpointUrl) } }
   );
   return { foregroundHandlers, hook, subscribeNativeAppForeground, tryForegroundAutoSync };
 }
@@ -117,6 +118,22 @@ async function expectSkippedPassDoesNotRetry() {
   expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
 }
 
+async function expectWaitsForNativePairing() {
+  vi.spyOn(Date, 'now').mockReturnValue(1_000);
+  const { hook, tryForegroundAutoSync } = await renderAutoSyncHook(
+    true,
+    'http://10.0.2.2:38641',
+    vi.fn(async () => 'completed' as const),
+    false
+  );
+
+  expect(tryForegroundAutoSync).not.toHaveBeenCalled();
+
+  hook.rerender({ pairingReady: true, syncState: createSyncState('http://10.0.2.2:38641') });
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+}
+
 describe('useForegroundAutoSync triggers', () => {
   beforeEach(() => {
     resetAutoSyncTestModules();
@@ -189,10 +206,12 @@ describe('useForegroundAutoSync triggers', () => {
 
     expect(tryForegroundAutoSync).not.toHaveBeenCalled();
 
-    hook.rerender({ syncState: createSyncState('http://10.0.2.2:38641') });
+    hook.rerender({ pairingReady: true, syncState: createSyncState('http://10.0.2.2:38641') });
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
   });
+
+  it('waits for native pairing before syncing a saved endpoint', expectWaitsForNativePairing);
 });
 
 describe('useForegroundAutoSync retry cadence', () => {

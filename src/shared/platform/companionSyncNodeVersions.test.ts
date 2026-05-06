@@ -50,6 +50,25 @@ it('opens the Android companion database before running the shared core', async 
   expect(connection.open).toHaveBeenCalled();
 });
 
+it('retrieves the Android companion database when create reports an existing connection', async () => {
+  db = new Database(':memory:');
+  installNodeApplySchema(db);
+  const connection = createFakeCapacitorConnection(db);
+  const manager = {
+    createConnection: vi.fn(async () => {
+      throw new Error('CreateConnection: Connection foliole-companion already exists');
+    }),
+    isConnection: vi.fn(async () => ({ result: false })),
+    retrieveConnection: vi.fn(async () => connection)
+  };
+
+  await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
+    .resolves.toEqual(['node-1']);
+
+  expect(manager.retrieveConnection).toHaveBeenCalledWith('foliole-companion', false);
+  expect(connection.open).toHaveBeenCalled();
+});
+
 function nodeVersion(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],

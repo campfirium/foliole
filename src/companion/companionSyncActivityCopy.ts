@@ -23,7 +23,7 @@ export function isSyncCheckOnlyMessage(message: string) {
 }
 
 export function isReportableSyncEvent(event: { message: string; status: string }) {
-  return event.status !== 'started' && !(event.status === 'completed' && isSyncCheckOnlyMessage(event.message));
+  return !(event.status === 'completed' && isSyncCheckOnlyMessage(event.message));
 }
 
 function stripDiagnosticSuffixes(message: string) {

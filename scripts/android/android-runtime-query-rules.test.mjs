@@ -28,6 +28,12 @@ describe('Android runtime query rules', () => {
       companionMeta: { queryName: 'companionMetaValue' },
       nextStateSeq: { nextStateSeqKey: 'next_state_seq', queryName: 'syncStateNextSeqForMutation' }
     });
+    expect(definitions.queries[definitions.runtimeQueries.existingState.queryName]).toMatchObject({
+      resultKey: definitions.runtimeQueries.existingState.resultKey
+    });
+    expect(definitions.queries[definitions.runtimeQueries.nextStateSeq.queryName]).toMatchObject({
+      resultKey: definitions.runtimeQueries.nextStateSeq.resultKey
+    });
   });
 
   it('keeps runtime Java helpers wired to generated query rules', async () => {

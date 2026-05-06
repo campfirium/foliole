@@ -35,12 +35,16 @@ it('builds content blob metadata upsert for referenced body blobs', () => {
   expect(sql).toContain('INSERT OR REPLACE INTO main.content_blobs');
   expect(sql).toContain('FROM incoming.content_blobs incoming');
   expect(sql).toContain('SELECT body_blob_hash FROM incoming.nodes');
+  expect(sql).toContain("incoming.object_type = 'node'");
   expect(sql).toContain('UNION SELECT body_blob_hash FROM incoming.external_documents');
 });
 
 it('builds node and attachment pack apply statements against an incoming alias', () => {
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
     'FROM incoming.nodes incoming'
+  );
+  expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
+    "incoming.object_type = 'node'"
   );
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming', incomingHasCurrentVersionId: false })).toContain(
     'SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id'

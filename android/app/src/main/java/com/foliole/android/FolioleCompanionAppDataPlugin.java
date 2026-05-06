@@ -14,7 +14,7 @@ public class FolioleCompanionAppDataPlugin extends Plugin {
             try {
                 call.resolve(FolioleCompanionAppDataStore.clear(getContext().getApplicationContext()));
             } catch (Exception exception) {
-                call.reject("Failed to clear Foliole app data.", exception);
+                call.reject(FolioleCompanionPluginErrors.withCause("Failed to clear Foliole app data.", exception), exception);
             }
         }).start();
     }

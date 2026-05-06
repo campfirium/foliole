@@ -42,6 +42,21 @@ async function applySyncPackNodeRowsWithDbPort(
   await port.run(buildSyncPackNodeUpsertSql(options));
 }
 
+async function pruneLearningRowsWithoutActiveNodes(port: DbPort) {
+  await port.run(
+    `DELETE FROM node_reading_device_state WHERE node_id NOT IN ` +
+    `(SELECT id FROM nodes WHERE deleted_at IS NULL)`
+  );
+  await port.run(
+    `DELETE FROM node_reading WHERE node_id NOT IN ` +
+    `(SELECT id FROM nodes WHERE deleted_at IS NULL)`
+  );
+  await port.run(
+    `DELETE FROM node_review WHERE node_id NOT IN ` +
+    `(SELECT id FROM nodes WHERE deleted_at IS NULL)`
+  );
+}
+
 async function applySyncPackNodeAttachmentsWithDbPort(
   port: DbPort,
   options: SyncPackNodeApplyOptions = {}
@@ -62,6 +77,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   if (shouldApply) {
     appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
     await applySyncPackNodeRowsWithDbPort(port, options);
+    await pruneLearningRowsWithoutActiveNodes(port);
     await applySyncPackExternalDocumentsWithDbPort(port, options);
     await applySyncPackSettingObjectsWithDbPort(port, options);
     await applySyncPackMetadataObjectsWithDbPort(port, options);

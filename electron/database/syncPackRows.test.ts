@@ -36,6 +36,7 @@ afterEach(async () => {
 });
 
 it('loads reading and review state as state-only sync pack metadata', () => {
+  insertNodeSyncState();
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
@@ -72,8 +73,9 @@ it('loads reading and review state as state-only sync pack metadata', () => {
   expect(loadPackRows(0, 6)).toMatchObject({
     contentBlobs: [],
     externalDocuments: [],
-    nodes: [],
+    nodes: [{ id: 'node-1' }],
     stateRows: [
+      { object_id: 'node-1', object_type: 'node', state_seq: 1 },
       { object_id: 'node-1', object_type: 'node_review', state_seq: 3 },
       { object_id: 'node-1', object_type: 'node_reading', state_seq: 4 },
       { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting', state_seq: 5 },
@@ -87,6 +89,18 @@ it('loads reading and review state as state-only sync pack metadata', () => {
     ]
   });
 });
+
+function insertNodeSyncState() {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('node-1', 'topic', 'Node 1', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
+  );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0)`
+  );
+}
 
 it('loads only payload objects that match changed state row pairs', () => {
   const driver = openDatabaseConnection().driver;
@@ -117,4 +131,21 @@ it('loads only payload objects that match changed state row pairs', () => {
     'attachment:att-1',
     'import_source:source-1'
   ]);
+});
+
+it('does not pack learning state rows when the node entity is gone', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES
+       ('node_reading', 'deleted-node', 7, 'reading-hash', 'desktop', '2026-04-27T00:07:00.000Z', 0),
+       ('node_review', 'deleted-node', 8, 'review-hash', 'desktop', '2026-04-27T00:08:00.000Z', 0)`
+  );
+
+  expect(loadPackRows(0, 8)).toMatchObject({
+    nodes: [],
+    stateRows: [],
+    syncObjects: []
+  });
 });

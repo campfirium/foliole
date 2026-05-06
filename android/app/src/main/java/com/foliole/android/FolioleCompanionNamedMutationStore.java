@@ -13,7 +13,12 @@ final class FolioleCompanionNamedMutationStore {
     private FolioleCompanionNamedMutationStore() {}
 
     static void execute(Context context, SQLiteDatabase database, String statementName, Object[] args) throws Exception {
-        database.execSQL(statement(context, statementName), args);
+        String sql = statement(context, statementName);
+        if (args == null || args.length == 0) {
+            database.execSQL(sql);
+            return;
+        }
+        database.execSQL(sql, args);
     }
 
     static int executeChanged(Context context, SQLiteDatabase database, String statementName, Object[] args) throws Exception {

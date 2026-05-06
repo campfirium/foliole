@@ -55,13 +55,29 @@ export async function openCompanionDatabaseConnection(manager: CompanionSqliteCo
   const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false).catch(() => ({ result: false }));
   const connection = existing.result
     ? await manager.retrieveConnection(COMPANION_DATABASE_NAME, false)
-    : await manager.createConnection(
+    : await createOrRetrieveCompanionConnection(manager);
+  await connection.open();
+  return connection;
+}
+
+async function createOrRetrieveCompanionConnection(manager: CompanionSqliteConnectionManager) {
+  try {
+    return await manager.createConnection(
       COMPANION_DATABASE_NAME,
       false,
       'no-encryption',
       COMPANION_DATABASE_VERSION,
       false
     );
-  await connection.open();
-  return connection;
+  } catch (error) {
+    if (!isExistingConnectionError(error)) {
+      throw error;
+    }
+    return manager.retrieveConnection(COMPANION_DATABASE_NAME, false);
+  }
+}
+
+function isExistingConnectionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /connection .*already exists/i.test(message);
 }

@@ -76,6 +76,30 @@ const COMPANION_APP_DATA_STORE = path.join(
   'android',
   'FolioleCompanionAppDataStore.java'
 );
+const COMPANION_APP_DATA_PLUGIN = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionAppDataPlugin.java'
+);
+const COMPANION_NAMED_MUTATION_STORE = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionNamedMutationStore.java'
+);
 
 describe('schema inventory drift gate', () => {
   it('generates the Android schema asset from the shared schema source', async () => {
@@ -127,6 +151,23 @@ describe('schema inventory drift gate', () => {
     expect(source).not.toContain('mutation.getString("table")');
     expect(source).not.toContain('mutation.getString("statementName")');
     expect(source).not.toContain('new ClearMutation("');
+  });
+
+  it('clears Android pairing only after app data tables are cleared', async () => {
+    const source = await readFile(COMPANION_APP_DATA_STORE, 'utf8');
+    const tableClearIndex = source.indexOf('clearTables(context, database)');
+    const pairingClearIndex = source.indexOf('FolioleCompanionPairingStore.clearPairingCredentials(context)');
+
+    expect(pairingClearIndex).toBeGreaterThan(tableClearIndex);
+  });
+
+  it('executes no-arg Android app data clear mutations without empty bind args', async () => {
+    const mutationStoreSource = await readFile(COMPANION_NAMED_MUTATION_STORE, 'utf8');
+    const appDataPluginSource = await readFile(COMPANION_APP_DATA_PLUGIN, 'utf8');
+
+    expect(mutationStoreSource).toContain('if (args == null || args.length == 0)');
+    expect(mutationStoreSource).toContain('database.execSQL(sql);');
+    expect(appDataPluginSource).toContain('FolioleCompanionPluginErrors.withCause("Failed to clear Foliole app data.", exception)');
   });
 
   it('keeps generated mutation definitions write-only', async () => {

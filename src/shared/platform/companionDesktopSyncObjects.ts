@@ -21,6 +21,7 @@ import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const SYNC_PACK_PATH = '/companion/sync-pack';
 export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
+export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS = 45_000;
 export {
   ATTACHMENT_RESOURCE_BATCH_LIMIT,
   CONTENT_BLOB_BATCH_LIMIT,
@@ -148,6 +149,70 @@ async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDes
   };
 }
 
+function createEmptyResourceStages() {
+  return {
+    attachmentResourceError: null,
+    contentBlobError: null,
+    syncedAttachmentResourceElapsedMs: 0,
+    syncedAttachmentIds: [],
+    syncedAttachmentResourceBytes: 0,
+    syncedContentBlobElapsedMs: 0,
+    syncedContentBlobBytes: 0,
+    syncedContentBlobHashes: [],
+    syncedResourceElapsedMs: 0
+  };
+}
+
+function createSkippedResourceSummary() {
+  return {
+    localDirtyCount: 0,
+    pendingAckCount: 0,
+    pushIssueCount: 0,
+    remainingAttachmentBreakdown: undefined,
+    remainingAttachmentResourceBytes: null,
+    remainingAttachmentResourceCount: null,
+    remainingFailedAttachmentResourceBytes: null,
+    remainingFailedAttachmentResourceCount: null,
+    remainingContentBreakdown: undefined,
+    remainingContentBlobBytes: null,
+    remainingContentBlobCount: null,
+    remainingFailedContentBlobBytes: null,
+    remainingFailedContentBlobCount: null,
+    remainingStructureChangeCount: 0
+  };
+}
+
+function mergeCompanionObjectsSyncResult(args: {
+  finalSummary: Awaited<ReturnType<typeof loadCompanionDesktopSyncSummary>> | ReturnType<typeof createSkippedResourceSummary>;
+  pack: Awaited<ReturnType<typeof pullRemoteStructurePack>>;
+  pushed: Awaited<ReturnType<typeof pushLocalDirtyObjects>> | {
+    pushConflictCount: number;
+    pushedObjectIds: string[];
+    pushedReviewOpIds: string[];
+    pushError: string;
+    pushRejectedCount: number;
+  };
+  resources: ReturnType<typeof createEmptyResourceStages> | Awaited<ReturnType<typeof pullResourceStages>>;
+}): CompanionDesktopSyncResult {
+  return {
+    appliedNodeIds: [],
+    appliedPackBlobCount: args.pack.appliedPackBlobCount,
+    appliedPackObjectCount: args.pack.appliedPackObjectCount,
+    appliedObjectIds: [],
+    appliedReviewOpIds: args.pack.appliedReviewOpIds,
+    changedObjectIds: [],
+    pushedNodeIds: [],
+    pushedObjectIds: args.pushed.pushedObjectIds,
+    pushedReviewOpIds: args.pushed.pushedReviewOpIds,
+    requestedObjectIds: [],
+    ...args.resources,
+    ...args.finalSummary,
+    pushConflictCount: args.pushed.pushConflictCount,
+    pushError: args.pushed.pushError,
+    pushRejectedCount: args.pushed.pushRejectedCount
+  };
+}
+
 async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
@@ -160,51 +225,16 @@ async function runCompanionObjectsSync(
       pushError: pushErrorMessage(error),
       pushRejectedCount: 0
     }));
-  const pack = await withSyncStepTimeout('applying the structure pack', pullRemoteStructurePack(endpointUrl));
+  const pack = await withSyncStepTimeout('applying the structure pack', pullRemoteStructurePack(endpointUrl), COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS);
   options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
   await options.onStructureSynced?.();
-  const resources = await pullResourceStages(endpointUrl, options.onProgress);
-  const finalSummary = await loadCompanionDesktopSyncSummary(endpointUrl);
-  return {
-    appliedNodeIds: [],
-    appliedPackBlobCount: pack.appliedPackBlobCount,
-    appliedPackObjectCount: pack.appliedPackObjectCount,
-    appliedObjectIds: [],
-    appliedReviewOpIds: pack.appliedReviewOpIds,
-    changedObjectIds: [],
-    pushedNodeIds: [],
-    pushedObjectIds: pushed.pushedObjectIds,
-    pushedReviewOpIds: pushed.pushedReviewOpIds,
-    pushError: pushed.pushError,
-    requestedObjectIds: [],
-    syncedAttachmentIds: resources.syncedAttachmentIds,
-    syncedAttachmentResourceElapsedMs: resources.syncedAttachmentResourceElapsedMs,
-    syncedAttachmentResourceBytes: resources.syncedAttachmentResourceBytes,
-    syncedResourceElapsedMs: resources.syncedResourceElapsedMs,
-    syncedStructureElapsedMs: pack.syncedStructureElapsedMs,
-    attachmentResourceError: resources.attachmentResourceError,
-    contentBlobError: resources.contentBlobError,
-    localDirtyCount: finalSummary.localDirtyCount,
-    pendingAckCount: finalSummary.pendingAckCount,
-    pushConflictCount: pushed.pushConflictCount,
-    pushIssueCount: finalSummary.pushIssueCount,
-    remainingAttachmentBreakdown: finalSummary.remainingAttachmentBreakdown,
-    remainingAttachmentResourceBytes: finalSummary.remainingAttachmentResourceBytes,
-    remainingAttachmentResourceCount: finalSummary.remainingAttachmentResourceCount,
-    remainingFailedAttachmentResourceBytes: finalSummary.remainingFailedAttachmentResourceBytes,
-    remainingFailedAttachmentResourceCount: finalSummary.remainingFailedAttachmentResourceCount,
-    remainingContentBreakdown: finalSummary.remainingContentBreakdown,
-    remainingContentBlobBytes: finalSummary.remainingContentBlobBytes,
-    remainingContentBlobCount: finalSummary.remainingContentBlobCount,
-    remainingFailedContentBlobBytes: finalSummary.remainingFailedContentBlobBytes,
-    remainingFailedContentBlobCount: finalSummary.remainingFailedContentBlobCount,
-    remainingStructureChangeCount: finalSummary.remainingStructureChangeCount,
-    syncedContentBlobHashes: resources.syncedContentBlobHashes,
-    syncedContentBlobElapsedMs: resources.syncedContentBlobElapsedMs,
-    syncedContentBlobNativeTiming: resources.syncedContentBlobNativeTiming,
-    syncedContentBlobBytes: resources.syncedContentBlobBytes,
-    pushRejectedCount: pushed.pushRejectedCount
-  };
+  const resources = options.includeResources === false
+    ? createEmptyResourceStages()
+    : await pullResourceStages(endpointUrl, options.onProgress);
+  const finalSummary = options.includeResources === false
+    ? createSkippedResourceSummary()
+    : await loadCompanionDesktopSyncSummary(endpointUrl);
+  return mergeCompanionObjectsSyncResult({ finalSummary, pack, pushed, resources });
 }
 
 export function syncCompanionObjectsFromDesktop(

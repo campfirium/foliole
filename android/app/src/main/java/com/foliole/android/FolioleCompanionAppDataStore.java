@@ -15,7 +15,6 @@ final class FolioleCompanionAppDataStore {
     private FolioleCompanionAppDataStore() {}
 
     static JSObject clear(Context context) throws Exception {
-        FolioleCompanionPairingStore.clearPairingCredentials(context);
         try (FolioleCompanionDatabaseHelper helper = new FolioleCompanionDatabaseHelper(context)) {
             SQLiteDatabase database = helper.getWritableDatabase();
             String now = Instant.now().toString();
@@ -29,7 +28,9 @@ final class FolioleCompanionAppDataStore {
                 database.endTransaction();
             }
             deleteRecursively(new File(context.getFilesDir(), FolioleCompanionResourceReadQueryRules.attachmentString(context, "directoryName")));
-            return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(context, database);
+            JSObject clearedState = FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(context, database);
+            FolioleCompanionPairingStore.clearPairingCredentials(context);
+            return clearedState;
         }
     }
 

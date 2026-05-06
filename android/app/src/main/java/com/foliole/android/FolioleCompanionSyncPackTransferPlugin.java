@@ -35,7 +35,7 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
                 );
                 call.resolve(result);
             } catch (Exception exception) {
-                call.reject("Failed to download companion desktop sync pack.", exception);
+                call.reject(FolioleCompanionPluginErrors.withCause("Failed to download companion desktop sync pack.", exception), exception);
             }
         }).start();
     }
@@ -56,7 +56,7 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
             );
             call.resolve(result);
         } catch (Exception exception) {
-            call.reject("Failed to delete companion desktop sync pack.", exception);
+            call.reject(FolioleCompanionPluginErrors.withCause("Failed to delete companion desktop sync pack.", exception), exception);
         }
     }
 

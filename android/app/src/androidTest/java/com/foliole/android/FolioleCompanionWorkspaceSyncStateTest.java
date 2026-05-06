@@ -39,6 +39,8 @@ public class FolioleCompanionWorkspaceSyncStateTest {
 
     @Test
     public void completedSyncEventPersistsLastSyncedAt() throws Exception {
+        insertNode();
+
         JSObject completed = helper.recordWorkspaceSyncEvent(
             "http://10.0.2.2:38641",
             "completed",
@@ -54,6 +56,8 @@ public class FolioleCompanionWorkspaceSyncStateTest {
 
         assertEquals("2026-05-01T02:00:00.000Z", completed.getString("last_synced_at"));
         assertEquals("2026-05-01T02:01:00.000Z", checked.getString("last_synced_at"));
+        assertFalse(completed.has("workspace_snapshot") && !completed.isNull("workspace_snapshot"));
+        assertFalse(checked.has("workspace_snapshot") && !checked.isNull("workspace_snapshot"));
     }
 
     @Test

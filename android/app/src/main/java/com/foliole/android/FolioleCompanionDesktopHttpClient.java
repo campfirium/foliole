@@ -22,7 +22,7 @@ import java.util.Iterator;
 final class FolioleCompanionDesktopHttpClient {
     private static final int CONNECT_TIMEOUT_MS = 5000;
     private static final int COPY_BUFFER_BYTES = 256 * 1024;
-    private static final int READ_TIMEOUT_MS = 5 * 60 * 1000;
+    private static final int READ_TIMEOUT_MS = 30 * 1000;
 
     private FolioleCompanionDesktopHttpClient() {}
 

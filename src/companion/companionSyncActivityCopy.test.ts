@@ -21,4 +21,11 @@ describe('formatSyncResultMessage', () => {
       status: 'completed'
     })).toBe(false);
   });
+
+  it('reports started events so an in-progress sync is visible in Activity', () => {
+    expect(isReportableSyncEvent({
+      message: 'Sync started.',
+      status: 'started'
+    })).toBe(true);
+  });
 });

@@ -15,12 +15,13 @@ import {
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
+import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
   buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
-import { hasSyncBacklog, type CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
+import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
 
 interface WorkspaceSnapshotActionArgs {
   setError: (message: string | null) => void;
@@ -32,7 +33,11 @@ interface WorkspaceSnapshotActionArgs {
   state: NativeCompanionWorkspaceSyncState;
 }
 
-const MANUAL_SYNC_MAX_BACKLOG_PASSES = 20;
+const STARTING_STRUCTURE_PROGRESS = {
+  completed: 0,
+  phase: 'structure' as const,
+  total: null
+};
 
 async function refreshConflictAwareState(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
@@ -46,66 +51,49 @@ async function refreshConflictAwareState(args: {
   return nextState;
 }
 
-function madeResourceProgress(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
-  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
-}
-
-function shouldContinueManualSync(
-  result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>,
-  passResult: ReturnType<typeof describeCompanionSyncPassResult>
-) {
-  if (passResult.outcome !== 'skipped' || !hasSyncBacklog(result)) {
-    return false;
-  }
-  if (result.contentBlobError || result.attachmentResourceError || result.pushError) {
-    return false;
-  }
-  if (result.pushConflictCount > 0 || result.pushRejectedCount > 0 || (result.pushIssueCount ?? 0) > 0) {
-    return false;
-  }
-  return madeResourceProgress(result) || (result.remainingStructureChangeCount ?? 0) > 0 ||
-    (result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0;
-}
-
 async function syncDesktopStreams(args: {
   endpointUrl: string;
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
+  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   const startedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     message: 'Sync started.',
     status: 'started'
   });
-  args.setState(startedState);
-  let nextState = startedState;
-  for (let pass = 0; pass < MANUAL_SYNC_MAX_BACKLOG_PASSES; pass += 1) {
-    const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-      onProgress: args.setSyncProgress,
-      onStructureSynced: async () => {
-        await refreshConflictAwareState(args);
-      }
-    });
-    const passResult = describeCompanionSyncPassResult(result);
-    nextState = await recordCompanionWorkspaceSyncEvent({
-      endpointUrl: args.endpointUrl,
-      message: passResult.message,
-      status: passResult.status
-    });
-    args.setState(nextState);
-    args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
-    args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-    const remainingProgress = buildRemainingSyncProgress(result);
-    if (remainingProgress) {
-      args.setSyncProgress(remainingProgress);
-    } else if (shouldClearCompanionSyncProgress(result)) {
-      args.setSyncProgress(null);
+  let latestWorkspaceSnapshot = args.workspaceSnapshot;
+  args.setState({
+    ...startedState,
+    workspace_snapshot: latestWorkspaceSnapshot
+  });
+  const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+    includeResources: false,
+    onProgress: args.setSyncProgress,
+    onStructureSynced: async () => {
+      args.setReadableArticle(await loadCompanionReadableArticle());
+      args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
     }
-    if (!shouldContinueManualSync(result, passResult)) {
-      break;
-    }
+  });
+  const passResult = describeCompanionSyncPassResult(result);
+  const nextState = await recordCompanionWorkspaceSyncEvent({
+    endpointUrl: args.endpointUrl,
+    message: passResult.message,
+    status: passResult.status
+  });
+  args.setState({
+    ...nextState,
+    workspace_snapshot: latestWorkspaceSnapshot
+  });
+  args.setReadableArticle(await loadCompanionReadableArticle(latestWorkspaceSnapshot));
+  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  const remainingProgress = buildRemainingSyncProgress(result);
+  if (remainingProgress) {
+    args.setSyncProgress(remainingProgress);
+  } else if (shouldClearCompanionSyncProgress(result)) {
+    args.setSyncProgress(null);
   }
   return nextState;
 }
@@ -126,6 +114,7 @@ async function recordManualSyncFailure(args: {
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
     args.setStatus('syncing');
+    args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     args.setError(null);
     try {
       const nextState = await syncDesktopStreams({
@@ -133,12 +122,13 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         setReadableArticle: args.setReadableArticle,
         setSyncConflictCount: args.setSyncConflictCount,
         setState: args.setState,
-        setSyncProgress: args.setSyncProgress
+        setSyncProgress: args.setSyncProgress,
+        workspaceSnapshot: args.state.workspace_snapshot
       });
       args.setStatus('idle');
       return nextState;
     } catch (syncError) {
-      const message = syncError instanceof Error ? syncError.message : 'Desktop sync failed.';
+      const message = formatCompanionSyncFailureMessage(syncError);
       args.setStatus('idle');
       args.setSyncProgress(null);
       args.setError(message);

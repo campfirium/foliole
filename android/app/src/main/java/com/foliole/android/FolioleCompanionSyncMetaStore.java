@@ -19,11 +19,17 @@ final class FolioleCompanionSyncMetaStore {
     private FolioleCompanionSyncMetaStore() {}
 
     static JSObject loadWorkspaceSyncState(Context context, SQLiteDatabase database) throws Exception {
+        return loadWorkspaceSyncState(context, database, true);
+    }
+
+    private static JSObject loadWorkspaceSyncState(Context context, SQLiteDatabase database, boolean includeWorkspaceSnapshot) throws Exception {
         JSObject result = new JSObject();
         String endpointUrl = FolioleCompanionMetaRecords.loadValue(context, database, syncMetaKey(context, "endpointUrl"));
         String lastSyncedAt = FolioleCompanionMetaRecords.loadValue(context, database, syncMetaKey(context, "lastSyncedAt"));
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
-        JSObject workspaceSnapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(context, database, deviceId);
+        JSObject workspaceSnapshot = includeWorkspaceSnapshot
+            ? FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(context, database, deviceId)
+            : null;
         result.put(syncMetaOutputKey(context, "endpointUrl"), endpointUrl);
         result.put(syncMetaOutputKey(context, "lastSyncedAt"), lastSyncedAt);
         result.put(syncMetaOutputKey(context, "rememberedTargets"), new JSONArray(loadRememberedTargets(context, database)));
@@ -42,7 +48,7 @@ final class FolioleCompanionSyncMetaStore {
         String occurredAt
     ) throws Exception {
         saveSyncEvent(context, database, endpointUrl, status, message, occurredAt);
-        return loadWorkspaceSyncState(context, database);
+        return loadWorkspaceSyncState(context, database, false);
     }
 
     static JSObject saveSyncOnboardingStatus(Context context, SQLiteDatabase database, String status) throws Exception {

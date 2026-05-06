@@ -92,6 +92,12 @@ export function insertNodeReviewSyncState() {
      VALUES ('node-review-1', 'topic', 'Review Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
   );
   driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node', 'node-review-1', 1, 'node-review-node-hash',
+       'desktop', '2026-04-27T00:00:00.000Z', 0)`
+  );
+  driver.execute(
     `INSERT INTO node_review (
        node_id, due, last_review_at, state, stability, difficulty,
        elapsed_days, scheduled_days, reps, lapses
@@ -120,6 +126,12 @@ export function insertNodeReadingSyncState() {
   driver.execute(
     `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
      VALUES ('node-reading-1', 'topic', 'Reading Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node', 'node-reading-1', 1, 'node-reading-node-hash',
+       'desktop', '2026-04-27T00:00:00.000Z', 0)`
   );
   driver.execute(
     `INSERT INTO node_reading (

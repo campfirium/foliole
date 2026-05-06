@@ -6,10 +6,10 @@ import {
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   loadCompanionReadableArticle,
-  loadCompanionWorkspaceSyncState,
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
 
+import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
   buildRemainingSyncProgress,
@@ -28,25 +28,11 @@ function madeResourceProgress(result: Awaited<ReturnType<typeof syncCompanionObj
   return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
 }
 
-function formatSyncFailureMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : 'Desktop sync failed.';
-  if (message.includes('Failed to apply companion desktop sync pack.')) {
-    return `Topic list sync failed: ${message.replace('Failed to apply companion desktop sync pack.', '').trim() || 'Android could not apply the desktop sync pack.'}`;
-  }
-  if (message.includes('applying the structure pack')) {
-    return `Topic list sync failed: ${message}`;
-  }
-  if (message.includes('fetching topic bodies')) {
-    return `Topic body sync failed: ${message}`;
-  }
-  if (message.includes('fetching attachment resources')) {
-    return `Attachment file sync failed: ${message}`;
-  }
-  if (message.includes('pushing local review changes')) {
-    return `Local change upload failed: ${message}`;
-  }
-  return message;
-}
+const STARTING_STRUCTURE_PROGRESS = {
+  completed: 0,
+  phase: 'structure' as const,
+  total: null
+};
 
 export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
@@ -66,6 +52,9 @@ export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionOb
 }
 
 function hasFastRetryWork(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+  if (result.attachmentResourceError || result.contentBlobError) {
+    return false;
+  }
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
   const waitingLocalChanges =
     !result.pushError &&
@@ -73,7 +62,7 @@ function hasFastRetryWork(result: Awaited<ReturnType<typeof syncCompanionObjects
     result.pushRejectedCount === 0 &&
     (result.pushIssueCount ?? 0) === 0 &&
     ((result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0);
-  return madeResourceProgress(result) || remainingStructure > 0 || waitingLocalChanges;
+  return remainingStructure > 0 || waitingLocalChanges;
 }
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
@@ -87,16 +76,17 @@ export async function runCompanionStreamSync(args: {
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
+  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
+  let latestWorkspaceSnapshot = args.workspaceSnapshot;
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+    includeResources: false,
     onProgress: args.setSyncProgress,
     onStructureSynced: async () => {
       if (args.cancelled()) {
         return;
       }
-      const structureState = await loadCompanionWorkspaceSyncState();
-      args.setState(structureState);
-      args.setReadableArticle(await syncReadableArticle(structureState.workspace_snapshot));
+      args.setReadableArticle(await loadCompanionReadableArticle());
     }
   });
   if (args.cancelled()) {
@@ -108,8 +98,12 @@ export async function runCompanionStreamSync(args: {
     message: passResult.message,
     status: passResult.status
   });
-  args.setState(completedState);
-  args.setReadableArticle(await syncReadableArticle(completedState.workspace_snapshot));
+  const completedStateWithSnapshot = {
+    ...completedState,
+    workspace_snapshot: latestWorkspaceSnapshot
+  };
+  args.setState(completedStateWithSnapshot);
+  args.setReadableArticle(await syncReadableArticle(latestWorkspaceSnapshot));
   args.setStatus('idle');
   const remainingProgress = buildRemainingSyncProgress(result);
   if (remainingProgress) {
@@ -135,16 +129,25 @@ export async function tryForegroundAutoSync(args: {
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!endpointUrl) return 'skipped';
   args.setStatus('syncing');
+  args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
   try {
     await recordCompanionWorkspaceSyncEvent({ endpointUrl, message: 'Auto sync started.', status: 'started' });
-    return await runCompanionStreamSync({ ...args, endpointUrl }) ?? 'skipped';
+    return await runCompanionStreamSync({
+      ...args,
+      endpointUrl,
+      workspaceSnapshot: args.state.workspace_snapshot
+    }) ?? 'skipped';
   } catch (syncError) {
     if (args.cancelled()) return 'skipped';
-    const message = formatSyncFailureMessage(syncError);
+    const message = formatCompanionSyncFailureMessage(syncError);
     args.setStatus('idle');
     args.setSyncProgress(null);
+    args.setError(message);
     const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);
-    if (failedState) args.setState(failedState);
+    if (failedState) args.setState({
+      ...failedState,
+      workspace_snapshot: args.state.workspace_snapshot
+    });
     return 'failed';
   }
 }

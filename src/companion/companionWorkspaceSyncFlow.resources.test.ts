@@ -64,8 +64,7 @@ async function testRecordsDownloadedResourcesForPass() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
-  expect(setSyncProgress).toHaveBeenCalledTimes(1);
+  expect(outcome).toBe('skipped');
   expect(setSyncProgress).toHaveBeenLastCalledWith({
     completed: 1,
     completedBytes: 1048576,
@@ -208,7 +207,7 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
   }));
 }
 
-async function testProgressWithUnknownResourceCountsContinuesBacklogRetry() {
+async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceCount: null,
     remainingContentBlobCount: null,
@@ -226,7 +225,7 @@ async function testProgressWithUnknownResourceCountsContinuesBacklogRetry() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync made progress; downloaded 1 topic body in this sync',
     status: 'skipped'
@@ -248,5 +247,5 @@ describe('tryForegroundAutoSync resource progress', () => {
 
   it('does not use unknown resource counts as fast backlog retry evidence', testUnknownResourceCountsDoNotDriveFastBacklogRetry);
 
-  it('continues quickly when resources moved but remaining counts are unavailable', testProgressWithUnknownResourceCountsContinuesBacklogRetry);
+  it('does not continue quickly only because resources moved', testProgressWithUnknownResourceCountsDoesNotDriveFastRetry);
 });

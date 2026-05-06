@@ -25,7 +25,7 @@ async function testUsesStreamSyncDirectly() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641',
-    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
   );
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -54,7 +54,7 @@ async function testUsesRememberedSyncTarget() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://192.168.1.44:38641',
-    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
   );
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -79,7 +79,7 @@ async function testKeepsUnreachableDesktopQuiet() {
     state: createSyncState()
   });
 
-  expect(setError).not.toHaveBeenCalled();
+  expect(setError).toHaveBeenCalledWith('Desktop unreachable.');
   expect(outcome).toBe('failed');
   expect(setStatus).toHaveBeenLastCalledWith('idle');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -195,7 +195,7 @@ describe('tryForegroundAutoSync', () => {
 
   it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
 
-  it('does not surface unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
+  it('surfaces unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 
   it('records structure apply failure causes in sync activity', testRecordsStructureApplyFailureCause);
 

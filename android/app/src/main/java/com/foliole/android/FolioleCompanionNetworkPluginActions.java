@@ -32,7 +32,7 @@ final class FolioleCompanionNetworkPluginActions {
                     call.getString(FolioleCompanionHostBridgeContractDefinitions.networkBodyRequestKey(context))
                 ));
             } catch (Exception exception) {
-                call.reject("Desktop HTTP request failed.", exception);
+                call.reject(FolioleCompanionPluginErrors.withCause("Desktop HTTP request failed.", exception), exception);
             }
         }).start();
     }
@@ -49,7 +49,7 @@ final class FolioleCompanionNetworkPluginActions {
                 result.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlsResponseKey(context), endpointUrls);
                 call.resolve(result);
             } catch (Exception exception) {
-                call.reject("Failed to load companion discovery candidates.", exception);
+                call.reject(FolioleCompanionPluginErrors.withCause("Failed to load companion discovery candidates.", exception), exception);
             }
         }).start();
     }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
@@ -30,6 +30,7 @@ type TryForegroundAutoSync = (args: {
 type ForegroundSyncRunnerArgs = {
   cancelled: () => boolean;
   inFlightRef: MutableRefObject<boolean>;
+  isPairingReadyRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
   lastForegroundAtRef: MutableRefObject<number>;
   retryAttemptRef: MutableRefObject<number>;
@@ -42,6 +43,16 @@ type ForegroundSyncRunnerArgs = {
   stateRef: MutableRefObject<NativeCompanionWorkspaceSyncState>;
   tryForegroundAutoSync: TryForegroundAutoSync;
 };
+type ForegroundSyncRefs = Pick<
+  ForegroundSyncRunnerArgs,
+  | 'inFlightRef'
+  | 'isPairingReadyRef'
+  | 'lastCheckedAtRef'
+  | 'lastForegroundAtRef'
+  | 'retryAttemptRef'
+  | 'retryTimerRef'
+  | 'stateRef'
+>;
 
 function clearRetryTimer(retryTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>) {
   if (retryTimerRef.current) {
@@ -71,6 +82,7 @@ function scheduleRetry(
 }
 
 function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number) {
+  if (!args.isPairingReadyRef.current) return false;
   if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)) return false;
   if (reason === 'foreground') {
     const elapsed = now - args.lastForegroundAtRef.current;
@@ -134,47 +146,60 @@ function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
   return runForegroundSyncCheck;
 }
 
+function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWorkspaceSyncState) {
+  const inFlightRef = useRef(false);
+  const isPairingReadyRef = useRef(isPairingReady);
+  const lastCheckedAtRef = useRef(0);
+  const lastForegroundAtRef = useRef(0);
+  const retryAttemptRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef(state);
+  const refs: ForegroundSyncRefs = useMemo(() => ({
+    inFlightRef,
+    isPairingReadyRef,
+    lastCheckedAtRef,
+    lastForegroundAtRef,
+    retryAttemptRef,
+    retryTimerRef,
+    stateRef
+  }), []);
+
+  useEffect(() => {
+    refs.isPairingReadyRef.current = isPairingReady;
+    refs.stateRef.current = state;
+  }, [isPairingReady, refs, state]);
+
+  return refs;
+}
+
 export function useForegroundAutoSync(
   setError: (error: string | null) => void,
   setReadableArticle: (article: CompanionReadableArticle | null) => void,
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void,
+  isPairingReady: boolean,
   state: NativeCompanionWorkspaceSyncState,
   tryForegroundAutoSync: TryForegroundAutoSync
 ) {
-  const inFlightRef = useRef(false);
-  const lastCheckedAtRef = useRef(0);
-  const lastForegroundAtRef = useRef(0);
-  const retryAttemptRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refs = useForegroundSyncRefs(isPairingReady, state);
   const runForegroundSyncCheckRef = useRef<(reason: ForegroundSyncReason) => void>(() => undefined);
-  const stateRef = useRef(state);
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(state);
 
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  useEffect(() => {
     runForegroundSyncCheckRef.current('endpoint-ready');
-  }, [endpointUrl]);
+  }, [endpointUrl, isPairingReady]);
 
   useEffect(() => {
     let cancelled = false;
     const runForegroundSyncCheck = createForegroundSyncRunner({
       cancelled: () => cancelled,
-      inFlightRef,
-      lastCheckedAtRef,
-      lastForegroundAtRef,
-      retryAttemptRef,
-      retryTimerRef,
+      ...refs,
       setError,
       setReadableArticle,
       setState,
       setSyncProgress,
       setStatus,
-      stateRef,
       tryForegroundAutoSync
     });
     runForegroundSyncCheckRef.current = runForegroundSyncCheck;
@@ -190,8 +215,8 @@ export function useForegroundAutoSync(
     });
     return () => {
       cancelled = true;
-      clearRetryTimer(retryTimerRef);
+      clearRetryTimer(refs.retryTimerRef);
       unsubscribe?.();
     };
-  }, [setError, setReadableArticle, setState, setStatus, tryForegroundAutoSync]);
+  }, [refs, setError, setReadableArticle, setState, setStatus, tryForegroundAutoSync]);
 }
