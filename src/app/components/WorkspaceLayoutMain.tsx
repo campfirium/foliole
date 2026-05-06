@@ -135,8 +135,6 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         onSelectRightPanel={handleSelectRightPanel}
         documentNodeId={documentNodeId}
         onSelectNode={handleSelectNode}
-        onStartClipboardImport={clipboardImportNotice.startClipboardImport}
-        onStartImport={() => void imports.onRunImportFile()}
         immersive={immersive}
         gridProps={gridProps}
         titleBarProps={props}
@@ -159,8 +157,6 @@ function renderWorkspaceGrid(args: {
   immersive: ReturnType<typeof useImmersiveReadingMode>;
   onEnterImmersiveEdit: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
-  onStartClipboardImport: () => void;
-  onStartImport: () => void;
   props: WorkspaceGridRenderSource;
 }) {
   const shouldSuppressSelectionRestore = () =>
@@ -174,8 +170,6 @@ function renderWorkspaceGrid(args: {
       onEnterImmersiveEdit={args.onEnterImmersiveEdit}
       onSelectNode={args.onSelectNode}
       onShouldSuppressSelectionRestore={shouldSuppressSelectionRestore}
-      onStartClipboardImport={args.onStartClipboardImport}
-      onStartImport={args.onStartImport}
       props={args.props}
     />
   );
@@ -188,8 +182,6 @@ function WorkspaceMainChrome({
   onOpenTrashView,
   onSelectNode,
   onSelectRightPanel,
-  onStartClipboardImport,
-  onStartImport,
   immersive,
   gridProps,
   titleBarProps
@@ -200,8 +192,6 @@ function WorkspaceMainChrome({
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
-  onStartClipboardImport: () => void;
-  onStartImport: () => void;
   gridProps: WorkspaceGridRenderSource;
   titleBarProps: WorkspaceTitleBarSource;
   immersive: ReturnType<typeof useImmersiveReadingMode>;
@@ -221,8 +211,6 @@ function WorkspaceMainChrome({
         immersive,
         onEnterImmersiveEdit: immersive.enterImmersiveEdit,
         onSelectNode,
-        onStartClipboardImport,
-        onStartImport,
         props: gridProps
       })}
     </>

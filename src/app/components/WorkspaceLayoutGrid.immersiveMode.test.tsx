@@ -50,8 +50,6 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
         onEnterImmersiveEdit={() => undefined}
         onSelectNode={() => undefined}
         onShouldSuppressSelectionRestore={() => false}
-        onStartClipboardImport={() => undefined}
-        onStartImport={() => undefined}
         props={buildProps(false)}
       />
     );
@@ -67,8 +65,6 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
         onEnterImmersiveEdit={() => undefined}
         onSelectNode={() => undefined}
         onShouldSuppressSelectionRestore={() => false}
-        onStartClipboardImport={() => undefined}
-        onStartImport={() => undefined}
         props={buildProps(true)}
       />
     );
@@ -132,8 +128,6 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
         onEnterImmersiveEdit={STABLE_NOOP}
         onSelectNode={STABLE_SELECT_NODE}
         onShouldSuppressSelectionRestore={STABLE_FALSE}
-        onStartClipboardImport={STABLE_NOOP}
-        onStartImport={STABLE_NOOP}
         props={props}
       />
     );
@@ -148,8 +142,6 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
         onEnterImmersiveEdit={STABLE_NOOP}
         onSelectNode={STABLE_SELECT_NODE}
         onShouldSuppressSelectionRestore={STABLE_FALSE}
-        onStartClipboardImport={STABLE_NOOP}
-        onStartImport={STABLE_NOOP}
         props={props}
       />
     );
@@ -202,8 +194,6 @@ function createGridElement(props: ReturnType<typeof buildProps>) {
       onEnterImmersiveEdit={STABLE_NOOP}
       onSelectNode={STABLE_SELECT_NODE}
       onShouldSuppressSelectionRestore={STABLE_FALSE}
-      onStartClipboardImport={STABLE_NOOP}
-      onStartImport={STABLE_NOOP}
       props={props}
     />
   );

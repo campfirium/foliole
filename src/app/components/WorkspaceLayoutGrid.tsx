@@ -22,8 +22,6 @@ export function WorkspaceLayoutGrid({
   documentNodeId,
   onEnterImmersiveEdit,
   onShouldSuppressSelectionRestore,
-  onStartClipboardImport,
-  onStartImport,
   onSelectNode,
   isImmersiveEditing,
   props
@@ -32,9 +30,7 @@ export function WorkspaceLayoutGrid({
   documentNodeId: string | null;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
-  onStartClipboardImport: () => void;
-  onStartImport: () => void;
-  onSelectNode: WorkspaceGridContentSource['onSelectNode'];
+  onSelectNode: WorkspaceGridContentSource['navigation']['onSelectNode'];
   isImmersiveEditing: boolean;
   props: WorkspaceLayoutGridSource;
 }) {
@@ -49,8 +45,6 @@ export function WorkspaceLayoutGrid({
       {props.layoutChrome.isImmersiveMode ? null : (
         <WorkspaceLeftRail
           {...selectWorkspaceLeftRailProps({
-            onStartClipboardImport,
-            onStartImport,
             props,
             showStudyDock: !props.review.isStudyMode
           })}

@@ -20,9 +20,9 @@ vi.mock('./WindowTitleBar', async () => {
 });
 
 vi.mock('./WorkspaceLayoutGrid', () => ({
-  WorkspaceLayoutGrid: (props: { onStartClipboardImport: () => void }) => {
+  WorkspaceLayoutGrid: (props: { props: { imports: { onStartClipboardImport: () => void } } }) => {
     workspaceLayoutGridRender(props);
-    return <button data-testid="workspace-grid" onClick={props.onStartClipboardImport} type="button" />;
+    return <button data-testid="workspace-grid" onClick={props.props.imports.onStartClipboardImport} type="button" />;
   }
 }));
 
