@@ -10,6 +10,34 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = path.resolve(process.env.PREVIEW_DEDUPE_REPO_ROOT ?? DEFAULT_REPO_ROOT);
 const VALID_TARGETS = new Set(['android', 'windows']);
+const TARGET_PATHS = {
+  android: [
+    'android/',
+    'scripts/android/',
+    'src/companion/',
+    'src/shared/',
+    'src/features/',
+    'lib/',
+    'package.json',
+    'package-lock.json',
+    'capacitor.config.ts',
+    'vite.companion.config.ts'
+  ],
+  windows: [
+    'electron/',
+    'scripts/windows/',
+    'src/app/',
+    'src/features/',
+    'src/shared/',
+    'src/store/',
+    'lib/',
+    'package.json',
+    'package-lock.json',
+    'index.html',
+    'vite.config.ts',
+    'playwright.desktop.config.ts'
+  ]
+};
 
 function parseArgs(argv) {
   const separatorIndex = argv.indexOf('--');
@@ -31,22 +59,29 @@ function runGitBuffer(args) {
   return result.stdout;
 }
 
-function listUntrackedFiles() {
+function isTargetPath(target, filePath) {
+  return TARGET_PATHS[target]?.some((targetPath) => (
+    targetPath.endsWith('/') ? filePath.startsWith(targetPath) : filePath === targetPath
+  )) ?? true;
+}
+
+function listUntrackedFiles(target) {
   const runtimeRoot = runtimeDir();
   const output = runGitBuffer(['ls-files', '--others', '--exclude-standard', '-z']);
   return output
     .toString('utf8')
     .split('\0')
     .filter(Boolean)
+    .filter((filePath) => isTargetPath(target, filePath))
     .filter((filePath) => !path.resolve(REPO_ROOT, filePath).startsWith(`${runtimeRoot}${path.sep}`))
     .sort();
 }
 
-async function workspaceHash() {
+async function workspaceHash(target) {
   const hash = createHash('sha256');
   hash.update('tracked-diff\0');
-  hash.update(runGitBuffer(['diff', '--binary', 'HEAD']));
-  for (const filePath of listUntrackedFiles()) {
+  hash.update(runGitBuffer(['diff', '--binary', 'HEAD', '--', ...TARGET_PATHS[target]]));
+  for (const filePath of listUntrackedFiles(target)) {
     hash.update('\0untracked\0');
     hash.update(filePath);
     hash.update('\0');
@@ -100,7 +135,7 @@ async function main() {
     return 2;
   }
 
-  const currentHash = await workspaceHash();
+  const currentHash = await workspaceHash(target);
   const storedHash = await readStoredHash(target);
   if (storedHash === currentHash) {
     console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);

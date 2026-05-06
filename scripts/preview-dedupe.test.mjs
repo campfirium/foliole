@@ -100,7 +100,8 @@ describe('preview-dedupe', () => {
       await mkdir(path.join(repoRoot, '.lab', 'internal', 'runtime'), { recursive: true });
       const first = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo run > runs.log']);
       const storedHash = await readHash(repoRoot, 'android');
-      await writeFile(path.join(repoRoot, 'untracked.txt'), 'included\n', 'utf8');
+      await mkdir(path.join(repoRoot, 'src', 'companion'), { recursive: true });
+      await writeFile(path.join(repoRoot, 'src', 'companion', 'untracked.ts'), 'included\n', 'utf8');
 
       const second = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo second >> runs.log']);
       expect(first.code).toBe(0);
@@ -108,6 +109,31 @@ describe('preview-dedupe', () => {
       expect(second.stdout).toContain('[android-preview] dedupe: claimed hash=');
       expect(await readHash(repoRoot, 'android')).not.toBe(storedHash);
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('run\nsecond\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('ignores files outside the target preview surface', async () => {
+    const repoRoot = await createRepo();
+    try {
+      await mkdir(path.join(repoRoot, 'src', 'app'), { recursive: true });
+      await mkdir(path.join(repoRoot, 'src', 'companion'), { recursive: true });
+      await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 1;\n', 'utf8');
+      await writeFile(path.join(repoRoot, 'src', 'companion', 'App.tsx'), 'export const companion = 1;\n', 'utf8');
+      git(repoRoot, ['add', 'src/app/App.tsx', 'src/companion/App.tsx']);
+      git(repoRoot, ['commit', '-m', 'add surfaces']);
+
+      const first = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo run > runs.log']);
+      const storedHash = await readHash(repoRoot, 'android');
+      await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 2;\n', 'utf8');
+
+      const second = await runDedupe(repoRoot, 'android', ['bash', '-c', 'echo second >> runs.log']);
+      expect(first.code).toBe(0);
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain('[android-preview] dedupe: covered hash=');
+      expect(await readHash(repoRoot, 'android')).toBe(storedHash);
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('run\n');
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }

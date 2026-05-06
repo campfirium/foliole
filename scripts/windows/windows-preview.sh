@@ -321,8 +321,8 @@ resolve_changed_files() {
     return 0
   fi
   {
-    git diff --name-only
-    git diff --name-only --cached
+    git diff --name-only --diff-filter=ACMR
+    git diff --name-only --diff-filter=ACMR --cached
     git ls-files --others --exclude-standard
   } | sort -u
 }
