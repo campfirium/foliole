@@ -43,5 +43,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run iOS SQLite capability gate
-        run: npm run ios:sqlite-capability:gate
+      - name: Run iOS sync preflight
+        run: npm run ios:sync:preflight

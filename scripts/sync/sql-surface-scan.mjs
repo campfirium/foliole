@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /* global console */
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
-import { cwd, exit } from 'node:process';
+import { delimiter, relative } from 'node:path';
+import { cwd, env, exit } from 'node:process';
 import { execFileSync } from 'node:child_process';
 
-const ROOTS = [
+const DEFAULT_ROOTS = [
   'electron/database',
   'electron/sync',
   'android/app/src/main/java/com/foliole/android',
+  'ios',
   'lib/core/sync',
   'src/shared/platform'
 ];
@@ -35,12 +36,19 @@ const CAPABILITIES = [
   ['alterTable', /\bALTER\s+TABLE\b/i],
   ['jsonFunction', /\bjson_(?:extract|set|insert|remove|array|object)\s*\(/i]
 ];
+const IOS_RUNTIME_CAPABILITY = 'iosRuntime';
+const IOS_RUNTIME_GATE = 'npm run ios:sync:preflight';
+const IOS_RUNTIME_MARKER = /\biosRuntime\b/;
 
 const files = listFiles();
 const findings = [];
+const iosRuntimeMarkers = [];
 
 for (const file of files) {
   const text = readFileSync(file, 'utf8');
+  if (IOS_RUNTIME_MARKER.test(text)) {
+    iosRuntimeMarkers.push(relative(cwd(), file));
+  }
   const sqlFragments = extractSqlFragments(text);
   for (const fragment of sqlFragments) {
     const capabilities = CAPABILITIES
@@ -59,19 +67,34 @@ for (const file of files) {
 const summary = summarize(findings);
 console.log(JSON.stringify({ findings, summary }, null, 2));
 
-const hardUnknowns = summary.missingCoreCapabilities.filter((name) => name !== 'iosRuntime');
+const hardUnknowns = summary.missingCoreCapabilities.filter((name) => {
+  return name !== IOS_RUNTIME_CAPABILITY || summary.iosRuntimeGap.required;
+});
 if (hardUnknowns.length > 0) {
   console.error(`Missing core SQL capability coverage: ${hardUnknowns.join(', ')}`);
+  if (hardUnknowns.includes(IOS_RUNTIME_CAPABILITY)) {
+    console.error(`iOS runtime SQL surface is in scope; run ${IOS_RUNTIME_GATE} before iOS sync work.`);
+  }
   exit(1);
 }
 
 function listFiles() {
+  const roots = resolveRoots();
   const output = hasCommand('rg')
-    ? execFileSync('rg', ['--files', ...ROOTS], { encoding: 'utf8' })
-    : execFileSync('git', ['ls-files', ...ROOTS], { encoding: 'utf8' });
+    ? execFileSync('rg', ['--files', ...roots], { encoding: 'utf8' })
+    : execFileSync('git', ['ls-files', ...roots], { encoding: 'utf8' });
   return output
     .split('\n')
-    .filter((file) => /\.(?:ts|tsx|js|java)$/.test(file));
+    .filter((file) => /\.(?:ts|tsx|js|java|swift)$/.test(file));
+}
+
+function resolveRoots() {
+  const value = env.SQL_SURFACE_SCAN_ROOTS ?? '';
+  if (!value.trim()) return DEFAULT_ROOTS;
+  return value
+    .split(delimiter)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function hasCommand(command) {
@@ -130,7 +153,7 @@ function summarize(items) {
     'exists',
     'blobTable'
   ].filter((name) => byCapability[name] > 0);
-  const missingCoreCapabilities = [
+  const coreCapabilities = [
     'attach',
     'detach',
     'crossDatabaseReference',
@@ -139,12 +162,21 @@ function summarize(items) {
     'explicitTransaction',
     'join',
     'exists',
-    'blobTable',
-    'iosRuntime'
-  ].filter((name) => name === 'iosRuntime' || byCapability[name] === 0);
+    'blobTable'
+  ];
+  const missingCoreCapabilities = [
+    ...coreCapabilities.filter((name) => byCapability[name] === 0),
+    IOS_RUNTIME_CAPABILITY
+  ];
   return {
     byCapability,
     coveredCoreCapabilities,
+    iosRuntimeGap: {
+      gate: IOS_RUNTIME_GATE,
+      markers: iosRuntimeMarkers,
+      required: iosRuntimeMarkers.length > 0,
+      scopeRule: 'iOS related scope is determined by iosRuntime capability markers in scanned files.'
+    },
     missingCoreCapabilities,
     scannedFiles: files.length,
     totalFindings: items.length

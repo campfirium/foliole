@@ -5,6 +5,12 @@ import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { spawnSync } from 'node:child_process';
 
+// iOS sync work must reuse the shared TS sync core, native command contracts,
+// DbPort semantics, and sync pack capability model.
+// Do not copy Android private store, runner, generated Java, or SQL business
+// logic into Swift. Stop before adding iOS native dependencies, runtime
+// fallback, or plugin behavior that has not been checked against official docs.
+
 if (process.platform !== 'darwin') {
   console.error('iOS SQLite capability gate must run on macOS with Xcode.');
   exit(1);

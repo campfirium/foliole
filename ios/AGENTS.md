@@ -17,4 +17,6 @@
 ## Validation
 
 - iOS 宿主正式接入前，不要求默认执行 iOS 预览命令。
-- 一旦仓库引入 iOS 宿主脚本或 npm 入口，本文件必须同步补上对应公开命令、最小验证顺序与预览 / 验收规则；不得继续停留在占位态。
+- iOS sync / SQLite 宿主工作开工前，先执行 `npm run ios:sync:preflight`；该入口先跑 SQL surface scan，再跑 macOS / Xcode 环境下的 SQLite capability gate。
+- 非 iOS 日常质量入口不默认执行 iOS preflight；`sync:sql-surface:scan` 只有在扫描范围出现 `iosRuntime` capability 标记时，才把 iOS runtime 缺口升级为硬失败。
+- 一旦仓库引入新的 iOS 宿主脚本或 npm 入口，本文件必须同步补上对应公开命令、最小验证顺序与预览 / 验收规则；不得继续停留在占位态。
