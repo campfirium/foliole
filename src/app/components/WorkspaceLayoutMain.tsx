@@ -71,6 +71,7 @@ function useClipboardImportNotice(onStartClipboardImport: () => boolean | Promis
       message: imported ? 'Clipboard imported to Inbox' : (failureMessage ?? 'No supported clipboard content found'),
       tone: imported ? 'success' : 'error'
     });
+    return imported;
   }, [onStartClipboardImport]);
 
   return { notice, startClipboardImport };
@@ -98,6 +99,13 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   );
   const immersive = useImmersiveReadingMode(flatProps);
   const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport);
+  const gridProps = useMemo(() => ({
+    ...props,
+    imports: {
+      ...imports,
+      onStartClipboardImport: clipboardImportNotice.startClipboardImport
+    }
+  }), [clipboardImportNotice.startClipboardImport, imports, props]);
   const { handleOpenNotesView, handleOpenTrashView, handleSelectNode } = useWorkspaceSurfaceActions({
     onCloseImportManagement: imports.onCloseImportManagement,
     onOpenNotesView: nodeList.onOpenNotesView,
@@ -124,15 +132,13 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         activeRightPanelId={activeRightPanelId}
         onOpenNotesView={handleOpenNotesView}
         onOpenTrashView={handleOpenTrashView}
-        isImportManagementOpen={imports.isImportManagementOpen}
         onSelectRightPanel={handleSelectRightPanel}
         documentNodeId={documentNodeId}
-        onOpenImportManagement={imports.onOpenImportManagement}
+        onSelectNode={handleSelectNode}
         onStartClipboardImport={clipboardImportNotice.startClipboardImport}
         onStartImport={() => void imports.onRunImportFile()}
-        onSelectNode={handleSelectNode}
         immersive={immersive}
-        gridProps={props}
+        gridProps={gridProps}
         titleBarProps={props}
       />
       {clipboardImportNotice.notice ? <ClipboardImportNotice message={clipboardImportNotice.notice.message} tone={clipboardImportNotice.notice.tone} /> : null}
@@ -151,9 +157,7 @@ function renderWorkspaceGrid(args: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
   immersive: ReturnType<typeof useImmersiveReadingMode>;
-  isImportManagementOpen: boolean;
   onEnterImmersiveEdit: () => void;
-  onOpenImportManagement: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
   onStartClipboardImport: () => void;
   onStartImport: () => void;
@@ -167,9 +171,7 @@ function renderWorkspaceGrid(args: {
       activeRightPanelId={args.activeRightPanelId}
       documentNodeId={args.documentNodeId}
       isImmersiveEditing={args.immersive.isImmersiveEditing}
-      isImportManagementOpen={args.isImportManagementOpen}
       onEnterImmersiveEdit={args.onEnterImmersiveEdit}
-      onOpenImportManagement={args.onOpenImportManagement}
       onSelectNode={args.onSelectNode}
       onShouldSuppressSelectionRestore={shouldSuppressSelectionRestore}
       onStartClipboardImport={args.onStartClipboardImport}
@@ -182,8 +184,6 @@ function renderWorkspaceGrid(args: {
 function WorkspaceMainChrome({
   activeRightPanelId,
   documentNodeId,
-  isImportManagementOpen,
-  onOpenImportManagement,
   onOpenNotesView,
   onOpenTrashView,
   onSelectNode,
@@ -196,8 +196,6 @@ function WorkspaceMainChrome({
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
-  isImportManagementOpen: boolean;
-  onOpenImportManagement: () => void;
   onOpenNotesView: () => void;
   onOpenTrashView: () => void;
   onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
@@ -221,9 +219,7 @@ function WorkspaceMainChrome({
         activeRightPanelId,
         documentNodeId,
         immersive,
-        isImportManagementOpen,
         onEnterImmersiveEdit: immersive.enterImmersiveEdit,
-        onOpenImportManagement,
         onSelectNode,
         onStartClipboardImport,
         onStartImport,

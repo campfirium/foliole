@@ -47,9 +47,7 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
         activeRightPanelId="dev"
         documentNodeId="node-1"
         isImmersiveEditing={false}
-        isImportManagementOpen={false}
         onEnterImmersiveEdit={() => undefined}
-        onOpenImportManagement={() => undefined}
         onSelectNode={() => undefined}
         onShouldSuppressSelectionRestore={() => false}
         onStartClipboardImport={() => undefined}
@@ -66,9 +64,7 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
         activeRightPanelId="dev"
         documentNodeId="node-1"
         isImmersiveEditing={false}
-        isImportManagementOpen={false}
         onEnterImmersiveEdit={() => undefined}
-        onOpenImportManagement={() => undefined}
         onSelectNode={() => undefined}
         onShouldSuppressSelectionRestore={() => false}
         onStartClipboardImport={() => undefined}
@@ -133,9 +129,7 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
         activeRightPanelId="source-info"
         documentNodeId="node-1"
         isImmersiveEditing={false}
-        isImportManagementOpen={false}
         onEnterImmersiveEdit={STABLE_NOOP}
-        onOpenImportManagement={STABLE_NOOP}
         onSelectNode={STABLE_SELECT_NODE}
         onShouldSuppressSelectionRestore={STABLE_FALSE}
         onStartClipboardImport={STABLE_NOOP}
@@ -151,9 +145,7 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
         activeRightPanelId="dev"
         documentNodeId="node-1"
         isImmersiveEditing={false}
-        isImportManagementOpen={false}
         onEnterImmersiveEdit={STABLE_NOOP}
-        onOpenImportManagement={STABLE_NOOP}
         onSelectNode={STABLE_SELECT_NODE}
         onShouldSuppressSelectionRestore={STABLE_FALSE}
         onStartClipboardImport={STABLE_NOOP}
@@ -207,9 +199,7 @@ function createGridElement(props: ReturnType<typeof buildProps>) {
       activeRightPanelId="source-info"
       documentNodeId="node-1"
       isImmersiveEditing={false}
-      isImportManagementOpen={false}
       onEnterImmersiveEdit={STABLE_NOOP}
-      onOpenImportManagement={STABLE_NOOP}
       onSelectNode={STABLE_SELECT_NODE}
       onShouldSuppressSelectionRestore={STABLE_FALSE}
       onStartClipboardImport={STABLE_NOOP}

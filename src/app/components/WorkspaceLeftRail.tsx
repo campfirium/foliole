@@ -21,9 +21,13 @@ export interface WorkspaceLeftRailProps {
 export type WorkspaceLeftRailSource = Pick<WorkspaceLayoutProps, 'imports' | 'review' | 'settings'>;
 
 export function selectWorkspaceLeftRailProps({
+  onStartClipboardImport,
+  onStartImport,
   props,
   showStudyDock
 }: {
+  onStartClipboardImport?: () => void;
+  onStartImport?: () => void;
   props: WorkspaceLeftRailSource;
   showStudyDock?: boolean;
 }): WorkspaceLeftRailProps {
@@ -36,8 +40,8 @@ export function selectWorkspaceLeftRailProps({
     onOpenImportManagement: imports.onOpenImportManagement,
     onOpenSettings: settings.onOpenSettings,
     onRunRailAction: settings.onRunRailAction,
-    onStartClipboardImport: imports.onStartClipboardImport,
-    onStartImport: () => void imports.onRunImportFile(),
+    onStartClipboardImport: onStartClipboardImport ?? imports.onStartClipboardImport,
+    onStartImport: onStartImport ?? (() => void imports.onRunImportFile()),
     onToggleReviewSession: review.onToggleReviewSession,
     reviewDueCount: review.reviewDueCount,
     showStudyDock
