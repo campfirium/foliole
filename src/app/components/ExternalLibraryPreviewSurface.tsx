@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
-import type { RuntimeExternalSearchPreview } from '../../shared/platform/externalSearchRuntimeRepository';
+import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
@@ -25,7 +25,7 @@ export function ExternalLibraryPreviewSurface(args: {
   onGoForward: () => void;
   onHandleImport: () => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
-  preview: RuntimeExternalSearchPreview;
+  preview: ExternalDocumentPreview;
 }) {
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
@@ -79,7 +79,7 @@ function ExternalPreviewHeader(args: {
   onGoBack: () => void;
   onGoForward: () => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
-  preview: RuntimeExternalSearchPreview;
+  preview: ExternalDocumentPreview;
 }) {
   const breadcrumbModel = buildExternalBreadcrumbModel(args.preview);
   return (
@@ -155,7 +155,7 @@ function createExternalHeaderNode(id: string, parentNodeId: string | null, title
   };
 }
 
-function buildExternalBreadcrumbModel(preview: RuntimeExternalSearchPreview) {
+function buildExternalBreadcrumbModel(preview: ExternalDocumentPreview) {
   const nodesById: Record<string, Node> = {};
   const selectionsByNodeId: Record<string, ExternalLibrarySelection> = {};
   const rootId = `external:${preview.folderId}`;

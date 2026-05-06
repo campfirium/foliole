@@ -6,8 +6,11 @@ import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
 const loadRuntimeExternalSearchPreview = vi.fn();
 
 vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
-  importRuntimeExternalSearchDocument: vi.fn(),
-  loadRuntimeExternalSearchPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
+  importRuntimeExternalSearchDocument: vi.fn()
+}));
+
+vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
+  loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({

@@ -2,13 +2,13 @@ import { Maximize2, Minimize2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react';
 
-import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
-import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import {
-  importRuntimeExternalSearchDocument,
-  type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  importExternalDocument,
+  type ExternalDocumentImportResult
+} from '../../shared/platform/externalDocumentImportRepository';
+import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
+import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -20,7 +20,7 @@ import { useExternalLinkPanels } from './useExternalLinkPanels';
 
 interface ExternalDocumentPreviewPanelProps {
   onClose: () => void;
-  onOpenImportedNode: (result: NativeTextImportResult) => void;
+  onOpenImportedNode: (result: ExternalDocumentImportResult) => void;
   onOpenInExternalLibrary: (request: ExternalDocumentPreviewRequest) => void;
   request: ExternalDocumentPreviewRequest | null;
 }
@@ -58,8 +58,8 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
 }
 
 function usePreviewImportHandler(
-  preview: RuntimeExternalSearchPreview | null,
-  onOpenImportedNode: (result: NativeTextImportResult) => void
+  preview: ExternalDocumentPreview | null,
+  onOpenImportedNode: (result: ExternalDocumentImportResult) => void
 ) {
   const [isImporting, setIsImporting] = useState(false);
 
@@ -69,7 +69,7 @@ function usePreviewImportHandler(
     }
     setIsImporting(true);
     try {
-      const result = await importRuntimeExternalSearchDocument(preview.absolutePath);
+      const result = await importExternalDocument(preview.absolutePath);
       if (!result?.node_id) {
         return;
       }
@@ -93,7 +93,7 @@ function PreviewWindow(args: {
   onOpenInExternalLibrary: () => void;
   onRetry: () => void;
   overlayRef: MutableRefObject<HTMLDivElement | null>;
-  preview: RuntimeExternalSearchPreview | null;
+  preview: ExternalDocumentPreview | null;
   request: ExternalDocumentPreviewRequest;
 }) {
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
@@ -193,7 +193,7 @@ function PreviewBody(args: {
   isLoading: boolean;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onRetry: () => void;
-  preview: RuntimeExternalSearchPreview | null;
+  preview: ExternalDocumentPreview | null;
 }) {
   if (args.isLoading) {
     return (

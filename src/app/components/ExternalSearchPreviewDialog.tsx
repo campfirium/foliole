@@ -1,11 +1,11 @@
 import { useState } from 'react';
 
-import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import {
-  importRuntimeExternalSearchDocument,
-  type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  importExternalDocument,
+  type ExternalDocumentImportResult
+} from '../../shared/platform/externalDocumentImportRepository';
+import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppErrorState, AppLoadingState } from '../../shared/ui';
 
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
@@ -14,7 +14,7 @@ function ExternalSearchPreviewBody(args: {
   error: string | null;
   isLoading: boolean;
   onRetry: () => void;
-  preview: RuntimeExternalSearchPreview | null;
+  preview: ExternalDocumentPreview | null;
 }) {
   if (args.isLoading) {
     return (
@@ -63,7 +63,7 @@ function ExternalSearchPreviewBody(args: {
 
 export function ExternalSearchPreviewDialog(props: {
   absolutePath: string | null;
-  onImportComplete: (result: NativeTextImportResult) => void;
+  onImportComplete: (result: ExternalDocumentImportResult) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.absolutePath);
@@ -75,7 +75,7 @@ export function ExternalSearchPreviewDialog(props: {
     }
     setIsImporting(true);
     try {
-      const result = await importRuntimeExternalSearchDocument(preview.absolutePath);
+      const result = await importExternalDocument(preview.absolutePath);
       if (result) {
         props.onImportComplete(result);
       }

@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 
-import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import {
+  importExternalDocument,
+  type ExternalDocumentImportResult
+} from '../../shared/platform/externalDocumentImportRepository';
+import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import {
-  importRuntimeExternalSearchDocument,
-  type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchRuntimeRepository';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -31,7 +31,7 @@ interface ExternalLibraryDocumentSurfaceProps {
   documentMaxWidth: number;
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   folders: ExternalLibraryFolder[];
-  onOpenImportedNode: (result: NativeTextImportResult) => void;
+  onOpenImportedNode: (result: ExternalDocumentImportResult) => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
   onGoBack: () => void;
   onGoForward: () => void;
@@ -154,7 +154,7 @@ function ExternalDocumentErrorSurface(args: { error: string; onRetry: () => void
 function renderExternalPreviewSurface(args: {
   isImporting: boolean;
   onHandleImport: () => void;
-  preview: RuntimeExternalSearchPreview;
+  preview: ExternalDocumentPreview;
   props: ExternalLibraryDocumentSurfaceProps;
 }) {
   return (
@@ -184,7 +184,7 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
     }
     setIsImporting(true);
     try {
-      const result = await importRuntimeExternalSearchDocument(preview.absolutePath);
+      const result = await importExternalDocument(preview.absolutePath);
       if (!result?.node_id) {
         return;
       }

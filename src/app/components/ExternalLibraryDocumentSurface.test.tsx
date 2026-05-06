@@ -6,8 +6,11 @@ import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface
 const loadRuntimeExternalSearchPreview = vi.fn();
 
 vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
-  importRuntimeExternalSearchDocument: vi.fn(),
-  loadRuntimeExternalSearchPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
+  importRuntimeExternalSearchDocument: vi.fn()
+}));
+
+vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
+  loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
 }));
 
 const folders = [

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
-  loadRuntimeExternalSearchPreview,
-  type RuntimeExternalSearchPreview
-} from '../../shared/platform/externalSearchRuntimeRepository';
+  loadExternalDocumentPreview,
+  type ExternalDocumentPreview
+} from '../../shared/platform/externalDocumentPreviewRepository';
 
 export function useExternalSearchPreviewDocument(absolutePath: string | null) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [preview, setPreview] = useState<RuntimeExternalSearchPreview | null>(null);
+  const [preview, setPreview] = useState<ExternalDocumentPreview | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export function useExternalSearchPreviewDocument(absolutePath: string | null) {
     setError(null);
     setIsLoading(true);
     setPreview(null);
-    void loadRuntimeExternalSearchPreview(absolutePath)
+    void loadExternalDocumentPreview(absolutePath)
       .then((result) => {
         if (!alive) {
           return;
