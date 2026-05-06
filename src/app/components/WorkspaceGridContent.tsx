@@ -11,8 +11,7 @@ import {
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import { selectWorkspaceGridColumnProps } from './workspaceGridContentProps';
 import { renderWorkspaceGridColumns } from './workspaceLayoutGridContentColumns';
-import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
-import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceGridContentSource = WorkspaceLayoutProps;
@@ -34,7 +33,6 @@ export function WorkspaceGridContent({
   onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentSource;
 }) {
-  const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
   const listNodesById = useProjectedListNodesById(props.nodeList.nodesById);
   const documentSurfaceProps = useWorkspaceGridDocumentSurfaceProps({
     activeRightPanelId,
@@ -42,7 +40,6 @@ export function WorkspaceGridContent({
     isImmersiveEditing,
     onEnterImmersiveEdit,
     onShouldSuppressSelectionRestore,
-    flatProps,
     props
   });
   const outlineActivePosition = resolveOutlineActivePosition({
@@ -77,7 +74,6 @@ function useWorkspaceGridDocumentSurfaceProps({
   isImmersiveEditing,
   onEnterImmersiveEdit,
   onShouldSuppressSelectionRestore,
-  flatProps,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
@@ -85,7 +81,6 @@ function useWorkspaceGridDocumentSurfaceProps({
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
-  flatProps: WorkspaceLayoutFlatProps;
   props: WorkspaceGridContentSource;
 }) {
   const showDocumentOutline = activeRightPanelId !== 'outline' || props.layoutChrome.isRightSidebarCollapsed;
@@ -96,7 +91,7 @@ function useWorkspaceGridDocumentSurfaceProps({
         isImmersiveEditing,
         onEnterImmersiveEdit,
         onShouldSuppressSelectionRestore,
-        props: flatProps
+        props
       }),
       showDocumentOutline
     }),
@@ -105,7 +100,7 @@ function useWorkspaceGridDocumentSurfaceProps({
       isImmersiveEditing,
       onEnterImmersiveEdit,
       onShouldSuppressSelectionRestore,
-      flatProps,
+      props,
       showDocumentOutline
     ]
   );
