@@ -2,7 +2,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeReadwiseContract';
-import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { applyReadwiseRootPath, updateDraftImportSource } from './importSourceWorkspaceModel';
@@ -13,7 +13,7 @@ async function chooseDraftFolder(
   field: 'highlightPath' | 'primaryPath',
   setDraftSources: Dispatch<SetStateAction<DraftImportSource[]>>
 ) {
-  const selectedPath = await selectRuntimeImportDirectory();
+  const selectedPath = await selectRuntimeFolder();
   if (!selectedPath) {
     return;
   }
@@ -24,7 +24,7 @@ async function chooseDraftRootFolder(
   setDraftRootPath: Dispatch<SetStateAction<string>>,
   setDraftSources: Dispatch<SetStateAction<DraftImportSource[]>>
 ) {
-  const selectedPath = await selectRuntimeImportDirectory();
+  const selectedPath = await selectRuntimeFolder();
   if (!selectedPath) {
     return;
   }

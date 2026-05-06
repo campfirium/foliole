@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { selectRuntimeImportDirectory } from '../../../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
 import { loadRuntimeLibraryPathSettings } from '../../../../shared/platform/libraryPathsRuntimeRepository';
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
 import {
@@ -166,7 +166,7 @@ function useBackupActionHandlers(args: {
   const handleChangeBackupPath = async () => {
     if (!args.draft) return;
     try {
-      const nextPath = await selectRuntimeImportDirectory();
+      const nextPath = await selectRuntimeFolder();
       if (!nextPath) return;
       args.setPathErrorMessage('');
       saveDraft({ ...args.draft, backup_dir: nextPath }, true);

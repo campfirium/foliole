@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
 import {
   loadRuntimeLibraryPathSettings,
   updateRuntimeLibraryPathSetting,
@@ -146,7 +146,7 @@ export function useLibraryPathSettings() {
 
   async function handleChangeRequest(location: RuntimeLibraryPathLocation) {
     try {
-      const selectedPath = await selectRuntimeImportDirectory();
+      const selectedPath = await selectRuntimeFolder();
       if (!selectedPath) {
         return;
       }

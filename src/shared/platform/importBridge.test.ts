@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { ElectronAPI } from './electronApi';
+import { selectRuntimeFolder } from './folderSelectionRuntimeRepository';
 import { selectRuntimeImportDirectory } from './importDirectoryRuntimeRepository';
 import { runRuntimeTextFileImport, selectRuntimeImportTextFile } from './importExecutionRuntimeRepository';
 import { loadRuntimeImportOverview } from './importOverviewRuntimeRepository';
@@ -134,7 +135,14 @@ it('normalizes the native import file payload', async () => {
   });
   expect(invoke).toHaveBeenCalledWith('select_import_text_file', {});
 });
-it('returns the selected import directory path from the runtime bridge', async () => {
+it('returns the selected folder path from the runtime bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue('/tmp/import-folder');
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(selectRuntimeFolder()).resolves.toBe('/tmp/import-folder');
+  expect(invoke).toHaveBeenCalledWith('select_import_directory');
+});
+it('keeps the import directory wrapper on the shared import bridge', async () => {
   const invoke = vi.fn().mockResolvedValue('/tmp/import-folder');
   window.electronAPI = createMockElectronApi(invoke);
 

@@ -6,7 +6,7 @@ import {
   saveRuntimeExternalSearchFolders,
   type RuntimeExternalSearchFolder
 } from '../../../shared/platform/externalSearchRuntimeRepository';
-import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
 
 function createDraftFolder(folderPath: string): RuntimeExternalSearchFolder {
   const now = new Date().toISOString();
@@ -134,7 +134,7 @@ async function addExternalSearchFolder(
   setFeedback: (value: string | null) => void,
   setFolders: (value: (current: RuntimeExternalSearchFolder[]) => RuntimeExternalSearchFolder[]) => void
 ) {
-  const selectedPath = await selectRuntimeImportDirectory();
+  const selectedPath = await selectRuntimeFolder();
   if (!selectedPath) return;
   setFolders((current) => [...current, createDraftFolder(selectedPath)]);
   setFeedback(null);
@@ -145,7 +145,7 @@ async function chooseExternalAttachmentRoot(
   folderId: string,
   updateFolder: (folderId: string, update: (current: RuntimeExternalSearchFolder) => RuntimeExternalSearchFolder) => void
 ) {
-  const selectedPath = await selectRuntimeImportDirectory();
+  const selectedPath = await selectRuntimeFolder();
   if (!selectedPath) return;
   updateFolder(folderId, (current) => ({ ...current, attachmentRootPath: selectedPath }));
 }
@@ -154,7 +154,7 @@ async function chooseExternalSearchFolder(
   folderId: string,
   updateFolder: (folderId: string, update: (current: RuntimeExternalSearchFolder) => RuntimeExternalSearchFolder) => void
 ) {
-  const selectedPath = await selectRuntimeImportDirectory();
+  const selectedPath = await selectRuntimeFolder();
   if (!selectedPath) return;
   updateFolder(folderId, (current) => ({ ...current, folderPath: selectedPath }));
 }

@@ -7,7 +7,7 @@ import {
   type KeepImportPreviewSummary
 } from '../../../lib/core/import/importManagerSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
 import { previewRuntimeKeepImportRule } from '../../shared/platform/keepImportPreviewRuntimeRepository';
 
 import {
@@ -84,7 +84,7 @@ function usePersistedImportSourceWorkspaceSettings() {
 }
 
 async function selectFolderPath() {
-  return selectRuntimeImportDirectory();
+  return selectRuntimeFolder();
 }
 
 function createGenericSourceActions(setSettings: SetSettings) {

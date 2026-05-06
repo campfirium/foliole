@@ -1,4 +1,5 @@
 export { selectRuntimeImportDirectory } from './importDirectoryRuntimeRepository';
+export { selectRuntimeFolder } from './folderSelectionRuntimeRepository';
 export {
   runRuntimeClipboardImport,
   runRuntimeDirectoryImport,

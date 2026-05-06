@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../shared/platform/importDirectoryRuntimeRepository', () => ({
-  selectRuntimeImportDirectory: vi.fn()
+vi.mock('../../../../shared/platform/folderSelectionRuntimeRepository', () => ({
+  selectRuntimeFolder: vi.fn()
 }));
 
 vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
@@ -23,7 +23,7 @@ vi.mock('../../model/databaseBackups', () => ({
 }));
 
 import { exportDiagnosticBundle } from '../../../../shared/platform/diagnosticBundle';
-import { selectRuntimeImportDirectory } from '../../../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
 import {
   areDatabaseBackupActionsAvailable,
   createDatabaseBackup,
@@ -64,7 +64,7 @@ const defaultBackups = [
 ];
 
 beforeEach(() => {
-  vi.mocked(selectRuntimeImportDirectory).mockReset();
+  vi.mocked(selectRuntimeFolder).mockReset();
   vi.mocked(exportDiagnosticBundle).mockReset();
   vi.mocked(loadDatabaseBackupSettings).mockReset();
   vi.mocked(saveDatabaseBackupSettings).mockReset();
@@ -169,7 +169,7 @@ it('auto-saves edited backup settings without a save button', async () => {
 });
 
 it('changes backup location through folder picker and saves immediately', async () => {
-  vi.mocked(selectRuntimeImportDirectory).mockResolvedValue('/new/Backups');
+  vi.mocked(selectRuntimeFolder).mockResolvedValue('/new/Backups');
 
   render(<SettingsBackupsSection />);
 

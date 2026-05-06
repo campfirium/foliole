@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { selectRuntimeImportDirectory } from '../../../shared/platform/importDirectoryRuntimeRepository';
+import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
 import {
   loadRuntimeLibraryPathSettings,
   rebuildRuntimeMirrorAttachmentLinks,
@@ -16,13 +16,13 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 vi.mock('../model/systemFonts', () => ({
   listAvailableSystemFonts: vi.fn()
 }));
-vi.mock('../../../shared/platform/importDirectoryRuntimeRepository', async () => {
-  const actual = await vi.importActual<typeof import('../../../shared/platform/importDirectoryRuntimeRepository')>(
-    '../../../shared/platform/importDirectoryRuntimeRepository'
+vi.mock('../../../shared/platform/folderSelectionRuntimeRepository', async () => {
+  const actual = await vi.importActual<typeof import('../../../shared/platform/folderSelectionRuntimeRepository')>(
+    '../../../shared/platform/folderSelectionRuntimeRepository'
   );
   return {
     ...actual,
-    selectRuntimeImportDirectory: vi.fn()
+    selectRuntimeFolder: vi.fn()
   };
 });
 vi.mock('../../../shared/platform/libraryPathsRuntimeRepository', async () => {
@@ -39,7 +39,7 @@ vi.mock('../../../shared/platform/libraryPathsRuntimeRepository', async () => {
 });
 
 const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
-const mockedSelectRuntimeImportDirectory = vi.mocked(selectRuntimeImportDirectory);
+const mockedSelectRuntimeFolder = vi.mocked(selectRuntimeFolder);
 const mockedLoadRuntimeLibraryPathSettings = vi.mocked(loadRuntimeLibraryPathSettings);
 const mockedRebuildRuntimeMirrorAttachmentLinks = vi.mocked(rebuildRuntimeMirrorAttachmentLinks);
 const mockedRebuildRuntimeMirrorOutput = vi.mocked(rebuildRuntimeMirrorOutput);
@@ -102,12 +102,12 @@ beforeEach(() => {
       [location === 'inbox' ? 'inbox' : 'mirror']: nextPath ?? defaultLibraryPaths[location === 'inbox' ? 'inbox' : 'mirror']
     };
   });
-  mockedSelectRuntimeImportDirectory.mockReset();
-  mockedSelectRuntimeImportDirectory.mockResolvedValue(null);
+  mockedSelectRuntimeFolder.mockReset();
+  mockedSelectRuntimeFolder.mockResolvedValue(null);
 });
 
 it('shows the default inbox path and lets the user choose a custom location through the runtime bridge', async () => {
-  mockedSelectRuntimeImportDirectory.mockResolvedValue('D:\\Capture\\Inbox');
+  mockedSelectRuntimeFolder.mockResolvedValue('D:\\Capture\\Inbox');
 
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
@@ -190,7 +190,7 @@ it('shows separate mirror output rebuild feedback from mirror link rebuild', asy
 });
 
 it('updates Library Home, Assets, and Mirror through the same runtime interface', async () => {
-  mockedSelectRuntimeImportDirectory
+  mockedSelectRuntimeFolder
     .mockResolvedValueOnce('E:\\LibraryRoot')
     .mockResolvedValueOnce('G:\\AttachmentVault')
     .mockResolvedValueOnce('F:\\MirrorVault');
