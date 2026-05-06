@@ -12,7 +12,8 @@ const BANNED_IMPORT_PATTERN =
   /\b(?:import(?:\s+type)?[\s\S]*?\s+from\s+|import\s*\(|require\s*\()\s*['"](?:better-sqlite3|child_process(?:\/[^'"]+)?|electron(?:\/[^'"]+)?|fs(?:\/[^'"]+)?|node:child_process(?:\/[^'"]+)?|node:fs(?:\/[^'"]+)?|node:path(?:\/[^'"]+)?|path(?:\/[^'"]+)?)['"]/;
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
 const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/companion/', 'src/store/', 'src/features/', 'src/shared/diagnostics/'];
-const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
+const MODULE_REFERENCE_STATEMENT_PATTERN =
+  /\b(?:import(?:\s+type)?|export(?:\s+type)?)([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const MODULE_EXTENSION_PATTERN = String.raw`(?:\.[cm]?[jt]sx?)?`;
 const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = new RegExp(
   String.raw`(?:^|/)lib/platform/(?:nativeCommands|nativeContract)${MODULE_EXTENSION_PATTERN}$`
@@ -31,6 +32,10 @@ const RUNTIME_LEGACY_CAPABILITY_IMPORT_SOURCE_PATTERN = new RegExp(
 );
 const PLATFORM_COMPAT_IMPORT_SOURCE_PATTERN = /^\.\/[^/]*(?:Bridge|BridgePayloads)$/;
 const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
+const WORKSPACE_STORE_IMPORT_SOURCE_PATTERN = new RegExp(String.raw`(?:^|/)store/workspaceStore${MODULE_EXTENSION_PATTERN}$`);
+const WORKSPACE_LAYOUT_EXPORT_PATTERN =
+  /\b(?:DOCUMENT_WIDTH_DEFAULT|LIST_WIDTH_DEFAULT|RIGHT_SIDEBAR_WIDTH_DEFAULT|WorkspaceLayoutState)\b/;
+const WORKSPACE_LAYOUT_SHAPE_PATTERN = /\bstate\.layout\b/;
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -96,6 +101,15 @@ function isCorePlatformImport(source) {
   return CORE_PLATFORM_IMPORT_SOURCE_PATTERN.test(normalizedSource);
 }
 
+function isWorkspaceStoreImport(source) {
+  const normalizedSource = source.replace(/\\/g, '/').replace(/^(?:\.\.\/)+/, '');
+  return WORKSPACE_STORE_IMPORT_SOURCE_PATTERN.test(normalizedSource);
+}
+
+function checksWorkspaceLayoutDomainBoundary(relativeFile) {
+  return relativeFile.startsWith('src/app/') || relativeFile.startsWith('src/features/');
+}
+
 function inspectFile(filePath, repoRoot) {
   const relativeFile = path.relative(repoRoot, filePath);
   const contents = fs.readFileSync(filePath, 'utf8');
@@ -114,7 +128,7 @@ function inspectFile(filePath, repoRoot) {
     });
   }
   if (checksRuntimeCommandBoundary) {
-    for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
+    for (const match of contents.matchAll(MODULE_REFERENCE_STATEMENT_PATTERN)) {
       if (isRuntimeCommandBoundaryImport(match[1] ?? '', match[2] ?? '')) {
         violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'runtime-command-import' });
       }
@@ -133,15 +147,35 @@ function inspectFile(filePath, repoRoot) {
       }
     }
   }
+  if (checksWorkspaceLayoutDomainBoundary(relativeFile)) {
+    for (const match of contents.matchAll(MODULE_REFERENCE_STATEMENT_PATTERN)) {
+      const imports = match[1] ?? '';
+      const source = match[2] ?? '';
+      if (isWorkspaceStoreImport(source) && WORKSPACE_LAYOUT_EXPORT_PATTERN.test(imports)) {
+        violations.push({
+          file: relativeFile,
+          line: toLineNumber(contents, match.index ?? 0),
+          kind: 'workspace-layout-store-import'
+        });
+      }
+      if (isWorkspaceStoreImport(source) && WORKSPACE_LAYOUT_SHAPE_PATTERN.test(contents)) {
+        violations.push({
+          file: relativeFile,
+          line: toLineNumber(contents, match.index ?? 0),
+          kind: 'workspace-layout-store-shape'
+        });
+      }
+    }
+  }
   if (relativeFile.startsWith('lib/core/')) {
-    for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
+    for (const match of contents.matchAll(MODULE_REFERENCE_STATEMENT_PATTERN)) {
       if (isCorePlatformImport(match[2] ?? '')) {
         violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'core-platform-import' });
       }
     }
   }
   if (relativeFile.startsWith('src/shared/platform/') && !isPlatformCompatibilityFile(relativeFile)) {
-    for (const match of contents.matchAll(IMPORT_STATEMENT_PATTERN)) {
+    for (const match of contents.matchAll(MODULE_REFERENCE_STATEMENT_PATTERN)) {
       if (isPlatformCompatibilityImport(match[2] ?? '')) {
         violations.push({ file: relativeFile, line: toLineNumber(contents, match.index ?? 0), kind: 'platform-compat-import' });
       }

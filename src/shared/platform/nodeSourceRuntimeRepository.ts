@@ -9,7 +9,12 @@ import {
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeNodeSourceDetails, RuntimeNodeSourceUpdatePreview } from './nodeSourceRuntimePayloads';
+export type {
+  RuntimeKeepImportItemDetails,
+  RuntimeNodeImportSource,
+  RuntimeNodeSourceDetails,
+  RuntimeNodeSourceUpdatePreview
+} from './nodeSourceRuntimePayloads';
 
 export async function loadRuntimeNodeSourceDetails(nodeId: string): Promise<RuntimeNodeSourceDetails | null> {
   const runtimeInvoke = getRuntimeInvoke();

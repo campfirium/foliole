@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useNavigationReadingPosition } from './appControllerNavigationReadingPosition';
@@ -20,7 +21,7 @@ import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export function useWorkspaceSelectors() {
-  return useWorkspaceStore(
+  const ws = useWorkspaceStore(
     useShallow((state) => ({
       activeNodeId: state.activeNodeId,
       isHydrated: state.isHydrated,
@@ -41,9 +42,6 @@ export function useWorkspaceSelectors() {
       goToParent: state.goToParent,
       gradeReviewCard: state.gradeReviewCard,
       jumpToAncestorNode: state.jumpToAncestorNode,
-      isListCollapsed: state.layout.isListCollapsed,
-      isRightSidebarCollapsed: state.layout.isRightSidebarCollapsed,
-      listWidth: state.layout.listWidth,
       moveNode: state.moveNode,
       navigation: state.navigation,
       nodesById: state.nodesById,
@@ -52,14 +50,8 @@ export function useWorkspaceSelectors() {
       openNode: state.openNode,
       revealReviewAnswer: state.revealReviewAnswer,
       reviewSession: state.reviewSession,
-      resetLayout: state.resetLayout,
-      setListCollapsed: state.setListCollapsed,
-      setListWidth: state.setListWidth,
-      setRightSidebarCollapsed: state.setRightSidebarCollapsed,
-      setRightSidebarWidth: state.setRightSidebarWidth,
       setNodeViewState: state.setNodeViewState,
       startReviewSession: state.startReviewSession,
-      rightSidebarWidth: state.layout.rightSidebarWidth,
       trashedNodeIds: state.trashedNodeIds,
       updateNodeContent: state.updateNodeContent,
       updateVirtualNodeFilter: state.updateVirtualNodeFilter,
@@ -69,6 +61,8 @@ export function useWorkspaceSelectors() {
       exitReviewSession: state.exitReviewSession
     }))
   );
+  const layout = useWorkspaceLayoutState();
+  return { ...ws, ...layout };
 }
 
 export function useNowIso(tickMs = 15_000) {
