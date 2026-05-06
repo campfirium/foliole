@@ -314,7 +314,7 @@ run_related_tests_if_needed() {
     "quality-gate-fast" \
     "test" \
     "test (related)" \
-    npx vitest run --pool=threads --maxWorkers=2 "${test_array[@]}"
+    npx vitest run --reporter=dot --silent=passed-only --pool=threads --maxWorkers=2 "${test_array[@]}"
 }
 
 if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@"; then

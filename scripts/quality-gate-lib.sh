@@ -308,7 +308,7 @@ resolve_quality_gate_rerun_command() {
     if [[ -n "${failed_tests}" ]]; then
       local -a failed_test_array
       mapfile -t failed_test_array <<< "${failed_tests}"
-      printf 'npx vitest run --pool=threads --maxWorkers=2'
+      printf 'npx vitest run --reporter=dot --silent=passed-only --pool=threads --maxWorkers=2'
       printf ' %q' "${failed_test_array[@]}"
       return 0
     fi

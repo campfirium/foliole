@@ -47,6 +47,8 @@ describe('windows-cap-sync.sh', () => {
     const script = await readFile(CAP_SYNC_PS_SCRIPT, 'utf8');
 
     expect(script).toContain('function Get-CapSyncInputHash');
+    expect(script).toContain('function Test-CapSyncInputFile');
+    expect(script).toContain('\\.(test|spec)\\.[^/]+$');
     expect(script).toContain('android-cap-sync-cache.json');
     expect(script).toContain('Test-CapSyncCacheHit -InputHash $inputHash');
     expect(script).toContain('cache: HIT input=$inputHash');

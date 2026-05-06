@@ -30,6 +30,13 @@ function Get-RelativePath {
   return $fullPath.Replace('\', '/')
 }
 
+function Test-CapSyncInputFile {
+  param([System.IO.FileInfo]$File)
+  $relativePath = Get-RelativePath -Path $File.FullName
+  return $relativePath -notmatch '(^|/)(__tests__|test-results|coverage)/' `
+    -and $relativePath -notmatch '\.(test|spec)\.[^/]+$'
+}
+
 function Get-InputFiles {
   $paths = @(
     "package.json",
@@ -52,7 +59,7 @@ function Get-InputFiles {
       $files += Get-ChildItem -Path $fullPath -File -Recurse
     }
   }
-  return $files | Sort-Object FullName
+  return $files | Where-Object { Test-CapSyncInputFile -File $_ } | Sort-Object FullName
 }
 
 function Get-CapSyncInputHash {
