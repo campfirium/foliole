@@ -13,11 +13,22 @@ const BANNED_IMPORT_PATTERN =
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
 const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/companion/', 'src/store/', 'src/features/', 'src/shared/diagnostics/'];
 const IMPORT_STATEMENT_PATTERN = /\bimport(?:\s+type)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
-const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = /(?:^|\/)lib\/platform\/(?:nativeCommands|nativeContract)$/;
-const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/(?:bridge|runtimeInvoke)$/;
-const RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/[^/]*Bridge$/;
-const RUNTIME_HOST_BRIDGE_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/electronApi$/;
-const RUNTIME_LEGACY_CAPABILITY_IMPORT_SOURCE_PATTERN = /(?:^|\/)(?:shared\/)?platform\/importDirectoryRuntimeRepository$/;
+const MODULE_EXTENSION_PATTERN = String.raw`(?:\.[cm]?[jt]sx?)?`;
+const RUNTIME_COMMAND_IMPORT_SOURCE_PATTERN = new RegExp(
+  String.raw`(?:^|/)lib/platform/(?:nativeCommands|nativeContract)${MODULE_EXTENSION_PATTERN}$`
+);
+const RUNTIME_INVOKE_IMPORT_SOURCE_PATTERN = new RegExp(
+  String.raw`(?:^|/)(?:shared/)?platform/(?:bridge|runtimeInvoke)${MODULE_EXTENSION_PATTERN}$`
+);
+const RUNTIME_BRIDGE_IMPORT_SOURCE_PATTERN = new RegExp(
+  String.raw`(?:^|/)(?:shared/)?platform/[^/]*Bridge${MODULE_EXTENSION_PATTERN}$`
+);
+const RUNTIME_HOST_BRIDGE_IMPORT_SOURCE_PATTERN = new RegExp(
+  String.raw`(?:^|/)(?:shared/)?platform/electronApi${MODULE_EXTENSION_PATTERN}$`
+);
+const RUNTIME_LEGACY_CAPABILITY_IMPORT_SOURCE_PATTERN = new RegExp(
+  String.raw`(?:^|/)(?:shared/)?platform/importDirectoryRuntimeRepository${MODULE_EXTENSION_PATTERN}$`
+);
 const PLATFORM_COMPAT_IMPORT_SOURCE_PATTERN = /^\.\/[^/]*(?:Bridge|BridgePayloads)$/;
 const CORE_PLATFORM_IMPORT_SOURCE_PATTERN = /^platform\/(?:nativeCommands|nativeContract)(?:\.[cm]?[jt]s)?$/;
 

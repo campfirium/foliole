@@ -162,6 +162,27 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     ]);
   });
 
+  it('blocks upper production code from importing runtime boundaries with module extensions', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/app/hooks/useAppRuntime.ts', `
+      import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands.js';
+      import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke.ts';
+      import { getElectronAPI } from '../../shared/platform/electronApi.ts';
+      import { loadRuntimeImportOverview } from '../../shared/platform/importBridge.ts';
+      import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository.ts';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'src/app/hooks/useAppRuntime.ts', line: 1, kind: 'runtime-command-import' },
+      { file: 'src/app/hooks/useAppRuntime.ts', line: 2, kind: 'runtime-command-import' },
+      { file: 'src/app/hooks/useAppRuntime.ts', line: 3, kind: 'runtime-host-bridge-import' },
+      { file: 'src/app/hooks/useAppRuntime.ts', line: 4, kind: 'runtime-bridge-import' },
+      { file: 'src/app/hooks/useAppRuntime.ts', line: 5, kind: 'runtime-legacy-capability-import' }
+    ]);
+  });
+
   it('blocks shared diagnostics helpers from importing runtime command details', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'src/shared/diagnostics/debugRuntime.ts', `
