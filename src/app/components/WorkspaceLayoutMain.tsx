@@ -7,9 +7,10 @@ import { getFormalImportFailureMessage } from '../hooks/useFormalImport';
 import { ClipboardImportNotice, type ClipboardImportNoticeTone } from './ClipboardImportNotice';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
+import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
-import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
 import {
   loadWorkspaceRightPanelPreference,
@@ -92,12 +93,12 @@ function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrom
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
-  const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
   const { imports, layoutChrome, navigation, nodeList, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
   );
-  const immersive = useImmersiveReadingMode(flatProps);
+  const immersiveSource = useMemo(() => selectImmersiveReadingModeSource(props), [props]);
+  const immersive = useImmersiveReadingMode(immersiveSource);
   const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport);
   const gridProps = useMemo(() => ({
     ...props,

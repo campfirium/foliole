@@ -65,6 +65,7 @@ function selectDocumentSurfaceState({
 function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
   return {
     contextMenu: props.document.contextMenu,
+    editorAdapterRef: props.document.editorAdapterRef,
     editorContent: props.document.editorContent,
     editorNodeId: props.document.editorNodeId,
     editorNodeViewState: props.document.editorNodeViewState,
@@ -113,7 +114,9 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onEditorReady: props.document.onEditorReady,
     onExportImage: props.editorCommands.onExportImage,
     onNodeContentChange: props.document.onNodeContentChange,
+    onNodeDesiredRetentionChange: props.document.onNodeDesiredRetentionChange,
     onNodePriorityChange: props.document.onNodePriorityChange,
+    onEnterPriorityQuickSet: props.document.onEnterPriorityQuickSet,
     onPastedTextAnchors: props.document.onPastedTextAnchors,
     onPersistPdfViewState: props.document.onPersistPdfViewState,
     onRegisterEditorDraftFlush: props.document.onRegisterEditorDraftFlush,
@@ -128,6 +131,7 @@ function selectDocumentSurfaceReadingPosition(props: WorkspaceDocumentSurfaceSou
     beginApplyingReadingPosition: props.readingPosition.beginApplyingReadingPosition,
     completeApplyingReadingPosition: props.readingPosition.completeApplyingReadingPosition,
     getReadingPositionSelection: props.readingPosition.getReadingPositionSelection,
+    getReadingPositionSyncState: props.readingPosition.getReadingPositionSyncState,
     getReadingPositionTargetViewportMode: props.readingPosition.getReadingPositionTargetViewportMode,
     getReadingPositionTargetViewportRatio: props.readingPosition.getReadingPositionTargetViewportRatio,
     setReadingPositionSelection: props.readingPosition.setReadingPositionSelection
