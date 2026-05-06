@@ -3,12 +3,12 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
-import { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 import {
   listPendingNodeSyncSnapshots,
   resolvePendingNodeSync,
   stagePendingNodeSync
 } from './workspacePendingNodeSync';
+import { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 import type {
   WorkspaceRuntimeNode,
   WorkspaceRuntimeNodeDocument,

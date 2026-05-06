@@ -1,19 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../shared/platform/bridge', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../shared/platform/bridge')>();
-  return {
-    ...actual,
-    getRuntimeInvoke: vi.fn()
-  };
-});
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-import { getRuntimeInvoke } from '../shared/platform/bridge';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP, getCurrentFolderTreeItem } from './app-smoke.shared';

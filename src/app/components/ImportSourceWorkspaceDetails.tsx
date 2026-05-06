@@ -1,8 +1,9 @@
+import { X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogClose, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';
@@ -212,6 +213,12 @@ export function ImportSourceWorkspaceDetails({ open, onOpenChange, onSelectNode 
         >
           <section aria-label="Import management" className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)]">
             <AppDialogTitle className="sr-only">Import management</AppDialogTitle>
+            <AppDialogClose
+              aria-label="Close import management"
+              className="absolute right-4 top-4 z-10 inline-flex size-8 items-center justify-center rounded-md text-foreground/58 transition-colors hover:bg-settings-selected hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <X aria-hidden="true" size={16} strokeWidth={1.8} />
+            </AppDialogClose>
             <ImportSourceWorkspaceNavigation activePageId={activePageId} onSelect={setActivePageId} />
             <ImportSourceWorkspacePageContent
               onOpenChange={onOpenChange}

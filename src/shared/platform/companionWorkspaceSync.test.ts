@@ -24,6 +24,7 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 
+import { clearCompanionAppData } from './companionAppData';
 import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
@@ -33,7 +34,6 @@ import {
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from './companionWorkspaceSync';
-import { clearCompanionAppData } from './companionAppData';
 import {
   createStoredSyncState,
   createUpdatedStoredSnapshot,

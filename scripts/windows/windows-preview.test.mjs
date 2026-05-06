@@ -338,7 +338,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
   it('chooses full restart when committed runtime changes and renderer source changes are both pending', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     try {
-      const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',

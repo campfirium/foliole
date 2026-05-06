@@ -20,6 +20,11 @@ function createTextAnchorLink(id: string, originalText: string, from: number) {
   };
 }
 
+function openRightPanelFromMenu(label: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
+}
+
 it('reveals document highlights from the right sidebar list', () => {
   const parentContent = '# Parent Needle\n\nSecond mark';
   useWorkspaceStore.setState((state) => ({
@@ -46,7 +51,7 @@ it('reveals document highlights from the right sidebar list', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Highlights panel' }));
+  openRightPanelFromMenu('Highlights');
   fireEvent.click(screen.getByRole('button', { name: /Second mark/i }));
 
   const expectedFrom = parentContent.indexOf('Second mark');

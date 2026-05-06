@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
-import { markNodePositionReady } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { pushDebugTrace } from '../../../shared/diagnostics/debugTrace';
+import { markNodePositionReady } from '../../../shared/platform/performanceDiagnosticsProbe';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
 

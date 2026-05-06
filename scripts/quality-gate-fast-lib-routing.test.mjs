@@ -12,11 +12,11 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
 
-function runQualityGate(cwd, env = {}) {
+function runQualityGate(cwd, env = {}, args = []) {
   return new Promise((resolve) => {
-    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT], {
+    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
       cwd,
-      env: { ...process.env, ...env }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
     });
     let stdout = '';
     let stderr = '';
@@ -70,6 +70,31 @@ describe('quality-gate-fast lib routing', () => {
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
       expect(result.stdout).toContain('full test ok');
       expect(result.stdout).toContain('android web build ok');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('explains lib changes as a full gate route without running checks', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'full lint should stay unused\')"',
+        'test:full': 'node -e "console.log(\'full test should stay unused\')"'
+      });
+
+      const result = await runQualityGate(
+        tempRoot,
+        { QUALITY_GATE_CHANGED_FILES: 'lib/core/database/desktopFreshSchemaStatements.ts' },
+        ['--route']
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-route] selected level: full');
+      expect(result.stdout).toContain('shared runtime, desktop runtime, store, or dependency root changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: quality:full');
+      expect(result.stdout).not.toContain('full lint should stay unused');
+      expect(result.stdout).not.toContain('full test should stay unused');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

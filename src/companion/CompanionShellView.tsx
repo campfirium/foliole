@@ -8,6 +8,43 @@ function openCompanionSyncSettings(model: CompanionShellModel) {
   model.setSettingsPage('sync');
 }
 
+function renderCompanionMainContent(model: CompanionShellModel) {
+  return (
+    <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
+      <CompanionShellTopBar
+        onOpenSyncSettings={() => openCompanionSyncSettings(model)}
+        topBarProps={model.topBarProps}
+        workspaceSync={model.workspaceSync}
+      />
+      {renderCompanionShellContent({
+        hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
+        browseSortDirection: model.browseSortDirection,
+        browseSortKey: model.browseSortKey,
+        companionTabConfig: model.companionTabs.config,
+        directorySelection: model.directorySelection,
+        onBackDirectorySelection: model.topBarProps.onBack ?? (() => undefined),
+        onBackToSettingsList: () => model.setSettingsPage('list'),
+        onChangeDirectorySelection: model.setDirectorySelection,
+        onChangeBrowseSortDirection: model.setBrowseSortDirection,
+        onChangeBrowseSortKey: model.setBrowseSortKey,
+        onCompanionTabConfigChange: model.companionTabs.setConfig,
+        isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
+        isOnlyReviewOpen: model.isOnlyReviewOpen,
+        onOpenSyncSettingsPage: model.setSettingsPage,
+        onOpenSyncSettings: () => model.setSettingsPage('sync'),
+        onOpenTabsSettings: () => model.setSettingsPage('tabs'),
+        onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
+        onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
+        reviewBreadcrumbItems: model.reviewBreadcrumbItems,
+        settingsPage: model.settingsPage,
+        surface: model.surface,
+        workspaceError: model.workspaceSync.error,
+        workspaceSync: model.workspaceSync
+      })}
+    </div>
+  );
+}
+
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   return (
@@ -22,38 +59,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
           onTouchMove={model.floatingBar.handleTouchMove}
           onTouchStart={model.floatingBar.handleTouchStart}
         >
-          <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pb-24 pt-4 sm:px-7">
-            <CompanionShellTopBar
-              onOpenSyncSettings={() => openCompanionSyncSettings(model)}
-              topBarProps={model.topBarProps}
-              workspaceSync={model.workspaceSync}
-            />
-            {renderCompanionShellContent({
-              hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
-              browseSortDirection: model.browseSortDirection,
-              browseSortKey: model.browseSortKey,
-              companionTabConfig: model.companionTabs.config,
-              directorySelection: model.directorySelection,
-              onBackDirectorySelection: model.topBarProps.onBack ?? (() => undefined),
-              onBackToSettingsList: () => model.setSettingsPage('list'),
-              onChangeDirectorySelection: model.setDirectorySelection,
-              onChangeBrowseSortDirection: model.setBrowseSortDirection,
-              onChangeBrowseSortKey: model.setBrowseSortKey,
-              onCompanionTabConfigChange: model.companionTabs.setConfig,
-              isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
-              isOnlyReviewOpen: model.isOnlyReviewOpen,
-              onOpenSyncSettingsPage: model.setSettingsPage,
-              onOpenSyncSettings: () => model.setSettingsPage('sync'),
-              onOpenTabsSettings: () => model.setSettingsPage('tabs'),
-              onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
-              onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
-              reviewBreadcrumbItems: model.reviewBreadcrumbItems,
-              settingsPage: model.settingsPage,
-              surface: model.surface,
-              workspaceError: model.workspaceSync.error,
-              workspaceSync: model.workspaceSync
-            })}
-          </div>
+          {renderCompanionMainContent(model)}
         </div>
       </main>
       <CompanionShellOverlays

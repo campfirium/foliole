@@ -6,11 +6,11 @@ import {
   planAndExecuteSyncNodesFromRemote
 } from '../../lib/core/sync/syncPullExecutor.js';
 import type { NativeInvoke } from '../../lib/platform/nativeContract.js';
-import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeRecord
 } from '../../lib/platform/nativeSyncContract.js';
+import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 
 function createLocalIndexEntry(
   overrides: Partial<NativeSyncIndexEntry> & Pick<NativeSyncIndexEntry, 'object_id'>

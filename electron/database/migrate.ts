@@ -1,9 +1,9 @@
+import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
 import {
   DATABASE_SCHEMA_VERSION,
   initializeDatabaseConnection,
   isLegacyDatabaseRebuildRequiredError
 } from '../../lib/core/database/migrations.js';
-import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';

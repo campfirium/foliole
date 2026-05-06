@@ -1,8 +1,8 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeCommandArgs, NativeCommandName } from '../../../lib/platform/nativeContract';
 
-import { getRuntimeInvoke } from './runtimeInvoke';
 import { isDesktopRuntime } from './runtime';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export {

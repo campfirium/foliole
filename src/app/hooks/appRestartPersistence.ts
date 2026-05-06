@@ -2,13 +2,13 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
+import { restartMainWindowApp } from '../../shared/platform/windowControls';
 import {
   hasWorkspaceRuntimeRepository,
   saveWorkspaceReadingProgressNow
 } from '../../shared/platform/workspaceRuntimeRepository';
-import { restartMainWindowApp } from '../../shared/platform/windowControls';
-import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
 

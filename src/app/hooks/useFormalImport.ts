@@ -1,7 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { create } from 'zustand';
 
-import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntimeCommandRepository';
 import {
   runRuntimeClipboardImport,
@@ -11,6 +10,7 @@ import {
   type RuntimeTextImportResult
 } from '../../shared/platform/importExecutionRuntimeRepository';
 import { loadRuntimeImportOverview, type RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
+import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { runResetImportDataFlow } from './formalImportReset';

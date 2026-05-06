@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 
@@ -42,7 +42,6 @@ function createSnapshot(): WorkspaceSnapshot {
   };
 }
 
-describe('companion readable articles with missing body blobs', () => {
   it('keeps missing body topics selectable with metadata', () => {
     const result = resolveReadableCompanionArticleByNodeId(createSnapshot(), 'topic-1');
 
@@ -99,7 +98,7 @@ describe('companion readable articles with missing body blobs', () => {
     });
   });
 
-  it('keeps fetching and failed body topics selectable for status display', () => {
+  it('keeps fetching body topics selectable for status display', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = {
       ...snapshot.nodesById['topic-1'],
@@ -110,7 +109,10 @@ describe('companion readable articles with missing body blobs', () => {
       bodyStatus: 'fetching',
       nodeId: 'topic-1'
     });
+  });
 
+  it('keeps failed body topics in recent articles for status display', () => {
+    const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = {
       ...snapshot.nodesById['topic-1'],
       bodyStatus: 'failed'
@@ -121,4 +123,3 @@ describe('companion readable articles with missing body blobs', () => {
       nodeId: 'topic-1'
     });
   });
-});

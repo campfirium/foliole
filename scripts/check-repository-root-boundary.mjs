@@ -4,7 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const ACTIVE_ROOTS = new Set(['android', 'electron', 'ios', 'lib', 'scripts', 'src', 'tests']);
-const BASELINE_ALLOWED_ROOTS = new Set(['.claude', '.git', '.lab']);
+const BASELINE_ALLOWED_ROOTS = new Set(['.claude', '.git', '.github', '.githooks', '.lab']);
 const EXEMPT_ROOTS = new Set([
   'dist',
   'electron-dist',
@@ -14,7 +14,8 @@ const EXEMPT_ROOTS = new Set([
   'ref',
   'release',
   'src-tauri',
-  'test-results'
+  'test-results',
+  'trees'
 ]);
 const EXEMPT_PATTERNS = [/^\.tmp(?:$|[-_])/, /^_tmp(?:$|[-_])/, /^tmp(?:$|[-_])/];
 

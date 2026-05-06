@@ -4,12 +4,12 @@ import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 
-import { getRuntimeInvoke } from './runtimeInvoke';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceRuntimeRepository';
 import { updateImageCacheStats } from './performanceDiagnosticsProbe';
+import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
 function isAttachmentResourceResolution(value: unknown): value is NativeAttachmentResourceResolution {

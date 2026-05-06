@@ -53,7 +53,6 @@ it('creates highlight node without leaving current node', () => {
   act(() => {
     useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
   });
-  fireEvent.click(within(getCurrentFolderPanel()).getByRole('button', { name: 'Expand all topics' }));
   expect(getCurrentFolderTreeItem('Welcome to Foliole')).toHaveAttribute(
     'data-node-derived',
     'false'
@@ -75,8 +74,6 @@ it('keeps only top-level rows bold while lowering non-top-level row emphasis', (
   act(() => {
     useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
   });
-  fireEvent.click(within(getCurrentFolderPanel()).getByRole('button', { name: 'Expand all topics' }));
-
   const regularRow = getCurrentFolderTreeItem('Welcome to Foliole');
   const derivedRow = getCurrentFolderTreeItem('Welcome');
 

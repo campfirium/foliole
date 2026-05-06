@@ -6,6 +6,11 @@ import './app-smoke.shared';
 import { App } from '../app/App';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
+function openRightPanelFromMenu(label: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
+}
+
 it('toggles both sidebars from the titlebar buttons', () => {
   render(<App />);
 
@@ -36,8 +41,8 @@ it('keeps the workspace stable when switching right panels after collapsing the 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle left panel' }));
   expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Highlights panel' }));
-  expect(screen.getByRole('button', { name: 'Highlights panel' })).toHaveAttribute('aria-pressed', 'true');
+  openRightPanelFromMenu('Highlights');
+  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('data-active', 'true');
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);

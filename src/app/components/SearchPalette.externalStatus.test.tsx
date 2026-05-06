@@ -11,8 +11,8 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
 
-import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
+import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';

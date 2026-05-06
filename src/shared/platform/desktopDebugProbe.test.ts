@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from './runtimeInvoke';
 import { installDesktopDebugProbe, readDesktopDebugProbe, resetDesktopDebugProbeState } from './desktopDebugProbe';
 import type { ElectronAPI } from './electronApi';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 function createMockElectronApi(invoke: ElectronAPI['invoke'], runtimeHead: string | null = null): ElectronAPI {
   return {

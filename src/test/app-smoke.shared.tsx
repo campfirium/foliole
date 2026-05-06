@@ -209,6 +209,7 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
 
 export function resetAppSmokeState() {
   window.history.pushState({}, '', '/');
+  window.electronAPI = undefined;
   localStorage.clear();
   resetPerformanceDiagnosticsProbe();
   resetWorkspaceNodeDocumentPrefetchForTest();

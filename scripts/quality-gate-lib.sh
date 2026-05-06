@@ -29,7 +29,7 @@ has_package_script() {
 }
 
 resolve_quality_gate_log_mode() {
-  printf '%s' "${QUALITY_GATE_LOG_MODE:-summary}"
+  printf '%s' "${QUALITY_GATE_LOG_MODE:-fail-only}"
 }
 
 quality_gate_should_print_step() {

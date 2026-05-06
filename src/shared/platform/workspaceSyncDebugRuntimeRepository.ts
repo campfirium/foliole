@@ -5,11 +5,11 @@ import type {
   NativeSyncNodeRecord,
   NativeSyncObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
-import { createNativeSyncRuntimePort } from '../../../lib/platform/nativeSyncRuntimePort';
 import {
   invokeLoadSyncIndex,
   invokeLoadSyncNodeConflicts
 } from '../../../lib/platform/nativeSyncInvoke';
+import { createNativeSyncRuntimePort } from '../../../lib/platform/nativeSyncRuntimePort';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 

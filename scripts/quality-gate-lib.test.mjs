@@ -141,6 +141,16 @@ describe('quality-gate-lib.sh', () => {
     expect(result.stdout.trim()).toBe('42');
   });
 
+  it('defaults quality gate output to fail-only mode', async () => {
+    const result = await runBash(
+      [`source "${QUALITY_GATE_LIB}"`, 'resolve_quality_gate_log_mode'].join('\n'),
+      REPO_ROOT
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe('fail-only');
+  });
+
   it('records failed tests and prints a targeted vitest rerun command', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-lib-'));
     const failedSummary = path.join(tempRoot, 'test-run', 'failed.txt');

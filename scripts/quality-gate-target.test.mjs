@@ -16,7 +16,7 @@ function runTargetGate(cwd, target, env = {}) {
   return new Promise((resolve) => {
     const child = spawn('bash', [TARGET_SCRIPT, target], {
       cwd,
-      env: { ...process.env, ...env }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
     });
     let stdout = '';
     let stderr = '';

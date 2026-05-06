@@ -2,8 +2,8 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import type { NodeViewState } from '../../store/workspaceStore';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { usePreparedNavigationHandlers } from './useWorkspaceNavigationPrefetch';
 import { usePendingAnchorNavigation } from './useWorkspacePendingAnchorNavigation';

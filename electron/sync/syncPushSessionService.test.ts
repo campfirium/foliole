@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { runSyncPushSession } from '../../lib/core/sync/syncSessionService.js';
 import type { NativeInvoke } from '../../lib/platform/nativeContract.js';
-import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord
 } from '../../lib/platform/nativeSyncContract.js';
+import { createNativeSyncRuntimePort } from '../../lib/platform/nativeSyncRuntimePort.js';
 
 function createIndexEntry(overrides: Partial<NativeSyncIndexEntry> & Pick<NativeSyncIndexEntry, 'object_id'>) {
   const { object_id, ...rest } = overrides;

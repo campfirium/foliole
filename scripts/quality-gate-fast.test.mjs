@@ -17,7 +17,7 @@ function runQualityGate(cwd, env = {}, args = []) {
   return new Promise((resolve) => {
     const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
       cwd,
-      env: { ...process.env, ...env }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
     });
     let stdout = '';
     let stderr = '';
@@ -312,6 +312,39 @@ describe('quality-gate-fast.sh', () => {
     }
   }, 15000);
 
+  it('prints a route plan without running checks', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"',
+        typecheck: 'node -e "console.log(\'typecheck should stay unused\')"'
+      });
+      await writeFixtureFile(
+        tempRoot,
+        'src/features/image-cloze/components/ImageClozeCardView.tsx',
+        'export function ImageClozeCardView() { return null; }\n'
+      );
+
+      const result = await runQualityGate(
+        tempRoot,
+        { QUALITY_GATE_CHANGED_FILES: 'src/features/image-cloze/components/ImageClozeCardView.tsx' },
+        ['--explain', '--route']
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-route] selected level: light');
+      expect(result.stdout).toContain('[quality-gate-route] reason: local source change');
+      expect(result.stdout).toContain('[quality-gate-route] target: scoped lint + typecheck');
+      expect(result.stdout).toContain('[quality-gate-route] lint targets:');
+      expect(result.stdout).toContain('src/features/image-cloze/components/ImageClozeCardView.tsx');
+      expect(result.stdout).toContain('[quality-gate-route] related tests: none');
+      expect(result.stdout).not.toContain('repo lint should stay unused');
+      expect(result.stdout).not.toContain('typecheck should stay unused');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
   it('uses the mid level for props signature changes and runs related tests', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
     const typecheckMarker = path.join(tempRoot, 'typecheck.marker');
@@ -355,6 +388,58 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');
       expect(result.stdout).not.toContain('repo build should stay unused');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('prints related tests for mid-level route plans', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"',
+        typecheck: 'node -e "console.log(\'typecheck should stay unused\')"'
+      });
+      await writeFixtureFile(
+        tempRoot,
+        'src/app/components/FancyCard.tsx',
+        'export interface FancyCardProps { title: string }\nexport function FancyCard(_props: FancyCardProps) { return null; }\n'
+      );
+      await writeFixtureFile(tempRoot, 'src/app/components/FancyCard.test.tsx', 'export {};\n');
+
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'src/app/components/FancyCard.tsx'
+      }, ['--route']);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-route] selected level: mid');
+      expect(result.stdout).toContain('exported component surface or props/type signature changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: scoped lint + typecheck + workspace boundary + related tests');
+      expect(result.stdout).toContain('src/app/components/FancyCard.test.tsx');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('routes mixed android and full-scope changes to the full gate', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"'
+      });
+
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: [
+          'scripts/android/android-boundary-quality-gate.test.mjs',
+          'lib/core/database/numberedMigrations.ts'
+        ].join('\n')
+      }, ['--route']);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-route] selected level: full');
+      expect(result.stdout).toContain('shared runtime, desktop runtime, store, or dependency root changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: quality:full');
+      expect(result.stdout).not.toContain('repo lint should stay unused');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

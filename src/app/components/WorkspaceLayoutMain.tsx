@@ -5,9 +5,9 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { getFormalImportFailureMessage } from '../hooks/useFormalImport';
 
 import { ClipboardImportNotice, type ClipboardImportNoticeTone } from './ClipboardImportNotice';
+import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
-import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';

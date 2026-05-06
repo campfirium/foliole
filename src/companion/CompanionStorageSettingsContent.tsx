@@ -14,6 +14,45 @@ function reloadCompanionApp() {
   window.location.reload();
 }
 
+function ClearAppDataDialog(props: {
+  isClearing: boolean;
+  isOpen: boolean;
+  onClear: () => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <AppDialog onOpenChange={props.onOpenChange} open={props.isOpen}>
+      <AppDialogPortal>
+        <AppDialogOverlay />
+        <AppDialogContent className="w-[calc(100vw-3rem)] max-w-[420px] px-5 py-5">
+          <AppDialogTitle>Clear App Data?</AppDialogTitle>
+          <AppDialogDescription className="mt-2">
+            This will disconnect the current connection and clear Foliole app data on this device. Data on your desktop and other devices will not be deleted.
+          </AppDialogDescription>
+          <div className="mt-5 flex flex-col gap-3">
+            <button
+              className="w-full rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={props.isClearing}
+              onClick={props.onClear}
+              type="button"
+            >
+              {props.isClearing ? 'Clearing...' : 'Clear App Data'}
+            </button>
+            <button
+              className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={props.isClearing}
+              onClick={() => props.onOpenChange(false)}
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
+        </AppDialogContent>
+      </AppDialogPortal>
+    </AppDialog>
+  );
+}
+
 export function CompanionStorageSettingsContent() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -48,35 +87,12 @@ export function CompanionStorageSettingsContent() {
         </button>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
       </div>
-      <AppDialog onOpenChange={setIsConfirmOpen} open={isConfirmOpen}>
-        <AppDialogPortal>
-          <AppDialogOverlay />
-          <AppDialogContent className="w-[calc(100vw-3rem)] max-w-[420px] px-5 py-5">
-            <AppDialogTitle>Clear App Data?</AppDialogTitle>
-            <AppDialogDescription className="mt-2">
-              This will disconnect the current connection and clear Foliole app data on this device. Data on your desktop and other devices will not be deleted.
-            </AppDialogDescription>
-            <div className="mt-5 flex flex-col gap-3">
-              <button
-                className="w-full rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed disabled:opacity-45"
-                disabled={isClearing}
-                onClick={() => void handleClearAppData()}
-                type="button"
-              >
-                {isClearing ? 'Clearing...' : 'Clear App Data'}
-              </button>
-              <button
-                className="w-full rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
-                disabled={isClearing}
-                onClick={() => setIsConfirmOpen(false)}
-                type="button"
-              >
-                Cancel
-              </button>
-            </div>
-          </AppDialogContent>
-        </AppDialogPortal>
-      </AppDialog>
+      <ClearAppDataDialog
+        isClearing={isClearing}
+        isOpen={isConfirmOpen}
+        onClear={() => void handleClearAppData()}
+        onOpenChange={setIsConfirmOpen}
+      />
     </section>
   );
 }

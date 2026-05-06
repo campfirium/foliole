@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { isDesktopRuntime } from '../shared/platform/runtime';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import { syncNodeContentToRuntime, syncNodeOrderToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 

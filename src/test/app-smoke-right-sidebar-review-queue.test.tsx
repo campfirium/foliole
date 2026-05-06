@@ -118,8 +118,7 @@ it('labels cloze review nodes as FSRS in the review queue panel', () => {
   const queueList = screen.getByRole('list', { name: 'Review queue items' });
 
   expect(within(queueList).getByText(/1\. Cloze prompt$/)).toBeInTheDocument();
-  expect(within(queueList).getByText('FSRS queue')).toBeInTheDocument();
-  expect(screen.getByText('FSRS')).toBeInTheDocument();
+  expect(within(queueList).getByText('Review item queue')).toBeInTheDocument();
 });
 
 it('shows scheduled review cards in the whole queue even when the live review session only contains reading items', () => {

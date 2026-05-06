@@ -74,7 +74,71 @@ function findLatestFailedTerminalEvent(android: SyncDiagnosticSnapshot) {
     event.status === 'failed' || event.status === 'completed' || event.status === 'skipped'
   ))?.status === 'failed'
     ? android.events.find((event) => event.status === 'failed') ?? null
-    : null;
+	    : null;
+}
+
+function pushSyncLagVerdicts(args: {
+  android: SyncDiagnosticSnapshot;
+  cursorLag: number;
+  desktop: SyncDiagnosticSnapshot;
+  desktopMaxSeq: number;
+  verdicts: SyncDiagnosticVerdict[];
+}) {
+  if (args.cursorLag > 0) {
+    args.verdicts.push(infoVerdict('sync_android_not_caught_up', 'New desktop changes are available for this device.', {
+      android_pack_cursor: args.android.sync_state.pack_cursor ?? 0,
+      cursor_lag: args.cursorLag,
+      desktop_max_state_seq: args.desktopMaxSeq,
+      lagging_object_types: findLaggingDesktopObjectTypes({
+        desktop: args.desktop,
+        packCursor: args.android.sync_state.pack_cursor
+      })
+    }));
+  }
+  if (args.desktop.storage.active_node_count > 0 && args.android.storage.active_node_count === 0) {
+    args.verdicts.push(warningVerdict('sync_pack_download_or_apply_breakpoint', 'Desktop has topics but Android has none.', {
+      android_node_count: args.android.storage.active_node_count,
+      desktop_node_count: args.desktop.storage.active_node_count
+    }));
+  }
+  if (args.desktop.storage.active_node_count > 0 && args.desktop.sync_state.max_state_seq === null) {
+    args.verdicts.push(warningVerdict('sync_desktop_missing_node_ledger', 'Desktop topics are not represented in sync state.', {
+      desktop_node_count: args.desktop.storage.active_node_count
+    }));
+  }
+}
+
+function pushContentBacklogVerdicts(android: SyncDiagnosticSnapshot, verdicts: SyncDiagnosticVerdict[]) {
+  if (android.storage.active_node_count > 0 && android.content.missing_content_blob_count > 0) {
+    verdicts.push(infoVerdict('sync_android_content_cache_backlog', 'Some topic bodies are still downloading.', {
+      missing_content_blob_count: android.content.missing_content_blob_count,
+      missing_external_document_body_count: android.content.missing_external_document_body_count ?? 0,
+      missing_topic_body_count: android.content.missing_topic_body_count ?? 0
+    }));
+  }
+  if ((android.content.missing_attachment_resource_count ?? 0) > 0) {
+    verdicts.push(infoVerdict('sync_android_attachment_cache_backlog', 'Some attachment files are still downloading.', {
+      missing_attachment_resource_count: android.content.missing_attachment_resource_count ?? 0
+    }));
+  }
+}
+
+function pushAlignedVerdict(args: {
+  android: SyncDiagnosticSnapshot;
+  androidCursor: number;
+  desktopMaxSeq: number;
+  verdicts: SyncDiagnosticVerdict[];
+}) {
+  if (args.desktopMaxSeq <= 0 || args.desktopMaxSeq !== args.androidCursor || args.android.storage.active_node_count <= 0) {
+    return;
+  }
+  args.verdicts.push(okVerdict('sync_structure_aligned', 'Structure sync is aligned.', {
+    missing_attachment_resource_count: args.android.content.missing_attachment_resource_count ?? 0,
+    missing_content_blob_count: args.android.content.missing_content_blob_count,
+    missing_external_document_body_count: args.android.content.missing_external_document_body_count ?? 0,
+    missing_topic_body_count: args.android.content.missing_topic_body_count ?? 0,
+    state_seq: args.desktopMaxSeq
+  }));
 }
 
 export function mergeSyncDiagnosticVerdicts(args: {
@@ -95,53 +159,9 @@ export function mergeSyncDiagnosticVerdicts(args: {
       occurred_at: latestFailed.occurred_at
     }));
   }
-  if (cursorLag > 0) {
-    verdicts.push(infoVerdict('sync_android_not_caught_up', 'New desktop changes are available for this device.', {
-      android_pack_cursor: androidCursor,
-      cursor_lag: cursorLag,
-      desktop_max_state_seq: desktopMaxSeq,
-      lagging_object_types: findLaggingDesktopObjectTypes({
-        desktop: args.desktop,
-        packCursor: args.android.sync_state.pack_cursor
-      })
-    }));
-  }
-  if (args.desktop.storage.active_node_count > 0 && args.android.storage.active_node_count === 0) {
-    verdicts.push(warningVerdict('sync_pack_download_or_apply_breakpoint', 'Desktop has topics but Android has none.', {
-      android_node_count: args.android.storage.active_node_count,
-      desktop_node_count: args.desktop.storage.active_node_count
-    }));
-  }
-  if (args.desktop.storage.active_node_count > 0 && args.desktop.sync_state.max_state_seq === null) {
-    verdicts.push(warningVerdict('sync_desktop_missing_node_ledger', 'Desktop topics are not represented in sync state.', {
-      desktop_node_count: args.desktop.storage.active_node_count
-    }));
-  }
-  if (args.android.storage.active_node_count > 0 && args.android.content.missing_content_blob_count > 0) {
-    verdicts.push(infoVerdict('sync_android_content_cache_backlog', 'Some topic bodies are still downloading.', {
-      missing_content_blob_count: args.android.content.missing_content_blob_count,
-      missing_external_document_body_count: args.android.content.missing_external_document_body_count ?? 0,
-      missing_topic_body_count: args.android.content.missing_topic_body_count ?? 0
-    }));
-  }
-  if ((args.android.content.missing_attachment_resource_count ?? 0) > 0) {
-    verdicts.push(infoVerdict('sync_android_attachment_cache_backlog', 'Some attachment files are still downloading.', {
-      missing_attachment_resource_count: args.android.content.missing_attachment_resource_count ?? 0
-    }));
-  }
-  if (
-    desktopMaxSeq > 0 &&
-    desktopMaxSeq === androidCursor &&
-    args.android.storage.active_node_count > 0
-  ) {
-    verdicts.push(okVerdict('sync_structure_aligned', 'Structure sync is aligned.', {
-      missing_attachment_resource_count: args.android.content.missing_attachment_resource_count ?? 0,
-      missing_content_blob_count: args.android.content.missing_content_blob_count,
-      missing_external_document_body_count: args.android.content.missing_external_document_body_count ?? 0,
-      missing_topic_body_count: args.android.content.missing_topic_body_count ?? 0,
-      state_seq: desktopMaxSeq
-    }));
-  }
+  pushSyncLagVerdicts({ android: args.android, cursorLag, desktop: args.desktop, desktopMaxSeq, verdicts });
+  pushContentBacklogVerdicts(args.android, verdicts);
+  pushAlignedVerdict({ android: args.android, androidCursor, desktopMaxSeq, verdicts });
   return verdicts;
 }
 

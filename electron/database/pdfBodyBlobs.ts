@@ -1,5 +1,5 @@
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { PDF_READER_PLACEHOLDER_TEXT, resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 

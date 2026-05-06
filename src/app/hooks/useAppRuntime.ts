@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
-import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/workspaceRuntimeRepository';
+import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
 import { useWindowHotkeys } from './useAppRuntimeHotkeys';
@@ -149,9 +149,7 @@ function useEditorDraftFlushRegistry(refs: ReturnType<typeof createRuntimeRefs>)
   return { flushPendingEditorDraft, flushPendingEditorDraftImmediately, registerPendingEditorDraftFlush };
 }
 
-export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
-  const refs = createRuntimeRefs(initialListWidth, initialRightSidebarWidth);
-  const [, setReadingPositionRequestVersion] = useState(0);
+function useRuntimeFlags() {
   const [isViewingTrashNode, setIsViewingTrashNode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -160,22 +158,46 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const [isMoveToNodePaletteOpen, setIsMoveToNodePaletteOpen] = useState(false);
   const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  return {
+    isCommandPaletteOpen,
+    isGoToNodePaletteOpen,
+    isImmersiveMode,
+    isImportManagementOpen,
+    isMoveToNodePaletteOpen,
+    isSearchPaletteOpen,
+    isSettingsOpen,
+    isViewingTrashNode,
+    setIsCommandPaletteOpen,
+    setIsGoToNodePaletteOpen,
+    setIsImmersiveMode,
+    setIsImportManagementOpen,
+    setIsMoveToNodePaletteOpen,
+    setIsSearchPaletteOpen,
+    setIsSettingsOpen,
+    setIsViewingTrashNode
+  };
+}
+
+export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth: number) {
+  const refs = createRuntimeRefs(initialListWidth, initialRightSidebarWidth);
+  const [, setReadingPositionRequestVersion] = useState(0);
+  const flags = useRuntimeFlags();
   const settingsRequest = useSettingsRequestState();
   const recentHistory = useRecentHistory();
   useWindowHotkeys({
-    setIsCommandPaletteOpen,
-    setIsGoToNodePaletteOpen,
-    setIsMoveToNodePaletteOpen,
-    setIsSearchPaletteOpen
+    setIsCommandPaletteOpen: flags.setIsCommandPaletteOpen,
+    setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
+    setIsMoveToNodePaletteOpen: flags.setIsMoveToNodePaletteOpen,
+    setIsSearchPaletteOpen: flags.setIsSearchPaletteOpen
   });
 
   useEffect(() => {
     return subscribeOpenClozeGuardSettings(() => {
       settingsRequest.setRequestedSettingsDialog(null);
       settingsRequest.setRequestedSettingsCategory('editor');
-      setIsSettingsOpen(true);
+      flags.setIsSettingsOpen(true);
     });
-  }, [settingsRequest]);
+  }, [flags, settingsRequest]);
 
   const editorDraftFlush = useEditorDraftFlushRegistry(refs);
   const bumpReadingPositionRequest = useCallback(() => {
@@ -188,25 +210,25 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
       refs,
       requestedSettingsCategory: settingsRequest.requestedSettingsCategory,
       requestedSettingsDialog: settingsRequest.requestedSettingsDialog,
-      setIsCommandPaletteOpen,
-      setIsGoToNodePaletteOpen,
-      setIsImportManagementOpen,
-      setIsImmersiveMode,
-      setIsMoveToNodePaletteOpen,
-      setIsSearchPaletteOpen,
-      setIsSettingsOpen,
-      setIsViewingTrashNode,
+      setIsCommandPaletteOpen: flags.setIsCommandPaletteOpen,
+      setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
+      setIsImportManagementOpen: flags.setIsImportManagementOpen,
+      setIsImmersiveMode: flags.setIsImmersiveMode,
+      setIsMoveToNodePaletteOpen: flags.setIsMoveToNodePaletteOpen,
+      setIsSearchPaletteOpen: flags.setIsSearchPaletteOpen,
+      setIsSettingsOpen: flags.setIsSettingsOpen,
+      setIsViewingTrashNode: flags.setIsViewingTrashNode,
       setRequestedSettingsCategory: settingsRequest.setRequestedSettingsCategory,
       setRequestedSettingsDialog: settingsRequest.setRequestedSettingsDialog,
       state: {
-        isCommandPaletteOpen,
-        isGoToNodePaletteOpen,
-        isImmersiveMode,
-        isImportManagementOpen,
-        isMoveToNodePaletteOpen,
-        isSearchPaletteOpen,
-        isSettingsOpen,
-        isViewingTrashNode
+        isCommandPaletteOpen: flags.isCommandPaletteOpen,
+        isGoToNodePaletteOpen: flags.isGoToNodePaletteOpen,
+        isImmersiveMode: flags.isImmersiveMode,
+        isImportManagementOpen: flags.isImportManagementOpen,
+        isMoveToNodePaletteOpen: flags.isMoveToNodePaletteOpen,
+        isSearchPaletteOpen: flags.isSearchPaletteOpen,
+        isSettingsOpen: flags.isSettingsOpen,
+        isViewingTrashNode: flags.isViewingTrashNode
       }
     }),
     ...editorDraftFlush

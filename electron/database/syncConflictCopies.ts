@@ -5,13 +5,13 @@ import {
   conflictCopyBranchKey,
   conflictCopyNodeId
 } from './syncConflictCopyIdentity.js';
-import { upsertConflictCopyProjection } from './syncConflictCopyProjection.js';
 import {
   loadConflictCopyBranchMapping,
   loadConflictCopyMapping,
   saveConflictCopyBranchMapping,
   saveConflictCopyMapping
 } from './syncConflictCopyMappings.js';
+import { upsertConflictCopyProjection } from './syncConflictCopyProjection.js';
 import { recordRemoteNodeConflict } from './syncNodeConflictRecords.js';
 
 interface ConflictCopyResult {

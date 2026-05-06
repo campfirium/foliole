@@ -182,7 +182,7 @@ it('restores the last active import management page from persistent settings', a
   await act(() => Promise.resolve());
 });
 
-it('does not render a header close button in import management', async () => {
+it('closes import management from the header close button', async () => {
   const onOpenChange = vi.fn();
 
   render(<ImportSourceWorkspace onOpenChange={onOpenChange} open />);
@@ -191,6 +191,7 @@ it('does not render a header close button in import management', async () => {
     expect(loadRuntimePdfImportsInventory).toHaveBeenCalled();
   });
 
-  expect(screen.queryByRole('button', { name: 'Close import management' })).not.toBeInTheDocument();
-  expect(onOpenChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
+
+  expect(onOpenChange).toHaveBeenCalledWith(false);
 });

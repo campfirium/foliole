@@ -33,6 +33,16 @@ trap cleanup_quality_gate_processes EXIT INT TERM
 
 pm="$(resolve_package_manager)"
 
+has_quality_gate_arg() {
+  local expected="$1"
+  shift || true
+  local arg
+  for arg in "$@"; do
+    [[ "${arg}" == "${expected}" ]] && return 0
+  done
+  return 1
+}
+
 collect_changed_files() {
   if [[ -n "${QUALITY_GATE_CHANGED_FILES:-}" ]]; then
     printf '%s\n' "${QUALITY_GATE_CHANGED_FILES}" | grep -v '^\s*$' | sort -u || true
@@ -60,16 +70,26 @@ diff_has_mid_scope_signature() {
   [[ -f "${file_path}" ]] && grep -E -q "${untracked_pattern}" "${file_path}"
 }
 
-resolve_quality_gate_level() {
+resolve_quality_gate_route() {
   local changed="$1"
 
-  if printf '%s\n' "${changed}" | grep -E -q '^(android/|scripts/android/|src/companion/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)'; then
-    printf 'android'
+  if [[ -z "${changed}" ]]; then
+    printf 'light\tno changed files detected'
     return 0
   fi
 
-  if printf '%s\n' "${changed}" | grep -E -q '^(electron/|lib/|src/store/|src/shared/platform/|scripts/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
-    printf 'full'
+  if printf '%s\n' "${changed}" | grep -E -q '^(electron/|lib/|src/store/|src/shared/platform/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
+    printf 'full\tshared runtime, desktop runtime, store, or dependency root changed'
+    return 0
+  fi
+
+  if printf '%s\n' "${changed}" | grep -E '^scripts/' | grep -E -v -q '^scripts/android/'; then
+    printf 'full\tnon-Android script changed'
+    return 0
+  fi
+
+  if printf '%s\n' "${changed}" | grep -E -q '^(android/|scripts/android/|src/companion/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)'; then
+    printf 'android\tandroid or companion path changed'
     return 0
   fi
 
@@ -78,24 +98,118 @@ resolve_quality_gate_level() {
     [[ -z "${file_path}" ]] && continue
     [[ "${file_path}" =~ \.(test|spec)\.[^.]+$ ]] && continue
     if [[ "${file_path}" =~ ^src/shared/ui/ ]]; then
-      printf 'mid'
+      printf 'mid\tshared UI surface changed'
       return 0
     fi
     if [[ "${file_path}" =~ ^src/(features/|app/components/) ]]; then
       base_name="$(basename "${file_path}")"
       if [[ "${base_name}" =~ ^index\.(ts|tsx)$ || "${base_name}" =~ types?\.[^.]+$ ]] || diff_has_mid_scope_signature "${file_path}"; then
-        printf 'mid'
+        printf 'mid\texported component surface or props/type signature changed'
         return 0
       fi
     fi
   done <<< "${changed}"
 
-  printf 'light'
+  printf 'light\tlocal source change'
+}
+
+resolve_quality_gate_level() {
+  local changed="$1"
+  resolve_quality_gate_route "${changed}" | cut -f1
+}
+
+resolve_quality_gate_level_reason() {
+  local changed="$1"
+  resolve_quality_gate_route "${changed}" | cut -f2-
 }
 
 collect_lint_targets() {
   local changed="$1"
   printf '%s\n' "${changed}" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | grep -v '^\s*$' || true
+}
+
+collect_related_test_files() {
+  local changed="$1"
+  local source_changed direct_tests source_files inferred_tests
+
+  source_changed="$(printf '%s\n' "${changed}" | grep -E '^(src/|electron/|scripts/).*\.(ts|tsx|mjs)$' || true)"
+  if [[ -z "${source_changed}" ]]; then
+    return 0
+  fi
+
+  direct_tests="$(echo "${source_changed}" | grep -E '\.(test|spec)\.' || true)"
+  source_files="$(echo "${source_changed}" | grep -vE '\.(test|spec)\.' || true)"
+  inferred_tests=""
+
+  if [[ -n "${source_files}" ]]; then
+    while IFS= read -r src_file; do
+      [[ -z "${src_file}" ]] && continue
+      local dir base stem candidate
+      dir="$(dirname "${src_file}")"
+      base="$(basename "${src_file}")"
+      stem="${base%.*}"
+      for ext in test.ts test.tsx; do
+        candidate="${dir}/${stem}.${ext}"
+        if [[ -f "${candidate}" ]]; then
+          inferred_tests="${inferred_tests}${candidate}"$'\n'
+        fi
+      done
+    done <<< "${source_files}"
+  fi
+
+  printf '%s\n%s' "${direct_tests}" "${inferred_tests}" | grep -v '^\s*$' | sort -u || true
+}
+
+print_quality_gate_route_plan() {
+  local changed="$1"
+  local level="$2"
+  local reason lint_targets related_tests
+
+  reason="$(resolve_quality_gate_level_reason "${changed}")"
+  lint_targets="$(collect_lint_targets "${changed}")"
+  related_tests="$(collect_related_test_files "${changed}")"
+
+  echo "[quality-gate-route] selected level: ${level}"
+  echo "[quality-gate-route] reason: ${reason}"
+  case "${level}" in
+    full)
+      echo "[quality-gate-route] target: quality:full"
+      ;;
+    android)
+      echo "[quality-gate-route] target: quality:android"
+      ;;
+    mid)
+      echo "[quality-gate-route] target: scoped lint + typecheck + workspace boundary + related tests"
+      ;;
+    *)
+      if [[ -z "${changed}" ]]; then
+        echo "[quality-gate-route] target: full lint + typecheck"
+      else
+        echo "[quality-gate-route] target: scoped lint + typecheck"
+      fi
+      ;;
+  esac
+
+  if [[ -n "${changed}" ]]; then
+    echo "[quality-gate-route] changed files:"
+    echo "${changed}" | sed 's/^/[quality-gate-route]   /'
+  else
+    echo "[quality-gate-route] changed files: none"
+  fi
+
+  if [[ -n "${lint_targets}" ]]; then
+    echo "[quality-gate-route] lint targets:"
+    echo "${lint_targets}" | sed 's/^/[quality-gate-route]   /'
+  else
+    echo "[quality-gate-route] lint targets: none"
+  fi
+
+  if [[ -n "${related_tests}" ]]; then
+    echo "[quality-gate-route] related tests:"
+    echo "${related_tests}" | sed 's/^/[quality-gate-route]   /'
+  else
+    echo "[quality-gate-route] related tests: none"
+  fi
 }
 
 run_changed_lint() {
@@ -183,38 +297,9 @@ run_parallel_lint_and_typecheck() {
 
 run_related_tests_if_needed() {
   local changed="$1"
-  local source_changed direct_tests source_files inferred_tests test_files count
+  local test_files count
 
-  source_changed="$(printf '%s\n' "${changed}" | grep -E '^(src/|electron/|scripts/).*\.(ts|tsx|mjs)$' || true)"
-  if [[ -z "${source_changed}" ]]; then
-    if quality_gate_should_print_step; then
-      echo "[quality-gate-fast] no source changes detected — skipping tests"
-    fi
-    return 0
-  fi
-
-  direct_tests="$(echo "${source_changed}" | grep -E '\.(test|spec)\.' || true)"
-  source_files="$(echo "${source_changed}" | grep -vE '\.(test|spec)\.' || true)"
-  inferred_tests=""
-
-  if [[ -n "${source_files}" ]]; then
-    while IFS= read -r src_file; do
-      [[ -z "${src_file}" ]] && continue
-      local dir base stem candidate
-      dir="$(dirname "${src_file}")"
-      base="$(basename "${src_file}")"
-      stem="${base%.*}"
-      for ext in test.ts test.tsx; do
-        candidate="${dir}/${stem}.${ext}"
-        if [[ -f "${candidate}" ]]; then
-          inferred_tests="${inferred_tests}${candidate}"$'\n'
-        fi
-      done
-    done <<< "${source_files}"
-  fi
-
-  test_files="$(printf '%s\n%s' "${direct_tests}" "${inferred_tests}" | grep -v '^\s*$' | sort -u || true)"
-
+  test_files="$(collect_related_test_files "${changed}")"
   if [[ -z "${test_files}" ]]; then
     if quality_gate_should_print_step; then
       echo "[quality-gate-fast] changes detected but no related tests found — skipping tests"
@@ -236,18 +321,18 @@ run_related_tests_if_needed() {
     npx vitest run --pool=threads --maxWorkers=2 "${test_array[@]}"
 }
 
-if quality_gate_should_print_step; then
+if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@"; then
   echo "[quality-gate-fast] detected package manager: ${pm}"
 fi
 
-if [[ "${1:-}" == "--full" ]]; then
+if has_quality_gate_arg "--full" "$@"; then
   if quality_gate_should_print_step; then
     echo "[quality-gate-fast] forcing full quality gate"
   fi
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
 fi
 
-if [[ "${1:-}" == "--release" ]]; then
+if has_quality_gate_arg "--release" "$@"; then
   if quality_gate_should_print_step; then
     echo "[quality-gate-fast] forcing release quality gate"
   fi
@@ -256,6 +341,11 @@ fi
 
 all_changed="$(collect_changed_files)"
 level="$(resolve_quality_gate_level "${all_changed}")"
+
+if has_quality_gate_arg "--route" "$@"; then
+  print_quality_gate_route_plan "${all_changed}" "${level}"
+  exit 0
+fi
 
 if quality_gate_should_print_step; then
   echo "[quality-gate-fast] selected level: ${level}"

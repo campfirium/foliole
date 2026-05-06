@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
 
-import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../shared/diagnostics/debugTrace';
+import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter } from '../adapters/EditorAdapter';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';

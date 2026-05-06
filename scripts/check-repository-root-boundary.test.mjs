@@ -20,6 +20,8 @@ async function createFixtureRoot() {
   const directoryNames = [
     '.claude',
     '.git',
+    '.github',
+    '.githooks',
     '.lab',
     '.tmp-fixture',
     'dist',
@@ -37,7 +39,8 @@ async function createFixtureRoot() {
     'src',
     'src-tauri',
     'test-results',
-    'tests'
+    'tests',
+    'trees'
   ];
 
   await Promise.all(directoryNames.map((name) => mkdir(path.join(fixtureRoot, name), { recursive: true })));
@@ -72,10 +75,11 @@ describe('check-repository-root-boundary', () => {
     expect(cliResult.exitCode).toBe(1);
     expect(output).toContain('status: VIOLATION');
     expect(output).toContain('unauthorized=docs');
-    expect(output).toContain('allowed=android,electron,ios,lib,scripts,src,tests,.claude,.git,.lab');
+    expect(output).toContain('allowed=android,electron,ios,lib,scripts,src,tests,.claude,.git,.github,.githooks,.lab');
     expect(output).not.toContain('.tmp-fixture');
     expect(output).not.toContain('ref');
     expect(output).not.toContain('src-tauri');
     expect(output).not.toContain('release');
+    expect(output).not.toContain('trees');
   });
 });

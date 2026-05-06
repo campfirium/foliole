@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
+import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 
 interface NodeSourceUpdatePreviewState {
   isLoading: boolean;
