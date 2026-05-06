@@ -30,7 +30,7 @@ type WorkspaceDocumentSurfaceFlatSource =
     | 'onSelectNode'
     | 'onSelectNodeInVirtualView'
   > &
-  WorkspaceLayoutProps['nodeList'] &
+  Pick<WorkspaceLayoutProps['nodeList'], 'nodeOrder' | 'nodesById'> &
   WorkspaceLayoutProps['readingPosition'] &
   Pick<WorkspaceLayoutProps['review'], 'reviewSchedulerSettings'> &
   Pick<WorkspaceLayoutProps['trash'], 'isTrashViewOpen' | 'trashedNodeIds'>;

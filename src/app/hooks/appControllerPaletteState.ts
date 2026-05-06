@@ -7,8 +7,6 @@ import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
-import { flattenWorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
-import type { WorkspaceLayoutFlatProps } from '../components/workspaceLayoutProps';
 
 import { buildPaletteState } from './appControllerHelpers';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -108,7 +106,7 @@ function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
-  layoutProps: WorkspaceLayoutFlatProps;
+  layoutProps: WorkspaceLayoutProps;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   paletteItems: CommandPaletteItem[];
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -124,7 +122,7 @@ function createPaletteRunnerArgs(args: {
     createItem: createDirectNodeCommand('item', args),
     createTopic: createDirectNodeCommand('topic', args),
     createVirtualNode: createVirtualNodeCommand(args),
-    enterPriorityMode: args.layoutProps.onEnterPriorityQuickSet,
+    enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
     deferReviewItem: args.ws.deferReviewItem,
     dismissReviewItem: args.ws.dismissReviewItem,
     exitReviewSession: args.ws.exitReviewSession,
@@ -141,8 +139,8 @@ function createPaletteRunnerArgs(args: {
     onToggleBaseColorMode: args.appearance.toggleBaseColorMode,
     onToggleDevTools: toggleMainWindowDevTools,
     onToggleEditorDisplayMode: args.appearance.toggleEditorDisplayMode,
-    onToggleImmersiveMode: args.layoutProps.onToggleImmersiveMode,
-    onToggleListVisibility: args.layoutProps.onToggleListVisibility,
+    onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
+    onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
     openImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     openReadwiseReaderSettings: () => openReadwiseReaderSettings(args.runtime),
     openTrashView: args.trash.openTrashView,
@@ -154,7 +152,7 @@ function createPaletteRunnerArgs(args: {
     setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
     setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
-    startClipboardImport: args.layoutProps.onStartClipboardImport,
+    startClipboardImport: args.layoutProps.imports.onStartClipboardImport,
     startReviewSession: args.ws.startReviewSession,
     startStudyMode: args.study.startStudyMode,
     trashViewOpen: args.trash.isTrashViewOpen
@@ -173,10 +171,7 @@ export function buildControllerPaletteState(args: {
   trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const runPaletteCommand = createPaletteCommandRunner(createPaletteRunnerArgs({
-    ...args,
-    layoutProps: flattenWorkspaceLayoutProps(args.layoutProps)
-  }));
+  const runPaletteCommand = createPaletteCommandRunner(createPaletteRunnerArgs(args));
 
   return buildPaletteState(
     args.runtime.isCommandPaletteOpen,
