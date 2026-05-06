@@ -74,6 +74,7 @@ function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
     externalSelection: props.externalLibrary.externalSelection,
     nodeOrder: props.nodeList.nodeOrder,
     nodesById: props.nodeList.nodesById,
+    nodeViewById: props.document.nodeViewById,
     priorityQuickSetShortcutLabel: props.document.priorityQuickSetShortcutLabel,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,
     trashedNodeIds: props.trash.trashedNodeIds
@@ -106,6 +107,9 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onCreateHighlightFromPayload: props.editorCommands.onCreateHighlightFromPayload,
     onCreateNote: props.editorCommands.onCreateNote,
     onDeleteExistingHighlight: props.editorCommands.onDeleteExistingHighlight,
+    onCreateSelectionHighlight: props.editorCommands.onCreateSelectionHighlight,
+    onToggleSelectionHighlight: props.editorCommands.onToggleSelectionHighlight,
+    onCreateSelectionNote: props.editorCommands.onCreateSelectionNote,
     onCreatePdfHighlight: props.editorCommands.onCreatePdfHighlight,
     onCutImage: props.editorCommands.onCutImage,
     onDeleteImage: props.editorCommands.onDeleteImage,
@@ -121,8 +125,10 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onPersistPdfViewState: props.document.onPersistPdfViewState,
     onRegisterEditorDraftFlush: props.document.onRegisterEditorDraftFlush,
     onResolveDocumentPositionAtViewportY: props.document.onResolveDocumentPositionAtViewportY,
+    onRevealAnchorInDocument: props.document.onRevealAnchorInDocument,
     onRevealDocumentPosition: props.document.onRevealDocumentPosition,
     onRevealDocumentSelection: props.document.onRevealDocumentSelection,
+    setNodeViewState: props.document.setNodeViewState,
   };
 }
 
