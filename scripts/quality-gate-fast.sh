@@ -78,6 +78,11 @@ resolve_quality_gate_route() {
     return 0
   fi
 
+  if ! printf '%s\n' "${changed}" | grep -E -v '\.(test|spec)\.[^.]+$' >/dev/null; then
+    printf 'mid\ttest files changed'
+    return 0
+  fi
+
   if printf '%s\n' "${changed}" | grep -E -q '^(electron/|lib/|src/store/|src/shared/platform/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
     printf 'full\tshared runtime, desktop runtime, store, or dependency root changed'
     return 0

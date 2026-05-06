@@ -390,7 +390,9 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('repository root boundary ok');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
-      expect(result.stdout).toContain('related test:run --pool=threads --maxWorkers=2 src/app/components/FancyCard.test.tsx');
+      expect(result.stdout).toContain(
+        'related test:run --reporter=dot --silent=passed-only --pool=threads --maxWorkers=2 src/app/components/FancyCard.test.tsx'
+      );
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');
       expect(result.stdout).not.toContain('repo build should stay unused');
@@ -446,6 +448,31 @@ describe('quality-gate-fast.sh', () => {
       expect(result.stdout).toContain('shared runtime, desktop runtime, store, or dependency root changed');
       expect(result.stdout).toContain('[quality-gate-route] target: quality:full');
       expect(result.stdout).not.toContain('repo lint should stay unused');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it('keeps test-only Android script changes on the related-test route', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"',
+        typecheck: 'node -e "console.log(\'typecheck should stay unused\')"'
+      });
+
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'scripts/android/android-boundary-quality-gate.test.mjs'
+      }, ['--route']);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-route] selected level: mid');
+      expect(result.stdout).toContain('[quality-gate-route] reason: test files changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: scoped lint + typecheck + workspace boundary + related tests');
+      expect(result.stdout).toContain('scripts/android/android-boundary-quality-gate.test.mjs');
+      expect(result.stdout).not.toContain('quality:android');
+      expect(result.stdout).not.toContain('repo lint should stay unused');
+      expect(result.stdout).not.toContain('typecheck should stay unused');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
