@@ -3,6 +3,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { inspectPlatformSubdomainBoundary } from './platform-subdomain-boundary.mjs';
+
 const SCAN_DIRS = ['src/app', 'src/companion', 'src/features', 'src/store', 'src/shared/diagnostics'];
 const CORE_SCAN_DIRS = ['lib/core'];
 const PLATFORM_SCAN_DIRS = ['src/shared/platform'];
@@ -188,7 +190,13 @@ export function inspectLayerDependencyBoundary({ repoRoot = resolveRepoRoot() } 
   const scannedFiles = [...SCAN_DIRS, ...CORE_SCAN_DIRS, ...PLATFORM_SCAN_DIRS].flatMap((dir) =>
     collectSourceFiles(path.join(repoRoot, dir))
   );
-  const violations = scannedFiles.flatMap((filePath) => inspectFile(filePath, repoRoot));
+  const platformFiles = collectSourceFiles(path.join(repoRoot, PLATFORM_SCAN_DIRS[0])).map((filePath) =>
+    path.relative(repoRoot, filePath).replace(/\\/g, '/')
+  );
+  const violations = [
+    ...scannedFiles.flatMap((filePath) => inspectFile(filePath, repoRoot)),
+    ...inspectPlatformSubdomainBoundary({ repoRoot, platformFiles, toLineNumber })
+  ];
   return {
     ok: violations.length === 0,
     scannedCount: scannedFiles.length,
