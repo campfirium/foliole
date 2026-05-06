@@ -4,7 +4,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import {
   hasWorkspaceSearchRuntimeRepository,
   searchWorkspaceInRuntime
-} from '../../shared/platform/workspaceSearchRuntimeRepository';
+} from '../../shared/platform/appRuntimeCommandRepository';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
