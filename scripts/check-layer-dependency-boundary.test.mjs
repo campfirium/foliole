@@ -145,6 +145,23 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
     );
   });
 
+  it('blocks upper production code from importing legacy runtime capability modules', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/features/settings/useFolderPicker.ts', `
+      import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository';
+    `);
+    await writeFixtureFile(repoRoot, 'src/app/hooks/useFolderPicker.ts', `
+      import { selectRuntimeImportDirectory } from '../../shared/platform/importDirectoryRuntimeRepository';
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'src/app/hooks/useFolderPicker.ts', line: 1, kind: 'runtime-legacy-capability-import' },
+      { file: 'src/features/settings/useFolderPicker.ts', line: 1, kind: 'runtime-legacy-capability-import' }
+    ]);
+  });
+
   it('blocks shared diagnostics helpers from importing runtime command details', async () => {
     const repoRoot = await createFixtureRoot();
     await writeFixtureFile(repoRoot, 'src/shared/diagnostics/debugRuntime.ts', `
