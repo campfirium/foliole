@@ -1,6 +1,9 @@
-import type { RuntimeExternalSearchFolder } from './externalSearchRuntimeRepository';
+interface ExternalSearchStatusLike {
+  lastError: string | null;
+  status: 'error' | 'idle' | 'indexing' | 'ready';
+}
 
-export function resolveExternalSearchStatusLabel(folder: Pick<RuntimeExternalSearchFolder, 'lastError' | 'status'>) {
+export function resolveExternalSearchStatusLabel(folder: ExternalSearchStatusLike) {
   if (folder.status === 'error' || Boolean(folder.lastError)) {
     return 'Folder unavailable';
   }
@@ -13,9 +16,7 @@ export function resolveExternalSearchStatusLabel(folder: Pick<RuntimeExternalSea
   return 'Waiting to update';
 }
 
-export function resolveExternalSectionStatusLabel(
-  folders: Array<Pick<RuntimeExternalSearchFolder, 'lastError' | 'status'>>
-) {
+export function resolveExternalSectionStatusLabel(folders: ExternalSearchStatusLike[]) {
   if (folders.some((folder) => folder.status === 'error' || Boolean(folder.lastError))) {
     return 'Folder unavailable';
   }

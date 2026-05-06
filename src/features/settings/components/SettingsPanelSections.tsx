@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
-import type { RuntimeExternalSearchFolder } from '../../../shared/platform/externalSearchRuntimeRepository';
+import type {
+  ExternalSourceSettingsFolder,
+  ExternalSourceSettingsFolderPatch
+} from '../../../shared/platform/externalSourceSettingsRepository';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import {
   getSettingsCategoryOption,
@@ -29,7 +32,7 @@ export interface SettingsCategoryContentProps {
   errorByLocation: Record<'assets_dir' | 'inbox' | 'library_home' | 'mirror', string | null>;
   externalSearchError: string | null;
   externalSearchFeedback: string | null;
-  externalSearchFolders: RuntimeExternalSearchFolder[];
+  externalSearchFolders: ExternalSourceSettingsFolder[];
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
@@ -55,10 +58,7 @@ export interface SettingsCategoryContentProps {
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
-  onUpdateExternalSearchFolder: (
-    folderId: string,
-    patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
-  ) => void;
+  onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
   readwiseReaderCategoryContent?: ReactNode;
   onHotkeyReset: (commandId: string) => void;

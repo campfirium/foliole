@@ -1,6 +1,9 @@
 import { useState } from 'react';
 
-import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchRuntimeRepository';
+import type {
+  ExternalSourceSettingsFolder,
+  ExternalSourceSettingsFolderPatch
+} from '../../../../shared/platform/externalSourceSettingsRepository';
 import { clearLinkPanelBrowsingData } from '../../../../shared/platform/linkPanelBrowsingData';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -15,7 +18,7 @@ import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSear
 interface SettingsExternalSearchSectionProps {
   error: string | null;
   feedback: string | null;
-  folders: RuntimeExternalSearchFolder[];
+  folders: ExternalSourceSettingsFolder[];
   isDesktopRuntime: boolean;
   isLoading: boolean;
   isSaving: boolean;
@@ -25,10 +28,7 @@ interface SettingsExternalSearchSectionProps {
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
   onRetryLoad: () => void;
-  onUpdateFolder: (
-    folderId: string,
-    patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
-  ) => void;
+  onUpdateFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
 }
 
 function LinkPanelBrowsingDataRow(props: { isDesktopRuntime: boolean }) {

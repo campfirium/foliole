@@ -1,8 +1,11 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { RuntimeExternalSearchFolder } from '../../../../shared/platform/externalSearchRuntimeRepository';
 import { resolveExternalSearchStatusLabel } from '../../../../shared/platform/externalSearchStatus';
+import type {
+  ExternalSourceSettingsFolder,
+  ExternalSourceSettingsFolderPatch
+} from '../../../../shared/platform/externalSourceSettingsRepository';
 import {
   AppStatusBadge,
   ObjectConfigPathButton,
@@ -16,22 +19,19 @@ import {
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
 
-type ExternalLibraryFolderUpdate = (
-  folderId: string,
-  patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
-) => void;
+type ExternalLibraryFolderUpdate = (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
 
 const EXTERNAL_LIBRARY_COLUMNS = SETTINGS_ACTION_TABLE_EXTERNAL_LIBRARY_COLUMNS_CLASS_NAME;
 const EXTERNAL_LIBRARY_HEADERS = ['Folder', 'Attachment folder', 'Excluded folders', 'Status'];
 
-function statusTone(folder: RuntimeExternalSearchFolder) {
+function statusTone(folder: ExternalSourceSettingsFolder) {
   if (folder.status === 'ready') return 'success';
   if (folder.status === 'indexing') return 'info';
   if (folder.status === 'error') return 'error';
   return 'neutral';
 }
 
-function statusMeta(folder: RuntimeExternalSearchFolder) {
+function statusMeta(folder: ExternalSourceSettingsFolder) {
   if (folder.status === 'error') return folder.lastError ?? 'Index build failed.';
   if (folder.status === 'ready') return `${folder.documentCount} files indexed`;
   if (folder.status === 'indexing') return 'Updating in the background';
@@ -61,7 +61,7 @@ function ExternalLibraryHeader() {
   );
 }
 
-function ExternalLibraryStatus(props: { folder: RuntimeExternalSearchFolder }) {
+function ExternalLibraryStatus(props: { folder: ExternalSourceSettingsFolder }) {
   const meta = statusMeta(props.folder);
 
   return (
@@ -91,7 +91,7 @@ function ExternalLibraryPathButton(props: {
 }
 
 function ExternalLibraryExcludedInput(props: {
-  folder: RuntimeExternalSearchFolder;
+  folder: ExternalSourceSettingsFolder;
   onUpdateFolder: ExternalLibraryFolderUpdate;
 }) {
   return (
@@ -194,7 +194,7 @@ function ExternalLibraryAddRow(props: { disabled: boolean; onAddFolder: () => vo
 
 export function ExternalLibraryTable(props: {
   children: ReactNode;
-  folders: RuntimeExternalSearchFolder[];
+  folders: ExternalSourceSettingsFolder[];
   isDesktopRuntime: boolean;
   isSaving: boolean;
   onAddFolder: () => void;
@@ -219,7 +219,7 @@ export function ExternalLibraryTable(props: {
 }
 
 export function ExternalLibraryRow(props: {
-  folder: RuntimeExternalSearchFolder;
+  folder: ExternalSourceSettingsFolder;
   isSaving: boolean;
   onChooseAttachmentRoot: (folderId: string) => void;
   onChooseFolder: (folderId: string) => void;

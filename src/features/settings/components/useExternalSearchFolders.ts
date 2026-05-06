@@ -1,32 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
-  loadRuntimeExternalSearchFolders,
-  rebuildRuntimeExternalSearchIndex,
-  saveRuntimeExternalSearchFolders,
-  type RuntimeExternalSearchFolder
-} from '../../../shared/platform/externalSearchRuntimeRepository';
-import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
-
-function createDraftFolder(folderPath: string): RuntimeExternalSearchFolder {
-  const now = new Date().toISOString();
-  return {
-    attachmentMode: 'document_relative_first_then_fixed_root',
-    attachmentRootPath: null,
-    createdAt: now,
-    documentCount: 0,
-    excludedDirs: [],
-    folderPath,
-    id: crypto.randomUUID(),
-    indexedAt: null,
-    lastError: null,
-    status: 'idle',
-    updatedAt: now
-  };
-}
+  createDraftExternalSourceFolder,
+  loadExternalSourceSettingsFolders,
+  rebuildExternalSourceSettingsIndex,
+  saveExternalSourceSettingsFolders,
+  selectExternalSourceSettingsFolderPath,
+  type ExternalSourceSettingsFolder,
+  type ExternalSourceSettingsFolderPatch
+} from '../../../shared/platform/externalSourceSettingsRepository';
 
 export function useExternalSearchFolders() {
-  const [folders, setFolders] = useState<RuntimeExternalSearchFolder[]>([]);
+  const [folders, setFolders] = useState<ExternalSourceSettingsFolder[]>([]);
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -38,7 +23,7 @@ export function useExternalSearchFolders() {
   useLoadExternalSearchFolders(loadKey, setError, setFolders, setIsDesktopRuntime, setIsLoading, lastSavedSnapshotRef);
   usePersistExternalSearchFolders(folders, isDesktopRuntime, lastSavedSnapshotRef, setError, setFeedback, setFolders, setIsSaving);
 
-  function updateFolder(folderId: string, update: (current: RuntimeExternalSearchFolder) => RuntimeExternalSearchFolder) {
+  function updateFolder(folderId: string, update: (current: ExternalSourceSettingsFolder) => ExternalSourceSettingsFolder) {
     setFolders((current) => current.map((folder) => (folder.id === folderId ? update(folder) : folder)));
   }
 
@@ -56,10 +41,7 @@ export function useExternalSearchFolders() {
       void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving),
     onRemoveExternalSearchFolder: (folderId: string) => setFolders((current) => current.filter((folder) => folder.id !== folderId)),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
-    onUpdateExternalSearchFolder: (
-      folderId: string,
-      patch: Partial<Pick<RuntimeExternalSearchFolder, 'attachmentRootPath' | 'excludedDirs' | 'folderPath'>>
-    ) =>
+    onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) =>
       updateFolder(folderId, (current) => ({
         ...current,
         ...patch
@@ -70,7 +52,7 @@ export function useExternalSearchFolders() {
 function useLoadExternalSearchFolders(
   loadKey: number,
   setError: (value: string | null) => void,
-  setFolders: (value: RuntimeExternalSearchFolder[]) => void,
+  setFolders: (value: ExternalSourceSettingsFolder[]) => void,
   setIsDesktopRuntime: (value: boolean) => void,
   setIsLoading: (value: boolean) => void,
   lastSavedSnapshotRef: { current: string }
@@ -79,7 +61,7 @@ function useLoadExternalSearchFolders(
     let alive = true;
     setError(null);
     setIsLoading(true);
-    loadRuntimeExternalSearchFolders()
+    loadExternalSourceSettingsFolders()
       .then((loaded) => {
         if (!alive || loaded === null) return;
         setIsDesktopRuntime(true);
@@ -102,12 +84,12 @@ function useLoadExternalSearchFolders(
 }
 
 function usePersistExternalSearchFolders(
-  folders: RuntimeExternalSearchFolder[],
+  folders: ExternalSourceSettingsFolder[],
   isDesktopRuntime: boolean,
   lastSavedSnapshotRef: { current: string },
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
-  setFolders: (value: RuntimeExternalSearchFolder[]) => void,
+  setFolders: (value: ExternalSourceSettingsFolder[]) => void,
   setIsSaving: (value: boolean) => void
 ) {
   useEffect(() => {
@@ -132,48 +114,48 @@ function usePersistExternalSearchFolders(
 async function addExternalSearchFolder(
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
-  setFolders: (value: (current: RuntimeExternalSearchFolder[]) => RuntimeExternalSearchFolder[]) => void
+  setFolders: (value: (current: ExternalSourceSettingsFolder[]) => ExternalSourceSettingsFolder[]) => void
 ) {
-  const selectedPath = await selectRuntimeFolder();
+  const selectedPath = await selectExternalSourceSettingsFolderPath();
   if (!selectedPath) return;
-  setFolders((current) => [...current, createDraftFolder(selectedPath)]);
+  setFolders((current) => [...current, createDraftExternalSourceFolder(selectedPath)]);
   setFeedback(null);
   setError(null);
 }
 
 async function chooseExternalAttachmentRoot(
   folderId: string,
-  updateFolder: (folderId: string, update: (current: RuntimeExternalSearchFolder) => RuntimeExternalSearchFolder) => void
+  updateFolder: (folderId: string, update: (current: ExternalSourceSettingsFolder) => ExternalSourceSettingsFolder) => void
 ) {
-  const selectedPath = await selectRuntimeFolder();
+  const selectedPath = await selectExternalSourceSettingsFolderPath();
   if (!selectedPath) return;
   updateFolder(folderId, (current) => ({ ...current, attachmentRootPath: selectedPath }));
 }
 
 async function chooseExternalSearchFolder(
   folderId: string,
-  updateFolder: (folderId: string, update: (current: RuntimeExternalSearchFolder) => RuntimeExternalSearchFolder) => void
+  updateFolder: (folderId: string, update: (current: ExternalSourceSettingsFolder) => ExternalSourceSettingsFolder) => void
 ) {
-  const selectedPath = await selectRuntimeFolder();
+  const selectedPath = await selectExternalSourceSettingsFolderPath();
   if (!selectedPath) return;
   updateFolder(folderId, (current) => ({ ...current, folderPath: selectedPath }));
 }
 
 async function persistExternalSearchFolders(
-  folders: RuntimeExternalSearchFolder[],
+  folders: ExternalSourceSettingsFolder[],
   nextSnapshot: string,
   lastSavedSnapshotRef: { current: string },
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
-  setFolders: (value: RuntimeExternalSearchFolder[]) => void,
+  setFolders: (value: ExternalSourceSettingsFolder[]) => void,
   setIsSaving: (value: boolean) => void
 ) {
   setIsSaving(true);
   setError(null);
   try {
-    const saved = await saveRuntimeExternalSearchFolders(folders);
+    const saved = await saveExternalSourceSettingsFolders(folders);
     if (saved === null) return;
-    const rebuilt = await rebuildRuntimeExternalSearchIndex();
+    const rebuilt = await rebuildExternalSourceSettingsIndex();
     lastSavedSnapshotRef.current = nextSnapshot;
     setFolders(rebuilt ?? saved);
     setFeedback('External library settings saved.');
@@ -184,7 +166,7 @@ async function persistExternalSearchFolders(
   }
 }
 
-function serializeEditableFolders(folders: RuntimeExternalSearchFolder[]) {
+function serializeEditableFolders(folders: ExternalSourceSettingsFolder[]) {
   return JSON.stringify(
     folders.map((folder) => ({
       attachmentMode: 'document_relative_first_then_fixed_root',
@@ -200,14 +182,14 @@ async function rebuildExternalSearchFolders(
   folderId: string | undefined,
   setError: (value: string | null) => void,
   setFeedback: (value: string | null) => void,
-  setFolders: (value: RuntimeExternalSearchFolder[]) => void,
+  setFolders: (value: ExternalSourceSettingsFolder[]) => void,
   setIsSaving: (value: boolean) => void
 ) {
   setIsSaving(true);
   setFeedback(null);
   setError(null);
   try {
-    const rebuilt = await rebuildRuntimeExternalSearchIndex(folderId);
+    const rebuilt = await rebuildExternalSourceSettingsIndex(folderId);
     if (!rebuilt) return;
     setFolders(rebuilt);
     setFeedback(folderId ? 'Folder index rebuilt.' : 'All external library indexes rebuilt.');
