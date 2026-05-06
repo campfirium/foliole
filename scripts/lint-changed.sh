@@ -3,8 +3,8 @@ set -euo pipefail
 
 collect_changed_files() {
   local staged unstaged untracked
-  staged="$(git diff --cached --name-only -- . 2>/dev/null || true)"
-  unstaged="$(git diff --name-only -- . 2>/dev/null || true)"
+  staged="$(git diff --cached --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
+  unstaged="$(git diff --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
   untracked="$(git ls-files --others --exclude-standard -- . 2>/dev/null || true)"
 
   printf '%s\n%s\n%s\n' "${staged}" "${unstaged}" "${untracked}" | grep -v '^\s*$' | sort -u || true
@@ -25,8 +25,14 @@ filter_by_scope() {
     "")
       cat
       ;;
+    desktop)
+      grep -E '^(src/(app|features)/|src/shared/(ui|platform)/|electron/|scripts/windows/|vite\.config\.ts$|playwright\.desktop\.config\.ts$)' || true
+      ;;
     android)
       grep -E '^(src/companion/|src/shared/(platform|ui|lib|commands|config)/|scripts/android/|android/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)' || true
+      ;;
+    shared)
+      grep -E '^(src/(shared|features|store)/|scripts/(check-|layer-|lint-changed|quality-|vite-config)|vite\.config\.ts$|vite\.companion\.config\.ts$|playwright\.desktop\.config\.ts$|capacitor\.config\.ts$)' || true
       ;;
     *)
       echo "[lint-changed] unknown scope: ${scope}" >&2
@@ -55,4 +61,4 @@ if [[ -z "${lint_targets}" ]]; then
 fi
 
 mapfile -t lint_array <<< "${lint_targets}"
-./node_modules/.bin/eslint "${lint_array[@]}"
+./node_modules/.bin/eslint --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"

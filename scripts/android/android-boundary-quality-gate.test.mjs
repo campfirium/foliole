@@ -58,7 +58,7 @@ const ANDROID_GATE_SCRIPTS = {
 
 const SHARED_GATE_SCRIPTS = {
   'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-  'lint:shared': 'node -e "console.log(\'shared lint ok\')"',
+  'lint:shared:full': 'node -e "console.log(\'shared full lint ok\')"',
   'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
   'test:shared': 'node -e "console.log(\'shared test ok\')"',
   build: 'node -e "console.log(\'shared build ok\')"',
@@ -120,7 +120,7 @@ describe('Android boundary quality gate routing', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('android boundary ok');
-      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('shared lint ok'));
+      expect(result.stdout.indexOf('android boundary ok')).toBeLessThan(result.stdout.indexOf('shared full lint ok'));
       expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

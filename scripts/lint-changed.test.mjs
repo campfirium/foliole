@@ -49,7 +49,7 @@ describe('lint-changed.sh', () => {
       const result = await runBash([LINT_CHANGED_SCRIPT], tempRoot);
 
       expect(result.code).toBe(0);
-      expect(await readFile(marker, 'utf8')).toBe('src/changed.ts\n');
+      expect(await readFile(marker, 'utf8')).toBe('--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/changed.ts\n');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -64,7 +64,29 @@ describe('lint-changed.sh', () => {
       const result = await runBash([LINT_CHANGED_SCRIPT, 'src/app/App.tsx', 'README.md'], tempRoot);
 
       expect(result.code).toBe(0);
-      expect(await readFile(marker, 'utf8')).toBe('src/app/App.tsx\n');
+      expect(await readFile(marker, 'utf8')).toBe('--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/app/App.tsx\n');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores deleted tracked files when collecting changed targets', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    try {
+      spawnSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
+      spawnSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tempRoot, stdio: 'ignore' });
+      spawnSync('git', ['config', 'user.name', 'Test User'], { cwd: tempRoot, stdio: 'ignore' });
+      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', '#!/usr/bin/env bash\nexit 99\n');
+      await mkdir(path.join(tempRoot, 'src'), { recursive: true });
+      await writeFile(path.join(tempRoot, 'src/deleted.ts'), 'export const value = 1;\n', 'utf8');
+      spawnSync('git', ['add', 'src/deleted.ts'], { cwd: tempRoot, stdio: 'ignore' });
+      spawnSync('git', ['commit', '-m', 'add deleted fixture'], { cwd: tempRoot, stdio: 'ignore' });
+      await rm(path.join(tempRoot, 'src/deleted.ts'));
+
+      const result = await runBash([LINT_CHANGED_SCRIPT], tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[lint-changed] no lintable changed files detected');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -87,7 +109,47 @@ describe('lint-changed.sh', () => {
       ], tempRoot);
 
       expect(result.code).toBe(0);
-      expect(await readFile(marker, 'utf8')).toBe('src/companion/App.tsx\nvite.companion.config.ts\n');
+      expect(await readFile(marker, 'utf8')).toBe(
+        '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/companion/App.tsx\nvite.companion.config.ts\n'
+      );
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('filters changed files by desktop and shared scopes', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    const marker = path.join(tempRoot, 'eslint.args');
+    try {
+      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+
+      const desktopResult = await runBash([
+        LINT_CHANGED_SCRIPT,
+        '--scope',
+        'desktop',
+        'electron/main.ts',
+        'src/companion/App.tsx',
+        'src/shared/platform/runtime.ts'
+      ], tempRoot);
+
+      expect(desktopResult.code).toBe(0);
+      expect(await readFile(marker, 'utf8')).toBe(
+        '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nelectron/main.ts\nsrc/shared/platform/runtime.ts\n'
+      );
+
+      const sharedResult = await runBash([
+        LINT_CHANGED_SCRIPT,
+        '--scope',
+        'shared',
+        'src/shared/platform/runtime.ts',
+        'src/companion/App.tsx',
+        'scripts/quality-gate-fast.test.mjs'
+      ], tempRoot);
+
+      expect(sharedResult.code).toBe(0);
+      expect(await readFile(marker, 'utf8')).toBe(
+        '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/shared/platform/runtime.ts\nscripts/quality-gate-fast.test.mjs\n'
+      );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

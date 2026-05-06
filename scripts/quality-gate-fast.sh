@@ -50,8 +50,8 @@ collect_changed_files() {
   fi
 
   local staged unstaged untracked
-  staged="$(git diff --cached --name-only -- . 2>/dev/null || true)"
-  unstaged="$(git diff --name-only -- . 2>/dev/null || true)"
+  staged="$(git diff --cached --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
+  unstaged="$(git diff --name-only --diff-filter=ACMR -- . 2>/dev/null || true)"
   untracked="$(git ls-files --others --exclude-standard -- . 2>/dev/null || true)"
 
   printf '%s\n%s\n%s\n' "${staged}" "${unstaged}" "${untracked}" | grep -v '^\s*$' | sort -u || true
@@ -223,15 +223,15 @@ run_changed_lint() {
 
   mapfile -t lint_array <<< "${lint_targets}"
   if [[ -x "./node_modules/.bin/eslint" ]]; then
-    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" ./node_modules/.bin/eslint "${lint_array[@]}"
+    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" ./node_modules/.bin/eslint --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
     return 0
   fi
   if command -v npx >/dev/null 2>&1; then
-    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" npx eslint "${lint_array[@]}"
+    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" npx eslint --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
     return 0
   fi
   if [[ "${pm}" == "yarn" ]] && command -v yarn >/dev/null 2>&1; then
-    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" yarn exec eslint "${lint_array[@]}"
+    run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" yarn exec eslint --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
     return 0
   fi
 

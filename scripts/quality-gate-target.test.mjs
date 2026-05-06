@@ -72,7 +72,7 @@ describe('quality-gate-target.sh', () => {
     try {
       await writePackageJson(tempRoot, {
         'copy:guard': 'node scripts/check-ui-copy-guard.mjs',
-        'lint:desktop': 'node -e "console.log(\'desktop lint ok\')"',
+        'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop': 'node -e "console.log(\'desktop test ok\')"',
         build: 'node -e "console.log(\'desktop build ok\')"',
@@ -86,7 +86,7 @@ describe('quality-gate-target.sh', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('copy guard ok');
-      expect(result.stdout).toContain('desktop lint ok');
+      expect(result.stdout).toContain('desktop full lint ok');
       expect(result.stdout).toContain('desktop typecheck ok');
       expect(result.stdout).toContain('desktop test ok');
       expect(result.stdout).toContain('desktop build ok');
@@ -165,7 +165,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:shared': 'node -e "console.log(\'shared lint ok\')"',
+        'lint:shared:full': 'node -e "console.log(\'shared full lint ok\')"',
         'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
         'test:shared': 'node -e "console.log(\'shared test ok\')"',
         build: 'node -e "console.log(\'shared build ok\')"',
@@ -178,7 +178,7 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'shared');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('shared lint ok');
+      expect(result.stdout).toContain('shared full lint ok');
       expect(result.stdout).toContain('shared typecheck ok');
       expect(result.stdout).toContain('shared test ok');
       expect(result.stdout).toContain('shared build ok');
@@ -386,7 +386,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:desktop': 'node -e "console.log(\'desktop lint ok\')"',
+        'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop':
           'node -e "for (let i = 1; i <= 220; i += 1) console.log(\'test-line-\' + i); process.exit(1)"',
@@ -412,7 +412,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:desktop': 'node -e "console.log(\'desktop lint ok\')"',
+        'lint:desktop:full': 'node -e "console.log(\'desktop full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop': 'node -e "console.log(\'deep failure details\'); process.exit(1)"',
         build: 'node -e "console.log(\'desktop build ok\')"',
