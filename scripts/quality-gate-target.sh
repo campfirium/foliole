@@ -38,6 +38,12 @@ run_repository_root_boundary_check_if_present() {
   fi
 }
 
+run_native_contracts_check_if_present() {
+  if has_package_script "check:native-contracts"; then
+    run_quality_gate_script "${prefix}" "${pm}" "check:native-contracts"
+  fi
+}
+
 run_layer_dependency_boundary_check_if_present() {
   if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
     run_quality_gate_command \
@@ -51,6 +57,12 @@ run_layer_dependency_boundary_check_if_present() {
 run_settings_classification_check_if_present() {
   if [[ -f "scripts/check-settings-classification.mjs" ]]; then
     run_quality_gate_script "${prefix}" "${pm}" "check:settings-classification"
+  fi
+}
+
+run_reading_typography_check_if_present() {
+  if has_package_script "check:reading-typography"; then
+    run_quality_gate_script "${prefix}" "${pm}" "check:reading-typography"
   fi
 }
 
@@ -169,8 +181,10 @@ if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
 fi
 
+run_native_contracts_check_if_present
 run_layer_dependency_boundary_check_if_present
 run_settings_classification_check_if_present
+run_reading_typography_check_if_present
 
 [[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "${prefix}" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
 
@@ -200,14 +214,16 @@ case "${target}" in
   full)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:full typecheck:desktop typecheck:android test:full
+    run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
+    run_gate_steps test:full
     run_gate_steps_parallel build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
   release)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:full typecheck:desktop typecheck:android test:full
+    run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
+    run_gate_steps test:full
     run_gate_steps_parallel build electron:compile android:web:build
     run_gate_steps android:sync android:host:lint android:host:test
     run_workspace_boundary_check_if_present

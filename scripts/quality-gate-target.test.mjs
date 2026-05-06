@@ -209,6 +209,8 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
+        'check:native-contracts': 'node -e "console.log(\'native contracts ok\')"',
+        'check:reading-typography': 'node -e "console.log(\'reading typography ok\')"',
         'lint:full': 'node -e "console.log(\'full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
@@ -231,6 +233,9 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('full android typecheck ok');
       expect(result.stdout).toContain('full deduped test ok');
       expect(result.stdout).toContain('full build ok');
+      expect(result.stdout).toContain('native contracts ok');
+      expect(result.stdout).toContain('reading typography ok');
+      expect(result.stdout).toContain('[quality-gate:full] running in parallel: lint:full typecheck:desktop typecheck:android');
       expect(result.stdout).toContain('[quality-gate:full] running in parallel: build electron:compile android:web:build');
       expect(result.stdout).toContain('full electron compile ok');
       expect(result.stdout).toContain('full android web build ok');
