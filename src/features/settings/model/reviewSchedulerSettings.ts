@@ -8,7 +8,7 @@ import {
   hasReviewSchedulerSettingsRuntimeRepository,
   loadReviewSchedulerSettingsFromRuntime,
   saveReviewSchedulerSettingsToRuntime
-} from '../../../shared/platform/reviewSchedulerSettingsRuntimeRepository';
+} from '../../../shared/platform/settingsRuntimeRepository';
 
 export interface ReviewSchedulerSettings {
   algorithm: string;
