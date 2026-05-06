@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+
 import {
   syncCreateNodeToRuntime,
   syncNodeContentToRuntime,
@@ -92,7 +94,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
       expect.objectContaining({
         id: createdNodeId,
         kind: 'topic',
-        parentNodeId: null,
+        parentNodeId: 'special-inbox',
         content: '# Root node',
         title: 'Root node'
       })
@@ -103,8 +105,10 @@ describe('createWorkspaceNodeActions root creation sync', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness({
       ...createWorkspaceNodeActionsFixture(),
       activeNodeId: null,
-      nodeOrder: [],
-      nodesById: {}
+      nodeOrder: ['special-inbox'],
+      nodesById: {
+        'special-inbox': createWorkspaceNodeActionsFixture().nodesById['special-inbox']!
+      }
     });
     const actions = createWorkspaceNodeActions(harness.setState);
 
@@ -117,6 +121,22 @@ describe('createWorkspaceNodeActions root creation sync', () => {
         title: 'Untitled 1'
       })
     );
+  });
+
+  it('treats a missing Inbox as a workspace invariant violation', () => {
+    const fixture = createWorkspaceNodeActionsFixture();
+    const nodesById = { ...fixture.nodesById };
+    delete nodesById[INBOX_NODE_ID];
+    const harness = createWorkspaceNodeActionsSetStateHarness({
+      ...fixture,
+      nodeOrder: fixture.nodeOrder.filter((nodeId) => nodeId !== INBOX_NODE_ID),
+      nodesById
+    });
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    expect(() => actions.createRootNode('# Root node')).toThrow('Inbox node is missing');
+    expect(syncCreateNodeToRuntime).not.toHaveBeenCalled();
+    expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
   });
 });
 

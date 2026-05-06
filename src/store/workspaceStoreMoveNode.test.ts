@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 it('creates child node under target parent', () => {
-  const rootId = useWorkspaceStore.getState().createRootNode('Folder');
+  const rootId = useWorkspaceStore.getState().createRootNode('Folder', 'folder');
   const childId = useWorkspaceStore.getState().createChildNode(rootId, '');
 
   expect(useWorkspaceStore.getState().nodesById[childId]?.parentNodeId).toBe(rootId);
@@ -57,8 +57,8 @@ it('keeps newest inbox child at the top of inbox children', () => {
 });
 
 it('moves regular node under new parent and reorders subtree block', () => {
-  const folderAId = useWorkspaceStore.getState().createRootNode('A');
-  const folderBId = useWorkspaceStore.getState().createRootNode('B');
+  const folderAId = useWorkspaceStore.getState().createRootNode('A', 'folder');
+  const folderBId = useWorkspaceStore.getState().createRootNode('B', 'folder');
   const childId = useWorkspaceStore.getState().createChildNode(folderAId, 'A child');
 
   const moved = useWorkspaceStore.getState().moveNode(folderBId, folderAId);
@@ -80,7 +80,7 @@ it('blocks moving derived nodes and cycle reparenting', () => {
         to: 'selection text'.length
       }
     });
-  const folderId = useWorkspaceStore.getState().createRootNode('Folder');
+  const folderId = useWorkspaceStore.getState().createRootNode('Folder', 'folder');
   const childId = useWorkspaceStore.getState().createChildNode('node-1', 'child');
 
   expect(derivedId).toBeTruthy();
@@ -98,10 +98,10 @@ it('blocks moving derived nodes and cycle reparenting', () => {
 });
 
 it('moves selected root nodes before target and preserves relative order', () => {
-  const rootAId = useWorkspaceStore.getState().createRootNode('A');
-  const rootBId = useWorkspaceStore.getState().createRootNode('B');
-  const rootCId = useWorkspaceStore.getState().createRootNode('C');
-  const rootDId = useWorkspaceStore.getState().createRootNode('D');
+  const rootAId = useWorkspaceStore.getState().createRootNode('A', 'folder');
+  const rootBId = useWorkspaceStore.getState().createRootNode('B', 'folder');
+  const rootCId = useWorkspaceStore.getState().createRootNode('C', 'folder');
+  const rootDId = useWorkspaceStore.getState().createRootNode('D', 'folder');
 
   const moved = useWorkspaceStore
     .getState()
@@ -124,7 +124,7 @@ it('moves selected root nodes before target and preserves relative order', () =>
 
 it('moves nodes into inbox as the newest inbox children', () => {
   const firstInboxChildId = useWorkspaceStore.getState().createChildNode(INBOX_NODE_ID, 'Old inbox item');
-  const rootId = useWorkspaceStore.getState().createRootNode('Moved into inbox');
+  const rootId = useWorkspaceStore.getState().createRootNode('Moved into inbox', 'folder');
 
   const moved = useWorkspaceStore.getState().moveNodes([rootId], INBOX_NODE_ID, 'child');
 
@@ -137,6 +137,15 @@ it('moves nodes into inbox as the newest inbox children', () => {
     'node-1'
   ]);
   expect(useWorkspaceStore.getState().nodesById[rootId]?.parentNodeId).toBe(INBOX_NODE_ID);
+});
+
+it('blocks moving topics to the root directory', () => {
+  const topicId = useWorkspaceStore.getState().createChildNode(INBOX_NODE_ID, 'Inbox topic');
+
+  const moved = useWorkspaceStore.getState().moveNodes([topicId], null, 'root');
+
+  expect(moved).toBe(false);
+  expect(useWorkspaceStore.getState().nodesById[topicId]?.parentNodeId).toBe(INBOX_NODE_ID);
 });
 
 it('reorders virtual nodes within the fixed virtual root', () => {
@@ -183,5 +192,5 @@ it('blocks moving item nodes even when the target is otherwise valid', () => {
   const moved = useWorkspaceStore.getState().moveNode(itemId, folderId);
 
   expect(moved).toBe(false);
-  expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBe(INBOX_NODE_ID);
 });

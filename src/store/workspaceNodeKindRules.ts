@@ -35,6 +35,9 @@ export function canMoveRootsIntoTarget(
   if (nextParentNodeId === VIRTUAL_ROOT_NODE_ID) {
     return false;
   }
+  if (nextParentNodeId === null) {
+    return rootNodeIds.every((rootNodeId) => state.nodesById[rootNodeId]?.kind === 'folder');
+  }
   const nextParentKind = nextParentNodeId ? state.nodesById[nextParentNodeId]?.kind ?? null : null;
   if (
     intent === 'child' &&

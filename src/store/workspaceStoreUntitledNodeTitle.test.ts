@@ -7,13 +7,7 @@ function resetWorkspaceStore() {
 }
 
 function resetToEmptyWorkspace() {
-  useWorkspaceStore.setState({
-    activeNodeId: null,
-    nodeOrder: [],
-    nodesById: {},
-    trashedNodeIds: [],
-    untitledSequenceByParent: {}
-  });
+  useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
 }
 
 beforeEach(() => {

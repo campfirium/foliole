@@ -199,48 +199,34 @@ it('creates highlight node from selected content', () => {
   expect(createdNode?.review).toBeNull();
 });
 
-it('creates root node when workspace is empty', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: null,
-    nodeOrder: [],
-    nodesById: {}
-  });
-
+it('creates global topics inside Inbox', () => {
   const createdId = useWorkspaceStore.getState().createRootNode('Pasted content');
 
   expect(createdId).toBeTruthy();
   expect(useWorkspaceStore.getState().activeNodeId).toBe(createdId);
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual([createdId]);
+  expect(useWorkspaceStore.getState().nodesById[createdId]?.parentNodeId).toBe(INBOX_NODE_ID);
   expect(useWorkspaceStore.getState().nodesById[createdId]?.content).toBe('Pasted content');
 });
 
-it('creates empty root node for explicit new note action', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: null,
-    nodeOrder: [],
-    nodesById: {}
-  });
-
+it('creates empty global topics inside Inbox', () => {
   const createdId = useWorkspaceStore.getState().createRootNode();
 
+  expect(useWorkspaceStore.getState().nodesById[createdId]?.parentNodeId).toBe(INBOX_NODE_ID);
   expect(useWorkspaceStore.getState().nodesById[createdId]?.content).toBe('');
-  expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled');
+  expect(useWorkspaceStore.getState().nodesById[createdId]?.title).toBe('Untitled 1');
 });
 
-it('creates root nodes with explicit folder-topic-item kinds', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: null,
-    nodeOrder: [],
-    nodesById: {}
-  });
-
+it('keeps only folders as root nodes for explicit folder-topic-item kinds', () => {
   const folderId = useWorkspaceStore.getState().createRootNode('', 'folder');
   const topicId = useWorkspaceStore.getState().createRootNode('', 'topic');
   const itemId = useWorkspaceStore.getState().createRootNode('', 'item');
 
   expect(useWorkspaceStore.getState().nodesById[folderId]?.kind).toBe('folder');
+  expect(useWorkspaceStore.getState().nodesById[folderId]?.parentNodeId).toBeNull();
   expect(useWorkspaceStore.getState().nodesById[topicId]?.kind).toBe('topic');
+  expect(useWorkspaceStore.getState().nodesById[topicId]?.parentNodeId).toBe(INBOX_NODE_ID);
   expect(useWorkspaceStore.getState().nodesById[itemId]?.kind).toBe('item');
+  expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBe(INBOX_NODE_ID);
 });
 
 it('blocks creating folder children under topics', () => {

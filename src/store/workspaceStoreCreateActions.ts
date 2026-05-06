@@ -4,6 +4,7 @@ import {
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
 import type { NodeAnchorLink } from '../features/nodes/model/nodeTypes';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createDefaultReviewProfile } from './workspaceSeed';
@@ -60,6 +61,44 @@ function syncCreatedNode(node: WorkspaceNode | null, nodeOrder: string[] | null,
   handlers.syncNodeOrder(nodeOrder);
 }
 
+function resolveRootCreationParentId(kind: NodeKind, state: WorkspaceState) {
+  if (kind === 'folder') return null;
+  if (!state.nodesById[INBOX_NODE_ID]) {
+    throw new Error('Workspace invariant violated: Inbox node is missing.');
+  }
+  return INBOX_NODE_ID;
+}
+
+function createRootNodeRecord(args: {
+  content: string;
+  kind: NodeKind;
+  nodeId: string;
+  parentNodeId: string | null;
+  state: WorkspaceState;
+  timestamp: string;
+}) {
+  const untitledState = resolveCreatedNodeTitleState(
+    deriveNodeTitleFromContent(args.content),
+    args.parentNodeId,
+    args.state
+  );
+  const node: WorkspaceNode = {
+    id: args.nodeId,
+    parentNodeId: args.parentNodeId,
+    kind: args.kind,
+    title: untitledState.title,
+    hasContent: args.content.trim().length > 0,
+    content: args.content,
+    anchorLink: null,
+    hasReveal: false,
+    reveal: null,
+    review: null,
+    createdAt: args.timestamp,
+    updatedAt: args.timestamp
+  };
+  return { node, untitledState };
+}
+
 export function createRootNodeAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers
@@ -67,53 +106,45 @@ export function createRootNodeAction(
   return (content = '', kind: NodeKind = 'topic') => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
-    let createdNode = {
-      id: nodeId,
-      parentNodeId: null,
-      kind,
-      title: deriveNodeTitleFromContent(content),
-      hasContent: content.trim().length > 0,
-      content,
-      anchorLink: null,
-      hasReveal: false,
-      reveal: null,
-      review: null,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    };
-    let nextNodeOrder: string[] = [];
+    let createdNode: WorkspaceNode | null = null;
+    let nextNodeOrder: string[] | null = null;
 
     set((state) => {
-      const untitledState = resolveCreatedNodeTitleState(
-        deriveNodeTitleFromContent(content),
-        null,
-        state
-      );
-      nextNodeOrder = [...state.nodeOrder, nodeId];
-      createdNode = {
-        ...createdNode,
-        title: untitledState.title
-      };
+      const parentNodeId = resolveRootCreationParentId(kind, state);
+      const created = createRootNodeRecord({
+        content,
+        kind,
+        nodeId,
+        parentNodeId,
+        state,
+        timestamp
+      });
+      nextNodeOrder = parentNodeId === INBOX_NODE_ID
+        ? [INBOX_NODE_ID, nodeId, ...state.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]
+        : [...state.nodeOrder, nodeId];
+      createdNode = created.node;
       const nextNodesById = { ...state.nodesById, [nodeId]: createdNode };
       return {
         activeNodeId: nodeId,
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
-        untitledSequenceByParent: untitledState.untitledSequenceByParent,
+        untitledSequenceByParent: created.untitledState.untitledSequenceByParent,
         reviewSession: reconcileReviewSession(
           {
             ...state,
             activeNodeId: nodeId,
             nodeOrder: nextNodeOrder,
             nodesById: nextNodesById,
-            untitledSequenceByParent: untitledState.untitledSequenceByParent
+            untitledSequenceByParent: created.untitledState.untitledSequenceByParent
           },
           nodeId
         )
       };
     });
-    handlers.syncNodeCreation(createdNode);
-    handlers.syncNodeOrder(nextNodeOrder);
+    if (createdNode && nextNodeOrder) {
+      handlers.syncNodeCreation(createdNode);
+      handlers.syncNodeOrder(nextNodeOrder);
+    }
     return nodeId;
   };
 }
