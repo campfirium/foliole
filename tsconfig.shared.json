@@ -17,7 +17,6 @@
     "**/*.test.tsx",
     "**/*.testUtils.ts",
     "**/*.testUtils.tsx",
-    "src/shared/testing/**",
     "src/test/**"
   ]
 }
