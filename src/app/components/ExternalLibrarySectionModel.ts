@@ -13,7 +13,6 @@ import {
   type ExternalLibraryDirectoryNode,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
-import { compareNaturalName } from './workspaceContentSort';
 
 export interface ExternalTreeRowRecord {
   depth: number;
@@ -102,9 +101,7 @@ export function buildExternalTreeRows(
   isExternalViewOpen: boolean,
   collapsedIds: Set<string>
 ) {
-  return [...folders]
-    .sort((left, right) => compareNaturalName(resolveExternalFolderLabel(left.folderPath), resolveExternalFolderLabel(right.folderPath)))
-    .flatMap((folder) => buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds));
+  return folders.flatMap((folder) => buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds));
 }
 
 export function createKeyboardRow(row: ExternalTreeRowRecord): NodeTreeRowModel {

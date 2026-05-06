@@ -112,6 +112,7 @@ export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'nodeTrashManualCollapsed',
   'workspaceContentSort',
   'externalLibraryCollapsed',
+  'externalLibraryFolderOrder',
   'listCollapsed',
   'listWidth',
   'dualListWidth',

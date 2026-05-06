@@ -8,13 +8,13 @@ import {
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 import {
   buildExternalLibraryFolderBrowseState,
-  compareNaturalName,
   resolveExternalFolderLabel,
   type ExternalLibraryDirectoryNode
 } from '../shared/platform/externalLibraryBrowseModel';
 
 import { toTrashItem, toTrashRootItem, type TrashDirectoryListItem } from './CompanionDirectoryTrashModel';
 
+const INBOX_NODE_ID = 'special-inbox';
 const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
 export type CompanionDirectorySelection =
@@ -148,6 +148,10 @@ function isVirtualRootItem(item: CompanionFolderListEntry) {
   return item.nodeId === VIRTUAL_ROOT_NODE_ID;
 }
 
+function isInboxItem(item: CompanionFolderListEntry) {
+  return item.nodeId === INBOX_NODE_ID;
+}
+
 function isVirtualChild(snapshot: WorkspaceSnapshot | null, item: CompanionFolderListEntry) {
   return snapshot?.nodesById[item.nodeId]?.parentNodeId === VIRTUAL_ROOT_NODE_ID;
 }
@@ -176,18 +180,20 @@ export function resolveDirectorySections(args: {
     return [{ id: 'current', items: args.folderView.items.map(toItem) }];
   }
   const rootItems = args.rootView.items;
+  const inboxItems = rootItems
+    .filter(isInboxItem)
+    .map(toInternalItem);
   const internalItems = rootItems
-    .filter((item) => !isVirtualRootItem(item) && !isVirtualChild(args.snapshot, item))
+    .filter((item) => !isInboxItem(item) && !isVirtualRootItem(item) && !isVirtualChild(args.snapshot, item))
     .map(toInternalItem);
   const virtualItems = resolveVirtualItems(args.snapshot, rootItems);
   const externalFolders = [...args.directory.folders]
-    .sort((left, right) => compareNaturalName(resolveExternalFolderLabel(left.folderPath), resolveExternalFolderLabel(right.folderPath)))
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
-    { id: 'internal', items: internalItems, title: 'Workspace' },
-    { id: 'trash', items: [toTrashRootItem()], title: 'Trash' },
+    { id: 'internal', items: [...inboxItems, ...internalItems], title: 'Workspace' },
+    { id: 'external', items: externalFolders, title: 'External' },
     { id: 'virtual', items: virtualItems, title: 'Virtual' },
-    { id: 'external', items: externalFolders, title: 'External' }
+    { id: 'trash', items: [toTrashRootItem()], title: 'Trash' }
   ];
   return sections.filter((section) => section.items.length > 0);
 }

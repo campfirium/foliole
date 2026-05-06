@@ -7,12 +7,18 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import {
+  loadExternalLibraryFolderOrder,
+  sortExternalLibraryFolders,
+  type ExternalLibraryFolderOrderItem
+} from '../../shared/platform/externalLibraryFolderOrder';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import {
   loadExternalCollapsedRowIds,
   saveExternalCollapsedRowIds
 } from './externalLibraryCollapseSettings';
+import { useExternalFolderDrag } from './ExternalLibrarySectionDrag';
 import {
   buildExternalTreeRows,
   buildFolderRowId,
@@ -46,9 +52,12 @@ function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.S
 
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const rowSpacing = getNodeListRowSpacing();
-  const [collapsedIds, setCollapsedIds] = useExternalCollapsedIds(props.folders);
-  const rows = useExternalTreeRows(props, collapsedIds);
+  const [folderOrder, setFolderOrder] = useState<ExternalLibraryFolderOrderItem[]>(loadExternalLibraryFolderOrder);
+  const orderedFolders = useMemo(() => sortExternalLibraryFolders(props.folders, folderOrder), [folderOrder, props.folders]);
+  const [collapsedIds, setCollapsedIds] = useExternalCollapsedIds(orderedFolders);
+  const rows = useExternalTreeRows({ ...props, folders: orderedFolders }, collapsedIds);
   const onRowKeyDown = useExternalRowKeyDown(collapsedIds, rows, props.onOpenExternalSelection, setCollapsedIds);
+  const drag = useExternalFolderDrag(orderedFolders, setFolderOrder);
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
@@ -66,14 +75,22 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               hasChildren={row.hasChildren}
               isActive={row.isSelected}
               isCollapsed={collapsedIds.has(row.id)}
+              isDragDisabled={row.secondaryIconKind !== 'external-folder'}
+              isDropTarget={drag.state?.targetId === row.id}
               isSelected={row.isSelected}
               key={row.id}
               label={row.label}
               nodeId={row.id}
+              dragDisabledLabel={null}
+              dropIntent={drag.state?.targetId === row.id ? drag.state.dropIntent : null}
               rowSpacing={rowSpacing}
               secondaryLabel={row.secondaryLabel}
               showIcon={false}
               trailingLabelContent={renderExternalTrailingLabelContent(row)}
+              onDragEnd={drag.onDragEnd}
+              onDragOver={drag.onDragOver}
+              onDragStart={drag.onDragStart}
+              onDrop={drag.onDrop}
               onKeyDown={(nodeId, event) => handleExternalRowKeyDown(nodeId, event, onRowKeyDown)}
               onSelect={(nodeId) => openRowSelection(nodeId, rows, props.onOpenExternalSelection)}
               onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, setCollapsedIds)}
@@ -84,6 +101,7 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
     </div>
   );
 }
+
 
 function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord) {
   if (row.secondaryIconKind !== 'external-folder') {

@@ -7,14 +7,16 @@ import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel
 
 const rootView = {
   items: [
-    { kind: 'folder' as const, nodeId: 'folder-1', preview: null, title: 'Inbox' },
+    { kind: 'folder' as const, nodeId: 'folder-untitled', preview: null, title: '1Untitled Folder' },
+    { kind: 'folder' as const, nodeId: 'special-inbox', preview: null, title: 'Inbox' },
     { kind: 'folder' as const, nodeId: 'special-virtual-root', preview: null, title: 'Virtual' }
   ]
 };
 
 const snapshot = {
   nodesById: {
-    'folder-1': { parentNodeId: null },
+    'folder-untitled': { parentNodeId: null },
+    'special-inbox': { parentNodeId: null },
     'special-virtual-root': { parentNodeId: null }
   }
 } as never;
@@ -38,7 +40,10 @@ function resolveSections(selection: Parameters<typeof resolveDirectorySections>[
 };
 
 const externalDirectory = {
-  folders: [{ documentCount: 2, folderPath: '/library/2think', id: 'external-1' }],
+  folders: [
+    { documentCount: 2, folderPath: '/library/2think', id: 'external-1' },
+    { documentCount: 1, folderPath: '/library/1act', id: 'external-2' }
+  ],
   entries: [
     {
       absolutePath: 'external-1:a.md',
@@ -70,10 +75,10 @@ describe('CompanionDirectoryModel', () => {
     const sections = resolveSections({ kind: 'root' });
 
     expect(sectionTitles(sections)).toEqual([
-      { id: 'internal', title: 'Workspace', titles: ['Inbox'] },
-      { id: 'trash', title: 'Trash', titles: ['Trash'] },
+      { id: 'internal', title: 'Workspace', titles: ['Inbox', '1Untitled Folder'] },
+      { id: 'external', title: 'External', titles: ['2think', '1act'] },
       { id: 'virtual', title: 'Virtual', titles: ['Virtual'] },
-      { id: 'external', title: 'External', titles: ['2think'] }
+      { id: 'trash', title: 'Trash', titles: ['Trash'] }
     ]);
   });
 

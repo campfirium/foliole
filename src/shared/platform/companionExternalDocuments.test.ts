@@ -11,6 +11,8 @@ const capacitorMock = vi.hoisted(() => ({
     loadExternalDocument: vi.fn(async () => ({
       document: externalDocument({ content_status: 'missing' })
     })),
+    loadSyncIndex: vi.fn(async () => ({ entries: [] as Array<{ object_id: string; object_type: string }> })),
+    loadSyncObjects: vi.fn(async () => ({ objects: [] as Array<{ payload_json: string | null }> })),
     searchExternalDocuments: vi.fn(async () => ({
       query: 'external',
       results: [{ ...externalDocument({ content_status: 'ready' }), excerpt: 'cached external content', match_start: 7 }]
@@ -98,6 +100,42 @@ describe('companion external documents bridge', () => {
       }]
     });
     expect(capacitorMock.plugin.loadExternalDirectory).toHaveBeenCalledWith();
+  });
+});
+
+describe('companion external directory ordering', () => {
+  it('orders cached external folders by synced app settings', async () => {
+    capacitorMock.plugin.loadExternalDirectory.mockResolvedValueOnce({
+      entries: [],
+      folders: [
+        { document_count: 1, folder_path: '/library/1act', id: 'folder-1' },
+        { document_count: 1, folder_path: '/library/2think', id: 'folder-2' }
+      ]
+    });
+    capacitorMock.plugin.loadSyncIndex.mockResolvedValueOnce({
+      entries: [{ object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }]
+    });
+    capacitorMock.plugin.loadSyncObjects.mockResolvedValueOnce({
+      objects: [{
+        payload_json: JSON.stringify({
+          key: 'app_settings',
+          value_json: JSON.stringify({
+            'foliole-external-library-folder-order': JSON.stringify([
+              { folderPath: 'library/2think', id: 'folder-2' },
+              { folderPath: 'library/1act', id: 'folder-1' }
+            ])
+          })
+        })
+      }]
+    });
+    const api = await import('./companionExternalDocuments');
+
+    await expect(api.loadCompanionExternalDirectory()).resolves.toMatchObject({
+      folders: [
+        { id: 'folder-2' },
+        { id: 'folder-1' }
+      ]
+    });
   });
 });
 

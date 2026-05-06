@@ -108,7 +108,9 @@ export function resolveCompanionRootDirectoryView(
     .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
     .map((nodeId) => snapshot.nodesById[nodeId])
     .filter((node): node is CompanionReadableNode => isRootFolderNode(node));
-  return { items: sortCompanionBrowseNodes(snapshot, rootNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry) };
+  void sortKey;
+  void sortDirection;
+  return { items: rootNodes.map(buildCompanionFolderListEntry) };
 }
 
 export function resolveCompanionTrashView(
