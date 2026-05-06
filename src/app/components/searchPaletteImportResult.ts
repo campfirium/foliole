@@ -1,10 +1,10 @@
-import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
+import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 export async function openImportedExternalResult(
-  result: NativeTextImportResult,
+  result: ExternalDocumentImportResult,
   onOpenResult: (result: WorkspaceSearchResult) => void,
   setExternalPreviewPath: (value: string | null) => void
 ) {

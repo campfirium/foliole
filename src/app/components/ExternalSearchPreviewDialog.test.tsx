@@ -4,13 +4,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { ExternalSearchPreviewDialog } from './ExternalSearchPreviewDialog';
 
 const loadRuntimeExternalSearchPreview = vi.fn();
-
-vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
-  importRuntimeExternalSearchDocument: vi.fn()
-}));
+const importExternalDocument = vi.fn();
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
   loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
+}));
+
+vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
+  importExternalDocument: (absolutePath: string) => importExternalDocument(absolutePath)
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
@@ -18,6 +19,7 @@ vi.mock('../../features/editor/components/MarkdownEditor', () => ({
 }));
 
 beforeEach(() => {
+  importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });
 
@@ -50,5 +52,37 @@ it('shows a retryable error when the external search preview fails', async () =>
 
   await waitFor(() => {
     expect(screen.getByText('# Preview')).toBeInTheDocument();
+  });
+});
+
+it('imports the loaded external preview through the external document import ability', async () => {
+  importExternalDocument.mockResolvedValueOnce({
+    imported_at: '2026-04-21T00:00:00.000Z',
+    node_id: 'node-imported',
+    source_name: 'topic.md'
+  });
+  loadRuntimeExternalSearchPreview.mockResolvedValueOnce({
+    absolutePath: '/library/topic.md',
+    content: '# Preview',
+    extension: 'md',
+    fileName: 'topic.md',
+    folderId: 'folder-1',
+    folderPath: '/library',
+    relativePath: 'topic.md'
+  });
+  const onImportComplete = vi.fn();
+
+  render(<ExternalSearchPreviewDialog absolutePath="/library/topic.md" onImportComplete={onImportComplete} onOpenChange={vi.fn()} />);
+
+  await screen.findByText('# Preview');
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+
+  await waitFor(() => {
+    expect(importExternalDocument).toHaveBeenCalledWith('/library/topic.md');
+    expect(onImportComplete).toHaveBeenCalledWith({
+      imported_at: '2026-04-21T00:00:00.000Z',
+      node_id: 'node-imported',
+      source_name: 'topic.md'
+    });
   });
 });

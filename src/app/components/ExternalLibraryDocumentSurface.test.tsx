@@ -1,16 +1,34 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { useWorkspaceStore } from '../../store/workspaceStore';
+
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
 
 const loadRuntimeExternalSearchPreview = vi.fn();
-
-vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
-  importRuntimeExternalSearchDocument: vi.fn()
-}));
+const importExternalDocument = vi.fn();
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
   loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
+}));
+
+vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
+  importExternalDocument: (absolutePath: string) => importExternalDocument(absolutePath)
+}));
+
+vi.mock('../../features/editor/components/MarkdownEditor', () => ({
+  MarkdownEditor: (props: { value: string }) => <div>{props.value}</div>
+}));
+
+vi.mock('./ExternalLibraryPreviewSurface', () => ({
+  ExternalLibraryPreviewSurface: (props: { onHandleImport: () => void; preview: { content: string } }) => (
+    <div>
+      <div>{props.preview.content}</div>
+      <button onClick={props.onHandleImport} type="button">
+        Import to Foliole
+      </button>
+    </div>
+  )
 }));
 
 const folders = [
@@ -57,6 +75,7 @@ const entriesByFolderId = {
 };
 
 beforeEach(() => {
+  importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });
 
@@ -145,4 +164,56 @@ it('shows an alert and retries when an external library document fails to load',
     expect(loadRuntimeExternalSearchPreview).toHaveBeenCalledTimes(2);
   });
   expect(screen.getByText('Loading document')).toBeInTheDocument();
+});
+
+it('imports the external library preview and opens the imported topic', async () => {
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);
+  importExternalDocument.mockResolvedValueOnce({
+    imported_at: '2026-04-21T00:00:00.000Z',
+    node_id: 'node-imported',
+    source_name: 'one.md'
+  });
+  loadRuntimeExternalSearchPreview.mockResolvedValueOnce({
+    absolutePath: '/library/test 6/one.md',
+    content: '# One',
+    extension: 'md',
+    fileName: 'one.md',
+    folderId: 'folder-1',
+    folderPath: '/library/test 6',
+    relativePath: 'one.md'
+  });
+  const onOpenImportedNode = vi.fn();
+
+  render(
+    <ExternalLibraryDocumentSurface
+      canGoBack={false}
+      canGoForward={false}
+      documentMaxWidth={760}
+      entriesByFolderId={entriesByFolderId}
+      folders={folders}
+      onGoBack={vi.fn()}
+      onGoForward={vi.fn()}
+      onOpenImportedNode={onOpenImportedNode}
+      onOpenSelection={vi.fn()}
+      selection={{
+        absolutePath: '/library/test 6/one.md',
+        folderId: 'folder-1',
+        kind: 'document'
+      }}
+    />
+  );
+
+  await screen.findByText('# One');
+  fireEvent.click(screen.getByRole('button', { name: 'Import to Foliole' }));
+
+  await waitFor(() => {
+    expect(importExternalDocument).toHaveBeenCalledWith('/library/test 6/one.md');
+    expect(rehydrate).toHaveBeenCalledTimes(1);
+    expect(onOpenImportedNode).toHaveBeenCalledWith({
+      imported_at: '2026-04-21T00:00:00.000Z',
+      node_id: 'node-imported',
+      source_name: 'one.md'
+    });
+  });
+  rehydrate.mockRestore();
 });

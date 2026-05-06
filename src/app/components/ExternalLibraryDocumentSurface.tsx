@@ -1,18 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import {
-  importExternalDocument,
-  type ExternalDocumentImportResult
-} from '../../shared/platform/externalDocumentImportRepository';
+import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import { AppButton, AppEmptyState, AppErrorState, AppLoadingState } from '../../shared/ui';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useOpenImportedExternalDocument } from './externalDocumentImportState';
 import {
   buildExternalLibraryFolderBrowseState,
   type ExternalLibrarySelection
@@ -175,25 +172,8 @@ function renderExternalPreviewSurface(args: {
 export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSurfaceProps) {
   const previewPath = props.selection.kind === 'document' ? props.selection.absolutePath : null;
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(previewPath);
-  const [isImporting, setIsImporting] = useState(false);
+  const { handleImport, isImporting } = useOpenImportedExternalDocument(preview, props.onOpenImportedNode);
   const { activeFolderId, documentNodes, documentNodesById, selectedFolder } = useExternalFolderBrowseState(props);
-
-  async function handleImport() {
-    if (!preview) {
-      return;
-    }
-    setIsImporting(true);
-    try {
-      const result = await importExternalDocument(preview.absolutePath);
-      if (!result?.node_id) {
-        return;
-      }
-      await useWorkspaceStore.persist.rehydrate();
-      props.onOpenImportedNode(result);
-    } finally {
-      setIsImporting(false);
-    }
-  }
 
   if ((props.selection.kind === 'folder' || props.selection.kind === 'directory') && activeFolderId) {
     return (

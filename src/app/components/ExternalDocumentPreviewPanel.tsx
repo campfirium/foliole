@@ -1,17 +1,14 @@
 import { Maximize2, Minimize2, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
-import {
-  importExternalDocument,
-  type ExternalDocumentImportResult
-} from '../../shared/platform/externalDocumentImportRepository';
+import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useOpenImportedExternalDocument } from './externalDocumentImportState';
 import { useExternalDocumentPreviewPanelFrame } from './externalDocumentPreviewPanelState';
 import type { ExternalDocumentPreviewRequest } from './externalDocumentPreviewState';
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
@@ -29,7 +26,7 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.request?.absolutePath ?? null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const frame = useExternalDocumentPreviewPanelFrame(overlayRef, Boolean(props.request));
-  const { handleImport, isImporting } = usePreviewImportHandler(preview, props.onOpenImportedNode);
+  const { handleImport, isImporting } = useOpenImportedExternalDocument(preview, props.onOpenImportedNode);
 
   if (!props.request) {
     return null;
@@ -55,32 +52,6 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
       request={request}
     />
   );
-}
-
-function usePreviewImportHandler(
-  preview: ExternalDocumentPreview | null,
-  onOpenImportedNode: (result: ExternalDocumentImportResult) => void
-) {
-  const [isImporting, setIsImporting] = useState(false);
-
-  async function handleImport() {
-    if (!preview) {
-      return;
-    }
-    setIsImporting(true);
-    try {
-      const result = await importExternalDocument(preview.absolutePath);
-      if (!result?.node_id) {
-        return;
-      }
-      await useWorkspaceStore.persist.rehydrate();
-      onOpenImportedNode(result);
-    } finally {
-      setIsImporting(false);
-    }
-  }
-
-  return { handleImport, isImporting };
 }
 
 function PreviewWindow(args: {

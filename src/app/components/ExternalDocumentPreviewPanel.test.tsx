@@ -1,16 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
+import { useWorkspaceStore } from '../../store/workspaceStore';
+
 import { ExternalDocumentPreviewPanel } from './ExternalDocumentPreviewPanel';
 
 const loadRuntimeExternalSearchPreview = vi.fn();
-
-vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
-  importRuntimeExternalSearchDocument: vi.fn()
-}));
+const importExternalDocument = vi.fn();
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
   loadExternalDocumentPreview: (absolutePath: string) => loadRuntimeExternalSearchPreview(absolutePath)
+}));
+
+vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
+  importExternalDocument: (absolutePath: string) => importExternalDocument(absolutePath)
 }));
 
 vi.mock('../../features/editor/components/MarkdownEditor', () => ({
@@ -32,6 +35,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  importExternalDocument.mockReset();
   loadRuntimeExternalSearchPreview.mockReset();
 });
 
@@ -163,4 +167,49 @@ it('toggles the preview window into fullscreen mode', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Full screen preview' }));
 
   expect(screen.getByRole('button', { name: 'Restore preview window' })).toBeInTheDocument();
+});
+
+it('imports the floating external preview and opens the imported topic', async () => {
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);
+  importExternalDocument.mockResolvedValueOnce({
+    imported_at: '2026-04-21T00:00:00.000Z',
+    node_id: 'node-imported',
+    source_name: 'topic.md'
+  });
+  loadRuntimeExternalSearchPreview.mockResolvedValueOnce({
+    absolutePath: '/library/topic.md',
+    content: '# Topic',
+    extension: 'md',
+    fileName: 'topic.md',
+    folderId: 'folder-1',
+    folderPath: '/library',
+    relativePath: 'topic.md'
+  });
+  const onOpenImportedNode = vi.fn();
+
+  render(
+    <ExternalDocumentPreviewPanel
+      onClose={vi.fn()}
+      onOpenImportedNode={onOpenImportedNode}
+      onOpenInExternalLibrary={vi.fn()}
+      request={{
+        absolutePath: '/library/topic.md',
+        folderId: 'folder-1'
+      }}
+    />
+  );
+
+  await screen.findByText('# Topic');
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+
+  await waitFor(() => {
+    expect(importExternalDocument).toHaveBeenCalledWith('/library/topic.md');
+    expect(rehydrate).toHaveBeenCalledTimes(1);
+    expect(onOpenImportedNode).toHaveBeenCalledWith({
+      imported_at: '2026-04-21T00:00:00.000Z',
+      node_id: 'node-imported',
+      source_name: 'topic.md'
+    });
+  });
+  rehydrate.mockRestore();
 });
