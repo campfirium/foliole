@@ -1,9 +1,6 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { isDesktopRuntime } from '../shared/platform/runtime';
-import { logRuntimeError } from '../shared/platform/runtimeLogging';
 import {
   deleteWorkspaceNodesPermanently,
-  hasWorkspaceRuntimeRepository,
   restoreWorkspaceNodes,
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeContentSnapshot,
@@ -70,30 +67,7 @@ export function syncNodeOrderToRuntime(nodeOrder: string[]) {
 }
 
 export async function syncReviewGradeToRuntime(payload: WorkspaceReviewGradeSyncPayload): Promise<void> {
-  if (!hasWorkspaceRuntimeRepository()) {
-    if (!isDesktopRuntime()) {
-      return;
-    }
-    const error = new Error('runtime bridge unavailable for review grade sync');
-    logRuntimeError('runtime review grade sync failed', {
-      area: 'native',
-      action: 'sync_review_grade',
-      fallback: 'throw',
-      error
-    });
-    throw error;
-  }
-  try {
-    await saveWorkspaceReviewGrade(payload);
-  } catch (error) {
-    logRuntimeError('runtime review grade sync failed', {
-      area: 'native',
-      action: 'sync_review_grade',
-      fallback: 'throw',
-      error
-    });
-    throw error;
-  }
+  await saveWorkspaceReviewGrade(payload);
 }
 
 export function syncRelearnNodeToRuntime(payload: WorkspaceRelearnNodePayload) {

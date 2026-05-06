@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeCommandArgs, NativeCommandName } from '../../../lib/platform/nativeContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
+import { isDesktopRuntime } from './runtime';
 import { logRuntimeError } from './runtimeLogging';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export {
@@ -79,9 +80,28 @@ export function saveWorkspaceNodeOrder(nodeOrder: string[]) {
 export async function saveWorkspaceReviewGrade(payload: WorkspaceReviewGradeSyncPayload): Promise<void> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
-    throw new Error('runtime bridge unavailable for review grade sync');
+    if (!isDesktopRuntime()) {
+      return;
+    }
+    const error = new Error('runtime bridge unavailable for review grade sync');
+    logReviewGradeRuntimeError(error);
+    throw error;
   }
-  await runtimeInvoke(NATIVE_COMMANDS.applyReviewGrade, payload);
+  try {
+    await runtimeInvoke(NATIVE_COMMANDS.applyReviewGrade, payload);
+  } catch (error) {
+    logReviewGradeRuntimeError(error);
+    throw error;
+  }
+}
+
+function logReviewGradeRuntimeError(error: unknown) {
+  logRuntimeError('runtime review grade sync failed', {
+    area: 'native',
+    action: 'sync_review_grade',
+    fallback: 'throw',
+    error
+  });
 }
 
 export function saveWorkspaceRelearnNode(payload: WorkspaceRelearnNodePayload) {
