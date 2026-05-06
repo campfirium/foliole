@@ -1,313 +1,35 @@
-// @vitest-environment node
-
-import { promises as fs } from 'node:fs';
-import fsSync from 'node:fs';
-import { createRequire } from 'node:module';
-import os from 'node:os';
 import path from 'node:path';
-import { inflateSync } from 'node:zlib';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
-let mockedAppDataDir = '/tmp/foliole-sync-pack-builder-tests';
+import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
+
+import { upsertExternalDocuments } from './externalDocuments.js';
+import { buildDesktopSyncPack } from './syncPackBuilder.js';
+import {
+  insertNodeAttachmentRows,
+  insertNodeSyncState,
+  mockedSyncPackBuilderAppDataDir,
+  readPackRows,
+  resolveSyncPackPath,
+  setupSyncPackBuilderTestLifecycle
+} from './syncPackBuilderTestSupport.js';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
-    app_data_dir: mockedAppDataDir,
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
+    app_data_dir: mockedSyncPackBuilderAppDataDir,
+    app_cache_dir: path.join(mockedSyncPackBuilderAppDataDir, 'cache'),
+    app_config_dir: path.join(mockedSyncPackBuilderAppDataDir, 'config'),
+    app_log_dir: path.join(mockedSyncPackBuilderAppDataDir, 'logs')
   })
 }));
 
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
-
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { upsertExternalDocuments } from './externalDocuments.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-
-const require = createRequire(import.meta.url);
-const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-
-let tempRoot = '';
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-builder-'));
-  mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
-});
-
-afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
-});
-
-function insertNodeSyncState() {
-  const driver = openDatabaseConnection().driver;
-  const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
-  driver.execute(
-    `INSERT INTO nodes (
-       id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash,
-       current_version_id, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?, ?)`,
-    ['node-1', 'Node 1', 'Node opening preview', 'node body must stay out of pack', bodyHash,
-      'desktop#node-1-v1', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
-  );
-  driver.execute(
-    `INSERT INTO setting_records (
-       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
-     ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}',
-       'setting-hash', '2026-04-27T00:01:00.000Z')`
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
-       'desktop', '2026-04-27T00:01:00.000Z', 1)`
-  );
-}
-
-function insertAttachmentSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO attachment_blobs (
-       attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_device_id, created_at, cached_at, last_verified_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['att-1', 'sha256:att-1', 'attachments/sha256-att-1.png', 12, 'image/png',
-      'local', 'desktop-fixture', '2026-04-27T00:02:00.000Z',
-      '2026-04-27T00:02:00.000Z', '2026-04-27T00:02:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('attachment', 'att-1', 3, 'attachment-hash', 'desktop', '2026-04-27T00:02:00.000Z', 1)`
-  );
-}
-
-function insertNodeReviewSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
-     VALUES ('node-review-1', 'topic', 'Review Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
-  );
-  driver.execute(
-    `INSERT INTO node_review (
-       node_id, due, last_review_at, state, stability, difficulty,
-       elapsed_days, scheduled_days, reps, lapses
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'node-review-1',
-      '2026-04-28T00:00:00.000Z',
-      '2026-04-27T00:05:00.000Z',
-      2,
-      3,
-      4,
-      1,
-      1,
-      2,
-      0
-    ]
-  );
-  driver.execute(
-    `INSERT INTO review_log (
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'log-1',
-      'op-1',
-      'android-test',
-      'node-review-1',
-      3,
-      'ts-fsrs@4',
-      '2026-04-27T00:05:00.000Z',
-      '2026-04-27T00:00:00.000Z',
-      1,
-      2,
-      '2026-04-28T00:00:00.000Z',
-      3,
-      4
-    ]
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node_review', 'node-review-1', 6, 'review-hash',
-       'android-test', '2026-04-27T00:05:00.000Z', 0)`
-  );
-}
-
-function insertNodeReadingSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
-     VALUES ('node-reading-1', 'topic', 'Reading Topic', '', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z')`
-  );
-  driver.execute(
-    `INSERT INTO node_reading (
-       node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
-       next_at, priority, repetition_count, state
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'node-reading-1',
-      120000,
-      1.5,
-      '2026-04-27T00:05:00.000Z',
-      '2026-04-28T00:05:00.000Z',
-      0.75,
-      2,
-      'active'
-    ]
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node_reading', 'node-reading-1', 8, 'reading-hash',
-       'desktop', '2026-04-27T00:05:00.000Z', 0)`
-  );
-}
-
-function insertViewStateSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO workspace_meta (key, value, updated_at)
-     VALUES ('active_node_id', 'node-1', '2026-04-27T00:06:00.000Z')`
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('view_state', 'session_resume:windows:desktop:desktop-test:active_node', 9, 'view-hash',
-       'desktop-test', '2026-04-27T00:06:00.000Z', 0)`
-  );
-}
-
-function insertNodeAttachmentRows() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
-  );
-  driver.execute(
-    'INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
-    ['node-1', 'att-1', 'image']
-  );
-}
-
-function insertExternalFolderSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO external_search_folders (
-       id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
-       status, document_count, indexed_at, last_error, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['folder-1', '/library', 'document_relative_first_then_fixed_root', null, '[".git"]',
-      'ready', 3, '2026-04-27T00:03:00.000Z', null,
-      '2026-04-27T00:03:00.000Z', '2026-04-27T00:03:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('external_folder', 'folder-1', 4, 'external-folder-hash',
-       'desktop', '2026-04-27T00:03:00.000Z', 1)`
-  );
-}
-
-function insertImportSourceSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO import_sources (
-       source_fingerprint, provider, source_kind, source_name, source_locator,
-       first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['source-1', 'manual', 'markdown', 'notes.md', '/library/notes.md',
-      '2026-04-27T00:04:00.000Z', '2026-04-27T00:04:00.000Z', 'content-1', 'node-1']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('import_source', 'source-1', 5, 'import-source-hash',
-       'desktop', '2026-04-27T00:04:00.000Z', 1)`
-  );
-}
-
-function insertPdfPageTextSyncState() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['pdf-1', 'paper.pdf', 'application/pdf', 128, '2026-04-27T00:05:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['pdf-1', 1, 'page text', 612, 792]
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('pdf_page_text', 'pdf-1:1', 7, 'pdf-page-text-hash',
-       'desktop', '2026-04-27T00:05:00.000Z', 1)`
-  );
-}
-
-function readPackRows(packPath: string) {
-  const entries = readStoredZipEntries(packPath);
-  const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
-  const incomingBytes = inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0));
-  const incomingPath = path.join(tempRoot, 'read-incoming.db');
-  fsSync.writeFileSync(incomingPath, incomingBytes);
-  const db = new BetterSqlite3(incomingPath, { readonly: true });
-  try {
-    return {
-      blobDataTable: db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blob_data'").get(),
-      blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
-      externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
-      manifest,
-      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
-      nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text, current_version_id FROM nodes').all(),
-      reviewLog: db.prepare('SELECT op_id, node_id, grade FROM review_log').all(),
-      stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
-      syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
-    };
-  } finally {
-    db.close();
-  }
-}
-
-function readStoredZipEntries(filePath: string) {
-  const buffer = fsSync.readFileSync(filePath);
-  const entries = new Map<string, Buffer>();
-  let offset = 0;
-  while (buffer.readUInt32LE(offset) === 0x04034b50) {
-    const compressedSize = buffer.readUInt32LE(offset + 18);
-    const fileNameLength = buffer.readUInt16LE(offset + 26);
-    const extraLength = buffer.readUInt16LE(offset + 28);
-    const nameStart = offset + 30;
-    const contentStart = nameStart + fileNameLength + extraLength;
-    const name = buffer.subarray(nameStart, nameStart + fileNameLength).toString('utf8');
-    entries.set(name, buffer.subarray(contentStart, contentStart + compressedSize));
-    offset = contentStart + compressedSize;
-  }
-  return entries;
-}
+setupSyncPackBuilderTestLifecycle();
 
 it('builds a sqlite pack with structure and blob manifests but no body bytes', async () => {
   insertNodeSyncState();
   insertNodeAttachmentRows();
-  const packPath = path.join(tempRoot, 'incoming.db');
+  const packPath = resolveSyncPackPath('incoming.db');
 
   const result = await buildDesktopSyncPack({
     createdAt: '2026-04-27T02:00:00.000Z',
@@ -324,6 +46,10 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
     packId: 'pack-1',
     toStateSeq: 2
   });
+  expectNodePackRows(packPath);
+});
+
+function expectNodePackRows(packPath: string) {
   expect(readPackRows(packPath)).toMatchObject({
     blobDataTable: undefined,
     blobs: [expect.objectContaining({ kind: 'text_body' })],
@@ -367,256 +93,7 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
       payload_json: expect.stringContaining('theme')
     })]
   });
-});
-
-it('packs attachment metadata as a generic sync object', async () => {
-  insertAttachmentSyncState();
-  const packPath = path.join(tempRoot, 'incoming-attachment.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-attachment-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-attachment-1',
-    toStateSeq: 3
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{ object_id: 'att-1', object_type: 'attachment', state_seq: 3 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'att-1',
-      object_type: 'attachment',
-      payload_json: expect.stringContaining('cover.png')
-    })]
-  });
-});
-
-it('packs external folder metadata as a generic sync object', async () => {
-  insertExternalFolderSyncState();
-  const packPath = path.join(tempRoot, 'incoming-external-folder.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-external-folder-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-external-folder-1',
-    toStateSeq: 4
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{ object_id: 'folder-1', object_type: 'external_folder', state_seq: 4 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'folder-1',
-      object_type: 'external_folder',
-      payload_json: expect.stringContaining('/library')
-    })]
-  });
-});
-
-it('packs import source metadata as a generic sync object', async () => {
-  insertImportSourceSyncState();
-  const packPath = path.join(tempRoot, 'incoming-import-source.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-import-source-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-import-source-1',
-    toStateSeq: 5
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{ object_id: 'source-1', object_type: 'import_source', state_seq: 5 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'source-1',
-      object_type: 'import_source',
-      payload_json: expect.stringContaining('notes.md')
-    })]
-  });
-});
-
-it('packs pdf page text as a generic sync object', async () => {
-  insertPdfPageTextSyncState();
-  const packPath = path.join(tempRoot, 'incoming-pdf-page-text.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-pdf-page-text-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-pdf-page-text-1',
-    toStateSeq: 7
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{ object_id: 'pdf-1:1', object_type: 'pdf_page_text', state_seq: 7 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'pdf-1:1',
-      object_type: 'pdf_page_text',
-      payload_json: expect.stringContaining('page text')
-    })]
-  });
-});
-
-it('packs review log rows with changed node review state', async () => {
-  insertNodeReviewSyncState();
-  const packPath = path.join(tempRoot, 'incoming-review-log.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-review-log-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-review-log-1',
-    toStateSeq: 6
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: expect.arrayContaining([{ name: 'review_log', row_count: 1 }])
-    }),
-    reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
-    stateRows: [{ object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'node-review-1',
-      object_type: 'node_review',
-      payload_json: expect.stringContaining('last_review_at')
-    })]
-  });
-});
-
-it('packs node reading state as a generic sync object', async () => {
-  insertNodeReadingSyncState();
-  const packPath = path.join(tempRoot, 'incoming-node-reading.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-node-reading-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-node-reading-1',
-    toStateSeq: 8
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{ object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'node-reading-1',
-      object_type: 'node_reading',
-      payload_json: expect.stringContaining('interval_duration_ms')
-    })]
-  });
-});
-
-it('packs view state as a carried sync object payload', async () => {
-  insertViewStateSyncState();
-  const packPath = path.join(tempRoot, 'incoming-view-state.db');
-
-  const result = await buildDesktopSyncPack({
-    outputPath: packPath,
-    packId: 'pack-view-state-1',
-    fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({
-    objectCount: 1,
-    packId: 'pack-view-state-1',
-    toStateSeq: 9
-  });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{
-      object_id: 'session_resume:windows:desktop:desktop-test:active_node',
-      object_type: 'view_state',
-      state_seq: 9
-    }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'session_resume:windows:desktop:desktop-test:active_node',
-      object_type: 'view_state',
-      payload_json: expect.stringContaining('node-1')
-    })]
-  });
-});
+}
 
 it('packs external document structure with body blob manifests but no body bytes', async () => {
   const folder: NativeExternalSearchFolder = {
@@ -642,7 +119,7 @@ it('packs external document structure with body blob manifests but no body bytes
     relativePath: 'doc.md',
     sizeBytes: 48
   }], '2026-04-27T00:00:00.000Z');
-  const packPath = path.join(tempRoot, 'incoming-external.db');
+  const packPath = resolveSyncPackPath('incoming-external.db');
 
   const result = await buildDesktopSyncPack({
     outputPath: packPath,

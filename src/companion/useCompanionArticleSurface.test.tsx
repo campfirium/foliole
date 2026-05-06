@@ -1,9 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import {
+  createCompanionArticleSnapshot,
+  createFloatingBar,
+  createUnpairedWorkspaceSync,
+  createWorkspaceSync
+} from './useCompanionArticleSurfaceTestSupport';
 
 const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
@@ -18,161 +22,8 @@ const desktopSyncMock = vi.hoisted(() => ({
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock);
 
-function createSnapshot(): WorkspaceSnapshot {
-  return {
-    activeNodeId: 'article-1',
-    nodeOrder: ['folder-1', 'article-1', 'article-2'],
-    nodesById: {
-      'folder-1': {
-        anchorLink: null,
-        content: '',
-        createdAt: '2026-04-22T08:00:00.000Z',
-        hideTitleHeading: false,
-        id: 'folder-1',
-        isTitleManual: false,
-        kind: 'folder',
-        parentNodeId: null,
-        reading: null,
-        reveal: null,
-        review: null,
-        title: 'Reading',
-        updatedAt: '2026-04-22T08:00:00.000Z'
-      },
-      'article-1': {
-        anchorLink: null,
-        content: '# First article\n\nBody',
-        createdAt: '2026-04-22T08:01:00.000Z',
-        hideTitleHeading: false,
-        id: 'article-1',
-        isTitleManual: false,
-        kind: 'topic',
-        parentNodeId: 'folder-1',
-        reading: null,
-        reveal: null,
-        review: null,
-        title: 'First article',
-        updatedAt: '2026-04-22T08:01:00.000Z'
-      },
-      'article-2': {
-        anchorLink: null,
-        content: '# Second article\n\nNext',
-        createdAt: '2026-04-22T08:02:00.000Z',
-        hideTitleHeading: false,
-        id: 'article-2',
-        isTitleManual: false,
-        kind: 'topic',
-        parentNodeId: 'folder-1',
-        reading: null,
-        reveal: null,
-        review: null,
-        title: 'Second article',
-        updatedAt: '2026-04-22T08:02:00.000Z'
-      }
-    },
-    trashedNodeIds: [],
-    untitledSequenceByParent: {}
-  };
-}
-
-function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createSnapshot()) {
-  const state = {
-    endpoint_url: 'http://10.0.2.2:38641',
-    last_synced_at: '2026-04-22T08:03:00.000Z',
-    remembered_targets: ['http://10.0.2.2:38641'],
-    sync_events: [],
-    sync_onboarding_status: 'completed' as const,
-    workspace_snapshot: snapshot
-  };
-
-  return {
-    bootstrapState: {
-      booted_at: '2026-04-22T08:03:00.000Z',
-      database_path: 'foliole-companion-preview.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor' as const
-    },
-    checkDesktop: vi.fn(),
-    clearError: vi.fn(),
-    completePairing: vi.fn(),
-    cancelPairing: vi.fn(),
-    desktopDiscoveries: [],
-    desktopDiscovery: null,
-    error: null,
-    pendingPairRequest: null,
-    pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
-      is_paired: true,
-      paired_at: '2026-04-22T08:03:00.000Z'
-    },
-    pairingStatus: 'idle' as const,
-    pullFromDesktop: vi.fn(async () => ({
-      endpoint_url: 'http://10.0.2.2:38641',
-      last_synced_at: '2026-04-22T08:03:00.000Z',
-      remembered_targets: ['http://10.0.2.2:38641'],
-      sync_events: [],
-      sync_onboarding_status: 'completed' as const,
-      workspace_snapshot: snapshot
-    })),
-    readableArticle: {
-      content: '# First article\n\nBody',
-      hideTitleHeading: false,
-      nodeId: 'article-1',
-      persistedNodeViewState: null,
-      pdfAttachmentId: null,
-      textAnchorDecorations: [],
-      title: 'First article'
-    },
-    replaceSnapshot: vi.fn(async () => state),
-    refreshFromDevice: vi.fn(async () => state),
-    removeRememberedTarget: vi.fn(),
-    requestPairing: vi.fn(),
-    saveSyncOnboardingStatus: vi.fn(async () => state),
-    saveEndpoint: vi.fn(),
-    state,
-    syncConflictCount: 0,
-    syncProgress: null,
-    status: 'idle' as const
-  };
-}
-
-function createUnpairedWorkspaceSync() {
-  return {
-    ...createWorkspaceSync(null),
-    pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
-      is_paired: false,
-      paired_at: null
-    },
-    readableArticle: null,
-    state: {
-      endpoint_url: null,
-      last_synced_at: null,
-      remembered_targets: [],
-      sync_events: [],
-      sync_onboarding_status: 'pending' as const,
-      workspace_snapshot: null
-    }
-  };
-}
-
-function createFloatingBar() {
-  return {
-    handleContainerScroll: vi.fn(),
-    handleTouchEnd: vi.fn(),
-    handleTouchMove: vi.fn(),
-    handleTouchStart: vi.fn(),
-    isVisible: true,
-    revealBar: vi.fn()
-  };
-}
-
 async function expectReadingReviewActionPersists() {
-  const snapshot = createSnapshot();
+  const snapshot = createCompanionArticleSnapshot();
   snapshot.nodesById['article-1'] = {
     ...snapshot.nodesById['article-1'],
     reading: {
@@ -258,7 +109,7 @@ describe('useCompanionArticleSurface browsing', () => {
 
   it('marks the selected missing body as loading while direct body sync runs', async () => {
     desktopSyncMock.syncCompanionContentBlobFromDesktop.mockReturnValue(new Promise(() => undefined));
-    const snapshot = createSnapshot();
+    const snapshot = createCompanionArticleSnapshot();
     snapshot.nodesById['article-2'] = {
       ...snapshot.nodesById['article-2'],
       bodyBlobHash: 'b'.repeat(64),
@@ -281,7 +132,9 @@ describe('useCompanionArticleSurface browsing', () => {
     );
     expect(result.current.readableArticle?.bodyStatus).toBe('fetching');
   });
+});
 
+describe('useCompanionArticleSurface browse state', () => {
   it('keeps the current readable article available when snapshot recent rows are empty', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(null), createFloatingBar()));
 

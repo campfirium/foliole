@@ -24,6 +24,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDatabase } from './migrate.js';
 import { restoreNodes, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { searchWorkspace } from './workspaceSearch.js';
+import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
 
 let tempRoot = '';
 
@@ -58,15 +59,6 @@ function insertNode(input: { content: string; deletedAt?: string | null; id: str
       deletedAt: input.deletedAt
     });
   }
-}
-
-function insertPdfAttachment(input: { id: string; originalName: string; status: 'failed' | 'indexing' | 'pending' | 'ready' }) {
-  openDatabaseConnection().sqlite
-    .prepare(
-      `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at, pdf_index_status)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(input.id, input.originalName, 'application/pdf', 128, '2026-03-01T00:00:00.000Z', input.status);
 }
 
 it('searches titles and content from sqlite without needing renderer-side content mirrors', () => {

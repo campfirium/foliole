@@ -11,5 +11,6 @@
     "rootDir": "..",
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../lib/**/*.ts"]
+  "include": ["./**/*.ts", "../lib/**/*.ts"],
+  "exclude": ["../lib/core/database/androidCompanion*.ts"]
 }

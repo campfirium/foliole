@@ -12,8 +12,6 @@ import {
   createLocalNodeReadingChange,
   createLocalNodeReviewChange,
   createLocalReviewLog,
-  createLocalSettingChange,
-  createLocalViewStateChange,
   parsePushItems
 } from './companionDesktopSyncObjectsPushAckTestSupport';
 
@@ -92,155 +90,110 @@ function setupPushAckMocks() {
   });
 }
 
-describe('companion desktop sync push acknowledgements', () => {
+describe('companion desktop sync push acknowledgement conflicts', () => {
   setupPushAckMocks();
 
-  it('returns persisted push issue count from the final local diagnostics', async () => {
-    diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
-      content: {
-        missing_attachment_resource_bytes: 0,
-        missing_attachment_resource_count: 0,
-        missing_content_blob_bytes: 0,
-        missing_content_blob_count: 0
-      },
-      sync_state: {
-        local_dirty_count: 0,
-        pending_ack_count: 0,
-        push_issue_count: 1
-      }
-    } as Awaited<ReturnType<typeof diagnosticsMock.loadLocalSyncDiagnostics>>);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.pushIssueCount).toBe(1);
-  });
-
-  it('does not push unsupported state dirty through the new push endpoint', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{
-      ...createLocalNodeReadingChange(),
-      object_type: 'attachment'
-    }]);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.pushedObjectIds).toEqual([]);
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
-    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
-  });
-});
-
-describe('companion desktop sync accepted push acknowledgements', () => {
-  setupPushAckMocks();
-
-  it('pushes state objects and review_log, storing state acks without advancing review log cursor from ack alone', async () => {
+  it('reports rejected and conflicted push acknowledgements without storing them as pending acks', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([
       createLocalNodeReadingChange(),
-      createLocalNodeReviewChange(),
-      createLocalSettingChange(),
-      createLocalViewStateChange()
+      createLocalNodeReviewChange()
     ]);
-    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
+    vi.mocked(fetch).mockResolvedValueOnce(createRejectedAckResponse() as Response);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
-      body: expect.stringContaining('"baseContentHash":"desktop-base"'),
-      method: 'POST'
-    }));
-    expect(result.pushedObjectIds).toEqual([
-      'node_reading:node-1',
-      'node_review:node-1',
-      'setting:device:android:phone:*:app_settings',
-      'view_state:session_resume:android:phone:android-test-device:active_node'
-    ]);
-    expect(result.pushedReviewOpIds).toEqual(['op-1']);
+    expect(result.pushConflictCount).toBe(1);
+    expect(result.pushRejectedCount).toBe(1);
+    expect(result.pushedObjectIds).toEqual([]);
     expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
-      expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'accepted' }),
-      expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'accepted' }),
-      expect.objectContaining({ clientOpId: 'setting:device:android:phone:*:app_settings:11', status: 'accepted' }),
-      expect.objectContaining({
-        clientOpId: 'view_state:session_resume:android:phone:android-test-device:active_node:12',
-        status: 'accepted'
-      }),
-      expect.objectContaining({ clientOpId: 'review_log:op-1', status: 'accepted' })
+      expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'conflict' }),
+      expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'rejected' })
     ]);
-    expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 
-  it('does not push review_log when its node_review is not ready to push', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
-    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.pushedReviewOpIds).toEqual([]);
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
-  });
-});
-
-describe('companion desktop sync push acknowledgement cursors', () => {
-  setupPushAckMocks();
-
-  it('advances accepted review log cursor only after the pulled pack confirms the op id', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
-    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
-    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
-      applied_blob_count: 0,
-      applied_object_count: 1,
-      applied_review_op_ids: ['op-1'],
-      to_state_seq: 10
-    });
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.appliedReviewOpIds).toEqual(['op-1']);
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).toHaveBeenCalledWith({
-      change_id: 'op-1',
-      created_at: '2026-04-25T00:05:00.000Z'
-    });
-  });
-
-  it('does not advance the review log cursor past earlier unconfirmed ops', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
-    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([
-      createLocalReviewLog({ op_id: 'op-1', reviewed_at: '2026-04-25T00:05:00.000Z' }),
-      createLocalReviewLog({ id: 'review-op-2', op_id: 'op-2', reviewed_at: '2026-04-25T00:06:00.000Z' })
-    ]);
-    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
-      applied_blob_count: 0,
-      applied_object_count: 1,
-      applied_review_op_ids: ['op-2'],
-      to_state_seq: 10
-    });
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.appliedReviewOpIds).toEqual(['op-2']);
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
-  });
-
-  it('surfaces push failures while still applying the structure pack', async () => {
+  it('rejects accepted state-object acks that cannot be confirmed by a pulled state seq', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
     vi.mocked(fetch).mockResolvedValueOnce({
-      json: async () => ({}),
-      ok: false,
-      status: 500,
-      text: async () => 'push rejected'
+      json: async () => ({
+        acks: [{
+          client_op_id: 'node_review:node-1:10',
+          identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+          status: 'accepted'
+        }]
+      }),
+      ok: true
     } as Response);
     const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
 
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-    expect(result.pushError).toBe('Desktop sync target returned 500 for /companion/sync-push.');
     expect(result.pushedObjectIds).toEqual([]);
-    expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalled();
+    expect(result.pushRejectedCount).toBe(1);
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+      expect.objectContaining({ clientOpId: 'node_review:node-1:10', conflictReason: 'missing_state_seq' })
+    ]);
   });
 });
+
+describe('companion desktop sync create-attempt push acknowledgements', () => {
+  setupPushAckMocks();
+
+  it('pushes dirty state rows with a null base as create attempts', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReadingChange({ base_content_hash: null })]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedObjectIds).toEqual(['node_reading:node-1']);
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
+      body: expect.stringContaining('"baseContentHash":null'),
+      method: 'POST'
+    }));
+  });
+
+  it('pushes node_review dirty rows with a null base as create attempts', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{ ...createLocalNodeReviewChange(), base_content_hash: null }]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedObjectIds).toEqual(['node_review:node-1']);
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
+      body: expect.stringContaining('"baseContentHash":null'),
+      method: 'POST'
+    }));
+  });
+
+  it('pushes review_log when the matching node_review is a create attempt', async () => {
+    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([{ ...createLocalNodeReviewChange(), base_content_hash: null }]);
+    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+    expect(result.pushedReviewOpIds).toEqual(['op-1']);
+    expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.any(Object));
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
+  });
+});
+
+function createRejectedAckResponse() {
+  return {
+    json: async () => ({
+      acks: parsePushItems({
+        body: JSON.stringify({
+          items: [
+            { clientOpId: 'node_reading:node-1:9', identity: { objectId: 'node-1', objectType: 'node_reading' } },
+            { clientOpId: 'node_review:node-1:10', identity: { objectId: 'node-1', objectType: 'node_review' } }
+          ]
+        })
+      }).items.map((item, index) => ({
+        client_op_id: item.clientOpId,
+        identity: item.identity,
+        status: index === 0 ? 'conflict' : 'rejected'
+      }))
+    }),
+    ok: true
+  };
+}

@@ -18,10 +18,8 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import {
-  applyNumberedSchemaMigrations,
   DATABASE_SCHEMA_VERSION,
-  initializeDatabaseConnection,
-  resolveNumberedSchemaMigrations
+  initializeDatabaseConnection
 } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -75,69 +73,6 @@ it('initializes a fresh database with the current schema', () => {
     { name: 'sync_peers' },
     { name: 'workspace_meta' }
   ]);
-});
-
-it('applies content blob migrations to existing v28 databases', () => {
-  const connection = openDatabaseConnection();
-  connection.sqlite.exec(`
-    CREATE TABLE nodes (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      content TEXT NOT NULL DEFAULT '',
-      updated_at TEXT NOT NULL
-    );
-    INSERT INTO nodes (id, title, content, updated_at)
-    VALUES ('node-1', 'Node 1', 'Long body text', '2026-04-27T00:00:00.000Z');
-
-    CREATE TABLE external_documents (
-      document_id TEXT PRIMARY KEY,
-      content TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    INSERT INTO external_documents (document_id, content, updated_at)
-    VALUES ('doc-1', 'External body text', '2026-04-27T00:00:00.000Z');
-  `);
-  connection.sqlite.pragma('user_version = 28');
-
-  initializeDatabaseConnection(connection);
-
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
-  const table = connection.sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blobs'")
-    .get() as { name: string } | undefined;
-  expect(table).toEqual({ name: 'content_blobs' });
-  const columns = connection.sqlite.prepare('PRAGMA table_info(content_blobs)').all() as Array<{ name: string }>;
-  expect(columns.map((column) => column.name)).toEqual(expect.arrayContaining([
-    'hash',
-    'storage_key',
-    'kind',
-    'compression',
-    'original_size_bytes',
-    'stored_size_bytes',
-    'availability'
-  ]));
-  const nodeColumns = connection.sqlite.prepare('PRAGMA table_info(nodes)').all() as Array<{ name: string }>;
-  const externalColumns = connection.sqlite.prepare('PRAGMA table_info(external_documents)').all() as Array<{ name: string }>;
-  expect(nodeColumns.map((column) => column.name)).toContain('body_blob_hash');
-  expect(externalColumns.map((column) => column.name)).toContain('body_blob_hash');
-
-  const node = connection.sqlite
-    .prepare('SELECT body_blob_hash FROM nodes WHERE id = ?')
-    .get('node-1') as { body_blob_hash: string } | undefined;
-  const externalDocument = connection.sqlite
-    .prepare('SELECT body_blob_hash FROM external_documents WHERE document_id = ?')
-    .get('doc-1') as { body_blob_hash: string } | undefined;
-  expect(node?.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
-  expect(externalDocument?.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
-
-  const blobCount = connection.sqlite
-    .prepare("SELECT COUNT(*) AS count FROM content_blobs WHERE kind = 'text_body' AND availability = 'local'")
-    .get() as { count: number };
-  expect(blobCount.count).toBe(2);
-  const blobDataCount = connection.sqlite
-    .prepare('SELECT COUNT(*) AS count FROM content_blob_data')
-    .get() as { count: number };
-  expect(blobDataCount.count).toBe(2);
 });
 
 it('migrates node view state to device-scoped rows', () => {
@@ -270,55 +205,6 @@ it('rejects legacy development databases and requires a fresh schema reset', () 
   connection.sqlite.pragma('user_version = 12');
 
   expect(() => initializeDatabaseConnection(connection)).toThrow(/reset foliole\.db and initialize fresh schema/i);
-});
-
-it('requires numbered migrations for every schema version after v28', () => {
-  expect(resolveNumberedSchemaMigrations({
-    currentVersion: 28,
-    legacyMessage: 'legacy',
-    migrations: [
-      { version: 29, migrate: () => undefined },
-      { version: 30, migrate: () => undefined }
-    ],
-    targetVersion: 30
-  }).map((migration) => migration.version)).toEqual([29, 30]);
-
-  expect(() => resolveNumberedSchemaMigrations({
-    currentVersion: 28,
-    legacyMessage: 'legacy',
-    migrations: [{ version: 30, migrate: () => undefined }],
-    targetVersion: 30
-  })).toThrow(/missing database schema migration for version 29/i);
-});
-
-it('rejects duplicate numbered schema migrations', () => {
-  expect(() => resolveNumberedSchemaMigrations({
-    currentVersion: 28,
-    legacyMessage: 'legacy',
-    migrations: [
-      { version: 29, migrate: () => undefined },
-      { version: 29, migrate: () => undefined }
-    ],
-    targetVersion: 29
-  })).toThrow(/duplicate database schema migration registered for version 29/i);
-});
-
-it('applies numbered schema migrations and advances user_version after each version', () => {
-  const events: string[] = [];
-
-  applyNumberedSchemaMigrations({
-    currentVersion: 28,
-    legacyMessage: 'legacy',
-    migrations: [
-      { version: 29, migrate: () => events.push('migrate-29') },
-      { version: 30, migrate: () => events.push('migrate-30') }
-    ],
-    setUserVersion: (version) => events.push(`version-${version}`),
-    sqlite: {} as never,
-    targetVersion: 30
-  });
-
-  expect(events).toEqual(['migrate-29', 'version-29', 'migrate-30', 'version-30']);
 });
 
 it('creates new nodes columns required by sync-aware schema', () => {

@@ -1,4 +1,4 @@
-import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.js';
+import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.ts';
 
 export const ANDROID_COMPANION_RESOURCE_STATUSES = {
   cached: 'cached',

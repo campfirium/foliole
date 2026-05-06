@@ -40,6 +40,9 @@ export function detectSystemFonts(): string[] {
   if (typeof document === 'undefined') {
     return [];
   }
+  if (typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('jsdom')) {
+    return [];
+  }
 
   const canvas = document.createElement('canvas');
   let context: CanvasRenderingContext2D | null = null;

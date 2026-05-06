@@ -116,13 +116,14 @@ describe('quality-gate-lib.sh', () => {
         'printf "%s\\n" "$(resolve_quality_gate_limit android:host:lint timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit android:host:test timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit android:host:device-test timeout_seconds)"',
-        'printf "%s\\n" "$(resolve_quality_gate_limit test timeout_seconds)"'
+        'printf "%s\\n" "$(resolve_quality_gate_limit test timeout_seconds)"',
+        'printf "%s\\n" "$(resolve_quality_gate_limit test:full timeout_seconds)"'
       ].join('\n'),
       REPO_ROOT
     );
 
     expect(result.code).toBe(0);
-    expect(result.stdout.trim().split('\n')).toEqual(['1200', '1200', '1200', '1800', '600']);
+    expect(result.stdout.trim().split('\n')).toEqual(['1200', '1200', '1200', '1800', '600', '1200']);
   });
 
   it('keeps explicit timeout overrides for android host tasks', async () => {

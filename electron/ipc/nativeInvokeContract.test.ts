@@ -37,11 +37,11 @@ describe('native invoke contract dispatch', () => {
     vi.mocked(loadWorkspaceNodeDocument).mockReturnValue({
       content: '# Node',
       hideTitleHeading: false,
-      imageRegions: null,
+      imageRegions: [],
+      kind: 'topic',
       nodeId: 'node-1',
-      parentNodeId: null,
       reveal: null,
-      title: 'Node'
+      virtualFilter: null
     });
 
     await expect(
@@ -49,7 +49,7 @@ describe('native invoke contract dispatch', () => {
         command: NATIVE_COMMANDS.loadNodeDocument,
         args: { nodeId: 'node-1' }
       })
-    ).resolves.toMatchObject({ nodeId: 'node-1', title: 'Node' });
+    ).resolves.toMatchObject({ nodeId: 'node-1' });
 
     expect(loadWorkspaceNodeDocument).toHaveBeenCalledWith('node-1');
   });
