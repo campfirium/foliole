@@ -63,7 +63,7 @@ vi.mock('../shared/platform/performanceDiagnosticsProbe', () => ({
   readPerformanceDiagnosticsProbe: () => undefined
 }));
 
-vi.mock('../shared/testing/workspaceDebugBridge', () => ({
+vi.mock('../shared/diagnostics/workspaceDebugBridge', () => ({
   installWorkspaceDebugBridge: () => undefined
 }));
 

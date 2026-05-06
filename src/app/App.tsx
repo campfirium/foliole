@@ -7,7 +7,7 @@ import { ReviewSchedulerSettingsProvider } from '../features/settings/context/Re
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
-import { installWorkspaceDebugBridge } from '../shared/testing/workspaceDebugBridge';
+import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { CommandPalette } from './components/CommandPalette';
