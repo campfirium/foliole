@@ -27,7 +27,7 @@ export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput)
     return !hasRemainingResourceBacklog(result);
   }
   const structureDone = result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0;
-  return result.remainingAttachmentResourceCount === 0 && result.remainingContentBlobCount === 0 && structureDone;
+  return !isKnownBacklog(result.remainingAttachmentResourceCount) && !isKnownBacklog(result.remainingContentBlobCount) && structureDone;
 }
 
 export function buildRemainingSyncProgress(result: CompanionSyncPassInput): CompanionDesktopSyncProgress | null {

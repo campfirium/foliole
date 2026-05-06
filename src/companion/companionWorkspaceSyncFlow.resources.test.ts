@@ -201,8 +201,9 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
   expect(outcome).toBe('skipped');
   expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'content' }));
   expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'attachment' }));
+  expect(setSyncProgress).toHaveBeenLastCalledWith(null);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked',
+    message: 'Sync checked; topic list is up to date.',
     status: 'skipped'
   }));
 }

@@ -193,6 +193,10 @@ function isKnownBacklog(count: number | null) {
   return typeof count === 'number' && count > 0;
 }
 
+function clarifyCheckOnlyMessage(message: string) {
+  return message === 'Sync checked' ? 'Sync checked; topic list is up to date.' : message;
+}
+
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
   const withTiming = (message: string) => appendNativeBodyTimingSuffix(appendStageTimingSuffix(message, result), result);
   if (result.attachmentResourceError) {
@@ -251,5 +255,5 @@ export function describeCompanionSyncPassResult(result: CompanionSyncPassInput):
   ) {
     return createPassResult(withTiming(appendDownloadSuffix(`${syncCheckedPrefix(result)}; local changes are still waiting to settle.`, result)), 'skipped');
   }
-  return createPassResult(withTiming(appendBacklogSuffix(appendDownloadSuffix(syncCheckedPrefix(result), result), result)), 'skipped');
+  return createPassResult(withTiming(clarifyCheckOnlyMessage(appendBacklogSuffix(appendDownloadSuffix(syncCheckedPrefix(result), result), result))), 'skipped');
 }
