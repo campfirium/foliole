@@ -3,17 +3,18 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { inspectHostIsolation } from './layer-topology-inspector.mjs';
+import {
+  PRODUCTION_SCAN_DIRS,
+  RUNTIME_COMMAND_BOUNDARY_DIRS,
+  SOURCE_EXTENSIONS,
+  TEST_FILE_PATTERN
+} from './layer-topology-rules.mjs';
 import { inspectPlatformSubdomainBoundary } from './platform-subdomain-boundary.mjs';
 
-const SCAN_DIRS = ['src/app', 'src/companion', 'src/features', 'src/store', 'src/shared/diagnostics'];
-const CORE_SCAN_DIRS = ['lib/core'];
-const PLATFORM_SCAN_DIRS = ['src/shared/platform'];
-const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
-const TEST_FILE_PATTERN = /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/;
 const BANNED_IMPORT_PATTERN =
   /\b(?:import(?:\s+type)?[\s\S]*?\s+from\s+|import\s*\(|require\s*\()\s*['"](?:better-sqlite3|child_process(?:\/[^'"]+)?|electron(?:\/[^'"]+)?|fs(?:\/[^'"]+)?|node:child_process(?:\/[^'"]+)?|node:fs(?:\/[^'"]+)?|node:path(?:\/[^'"]+)?|path(?:\/[^'"]+)?)['"]/;
 const BANNED_HOST_ACCESS_PATTERN = /\b(?:window|globalThis)\.(?:electron|electronAPI)\b/;
-const RUNTIME_COMMAND_BOUNDARY_DIRS = ['src/app/', 'src/companion/', 'src/store/', 'src/features/', 'src/shared/diagnostics/'];
 const MODULE_REFERENCE_STATEMENT_PATTERN =
   /\b(?:import(?:\s+type)?|export(?:\s+type)?)([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const MODULE_EXTENSION_PATTERN = String.raw`(?:\.[cm]?[jt]sx?)?`;
@@ -116,8 +117,11 @@ function inspectFile(filePath, repoRoot) {
   const relativeFile = path.relative(repoRoot, filePath);
   const contents = fs.readFileSync(filePath, 'utf8');
   const lines = contents.split(/\r?\n/);
-  const violations = [];
-  const checksBottomLayerBoundary = SCAN_DIRS.some((dir) => relativeFile.startsWith(`${dir}/`));
+  const violations = inspectHostIsolation(relativeFile, contents, {
+    referencePattern: MODULE_REFERENCE_STATEMENT_PATTERN,
+    toLineNumber
+  });
+  const checksBottomLayerBoundary = RUNTIME_COMMAND_BOUNDARY_DIRS.some((dir) => relativeFile.startsWith(dir));
   const checksRuntimeCommandBoundary = RUNTIME_COMMAND_BOUNDARY_DIRS.some((dir) => relativeFile.startsWith(dir));
   if (checksBottomLayerBoundary) {
     lines.forEach((line, index) => {
@@ -187,10 +191,10 @@ function inspectFile(filePath, repoRoot) {
 }
 
 export function inspectLayerDependencyBoundary({ repoRoot = resolveRepoRoot() } = {}) {
-  const scannedFiles = [...SCAN_DIRS, ...CORE_SCAN_DIRS, ...PLATFORM_SCAN_DIRS].flatMap((dir) =>
+  const scannedFiles = PRODUCTION_SCAN_DIRS.flatMap((dir) =>
     collectSourceFiles(path.join(repoRoot, dir))
   );
-  const platformFiles = collectSourceFiles(path.join(repoRoot, PLATFORM_SCAN_DIRS[0])).map((filePath) =>
+  const platformFiles = collectSourceFiles(path.join(repoRoot, 'src/shared/platform')).map((filePath) =>
     path.relative(repoRoot, filePath).replace(/\\/g, '/')
   );
   const violations = [
