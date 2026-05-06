@@ -69,7 +69,7 @@ it('creates a managed safety snapshot before numbered schema migrations', async 
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(databasePath);
   const snapshotNames = await fs.readdir(snapshotDirectory);
   expect(snapshotNames.some((name) => name.startsWith('pre-migration-') && name.endsWith('.db'))).toBe(true);
-  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(32);
+  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(33);
 });
 
 function createVersionTwelveDatabase(databasePath: string) {

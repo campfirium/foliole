@@ -67,6 +67,7 @@ it('restores the application sqlite state from an online backup snapshot', async
         title: 'node-1',
         isTitleManual: true,
         hideTitleHeading: false,
+        bodyBlobHash: expect.stringMatching(/^[a-f0-9]{64}$/),
         content: '# original',
         openingText: null,
         virtualFilter: null,
@@ -75,6 +76,16 @@ it('restores the application sqlite state from an online backup snapshot', async
         reading: null,
         review: null,
         createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z'
+      }
+    },
+    persistedNodeViewById: {
+      'node-1': {
+        nodeId: 'node-1',
+        scrollTop: 24,
+        selectionFrom: 1,
+        selectionTo: 3,
+        source: 'user-scroll',
         updatedAt: '2026-03-14T10:00:00.000Z'
       }
     },
@@ -142,6 +153,7 @@ function createRestoredNodeSnapshot(nodeId: string, content: string, reveal: str
     title: nodeId,
     isTitleManual: true,
     hideTitleHeading: false,
+    bodyBlobHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     content,
     openingText: reveal === null ? null : content,
     virtualFilter: null,

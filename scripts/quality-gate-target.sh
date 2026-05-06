@@ -175,6 +175,8 @@ fi
 
 run_layer_dependency_boundary_check_if_present
 
+[[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "${prefix}" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
+
 case "${target}" in
   desktop)
     run_copy_guard_if_present

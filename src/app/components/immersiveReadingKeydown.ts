@@ -186,11 +186,12 @@ function handleImmersiveToggleKey(args: {
     isImmersiveEditing: args.isImmersiveEditing
   });
   args.suppressNextSelectionRestore();
-  const readingSelection = args.getReadingSelection() ?? args.props.editorAdapterRef.current?.getSelection() ?? { from: 0, to: 0 };
   if (!args.props.isImmersiveMode) {
     args.captureReadingSelectionFromViewport();
+    const readingSelection = args.getReadingSelection() ?? args.props.editorAdapterRef.current?.getSelection() ?? { from: 0, to: 0 };
     args.props.beginApplyingReadingPosition(readingSelection, 'enter-immersive');
   } else if (!args.isImmersiveEditing) {
+    const readingSelection = args.getReadingSelection() ?? args.props.editorAdapterRef.current?.getSelection() ?? { from: 0, to: 0 };
     args.queueReadingSelectionRestore();
     args.props.beginApplyingReadingPosition(readingSelection, 'exit-immersive');
   }

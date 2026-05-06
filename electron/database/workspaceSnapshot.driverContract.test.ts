@@ -75,6 +75,7 @@ it('loads workspace snapshot through query helpers only', () => {
         title: 'Node 1',
         isTitleManual: true,
         hideTitleHeading: false,
+        bodyBlobHash: null,
         openingText: null,
         content: 'content',
         virtualFilter: null,
@@ -91,6 +92,6 @@ it('loads workspace snapshot through query helpers only', () => {
   });
 
   expect(queryAllSpy).toHaveBeenCalledTimes(3);
-  expect(queryOneSpy).toHaveBeenCalledTimes(3);
+  expect(queryOneSpy).toHaveBeenCalledTimes(4);
   expect(queryAllSpy.mock.calls[0]?.[0]).toContain('content_blob_data');
 });

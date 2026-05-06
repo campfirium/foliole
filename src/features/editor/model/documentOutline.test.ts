@@ -22,13 +22,10 @@ describe('extractDocumentOutline', () => {
     ]);
   });
 
-  it('collects setext headings', () => {
+  it('does not collect legacy setext headings', () => {
     const content = ['Title', '===', 'Section', '---'].join('\n');
 
-    expect(extractDocumentOutline(content)).toEqual([
-      { from: 0, level: 1, text: 'Title', to: 9 },
-      { from: 10, level: 2, text: 'Section', to: 21 }
-    ]);
+    expect(extractDocumentOutline(content)).toEqual([]);
   });
 
   it('collects whole-line strong-wrapped ATX compatibility headings', () => {

@@ -4,7 +4,7 @@ const { requestPdfSearch } = vi.hoisted(() => ({
   requestPdfSearch: vi.fn()
 }));
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
   requestPdfSearch
 }));
 

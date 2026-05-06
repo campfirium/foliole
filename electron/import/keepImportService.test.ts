@@ -166,7 +166,7 @@ it('wires readwise keep import into existing highlight-derived child creation', 
   });
   expect(childRows[1]).toEqual({
     anchor_link: childRows[1]!.anchor_link,
-    content: 'Another matching excerpt.',
+    content: 'Another matching excerpt.\n※ Keep import note',
     title: 'Another matching excerpt.'
   });
   expect(firstAnchorLink).toEqual(expect.objectContaining({

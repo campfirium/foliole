@@ -14,6 +14,7 @@ const {
   markNodeDocumentMerged,
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted,
+  markNodePositionRequested,
   markNodeSelectionApplied,
   markNodeSelectionRequested,
   requestPdfAnchorJump
@@ -21,12 +22,13 @@ const {
   markNodeDocumentMerged: vi.fn(),
   markNodeDocumentLoadResolved: vi.fn(),
   markNodeDocumentLoadStarted: vi.fn(),
+  markNodePositionRequested: vi.fn(),
   markNodeSelectionApplied: vi.fn(),
   markNodeSelectionRequested: vi.fn(),
   requestPdfAnchorJump: vi.fn()
 }));
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
   requestPdfAnchorJump
 }));
 
@@ -38,6 +40,7 @@ vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
   markNodeDocumentMerged,
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted,
+  markNodePositionRequested,
   markNodeSelectionApplied,
   markNodeSelectionRequested
 }));

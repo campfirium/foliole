@@ -280,6 +280,7 @@ if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
     "layer dependency boundary" \
     node scripts/check-layer-dependency-boundary.mjs
 fi
+[[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "quality-gate-fast" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
 
 if [[ "${level}" == "full" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full

@@ -145,7 +145,7 @@ it('keeps merged child text from the highlight file while storing the matched pa
         kind: 'highlight',
         locator: expect.objectContaining({ originalText: 'Before the quote. This is the highlighted sentence. After the quote.' })
       }),
-      content: 'This is the highlighted sentence.\n---\nReader note',
+      content: 'This is the highlighted sentence.\n※ Reader note',
       parent_id: updated.nodeId,
       title: 'This is the highlighted sentence.'
     }

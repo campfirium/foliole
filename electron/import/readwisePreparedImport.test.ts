@@ -110,13 +110,13 @@ it('splits default readwise bullet highlights without requiring a custom starter
 
   expect(prepared.matchedHighlights).toMatchObject([
     {
-      content: '- This is the highlighted sentence.',
+      content: 'This is the highlighted sentence.',
       locatorText: 'Before the quote. This is the highlighted sentence. After the quote.'
     },
     {
-      content: '- Another matching excerpt.',
+      content: 'Another matching excerpt.',
       locatorText: 'Another paragraph with Another matching excerpt. End.'
     },
-    { content: '- Closing thought from the final highlight.' }
+    { content: 'Closing thought from the final highlight.' }
   ]);
 });

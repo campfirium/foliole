@@ -4,7 +4,7 @@ const { requestPdfAnchorJump } = vi.hoisted(() => ({
   requestPdfAnchorJump: vi.fn()
 }));
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
   requestPdfAnchorJump
 }));
 

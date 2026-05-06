@@ -86,7 +86,7 @@
 - 包管理器必须按锁文件检测；当前仓库以 `npm` 为准。
 - 运行验证前必须先从 `package.json` / `npm run` 确认真实脚本入口；若不存在 `test`、`build` 或其他习惯性脚本名，必须改用仓库已声明的具体脚本，不得先运行不存在的默认命令。
 - 定向跑测试时必须先用 `rg --files` / `rg` 找到测试文件与相关 npm 脚本，再选择最窄可用入口；当前仓库测试入口以 `test:changed`、`test:desktop`、`test:shared`、`test:android`、`test:full` 和各质量闸脚本为准，而不是 `npm test`。
-- 当前仓库没有强制 git hooks / CI 兜底；质量闸由执行者按任务范围主动选择并运行，不得假设提交或推送时会自动补跑。
+- 当前仓库只有提交内容 / commit sequence 钩子与手动 SQLite capability workflow，没有会自动补跑本轮质量闸的强制 hook / CI 兜底；质量闸由执行者按任务范围主动选择并运行。
 - 默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环范围或技术风险超过“相关验证”覆盖面时，才升级到宿主 / 共享质量闸。
 - 相关最小验证默认由与本轮能力闭环直接对应的 `eslint`、`vitest`、局部 `tsc`、宿主链路 smoke test 与必要预览组成，而不是默认整仓或整宿主全跑；不得只验证最后一个文件、函数或调用点。
 - 质量闸属于升级入口，不是每个能力闭环的默认动作；满足条件时按范围选择：`npm run quality:desktop`、`npm run quality:android`、`npm run quality:android:device`、`npm run quality:shared`、`npm run quality:full`、`npm run quality:release` 或 `npm run quality:fast`。
@@ -95,11 +95,15 @@
 - `quality:shared` 适用于共享 contract / 构建根链路 / 跨宿主脚本调整，或相关验证不足以覆盖风险的场景；`quality:full` 适用于仓库级 JS/TS、桌面构建与 companion Web 构建验证，但不包含 Android 原生宿主检查；`quality:release` 才是桌面 + companion Web + Android 原生宿主的完整发布级验证。
 - `quality:fast` 仅作为通用自动选择入口；多平台任务汇报默认说清实际宿主 / 共享质量入口，不只写 `quality:fast`。
 - 任一质量闸失败后，下一步默认必须先运行失败文件、失败 npm script 或失败 Gradle task 对应的定向复验；只有所有已知失败定向通过后，才允许再次运行同级或更高质量闸。
+- 当全量或宿主级测试已把失败收敛到具体文件、用例或单一语义组后，修复后的默认验证只跑该文件 / 用例 / 语义组的定向入口和相关 lint；不得为了确认单个已收敛失败而默认重跑完整 `test:desktop`、`test:shared`、`test:android` 或同级质量闸，除非本次修复又触及构建根链路、共享 contract、宿主入口，或用户明确要求阶段验收 / 全量复跑。
 - E2E（Playwright）不进入任何质量闸；只在用户明确要求验证某条核心用户路径回归时，由用户手工运行 `npm run test:e2e`，AI 不主动调用 E2E 验证 UI 改动。
 - 若只做相关最小验证，必须优先选择与本轮能力闭环、改动链路、复现场景直接对应的检查命令；最终汇报默认不列测试命令，除非失败、用户追问、或该命令本身就是用户验收所需信息。
 - 只有当你主动执行了某个质量闸，且该质量闸暴露的问题与本轮能力闭环、当前宿主或被选中的验证范围直接相关时，当前任务才需要顺手清掉这些红灯；禁止因为误触发过重质量闸，就把全仓无关红灯一并卷入当前能力闭环。
 - 可复现 Bug 修复前，优先先补复现测试，再修复并验证测试通过；若暂时无法自动化复现，必须先说明原因，并补充可执行的人工验证步骤。
 - 任意可复现 Bug 修复必须新增至少 1 条自动化回归测试；没有回归测试不算完成。
+- 遇到测试失败时默认先复现并修复；只有确认失败与本轮能力闭环无关、当前无法安全修复、且能写出具体 revive 条件时，才允许用合规 `SKIP` 暂存。
+- 测试源码中的 `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>` 注释；不得留下无注释 skip、空泛 reason 或把 skip 当成默认修复替代品。
+- 看到超过 30 天的 stale `SKIP` 提醒时必须复查是否能恢复测试；恢复时显式删除 `.skip` 与对应 `SKIP` 注释，不能等待脚本自动取消。
 - 重构、模块迁移、preload / bridge 改动、Capacitor bridge 改动与宿主生命周期改动视为高回归风险，提交前必须补齐或更新关键回归测试。
 - 新增或升级 npm 依赖时，除常规质量闸外，必须额外执行 `npm run deps:hardening:check`；不得只凭口头说明或文档勾选完成。
 - 对话协作模式下，预览由“当次协作模式 + 本地 flag”共同控制，而不是每轮改文件后无条件执行：`.lab/internal/runtime/windows-preview.flag` 控制 `npm run windows:preview`，`.lab/internal/runtime/android-preview.flag` 控制 `npm run android:preview`，有效值仅 `ON` / `OFF`，缺失按 `OFF` 处理。

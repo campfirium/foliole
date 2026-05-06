@@ -106,7 +106,7 @@ it('merges selected highlight files into an existing topic and appends newly add
     kind: 'highlight',
     locator: expect.objectContaining({ originalText: 'Alpha sentence.' })
   }));
-  expect(firstState.children[0]?.content).toBe('Alpha sentence.\n---\nFirst note');
+  expect(firstState.children[0]?.content).toBe('Alpha sentence.\n※ First note');
 
   const secondResult = await mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, secondHighlightPath);
   const secondState = readMergedState(imported.nodeId as string);

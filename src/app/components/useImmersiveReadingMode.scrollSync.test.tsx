@@ -123,7 +123,7 @@ it('ignores the immediate scroll event caused by paragraph navigation', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
 
-  expect(adapter.setSelection).toHaveBeenLastCalledWith({ from: 7, to: 11 });
+  expect(adapter.setSelection).toHaveBeenLastCalledWith({ from: 7, to: 7 });
   vi.mocked(adapter.setSelection).mockClear();
 
   act(() => {

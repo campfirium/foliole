@@ -121,14 +121,14 @@ function expectReadwiseDerivedChildren(input: {
           originalText: 'Another paragraph with Another matching excerpt. End.'
         })
       }),
-      content: 'Another matching excerpt\n---\nKeep this one',
+      content: 'Another matching excerpt\n※ Keep this one',
       kind: 'topic',
       parent_id: input.nodeId,
       title: 'Another matching excerpt'
     },
     {
       anchorLink: null,
-      content: 'quote that is not present in the body\n---\nUnmatched note',
+      content: 'quote that is not present in the body\n※ Unmatched note',
       kind: 'topic',
       parent_id: input.nodeId,
       title: 'quote that is not present in the body'
@@ -209,7 +209,7 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
     expect.objectContaining({
       kind: 'topic',
       anchorLink: null,
-      content: 'quote that is not present in the body\n---\nUnmatched note'
+      content: 'quote that is not present in the body\n※ Unmatched note'
     })
   ]);
 }

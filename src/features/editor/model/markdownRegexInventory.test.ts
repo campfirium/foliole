@@ -84,6 +84,31 @@ const allowedRegexInventory = [
     owner: 'color setting validation'
   },
   {
+    path: 'src/features/editor/model/highlightAnnotationPrefixSetting.ts',
+    line: "const normalized = (value ?? '').replace(/\\r\\n?/g, '\\n').split('\\n')[0]?.slice(0, HIGHLIGHT_ANNOTATION_PREFIX_MAX_LENGTH) ?? '';",
+    owner: 'single-line annotation prefix setting'
+  },
+  {
+    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
+    line: 'const match = /^(#{1,6})([ \\t]+)(\\S.*)$/.exec(inner);',
+    owner: 'lenient strong ATX heading compatibility'
+  },
+  {
+    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
+    line: 'function addLenientStrongATXHeading(cx: BlockContext, line: Line, text: string, match: RegExpExecArray) {',
+    owner: 'lenient strong ATX heading compatibility'
+  },
+  {
+    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
+    line: 'return /\\p{P}/u.test(String.fromCodePoint(value));',
+    owner: 'lenient strong marker punctuation guard'
+  },
+  {
+    path: 'src/features/editor/model/markdownCompatibilityExtension.ts',
+    line: 'return /^(#{1,6})([ \\t]+)(\\S.*)$/.test(inner);',
+    owner: 'lenient strong ATX heading compatibility'
+  },
+  {
     path: 'src/features/editor/adapters/htmlPaste.ts',
     line: "const baseName = originalName.replace(/\\.[^.]+$/, '').trim();",
     owner: 'clipboard image filename cleanup'
@@ -142,6 +167,26 @@ const allowedRegexInventory = [
     path: 'src/features/editor/model/markdownOblikeInlineProjection.ts',
     line: "return note.replace(/\\\\([\\\\}])/g, '$1').trim() || null;",
     owner: 'OB-like footnote note unescape'
+  },
+  {
+    path: 'src/features/editor/model/markdownThematicBreakProjection.ts',
+    line: "from: offset + lineStart + (line.match(/^\\s*/)?.[0].length ?? 0),",
+    owner: 'thematic break marker trimming'
+  },
+  {
+    path: 'src/features/editor/model/markdownThematicBreakProjection.ts',
+    line: "if (/^\\s*(```|~~~)/.test(line)) {",
+    owner: 'thematic break fence guard'
+  },
+  {
+    path: 'src/features/editor/model/markdownThematicBreakProjection.ts',
+    line: "to: offset + lineEnd - (line.match(/\\s*$/)?.[0].length ?? 0)",
+    owner: 'thematic break marker trimming'
+  },
+  {
+    path: 'src/features/editor/model/markdownThematicBreakProjection.ts',
+    line: "} else if (!inFence && /^\\s*-{3,}\\s*$/.test(line)) {",
+    owner: 'thematic break marker detection'
   }
 ];
 

@@ -20,6 +20,7 @@ describe('inlineLineMatchPlans', () => {
   it('skips inline-only collectors inside code blocks in source mode', () => {
     expect(collectSourceLineMatchState(0, '`x` ^[1] [a](b) [[Node]] [...]', true)).toEqual({
       autolinkMatches: [],
+      embedMatches: [],
       footnoteRanges: [],
       imageMatches: [],
       inlineCodeMatches: [],

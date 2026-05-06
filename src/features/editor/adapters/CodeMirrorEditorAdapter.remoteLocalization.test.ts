@@ -57,7 +57,7 @@ it('rewrites remote markdown images by default after editor content changes', as
 
   expect(adapter.getContent()).toBe('![Remote](asset://hash-1.png)');
   expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/cover.png');
-  expect(onChange).toHaveBeenLastCalledWith('![Remote](asset://hash-1.png)');
+  expect(onChange).toHaveBeenLastCalledWith('![Remote](asset://hash-1.png)', { nodeId: 'node-1' });
   expect(window.confirm).not.toHaveBeenCalled();
 
   adapter.destroy();
