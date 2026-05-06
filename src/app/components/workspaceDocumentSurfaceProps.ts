@@ -17,12 +17,23 @@ type WorkspaceDocumentSurfaceFlatSource =
   WorkspaceLayoutProps['document'] &
   WorkspaceLayoutProps['editorCommands'] &
   WorkspaceLayoutProps['externalLibrary'] &
-  WorkspaceLayoutProps['layoutChrome'] &
-  WorkspaceLayoutProps['navigation'] &
+  Pick<WorkspaceLayoutProps['layoutChrome'], 'isImmersiveMode' | 'isWorkspaceHydrated'> &
+  Pick<
+    WorkspaceLayoutProps['navigation'],
+    | 'canGoBack'
+    | 'canGoForward'
+    | 'canGoParent'
+    | 'onGoBack'
+    | 'onGoForward'
+    | 'onGoParent'
+    | 'onSelectBreadcrumbNode'
+    | 'onSelectNode'
+    | 'onSelectNodeInVirtualView'
+  > &
   WorkspaceLayoutProps['nodeList'] &
   WorkspaceLayoutProps['readingPosition'] &
-  WorkspaceLayoutProps['review'] &
-  WorkspaceLayoutProps['trash'];
+  Pick<WorkspaceLayoutProps['review'], 'reviewSchedulerSettings'> &
+  Pick<WorkspaceLayoutProps['trash'], 'isTrashViewOpen' | 'trashedNodeIds'>;
 
 export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceFlatSource & {
   documentNodeId: string | null;
@@ -89,7 +100,9 @@ function selectDocumentSurfaceNavigation(props: WorkspaceDocumentSurfaceSource) 
     onGoBack: props.navigation.onGoBack,
     onGoForward: props.navigation.onGoForward,
     onGoParent: props.navigation.onGoParent,
+    onOpenExternalLibrarySettings: props.externalLibrary.onOpenExternalLibrarySettings,
     onOpenExternalSelection: props.externalLibrary.onOpenExternalSelection,
+    onOpenExternalView: props.externalLibrary.onOpenExternalView,
     onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode: props.navigation.onSelectNode,
     onSelectNodeInVirtualView: props.navigation.onSelectNodeInVirtualView
