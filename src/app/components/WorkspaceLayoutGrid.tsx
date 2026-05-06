@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react';
+import type { ReactNode } from 'react';
 
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
 
@@ -8,7 +8,7 @@ import {
 } from './WorkspaceBottomReviewToolbar';
 import { WorkspaceGridContent, type WorkspaceGridContentSource } from './WorkspaceGridContent';
 import { WorkspaceGridDividerOverlay } from './WorkspaceGridDividerOverlay';
-import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import {
   selectWorkspaceLeftRailProps,
   WorkspaceLeftRail
@@ -38,7 +38,6 @@ export function WorkspaceLayoutGrid({
   isImmersiveEditing: boolean;
   props: WorkspaceLayoutGridSource;
 }) {
-  const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
   recordComponentRender('workspaceGrid');
   const gridTemplateColumns = props.layoutChrome.isImmersiveMode
     ? 'minmax(0, 1fr)'
@@ -64,7 +63,7 @@ export function WorkspaceLayoutGrid({
         onEnterImmersiveEdit={onEnterImmersiveEdit}
         onShouldSuppressSelectionRestore={onShouldSuppressSelectionRestore}
         onSelectNode={onSelectNode}
-        props={flatProps}
+        props={props}
       />
       <WorkspaceBottomReviewToolbar {...selectWorkspaceBottomReviewToolbarProps(props)} />
     </WorkspaceLayoutGridShell>

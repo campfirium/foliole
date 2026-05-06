@@ -1,64 +1,18 @@
-import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
-
-import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
-import type {
-  RuntimeExternalSearchBrowseEntry,
-  RuntimeExternalSearchFolder
-} from '../../shared/platform/externalSearchRuntimeRepository';
 
-import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import type { WorkspaceGridColumnProps } from './workspaceLayoutGridContentColumns';
 import type { WorkspaceListAreaProps } from './WorkspaceLayoutGridSections';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import type { WorkspaceListSplitterProps } from './WorkspaceListSplitter';
 import type { WorkspaceRightSidebarProps } from './WorkspaceRightSidebar';
 import type { WorkspaceRightSidebarSplitterProps } from './WorkspaceRightSidebarSplitter';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-export interface WorkspaceGridContentProjectionSource {
-  activeNodeId: string | null;
-  activeVirtualNodeId?: string | null;
-  externalEntriesByFolderId: Record<string, RuntimeExternalSearchBrowseEntry[] | undefined>;
-  externalFolders: RuntimeExternalSearchFolder[];
-  externalSelection: ExternalLibrarySelection;
-  isExternalViewOpen: boolean;
-  isImmersiveMode: boolean;
-  isListCollapsed: boolean;
-  isResizingList: boolean;
-  isResizingRightSidebar: boolean;
-  isRightSidebarCollapsed: boolean;
-  isTrashViewOpen: boolean;
-  isVirtualViewOpen: boolean;
-  isWorkspaceHydrated?: boolean;
-  listWidth: number;
-  nodeOrder: string[];
-  nodesById: Record<string, Node>;
-  onOpenExternalLibrarySettings: () => void;
-  onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
-  onOpenMoveToNode: () => void;
-  onOpenNotesView: () => void;
-  onOpenTrashView: () => void;
-  onOpenVirtualView: (nodeId?: string) => void;
-  onResetLayout: () => void;
-  onRevealAnchorInDocument: (anchor: NodeAnchorLink) => void;
-  onRevealDocumentPosition: (position: number) => void;
-  onRightSidebarSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
-  onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onSelectBreadcrumbNode: (nodeId: string) => void;
-  onSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
-  onSelectNodeInVirtualView: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
-  onSelectTrashNode: (nodeId: string) => void;
-  onSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
-  onSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  reviewCurrentNodeId: string | null;
-  reviewPanelQueueNodeIds: string[];
-  reviewSchedulerSettings: ReviewSchedulerSettings;
-  rightSidebarWidth: number;
-  selectedTrashNodeId: string | null;
-  trashedNodeIds: string[];
-}
+export type WorkspaceGridContentProjectionSource = Pick<
+  WorkspaceLayoutProps,
+  'document' | 'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'trash' | 'virtualView'
+>;
 
 export function selectWorkspaceGridColumnProps({
   activeRightPanelId,
@@ -74,14 +28,14 @@ export function selectWorkspaceGridColumnProps({
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
   listNodesById: WorkspaceListNodesById;
   outlineActivePosition: number;
-  onSelectNode: WorkspaceGridContentProjectionSource['onSelectNode'];
+  onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceGridColumnProps {
   return {
     documentSurfaceProps,
-    isImmersiveMode: props.isImmersiveMode,
-    isListCollapsed: props.isListCollapsed,
-    isRightSidebarCollapsed: props.isRightSidebarCollapsed,
+    isImmersiveMode: props.layoutChrome.isImmersiveMode,
+    isListCollapsed: props.layoutChrome.isListCollapsed,
+    isRightSidebarCollapsed: props.layoutChrome.isRightSidebarCollapsed,
     listAreaProps: selectWorkspaceListAreaProps({ listNodesById, onSelectNode, props }),
     listSplitterProps: selectWorkspaceListSplitterProps(props),
     rightSidebarProps: selectWorkspaceRightSidebarProps({
@@ -101,33 +55,33 @@ function selectWorkspaceListAreaProps({
   props
 }: {
   listNodesById: WorkspaceListNodesById;
-  onSelectNode: WorkspaceGridContentProjectionSource['onSelectNode'];
+  onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceListAreaProps {
   return {
-    activeNodeId: props.activeNodeId,
-    activeVirtualNodeId: props.activeVirtualNodeId ?? null,
-    externalEntriesByFolderId: props.externalEntriesByFolderId,
-    externalFolders: props.externalFolders,
-    externalSelection: props.externalSelection,
-    isExternalViewOpen: props.isExternalViewOpen,
-    isTrashViewOpen: props.isTrashViewOpen,
-    isVirtualViewOpen: props.isVirtualViewOpen,
-    isWorkspaceHydrated: props.isWorkspaceHydrated,
+    activeNodeId: props.navigation.activeNodeId,
+    activeVirtualNodeId: props.virtualView.activeVirtualNodeId ?? null,
+    externalEntriesByFolderId: props.externalLibrary.externalEntriesByFolderId,
+    externalFolders: props.externalLibrary.externalFolders,
+    externalSelection: props.externalLibrary.externalSelection,
+    isExternalViewOpen: props.externalLibrary.isExternalViewOpen,
+    isTrashViewOpen: props.trash.isTrashViewOpen,
+    isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
+    isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated,
     listNodesById,
-    nodesById: props.nodesById,
-    nodeOrder: props.nodeOrder,
-    onOpenMoveToNode: props.onOpenMoveToNode,
-    onOpenNotesView: props.onOpenNotesView,
-    onOpenExternalSelection: props.onOpenExternalSelection,
-    onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
-    onOpenTrashView: props.onOpenTrashView,
-    onOpenVirtualView: props.onOpenVirtualView,
+    nodesById: props.nodeList.nodesById,
+    nodeOrder: props.nodeList.nodeOrder,
+    onOpenMoveToNode: props.nodeList.onOpenMoveToNode,
+    onOpenNotesView: props.nodeList.onOpenNotesView,
+    onOpenExternalSelection: props.externalLibrary.onOpenExternalSelection,
+    onOpenExternalLibrarySettings: props.externalLibrary.onOpenExternalLibrarySettings,
+    onOpenTrashView: props.trash.onOpenTrashView,
+    onOpenVirtualView: props.virtualView.onOpenVirtualView,
     onSelectNode,
-    onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
-    onSelectTrashNode: props.onSelectTrashNode,
-    selectedTrashNodeId: props.selectedTrashNodeId,
-    trashedNodeIds: props.trashedNodeIds
+    onSelectNodeInVirtualView: props.navigation.onSelectNodeInVirtualView,
+    onSelectTrashNode: props.trash.onSelectTrashNode,
+    selectedTrashNodeId: props.trash.selectedTrashNodeId,
+    trashedNodeIds: props.trash.trashedNodeIds
   };
 }
 
@@ -135,12 +89,12 @@ function selectWorkspaceListSplitterProps(
   props: WorkspaceGridContentProjectionSource
 ): WorkspaceListSplitterProps {
   return {
-    isCollapsed: props.isListCollapsed,
-    isResizingList: props.isResizingList,
-    listWidth: props.listWidth,
-    onResetLayout: props.onResetLayout,
-    onSplitterKeyDown: props.onSplitterKeyDown,
-    onSplitterPointerDown: props.onSplitterPointerDown
+    isCollapsed: props.layoutChrome.isListCollapsed,
+    isResizingList: props.layoutChrome.isResizingList,
+    listWidth: props.layoutChrome.listWidth,
+    onResetLayout: props.layoutChrome.onResetLayout,
+    onSplitterKeyDown: props.layoutChrome.onSplitterKeyDown,
+    onSplitterPointerDown: props.layoutChrome.onSplitterPointerDown
   };
 }
 
@@ -154,23 +108,23 @@ function selectWorkspaceRightSidebarProps({
   activeRightPanelId: WorkspaceRightPanelId;
   documentNodeId: string | null;
   outlineActivePosition: number;
-  onSelectNode: WorkspaceGridContentProjectionSource['onSelectNode'];
+  onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentProjectionSource;
 }): WorkspaceRightSidebarProps {
   return {
     activePanelId: activeRightPanelId,
     activeNodeId: documentNodeId,
     outlineActivePosition,
-    nodeOrder: props.nodeOrder,
-    nodesById: props.nodesById,
-    onRevealAnchorInDocument: props.onRevealAnchorInDocument,
-    onRevealDocumentPosition: props.onRevealDocumentPosition,
-    onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
+    nodeOrder: props.nodeList.nodeOrder,
+    nodesById: props.nodeList.nodesById,
+    onRevealAnchorInDocument: props.document.onRevealAnchorInDocument,
+    onRevealDocumentPosition: props.document.onRevealDocumentPosition,
+    onSelectBreadcrumbNode: props.navigation.onSelectBreadcrumbNode,
     onSelectNode,
-    reviewCurrentNodeId: props.reviewCurrentNodeId,
-    reviewQueueNodeIds: props.reviewPanelQueueNodeIds,
-    reviewSchedulerSettings: props.reviewSchedulerSettings,
-    trashedNodeIds: props.trashedNodeIds
+    reviewCurrentNodeId: props.review.reviewCurrentNodeId,
+    reviewQueueNodeIds: props.review.reviewPanelQueueNodeIds,
+    reviewSchedulerSettings: props.review.reviewSchedulerSettings,
+    trashedNodeIds: props.trash.trashedNodeIds
   };
 }
 
@@ -178,11 +132,11 @@ function selectWorkspaceRightSidebarSplitterProps(
   props: WorkspaceGridContentProjectionSource
 ): WorkspaceRightSidebarSplitterProps {
   return {
-    isCollapsed: props.isRightSidebarCollapsed,
-    isResizingRightSidebar: props.isResizingRightSidebar,
-    onResetLayout: props.onResetLayout,
-    onRightSidebarSplitterKeyDown: props.onRightSidebarSplitterKeyDown,
-    onRightSidebarSplitterPointerDown: props.onRightSidebarSplitterPointerDown,
-    rightSidebarWidth: props.rightSidebarWidth
+    isCollapsed: props.layoutChrome.isRightSidebarCollapsed,
+    isResizingRightSidebar: props.layoutChrome.isResizingRightSidebar,
+    onResetLayout: props.layoutChrome.onResetLayout,
+    onRightSidebarSplitterKeyDown: props.layoutChrome.onRightSidebarSplitterKeyDown,
+    onRightSidebarSplitterPointerDown: props.layoutChrome.onRightSidebarSplitterPointerDown,
+    rightSidebarWidth: props.layoutChrome.rightSidebarWidth
   };
 }

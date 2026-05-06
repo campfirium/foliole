@@ -6,16 +6,16 @@ import {
 } from '../../features/nodes/model/workspaceListNode';
 
 import {
-  selectWorkspaceDocumentSurfaceProps,
-  type WorkspaceDocumentSurfaceSource
+  selectWorkspaceDocumentSurfaceProps
 } from './workspaceDocumentSurfaceProps';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import { selectWorkspaceGridColumnProps } from './workspaceGridContentProps';
-import type { WorkspaceGridContentProjectionSource } from './workspaceGridContentProps';
 import { renderWorkspaceGridColumns } from './workspaceLayoutGridContentColumns';
+import { flattenWorkspaceLayoutProps, type WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
-export type WorkspaceGridContentSource = WorkspaceDocumentSurfaceSource & WorkspaceGridContentProjectionSource;
+export type WorkspaceGridContentSource = WorkspaceLayoutProps;
 
 export function WorkspaceGridContent({
   activeRightPanelId,
@@ -31,28 +31,30 @@ export function WorkspaceGridContent({
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
-  onSelectNode: WorkspaceGridContentProjectionSource['onSelectNode'];
+  onSelectNode: WorkspaceLayoutProps['navigation']['onSelectNode'];
   props: WorkspaceGridContentSource;
 }) {
-  const listNodesById = useProjectedListNodesById(props.nodesById);
+  const flatProps = useMemo(() => flattenWorkspaceLayoutProps(props), [props]);
+  const listNodesById = useProjectedListNodesById(props.nodeList.nodesById);
   const documentSurfaceProps = useWorkspaceGridDocumentSurfaceProps({
     activeRightPanelId,
     documentNodeId,
     isImmersiveEditing,
     onEnterImmersiveEdit,
     onShouldSuppressSelectionRestore,
+    flatProps,
     props
   });
   const outlineActivePosition = resolveOutlineActivePosition({
-    editorSelection: props.editorNodeViewState?.selection ?? null,
-    readingSelection: props.getReadingPositionSelection()
+    editorSelection: props.document.editorNodeViewState?.selection ?? null,
+    readingSelection: props.readingPosition.getReadingPositionSelection()
   });
 
   return (
     <WorkspaceLayoutGridFrame
-      isImmersiveMode={props.isImmersiveMode}
-      isResizingList={props.isResizingList}
-      isResizingRightSidebar={props.isResizingRightSidebar}
+      isImmersiveMode={props.layoutChrome.isImmersiveMode}
+      isResizingList={props.layoutChrome.isResizingList}
+      isResizingRightSidebar={props.layoutChrome.isResizingRightSidebar}
     >
       {renderWorkspaceGridColumns(
         selectWorkspaceGridColumnProps({
@@ -75,6 +77,7 @@ function useWorkspaceGridDocumentSurfaceProps({
   isImmersiveEditing,
   onEnterImmersiveEdit,
   onShouldSuppressSelectionRestore,
+  flatProps,
   props
 }: {
   activeRightPanelId: WorkspaceRightPanelId;
@@ -82,9 +85,10 @@ function useWorkspaceGridDocumentSurfaceProps({
   isImmersiveEditing: boolean;
   onEnterImmersiveEdit: () => void;
   onShouldSuppressSelectionRestore: () => boolean;
+  flatProps: WorkspaceLayoutFlatProps;
   props: WorkspaceGridContentSource;
 }) {
-  const showDocumentOutline = activeRightPanelId !== 'outline' || props.isRightSidebarCollapsed;
+  const showDocumentOutline = activeRightPanelId !== 'outline' || props.layoutChrome.isRightSidebarCollapsed;
   return useMemo(
     () => ({
       ...selectWorkspaceDocumentSurfaceProps({
@@ -92,7 +96,7 @@ function useWorkspaceGridDocumentSurfaceProps({
         isImmersiveEditing,
         onEnterImmersiveEdit,
         onShouldSuppressSelectionRestore,
-        props
+        props: flatProps
       }),
       showDocumentOutline
     }),
@@ -101,7 +105,7 @@ function useWorkspaceGridDocumentSurfaceProps({
       isImmersiveEditing,
       onEnterImmersiveEdit,
       onShouldSuppressSelectionRestore,
-      props,
+      flatProps,
       showDocumentOutline
     ]
   );
@@ -114,7 +118,7 @@ export function resolveOutlineActivePosition(args: {
   return args.readingSelection?.from ?? args.editorSelection?.from ?? 0;
 }
 
-function useProjectedListNodesById(nodesById: WorkspaceGridContentProjectionSource['nodesById']) {
+function useProjectedListNodesById(nodesById: WorkspaceLayoutProps['nodeList']['nodesById']) {
   const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
   return useMemo(() => {
     const nextProjection = projectWorkspaceListNodesById(
