@@ -1,28 +1,6 @@
 import { loadRuntimeAppSettingsState } from './appSettingsState';
 import { getLocalStorageWhitelist } from './storage';
 
-function getBrowserLocalStorage() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  return window.localStorage;
-}
-
-function readWhitelistedLocalSettings() {
-  const storage = getBrowserLocalStorage();
-  if (!storage) {
-    return {} as Record<string, string>;
-  }
-  const snapshot: Record<string, string> = {};
-  for (const key of getLocalStorageWhitelist()) {
-    const value = storage.getItem(key);
-    if (typeof value === 'string') {
-      snapshot[key] = value;
-    }
-  }
-  return snapshot;
-}
-
 function normalizeSettingsPayload(value: unknown) {
   if (!value || typeof value !== 'object') {
     return {} as Record<string, string>;
@@ -39,14 +17,13 @@ function normalizeSettingsPayload(value: unknown) {
 }
 
 function writeWhitelistedLocalSettings(settings: Record<string, string>) {
-  const storage = getBrowserLocalStorage();
-  if (!storage) {
+  if (typeof window === 'undefined') {
     return;
   }
   for (const key of getLocalStorageWhitelist()) {
     const value = settings[key];
     if (typeof value === 'string') {
-      storage.setItem(key, value);
+      window.localStorage.setItem(key, value);
     }
   }
 }

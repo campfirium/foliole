@@ -48,6 +48,12 @@ run_layer_dependency_boundary_check_if_present() {
   fi
 }
 
+run_settings_classification_check_if_present() {
+  if [[ -f "scripts/check-settings-classification.mjs" ]]; then
+    run_quality_gate_script "${prefix}" "${pm}" "check:settings-classification"
+  fi
+}
+
 package_script_exists() {
   node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts[process.argv[1]] ? 0 : 1)" "$1"
 }
@@ -174,6 +180,7 @@ if quality_gate_should_print_step; then
 fi
 
 run_layer_dependency_boundary_check_if_present
+run_settings_classification_check_if_present
 
 [[ ! -f "scripts/quality-skip-lint.mjs" ]] || run_quality_gate_command "${prefix}" "quality-skip-lint" "quality skip lint" node scripts/quality-skip-lint.mjs
 

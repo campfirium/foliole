@@ -129,6 +129,17 @@ it('filters malformed app settings payload values', async () => {
   });
 });
 
+it('filters app settings keys that have no persistence classification', async () => {
+  await saveAppSettingsState({
+    'foliole-ui-font-preset': 'inter',
+    'foliole-unclassified-setting': 'x'
+  });
+
+  await expect(loadAppSettingsState()).resolves.toEqual({
+    'foliole-ui-font-preset': 'inter'
+  });
+});
+
 it('ignores the legacy workspace file when sqlite app settings are empty', async () => {
   await writeLegacyWorkspaceFile({
     documentMaxWidth: 960,
