@@ -126,17 +126,14 @@ it('keeps font selects disabled until system fonts are loaded', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
-  const uiSelect = screen.getByLabelText('Interface font');
   const textSelect = screen.getByLabelText('Text font');
   const monoSelect = screen.getByLabelText('Monospace font preset');
-  expect(uiSelect).toBeDisabled();
   expect(textSelect).toBeDisabled();
   expect(monoSelect).toBeDisabled();
 
   deferred.resolve({ fonts: ['XHei-Believe'], monospaceFonts: ['XHei-Believe-Mono'] });
 
   await waitFor(() => {
-    expect(uiSelect).toBeEnabled();
     expect(textSelect).toBeEnabled();
     expect(monoSelect).toBeEnabled();
   });

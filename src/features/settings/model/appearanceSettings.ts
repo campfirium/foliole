@@ -56,7 +56,8 @@ import {
   applyEditorTypographyScale,
   applyReadingLineHeight,
   resolveInterfaceFontFamily,
-  resolveMonospaceFontFamily
+  resolveMonospaceFontFamily,
+  resolveUiFontFamily
 } from './appearanceTypography';
 import { BASE_COLOR_OPTIONS, type BaseColorMode, isBaseColorMode, type ResolvedBaseColorMode } from './baseColorMode';
 import {
@@ -228,8 +229,6 @@ export function applyAppearanceSettings({
   selectionColor,
   highlightColor,
   clozeColor,
-  uiFont,
-  customUiFont,
   interfaceFont,
   interfaceFontSize,
   monospaceFont,
@@ -242,7 +241,7 @@ export function applyAppearanceSettings({
     return;
   }
   const clampedFontSize = clampFontSize(interfaceFontSize);
-  const uiFontValue = resolveInterfaceFontFamily(uiFont, sanitizeFontFamily(customUiFont));
+  const uiFontValue = resolveUiFontFamily();
   const interfaceFontValue = resolveInterfaceFontFamily(interfaceFont, sanitizeFontFamily(customInterfaceFont));
   const monospaceFontValue = resolveMonospaceFontFamily(monospaceFont, sanitizeFontFamily(customMonospaceFont));
   const root = document.documentElement;

@@ -232,12 +232,6 @@ function AppearanceSupportingSections(props: ReturnType<typeof useAppearanceSect
             : value.startsWith('mono-font:') &&
               (appearance.setCustomMonospaceFont(value.slice('mono-font:'.length)), appearance.setMonospaceFontPreset('custom'))
         }
-        onUiFontSelectionChange={(value) =>
-          value.startsWith('ui-preset:')
-            ? appearance.setUiFontPreset(value.slice('ui-preset:'.length) as typeof appearance.uiFontPreset)
-            : value.startsWith('ui-font:') &&
-              (appearance.setCustomUiFont(value.slice('ui-font:'.length)), appearance.setUiFontPreset('custom'))
-        }
       />
     </>
   );

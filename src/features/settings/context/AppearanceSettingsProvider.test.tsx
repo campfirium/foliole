@@ -66,6 +66,8 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+  expect(document.documentElement.style.getPropertyValue('--app-interface-font-family')).toBe('var(--font-family-interface)');
+  expect(document.documentElement.style.getPropertyValue('--content-panel-font-family')).toBe('var(--font-family-text)');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('860px');
   expect(document.body.dataset.bootSkeleton).toBeUndefined();
 
@@ -95,4 +97,34 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('920px');
+});
+
+it('keeps the selected reading line height when the color mode changes', () => {
+  render(
+    <AppearanceSettingsProvider>
+      <AppearanceHarness />
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+  expect(screen.getByText('dark')).toBeInTheDocument();
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
+});
+
+it('applies the same reading line height values after the color mode changes first', () => {
+  render(
+    <AppearanceSettingsProvider>
+      <AppearanceHarness />
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+  expect(screen.getByText('dark')).toBeInTheDocument();
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.75');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
+  expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
 });

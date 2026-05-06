@@ -1,20 +1,13 @@
 import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSettings';
 import type { ReadingLineHeight } from './appearanceSettingsOptions';
 
-const SYSTEM_FONT_FALLBACK =
-  "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif";
+const TEXT_SYSTEM_FONT_FALLBACK = 'var(--font-family-text)';
 
 const INTERFACE_FONT_PRESET_VALUES: Record<InterfaceFontPreset, string> = {
-  default: SYSTEM_FONT_FALLBACK,
-  inter:
-    "'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif",
-  system: SYSTEM_FONT_FALLBACK,
-  'source-sans':
-    "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif",
+  default: TEXT_SYSTEM_FONT_FALLBACK,
+  system: TEXT_SYSTEM_FONT_FALLBACK,
   serif: "'Source Serif 4', 'Noto Serif CJK SC', 'Songti SC', SimSun, Georgia, serif",
-  rounded:
-    "'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif",
-  custom: SYSTEM_FONT_FALLBACK
+  custom: TEXT_SYSTEM_FONT_FALLBACK
 };
 
 const MONOSPACE_FONT_PRESET_VALUES: Record<MonospaceFontPreset, string> = {
@@ -48,7 +41,13 @@ export function resolveInterfaceFontFamily(interfaceFont: InterfaceFontPreset, c
   if (interfaceFont !== 'custom') {
     return INTERFACE_FONT_PRESET_VALUES[interfaceFont];
   }
-  return customInterfaceFont ? `${quoteFontFamilyName(customInterfaceFont)}, ${SYSTEM_FONT_FALLBACK}` : SYSTEM_FONT_FALLBACK;
+  return customInterfaceFont
+    ? `${quoteFontFamilyName(customInterfaceFont)}, ${TEXT_SYSTEM_FONT_FALLBACK}`
+    : TEXT_SYSTEM_FONT_FALLBACK;
+}
+
+export function resolveUiFontFamily() {
+  return 'var(--font-family-interface)';
 }
 
 export function resolveMonospaceFontFamily(monospaceFont: MonospaceFontPreset, customMonospaceFont: string) {

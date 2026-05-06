@@ -121,14 +121,8 @@
   --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(var(--color-background)) 68%, rgb(var(--color-canvas)) 32%);
   --pdf-reading-warm-surface-color: color-mix(in srgb, rgb(var(--color-canvas)) 84%, rgb(var(--app-cloze-color-rgb)) 16%);
   --pdf-reading-warm-text-layer-color: color-mix(in srgb, rgb(var(--color-canvas)) 78%, rgb(var(--app-cloze-color-rgb)) 22%);
-  --font-family-interface:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
-    sans-serif;
-  --font-family-text:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC',
-    sans-serif;
+  --font-family-interface: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  --font-family-text: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --font-family-sans: var(--font-family-text);
   --font-family-mono:
     'JetBrains Mono', 'Cascadia Code', 'Sarasa Mono SC', 'SFMono-Regular', Menlo, Consolas,
@@ -212,6 +206,18 @@
     var(--workspace-region-main-document-token-bg) var(--workspace-document-content-divider-surface-weight),
     var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target))
   );
+}
+
+:root:lang(zh) {
+  --font-family-text: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+}
+
+:root:lang(ja) {
+  --font-family-text: system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', sans-serif;
+}
+
+:root:lang(ko) {
+  --font-family-text: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
 
 @media (max-width: 1080px) {
