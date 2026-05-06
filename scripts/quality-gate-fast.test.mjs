@@ -222,19 +222,25 @@ describe('quality-gate-fast.sh', () => {
     const pidFile = path.join(tempRoot, 'lint.pid');
     try {
       await writePackageJson(tempRoot, {
-        lint: `bash -lc '(sleep 30) & child=$!; echo "$child" > "${pidFile}"; wait'`,
         typecheck: 'node -e "console.log(\'typecheck ok\')"',
         test: 'node -e "console.log(\'test ok\')"'
       });
+      await writeExecutable(
+        tempRoot,
+        'node_modules/.bin/eslint',
+        `#!/usr/bin/env bash\n(sleep 30) & child=$!; echo "$child" > "${pidFile}"; wait\n`
+      );
+      await writeFixtureFile(tempRoot, 'src/features/image-cloze/components/ImageClozeCardView.tsx', 'export const value = 1;\n');
 
       const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'src/features/image-cloze/components/ImageClozeCardView.tsx',
         QUALITY_GATE_LINT_TIMEOUT_SECONDS: '4',
         QUALITY_GATE_TYPECHECK_TIMEOUT_SECONDS: '20'
       });
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('lint failed:');
-      expect(result.stdout).toContain('failed: lint exceeded timeout (4s)');
+      expect(result.stdout).toContain('failed: lint (changed files) exceeded timeout (4s)');
       await waitForFile(pidFile);
       const lingeringPid = Number.parseInt((await readFile(pidFile, 'utf8')).trim(), 10);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
@@ -449,7 +455,7 @@ describe('quality-gate-fast.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'full lint ok\')"',
+        'lint:full': 'node -e "console.log(\'full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'full deduped test ok\')"',
@@ -485,7 +491,7 @@ describe('quality-gate-fast.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'release lint ok\')"',
+        'lint:full': 'node -e "console.log(\'release lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'release deduped test ok\')"',

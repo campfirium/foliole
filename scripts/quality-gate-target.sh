@@ -214,7 +214,7 @@ case "${target}" in
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
     run_android_boundary_check_if_present
-    run_gate_steps lint typecheck:desktop typecheck:android test:full
+    run_gate_steps lint:full typecheck:desktop typecheck:android test:full
     run_gate_steps_parallel build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
@@ -222,7 +222,7 @@ case "${target}" in
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
     run_android_boundary_check_if_present
-    run_gate_steps lint typecheck:desktop typecheck:android test:full
+    run_gate_steps lint:full typecheck:desktop typecheck:android test:full
     run_gate_steps_parallel build electron:compile android:web:build
     run_gate_steps android:sync android:host:lint android:host:test
     run_workspace_boundary_check_if_present

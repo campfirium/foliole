@@ -183,7 +183,7 @@ print_quality_gate_route_plan() {
       ;;
     *)
       if [[ -z "${changed}" ]]; then
-        echo "[quality-gate-route] target: full lint + typecheck"
+        echo "[quality-gate-route] target: typecheck only"
       else
         echo "[quality-gate-route] target: scoped lint + typecheck"
       fi
@@ -255,11 +255,7 @@ run_parallel_lint_and_typecheck() {
 
   (
     trap 'if [[ -n "${QUALITY_GATE_ACTIVE_PGID:-}" ]]; then terminate_process_group "${QUALITY_GATE_ACTIVE_PGID}"; fi' EXIT INT TERM
-    if [[ "${lint_mode}" == "full lint" ]]; then
-      run_quality_gate_script "quality-gate-fast" "${pm}" "lint" >"${lint_log}" 2>&1
-    else
-      run_changed_lint "${lint_targets}" >"${lint_log}" 2>&1
-    fi
+    run_changed_lint "${lint_targets}" >"${lint_log}" 2>&1
   ) &
   lint_pid=$!
   register_cleanup_pid "${lint_pid}"
@@ -392,7 +388,7 @@ if [[ "${level}" == "mid" ]]; then
   run_related_tests_if_needed "${all_changed}"
 else
   if [[ -z "${all_changed}" ]]; then
-    run_parallel_lint_and_typecheck "full lint" ""
+    run_parallel_lint_and_typecheck "scoped lint" ""
   else
     run_parallel_lint_and_typecheck "scoped lint" "${lint_targets}"
   fi

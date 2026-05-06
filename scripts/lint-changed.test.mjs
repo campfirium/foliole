@@ -1,0 +1,72 @@
+// @vitest-environment node
+/* global process */
+
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawn, spawnSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const LINT_CHANGED_SCRIPT = path.join(REPO_ROOT, 'scripts', 'lint-changed.sh');
+
+function runBash(args, cwd) {
+  return new Promise((resolve) => {
+    const child = spawn('bash', args, { cwd, env: process.env });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+async function writeExecutable(rootDir, relativePath, content) {
+  const fullPath = path.join(rootDir, relativePath);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, content, { encoding: 'utf8', mode: 0o755 });
+}
+
+describe('lint-changed.sh', () => {
+  it('runs eslint only for lintable changed files', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    const marker = path.join(tempRoot, 'eslint.args');
+    try {
+      spawnSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
+      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+      await mkdir(path.join(tempRoot, 'src'), { recursive: true });
+      await writeFile(path.join(tempRoot, 'src/changed.ts'), 'export const value = 1;\n', 'utf8');
+      await writeFile(path.join(tempRoot, 'README.md'), '# ignored\n', 'utf8');
+
+      const result = await runBash([LINT_CHANGED_SCRIPT], tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(await readFile(marker, 'utf8')).toBe('src/changed.ts\n');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts explicit lint targets without falling back to the repository', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    const marker = path.join(tempRoot, 'eslint.args');
+    try {
+      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+
+      const result = await runBash([LINT_CHANGED_SCRIPT, 'src/app/App.tsx', 'README.md'], tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(await readFile(marker, 'utf8')).toBe('src/app/App.tsx\n');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+});

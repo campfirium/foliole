@@ -68,7 +68,7 @@ const SHARED_GATE_SCRIPTS = {
 
 const FULL_GATE_SCRIPTS = {
   'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-  lint: 'node -e "console.log(\'full lint ok\')"',
+  'lint:full': 'node -e "console.log(\'full lint ok\')"',
   'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
   'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
   'test:full': 'node -e "console.log(\'full test ok\')"',
@@ -79,7 +79,7 @@ const FULL_GATE_SCRIPTS = {
 
 const RELEASE_GATE_SCRIPTS = {
   ...FULL_GATE_SCRIPTS,
-  lint: 'node -e "console.log(\'release lint ok\')"',
+  'lint:full': 'node -e "console.log(\'release lint ok\')"',
   'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
   'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
   'test:full': 'node -e "console.log(\'release test ok\')"',

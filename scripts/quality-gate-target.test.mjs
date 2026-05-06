@@ -199,7 +199,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'full lint ok\')"',
+        'lint:full': 'node -e "console.log(\'full lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'full desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'full android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'full deduped test ok\')"',
@@ -239,7 +239,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'release lint ok\')"',
+        'lint:full': 'node -e "console.log(\'release lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'release desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'release android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'release deduped test ok\')"',
@@ -279,7 +279,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'lint ok\')"',
+        'lint:full': 'node -e "console.log(\'lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'test full ok\')"',
@@ -305,7 +305,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'lint ok\')"',
+        'lint:full': 'node -e "console.log(\'lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'test full ok\')"',
@@ -327,7 +327,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        lint: 'node -e "console.log(\'lint ok\')"',
+        'lint:full': 'node -e "console.log(\'lint ok\')"',
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:full': 'node -e "console.log(\'test full ok\')"',
