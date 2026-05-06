@@ -4,13 +4,13 @@ import {
   type ImportManagerSettings
 } from '../../../lib/core/import/importManagerSettings';
 import {
-  hasImportManagerSettingsRuntimeRepository,
+  hasAppRuntimeCommandRepository,
   loadImportManagerSettingsFromRuntime,
   saveImportManagerSettingsToRuntime
-} from '../../shared/platform/importManagerSettingsRuntimeRepository';
+} from '../../shared/platform/appRuntimeCommandRepository';
 
 export async function loadImportSourceWorkspaceSettings(): Promise<ImportManagerSettings> {
-  if (!hasImportManagerSettingsRuntimeRepository()) {
+  if (!hasAppRuntimeCommandRepository()) {
     return createDefaultImportManagerSettings();
   }
   try {
@@ -21,7 +21,7 @@ export async function loadImportSourceWorkspaceSettings(): Promise<ImportManager
 }
 
 export async function saveImportSourceWorkspaceSettings(settings: ImportManagerSettings) {
-  if (!hasImportManagerSettingsRuntimeRepository()) {
+  if (!hasAppRuntimeCommandRepository()) {
     return settings;
   }
   try {

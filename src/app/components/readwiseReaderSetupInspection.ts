@@ -3,7 +3,7 @@ import {
   hasReadwiseReaderSetupRuntimeRepository,
   inspectReadwiseReaderSetupInRuntime,
   type RuntimeReadwiseDetectionResult
-} from '../../shared/platform/readwiseReaderSetupRuntimeRepository';
+} from '../../shared/platform/appRuntimeCommandRepository';
 
 export async function inspectReadwiseReaderSetup(input: {
   articleDirectoryPath: string;
