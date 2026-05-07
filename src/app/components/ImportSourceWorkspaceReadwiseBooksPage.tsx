@@ -120,7 +120,7 @@ function useReadwiseBookCatalogState(
   nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
 ) {
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<ReadwiseSortKey>('dateSaved');
+  const [sortKey, setSortKey] = useState<ReadwiseSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredInventory = filterBooksInventory(query, booksInventory);
   const filteredBooks = useMemo(

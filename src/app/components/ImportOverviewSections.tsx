@@ -117,7 +117,7 @@ export function InboxImportedNodeRow({
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
-      trailing={renderImportDate(presentation.date, 'Date saved')}
+      trailing={renderImportDate(presentation.date, 'Date imported')}
     />
   );
 }
@@ -140,7 +140,7 @@ export function InboxRecentRunRow({
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
-      trailing={renderImportDate(presentation.date, canOpenNode ? 'Date saved' : 'Date imported')}
+      trailing={renderImportDate(presentation.date, 'Date imported')}
     />
   );
 }

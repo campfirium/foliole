@@ -171,10 +171,7 @@ it('opens import management from the left toolbar instead of replacing Inbox', a
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Close import management' }));
-
-  expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' })).toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: 'Import management' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close import management' })).not.toBeInTheDocument();
 });
 
 it('shows import, clipboard import, and import management actions in the left toolbar', () => {

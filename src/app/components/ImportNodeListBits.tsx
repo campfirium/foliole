@@ -5,7 +5,7 @@ export function renderImportTitle(value: ReactNode) {
 }
 
 export function renderImportOpening(value: string) {
-  return <span className="block line-clamp-3 text-[15px] leading-7 text-foreground/74">{value}</span>;
+  return <span className="line-clamp-3 overflow-hidden text-[15px] leading-7 text-foreground/74 [display:-webkit-box] [-webkit-box-orient:vertical]">{value}</span>;
 }
 
 export function renderImportDate(label: string, prefix: string) {
@@ -13,5 +13,5 @@ export function renderImportDate(label: string, prefix: string) {
 }
 
 export function renderImportMeta(value: string) {
-  return <span className="block min-h-5 min-w-0 break-all text-[13px] leading-5 text-foreground/56">{value}</span>;
+  return <span className="block min-h-5 min-w-0 truncate text-[13px] leading-5 text-foreground/56" title={value}>{value}</span>;
 }

@@ -100,7 +100,11 @@ it('keeps Inbox focused on a single continuous imports list', () => {
 
   expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: 'Search inbox imports' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sort imports by Date saved' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort imports by Date imported' })).toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort imports by Date imported' }), { key: 'ArrowDown' });
+  expect(screen.getByRole('menuitem', { name: 'Last opened' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Date imported' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Title' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Books inventory' })).not.toBeInTheDocument();
   expect(screen.getByText('No imported Inbox topics or recent runs yet.')).toBeInTheDocument();
 });
@@ -132,6 +136,9 @@ it('shows recent inbox items and lets the user open linked topics from both list
   expect(screen.getAllByText('Essay node')).toHaveLength(3);
   expect(screen.getAllByText('markdown · /imports/essay.md')).toHaveLength(2);
   expect(screen.getAllByText('Useful body text')).toHaveLength(3);
+  expect(screen.getAllByText('Useful body text')[0]).toHaveClass('line-clamp-3');
+  expect(screen.getAllByText('markdown · /imports/essay.md')[0]).toHaveClass('truncate');
+  expect(screen.getAllByText('markdown · /imports/essay.md')[0]).toHaveAttribute('title', 'markdown · /imports/essay.md');
   expect(screen.getByText('pdf · /imports/failure.pdf')).toBeInTheDocument();
   expect(screen.getByText('Could not parse metadata')).toBeInTheDocument();
   expect(screen.getByText('Failed failure.pdf')).toBeInTheDocument();

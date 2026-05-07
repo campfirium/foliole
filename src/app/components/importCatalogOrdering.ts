@@ -3,12 +3,12 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
 
 export const IMPORT_CATALOG_SORT_OPTIONS: ImportCatalogSortOption[] = [
-  { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateLastOpened', label: 'Date last opened' },
-  { ascLabel: 'Old -> Recent', descLabel: 'Recent -> Old', key: 'dateSaved', label: 'Date saved' },
+  { ascLabel: 'Older -> Recent', descLabel: 'Recent -> Older', key: 'dateLastOpened', label: 'Last opened' },
+  { ascLabel: 'Older -> Recent', descLabel: 'Recent -> Older', key: 'dateImported', label: 'Date imported' },
   { ascLabel: 'A -> Z', descLabel: 'Z -> A', key: 'title', label: 'Title' }
 ];
 
-export type ImportCatalogSortKey = 'dateLastOpened' | 'dateSaved' | 'title';
+export type ImportCatalogSortKey = 'dateImported' | 'dateLastOpened' | 'title';
 
 type SortableImportItem = {
   sortLastOpened: string | null;
@@ -61,7 +61,7 @@ export function sortImportCatalogItems<T extends SortableImportItem>(
       return compareSavedDesc(left.sortSaved, right.sortSaved);
     }
 
-    if (sortKey === 'dateSaved') {
+    if (sortKey === 'dateImported') {
       const savedResult = compareSavedDesc(left.sortSaved, right.sortSaved) * directionMultiplier;
       if (savedResult !== 0) {
         return savedResult;

@@ -47,7 +47,7 @@ function useInboxCatalogState(nodesById: Record<string, Node>) {
   const formalImport = useFormalImport();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<InboxSortKey>('dateSaved');
+  const [sortKey, setSortKey] = useState<InboxSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredRecentRuns = useMemo(
     () => filterRecentRuns(query, nodesById, formalImport.overview.recentRuns),

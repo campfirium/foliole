@@ -205,7 +205,7 @@ export function ReadwiseBookInventoryItem({
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(title)}
-      trailing={renderImportDate(presentation.date, generatedNodeId ? 'Date saved' : 'Date imported')}
+      trailing={renderImportDate(presentation.date, 'Date imported')}
     />
   );
 }
@@ -240,7 +240,7 @@ export function PdfInventoryItem({
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}
       title={renderImportTitle(presentation.title)}
-      trailing={renderImportDate(presentation.date, item.latestNodeId ? 'Date saved' : 'Date imported')}
+      trailing={renderImportDate(presentation.date, 'Date imported')}
     />
   );
 }

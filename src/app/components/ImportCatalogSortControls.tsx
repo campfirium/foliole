@@ -22,7 +22,7 @@ export function ImportCatalogSortControls(props: {
   sortKey: string;
 }) {
   const activeOption = props.options.find((option) => option.key === props.sortKey) ?? props.options[0];
-  const activeLabel = activeOption?.label ?? 'Date saved';
+  const activeLabel = activeOption?.label ?? 'Date imported';
   const orderOptions = [
     { label: activeOption?.descLabel ?? 'Recent -> Older', value: 'desc' as const },
     { label: activeOption?.ascLabel ?? 'Older -> Recent', value: 'asc' as const }
@@ -62,7 +62,7 @@ function ImportCatalogSortMenu(props: {
   sortKey: string;
 }) {
   return (
-    <AppDropdownMenuContent align="end" className="min-w-[240px] p-1" sideOffset={8}>
+    <AppDropdownMenuContent align="end" className="z-[82] min-w-[240px] p-1" sideOffset={8}>
       <AppDropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-medium text-foreground/45">
         Sort by
       </AppDropdownMenuLabel>
