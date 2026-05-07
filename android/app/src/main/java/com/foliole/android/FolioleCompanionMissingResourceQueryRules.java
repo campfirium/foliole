@@ -41,11 +41,11 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     static String attachmentMimeCategory(Context context, String key) throws Exception {
-        return attachmentObject(context, "mimeCategories").getString(key);
+        return nestedStringValue("attachmentResources", "mimeCategories", key);
     }
 
     static String attachmentRowKey(Context context, String key) throws Exception {
-        return attachmentObject(context, "rowKeys").getString(key);
+        return nestedStringValue("attachmentResources", "rowKeys", key);
     }
 
     static long attachmentRowLong(Context context, JSONObject row, String key) throws Exception {
@@ -70,27 +70,27 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     static String attachmentSummaryKey(Context context, String key) throws Exception {
-        return attachmentObject(context, "summaryKeys").getString(key);
+        return nestedStringValue("attachmentResources", "summaryKeys", key);
     }
 
     static String contentHashesQueryName(Context context) throws Exception {
-        return stringValue(context, "contentBlobs", "hashesQueryName");
+        return stringValue("contentBlobs", "hashesQueryName");
     }
 
     static String contentSummaryQueryName(Context context) throws Exception {
-        return stringValue(context, "contentBlobs", "summaryQueryName");
+        return stringValue("contentBlobs", "summaryQueryName");
     }
 
     static String contentResultKey(Context context) throws Exception {
-        return stringValue(context, "contentBlobs", "resultKey");
+        return stringValue("contentBlobs", "resultKey");
     }
 
     static String contentHashesResultKey(Context context) throws Exception {
-        return stringValue(context, "contentBlobs", "hashesResultKey");
+        return stringValue("contentBlobs", "hashesResultKey");
     }
 
     static String contentHashKey(Context context) throws Exception {
-        return stringValue(context, "contentBlobs", "hashKey");
+        return stringValue("contentBlobs", "hashKey");
     }
 
     static String contentHashString(Context context, JSONObject row) throws Exception {
@@ -106,7 +106,7 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     static String contentRowKey(Context context, String key) throws Exception {
-        return contentObject(context, "rowKeys").getString(key);
+        return nestedStringValue("contentBlobs", "rowKeys", key);
     }
 
     static long contentRowLong(Context context, JSONObject row, String key) throws Exception {
@@ -118,11 +118,19 @@ final class FolioleCompanionMissingResourceQueryRules {
     }
 
     static String contentSummaryKey(Context context, String key) throws Exception {
-        return contentObject(context, "summaryKeys").getString(key);
+        return nestedStringValue("contentBlobs", "summaryKeys", key);
     }
 
     private static String stringValue(Context context, String groupName, String key) throws Exception {
         return group(context, groupName).getString(key);
+    }
+
+    private static String stringValue(String groupName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.string("missingResourceRead", groupName, key);
+    }
+
+    private static String nestedStringValue(String groupName, String objectName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.nestedString("missingResourceRead", groupName, objectName, key);
     }
 
     private static int intValue(Context context, String groupName, String key) throws Exception {

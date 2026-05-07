@@ -87,7 +87,7 @@ describe('Android workspace read query rules', () => {
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotRowString(context, row, key)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.snapshotRowNullableString(context, row, key)');
     expect(combinedSource).toContain('FolioleCompanionWorkspaceReadQueryRules.viewStateRowString(context, row, "nodeIdRowKey")');
-    expect(rulesSource).toContain('snapshotObject(context, "outputKeys").getString(key)');
+    expect(rulesSource).toContain('nestedStringValue("snapshot", "outputKeys", key)');
     expect(rulesSource).toContain('snapshotShape(context, "nodePayload")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldOutputKey(context, field)');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowKey(context, field)');

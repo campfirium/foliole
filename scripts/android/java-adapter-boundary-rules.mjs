@@ -44,6 +44,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionNodeAttachmentQueryRules.java',
       'FolioleCompanionQueryAssetKeys.java',
       'FolioleCompanionQueryDefinitionShapeKeys.java',
+      'FolioleCompanionResourceQueryStringKeys.java',
       'FolioleCompanionResourceMutationRules.java',
       'FolioleCompanionResourceReadQueryRules.java',
       'FolioleCompanionRuntimeMutationRules.java',

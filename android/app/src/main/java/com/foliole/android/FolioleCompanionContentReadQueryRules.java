@@ -9,7 +9,7 @@ final class FolioleCompanionContentReadQueryRules {
     private FolioleCompanionContentReadQueryRules() {}
 
     static String externalDocumentString(Context context, String key) throws Exception {
-        return group(context, "externalDocuments").getString(key);
+        return stringValue("externalDocuments", key);
     }
 
     static int externalDocumentInt(Context context, String key) throws Exception {
@@ -21,11 +21,11 @@ final class FolioleCompanionContentReadQueryRules {
     }
 
     static String externalDocumentOutputKey(Context context, String key) throws Exception {
-        return externalDocumentObject(context, "outputKeys").getString(key);
+        return nestedStringValue("externalDocuments", "outputKeys", key);
     }
 
     static String externalDocumentRowKey(Context context, String key) throws Exception {
-        return externalDocumentObject(context, "rowKeys").getString(key);
+        return nestedStringValue("externalDocuments", "rowKeys", key);
     }
 
     static int externalDocumentRowInt(Context context, JSONObject row, String key) throws Exception {
@@ -46,7 +46,7 @@ final class FolioleCompanionContentReadQueryRules {
     }
 
     static String readableArticleString(Context context, String key) throws Exception {
-        return group(context, "readableArticle").getString(key);
+        return stringValue("readableArticle", key);
     }
 
     static JSONArray readableArticleArray(Context context, String key) throws Exception {
@@ -58,11 +58,11 @@ final class FolioleCompanionContentReadQueryRules {
     }
 
     static String readableArticleOutputKey(Context context, String key) throws Exception {
-        return readableArticleObject(context, "outputKeys").getString(key);
+        return nestedStringValue("readableArticle", "outputKeys", key);
     }
 
     static String readableArticleRowKey(Context context, String key) throws Exception {
-        return readableArticleObject(context, "rowKeys").getString(key);
+        return nestedStringValue("readableArticle", "rowKeys", key);
     }
 
     static String readableArticleRowString(Context context, JSONObject row, String key) throws Exception {
@@ -76,5 +76,13 @@ final class FolioleCompanionContentReadQueryRules {
 
     private static JSONObject group(Context context, String groupName) throws Exception {
         return FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName);
+    }
+
+    private static String stringValue(String groupName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.string("contentRead", groupName, key);
+    }
+
+    private static String nestedStringValue(String groupName, String objectName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.nestedString("contentRead", groupName, objectName, key);
     }
 }

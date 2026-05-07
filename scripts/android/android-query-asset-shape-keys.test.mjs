@@ -10,6 +10,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const NAMED_QUERY_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionNamedQueryStore.java');
 const SHAPE_KEYS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionQueryDefinitionShapeKeys.java');
+const SHAPE_GENERATOR = path.join(REPO_ROOT, 'scripts/android/android-query-shape-java.mjs');
 const SYNC_PAYLOAD_QUERY_STORE = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPayloadQueryStore.java'
@@ -69,22 +70,26 @@ describe('Android query asset shape keys', () => {
     const reviewLogRecordRules = await readFile(REVIEW_LOG_RECORD_RULES, 'utf8');
     const queryAssetKeys = await readFile(QUERY_ASSET_KEYS, 'utf8');
     const shapeKeys = await readFile(SHAPE_KEYS, 'utf8');
+    const shapeGenerator = await readFile(SHAPE_GENERATOR, 'utf8');
     const syncPayloadQueryStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
     const combinedSource = `${namedQueryStore}\n${reviewLogRecordRules}\n${syncPayloadQueryStore}`;
 
-    expect(queryAssetKeys).toContain('assetKey(payload, key)');
+    expect(queryAssetKeys).toContain('FolioleCompanionQueryDefinitionShapeKeys.assetKey(key)');
     expect(queryAssetKeys).toContain('groupKey(rules, groupName)');
-    expect(shapeKeys).toContain('FolioleCompanionQueryAssetKeys.section(context, "queryShape")');
+    expect(shapeGenerator).toContain('buildAndroidQueryShapeJava');
+    expect(shapeKeys).toContain('static String assetKey(String key)');
+    expect(shapeKeys).toContain('private static final String QUERY_RESULT_KEY = "resultKey";');
+    expect(shapeKeys).not.toContain('FolioleCompanionAssetReader.read');
+    expect(shapeKeys).not.toContain('FolioleCompanionQueryAssetKeys.section');
+    expect(shapeKeys).not.toContain('new JSONObject(FolioleCompanionAssetReader.read');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.columnKey(context, "source")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.routingKey(context, "routes")');
     expect(combinedSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.metricRowResultKey(context, metricRows)');
-    expect(shapeKeys).toContain('fieldKey(Context context, String key)');
     expect(shapeKeys).toContain('fieldOutputKey(Context context, JSONObject field)');
     expect(shapeKeys).toContain('fieldRowKey(Context context, JSONObject field)');
     expect(shapeKeys).toContain('fieldTypeKey(Context context, JSONObject field)');
     expect(shapeKeys).toContain('fieldType(Context context, String key)');
-    expect(shapeKeys).toContain('diagnosticRowGroupKey(Context context, String key)');
     expect(shapeKeys).toContain('diagnosticRowGroupOutputKey(Context context, JSONObject rowGroup)');
     expect(combinedSource).not.toContain('getString("sql")');
     expect(combinedSource).not.toContain('getJSONArray("columns")');

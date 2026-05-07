@@ -9,7 +9,7 @@ final class FolioleCompanionWorkspaceReadQueryRules {
     private FolioleCompanionWorkspaceReadQueryRules() {}
 
     static String snapshotString(Context context, String key) throws Exception {
-        return group(context, "snapshot").getString(key);
+        return stringValue("snapshot", key);
     }
 
     static JSONObject snapshotObject(Context context, String key) throws Exception {
@@ -17,7 +17,7 @@ final class FolioleCompanionWorkspaceReadQueryRules {
     }
 
     static String snapshotOutputKey(Context context, String key) throws Exception {
-        return snapshotObject(context, "outputKeys").getString(key);
+        return nestedStringValue("snapshot", "outputKeys", key);
     }
 
     static String snapshotRowString(Context context, JSONObject row, String key) throws Exception {
@@ -74,7 +74,7 @@ final class FolioleCompanionWorkspaceReadQueryRules {
     }
 
     static String viewStateString(Context context, String key) throws Exception {
-        return group(context, "viewState").getString(key);
+        return stringValue("viewState", key);
     }
 
     static JSONArray viewStateArray(Context context, String key) throws Exception {
@@ -87,6 +87,14 @@ final class FolioleCompanionWorkspaceReadQueryRules {
 
     private static JSONObject group(Context context, String groupName) throws Exception {
         return FolioleCompanionQueryAssetKeys.ruleGroup(context, "workspaceRead", groupName);
+    }
+
+    private static String stringValue(String groupName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.string("workspaceRead", groupName, key);
+    }
+
+    private static String nestedStringValue(String groupName, String objectName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.nestedString("workspaceRead", groupName, objectName, key);
     }
 
     private static String nestedPayloadKey(Context context, String key) throws Exception {

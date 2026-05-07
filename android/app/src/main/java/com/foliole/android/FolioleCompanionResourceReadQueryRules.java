@@ -13,7 +13,7 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String attachmentString(Context context, String key) throws Exception {
-        return group(context, "attachmentResources").getString(key);
+        return stringValue("attachmentResources", key);
     }
 
     static JSONObject attachmentObject(Context context, String key) throws Exception {
@@ -21,19 +21,19 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String attachmentBatchResponseKey(Context context, String key) throws Exception {
-        return attachmentObject(context, "batchResponseKeys").getString(key);
+        return nestedStringValue("attachmentResources", "batchResponseKeys", key);
     }
 
     static String attachmentResolveResponseKey(Context context, String key) throws Exception {
-        return attachmentObject(context, "resolveResponseKeys").getString(key);
+        return nestedStringValue("attachmentResources", "resolveResponseKeys", key);
     }
 
     static String attachmentResolveStatus(Context context, String key) throws Exception {
-        return attachmentObject(context, "resolveStatuses").getString(key);
+        return nestedStringValue("attachmentResources", "resolveStatuses", key);
     }
 
     static String attachmentSyncResponseKey(Context context, String key) throws Exception {
-        return attachmentObject(context, "syncResponseKeys").getString(key);
+        return nestedStringValue("attachmentResources", "syncResponseKeys", key);
     }
 
     static String attachmentRowString(Context context, JSONObject row, String key) throws Exception {
@@ -41,7 +41,7 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String contentBlobString(Context context, String key) throws Exception {
-        return group(context, "contentBlobs").getString(key);
+        return stringValue("contentBlobs", key);
     }
 
     static JSONObject contentBlobObject(Context context, String key) throws Exception {
@@ -49,7 +49,7 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String contentBlobCasString(Context context, String key) throws Exception {
-        return group(context, "contentBlobCas").getString(key);
+        return stringValue("contentBlobCas", key);
     }
 
     static JSONObject contentBlobCasObject(Context context, String key) throws Exception {
@@ -65,11 +65,11 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String contentBlobBatchResponseKey(Context context, String key) throws Exception {
-        return contentBlobObject(context, "batchResponseKeys").getString(key);
+        return nestedStringValue("contentBlobs", "batchResponseKeys", key);
     }
 
     static String contentBlobSyncResponseKey(Context context, String key) throws Exception {
-        return contentBlobObject(context, "syncResponseKeys").getString(key);
+        return nestedStringValue("contentBlobs", "syncResponseKeys", key);
     }
 
     static long contentBlobRowLong(Context context, JSONObject row, String key) throws Exception {
@@ -85,7 +85,7 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String pdfPageTextString(Context context, String key) throws Exception {
-        return group(context, "pdfPageText").getString(key);
+        return stringValue("pdfPageText", key);
     }
 
     static JSONObject pdfPageTextObject(Context context, String key) throws Exception {
@@ -97,7 +97,7 @@ final class FolioleCompanionResourceReadQueryRules {
     }
 
     static String pdfPageTextOutputKey(Context context, String key) throws Exception {
-        return pdfPageTextObject(context, "outputKeys").getString(key);
+        return nestedStringValue("pdfPageText", "outputKeys", key);
     }
 
     static String pdfPageTextRowString(Context context, JSONObject row, String key) throws Exception {
@@ -122,5 +122,13 @@ final class FolioleCompanionResourceReadQueryRules {
 
     private static JSONObject group(Context context, String groupName) throws Exception {
         return FolioleCompanionQueryAssetKeys.ruleGroup(context, "resourceRead", groupName);
+    }
+
+    private static String stringValue(String groupName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.string("resourceRead", groupName, key);
+    }
+
+    private static String nestedStringValue(String groupName, String objectName, String key) {
+        return FolioleCompanionResourceQueryStringKeys.nestedString("resourceRead", groupName, objectName, key);
     }
 }

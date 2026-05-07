@@ -28,8 +28,7 @@ final class FolioleCompanionQueryAssetKeys {
     }
 
     static String key(Context context, String key) throws Exception {
-        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
-        return assetKey(payload, key);
+        return FolioleCompanionQueryDefinitionShapeKeys.assetKey(key);
     }
 
     private static String ruleGroupKey(JSONObject rules, String groupName) throws Exception {
