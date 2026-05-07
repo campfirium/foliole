@@ -61,6 +61,7 @@ export async function loadCompanionSyncObjects(
 }
 
 export {
+  loadCompanionMissingContentBlobBatch,
   loadCompanionMissingContentBlobHashes,
   loadCompanionMissingContentBlobs,
   syncCompanionContentBlob,

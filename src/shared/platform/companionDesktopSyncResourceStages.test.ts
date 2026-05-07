@@ -23,7 +23,7 @@ async function testStopsContentPassAtResourceBudget() {
 
   expect(result.contentBlobError).toBeNull();
   expect(result.syncedContentBlobHashes).toHaveLength(CONTENT_BLOB_BATCH_LIMIT);
-  expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledTimes(2);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledTimes(1);
   expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
 }
 

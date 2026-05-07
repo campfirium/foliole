@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ANDROID_PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'android-preview.sh');
+const { hasPairingCredentials } = await import('./android-preview-sync-state.mjs');
 
 function runAndroidPreview(cwd, env = {}) {
   return new Promise((resolve) => {
@@ -43,6 +44,12 @@ async function writeExecutable(rootDir, relativePath, content) {
 }
 
 describe('android-preview sync readiness check', () => {
+  it('recognizes current and legacy native pairing preference keys', () => {
+    expect(hasPairingCredentials('<string name="device_id">a</string><string name="device_secret">b</string>')).toBe(true);
+    expect(hasPairingCredentials('<string name="pairing_device_id">a</string><string name="pairing_device_secret">b</string>')).toBe(true);
+    expect(hasPairingCredentials('<string name="device_id">a</string>')).toBe(false);
+  });
+
   it('can report sync readiness after deploy without blocking preview', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-sync-state-'));
     try {

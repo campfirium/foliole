@@ -27,6 +27,7 @@ final class FolioleCompanionContentBlobMissingStore {
         JSObject result = new JSObject();
         result.put(FolioleCompanionMissingResourceQueryRules.contentHashesResultKey(context), hashes);
         result.put(FolioleCompanionMissingResourceQueryRules.contentResultKey(context), blobs);
+        putSummary(context, result, summarizeMissingBodies(context, database));
         return result;
     }
 
@@ -57,6 +58,13 @@ final class FolioleCompanionContentBlobMissingStore {
         summary.put(summaryKey(context, "failedCount"), failedCount);
         summary.put(summaryKey(context, "failedBytes"), failedBytes);
         return summary;
+    }
+
+    private static void putSummary(Context context, JSObject target, JSObject summary) throws Exception {
+        target.put(summaryKey(context, "count"), summary.optLong(summaryKey(context, "count"), 0));
+        target.put(summaryKey(context, "bytes"), summary.optLong(summaryKey(context, "bytes"), 0));
+        target.put(summaryKey(context, "failedCount"), summary.optLong(summaryKey(context, "failedCount"), 0));
+        target.put(summaryKey(context, "failedBytes"), summary.optLong(summaryKey(context, "failedBytes"), 0));
     }
 
     private static String hashString(Context context, JSONObject row) throws Exception {

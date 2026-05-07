@@ -2,7 +2,8 @@ import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../.
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventSemantics';
 
-import { formatSyncResultMessage, isReportableSyncEvent } from './companionSyncActivityCopy';
+import { isReportableSyncEvent } from './companionSyncActivityCopy';
+import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
 import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
@@ -85,38 +86,6 @@ function formatEventStatus(event: NativeCompanionSyncEvent) {
   return 'Started';
 }
 
-function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
-  if (event.status === 'completed') {
-    return formatSyncResultMessage(event.message);
-  }
-  if (event.status === 'failed') {
-    return isSupersededFailure(event, laterEvents)
-      ? `Earlier issue: ${event.message}`
-      : event.message;
-  }
-  if (event.status === 'skipped') {
-    return formatSyncResultMessage(event.message);
-  }
-  return event.message;
-}
-
-function isSupersededFailure(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
-  return event.status === 'failed' && laterEvents.some((laterEvent) => (
-    (laterEvent.status === 'completed' || laterEvent.status === 'skipped') &&
-    laterEvent.endpoint_url === event.endpoint_url
-  ));
-}
-
-function statusClass(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
-  if (event.status === 'failed' && !isSupersededFailure(event, laterEvents)) {
-    return 'text-error';
-  }
-  if (isFullSyncCompletedEvent(event)) {
-    return 'text-companion-accent';
-  }
-  return 'text-companion-text-secondary';
-}
-
 function SyncActivitySummary(props: {
   events: NativeCompanionSyncEvent[];
   onOpen(): void;
@@ -127,26 +96,6 @@ function SyncActivitySummary(props: {
     : 'No activity';
   return (
     <SettingsLinkRow detail="Sync history" label="Activity" onClick={props.onOpen} value={summary} />
-  );
-}
-
-function ActivityPage(props: { events: NativeCompanionSyncEvent[] }) {
-  const visibleEvents = props.events.filter(isReportableSyncEvent);
-  return (
-    <section className="border-t border-companion-divider">
-      {visibleEvents.length === 0 ? (
-        <p className="border-b border-companion-divider py-4 text-sm leading-6 text-companion-text-secondary">
-          No sync activity yet.
-        </p>
-      ) : visibleEvents.slice(0, 20).map((event, index, mappedEvents) => (
-        <div className="grid grid-cols-[4.5rem_1fr] gap-3 border-b border-companion-divider py-3 text-sm leading-5" key={event.id}>
-          <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at)}</span>
-          <span className={statusClass(event, mappedEvents.slice(0, index))}>
-            {formatActivityMessage(event, mappedEvents.slice(0, index))}
-          </span>
-        </div>
-      ))}
-    </section>
   );
 }
 
@@ -188,7 +137,7 @@ export function CompanionSyncStatusDetails(props: {
   onOpenPage(page: CompanionSettingsPage): void;
 }) {
   if (props.page === 'syncActivity') {
-    return <ActivityPage events={props.syncEvents} />;
+    return <CompanionSyncActivityPage events={props.syncEvents} status={props.status} syncProgress={props.syncProgress} />;
   }
   if (props.page === 'syncConnection') {
     return <ConnectionPage endpointUrl={props.endpointUrl} pairingState={props.pairingState} />;

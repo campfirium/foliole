@@ -38,7 +38,14 @@ export interface CompanionWorkspaceSyncPlugin {
   loadSyncStateChanges(args: { cursor: number | null; limit?: number }): Promise<{ objects: NativeSyncStateObjectRecord[] }>;
   loadMissingContentBlobHashes(args: {
     limit?: number;
-  }): Promise<{ blobs?: Array<{ hash: string; size_bytes?: number }>; hashes: string[] }>;
+  }): Promise<{
+    blobs?: Array<{ hash: string; size_bytes?: number }>;
+    failed_content_blob_bytes?: number;
+    failed_content_blob_count?: number;
+    hashes: string[];
+    missing_content_blob_bytes?: number;
+    missing_content_blob_count?: number;
+  }>;
   syncContentBlobs(args: { body: string; headers: Record<string, string>; url: string }): Promise<{
     db_elapsed_ms?: number;
     http_elapsed_ms?: number;

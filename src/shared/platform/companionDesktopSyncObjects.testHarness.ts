@@ -14,7 +14,13 @@ export const syncBridgeMock = {
     to_state_seq: 8
   })),
   loadCompanionMissingAttachmentResources: vi.fn(async () => [] as Array<{ attachment_id: string; content_hash: string; size_bytes?: number }>),
-  loadCompanionMissingContentBlobs: vi.fn(async () => [] as Array<{ hash: string; size_bytes?: number }>),
+  loadCompanionMissingContentBlobBatch: vi.fn(async (limit: number) => {
+    const blobs = await syncBridgeMock.loadCompanionMissingContentBlobs(limit);
+    return { blobs, failedBytes: null, failedCount: null, hashes: blobs.map((blob) => blob.hash), total: null, totalBytes: null };
+  }),
+  loadCompanionMissingContentBlobs: vi.fn<(_limit?: number) => Promise<Array<{ hash: string; size_bytes?: number }>>>(
+    async () => []
+  ),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as Array<{ op_id: string; reviewed_at: string }>),
@@ -90,6 +96,10 @@ export function resetCompanionDesktopSyncMocks() {
     to_state_seq: 8
   });
   syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValue([]);
+  syncBridgeMock.loadCompanionMissingContentBlobBatch.mockImplementation(async (limit: number) => {
+    const blobs = await syncBridgeMock.loadCompanionMissingContentBlobs(limit);
+    return { blobs, failedBytes: null, failedCount: null, hashes: blobs.map((blob) => blob.hash), total: null, totalBytes: null };
+  });
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue([]);
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
   syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);

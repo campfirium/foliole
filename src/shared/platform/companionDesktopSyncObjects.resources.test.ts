@@ -63,7 +63,6 @@ async function testReportsAttachmentBreakdown() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   diagnosticsMock.loadLocalSyncDiagnostics
-    .mockResolvedValueOnce(null)
     .mockResolvedValueOnce({
       content: {
         missing_active_topic_attachment_resource_count: 1,

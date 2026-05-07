@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 
-function renderActivity(events: ComponentProps<typeof CompanionSyncStatusDetails>['syncEvents']) {
+function renderActivity(
+  events: ComponentProps<typeof CompanionSyncStatusDetails>['syncEvents'],
+  overrides: Partial<Pick<ComponentProps<typeof CompanionSyncStatusDetails>, 'status' | 'syncProgress'>> = {}
+) {
   render(
     <CompanionSyncStatusDetails
       endpointUrl="http://10.0.2.2:38641"
@@ -18,10 +21,10 @@ function renderActivity(events: ComponentProps<typeof CompanionSyncStatusDetails
         is_paired: true,
         paired_at: '2026-04-22T09:00:00.000Z'
       }}
-      status="idle"
+      status={overrides.status ?? 'idle'}
       syncConflictCount={0}
       syncEvents={events}
-      syncProgress={null}
+      syncProgress={overrides.syncProgress ?? null}
     />
   );
 }
@@ -53,5 +56,36 @@ describe('CompanionSyncStatusDetails activity', () => {
       'Desktop HTTP request failed. Cause: ConnectException: Failed to connect to /10.0.2.2:38641.'
     )).toBeInTheDocument();
     expect(screen.queryByText('Desktop sync failed.')).not.toBeInTheDocument();
+  });
+
+  it('shows the current sync stage above historical events', () => {
+    renderActivity([{
+      endpoint_url: 'http://10.0.2.2:38641',
+      id: 'auto-started',
+      message: 'Auto sync started.',
+      occurred_at: '2026-05-07T23:12:00.000Z',
+      status: 'started'
+    }], {
+      status: 'syncing',
+      syncProgress: {
+        completed: 12,
+        completedBytes: 2_097_152,
+        phase: 'content',
+        total: 585,
+        totalBytes: 10_066_330
+      }
+    });
+
+    expect(screen.getByText('Now')).toBeInTheDocument();
+    expect(screen.getByText('Topic bodies; 12/585 - 2.0 MB/9.6 MB')).toBeInTheDocument();
+    expect(screen.getByText('Auto sync started.')).toBeInTheDocument();
+  });
+
+  it('shows an in-flight sync even before the first progress callback', () => {
+    renderActivity([], { status: 'syncing' });
+
+    expect(screen.getByText('Now')).toBeInTheDocument();
+    expect(screen.getByText('Syncing; waiting for the next progress update.')).toBeInTheDocument();
+    expect(screen.queryByText('No sync activity yet.')).not.toBeInTheDocument();
   });
 });

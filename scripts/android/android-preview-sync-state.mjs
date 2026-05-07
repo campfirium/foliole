@@ -76,10 +76,16 @@ async function readPairingPresence(options) {
   try {
     const body = await readDeviceFile(options, PAIRING_PREFS_PATH);
     const xml = body.toString('utf8');
-    return /pairing_device_id/.test(xml) && /pairing_device_secret/.test(xml);
+    return hasPairingCredentials(xml);
   } catch {
     return false;
   }
+}
+
+function hasPairingCredentials(xml) {
+  const hasDeviceId = /name="(?:pairing_)?device_id"/.test(xml);
+  const hasDeviceSecret = /name="(?:pairing_)?device_secret"/.test(xml);
+  return hasDeviceId && hasDeviceSecret;
 }
 
 async function inspectPreviewSyncState(options) {
@@ -139,4 +145,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     });
 }
 
-export { inspectPreviewSyncState };
+export { hasPairingCredentials, inspectPreviewSyncState };

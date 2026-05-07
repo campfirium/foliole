@@ -80,7 +80,6 @@ async function testStructureTimeoutStaysBelowMinute() {
 async function testReportsRemainingStructureLagFromFinalDiagnostics() {
   diagnosticsMock.loadLocalSyncDiagnostics
     .mockResolvedValueOnce(null)
-    .mockResolvedValueOnce(null)
     .mockResolvedValueOnce({
       content: {
         missing_attachment_resource_bytes: 0,
