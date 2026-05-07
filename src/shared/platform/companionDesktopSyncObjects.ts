@@ -1,9 +1,9 @@
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
-  COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS,
-  pullMissingAttachmentResources,
-  pullMissingContentBlobs
-} from './companionDesktopSyncResources';
+  createEmptyResourceStages,
+  createSkippedResourceSummary,
+  pullResourceStages
+} from './companionDesktopSyncResourceStages';
 import { loadCompanionDesktopSyncSummary } from './companionDesktopSyncSummary';
 import type {
   CompanionDesktopSyncOptions,
@@ -104,82 +104,8 @@ async function withSyncStepTimeout<T>(
   }
 }
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Desktop content blob sync failed.';
-}
-
 function pushErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Desktop sync push failed.';
-}
-
-async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
-  const startedAt = Date.now();
-  const contentPull = (async () => {
-    const contentStartedAt = Date.now();
-    const blobs = await withSyncStepTimeout(
-      'fetching topic bodies',
-      pullMissingContentBlobs(endpointUrl, onProgress),
-      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
-    );
-    return { ...blobs, syncedContentBlobElapsedMs: Date.now() - contentStartedAt };
-  })();
-  const attachmentPull = (async () => {
-    const attachmentStartedAt = Date.now();
-    const attachments = await withSyncStepTimeout(
-      'fetching attachment resources',
-      pullMissingAttachmentResources(endpointUrl, onProgress),
-      COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS
-    );
-    return { ...attachments, syncedAttachmentResourceElapsedMs: Date.now() - attachmentStartedAt };
-  })();
-  const [content, attachments] = await Promise.allSettled([contentPull, attachmentPull]);
-  const contentValue = content.status === 'fulfilled' ? content.value : null;
-  const attachmentValue = attachments.status === 'fulfilled' ? attachments.value : null;
-  return {
-    attachmentResourceError: attachments.status === 'rejected' ? errorMessage(attachments.reason) : null,
-    contentBlobError: content.status === 'rejected' ? errorMessage(content.reason) : null,
-    syncedAttachmentResourceElapsedMs: attachmentValue?.syncedAttachmentResourceElapsedMs ?? 0,
-    syncedAttachmentIds: attachmentValue?.syncedAttachmentIds ?? [],
-    syncedAttachmentResourceBytes: attachmentValue?.syncedAttachmentResourceBytes ?? 0,
-    syncedContentBlobElapsedMs: contentValue?.syncedContentBlobElapsedMs ?? 0,
-    syncedContentBlobNativeTiming: contentValue?.syncedContentBlobNativeTiming,
-    syncedContentBlobBytes: contentValue?.syncedContentBlobBytes ?? 0,
-    syncedContentBlobHashes: contentValue?.syncedContentBlobHashes ?? [],
-    syncedResourceElapsedMs: Date.now() - startedAt
-  };
-}
-
-function createEmptyResourceStages() {
-  return {
-    attachmentResourceError: null,
-    contentBlobError: null,
-    syncedAttachmentResourceElapsedMs: 0,
-    syncedAttachmentIds: [],
-    syncedAttachmentResourceBytes: 0,
-    syncedContentBlobElapsedMs: 0,
-    syncedContentBlobBytes: 0,
-    syncedContentBlobHashes: [],
-    syncedResourceElapsedMs: 0
-  };
-}
-
-function createSkippedResourceSummary() {
-  return {
-    localDirtyCount: 0,
-    pendingAckCount: 0,
-    pushIssueCount: 0,
-    remainingAttachmentBreakdown: undefined,
-    remainingAttachmentResourceBytes: null,
-    remainingAttachmentResourceCount: null,
-    remainingFailedAttachmentResourceBytes: null,
-    remainingFailedAttachmentResourceCount: null,
-    remainingContentBreakdown: undefined,
-    remainingContentBlobBytes: null,
-    remainingContentBlobCount: null,
-    remainingFailedContentBlobBytes: null,
-    remainingFailedContentBlobCount: null,
-    remainingStructureChangeCount: 0
-  };
 }
 
 function mergeCompanionObjectsSyncResult(args: {
