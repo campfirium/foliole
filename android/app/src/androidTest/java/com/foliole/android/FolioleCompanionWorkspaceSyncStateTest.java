@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -12,6 +13,8 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,6 +61,60 @@ public class FolioleCompanionWorkspaceSyncStateTest {
         assertEquals("2026-05-01T02:01:00.000Z", checked.getString("last_synced_at"));
         assertFalse(completed.has("workspace_snapshot") && !completed.isNull("workspace_snapshot"));
         assertFalse(checked.has("workspace_snapshot") && !checked.isNull("workspace_snapshot"));
+    }
+
+    @Test
+    public void runFinishedBlockedEventKeepsRunMetadataWithoutLastSyncedAt() throws Exception {
+        JSObject blocked = helper.recordWorkspaceSyncEvent(
+            "http://10.0.2.2:38641",
+            "skipped",
+            "Sync checked; 2 device changes need review before sending.",
+            "2026-05-01T02:01:00.000Z",
+            "run_finished",
+            "blocked",
+            "run-1",
+            "2026-05-01T02:00:00.000Z"
+        );
+        JSONArray events = blocked.getJSONArray("sync_events");
+        JSONObject event = events.getJSONObject(0);
+
+        assertEquals("run_finished", event.getString("kind"));
+        assertEquals("blocked", event.getString("result"));
+        assertEquals("run-1", event.getString("run_id"));
+        assertFalse(blocked.has("last_synced_at") && !blocked.isNull("last_synced_at"));
+    }
+
+    @Test
+    public void syncEventHistoryKeepsTwentyFinishedRuns() throws Exception {
+        for (int index = 0; index < 21; index += 1) {
+            helper.recordWorkspaceSyncEvent("http://10.0.2.2:38641", "started", "Auto sync started.", "2026-05-01T02:00:00.000Z", "run_started", null, "run-" + index, "2026-05-01T02:00:00.000Z");
+            helper.recordWorkspaceSyncEvent("http://10.0.2.2:38641", "skipped", "Sync checked; 1 device change needs review before sending.", "2026-05-01T02:00:30.000Z", "run_finished", "blocked", "run-" + index, "2026-05-01T02:00:00.000Z");
+        }
+        JSObject state = helper.loadWorkspaceSyncState();
+        JSONArray events = state.getJSONArray("sync_events");
+
+        assertEquals(40, events.length());
+        assertTrue(events.toString().contains("run-20"));
+        assertFalse(events.toString().contains("run-0"));
+    }
+
+    @Test
+    public void syncEventHistoryKeepsStartedRunUntilFinalEventArrives() throws Exception {
+        JSObject started = helper.recordWorkspaceSyncEvent(
+            "http://10.0.2.2:38641",
+            "started",
+            "Sync started.",
+            "2026-05-01T02:00:00.000Z",
+            "run_started",
+            null,
+            "run-started-only",
+            "2026-05-01T02:00:00.000Z"
+        );
+        JSONArray events = started.getJSONArray("sync_events");
+
+        assertEquals(1, events.length());
+        assertEquals("run_started", events.getJSONObject(0).getString("kind"));
+        assertEquals("run-started-only", events.getJSONObject(0).getString("run_id"));
     }
 
     @Test

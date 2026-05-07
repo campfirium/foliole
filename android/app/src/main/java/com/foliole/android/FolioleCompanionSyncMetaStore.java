@@ -6,13 +6,11 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 final class FolioleCompanionSyncMetaStore {
 
@@ -33,7 +31,7 @@ final class FolioleCompanionSyncMetaStore {
         result.put(syncMetaOutputKey(context, "endpointUrl"), endpointUrl);
         result.put(syncMetaOutputKey(context, "lastSyncedAt"), lastSyncedAt);
         result.put(syncMetaOutputKey(context, "rememberedTargets"), new JSONArray(loadRememberedTargets(context, database)));
-        result.put(syncMetaOutputKey(context, "syncEvents"), new JSONArray(loadSyncEvents(context, database)));
+        result.put(syncMetaOutputKey(context, "syncEvents"), new JSONArray(FolioleCompanionSyncEventStore.load(context, database)));
         result.put(syncMetaOutputKey(context, "syncOnboardingStatus"), loadSyncOnboardingStatus(context, database, lastSyncedAt, workspaceSnapshot));
         result.put(syncMetaOutputKey(context, "workspaceSnapshot"), workspaceSnapshot);
         return result;
@@ -45,9 +43,17 @@ final class FolioleCompanionSyncMetaStore {
         String endpointUrl,
         String status,
         String message,
-        String occurredAt
+        String occurredAt,
+        String kind,
+        String result,
+        String runId,
+        String startedAt
     ) throws Exception {
-        saveSyncEvent(context, database, endpointUrl, status, message, occurredAt);
+        FolioleCompanionSyncEventStore.save(
+            context,
+            database,
+            new FolioleCompanionSyncEventStore.SyncEventInput(endpointUrl, status, message, occurredAt, kind, result, runId, startedAt)
+        );
         return loadWorkspaceSyncState(context, database, false);
     }
 
@@ -82,55 +88,6 @@ final class FolioleCompanionSyncMetaStore {
             }
         }
         return loadWorkspaceSyncState(context, database);
-    }
-
-    private static List<JSONObject> loadSyncEvents(Context context, SQLiteDatabase database) throws Exception {
-        String stored = FolioleCompanionMetaRecords.loadValue(context, database, syncMetaKey(context, "events"));
-        List<JSONObject> events = new ArrayList<>();
-        if (stored == null || stored.trim().isEmpty()) {
-            return events;
-        }
-        JSONArray items = new JSONArray(stored);
-        for (int index = 0; index < items.length(); index += 1) {
-            JSONObject event = items.optJSONObject(index);
-            if (event != null) {
-                events.add(event);
-            }
-        }
-        return events;
-    }
-
-    private static void saveSyncEvent(Context context, SQLiteDatabase database, String endpointUrl, String status, String message, String occurredAt) throws Exception {
-        List<JSONObject> events = loadSyncEvents(context, database);
-        JSONArray nextEvents = new JSONArray();
-        String normalizedStatus = normalizeSyncEventStatus(context, status);
-        String normalizedOccurredAt = occurredAt == null || occurredAt.trim().isEmpty() ? Instant.now().toString() : occurredAt.trim();
-        JSONObject event = new JSONObject();
-        event.put(syncEventRecordKey(context, "id"), UUID.randomUUID().toString());
-        event.put(syncEventRecordKey(context, "endpointUrl"), endpointUrl == null || endpointUrl.trim().isEmpty() ? JSONObject.NULL : endpointUrl.trim());
-        event.put(syncEventRecordKey(context, "status"), normalizedStatus);
-        event.put(syncEventRecordKey(context, "message"), message == null || message.trim().isEmpty() ? normalizedStatus : message.trim());
-        event.put(syncEventRecordKey(context, "occurredAt"), normalizedOccurredAt);
-        nextEvents.put(event);
-        for (int index = 0; index < events.size() && index < 19; index += 1) {
-            nextEvents.put(events.get(index));
-        }
-        FolioleCompanionMetaRecords.saveValue(context, database, syncMetaKey(context, "events"), nextEvents.toString(), Instant.now().toString());
-        if (
-            syncEventSkippedStatus(context).equals(normalizedStatus) ||
-            (syncEventCompletedStatus(context).equals(normalizedStatus) && syncEventFullCompletedMessage(context).equals(event.optString(syncEventRecordKey(context, "message"))))
-        ) {
-            FolioleCompanionMetaRecords.saveValue(context, database, syncMetaKey(context, "lastSyncedAt"), normalizedOccurredAt, normalizedOccurredAt);
-        }
-    }
-
-    private static String normalizeSyncEventStatus(Context context, String status) throws Exception {
-        String fallbackStatus = syncEventFallbackStatus(context);
-        if (status == null) {
-            return fallbackStatus;
-        }
-        String normalized = status.trim();
-        return syncEventStatuses(context).contains(normalized) ? normalized : fallbackStatus;
     }
 
     private static List<String> loadRememberedTargets(Context context, SQLiteDatabase database) throws Exception {
@@ -194,26 +151,6 @@ final class FolioleCompanionSyncMetaStore {
         return syncOnboardingStatuses(context).contains(normalized);
     }
 
-    private static Set<String> syncEventStatuses(Context context) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncEvents", "statuses");
-    }
-
-    private static String syncEventCompletedStatus(Context context) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "completedStatus");
-    }
-
-    private static String syncEventFallbackStatus(Context context) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fallbackStatus");
-    }
-
-    private static String syncEventFullCompletedMessage(Context context) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "fullSyncCompletedMessage");
-    }
-
-    private static String syncEventSkippedStatus(Context context) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEvents", "skippedStatus");
-    }
-
     private static Set<String> syncOnboardingStatuses(Context context) throws Exception {
         return FolioleCompanionSyncProtocolDefinitions.stringSet(context, "syncOnboarding", "statuses");
     }
@@ -238,7 +175,4 @@ final class FolioleCompanionSyncMetaStore {
         return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncMetaOutputKeys", key);
     }
 
-    private static String syncEventRecordKey(Context context, String key) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.stringValue(context, "syncEventRecordKeys", key);
-    }
 }

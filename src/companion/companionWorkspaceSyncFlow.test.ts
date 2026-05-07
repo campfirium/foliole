@@ -29,7 +29,9 @@ async function testUsesStreamSyncDirectly() {
   );
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync fully completed.',
+    message: 'All stages completed.',
+    result: 'completed',
+    kind: 'run_finished',
     status: 'completed'
   }));
   expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
@@ -59,98 +61,8 @@ async function testUsesRememberedSyncTarget() {
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     endpointUrl: 'http://192.168.1.44:38641',
+    kind: 'run_started',
     status: 'started'
-  }));
-}
-
-async function testKeepsUnreachableDesktopQuiet() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue(new Error('Desktop unreachable.'));
-  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-  const setError = vi.fn();
-  const setStatus = vi.fn();
-
-  const outcome = await tryForegroundAutoSync({
-    cancelled: () => false,
-    setError,
-    setReadableArticle: vi.fn(),
-    setState: vi.fn(),
-    setSyncProgress: vi.fn(),
-    setStatus,
-    state: createSyncState()
-  });
-
-  expect(setError).toHaveBeenCalledWith('Desktop unreachable.');
-  expect(outcome).toBe('failed');
-  expect(setStatus).toHaveBeenLastCalledWith('idle');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Desktop unreachable.',
-    status: 'failed'
-  }));
-}
-
-async function testRecordsStructureApplyFailureCause() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue(new Error(
-    'Failed to apply companion desktop sync pack. ambiguous column name: hash'
-  ));
-  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-
-  const outcome = await tryForegroundAutoSync({
-    cancelled: () => false,
-    setError: vi.fn(),
-    setReadableArticle: vi.fn(),
-    setState: vi.fn(),
-    setSyncProgress: vi.fn(),
-    setStatus: vi.fn(),
-    state: createSyncState()
-  });
-
-  expect(outcome).toBe('failed');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Topic list sync failed: ambiguous column name: hash',
-    status: 'failed'
-  }));
-}
-
-async function testRecordsNativeBridgeFailureCause() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue({
-    message: 'Desktop HTTP request failed. Cause: ConnectException: Failed to connect to /10.0.2.2:38641.'
-  });
-  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-
-  const outcome = await tryForegroundAutoSync({
-    cancelled: () => false,
-    setError: vi.fn(),
-    setReadableArticle: vi.fn(),
-    setState: vi.fn(),
-    setSyncProgress: vi.fn(),
-    setStatus: vi.fn(),
-    state: createSyncState()
-  });
-
-  expect(outcome).toBe('failed');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Desktop HTTP request failed. Cause: ConnectException: Failed to connect to /10.0.2.2:38641.',
-    status: 'failed'
-  }));
-}
-
-async function testRecordsMissingFailureDetails() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue({});
-  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-
-  await tryForegroundAutoSync({
-    cancelled: () => false,
-    setError: vi.fn(),
-    setReadableArticle: vi.fn(),
-    setState: vi.fn(),
-    setSyncProgress: vi.fn(),
-    setStatus: vi.fn(),
-    state: createSyncState()
-  });
-
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Desktop sync failed: no error details were returned.',
-    status: 'failed'
   }));
 }
 
@@ -172,7 +84,9 @@ async function testRecordsStructureLagWithoutCompleting() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; 4 topic list changes are still applying.',
+    kind: 'run_finished',
+    message: 'Topic list confirmation is still pending.',
+    result: 'partial',
     status: 'skipped'
   }));
 }
@@ -226,7 +140,15 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; local changes are still waiting to settle.',
+    kind: 'stage_finished',
+    message: 'Android changes are waiting for desktop confirmation; 1 change pending.',
+    result: 'blocked',
+    status: 'skipped'
+  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished',
+    message: 'Android changes are still waiting to settle.',
+    result: 'blocked',
     status: 'skipped'
   }));
 }
@@ -237,14 +159,6 @@ describe('tryForegroundAutoSync', () => {
   it('uses stream sync directly without pulling the legacy workspace snapshot', testUsesStreamSyncDirectly);
 
   it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
-
-  it('surfaces unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
-
-  it('records structure apply failure causes in sync activity', testRecordsStructureApplyFailureCause);
-
-  it('records native bridge failure causes in sync activity', testRecordsNativeBridgeFailureCause);
-
-  it('records when a failed sync returns no error details', testRecordsMissingFailureDetails);
 
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 

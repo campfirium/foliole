@@ -3,8 +3,12 @@ import type { WorkspaceSnapshot } from '../core/database/workspaceSnapshot.js';
 export interface NativeCompanionSyncEvent {
   endpoint_url: string | null;
   id: string;
+  kind?: 'diagnostic' | 'legacy_event' | 'run_finished' | 'run_started' | 'stage_finished';
   message: string;
   occurred_at: string;
+  result?: 'blocked' | 'cancelled' | 'completed' | 'failed' | 'partial';
+  run_id?: string;
+  started_at?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';
 }
 

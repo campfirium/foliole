@@ -2,6 +2,7 @@ import type {
   NativeCompanionPairingState,
   NativeCompanionReadableArticlePayload,
   NativeCompanionSignedRequestHeaders,
+  NativeCompanionSyncEvent,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
 import type {
@@ -136,8 +137,12 @@ export interface CompanionWorkspaceSyncPlugin {
   removeWorkspaceSyncRememberedTarget(args: { endpoint_url: string }): Promise<NativeCompanionWorkspaceSyncState>;
   recordWorkspaceSyncEvent(args: {
     endpoint_url: string | null;
+    kind?: NativeCompanionSyncEvent['kind'];
     message: string;
     occurred_at: string;
+    result?: NativeCompanionSyncEvent['result'];
+    run_id?: string;
+    started_at?: string;
     status: 'completed' | 'failed' | 'skipped' | 'started';
   }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncOnboardingStatus(args: {

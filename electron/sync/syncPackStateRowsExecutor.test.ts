@@ -13,16 +13,13 @@ it('writes clean local state rows from applyable sync pack rows', async () => {
   })).resolves.toBe(2);
 
   expect(port.query).toHaveBeenCalledWith('SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state');
-  expect(port.query).toHaveBeenCalledWith(expect.stringContaining('WHERE object_type IN (?, ?)'), ['node', 'setting']);
-  expect(port.run).toHaveBeenNthCalledWith(
-    1,
+  expect(port.run).toHaveBeenCalledWith(
     expect.stringContaining('INSERT OR REPLACE INTO sync_object_state'),
-    ['node', 'node-1', 8, 'desktop#1', 'hash-node', 'android-device', '2026-05-04T01:00:00.000Z', null]
+    ['node', 'setting', 8, 'android-device']
   );
-  expect(port.run).toHaveBeenNthCalledWith(
-    2,
-    expect.stringContaining('INSERT OR REPLACE INTO sync_object_state'),
-    ['setting', 'setting-1', 9, null, 'hash-setting', 'android-device', '2026-05-04T01:01:00.000Z', null]
+  expect(port.query).toHaveBeenCalledWith(
+    expect.stringContaining('SELECT COUNT(*) AS count'),
+    ['node', 'setting']
   );
 });
 
@@ -30,29 +27,9 @@ function createPort(): DbPort {
   return {
     query: vi.fn(async (sql: string) => {
       if (sql.includes('MAX(state_seq)')) return [{ next_state_seq: 8 }];
-      return [
-        stateRow('node', 'node-1', 'hash-node', 'desktop#1', '2026-05-04T01:00:00.000Z'),
-        stateRow('setting', 'setting-1', 'hash-setting', null, '2026-05-04T01:01:00.000Z')
-      ];
+      return [{ count: 2 }];
     }),
     run: vi.fn(async () => ({ changes: 1, lastInsertRowId: null })),
     transaction: vi.fn()
   } as never;
-}
-
-function stateRow(
-  objectType: string,
-  objectId: string,
-  contentHash: string,
-  currentVersionId: string | null,
-  updatedAt: string
-) {
-  return {
-    content_hash: contentHash,
-    current_version_id: currentVersionId,
-    deleted_at: null,
-    object_id: objectId,
-    object_type: objectType,
-    updated_at: updatedAt
-  };
 }

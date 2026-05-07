@@ -11,25 +11,18 @@ interface NextSeqRow extends DbRow {
 }
 
 interface PackStateRow extends DbRow {
-  content_hash: string;
-  current_version_id: string | null;
-  deleted_at: string | null;
-  object_id: string;
-  object_type: string;
-  updated_at: string;
+  count: number;
 }
 
 export async function applySyncPackStateRowsWithDbPort(
   port: DbPort,
   options: SyncPackStateRowsApplyOptions
 ) {
-  const rows = await loadPackStateRows(port, options);
-  let nextStateSeq = await loadNextStateSeq(port);
-  for (const row of rows) {
-    await insertCleanStateRow(port, row, options.deviceId, nextStateSeq);
-    nextStateSeq += 1;
-  }
-  return rows.length;
+  const objectTypes = normalizedObjectTypes(options);
+  if (objectTypes.length === 0) return 0;
+  const nextStateSeq = await loadNextStateSeq(port);
+  await insertCleanStateRows(port, options, objectTypes, nextStateSeq);
+  return await loadPackStateRowCount(port, options, objectTypes);
 }
 
 async function loadNextStateSeq(port: DbPort) {
@@ -37,9 +30,8 @@ async function loadNextStateSeq(port: DbPort) {
   return rows[0]?.next_state_seq ?? 1;
 }
 
-function loadPackStateRows(port: DbPort, options: SyncPackStateRowsApplyOptions) {
-  const alias = options.incomingAlias ?? 'inc';
-  const objectTypes = options.objectTypes ?? [
+function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
+  return options.objectTypes ?? [
     'attachment',
     'external_folder',
     'import_source',
@@ -51,33 +43,41 @@ function loadPackStateRows(port: DbPort, options: SyncPackStateRowsApplyOptions)
     'setting',
     'view_state'
   ];
-  if (objectTypes.length === 0) return Promise.resolve([]);
-  return port.query<PackStateRow>(
-    `SELECT object_type, object_id, content_hash, updated_at, deleted_at, ` +
-    `CASE WHEN object_type = 'node' THEN (` +
-    `SELECT current_version_id FROM ${alias}.nodes WHERE ${alias}.nodes.id = object_id` +
-    `) ELSE NULL END AS current_version_id FROM ${buildSyncPackApplyableRowsSql(options)} ` +
-    `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')}) ` +
-    `ORDER BY state_seq ASC`,
-    objectTypes
-  );
 }
 
-function insertCleanStateRow(port: DbPort, row: PackStateRow, deviceId: string, stateSeq: number) {
+function applyableStateRowsSql(options: SyncPackStateRowsApplyOptions, objectTypes: readonly string[]) {
+  return `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at ` +
+    `FROM ${buildSyncPackApplyableRowsSql(options)} ` +
+    `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')})`;
+}
+
+async function loadPackStateRowCount(port: DbPort, options: SyncPackStateRowsApplyOptions, objectTypes: readonly string[]) {
+  const rows = await port.query<PackStateRow>(
+    `SELECT COUNT(*) AS count FROM (${applyableStateRowsSql(options, objectTypes)})`,
+    objectTypes
+  );
+  return rows[0]?.count ?? 0;
+}
+
+function insertCleanStateRows(
+  port: DbPort,
+  options: SyncPackStateRowsApplyOptions,
+  objectTypes: readonly string[],
+  nextStateSeq: number
+) {
+  const alias = options.incomingAlias ?? 'inc';
   return port.run(
+    `WITH applyable AS (${applyableStateRowsSql(options, objectTypes)}), ` +
+    `numbered AS (` +
+    `SELECT applyable.*, ROW_NUMBER() OVER (ORDER BY state_seq ASC) - 1 AS state_seq_offset, ` +
+    `CASE WHEN object_type = 'node' THEN (` +
+    `SELECT current_version_id FROM ${alias}.nodes WHERE ${alias}.nodes.id = applyable.object_id` +
+    `) ELSE NULL END AS current_version_id FROM applyable) ` +
     `INSERT OR REPLACE INTO sync_object_state (` +
     `object_type, object_id, state_seq, current_version_id, content_hash, ` +
     `last_modified_by_device_id, updated_at, deleted_at, sync_dirty` +
-    `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-    [
-      row.object_type,
-      row.object_id,
-      stateSeq,
-      row.current_version_id,
-      row.content_hash,
-      deviceId,
-      row.updated_at,
-      row.deleted_at
-    ]
+    `) SELECT object_type, object_id, ? + state_seq_offset, current_version_id, content_hash, ` +
+    `?, updated_at, deleted_at, 0 FROM numbered`,
+    [...objectTypes, nextStateSeq, options.deviceId]
   );
 }

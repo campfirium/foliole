@@ -73,7 +73,14 @@ async function testRecordsDownloadedResourcesForPass() {
     totalBytes: 6291456
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync in 8s; 5 topic bodies (5.0 MB) still downloading.',
+    kind: 'stage_finished',
+    message: 'Topic bodies downloaded; 1 topic body (1.0 MB); 5 topic bodies (5.0 MB) left.',
+    result: 'partial',
+    status: 'completed'
+  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished',
+    message: 'Sync made progress; 5 topic bodies (5.0 MB) still downloading.',
     status: 'skipped'
   }));
 }
@@ -110,7 +117,14 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
     totalBytes: null
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body; 5 topic bodies left to download.',
+    kind: 'stage_finished',
+    message: 'Topic bodies failed; Topic body batch could not download any requested body.',
+    result: 'failed',
+    status: 'failed'
+  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished',
+    message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body.',
     status: 'skipped'
   }));
 }
@@ -180,59 +194,6 @@ async function testClearsProgressWhenBacklogIsDone() {
   expect(setSyncProgress).toHaveBeenCalledWith(null);
 }
 
-async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
-    remainingAttachmentResourceCount: null,
-    remainingContentBlobCount: null
-  }));
-  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-  const setSyncProgress = vi.fn();
-
-  const outcome = await tryForegroundAutoSync({
-    cancelled: () => false,
-    setError: vi.fn(),
-    setReadableArticle: vi.fn(),
-    setState: vi.fn(),
-    setSyncProgress,
-    setStatus: vi.fn(),
-    state: createSyncState()
-  });
-
-  expect(outcome).toBe('skipped');
-  expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'content' }));
-  expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'attachment' }));
-  expect(setSyncProgress).toHaveBeenLastCalledWith(null);
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; resource backlog was not measured in this pass.',
-    status: 'skipped'
-  }));
-}
-
-async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
-  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
-    remainingAttachmentResourceCount: null,
-    remainingContentBlobCount: null,
-    syncedContentBlobHashes: ['hash-1']
-  }));
-  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-
-  const outcome = await tryForegroundAutoSync({
-    cancelled: () => false,
-    setError: vi.fn(),
-    setReadableArticle: vi.fn(),
-    setState: vi.fn(),
-    setSyncProgress: vi.fn(),
-    setStatus: vi.fn(),
-    state: createSyncState()
-  });
-
-  expect(outcome).toBe('backlog');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync made progress; downloaded 1 topic body in this sync',
-    status: 'skipped'
-  }));
-}
-
 describe('tryForegroundAutoSync resource progress', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
@@ -246,7 +207,4 @@ describe('tryForegroundAutoSync resource progress', () => {
 
   it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
 
-  it('does not use unknown resource counts as fast backlog retry evidence', testUnknownResourceCountsDoNotDriveFastBacklogRetry);
-
-  it('continues quickly when resources moved in this pass', testProgressWithUnknownResourceCountsDoesNotDriveFastRetry);
 });

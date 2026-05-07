@@ -28,7 +28,11 @@ final class FolioleCompanionWorkspaceSyncPluginActions {
             call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey(context)),
             call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncStatusRequestKey(context)),
             call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncMessageRequestKey(context)),
-            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncOccurredAtRequestKey(context))
+            call.getString(FolioleCompanionHostBridgeContractDefinitions.workspaceSyncOccurredAtRequestKey(context)),
+            call.getString("kind"),
+            call.getString("result"),
+            call.getString("run_id"),
+            call.getString("started_at")
         );
     }
 

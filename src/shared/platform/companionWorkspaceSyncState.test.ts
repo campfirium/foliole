@@ -1,46 +1,109 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeWorkspaceSyncState } from './companionWorkspaceSyncState';
+import {
+  normalizeWorkspaceSyncState,
+  prependSyncEvent
+} from './companionWorkspaceSyncState';
+
+function runEvent(index: number, kind: 'run_finished' | 'run_started') {
+  const minute = String(index).padStart(2, '0');
+  const startedAt = `2026-04-29T02:${minute}:00.000Z`;
+  return {
+    endpoint_url: 'http://10.0.2.2:38641',
+    kind,
+    message: kind === 'run_started'
+      ? 'Auto sync started.'
+      : 'Sync checked; 1 device change needs review before sending.',
+    occurred_at: kind === 'run_started' ? startedAt : `2026-04-29T02:${minute}:30.000Z`,
+    result: kind === 'run_finished' ? 'blocked' as const : undefined,
+    run_id: `run-${index}`,
+    started_at: startedAt,
+    status: kind === 'run_started' ? 'started' as const : 'skipped' as const
+  };
+}
+
+function testUsesLatestFullSyncEvent() {
+  const state = normalizeWorkspaceSyncState({
+    endpoint_url: 'http://10.0.2.2:38641',
+    sync_events: [
+      {
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'event-2',
+        message: 'Sync fully completed.',
+        occurred_at: '2026-04-29T02:18:00.000Z',
+        status: 'completed'
+      },
+      {
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'event-1',
+        message: 'Auto sync started.',
+        occurred_at: '2026-04-29T02:17:58.000Z',
+        status: 'started'
+      }
+    ]
+  });
+
+  expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
+}
+
+function testUsesLegacySkippedSyncCheck() {
+  const state = normalizeWorkspaceSyncState({
+    endpoint_url: 'http://10.0.2.2:38641',
+    sync_events: [
+      {
+        endpoint_url: 'http://10.0.2.2:38641',
+        id: 'event-2',
+        message: 'Sync checked',
+        occurred_at: '2026-04-29T02:18:00.000Z',
+        status: 'skipped'
+      }
+    ]
+  });
+
+  expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
+}
+
+function testBlockedRunDoesNotUpdateLastSyncedAt() {
+  const state = normalizeWorkspaceSyncState({
+    endpoint_url: 'http://10.0.2.2:38641',
+    sync_events: [{
+      endpoint_url: 'http://10.0.2.2:38641',
+      id: 'run-blocked',
+      kind: 'run_finished',
+      message: 'Sync checked; 2 device changes need review before sending.',
+      occurred_at: '2026-04-29T02:18:00.000Z',
+      result: 'blocked',
+      run_id: 'run-1',
+      started_at: '2026-04-29T02:17:00.000Z',
+      status: 'skipped'
+    }]
+  });
+
+  expect(state.last_synced_at).toBeNull();
+}
+
+function testCapacityUsesFinishedRuns() {
+  const initial = normalizeWorkspaceSyncState({ sync_events: [] });
+  const state = Array.from({ length: 21 }).reduce((current, _, index) => (
+    prependSyncEvent(prependSyncEvent(current, runEvent(index, 'run_started')), runEvent(index, 'run_finished'))
+  ), initial);
+
+  expect(state.sync_events.filter((event) => event.kind === 'run_finished')).toHaveLength(20);
+  expect(state.sync_events.some((event) => event.run_id === 'run-0')).toBe(false);
+}
+
+function testKeepsCurrentStartedRunBeforeFinish() {
+  const initial = normalizeWorkspaceSyncState({ sync_events: [] });
+  const state = prependSyncEvent(initial, runEvent(1, 'run_started'));
+
+  expect(state.sync_events).toHaveLength(1);
+  expect(state.sync_events[0]?.kind).toBe('run_started');
+}
 
 describe('normalizeWorkspaceSyncState', () => {
-  it('uses the latest full sync event when last sync metadata is missing', () => {
-    const state = normalizeWorkspaceSyncState({
-      endpoint_url: 'http://10.0.2.2:38641',
-      sync_events: [
-        {
-          endpoint_url: 'http://10.0.2.2:38641',
-          id: 'event-2',
-          message: 'Sync fully completed.',
-          occurred_at: '2026-04-29T02:18:00.000Z',
-          status: 'completed'
-        },
-        {
-          endpoint_url: 'http://10.0.2.2:38641',
-          id: 'event-1',
-          message: 'Auto sync started.',
-          occurred_at: '2026-04-29T02:17:58.000Z',
-          status: 'started'
-        }
-      ]
-    });
-
-    expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
-  });
-
-  it('uses a completed sync check when no changes were applied', () => {
-    const state = normalizeWorkspaceSyncState({
-      endpoint_url: 'http://10.0.2.2:38641',
-      sync_events: [
-        {
-          endpoint_url: 'http://10.0.2.2:38641',
-          id: 'event-2',
-          message: 'Sync checked',
-          occurred_at: '2026-04-29T02:18:00.000Z',
-          status: 'skipped'
-        }
-      ]
-    });
-
-    expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
-  });
+  it('uses the latest full sync event when last sync metadata is missing', testUsesLatestFullSyncEvent);
+  it('uses a completed sync check when no changes were applied', testUsesLegacySkippedSyncCheck);
+  it('does not treat blocked runs as synced progress', testBlockedRunDoesNotUpdateLastSyncedAt);
+  it('keeps capacity by finished run instead of started event count', testCapacityUsesFinishedRuns);
+  it('keeps a started run until its final result arrives', testKeepsCurrentStartedRunBeforeFinish);
 });

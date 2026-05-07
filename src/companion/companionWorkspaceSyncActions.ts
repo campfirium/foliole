@@ -1,9 +1,7 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import {
-  syncCompanionObjectsFromDesktop,
-  type CompanionDesktopSyncProgress
-} from '../shared/platform/companionDesktopSyncObjects';
+import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
 import {
   loadCompanionReadableArticle,
@@ -18,9 +16,9 @@ import {
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
-  buildRemainingSyncProgress,
-  shouldClearCompanionSyncProgress
-} from './companionSyncProgressVisibility';
+  recordCompanionManualSyncFailure,
+  syncCompanionDesktopStreams
+} from './companionWorkspaceManualSync';
 import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
 
 interface WorkspaceSnapshotActionArgs {
@@ -38,24 +36,6 @@ const STARTING_STRUCTURE_PROGRESS = {
   phase: 'structure' as const,
   total: null
 };
-const WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS = 8_000;
-
-async function refreshWorkspaceSnapshotAfterStructureSync(fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<null>((resolve) => {
-    timeoutId = setTimeout(() => resolve(null), WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS);
-  });
-  try {
-    const refreshedState = await Promise.race([loadCompanionWorkspaceSyncState(), timeout]);
-    return refreshedState?.workspace_snapshot ?? fallbackSnapshot;
-  } catch {
-    return fallbackSnapshot;
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  }
-}
 
 async function refreshConflictAwareState(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
@@ -69,74 +49,31 @@ async function refreshConflictAwareState(args: {
   return nextState;
 }
 
-async function syncDesktopStreams(args: {
-  endpointUrl: string;
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
-  setSyncConflictCount: (count: number) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
-  setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
-  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
-}) {
-  const startedState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: 'Sync started.',
-    status: 'started'
-  });
-  args.setState({
-    ...startedState,
-    workspace_snapshot: args.workspaceSnapshot
-  });
-  const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-    onProgress: args.setSyncProgress,
-    onStructureSynced: () => undefined
-  });
-  const latestWorkspaceSnapshot = await refreshWorkspaceSnapshotAfterStructureSync(args.workspaceSnapshot);
-  const passResult = describeCompanionSyncPassResult(result);
-  const nextState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: passResult.message,
-    status: passResult.status
-  });
-  args.setState({
-    ...nextState,
-    workspace_snapshot: latestWorkspaceSnapshot
-  });
-  args.setReadableArticle(await loadCompanionReadableArticle(latestWorkspaceSnapshot));
-  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  const remainingProgress = buildRemainingSyncProgress(result);
-  if (remainingProgress) {
-    args.setSyncProgress(remainingProgress);
-  } else if (shouldClearCompanionSyncProgress(result)) {
-    args.setSyncProgress(null);
-  }
-  return nextState;
-}
-
-async function recordManualSyncFailure(args: {
-  endpointUrl: string;
-  message: string;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
-}) {
-  const failedState = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl: args.endpointUrl,
-    message: args.message,
-    status: 'failed'
-  }).catch(() => null);
-  if (failedState) args.setState(failedState);
-}
-
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
     args.setStatus('syncing');
     args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     args.setError(null);
+    const runId = createCompanionSyncRunId();
+    const startedAt = new Date().toISOString();
     try {
-      const nextState = await syncDesktopStreams({
+      const startedState = await recordCompanionWorkspaceSyncEvent({
         endpointUrl,
+        kind: 'run_started',
+        message: 'Sync started.',
+        runId,
+        startedAt,
+        status: 'started'
+      });
+      args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
+      const nextState = await syncCompanionDesktopStreams({
+        endpointUrl,
+        runId,
         setReadableArticle: args.setReadableArticle,
         setSyncConflictCount: args.setSyncConflictCount,
         setState: args.setState,
         setSyncProgress: args.setSyncProgress,
+        startedAt,
         workspaceSnapshot: args.state.workspace_snapshot
       });
       args.setStatus('idle');
@@ -146,7 +83,14 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
       args.setStatus('idle');
       args.setSyncProgress(null);
       args.setError(message);
-      await recordManualSyncFailure({ endpointUrl, message, setState: args.setState });
+      await recordCompanionManualSyncFailure({
+        endpointUrl,
+        message,
+        runId,
+        setState: args.setState,
+        startedAt,
+        workspaceSnapshot: args.state.workspace_snapshot
+      });
       throw syncError;
     }
   };

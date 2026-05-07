@@ -5,8 +5,11 @@ import {
 } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
+  createCompanionSyncRunId,
+  statusForSyncRunResult
+} from '../shared/platform/companionSyncActivityEvents';
+import {
   loadCompanionReadableArticle,
-  loadCompanionWorkspaceSyncState,
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
 
@@ -16,6 +19,8 @@ import {
   buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
+import { recordCompanionSyncStageEvents } from './companionSyncStageEvents';
+import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
@@ -34,24 +39,6 @@ const STARTING_STRUCTURE_PROGRESS = {
   phase: 'structure' as const,
   total: null
 };
-const WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS = 8_000;
-
-async function refreshWorkspaceSnapshotAfterStructureSync(fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<null>((resolve) => {
-    timeoutId = setTimeout(() => resolve(null), WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS);
-  });
-  try {
-    const refreshedState = await Promise.race([loadCompanionWorkspaceSyncState(), timeout]);
-    return refreshedState?.workspace_snapshot ?? fallbackSnapshot;
-  } catch {
-    return fallbackSnapshot;
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  }
-}
 
 export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
@@ -94,28 +81,63 @@ export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSync
   return loadCompanionReadableArticle(snapshot);
 }
 
+async function refreshVisibleStructure(args: {
+  cancelled: () => boolean;
+  fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
+  setReadableArticle(article: CompanionReadableArticle | null): void;
+  setState(state: NativeCompanionWorkspaceSyncState): void;
+}) {
+  const refreshedState = await loadCompanionStateAfterStructureSync(args.fallbackSnapshot);
+  const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.fallbackSnapshot;
+  if (!args.cancelled() && refreshedState) {
+    args.setState(refreshedState);
+    args.setReadableArticle(await syncReadableArticle(workspaceSnapshot));
+  }
+  return workspaceSnapshot;
+}
+
 export async function runCompanionStreamSync(args: {
   cancelled: () => boolean;
   endpointUrl: string;
+  runId: string;
+  startedAt: string;
   setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
+  let latestWorkspaceSnapshot = args.workspaceSnapshot;
+  let structureRefreshCompleted = false;
+  const refreshAfterStructureSync = async () => {
+    structureRefreshCompleted = true;
+    latestWorkspaceSnapshot = await refreshVisibleStructure({
+      cancelled: args.cancelled,
+      fallbackSnapshot: latestWorkspaceSnapshot,
+      setReadableArticle: args.setReadableArticle,
+      setState: args.setState
+    });
+  };
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
     onProgress: args.setSyncProgress,
-    onStructureSynced: () => undefined
+    onStructureSynced: refreshAfterStructureSync
   });
   if (args.cancelled()) {
     return;
   }
-  const latestWorkspaceSnapshot = await refreshWorkspaceSnapshotAfterStructureSync(args.workspaceSnapshot);
+  if (!structureRefreshCompleted) {
+    await refreshAfterStructureSync();
+  }
+  await recordCompanionSyncStageEvents(args, result);
   const passResult = describeCompanionSyncPassResult(result);
   const completedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
+    kind: 'run_finished',
     message: passResult.message,
-    status: passResult.status
+    result: passResult.result,
+    runId: args.runId,
+    startedAt: args.startedAt,
+    status: statusForSyncRunResult(passResult.result)
   });
   const completedStateWithSnapshot = {
     ...completedState,
@@ -147,25 +169,47 @@ export async function tryForegroundAutoSync(args: {
 }): Promise<ForegroundAutoSyncOutcome> {
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!endpointUrl) return 'skipped';
+  const runId = createCompanionSyncRunId();
+  const startedAt = new Date().toISOString();
   args.setStatus('syncing');
+  args.setError(null);
   args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
   try {
-    await recordCompanionWorkspaceSyncEvent({ endpointUrl, message: 'Auto sync started.', status: 'started' });
+    await recordCompanionWorkspaceSyncEvent({
+      endpointUrl,
+      kind: 'run_started',
+      message: 'Auto sync started.',
+      runId,
+      startedAt,
+      status: 'started'
+    });
     return await runCompanionStreamSync({
       ...args,
       endpointUrl,
+      runId,
+      startedAt,
       workspaceSnapshot: args.state.workspace_snapshot
     }) ?? 'skipped';
   } catch (syncError) {
     if (args.cancelled()) return 'skipped';
     const message = formatCompanionSyncFailureMessage(syncError);
+    const refreshedState = await loadCompanionStateAfterStructureSync(args.state.workspace_snapshot);
+    const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.state.workspace_snapshot;
     args.setStatus('idle');
     args.setSyncProgress(null);
     args.setError(message);
-    const failedState = await recordCompanionWorkspaceSyncEvent({ endpointUrl, message, status: 'failed' }).catch(() => null);
+    const failedState = await recordCompanionWorkspaceSyncEvent({
+      endpointUrl,
+      kind: 'run_finished',
+      message,
+      result: 'failed',
+      runId,
+      startedAt,
+      status: 'failed'
+    }).catch(() => null);
     if (failedState) args.setState({
       ...failedState,
-      workspace_snapshot: args.state.workspace_snapshot
+      workspace_snapshot: workspaceSnapshot
     });
     return 'failed';
   }

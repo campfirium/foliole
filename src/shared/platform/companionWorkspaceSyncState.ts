@@ -1,6 +1,9 @@
 import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
-import { isFullSyncCompletedEvent } from './companionSyncEventSemantics';
+import {
+  compactSyncEvents,
+  isSyncEventConfirmedProgress
+} from './companionSyncActivityEvents';
 
 export const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
 
@@ -38,10 +41,26 @@ function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
   return {
     endpoint_url: typeof raw.endpoint_url === 'string' && raw.endpoint_url.trim() ? raw.endpoint_url.trim() : null,
     id: typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `${status}:${occurredAt}`,
+    kind: normalizeSyncEventKind(raw.kind),
     message: typeof raw.message === 'string' && raw.message.trim() ? raw.message.trim() : status,
     occurred_at: occurredAt,
+    result: normalizeSyncEventResult(raw.result),
+    run_id: typeof raw.run_id === 'string' && raw.run_id.trim() ? raw.run_id.trim() : undefined,
+    started_at: typeof raw.started_at === 'string' && raw.started_at.trim() ? raw.started_at.trim() : undefined,
     status
   };
+}
+
+function normalizeSyncEventKind(value: unknown): NativeCompanionSyncEvent['kind'] {
+  return value === 'diagnostic' || value === 'legacy_event' || value === 'run_finished' || value === 'run_started'
+    ? value
+    : undefined;
+}
+
+function normalizeSyncEventResult(value: unknown): NativeCompanionSyncEvent['result'] {
+  return value === 'blocked' || value === 'cancelled' || value === 'completed' || value === 'failed' || value === 'partial'
+    ? value
+    : undefined;
 }
 
 function normalizeSyncEvents(raw: Record<string, unknown>) {
@@ -59,7 +78,7 @@ function resolveLastSyncedAt(raw: Record<string, unknown>, syncEvents: NativeCom
 }
 
 function isSyncCheckRecorded(event: NativeCompanionSyncEvent) {
-  return event.status === 'skipped' || isFullSyncCompletedEvent(event);
+  return isSyncEventConfirmedProgress(event);
 }
 
 export function prependSyncEvent(
@@ -71,7 +90,7 @@ export function prependSyncEvent(
   return {
     ...state,
     last_synced_at: isSyncCheckRecorded(nextEvent) ? nextEvent.occurred_at : state.last_synced_at,
-    sync_events: [nextEvent, ...state.sync_events].slice(0, 20)
+    sync_events: compactSyncEvents([nextEvent, ...state.sync_events])
   };
 }
 

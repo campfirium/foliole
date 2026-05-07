@@ -66,6 +66,18 @@ const SYNC_META_STORE = path.join(
   'android',
   'FolioleCompanionSyncMetaStore.java'
 );
+const SYNC_EVENT_STORE = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionSyncEventStore.java'
+);
 const META_RECORDS = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionMetaRecords.java');
 const SYNC_DIAGNOSTIC_VERDICTS = path.join(
   REPO_ROOT,
@@ -149,7 +161,10 @@ describe('Android sync push ack protocol rules', () => {
   });
 
   it('loads sync meta status sets from generated definitions', async () => {
-    const source = await readFile(SYNC_META_STORE, 'utf8');
+    const source = [
+      await readFile(SYNC_META_STORE, 'utf8'),
+      await readFile(SYNC_EVENT_STORE, 'utf8')
+    ].join('\n');
 
     expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncEvents.statuses).toEqual([
       'started',

@@ -29,7 +29,14 @@ async function testRecordsPushFailureWithoutFailingPull() {
 
   expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.',
+    kind: 'stage_finished',
+    message: 'Android changes were not sent; Desktop sync target returned 500 for /companion/sync-push.',
+    result: 'blocked',
+    status: 'skipped'
+  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished',
+    message: 'Android changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.',
     status: 'skipped'
   }));
 }
@@ -56,7 +63,14 @@ async function testRecordsPushConflictWithoutCompleting() {
 
   expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; 2 device changes need review before sending.',
+    kind: 'stage_finished',
+    message: 'Android changes need review; 2 changes were rejected or conflicted by desktop before sending.',
+    result: 'blocked',
+    status: 'skipped'
+  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished',
+    message: '2 Android changes need review before sending.',
     status: 'skipped'
   }));
 }

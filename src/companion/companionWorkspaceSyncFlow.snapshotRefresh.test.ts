@@ -93,6 +93,37 @@ async function testDoesNotFastRetryWhileTimedOutResourceStageMayStillBeClosingNa
   }));
 }
 
+async function testKeepsStructureSnapshotWhenResourceStageFailsAfterStructureSync() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const syncedSnapshot = createWorkspaceSnapshot('synced-before-resource-failure');
+  const setState = vi.fn();
+  syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState({
+    workspace_snapshot: syncedSnapshot
+  }));
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpoint, options) => {
+    await options.onStructureSynced?.();
+    throw new Error('Desktop sync timed out while fetching content bodies.');
+  });
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState,
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('failed');
+  expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({
+    workspace_snapshot: syncedSnapshot
+  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenLastCalledWith(expect.objectContaining({
+    status: 'failed'
+  }));
+}
+
 describe('companion stream sync snapshot refresh', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
@@ -101,4 +132,6 @@ describe('companion stream sync snapshot refresh', () => {
   it('does not leave foreground sync stuck when snapshot refresh stalls', testDoesNotLeaveForegroundSyncStuckWhenSnapshotRefreshStalls);
 
   it('does not fast retry while a timed out resource stage may still be closing native work', testDoesNotFastRetryWhileTimedOutResourceStageMayStillBeClosingNativeWork);
+
+  it('keeps the structure snapshot when resources fail after structure sync', testKeepsStructureSnapshotWhenResourceStageFailsAfterStructureSync);
 });

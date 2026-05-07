@@ -27,8 +27,9 @@ function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSy
 describe('describeCompanionSyncPassResult', () => {
   it('marks the pass completed only when resources and local work are clear', () => {
     expect(describeCompanionSyncPassResult(passInput())).toEqual({
-      message: 'Sync fully completed.',
+      message: 'All stages completed.',
       outcome: 'completed',
+      result: 'completed',
       status: 'completed'
     });
   });
@@ -41,8 +42,9 @@ describe('describeCompanionSyncPassResult', () => {
       syncedContentBlobHashes: ['hash-1', 'hash-2'],
       syncedResourceElapsedMs: 8000
     }))).toEqual({
-      message: 'Sync fully completed; downloaded 2 topic bodies (1.0 MB) and 1 attachment file (2.0 MB) in this sync in 8s',
+      message: 'All stages completed.',
       outcome: 'completed',
+      result: 'completed',
       status: 'completed'
     });
   });
@@ -58,6 +60,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
     }))).toEqual({
       message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) left to download.',
       outcome: 'skipped',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -69,6 +72,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
     }))).toEqual({
       message: 'Sync checked; resource backlog was not measured in this pass.',
       outcome: 'skipped',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -81,8 +85,9 @@ describe('describeCompanionSyncPassResult backlog', () => {
       syncedContentBlobHashes: ['hash-1'],
       syncedResourceElapsedMs: 65000
     }))).toEqual({
-      message: 'Sync made progress; downloaded 1 topic body (1.0 MB) in this sync in 1m 5s; 5 topic bodies (5.0 MB) still downloading.',
+      message: 'Sync made progress; 5 topic bodies (5.0 MB) still downloading.',
       outcome: 'skipped',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -98,6 +103,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
     }))).toEqual({
       message: 'Sync checked; 5 topic bodies (5.0 MB) left to download, 1 topic body download (1.0 MB) failed earlier, and 1 attachment download (512 KB) failed earlier.',
       outcome: 'skipped',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -113,8 +119,9 @@ describe('describeCompanionSyncPassResult timing', () => {
       syncedResourceElapsedMs: 20300,
       syncedStructureElapsedMs: 1300
     }))).toEqual({
-      message: 'Sync fully completed; downloaded 1 topic body and 1 attachment file in this sync in 20s; timing: topic list 1s, topic bodies 8s, attachment files 12s',
+      message: 'All stages completed.',
       outcome: 'completed',
+      result: 'completed',
       status: 'completed'
     });
   });
@@ -129,8 +136,9 @@ describe('describeCompanionSyncPassResult timing', () => {
         totalElapsedMs: 1800
       }
     }))).toEqual({
-      message: 'Sync fully completed; downloaded 1 topic body in this sync; body internals: http 1s, parse 0.1s, db 0.5s',
+      message: 'All stages completed.',
       outcome: 'completed',
+      result: 'completed',
       status: 'completed'
     });
   });
@@ -142,8 +150,9 @@ describe('describeCompanionSyncPassResult errors', () => {
       contentBlobError: 'Topic body batch could not download any requested body.',
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body; 5 topic bodies left to download.',
+      message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body.',
       outcome: 'skipped',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -153,8 +162,9 @@ describe('describeCompanionSyncPassResult errors', () => {
       attachmentResourceError: 'Attachment file batch could not download any requested file.',
       remainingAttachmentResourceCount: 2
     }))).toEqual({
-      message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file; 2 attachment files left to download.',
+      message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file.',
       outcome: 'skipped',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -165,75 +175,8 @@ describe('describeCompanionSyncPassResult errors', () => {
     }))).toEqual({
       message: 'Topic body download failed: Topic body batch could not download any requested body.',
       outcome: 'failed',
+      result: 'failed',
       status: 'failed'
-    });
-  });
-});
-
-describe('describeCompanionSyncPassResult local changes', () => {
-  it('keeps local dirty and pending ack work out of completed events', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      localDirtyCount: 1,
-      pendingAckCount: 1
-    }))).toEqual({
-      message: 'Sync checked; local changes are still waiting to settle.',
-      outcome: 'skipped',
-      status: 'skipped'
-    });
-  });
-
-  it('keeps pull success visible when push fails', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
-      remainingContentBlobCount: 3
-    }))).toEqual({
-      message: 'Sync checked; device changes could not be sent: Desktop sync target returned 500 for /companion/sync-push; 3 topic bodies left to download.',
-      outcome: 'skipped',
-      status: 'skipped'
-    });
-  });
-
-  it('keeps resource backlog visible when push conflicts need review', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      pushConflictCount: 1,
-      remainingAttachmentResourceCount: 0,
-      remainingContentBlobCount: 3
-    }))).toEqual({
-      message: 'Sync checked; 1 device change needs review before sending; 3 topic bodies left to download.',
-      outcome: 'skipped',
-      status: 'skipped'
-    });
-  });
-
-  it('keeps persisted push issues out of completed events', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      pushIssueCount: 1
-    }))).toEqual({
-      message: 'Sync checked; 1 device change needs review before sending.',
-      outcome: 'skipped',
-      status: 'skipped'
-    });
-  });
-});
-
-describe('describeCompanionSyncPassResult structure lag', () => {
-  it('keeps structure lag out of completed events', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      remainingStructureChangeCount: 4
-    }))).toEqual({
-      message: 'Sync checked; 4 topic list changes are still applying.',
-      outcome: 'skipped',
-      status: 'skipped'
-    });
-  });
-
-  it('keeps unknown structure confirmation out of completed events', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      remainingStructureChangeCount: null
-    }))).toEqual({
-      message: 'Sync checked; topic list confirmation is still pending.',
-      outcome: 'skipped',
-      status: 'skipped'
     });
   });
 });

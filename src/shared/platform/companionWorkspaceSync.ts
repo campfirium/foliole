@@ -1,5 +1,6 @@
 import type {
   CompanionWorkspaceVersionPayload,
+  NativeCompanionSyncEvent,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
@@ -98,8 +99,12 @@ export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnb
 
 export async function recordCompanionWorkspaceSyncEvent(args: {
   endpointUrl: string | null;
+  kind?: NativeCompanionSyncEvent['kind'];
   message: string;
   occurredAt?: string;
+  result?: NativeCompanionSyncEvent['result'];
+  runId?: string;
+  startedAt?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';
 }) {
   const occurredAt = args.occurredAt ?? new Date().toISOString();
@@ -107,16 +112,24 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
     const current = readWebSyncState();
     return writeWebSyncState(prependSyncEvent(current, {
       endpoint_url: args.endpointUrl,
+      kind: args.kind,
       message: args.message,
       occurred_at: occurredAt,
+      result: args.result,
+      run_id: args.runId,
+      started_at: args.startedAt,
       status: args.status
     }));
   }
   return runCompanionSyncWriterTask(async () => (
     normalizeWorkspaceSyncState(await FolioleCompanionSync.recordWorkspaceSyncEvent({
       endpoint_url: args.endpointUrl,
+      kind: args.kind,
       message: args.message,
       occurred_at: occurredAt,
+      result: args.result,
+      run_id: args.runId,
+      started_at: args.startedAt,
       status: args.status
     }))
   ));

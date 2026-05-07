@@ -54,9 +54,38 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionSyncMetaStore.loadWorkspaceSyncState(context, database);
     }
 
-    JSObject recordWorkspaceSyncEvent(String endpointUrl, String status, String message, String occurredAt) throws Exception {
+    JSObject recordWorkspaceSyncEvent(
+        String endpointUrl,
+        String status,
+        String message,
+        String occurredAt
+    ) throws Exception {
+        return recordWorkspaceSyncEvent(endpointUrl, status, message, occurredAt, null, null, null, null);
+    }
+
+    JSObject recordWorkspaceSyncEvent(
+        String endpointUrl,
+        String status,
+        String message,
+        String occurredAt,
+        String kind,
+        String result,
+        String runId,
+        String startedAt
+    ) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionSyncMetaStore.recordWorkspaceSyncEvent(context, database, endpointUrl, status, message, occurredAt);
+        return FolioleCompanionSyncMetaStore.recordWorkspaceSyncEvent(
+            context,
+            database,
+            endpointUrl,
+            status,
+            message,
+            occurredAt,
+            kind,
+            result,
+            runId,
+            startedAt
+        );
     }
 
     JSObject saveSyncOnboardingStatus(String status) throws Exception {

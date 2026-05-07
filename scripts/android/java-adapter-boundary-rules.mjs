@@ -127,6 +127,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionNodeAttachmentStore.java',
       'FolioleCompanionPdfPageTextStore.java',
       'FolioleCompanionReadableArticleQuery.java',
+      'FolioleCompanionSyncEventStore.java',
       'FolioleCompanionSyncMetaStore.java',
       'FolioleCompanionSyncNodeVersionStore.java',
       'FolioleCompanionSyncObjectStore.java',

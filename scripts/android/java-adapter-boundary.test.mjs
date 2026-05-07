@@ -43,7 +43,7 @@ describe('Android Java adapter boundary', () => {
       { kind: 'migration_adapter', hasResponsibility: true, fileCount: 3 },
       { kind: 'query_mutation_executor', hasResponsibility: true, fileCount: 4 },
       { kind: 'sync_diagnostic_adapter', hasResponsibility: true, fileCount: 6 },
-      { kind: 'store_executor', hasResponsibility: true, fileCount: 27 }
+      { kind: 'store_executor', hasResponsibility: true, fileCount: 28 }
     ]);
   });
 
