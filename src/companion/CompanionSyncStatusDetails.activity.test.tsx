@@ -78,6 +78,17 @@ describe('CompanionSyncStatusDetails activity', () => {
     expect(screen.queryByText('Auto sync started.')).not.toBeInTheDocument();
   });
 
+  it('shows repeated unchanged blocked facts only once', () => {
+    renderActivity([
+      runFinishedEvent(),
+      { ...runFinishedEvent(), id: 'run-0-finished', run_id: 'run-0', occurred_at: '2026-05-07T23:11:00.000Z' }
+    ]);
+
+    expect(screen.getAllByText('Sync blocked; 2 device changes need review before sending.')).toHaveLength(1);
+  });
+});
+
+describe('CompanionSyncStatusDetails activity progress', () => {
   it('shows the concrete failed sync reason returned by the native bridge', () => {
     renderActivity([{
       endpoint_url: 'http://10.0.2.2:38641',

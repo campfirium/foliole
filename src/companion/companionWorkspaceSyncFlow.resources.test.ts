@@ -29,7 +29,7 @@ async function testRecordsBacklogBytes() {
 
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) left to download.',
+    message: 'Resource downloads are still pending.',
     status: 'skipped'
   }));
 }
@@ -74,13 +74,13 @@ async function testRecordsDownloadedResourcesForPass() {
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'stage_finished',
-    message: 'Topic bodies downloaded; 1 topic body (1.0 MB); 5 topic bodies (5.0 MB) left.',
-    result: 'partial',
+    message: 'Topic bodies downloaded; 1 topic body (1.0 MB).',
+    result: 'completed',
     status: 'completed'
   }));
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
-    message: 'Sync made progress; 5 topic bodies (5.0 MB) still downloading.',
+    message: 'Resource downloads made progress and will continue.',
     status: 'skipped'
   }));
 }

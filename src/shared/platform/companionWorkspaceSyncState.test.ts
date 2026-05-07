@@ -82,6 +82,24 @@ function testBlockedRunDoesNotUpdateLastSyncedAt() {
   expect(state.last_synced_at).toBeNull();
 }
 
+function testPreservesStageFinishedKind() {
+  const state = normalizeWorkspaceSyncState({
+    sync_events: [{
+      endpoint_url: 'http://10.0.2.2:38641',
+      id: 'stage-1',
+      kind: 'stage_finished',
+      message: 'Topic bodies downloaded; 1 topic body.',
+      occurred_at: '2026-04-29T02:18:00.000Z',
+      result: 'completed',
+      run_id: 'run-1',
+      started_at: '2026-04-29T02:17:00.000Z',
+      status: 'completed'
+    }]
+  });
+
+  expect(state.sync_events[0]?.kind).toBe('stage_finished');
+}
+
 function testCapacityUsesFinishedRuns() {
   const initial = normalizeWorkspaceSyncState({ sync_events: [] });
   const state = Array.from({ length: 21 }).reduce((current, _, index) => (
@@ -104,6 +122,7 @@ describe('normalizeWorkspaceSyncState', () => {
   it('uses the latest full sync event when last sync metadata is missing', testUsesLatestFullSyncEvent);
   it('uses a completed sync check when no changes were applied', testUsesLegacySkippedSyncCheck);
   it('does not treat blocked runs as synced progress', testBlockedRunDoesNotUpdateLastSyncedAt);
+  it('preserves stage finished events as stage facts', testPreservesStageFinishedKind);
   it('keeps capacity by finished run instead of started event count', testCapacityUsesFinishedRuns);
   it('keeps a started run until its final result arrives', testKeepsCurrentStartedRunBeforeFinish);
 });

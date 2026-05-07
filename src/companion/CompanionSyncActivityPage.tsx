@@ -29,6 +29,26 @@ function statusClass(event: NativeCompanionSyncEvent, laterEvents: NativeCompani
   return 'text-companion-text-secondary';
 }
 
+function activityFactKey(event: NativeCompanionSyncEvent) {
+  return [
+    event.endpoint_url ?? '',
+    event.kind ?? 'legacy_event',
+    inferSyncRunResult(event),
+    event.message
+  ].join('|');
+}
+
+function visibleActivityEvents(events: NativeCompanionSyncEvent[]) {
+  const seenBlockedFacts = new Set<string>();
+  return events.filter(isReportableSyncEvent).filter((event) => {
+    if (inferSyncRunResult(event) !== 'blocked') return true;
+    const key = activityFactKey(event);
+    if (seenBlockedFacts.has(key)) return false;
+    seenBlockedFacts.add(key);
+    return true;
+  });
+}
+
 function formatCurrentActivityMessage(progress: CompanionDesktopSyncProgress | null) {
   if (!progress) return 'Syncing; waiting for the next progress update.';
   const summary = formatCompanionSyncProgressSummary(progress);
@@ -77,7 +97,7 @@ export function CompanionSyncActivityPage(props: {
   status: 'idle' | 'loading' | 'syncing';
   syncProgress: CompanionDesktopSyncProgress | null;
 }) {
-  const visibleEvents = props.events.filter(isReportableSyncEvent);
+  const visibleEvents = visibleActivityEvents(props.events);
   const currentMessage = props.status === 'syncing'
     ? formatCurrentActivityMessage(props.syncProgress)
     : null;

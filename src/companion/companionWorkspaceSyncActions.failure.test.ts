@@ -183,4 +183,5 @@ describe('companion workspace manual sync failures', () => {
       workspace_snapshot: syncedSnapshot
     }));
   });
+
 });

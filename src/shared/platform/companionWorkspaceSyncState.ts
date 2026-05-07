@@ -52,7 +52,11 @@ function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
 }
 
 function normalizeSyncEventKind(value: unknown): NativeCompanionSyncEvent['kind'] {
-  return value === 'diagnostic' || value === 'legacy_event' || value === 'run_finished' || value === 'run_started'
+  return value === 'diagnostic' ||
+    value === 'legacy_event' ||
+    value === 'run_finished' ||
+    value === 'run_started' ||
+    value === 'stage_finished'
     ? value
     : undefined;
 }

@@ -14,7 +14,7 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
-import { describeCompanionSyncPassResult } from './companionSyncPassResult';
+import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
 import {
   recordCompanionManualSyncFailure,
   syncCompanionDesktopStreams
@@ -52,47 +52,59 @@ async function refreshConflictAwareState(args: {
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
     args.setStatus('syncing');
-    args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
-    args.setError(null);
-    const runId = createCompanionSyncRunId();
-    const startedAt = new Date().toISOString();
-    try {
-      const startedState = await recordCompanionWorkspaceSyncEvent({
-        endpointUrl,
-        kind: 'run_started',
-        message: 'Sync started.',
-        runId,
-        startedAt,
-        status: 'started'
-      });
-      args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
-      const nextState = await syncCompanionDesktopStreams({
-        endpointUrl,
-        runId,
+    const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
+      args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
+      args.setError(null);
+      const runId = createCompanionSyncRunId();
+      const startedAt = new Date().toISOString();
+      try {
+        const startedState = await recordCompanionWorkspaceSyncEvent({
+          endpointUrl,
+          kind: 'run_started',
+          message: 'Sync started.',
+          runId,
+          startedAt,
+          status: 'started'
+        });
+        args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
+        const nextState = await syncCompanionDesktopStreams({
+          endpointUrl,
+          runId,
+          setReadableArticle: args.setReadableArticle,
+          setSyncConflictCount: args.setSyncConflictCount,
+          setState: args.setState,
+          setSyncProgress: args.setSyncProgress,
+          startedAt,
+          workspaceSnapshot: args.state.workspace_snapshot
+        });
+        args.setStatus('idle');
+        return nextState;
+      } catch (syncError) {
+        const message = formatCompanionSyncFailureMessage(syncError);
+        args.setStatus('idle');
+        args.setSyncProgress(null);
+        args.setError(message);
+        await recordCompanionManualSyncFailure({
+          endpointUrl,
+          message,
+          runId,
+          setState: args.setState,
+          startedAt,
+          workspaceSnapshot: args.state.workspace_snapshot
+        });
+        throw syncError;
+      }
+    });
+    if (!run.owned) {
+      const nextState = await refreshConflictAwareState({
         setReadableArticle: args.setReadableArticle,
         setSyncConflictCount: args.setSyncConflictCount,
-        setState: args.setState,
-        setSyncProgress: args.setSyncProgress,
-        startedAt,
-        workspaceSnapshot: args.state.workspace_snapshot
+        setState: args.setState
       });
       args.setStatus('idle');
       return nextState;
-    } catch (syncError) {
-      const message = formatCompanionSyncFailureMessage(syncError);
-      args.setStatus('idle');
-      args.setSyncProgress(null);
-      args.setError(message);
-      await recordCompanionManualSyncFailure({
-        endpointUrl,
-        message,
-        runId,
-        setState: args.setState,
-        startedAt,
-        workspaceSnapshot: args.state.workspace_snapshot
-      });
-      throw syncError;
     }
+    return run.result;
   };
 }
 

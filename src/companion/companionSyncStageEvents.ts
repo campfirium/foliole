@@ -60,10 +60,7 @@ function contentStage(result: CompanionDesktopSyncResult) {
   }
   const downloaded = withByteSuffix(formatCount(count, 'topic body', 'topic bodies'), result.syncedContentBlobBytes);
   const elapsed = formatElapsed(result.syncedContentBlobElapsedMs);
-  const remaining = result.remainingContentBlobCount && result.remainingContentBlobCount > 0
-    ? `; ${withByteSuffix(formatCount(result.remainingContentBlobCount, 'topic body', 'topic bodies'), result.remainingContentBlobBytes)} left`
-    : '';
-  return stageEvent(`Topic bodies downloaded; ${downloaded}${elapsed ? ` in ${elapsed}` : ''}${remaining}.`, remaining ? 'partial' : 'completed');
+  return stageEvent(`Topic bodies downloaded; ${downloaded}${elapsed ? ` in ${elapsed}` : ''}.`, 'completed');
 }
 
 function attachmentStage(result: CompanionDesktopSyncResult) {
@@ -74,10 +71,7 @@ function attachmentStage(result: CompanionDesktopSyncResult) {
   }
   const downloaded = withByteSuffix(formatCount(count, 'attachment file', 'attachment files'), result.syncedAttachmentResourceBytes);
   const elapsed = formatElapsed(result.syncedAttachmentResourceElapsedMs);
-  const remaining = result.remainingAttachmentResourceCount && result.remainingAttachmentResourceCount > 0
-    ? `; ${withByteSuffix(formatCount(result.remainingAttachmentResourceCount, 'attachment file', 'attachment files'), result.remainingAttachmentResourceBytes)} left`
-    : '';
-  return stageEvent(`Attachment files downloaded; ${downloaded}${elapsed ? ` in ${elapsed}` : ''}${remaining}.`, remaining ? 'partial' : 'completed');
+  return stageEvent(`Attachment files downloaded; ${downloaded}${elapsed ? ` in ${elapsed}` : ''}.`, 'completed');
 }
 
 function pushStage(result: CompanionDesktopSyncResult) {

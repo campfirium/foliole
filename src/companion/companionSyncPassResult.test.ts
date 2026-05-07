@@ -58,7 +58,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
       remainingContentBlobBytes: 5242880,
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) left to download.',
+      message: 'Resource downloads are still pending.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'
@@ -85,7 +85,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
       syncedContentBlobHashes: ['hash-1'],
       syncedResourceElapsedMs: 65000
     }))).toEqual({
-      message: 'Sync made progress; 5 topic bodies (5.0 MB) still downloading.',
+      message: 'Resource downloads made progress and will continue.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'
@@ -101,7 +101,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
       remainingFailedContentBlobBytes: 1048576,
       remainingFailedContentBlobCount: 1
     }))).toEqual({
-      message: 'Sync checked; 5 topic bodies (5.0 MB) left to download, 1 topic body download (1.0 MB) failed earlier, and 1 attachment download (512 KB) failed earlier.',
+      message: 'Resource downloads need another pass; some downloads failed earlier.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'

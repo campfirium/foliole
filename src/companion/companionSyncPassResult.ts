@@ -1,7 +1,5 @@
 import {
-  appendBacklogSuffix,
-  formatSyncPassCount,
-  syncCheckedPrefix
+  formatSyncPassCount
 } from './companionSyncPassResultFormat';
 
 export interface CompanionSyncPassInput {
@@ -81,6 +79,14 @@ function isKnownBacklog(count: number | null) {
 
 function clarifyCheckOnlyMessage(message: string) {
   return message === 'Sync checked' ? 'Sync checked; resource backlog was not measured in this pass.' : message;
+}
+
+function madeResourceProgress(result: CompanionSyncPassInput) {
+  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
+}
+
+function hasFailedResourceBacklog(result: CompanionSyncPassInput) {
+  return (result.remainingFailedContentBlobCount ?? 0) > 0 || (result.remainingFailedAttachmentResourceCount ?? 0) > 0;
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
@@ -176,5 +182,14 @@ function describeUnfinishedPass(
   if (result.remainingStructureChangeCount === null || (result.remainingStructureChangeCount ?? 0) > 0) {
     return createPassResult(withTiming('Topic list confirmation is still pending.'), 'skipped', 'partial');
   }
-  return createPassResult(withTiming(clarifyCheckOnlyMessage(appendBacklogSuffix(syncCheckedPrefix(result), result))), 'skipped');
+  if (hasFailedResourceBacklog(result)) {
+    return createPassResult(withTiming('Resource downloads need another pass; some downloads failed earlier.'), 'skipped');
+  }
+  if (hasRemainingResourceBacklog(result)) {
+    return createPassResult(
+      withTiming(madeResourceProgress(result) ? 'Resource downloads made progress and will continue.' : 'Resource downloads are still pending.'),
+      'skipped'
+    );
+  }
+  return createPassResult(withTiming(clarifyCheckOnlyMessage('Sync checked')), 'skipped');
 }
