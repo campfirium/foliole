@@ -66,6 +66,14 @@
 9. 只有用户明确要求 spike，或任务评估把某段代码标为 spike / diagnostic / fallback / one-off migration 时，才允许写临时验证代码；否则临时代码不得接入正式入口。
 10. 需要找文件、符号、测试或脚本入口时，默认先用 `rg --files` / `rg` 在仓库内定位；禁止先凭记忆猜路径、猜脚本名或用泛化命令代替仓库真实入口。
 
+## Delegation
+
+- 只有用户当次明确授权使用子代理、并行 agent work 或等价表述时，才允许开子代理；未授权时继续由主进程处理。
+- 子代理只处理验证红灯或机械整改：旧测试签名、fixture/schema 失配、旧断言同步、单文件 lint / 预算拆分、单测试失败日志定位；不得把根因判断、协议/数据语义、跨宿主设计取舍、最终 diff 审查或提交收口交给子代理。
+- 交给子代理前必须确认 4 件事：失败不改变当前主方案、写区能限定到文件或目录、主进程可并行推进、不与主进程改同一核心文件；不满足任一项则留在主进程。
+- 子代理任务必须写清所有权范围、禁止改动范围、最窄验收命令和返回格式；返回后主进程必须 review diff，并由主进程决定是否进入更高层验证。
+- 子代理分流是软规则，不由 hook 强制；能机械判断的验证触发必须优先落到脚本或 hook，不能只写在本节。
+
 ## Architecture And Troubleshooting
 
 - 实体先于表象：禁止从表现层或派生现象反推系统真相；若缺少核心状态的独立表达，先补实体，再写逻辑。
@@ -86,6 +94,8 @@
 - 包管理器必须按锁文件检测；当前仓库以 `npm` 为准。
 - 运行验证前必须先从 `package.json` / `npm run` 确认真实脚本入口；若不存在 `test`、`build` 或其他习惯性脚本名，必须改用仓库已声明的具体脚本，不得先运行不存在的默认命令。
 - 定向跑测试时必须先用 `rg --files` / `rg` 找到测试文件与相关 npm 脚本，再选择最窄可用入口；当前仓库测试入口以 `test:changed`、`test:desktop`、`test:shared`、`test:android`、`test:full` 和各质量闸脚本为准，而不是 `npm test`。
+- 改动 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*` 或 sync pack manifest / schema / apply 语义时，必须先跑 `npm run test:sync-pack`，通过后再按影响范围追加宿主验证；staged 命中这些路径时，pre-commit 会自动执行同一检查。
+- 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，必须先对触碰文件跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint；pre-commit 会对 staged 新增 / 重命名文件自动执行预算检查，并对其中代码文件执行显式文件 lint。
 - 当前仓库只有提交内容 / commit sequence 钩子与手动 SQLite capability workflow，没有会自动补跑本轮质量闸的强制 hook / CI 兜底；质量闸由执行者按任务范围主动选择并运行。
 - 默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环范围或技术风险超过“相关验证”覆盖面时，才升级到宿主 / 共享质量闸。
 - 相关最小验证默认由与本轮能力闭环直接对应的 `eslint`、`vitest`、局部 `tsc`、宿主链路 smoke test 与必要预览组成，而不是默认整仓或整宿主全跑；不得只验证最后一个文件、函数或调用点。

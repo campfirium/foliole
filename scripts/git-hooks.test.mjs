@@ -10,6 +10,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push'];
+const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budget.mjs');
+const PRE_COMMIT_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-commit-validation.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-commit-sequence.mjs');
 const tempDirs = [];
 
@@ -43,6 +45,8 @@ async function createRepo() {
   await mkdir(path.join(repoDir, '.githooks'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
   await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'));
+  await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
+  await copyFile(PRE_COMMIT_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-commit-validation.mjs'));
   await chmod(path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'), 0o755);
   await Promise.all(
     HOOK_NAMES.map(async (name) => {

@@ -13,3 +13,5 @@ if [[ -n "$blocked_paths" ]]; then
   } >&2
   exit 1
 fi
+
+node scripts/pre-commit-validation.mjs

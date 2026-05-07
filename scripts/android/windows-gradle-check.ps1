@@ -2,7 +2,8 @@ param(
   [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
   [string]$AndroidHostDir = "android",
   [Parameter(Mandatory = $true)]
-  [string]$TaskName
+  [string]$TaskName,
+  [string[]]$GradleArguments = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,14 +47,27 @@ function Resolve-SdkRoot {
 
 function Invoke-GradleWrapper {
   param(
-    [string]$TaskName
+    [string]$TaskName,
+    [string[]]$GradleArguments = @()
   )
 
+  $extraArgs = ($GradleArguments | ForEach-Object { Quote-CmdArgument $_ }) -join " "
   $gradleCommand = "call .\gradlew.bat --no-daemon $TaskName"
+  if ($extraArgs.Trim().Length -gt 0) {
+    $gradleCommand = "$gradleCommand $extraArgs"
+  }
   & cmd.exe /d /c $gradleCommand
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }
+}
+
+function Quote-CmdArgument {
+  param([string]$Value)
+  if ($Value -notmatch '[\s"&|<>^]') {
+    return $Value
+  }
+  return '"' + ($Value -replace '"', '\"') + '"'
 }
 
 $javaHome = Resolve-JavaHome
@@ -70,9 +84,12 @@ if (!(Test-Path -Path $androidDir)) {
 
 Write-Info "workdir: $androidDir"
 Write-Info "task: $TaskName"
+if ($GradleArguments.Count -gt 0) {
+  Write-Info "args: $($GradleArguments -join ' ')"
+}
 Push-Location $androidDir
 try {
-  Invoke-GradleWrapper -TaskName $TaskName
+  Invoke-GradleWrapper -TaskName $TaskName -GradleArguments $GradleArguments
 } finally {
   Pop-Location
 }

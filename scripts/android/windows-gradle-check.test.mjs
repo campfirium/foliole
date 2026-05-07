@@ -133,4 +133,44 @@ describe('windows-gradle-check.sh', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('forwards targeted instrumentation filters to Gradle', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-gradle-check-'));
+    try {
+      const mockBinDir = path.join(tempRoot, 'bin');
+      const powershellArgsLog = path.join(tempRoot, 'powershell-args.log');
+      await mkdir(mockBinDir, { recursive: true });
+      await writeFile(
+        path.join(mockBinDir, 'powershell.exe'),
+        ['#!/usr/bin/env bash', 'set -euo pipefail', 'printf "%s\\n" "$@" > "${POWERSHELL_ARGS_LOG}"'].join('\n'),
+        { encoding: 'utf8', mode: 0o755 }
+      );
+      await writeFile(
+        path.join(mockBinDir, 'wslpath'),
+        ['#!/usr/bin/env bash', 'set -euo pipefail', 'if [[ "$1" == "-w" ]]; then echo "$2"; else echo "/tmp/mock-wslpath"; fi'].join('\n'),
+        { encoding: 'utf8', mode: 0o755 }
+      );
+      await chmod(path.join(mockBinDir, 'powershell.exe'), 0o755);
+      await chmod(path.join(mockBinDir, 'wslpath'), 0o755);
+
+      const result = await runGradleCheck(
+        tempRoot,
+        ['connectedDebugAndroidTest', '--class', 'FolioleCompanionSyncPackContractApplyTest'],
+        {
+          ANDROID_SKIP_WINDOWS_SYNC: '1',
+          FOLIOLE_ANDROID_ALLOW_DATA_DESTRUCTIVE_TEST: '1',
+          PATH: `${mockBinDir}:${process.env.PATH ?? ''}`,
+          POWERSHELL_ARGS_LOG: powershellArgsLog,
+          WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-gradle-check.ps1')
+        }
+      );
+
+      expect(result.code).toBe(0);
+      const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
+      expect(args).toContain('-GradleArguments');
+      expect(args).toContain('-Pandroid.testInstrumentationRunnerArguments.class=com.foliole.android.FolioleCompanionSyncPackContractApplyTest');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
