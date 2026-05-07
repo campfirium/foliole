@@ -33,16 +33,7 @@ async function createRepo() {
   await runCommand('git', ['config', 'user.name', 'Precommit Test'], repoDir);
   await runCommand('git', ['config', 'user.email', 'precommit@example.com'], repoDir);
   await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
-  await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({
-    scripts: {
-      'test:sync-pack': 'node scripts/mock-sync-pack.mjs'
-    }
-  }), 'utf8');
-  await writeFile(
-    path.join(repoDir, 'scripts', 'mock-sync-pack.mjs'),
-    'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "sync-pack\\n");\n',
-    'utf8'
-  );
+  await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
   await writeFile(
     path.join(repoDir, 'scripts', 'check-file-budget.mjs'),
     'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", `budget:${process.argv.slice(2).join(",")}\\n`);\n',
@@ -57,7 +48,7 @@ async function createRepo() {
 }
 
 describe('pre-commit validation', () => {
-  it('runs sync-pack tests when staged sync-pack files changed', async () => {
+  it('keeps sync-pack tests out of the pre-commit path', async () => {
     const repoDir = await createRepo();
     try {
       await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
@@ -67,7 +58,7 @@ describe('pre-commit validation', () => {
       const result = await runCommand('node', [PRE_COMMIT_VALIDATION_SCRIPT], repoDir);
 
       expect(result.code).toBe(0);
-      expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
+      expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).not.toContain('sync-pack');
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }

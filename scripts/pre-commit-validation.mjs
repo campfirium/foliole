@@ -2,9 +2,7 @@
 /* global console, process */
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 
-const SYNC_PACK_PATH_PATTERN = /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u;
 const LINTABLE_FILE_PATTERN = /\.(cjs|js|jsx|mjs|ts|tsx)$/u;
 
 function run(command, args, options = {}) {
@@ -25,28 +23,9 @@ function stagedFiles(diffFilter) {
     .filter(Boolean);
 }
 
-function hasPackageScript(scriptName) {
-  try {
-    const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
-    return Boolean(packageJson.scripts?.[scriptName]);
-  } catch {
-    return false;
-  }
-}
-
 function runStep(label, command, args) {
   console.log(`[pre-commit-validation] ${label}`);
   run(command, args, { stdio: 'inherit' });
-}
-
-function runSyncPackCheckIfNeeded(files) {
-  if (!files.some((file) => SYNC_PACK_PATH_PATTERN.test(file))) {
-    return;
-  }
-  if (!hasPackageScript('test:sync-pack')) {
-    throw new Error('staged sync-pack changes require package script test:sync-pack.');
-  }
-  runStep('sync-pack changes detected; running test:sync-pack', 'npm', ['run', 'test:sync-pack']);
 }
 
 function runAddedFileChecks(files) {
@@ -61,9 +40,7 @@ function runAddedFileChecks(files) {
 }
 
 function main() {
-  const changedFiles = stagedFiles('ACMRTUXB');
   const addedOrRenamedFiles = stagedFiles('AR');
-  runSyncPackCheckIfNeeded(changedFiles);
   runAddedFileChecks(addedOrRenamedFiles);
 }
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-node scripts/check-commit-sequence.mjs pre-push
+input="$(cat)"
+printf '%s' "$input" | node scripts/check-commit-sequence.mjs pre-push
+printf '%s' "$input" | node scripts/pre-push-affected-validation.mjs

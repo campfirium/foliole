@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push'];
 const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budget.mjs');
+const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const PRE_COMMIT_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-commit-validation.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-commit-sequence.mjs');
 const tempDirs = [];
@@ -46,8 +47,15 @@ async function createRepo() {
   await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
   await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'));
   await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
+  await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
   await copyFile(PRE_COMMIT_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-commit-validation.mjs'));
   await chmod(path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'), 0o755);
+  await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
+  await writeFile(
+    path.join(repoDir, 'scripts', 'lint-changed.sh'),
+    '#!/usr/bin/env bash\nexit 0\n',
+    { encoding: 'utf8', mode: 0o755 }
+  );
   await Promise.all(
     HOOK_NAMES.map(async (name) => {
       const hookPath = path.join(repoDir, '.githooks', name);
@@ -130,5 +138,36 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('contains an unnumbered commit subject');
+  });
+
+  it('routes sync-pack affected checks through pre-push', async () => {
+    const repoDir = await createRepo();
+    await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({
+      scripts: {
+        'test:sync-pack': 'node scripts/mock-sync-pack.mjs'
+      }
+    }), 'utf8');
+    await writeFile(
+      path.join(repoDir, 'scripts', 'mock-sync-pack.mjs'),
+      'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "sync-pack\\n");\n',
+      'utf8'
+    );
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
+    await expect(commitFile(
+      repoDir,
+      'electron/database/syncPackBuilder.ts',
+      'export const value = 1;\n',
+      '000002 sync pack'
+    )).resolves.toMatchObject({ code: 0 });
+
+    const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
+    const hook = path.join(repoDir, '.githooks', 'pre-push');
+    const result = await runCommand('bash', [hook], repoDir, {
+      input: `refs/heads/main ${head} refs/heads/main ${'0'.repeat(40)}\n`
+    });
+
+    expect(result.code).toBe(0);
+    expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
   });
 });
