@@ -67,7 +67,7 @@ describe('describeCompanionSyncPassResult backlog', () => {
       remainingAttachmentResourceCount: null,
       remainingContentBlobCount: null
     }))).toEqual({
-      message: 'Sync checked; topic list is up to date.',
+      message: 'Sync checked; resource backlog was not measured in this pass.',
       outcome: 'skipped',
       status: 'skipped'
     });

@@ -36,9 +36,15 @@ async function createRepo() {
   await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
   await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({
     scripts: {
+      'check:android-boundary': 'node scripts/mock-android-boundary.mjs',
       'test:sync-pack': 'node scripts/mock-sync-pack.mjs'
     }
   }), 'utf8');
+  await writeFile(
+    path.join(repoDir, 'scripts', 'mock-android-boundary.mjs'),
+    'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "android-boundary\\n");\n',
+    'utf8'
+  );
   await writeFile(
     path.join(repoDir, 'scripts', 'mock-sync-pack.mjs'),
     'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "sync-pack\\n");\n',
@@ -69,6 +75,29 @@ describe('pre-push affected validation', () => {
 
       expect(result.code).toBe(0);
       expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runs Android boundary checks when pushed commits affect Android sync Java', async () => {
+    const repoDir = await createRepo();
+    try {
+      await writeFile(path.join(repoDir, 'README.md'), 'seed\n');
+      const remoteSha = await commitAll(repoDir, '000001 seed');
+      await mkdir(path.join(repoDir, 'android/app/src/main/java/com/foliole/android'), { recursive: true });
+      await writeFile(
+        path.join(repoDir, 'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncNodeVersionStore.java'),
+        'final class FolioleCompanionSyncNodeVersionStore {}\n'
+      );
+      const localSha = await commitAll(repoDir, '000002 android sync');
+
+      const result = await runCommand('node', [AFFECTED_VALIDATION_SCRIPT], repoDir, {
+        input: `refs/heads/main ${localSha} refs/heads/main ${remoteSha}\n`
+      });
+
+      expect(result.code).toBe(0);
+      expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('android-boundary');
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }

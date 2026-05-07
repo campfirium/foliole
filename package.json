@@ -69,6 +69,7 @@
     "android:preview": "node scripts/preview-dedupe.mjs android -- bash scripts/android/android-preview.sh",
     "android:preview:lite": "bash scripts/android/android-preview-lite.sh",
     "android:screenshot": "bash scripts/android/windows-screenshot.sh",
+    "android:sync:audit": "node scripts/android/android-sync-audit.mjs",
     "agent:codex": "bash scripts/codex/run-task.sh",
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",

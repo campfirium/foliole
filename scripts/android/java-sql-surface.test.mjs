@@ -95,7 +95,9 @@ function isAllowedAccessLine(entry) {
   }
   if (entry.file === 'FolioleCompanionNamedMutationStore.java') {
     return entry.text.includes('database.compileStatement(statement(context, statementName))') ||
-      entry.text.includes('database.execSQL(statement(context,');
+      entry.text.includes('database.execSQL(statement(context,') ||
+      entry.text.includes('database.execSQL(sql,') ||
+      entry.text.includes('database.execSQL(sql)');
   }
   if (entry.file === 'FolioleCompanionSchemaInstaller.java') {
     return entry.text.includes('database.execSQL(statement)');

@@ -27,7 +27,7 @@ async function testRecordsBacklogBytes() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync checked; 5 topic bodies (5.0 MB) and 2 attachment files (3.0 MB) left to download.',
     status: 'skipped'
@@ -64,7 +64,7 @@ async function testRecordsDownloadedResourcesForPass() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('backlog');
   expect(setSyncProgress).toHaveBeenLastCalledWith({
     completed: 1,
     completedBytes: 1048576,
@@ -141,7 +141,7 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('backlog');
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
@@ -203,7 +203,7 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
   expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'attachment' }));
   expect(setSyncProgress).toHaveBeenLastCalledWith(null);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    message: 'Sync checked; topic list is up to date.',
+    message: 'Sync checked; resource backlog was not measured in this pass.',
     status: 'skipped'
   }));
 }
@@ -226,7 +226,7 @@ async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Sync made progress; downloaded 1 topic body in this sync',
     status: 'skipped'
@@ -236,17 +236,17 @@ async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
 describe('tryForegroundAutoSync resource progress', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
-  it('records remaining cache bytes without scheduling a fast retry when the pass makes no progress', testRecordsBacklogBytes);
+  it('records remaining cache bytes and schedules a fast retry while backlog remains', testRecordsBacklogBytes);
 
   it('records downloaded resources when a pass makes progress', testRecordsDownloadedResourcesForPass);
 
   it('keeps resource errors visible without fast retry when the pass makes no progress', testKeepsResourceErrorsVisibleWithoutFastRetry);
 
-  it('keeps sync progress visible without fast retry when a pass leaves idle resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
+  it('keeps sync progress visible and retries when a pass leaves idle resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
 
   it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
 
   it('does not use unknown resource counts as fast backlog retry evidence', testUnknownResourceCountsDoNotDriveFastBacklogRetry);
 
-  it('does not continue quickly only because resources moved', testProgressWithUnknownResourceCountsDoesNotDriveFastRetry);
+  it('continues quickly when resources moved in this pass', testProgressWithUnknownResourceCountsDoesNotDriveFastRetry);
 });

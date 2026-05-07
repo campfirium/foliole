@@ -25,7 +25,7 @@ async function testUsesStreamSyncDirectly() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641',
-    expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -54,7 +54,7 @@ async function testUsesRememberedSyncTarget() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://192.168.1.44:38641',
-    expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({

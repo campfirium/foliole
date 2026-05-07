@@ -22,6 +22,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionBootstrapPlugin.java',
       'FolioleCompanionDatabasePlugin.java',
       'FolioleCompanionPairingPluginActions.java',
+      'FolioleCompanionPluginErrors.java',
       'FolioleCompanionResourcePluginActions.java',
       'FolioleCompanionSyncDataPluginActions.java',
       'FolioleCompanionSyncPackTransferPlugin.java',
@@ -149,6 +150,7 @@ export const REMOVED_BUSINESS_FORKS = [
 ];
 
 export const FORBIDDEN_BUSINESS_RULE_PATTERNS = [
+  /\bconflict-copy-/,
   /\bchooseConflictWinner\b/,
   /\bresolveConflict\b/,
   /\bmergeConflict\b/,
@@ -163,6 +165,27 @@ export const FORBIDDEN_BUSINESS_RULE_PATTERNS = [
   /\bcreateTableSql\b/,
   /\balterTableSql\b/
 ];
+
+const GENERATED_RESULT_FILTER_PATTERN =
+  /FolioleCompanionGeneratedQueryRunner\.load\([\s\S]*?new\s+JSONArray\s*\(\)[\s\S]*?for\s*\([\s\S]*?\.length\s*\(\)[\s\S]*?if\s*\([\s\S]*?\)[\s\S]*?\.put\s*\(/u;
+
+export function inspectJavaAdapterBoundarySource(file, source) {
+  const violations = FORBIDDEN_BUSINESS_RULE_PATTERNS
+    .filter((pattern) => pattern.test(`${file}\n${source}`))
+    .map((pattern) => ({
+      file,
+      kind: 'forbidden_business_rule',
+      pattern: pattern.source
+    }));
+  if (GENERATED_RESULT_FILTER_PATTERN.test(source)) {
+    violations.push({
+      file,
+      kind: 'generated_result_filter',
+      pattern: GENERATED_RESULT_FILTER_PATTERN.source
+    });
+  }
+  return violations;
+}
 
 export function classifiedFiles() {
   return Object.values(CLASSIFICATIONS).flatMap((entry) => entry.files).sort();

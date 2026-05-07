@@ -194,7 +194,7 @@ function isKnownBacklog(count: number | null) {
 }
 
 function clarifyCheckOnlyMessage(message: string) {
-  return message === 'Sync checked' ? 'Sync checked; topic list is up to date.' : message;
+  return message === 'Sync checked' ? 'Sync checked; resource backlog was not measured in this pass.' : message;
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {

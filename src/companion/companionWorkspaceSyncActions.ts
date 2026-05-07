@@ -87,7 +87,6 @@ async function syncDesktopStreams(args: {
     workspace_snapshot: args.workspaceSnapshot
   });
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-    includeResources: false,
     onProgress: args.setSyncProgress,
     onStructureSynced: () => undefined
   });

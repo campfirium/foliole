@@ -81,7 +81,13 @@ function hasFastRetryWork(result: Awaited<ReturnType<typeof syncCompanionObjects
     result.pushRejectedCount === 0 &&
     (result.pushIssueCount ?? 0) === 0 &&
     ((result.localDirtyCount ?? 0) > 0 || (result.pendingAckCount ?? 0) > 0);
-  return remainingStructure > 0 || waitingLocalChanges;
+  return (
+    isKnownBacklog(result.remainingContentBlobCount) ||
+    isKnownBacklog(result.remainingAttachmentResourceCount) ||
+    madeResourceProgress(result) ||
+    remainingStructure > 0 ||
+    waitingLocalChanges
+  );
 }
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
@@ -98,7 +104,6 @@ export async function runCompanionStreamSync(args: {
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-    includeResources: false,
     onProgress: args.setSyncProgress,
     onStructureSynced: () => undefined
   });

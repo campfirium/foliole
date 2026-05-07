@@ -20,22 +20,8 @@ final class FolioleCompanionSyncNodeVersionStore {
             FolioleCompanionSyncStreamQueryRules.cursorArgs(context, "nodeVersions", cursor, deviceId, limit)
         );
         String resultKey = FolioleCompanionSyncStreamQueryRules.nodeVersionsResultKey(context);
-        result.put(resultKey, filterConflictCopyNodes(result.getJSONArray(resultKey)));
         appendAncestorVersionIds(context, database, result.getJSONArray(resultKey));
         return result;
-    }
-
-    private static JSONArray filterConflictCopyNodes(JSONArray nodes) throws Exception {
-        JSONArray filtered = new JSONArray();
-        for (int index = 0; index < nodes.length(); index += 1) {
-            JSONObject node = nodes.getJSONObject(index);
-            String objectId = node.optString("object_id", node.optString("objectId", ""));
-            String versionId = node.optString("version_id", node.optString("versionId", ""));
-            if (!objectId.startsWith("conflict-copy-") && !versionId.contains("conflict-copy-")) {
-                filtered.put(node);
-            }
-        }
-        return filtered;
     }
 
     private static void appendAncestorVersionIds(Context context, SQLiteDatabase database, JSONArray nodes) throws Exception {

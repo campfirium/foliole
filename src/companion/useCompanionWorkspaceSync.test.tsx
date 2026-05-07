@@ -144,7 +144,7 @@ async function testManualSyncRefreshesReadableArticle() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641',
-    expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
   expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(2);
   expect(result.current.readableArticle?.nodeId).toBe('topic-1');

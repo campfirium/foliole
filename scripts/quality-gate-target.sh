@@ -198,22 +198,23 @@ case "${target}" in
   android)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test
+    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test
     ;;
   android-device)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test android:emulator android:host:device-test
+    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
+    run_gate_steps check:android-boundary lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
     run_workspace_boundary_check_if_present
     ;;
   full)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
+    run_gate_steps check:android-boundary
     run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
     run_gate_steps test:full
     run_gate_steps_parallel build electron:compile android:web:build
@@ -222,6 +223,7 @@ case "${target}" in
   release)
     run_copy_guard_if_present
     run_repository_root_boundary_check_if_present
+    run_gate_steps check:android-boundary
     run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
     run_gate_steps test:full
     run_gate_steps_parallel build electron:compile android:web:build
