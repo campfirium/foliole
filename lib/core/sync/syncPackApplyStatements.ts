@@ -57,6 +57,23 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     `INNER JOIN applyable_nodes ON applyable_nodes.id = incoming.id ORDER BY applyable_nodes.depth ASC`;
 }
 
+export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOptions = {}) {
+  const alias = incomingAlias(options);
+  return `INSERT OR REPLACE INTO main.node_order (node_id, position) ` +
+    `SELECT incoming.node_id, incoming.position FROM ${alias}.node_order incoming ` +
+    `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      incomingAlias: alias,
+      objectType: 'node'
+    })})`;
+}
+
+export function buildSyncPackNodeOrderDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
+  const alias = incomingAlias(options);
+  return `DELETE FROM main.node_order WHERE node_id IN (` +
+    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })}) ` +
+    `AND node_id NOT IN (SELECT node_id FROM ${alias}.node_order)`;
+}
+
 export function buildSyncPackNodeAttachmentDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
   return `DELETE FROM main.node_attachments WHERE node_id IN (` +
     `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ ...options, objectType: 'node' })})`;

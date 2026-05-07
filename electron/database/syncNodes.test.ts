@@ -80,6 +80,7 @@ function insertNodeFixture(connection: ReturnType<typeof openDatabaseConnection>
       null
     ]
   );
+  connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 7]);
 }
 
 function insertVersionFixtures(connection: ReturnType<typeof openDatabaseConnection>) {
@@ -106,6 +107,15 @@ function insertNodeAttachmentFixtures(connection: ReturnType<typeof openDatabase
   connection.driver.execute(
     `INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`,
     ['node-1', 'att-1', 'inline']
+  );
+}
+
+function replaceNodeOrderPosition(connection: ReturnType<typeof openDatabaseConnection>, position: number) {
+  connection.driver.execute('UPDATE nodes SET position = NULL WHERE id = ?', ['node-1']);
+  connection.driver.execute(
+    `INSERT INTO node_order (node_id, position) VALUES (?, ?)
+     ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`,
+    ['node-1', position]
   );
 }
 
@@ -172,6 +182,14 @@ describe('loadSyncNodes', () => {
     const connection = openDatabaseConnection();
     insertSyncNodeFixture(connection);
     expect(loadSyncNodes(['node-1'])).toEqual(expectedSyncNodeRecord());
+  });
+
+  it('uses node_order as the fallback sync node position source', () => {
+    const connection = openDatabaseConnection();
+    insertSyncNodeFixture(connection);
+    replaceNodeOrderPosition(connection, 12);
+
+    expect(loadSyncNodes(['node-1'])[0].snapshot.position).toBe(12);
   });
 
   it('returns empty array for empty object ids input', () => {

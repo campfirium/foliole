@@ -59,6 +59,7 @@ function insertNodeSyncState() {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
+  driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 3]);
   driver.execute(
     `INSERT INTO setting_records (
        key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
@@ -137,6 +138,7 @@ function readPackRows(packPath: string) {
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash FROM external_documents').all(),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
       nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all()
     };
   } finally {
@@ -181,6 +183,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
         { name: 'sync_object_state', row_count: 3 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
+        { name: 'node_order', row_count: 1 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 1 },
         { name: 'content_blobs', row_count: 2 },
@@ -188,6 +191,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       ]
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    nodeOrder: [{ node_id: 'node-1', position: 3 }],
     nodes: [expect.objectContaining({ content: '', id: 'node-1', opening_text: 'Node opening preview' })]
   });
 });

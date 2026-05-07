@@ -130,6 +130,7 @@ public class FolioleCompanionSyncPackContractApplyTest {
         mainDatabase.execSQL("CREATE TABLE node_attachments (" +
             "node_id TEXT NOT NULL, attachment_id TEXT NOT NULL, role TEXT NOT NULL, " +
             "PRIMARY KEY (node_id, attachment_id, role))");
+        mainDatabase.execSQL("CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL)");
     }
 
     private String selectString(String sql) {

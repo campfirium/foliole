@@ -58,10 +58,10 @@ public class FolioleCompanionContentBlobStoreTest {
         OneShotHttpServer server = new OneShotHttpServer(body);
         server.start();
 
-        assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(body.getBytes(StandardCharsets.UTF_8).length, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(body.getBytes(StandardCharsets.UTF_8).length, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("blobs")
             .getJSONObject(0)
             .getLong("size_bytes"));
@@ -70,7 +70,7 @@ public class FolioleCompanionContentBlobStoreTest {
         assertEquals("cached", result.getString("availability"));
         assertEquals("cached", selectString("SELECT availability FROM content_blobs WHERE hash = '" + hash + "'"));
         assertEquals(body, selectString("SELECT CAST(data AS TEXT) FROM content_blob_data WHERE hash = '" + hash + "'"));
-        assertEquals(0, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10).getJSONArray("hashes").length());
+        assertEquals(0, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10).getJSONArray("hashes").length());
         assertEquals("GET", server.method());
     }
 
@@ -85,7 +85,7 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNodeRef("node-1", referencedNodeHash, "2026-04-27T00:00:00.000Z");
         insertExternalDocumentRef("doc-1", referencedDocumentHash, "2026-04-27T00:00:00.000Z");
 
-        assertEquals(2, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(2, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .length());
     }
@@ -103,7 +103,7 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNodeRef("ready-node", readyCachedHash, "2026-04-27T00:00:00.000Z");
         database.execSQL("INSERT INTO content_blob_data (hash, data) VALUES ('" + readyCachedHash + "', CAST('ready cached body' AS BLOB))");
 
-        JSObject summary = FolioleCompanionContentBlobStore.summarizeMissingBodies(database);
+        JSObject summary = FolioleCompanionContentBlobStore.summarizeMissingBodies(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
 
         assertEquals(1, summary.getLong("missing_content_blob_count"));
         assertEquals(19, summary.getLong("missing_content_blob_bytes"));
@@ -128,16 +128,16 @@ public class FolioleCompanionContentBlobStoreTest {
         database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
             "('active_node_id', 'active-node', '2026-04-29T00:00:00.000Z')");
 
-        assertEquals(activeNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(activeNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(recentNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(recentNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(1));
-        assertEquals(oldNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(oldNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(2));
-        assertEquals(documentHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(documentHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(3));
     }
@@ -155,13 +155,13 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNodeRef("old-node", oldNodeHash, "2026-04-25T00:00:00.000Z");
         insertReviewDue("due-review-node", "2026-04-20T00:00:00.000Z");
 
-        assertEquals(dueReviewHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(dueReviewHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(recentNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(recentNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(1));
-        assertEquals(oldNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(oldNodeHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(2));
     }
@@ -176,10 +176,10 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNodeRef("recently-updated-node", recentlyUpdatedHash, "2026-04-29T00:00:00.000Z");
         insertReading("recently-read-node", "2026-04-30T00:00:00.000Z");
 
-        assertEquals(recentlyReadHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(recentlyReadHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(recentlyUpdatedHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(recentlyUpdatedHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(1));
     }
@@ -196,13 +196,13 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNestedNodeRef("nested-node", "top-level-node", nestedHash, "2026-04-30T00:00:00.000Z");
         insertExternalDocumentRef("doc-1", externalHash, "2026-05-01T00:00:00.000Z");
 
-        assertEquals(topLevelHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(topLevelHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(nestedHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(nestedHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(1));
-        assertEquals(externalHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(externalHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(2));
     }
@@ -246,10 +246,10 @@ public class FolioleCompanionContentBlobStoreTest {
         database.execSQL("UPDATE content_blobs SET availability = 'failed' WHERE hash = '" + hash + "'");
         insertNodeRef("node-1", hash, "2026-04-27T00:00:00.000Z");
 
-        assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(hash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        JSObject summary = FolioleCompanionContentBlobStore.summarizeMissingBodies(database);
+        JSObject summary = FolioleCompanionContentBlobStore.summarizeMissingBodies(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
         assertEquals(1, summary.getLong("failed_content_blob_count"));
         assertEquals(17, summary.getLong("failed_content_blob_bytes"));
     }
@@ -264,10 +264,10 @@ public class FolioleCompanionContentBlobStoreTest {
         insertNodeRef("failed-node", failedHash, "2026-04-30T00:00:00.000Z");
         insertNodeRef("fresh-node", freshHash, "2026-04-20T00:00:00.000Z");
 
-        assertEquals(freshHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(freshHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(failedHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(failedHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(1));
     }
@@ -284,10 +284,10 @@ public class FolioleCompanionContentBlobStoreTest {
         database.execSQL("INSERT INTO workspace_meta (key, value, updated_at) VALUES " +
             "('active_node_id', 'active-node', '2026-04-30T00:00:00.000Z')");
 
-        assertEquals(activeHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(activeHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(0));
-        assertEquals(freshHash, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10)
+        assertEquals(freshHash, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10)
             .getJSONArray("hashes")
             .getString(1));
     }

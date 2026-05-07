@@ -2,6 +2,8 @@ import type { DbPort } from './dbPort.js';
 import {
   buildSyncPackNodeAttachmentDeleteSql,
   buildSyncPackNodeAttachmentInsertSql,
+  buildSyncPackNodeOrderDeleteSql,
+  buildSyncPackNodeOrderUpsertSql,
   buildSyncPackNodeUpsertSql,
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
@@ -32,7 +34,16 @@ export async function applySyncPackNodesWithDbPort(
   options: SyncPackNodeApplyOptions = {}
 ) {
   await applySyncPackNodeRowsWithDbPort(port, options);
+  await applySyncPackNodeOrderRowsWithDbPort(port, options);
   await applySyncPackNodeAttachmentsWithDbPort(port, options);
+}
+
+async function applySyncPackNodeOrderRowsWithDbPort(
+  port: DbPort,
+  options: SyncPackNodeApplyOptions = {}
+) {
+  await port.run(buildSyncPackNodeOrderDeleteSql(options));
+  await port.run(buildSyncPackNodeOrderUpsertSql(options));
 }
 
 async function applySyncPackNodeRowsWithDbPort(
@@ -77,6 +88,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   if (shouldApply) {
     appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
     await applySyncPackNodeRowsWithDbPort(port, options);
+    await applySyncPackNodeOrderRowsWithDbPort(port, options);
     await pruneLearningRowsWithoutActiveNodes(port);
     await applySyncPackExternalDocumentsWithDbPort(port, options);
     await applySyncPackSettingObjectsWithDbPort(port, options);

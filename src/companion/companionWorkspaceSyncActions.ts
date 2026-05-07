@@ -38,6 +38,24 @@ const STARTING_STRUCTURE_PROGRESS = {
   phase: 'structure' as const,
   total: null
 };
+const WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS = 8_000;
+
+async function refreshWorkspaceSnapshotAfterStructureSync(fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => resolve(null), WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS);
+  });
+  try {
+    const refreshedState = await Promise.race([loadCompanionWorkspaceSyncState(), timeout]);
+    return refreshedState?.workspace_snapshot ?? fallbackSnapshot;
+  } catch {
+    return fallbackSnapshot;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 async function refreshConflictAwareState(args: {
   setReadableArticle: (article: CompanionReadableArticle | null) => void;
@@ -64,19 +82,16 @@ async function syncDesktopStreams(args: {
     message: 'Sync started.',
     status: 'started'
   });
-  let latestWorkspaceSnapshot = args.workspaceSnapshot;
   args.setState({
     ...startedState,
-    workspace_snapshot: latestWorkspaceSnapshot
+    workspace_snapshot: args.workspaceSnapshot
   });
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
     includeResources: false,
     onProgress: args.setSyncProgress,
-    onStructureSynced: async () => {
-      args.setReadableArticle(await loadCompanionReadableArticle());
-      args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-    }
+    onStructureSynced: () => undefined
   });
+  const latestWorkspaceSnapshot = await refreshWorkspaceSnapshotAfterStructureSync(args.workspaceSnapshot);
   const passResult = describeCompanionSyncPassResult(result);
   const nextState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,

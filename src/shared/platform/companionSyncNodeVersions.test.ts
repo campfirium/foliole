@@ -69,6 +69,27 @@ it('retrieves the Android companion database when create reports an existing con
   expect(connection.open).toHaveBeenCalled();
 });
 
+it('recreates the Android companion database connection when the cached handle is stale', async () => {
+  db = new Database(':memory:');
+  installNodeApplySchema(db);
+  const connection = createFakeCapacitorConnection(db);
+  const manager = {
+    checkConnectionsConsistency: vi.fn(async () => ({ result: true })),
+    createConnection: vi.fn(async () => connection),
+    isConnection: vi.fn(async () => ({ result: true })),
+    retrieveConnection: vi.fn(async () => {
+      throw new Error('Connection foliole-companion does not exist');
+    })
+  };
+
+  await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
+    .resolves.toEqual(['node-1']);
+
+  expect(manager.checkConnectionsConsistency).toHaveBeenCalled();
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 14, false);
+  expect(connection.open).toHaveBeenCalled();
+});
+
 function nodeVersion(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],

@@ -149,6 +149,25 @@ it('creates an initial sync version for an unversioned clean node', () => {
   ).toEqual({ object_id: 'node-1' });
 });
 
+it('uses node_order as the sync snapshot position source', () => {
+  upsertTestNode();
+  const connection = openDatabaseConnection();
+  connection.driver.execute('UPDATE nodes SET position = NULL WHERE id = ?', ['node-1']);
+  connection.driver.execute(
+    `INSERT INTO node_order (node_id, position) VALUES (?, ?)
+     ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`,
+    ['node-1', 9]
+  );
+
+  const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
+  const row = connection.driver.queryOne<{ snapshot_json: string }>(
+    'SELECT snapshot_json FROM node_sync_versions WHERE version_id = ?',
+    [versionId ?? '']
+  );
+
+  expect(JSON.parse(row?.snapshot_json ?? '{}')).toMatchObject({ position: 9 });
+});
+
 it('backfills sync state for already versioned nodes missing from sync_object_state', () => {
   upsertTestNode();
   const connection = openDatabaseConnection();

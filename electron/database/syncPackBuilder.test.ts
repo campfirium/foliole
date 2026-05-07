@@ -26,6 +26,17 @@ vi.mock('../ipc/paths.js', () => ({
 
 setupSyncPackBuilderTestLifecycle();
 
+const EXTERNAL_DOCUMENT_PACK_TABLES = [
+  { name: 'sync_object_state', row_count: 1 },
+  { name: 'sync_objects', row_count: 0 },
+  { name: 'nodes', row_count: 0 },
+  { name: 'node_order', row_count: 0 },
+  { name: 'node_attachments', row_count: 0 },
+  { name: 'external_documents', row_count: 1 },
+  { name: 'content_blobs', row_count: 1 },
+  { name: 'review_log', row_count: 0 }
+];
+
 it('builds a sqlite pack with structure and blob manifests but no body bytes', async () => {
   insertNodeSyncState();
   insertNodeAttachmentRows();
@@ -69,6 +80,7 @@ function expectNodePackRows(packPath: string) {
         { name: 'sync_object_state', row_count: 2 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
+        { name: 'node_order', row_count: 0 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 1 },
@@ -144,15 +156,7 @@ it('packs external document structure with body blob manifests but no body bytes
     manifest: expect.objectContaining({
       compression: 'zlib',
       database_file: 'incoming.db.deflate',
-      tables: [
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 0 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 1 },
-        { name: 'content_blobs', row_count: 1 },
-        { name: 'review_log', row_count: 0 }
-      ]
+      tables: EXTERNAL_DOCUMENT_PACK_TABLES
     }),
     stateRows: [{ object_id: 'folder-1:doc.md', object_type: 'external_document', state_seq: 1 }]
   });

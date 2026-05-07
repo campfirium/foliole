@@ -28,7 +28,7 @@ public class FolioleCompanionSyncEventStreamsTest {
         createTables();
         insertNode("node-1", "desktop#2", "local body");
         insertVersion("desktop#1", null, "node-1", "desktop", "hash-1");
-        insertVersion("desktop#2", "desktop#1", "node-1", "android-test", "hash-2");
+        insertVersion("desktop#2", "desktop#1", "node-1", "desktop", "hash-2");
     }
 
     @After

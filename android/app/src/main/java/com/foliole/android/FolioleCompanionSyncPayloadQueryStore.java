@@ -26,7 +26,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
 
     static String metadata(Context context, String queryName, String key) throws Exception {
         String value = syncPayload(context, queryName).optString(key, "");
-        if (value.trim().isEmpty()) {
+        if (value.trim().isEmpty() && !key.startsWith("default")) {
             throw new IllegalStateException("Companion query definitions asset is missing sync payload metadata: " + queryName + "." + key);
         }
         return value;

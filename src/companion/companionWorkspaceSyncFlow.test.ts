@@ -111,6 +111,49 @@ async function testRecordsStructureApplyFailureCause() {
   }));
 }
 
+async function testRecordsNativeBridgeFailureCause() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue({
+    message: 'Desktop HTTP request failed. Cause: ConnectException: Failed to connect to /10.0.2.2:38641.'
+  });
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(outcome).toBe('failed');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Desktop HTTP request failed. Cause: ConnectException: Failed to connect to /10.0.2.2:38641.',
+    status: 'failed'
+  }));
+}
+
+async function testRecordsMissingFailureDetails() {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue({});
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    message: 'Desktop sync failed: no error details were returned.',
+    status: 'failed'
+  }));
+}
+
 async function testRecordsStructureLagWithoutCompleting() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingStructureChangeCount: 4
@@ -198,6 +241,10 @@ describe('tryForegroundAutoSync', () => {
   it('surfaces unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 
   it('records structure apply failure causes in sync activity', testRecordsStructureApplyFailureCause);
+
+  it('records native bridge failure causes in sync activity', testRecordsNativeBridgeFailureCause);
+
+  it('records when a failed sync returns no error details', testRecordsMissingFailureDetails);
 
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 

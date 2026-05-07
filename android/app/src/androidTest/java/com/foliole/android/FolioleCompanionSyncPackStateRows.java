@@ -9,12 +9,15 @@ final class FolioleCompanionSyncPackStateRows {
 
     static int upsert(SQLiteDatabase database, String deviceId, String applyableRowsSql) {
         long nextStateSeq = nextStateSeq(database);
+        String nodeVersionExpression = incomingColumnExists(database, "nodes", "current_version_id")
+            ? "SELECT current_version_id FROM inc.nodes WHERE inc.nodes.id = object_id"
+            : "SELECT current_version_id FROM main.nodes WHERE main.nodes.id = object_id";
         int count = 0;
         try (
             Cursor cursor = database.rawQuery(
             "SELECT object_type, object_id, content_hash, updated_at, deleted_at, " +
                 "CASE WHEN object_type = 'node' THEN (" +
-                    "SELECT current_version_id FROM inc.nodes WHERE inc.nodes.id = object_id" +
+                    nodeVersionExpression +
                 ") ELSE NULL END FROM " +
                 applyableRowsSql + " WHERE object_type IN (" +
                 "'attachment', 'external_folder', 'import_source', 'node', 'external_document', " +
@@ -67,5 +70,16 @@ final class FolioleCompanionSyncPackStateRows {
         try (Cursor cursor = database.rawQuery("SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state", null)) {
             return cursor.moveToFirst() ? cursor.getLong(0) : 1L;
         }
+    }
+
+    private static boolean incomingColumnExists(SQLiteDatabase database, String tableName, String columnName) {
+        try (Cursor cursor = database.rawQuery("PRAGMA inc.table_info(" + tableName + ")", null)) {
+            while (cursor.moveToNext()) {
+                if (columnName.equals(cursor.getString(1))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

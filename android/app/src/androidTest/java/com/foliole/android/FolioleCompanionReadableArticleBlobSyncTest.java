@@ -57,7 +57,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
 
         assertEquals("ready", loadReadableContentStatus());
         assertEquals(body, loadReadableContent());
-        assertEquals(0, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10).getJSONArray("hashes").length());
+        assertEquals(0, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10).getJSONArray("hashes").length());
     }
 
     @Test
@@ -81,7 +81,7 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
             FolioleCompanionContentBlobStore.syncBlob(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, hash, server.url(), new JSONObject());
         } catch (IllegalStateException expected) {
             assertEquals("failed", loadReadableContentStatus());
-            assertEquals(1, FolioleCompanionContentBlobStore.loadMissingHashes(database, 10).getJSONArray("hashes").length());
+            assertEquals(1, FolioleCompanionContentBlobStore.loadMissingHashes(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, 10).getJSONArray("hashes").length());
             return;
         }
         throw new AssertionError("Expected content blob sync failure.");
@@ -119,13 +119,13 @@ public class FolioleCompanionReadableArticleBlobSyncTest {
     }
 
     private String loadReadableContentStatus() throws Exception {
-        return FolioleCompanionReadableArticleQuery.loadReadableArticle(database)
+        return FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database)
             .getJSONObject("readable_article")
             .getString("content_status");
     }
 
     private String loadReadableContent() throws Exception {
-        return FolioleCompanionReadableArticleQuery.loadReadableArticle(database)
+        return FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database)
             .getJSONObject("readable_article")
             .getString("content");
     }

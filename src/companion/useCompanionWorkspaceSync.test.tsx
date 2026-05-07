@@ -146,14 +146,13 @@ async function testManualSyncRefreshesReadableArticle() {
     'http://10.0.2.2:38641',
     expect.objectContaining({ includeResources: false, onStructureSynced: expect.any(Function) })
   );
-  expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(1);
+  expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(2);
   expect(result.current.readableArticle?.nodeId).toBe('topic-1');
   expect(result.current.status).toBe('idle');
 }
 
 async function testManualSyncRefreshesConflictCount() {
   syncObjectsMock.loadCompanionSyncNodeConflicts
-    .mockResolvedValueOnce([])
     .mockResolvedValueOnce([])
     .mockResolvedValueOnce([
       {

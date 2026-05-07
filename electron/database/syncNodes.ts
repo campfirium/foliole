@@ -145,7 +145,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.reveal,
   n.anchor_link,
   n.image_regions,
-  n.position,
+  node_order.position,
   n.current_version_id,
   n.created_at,
   n.updated_at,
@@ -166,6 +166,7 @@ export function loadSyncNodes(objectIds: string[]) {
     `SELECT
        ${SYNC_NODE_SELECT_COLUMNS}
      FROM nodes n
+     LEFT JOIN node_order ON node_order.node_id = n.id
      LEFT JOIN node_sync_versions v
        ON v.version_id = n.current_version_id
      WHERE n.id IN (${placeholders})
@@ -181,6 +182,7 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
     `SELECT
        ${SYNC_NODE_SELECT_COLUMNS}
      FROM nodes n
+     LEFT JOIN node_order ON node_order.node_id = n.id
      INNER JOIN node_sync_versions v
        ON v.object_id = n.id
      WHERE ${cursor ? '(v.created_at > ? OR (v.created_at = ? AND v.version_id > ?))' : '1 = 1'}

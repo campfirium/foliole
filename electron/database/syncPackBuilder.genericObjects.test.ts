@@ -41,6 +41,7 @@ it('packs attachment metadata as a generic sync object', async () => {
         { name: 'sync_object_state', row_count: 1 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 0 },
+        { name: 'node_order', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 0 },

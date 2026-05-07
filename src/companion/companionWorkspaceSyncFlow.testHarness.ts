@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
@@ -53,6 +54,32 @@ export function createSyncObjectsResult(overrides: Partial<CompanionDesktopSyncR
     syncedContentBlobBytes: 0,
     syncedResourceElapsedMs: 0,
     ...overrides
+  };
+}
+
+export function createWorkspaceSnapshot(nodeId = 'topic-1'): WorkspaceSnapshot {
+  return {
+    activeNodeId: nodeId,
+    nodeOrder: [nodeId],
+    nodesById: {
+      [nodeId]: {
+        anchorLink: null,
+        content: '# Synced topic\n\nBody',
+        createdAt: '2026-04-25T09:00:00.000Z',
+        hideTitleHeading: false,
+        id: nodeId,
+        isTitleManual: false,
+        kind: 'topic',
+        parentNodeId: null,
+        reading: null,
+        reveal: null,
+        review: null,
+        title: 'Synced topic',
+        updatedAt: '2026-04-25T09:05:00.000Z'
+      }
+    },
+    trashedNodeIds: [],
+    untitledSequenceByParent: {}
   };
 }
 

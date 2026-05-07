@@ -49,6 +49,11 @@ export interface NodeAttachmentPackRow extends DatabaseRow {
   role: string;
 }
 
+export interface NodeOrderPackRow extends DatabaseRow {
+  node_id: string;
+  position: number;
+}
+
 export interface ExternalDocumentPackRow extends DatabaseRow {
   body_blob_hash: string | null;
   content: string;
@@ -123,6 +128,15 @@ function loadNodeAttachmentRows(nodeIds: string[]) {
     `SELECT node_id, attachment_id, role
      FROM node_attachments WHERE node_id IN (__IDS__)
      ORDER BY node_id ASC, role ASC, attachment_id ASC`,
+    nodeIds
+  );
+}
+
+function loadNodeOrderRows(nodeIds: string[]) {
+  return queryRowsByIds<NodeOrderPackRow>(
+    `SELECT node_id, position
+     FROM node_order WHERE node_id IN (__IDS__)
+     ORDER BY position ASC, node_id ASC`,
     nodeIds
   );
 }
@@ -208,6 +222,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
     ),
     externalDocuments,
     nodeAttachments,
+    nodeOrder: loadNodeOrderRows(nodeIds),
     nodes,
     reviewLog: loadReviewLogRows(stateRows),
     stateRows,

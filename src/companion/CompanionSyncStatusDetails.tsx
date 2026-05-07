@@ -97,7 +97,7 @@ function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: Nat
   if (event.status === 'skipped') {
     return formatSyncResultMessage(event.message);
   }
-  return `${formatEventStatus(event)} ${event.message}`;
+  return event.message;
 }
 
 function isSupersededFailure(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {

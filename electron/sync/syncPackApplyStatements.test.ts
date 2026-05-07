@@ -6,6 +6,8 @@ import {
   buildSyncPackExternalDocumentUpsertSql,
   buildSyncPackNodeAttachmentDeleteSql,
   buildSyncPackNodeAttachmentInsertSql,
+  buildSyncPackNodeOrderDeleteSql,
+  buildSyncPackNodeOrderUpsertSql,
   buildSyncPackNodeUpsertSql
 } from '../../lib/core/sync/syncPackApplyStatements.js';
 
@@ -54,5 +56,11 @@ it('builds node and attachment pack apply statements against an incoming alias',
   );
   expect(buildSyncPackNodeAttachmentInsertSql({ incomingAlias: 'incoming' })).toContain(
     'INNER JOIN main.attachments attachment ON attachment.id = incoming.attachment_id'
+  );
+  expect(buildSyncPackNodeOrderDeleteSql({ incomingAlias: 'incoming' })).toContain(
+    'DELETE FROM main.node_order WHERE node_id IN'
+  );
+  expect(buildSyncPackNodeOrderUpsertSql({ incomingAlias: 'incoming' })).toContain(
+    'FROM incoming.node_order incoming'
   );
 });

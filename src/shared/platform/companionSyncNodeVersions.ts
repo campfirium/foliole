@@ -13,6 +13,7 @@ const COMPANION_DATABASE_NAME = 'foliole-companion';
 const COMPANION_DATABASE_VERSION = 14;
 
 export interface CompanionSqliteConnectionManager {
+  checkConnectionsConsistency?(): Promise<{ result?: boolean }>;
   createConnection(
     database: string,
     encrypted: boolean,
@@ -54,10 +55,22 @@ export async function applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(
 export async function openCompanionDatabaseConnection(manager: CompanionSqliteConnectionManager) {
   const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false).catch(() => ({ result: false }));
   const connection = existing.result
-    ? await manager.retrieveConnection(COMPANION_DATABASE_NAME, false)
+    ? await retrieveOrCreateCompanionConnection(manager)
     : await createOrRetrieveCompanionConnection(manager);
   await connection.open();
   return connection;
+}
+
+async function retrieveOrCreateCompanionConnection(manager: CompanionSqliteConnectionManager) {
+  try {
+    return await manager.retrieveConnection(COMPANION_DATABASE_NAME, false);
+  } catch (error) {
+    if (!isMissingConnectionError(error)) {
+      throw error;
+    }
+    await manager.checkConnectionsConsistency?.().catch(() => undefined);
+    return createOrRetrieveCompanionConnection(manager);
+  }
 }
 
 async function createOrRetrieveCompanionConnection(manager: CompanionSqliteConnectionManager) {
@@ -73,11 +86,34 @@ async function createOrRetrieveCompanionConnection(manager: CompanionSqliteConne
     if (!isExistingConnectionError(error)) {
       throw error;
     }
-    return manager.retrieveConnection(COMPANION_DATABASE_NAME, false);
+    return retrieveExistingCompanionConnection(manager);
+  }
+}
+
+async function retrieveExistingCompanionConnection(manager: CompanionSqliteConnectionManager) {
+  try {
+    return await manager.retrieveConnection(COMPANION_DATABASE_NAME, false);
+  } catch (error) {
+    if (!isMissingConnectionError(error)) {
+      throw error;
+    }
+    await manager.checkConnectionsConsistency?.().catch(() => undefined);
+    return manager.createConnection(
+      COMPANION_DATABASE_NAME,
+      false,
+      'no-encryption',
+      COMPANION_DATABASE_VERSION,
+      false
+    );
   }
 }
 
 function isExistingConnectionError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return /connection .*already exists/i.test(message);
+}
+
+function isMissingConnectionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /connection .*does not exist/i.test(message);
 }

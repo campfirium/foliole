@@ -42,6 +42,10 @@ export const PACK_SCHEMA = [
     role TEXT NOT NULL,
     PRIMARY KEY (node_id, attachment_id, role)
   )`,
+  `CREATE TABLE node_order (
+    node_id TEXT PRIMARY KEY,
+    position INTEGER NOT NULL
+  )`,
   `CREATE TABLE external_documents (
     document_id TEXT PRIMARY KEY,
     folder_id TEXT NOT NULL,

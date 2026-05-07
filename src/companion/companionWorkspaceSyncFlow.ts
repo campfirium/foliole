@@ -6,6 +6,7 @@ import {
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   loadCompanionReadableArticle,
+  loadCompanionWorkspaceSyncState,
   recordCompanionWorkspaceSyncEvent
 } from '../shared/platform/companionWorkspaceSync';
 
@@ -33,6 +34,24 @@ const STARTING_STRUCTURE_PROGRESS = {
   phase: 'structure' as const,
   total: null
 };
+const WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS = 8_000;
+
+async function refreshWorkspaceSnapshotAfterStructureSync(fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => resolve(null), WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS);
+  });
+  try {
+    const refreshedState = await Promise.race([loadCompanionWorkspaceSyncState(), timeout]);
+    return refreshedState?.workspace_snapshot ?? fallbackSnapshot;
+  } catch {
+    return fallbackSnapshot;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 export function hasSyncBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
   const remainingStructure = result.remainingStructureChangeCount ?? 0;
@@ -78,20 +97,15 @@ export async function runCompanionStreamSync(args: {
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
-  let latestWorkspaceSnapshot = args.workspaceSnapshot;
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
     includeResources: false,
     onProgress: args.setSyncProgress,
-    onStructureSynced: async () => {
-      if (args.cancelled()) {
-        return;
-      }
-      args.setReadableArticle(await loadCompanionReadableArticle());
-    }
+    onStructureSynced: () => undefined
   });
   if (args.cancelled()) {
     return;
   }
+  const latestWorkspaceSnapshot = await refreshWorkspaceSnapshotAfterStructureSync(args.workspaceSnapshot);
   const passResult = describeCompanionSyncPassResult(result);
   const completedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,

@@ -35,7 +35,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
         insertBlobManifest("blob-article-1", "missing");
         saveActiveNode("article-1");
 
-        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
         JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
 
         JSONObject article = readable.getJSONObject("readable_article");
@@ -53,7 +53,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
         insertBlobManifest("blob-failed", "failed");
         saveActiveNode("fetching-article");
 
-        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
         JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
 
         assertEquals("fetching", readable.getJSONObject("readable_article").getString("content_status"));
@@ -66,7 +66,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
         insertNode("article-1", "", null);
         saveActiveNode("article-1");
 
-        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
         JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
 
         JSONObject article = readable.getJSONObject("readable_article");
@@ -82,7 +82,7 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
             "desired_retention REAL, title TEXT NOT NULL, is_title_manual INTEGER NOT NULL DEFAULT 0, " +
             "hide_title_heading INTEGER NOT NULL DEFAULT 0, content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, " +
             "opening_text TEXT, virtual_filter TEXT, reveal TEXT, anchor_link TEXT, image_regions TEXT, " +
-            "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
+            "current_version_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
         database.execSQL("CREATE TABLE content_blobs (" +
             "hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT, " +
             "compression TEXT NOT NULL DEFAULT 'none', original_size_bytes INTEGER NOT NULL, " +
@@ -104,6 +104,9 @@ public class FolioleCompanionReadableArticleBodyStatusTest {
             "created_at TEXT, storage_key TEXT, cached_at TEXT)");
         database.execSQL("CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT, role TEXT, created_at TEXT, " +
             "PRIMARY KEY (node_id, attachment_id, role))");
+        database.execSQL("CREATE TABLE pdf_page_text (" +
+            "attachment_id TEXT NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL, page_width REAL, page_height REAL, " +
+            "PRIMARY KEY (attachment_id, page))");
         database.execSQL("CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)");
     }
 

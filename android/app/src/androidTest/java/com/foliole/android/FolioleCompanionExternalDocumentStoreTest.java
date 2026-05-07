@@ -58,7 +58,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
         FolioleCompanionSyncObjectApplyHarness.applySyncObjects(database, new JSONArray()
             .put(record("folder-1:doc.md", "doc.md", "cached external content")), "desktop-1");
 
-        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:doc.md");
+        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "folder-1:doc.md");
         JSONObject document = loaded.getJSONObject("document");
 
         assertEquals("folder-1:doc.md", document.getString("document_id"));
@@ -86,7 +86,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
             .put(record("folder-1:alpha.md", "alpha.md", "cached alpha body"))
             .put(record("folder-1:beta.md", "beta.md", "cached beta body")), "desktop-1");
 
-        JSObject loaded = FolioleCompanionExternalDocumentStore.searchDocuments(database, "BETA", 10);
+        JSObject loaded = FolioleCompanionExternalDocumentStore.searchDocuments(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "BETA", 10);
         JSONArray results = loaded.getJSONArray("results");
 
         assertEquals("BETA", loaded.getString("query"));
@@ -108,7 +108,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
             .put(record("folder-1:alpha.md", "alpha.md", "cached alpha body"))
             .put(record("folder-1:sub/beta.md", "sub/beta.md", "cached beta body")), "desktop-1");
 
-        JSObject directory = FolioleCompanionExternalDocumentStore.loadDirectory(database);
+        JSObject directory = FolioleCompanionExternalDocumentStore.loadDirectory(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
         JSONArray folders = directory.getJSONArray("folders");
         JSONArray entries = directory.getJSONArray("entries");
 
@@ -135,7 +135,7 @@ public class FolioleCompanionExternalDocumentStoreTest {
             "INSERT INTO content_blob_data (hash, data) VALUES ('blob-hash', CAST('blob text body' AS BLOB))"
         );
 
-        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:blob.md");
+        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "folder-1:blob.md");
 
         assertEquals("blob text body", loaded.getJSONObject("document").getString("content"));
         assertEquals("ready", loaded.getJSONObject("document").getString("content_status"));
@@ -153,9 +153,9 @@ public class FolioleCompanionExternalDocumentStoreTest {
                 "'', '2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z', '2026-04-26T01:00:00.000Z')"
         );
 
-        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:missing.md");
+        JSObject loaded = FolioleCompanionExternalDocumentStore.loadDocument(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "folder-1:missing.md");
         JSONObject document = loaded.getJSONObject("document");
-        JSONArray results = FolioleCompanionExternalDocumentStore.searchDocuments(database, "missing", 10)
+        JSONArray results = FolioleCompanionExternalDocumentStore.searchDocuments(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "missing", 10)
             .getJSONArray("results");
 
         assertEquals("", document.getString("content"));
@@ -172,9 +172,9 @@ public class FolioleCompanionExternalDocumentStoreTest {
         insertContentBlob("fetching-hash", "fetching");
         insertContentBlob("failed-hash", "failed");
 
-        JSONObject fetching = FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:fetching.md")
+        JSONObject fetching = FolioleCompanionExternalDocumentStore.loadDocument(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "folder-1:fetching.md")
             .getJSONObject("document");
-        JSONArray failedResults = FolioleCompanionExternalDocumentStore.searchDocuments(database, "failed", 10)
+        JSONArray failedResults = FolioleCompanionExternalDocumentStore.searchDocuments(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "failed", 10)
             .getJSONArray("results");
 
         assertEquals("fetching", fetching.getString("content_status"));
@@ -196,8 +196,8 @@ public class FolioleCompanionExternalDocumentStoreTest {
                 .put("payload_json", "{}")
                 .put("updated_at", "2026-04-26T01:05:00.000Z")), "desktop-1");
 
-        assertTrue(FolioleCompanionExternalDocumentStore.loadDocument(database, "folder-1:doc.md").isNull("document"));
-        assertEquals(0, FolioleCompanionExternalDocumentStore.searchDocuments(database, "external", 10)
+        assertTrue(FolioleCompanionExternalDocumentStore.loadDocument(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "folder-1:doc.md").isNull("document"));
+        assertEquals(0, FolioleCompanionExternalDocumentStore.searchDocuments(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "external", 10)
             .getJSONArray("results").length());
     }
 

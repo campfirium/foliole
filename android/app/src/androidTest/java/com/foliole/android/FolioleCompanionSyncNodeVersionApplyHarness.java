@@ -12,6 +12,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 final class FolioleCompanionSyncNodeVersionApplyHarness {
     private FolioleCompanionSyncNodeVersionApplyHarness() {}
@@ -26,7 +28,7 @@ final class FolioleCompanionSyncNodeVersionApplyHarness {
         database.beginTransaction();
         try {
             String now = Instant.now().toString();
-            JSONArray branchHeads = FolioleCompanionSyncNodeRecordBatch.latestBranchHeads(nodes);
+            JSONArray branchHeads = latestBranchHeads(nodes);
             for (int index = 0; index < branchHeads.length(); index += 1) {
                 JSONObject record = branchHeads.optJSONObject(index);
                 if (record == null) continue;
@@ -65,6 +67,41 @@ final class FolioleCompanionSyncNodeVersionApplyHarness {
     private static boolean isConflictCopy(JSONObject record, JSONObject snapshot) {
         return FolioleCompanionSyncConflictCopyIdentity.isConflictCopyNodeId(record.optString("object_id")) ||
             FolioleCompanionSyncConflictCopyIdentity.isConflictCopyNodeId(snapshot.optString("id"));
+    }
+
+    private static JSONArray latestBranchHeads(JSONArray records) {
+        Map<String, JSONObject> byBranch = new LinkedHashMap<>();
+        for (int index = 0; index < records.length(); index += 1) {
+            JSONObject record = records.optJSONObject(index);
+            if (record == null) continue;
+            String branchKey = record.optString("object_id") + "\n" + defaultBranchDevice(record);
+            JSONObject current = byBranch.get(branchKey);
+            if (current == null || compareRecordHead(current, record) < 0) {
+                byBranch.put(branchKey, record);
+            }
+        }
+        JSONArray result = new JSONArray();
+        for (JSONObject record : byBranch.values()) {
+            result.put(record);
+        }
+        return result;
+    }
+
+    private static String defaultBranchDevice(JSONObject record) {
+        String deviceId = record.optString("device_id", "").trim();
+        return deviceId.isEmpty() ? "remote" : deviceId;
+    }
+
+    private static int compareRecordHead(JSONObject left, JSONObject right) {
+        int timeCompare = recordHeadTime(left).compareTo(recordHeadTime(right));
+        if (timeCompare != 0) return timeCompare;
+        return left.optString("version_id", "").compareTo(right.optString("version_id", ""));
+    }
+
+    private static String recordHeadTime(JSONObject record) {
+        String versionCreatedAt = record.optString("version_created_at", "");
+        if (!versionCreatedAt.isEmpty()) return versionCreatedAt;
+        return record.optString("updated_at", "");
     }
 
     private static void upsertNode(SQLiteDatabase database, JSONObject record, JSONObject snapshot) throws Exception {

@@ -9,16 +9,15 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 final class FolioleCompanionWorkspaceSnapshotExporter {
     private FolioleCompanionWorkspaceSnapshotExporter() {}
 
     static JSObject loadWorkspaceSnapshot(Context context, SQLiteDatabase database, String deviceId) throws Exception {
         JSONArray orderedNodeIds = loadOrderedNodeIds(context, database);
-        if (orderedNodeIds.length() == 0) {
-            return null;
-        }
         boolean canReadBodyBlobData = FolioleCompanionSqliteRuntime.tableExists(database, contentBlobRule(context, "dataTableName"));
         String contentExpression = snapshotRule(context, canReadBodyBlobData ? "contentExpressionWithBodyBlobSql" : "contentExpressionInlineSql");
         String contentBlobJoin = canReadBodyBlobData ? snapshotRule(context, "contentBlobJoinSql") : "";
@@ -51,10 +50,11 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         if (nodesById.length() == 0) {
             return null;
         }
+        JSONArray nodeOrder = buildNodeOrder(nodes, nodesById, orderedNodeIds);
 
         JSObject snapshot = new JSObject();
         snapshot.put(snapshotOutputKey(context, "activeNodeId"), resolveActiveNodeId(context, database, nodesById, trashedNodeIds, firstActiveNodeId));
-        snapshot.put(snapshotOutputKey(context, "nodeOrder"), orderedNodeIds);
+        snapshot.put(snapshotOutputKey(context, "nodeOrder"), nodeOrder);
         snapshot.put(snapshotOutputKey(context, "nodesById"), nodesById);
         snapshot.put(snapshotOutputKey(context, "persistedNodeViewById"), FolioleCompanionWorkspaceViewStateExporter.loadPersistedNodeViewById(context, database, deviceId));
         snapshot.put(snapshotOutputKey(context, "trashedNodeIds"), trashedNodeIds);
@@ -85,6 +85,24 @@ final class FolioleCompanionWorkspaceSnapshotExporter {
         );
         for (int index = 0; index < rows.length(); index += 1) {
             result.put(snapshotRowString(context, rows.getJSONObject(index), "nodeIdRowKey"));
+        }
+        return result;
+    }
+
+    private static JSONArray buildNodeOrder(JSONArray nodes, JSObject nodesById, JSONArray orderedNodeIds) throws Exception {
+        JSONArray result = new JSONArray();
+        Set<String> includedNodeIds = new HashSet<>();
+        for (int index = 0; index < orderedNodeIds.length(); index += 1) {
+            String nodeId = orderedNodeIds.optString(index, null);
+            if (nodeId != null && nodesById.has(nodeId) && includedNodeIds.add(nodeId)) {
+                result.put(nodeId);
+            }
+        }
+        for (int index = 0; index < nodes.length(); index += 1) {
+            String nodeId = nodes.getJSONObject(index).getString("id");
+            if (includedNodeIds.add(nodeId)) {
+                result.put(nodeId);
+            }
         }
         return result;
     }

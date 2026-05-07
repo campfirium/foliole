@@ -27,24 +27,41 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
 }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
 
-function createSnapshot(): WorkspaceSnapshot {
+function createSnapshot(nodeId = 'topic-1'): WorkspaceSnapshot {
   return {
-    activeNodeId: null,
-    nodeOrder: [],
-    nodesById: {},
+    activeNodeId: nodeId,
+    nodeOrder: [nodeId],
+    nodesById: {
+      [nodeId]: {
+        anchorLink: null,
+        content: '# Synced topic\n\nBody',
+        createdAt: '2026-04-25T09:00:00.000Z',
+        hideTitleHeading: false,
+        id: nodeId,
+        isTitleManual: false,
+        kind: 'topic',
+        parentNodeId: null,
+        reading: null,
+        reveal: null,
+        review: null,
+        title: 'Synced topic',
+        updatedAt: '2026-04-25T09:05:00.000Z'
+      }
+    },
     trashedNodeIds: [],
     untitledSequenceByParent: {}
   };
 }
 
-function createSyncState(): NativeCompanionWorkspaceSyncState {
+function createSyncState(overrides: Partial<NativeCompanionWorkspaceSyncState> = {}): NativeCompanionWorkspaceSyncState {
   return {
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: null,
     remembered_targets: ['http://10.0.2.2:38641'],
     sync_events: [],
     sync_onboarding_status: 'completed',
-    workspace_snapshot: createSnapshot()
+    workspace_snapshot: createSnapshot(),
+    ...overrides
   };
 }
 
@@ -144,6 +161,26 @@ describe('companion workspace manual sync failures', () => {
     expect(workspaceSyncMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Topic list sync failed: Desktop sync timed out while applying the structure pack.',
       status: 'failed'
+    }));
+  });
+
+  it('refreshes the visible workspace snapshot after manual structure sync', async () => {
+    const { actions, callbacks } = createActions();
+    const syncedSnapshot = createSnapshot('synced-topic');
+    workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState({
+      workspace_snapshot: syncedSnapshot
+    }));
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpoint, options) => {
+      await options.onStructureSynced?.();
+      return createSyncResult();
+    });
+
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+
+    expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalled();
+    expect(workspaceSyncMock.loadCompanionReadableArticle).toHaveBeenCalledWith(syncedSnapshot);
+    expect(callbacks.setState).toHaveBeenLastCalledWith(expect.objectContaining({
+      workspace_snapshot: syncedSnapshot
     }));
   });
 });

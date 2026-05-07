@@ -55,7 +55,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         ));
 
         JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "remote-device");
-        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
 
         assertNotNull(snapshot);
         assertEquals("article-2", snapshot.getString("activeNodeId"));
@@ -88,7 +88,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
             "{\"active_node_id\":\"pdf-1\"}"
         ));
 
-        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
 
         JSONObject article = readable.getJSONObject("readable_article");
         assertEquals("pdf-1", article.getString("node_id"));
@@ -111,7 +111,7 @@ public class FolioleCompanionWorkspaceExportAfterSyncApplyTest {
         ));
 
         JSObject snapshot = FolioleCompanionWorkspaceSnapshotExporter.loadWorkspaceSnapshot(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database, "android-test");
-        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(database);
+        JSObject readable = FolioleCompanionReadableArticleQuery.loadReadableArticle(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getTargetContext(), database);
 
         assertEquals("Blob article body", snapshot.getJSONObject("nodesById")
             .getJSONObject("article-2").getString("content"));

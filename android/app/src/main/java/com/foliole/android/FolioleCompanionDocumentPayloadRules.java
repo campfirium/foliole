@@ -47,4 +47,5 @@ final class FolioleCompanionDocumentPayloadRules {
             key
         );
     }
+
 }
