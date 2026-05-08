@@ -215,18 +215,20 @@ export function addTableDecorations(
 ) {
   for (const table of tables) {
     if (table.active) continue;
-    const firstLine = doc.lineAt(table.from);
+    const renderFrom = table.renderFrom ?? table.from;
+    const renderTo = table.renderTo ?? table.to;
+    const firstLine = doc.lineAt(renderFrom);
     ranges.push(
       Decoration.replace({
         inclusive: false,
         widget: new MarkdownTableWidget(table)
-      }).range(table.from, Math.min(firstLine.to, table.to))
+      }).range(renderFrom, Math.min(firstLine.to, renderTo))
     );
 
     let lineNumber = firstLine.number + 1;
-    while (lineNumber <= doc.lineAt(Math.max(table.to - 1, table.from)).number) {
+    while (lineNumber <= doc.lineAt(Math.max(renderTo - 1, renderFrom)).number) {
       const line = doc.line(lineNumber);
-      addHiddenSourceLine(ranges, line.from, Math.min(line.to, table.to));
+      addHiddenSourceLine(ranges, line.from, Math.min(line.to, renderTo));
       lineNumber += 1;
     }
   }

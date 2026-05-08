@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectMarkdownTablePlans } from './markdownTablePlans';
+import { collectMarkdownTablePlans, collectViewportMarkdownTablePlans } from './markdownTablePlans';
 
 describe('markdownTablePlans', () => {
   it('collects GFM table block, row, and cell ranges', () => {
@@ -43,5 +43,19 @@ describe('markdownTablePlans', () => {
 
     expect(table?.rows[0]?.cells.map((cell) => cell.align)).toEqual(['left', 'right', 'center']);
     expect(table?.rows[1]?.cells.map((cell) => cell.align)).toEqual(['left', 'right', 'center']);
+  });
+
+  it('builds a visible table fragment when the viewport starts in the middle of a long table', () => {
+    const rows = Array.from({ length: 20 }, (_, index) => `| Row ${index + 1} | Value ${index + 1} |`);
+    const text = ['Intro', '| Name | Value |', '| --- | --- |', ...rows, 'Tail'].join('\n');
+    const tables = collectMarkdownTablePlans({ activePosition: null, from: 0, text });
+    const row12From = text.indexOf('| Row 12');
+    const row14To = text.indexOf('| Row 14') + '| Row 14 | Value 14 |'.length;
+    const viewportTables = collectViewportMarkdownTablePlans(tables, { from: row12From, to: row14To });
+
+    expect(viewportTables).toHaveLength(1);
+    expect(viewportTables[0]?.from).toBe(text.indexOf('| Name'));
+    expect(viewportTables[0]?.renderFrom).toBe(row12From);
+    expect(viewportTables[0]?.rows.map((row) => row.cells[0]?.text)).toEqual(['Name', 'Row 12', 'Row 13', 'Row 14']);
   });
 });

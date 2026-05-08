@@ -22,7 +22,11 @@ import {
   type MarkdownLinkReferenceRange
 } from '../model/markdownLinkReferences';
 import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
-import { collectMarkdownTablePlans, isPositionInsideInactiveTable } from '../model/markdownTablePlans';
+import {
+  collectMarkdownTablePlans,
+  collectViewportMarkdownTablePlans,
+  isPositionInsideInactiveTable
+} from '../model/markdownTablePlans';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';
@@ -142,8 +146,9 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const { endLineNumber, startLineNumber } = resolveVisibleLineWindow(view);
   const startLine = view.state.doc.line(startLineNumber);
   const endLine = view.state.doc.line(endLineNumber);
+  const source = view.state.doc.toString();
   const codeFenceProjection = collectCodeFenceProjection(view);
-  const linkReferences = collectMarkdownLinkReferences(view.state.doc.toString());
+  const linkReferences = collectMarkdownLinkReferences(source);
   const linkReferenceRangeByLineFrom = collectLinkReferenceRangeByLineFrom(view);
   const linkReferenceLineFroms = new Set(linkReferenceRangeByLineFrom.keys());
   const calloutPrefixRangeByLineFrom = collectCalloutPrefixRangeByLineFrom(view);
@@ -153,10 +158,11 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   const tablePlans = collectMarkdownTablePlans({
     activePosition: null,
     anchorDecorations: getTextAnchorDecorations(view),
-    from: startLine.from,
+    from: 0,
     linkReferences,
-    text: view.state.sliceDoc(startLine.from, endLine.to)
+    text: source
   });
+  const viewportTablePlans = collectViewportMarkdownTablePlans(tablePlans, { from: startLine.from, to: endLine.to });
   const viewportPlans = collectPreviewViewportPlans({
     codeFenceLineFroms: codeFenceProjection.fenceLineFroms,
     codeLineFroms: codeFenceProjection.codeLineFroms,
@@ -171,10 +177,10 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     thematicBreakLineFroms
   });
 
-  addTableDecorations(ranges, tablePlans, view.state.doc);
+  addTableDecorations(ranges, viewportTablePlans, view.state.doc);
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
-    if (isPositionInsideInactiveTable(lineFrom, tablePlans)) {
+    if (isPositionInsideInactiveTable(lineFrom, viewportTablePlans)) {
       continue;
     }
     if (plan.lineClass) addLine(ranges, lineFrom, plan.lineClass);

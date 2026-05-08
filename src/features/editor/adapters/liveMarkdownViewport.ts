@@ -6,6 +6,13 @@ export interface VisibleLineWindow {
 }
 
 export function resolveVisibleLineWindow(view: EditorView): VisibleLineWindow {
+  if (view.viewport.to > view.viewport.from) {
+    return {
+      endLineNumber: view.state.doc.lineAt(Math.max(view.viewport.to - 1, view.viewport.from)).number,
+      startLineNumber: view.state.doc.lineAt(view.viewport.from).number
+    };
+  }
+
   const firstVisibleRange = view.visibleRanges[0];
   const lastVisibleRange = view.visibleRanges[view.visibleRanges.length - 1];
   if (!firstVisibleRange || !lastVisibleRange) {
