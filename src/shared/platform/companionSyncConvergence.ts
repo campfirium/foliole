@@ -1,6 +1,14 @@
 import type { SyncDiagnosticEvent, SyncDiagnosticSeverity } from '../../../lib/platform/syncDiagnosticsContract';
 
 import {
+  formatRemainingSyncSegments,
+  formatSyncConvergenceCount
+} from './companionSyncConvergenceFormatting';
+import {
+  deriveSyncConvergenceStatus,
+  type SyncConvergenceStatus
+} from './companionSyncConvergenceStatus';
+import {
   runCombinedSyncDiagnostics,
   type CombinedSyncDiagnosticResult
 } from './companionSyncDiagnostics';
@@ -14,7 +22,7 @@ export interface SyncConvergenceCheck {
 
 export interface SyncConvergenceReport {
   checks: SyncConvergenceCheck[];
-  status: 'blocked' | 'converged' | 'pending' | 'unknown';
+  status: SyncConvergenceStatus;
 }
 
 export interface SyncConvergenceResult {
@@ -35,40 +43,11 @@ function check(
   return { code, detail, severity, title };
 }
 
-function formatCount(count: number, singular: string, plural: string) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function formatRemainingSegments(args: {
-  dirtyCount: number;
-  lag: number;
-  missingAttachments: number;
-  missingBodies: number;
-  pendingAckCount: number;
-  pushIssueCount: number;
-}) {
-  return [
-    formatCount(args.dirtyCount, 'device change', 'device changes'),
-    formatCount(args.pendingAckCount, 'desktop confirmation', 'desktop confirmations'),
-    formatCount(args.pushIssueCount, 'change issue', 'change issues'),
-    formatCount(args.missingBodies, 'topic body file', 'topic body files'),
-    formatCount(args.missingAttachments, 'attachment file', 'attachment files'),
-    formatCount(args.lag, 'topic list change', 'topic list changes')
-  ].join(', ');
-}
-
 function structureLag(result: CombinedSyncDiagnosticResult) {
   const cursor = result.android?.sync_state.pack_cursor;
   const desktopSeq = result.desktop?.sync_state.max_state_seq;
   if (typeof cursor !== 'number' || typeof desktopSeq !== 'number') return null;
   return Math.max(0, desktopSeq - cursor);
-}
-
-function deriveStatus(checks: SyncConvergenceCheck[]): SyncConvergenceReport['status'] {
-  if (checks.some((item) => item.severity === 'error')) return 'blocked';
-  if (checks.some((item) => item.severity === 'warning' || item.severity === 'info')) return 'pending';
-  if (checks.every((item) => item.severity === 'ok')) return 'converged';
-  return 'unknown';
 }
 
 export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult): SyncConvergenceReport {
@@ -80,7 +59,7 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
     checks.push(check('desktop_diagnostics_missing', 'error', 'Desktop diagnostics unavailable', 'A paired desktop endpoint is required for convergence.'));
   }
   if (!result.android || !result.desktop) {
-    return { checks, status: deriveStatus(checks) };
+    return { checks, status: deriveSyncConvergenceStatus(checks) };
   }
   checks.push(...buildDiagnosticVerdictChecks(result));
   checks.push(...buildLocalStateChecks(result));
@@ -91,7 +70,7 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
   if (checks.length === 0) {
     checks.push(check('sync_converged', 'ok', 'Sync is up to date', 'No device changes, desktop confirmations, topic list changes, or body downloads are waiting.'));
   }
-  return { checks, status: deriveStatus(checks) };
+  return { checks, status: deriveSyncConvergenceStatus(checks) };
 }
 
 function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
@@ -104,7 +83,7 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
       'local_dirty_not_converged',
       'warning',
       'Device changes still need to send',
-      `${formatCount(dirtyCount, 'device change is', 'device changes are')} waiting to send.`
+      `${formatSyncConvergenceCount(dirtyCount, 'device change is', 'device changes are')} waiting to send.`
     ));
   }
   if (pendingAckCount > 0) {
@@ -115,7 +94,7 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
       'push_issue_not_converged',
       'warning',
       'Device changes were not sent',
-      `${formatCount(pushIssueCount, 'device change was', 'device changes were')} rejected or conflicted during push.`
+      `${formatSyncConvergenceCount(pushIssueCount, 'device change was', 'device changes were')} rejected or conflicted during push.`
     ));
   }
   return checks;
@@ -153,14 +132,14 @@ function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {
       'pending_ack_survived_finished_pass',
       'error',
       'Desktop confirmation was not pulled back',
-      `${formatCount(staleCount, 'desktop confirmation remained', 'desktop confirmations remained')} pending after a later sync check.`
+      `${formatSyncConvergenceCount(staleCount, 'desktop confirmation remained', 'desktop confirmations remained')} pending after a later sync check.`
     );
   }
   return check(
     'pending_ack_not_confirmed',
     'warning',
     'Desktop confirmations are still pending',
-    `${formatCount(pendingAckCount, 'desktop confirmation still needs', 'desktop confirmations still need')} to come back from the next topic list sync.`
+    `${formatSyncConvergenceCount(pendingAckCount, 'desktop confirmation still needs', 'desktop confirmations still need')} to come back from the next topic list sync.`
   );
 }
 
@@ -174,7 +153,7 @@ function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
       'structure_lag_exists',
       'info',
       'Desktop topic list changes are still available',
-      `${formatCount(lag, 'desktop change has', 'desktop changes have')} not reached this device.`
+      `${formatSyncConvergenceCount(lag, 'desktop change has', 'desktop changes have')} not reached this device.`
     )]
     : [];
 }
@@ -202,7 +181,7 @@ function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
       'content_backlog_exists',
       'info',
       'Topic bodies are still downloading',
-      `${formatCount(missing, 'topic body file remains', 'topic body files remain')} to download: ${formatCount(topicBodies, 'topic', 'topics')}, ${formatCount(externalBodies, 'external document', 'external documents')}.`
+      `${formatSyncConvergenceCount(missing, 'topic body file remains', 'topic body files remain')} to download: ${formatSyncConvergenceCount(topicBodies, 'topic', 'topics')}, ${formatSyncConvergenceCount(externalBodies, 'external document', 'external documents')}.`
     ));
   }
   if (missingAttachments > 0) {
@@ -210,7 +189,7 @@ function buildResourceChecks(result: CombinedSyncDiagnosticResult) {
       'attachment_backlog_exists',
       'info',
       'Attachment files are still downloading',
-      `${formatCount(missingAttachments, 'attachment file remains', 'attachment files remain')} to download.`
+      `${formatSyncConvergenceCount(missingAttachments, 'attachment file remains', 'attachment files remain')} to download.`
     ));
   }
   return checks;
@@ -231,7 +210,7 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
     'completed_event_with_local_work',
     'warning',
     'Latest sync check still has work left',
-    `A finished sync check was recorded while ${formatRemainingSegments({
+    `A finished sync check was recorded while ${formatRemainingSyncSegments({
       dirtyCount,
       lag,
       missingAttachments,

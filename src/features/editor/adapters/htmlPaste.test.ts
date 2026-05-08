@@ -129,6 +129,26 @@ function runHtmlDegradedCase() {
   );
 }
 
+function runVsCodeMarkdownTableCase() {
+  const view = createPasteView();
+  const table = '| 名称 | 描述 | 工具 |\n| --- | --- | --- |\n| readme-skill | 生成本地 AI-Native 开发者档案 | Codex |';
+  const html = [
+    '<div style="font-family: Cascadia Code; white-space: pre;">',
+    '<span>| 名称 | 描述 | 工具 |</span>',
+    '<span>| --- | --- | --- |</span>',
+    '<span>| readme-skill | 生成本地 AI-Native 开发者档案 | Codex |</span>',
+    '</div>'
+  ].join('');
+
+  expect(
+    handleMarkdownCompatibleHtmlPaste(
+      { getData: (format: string) => (format === 'text/html' ? html : format === 'text/plain' ? table : '') },
+      view
+    )
+  ).toBe(true);
+  expectInsert(view, { from: 0, insert: table, to: 0 }, table.length);
+}
+
 function runExternalMarkedTextCase() {
   const onPastedAnchors = vi.fn();
   const view = createPasteView({ facet: createAnchorFacet(onPastedAnchors) });
@@ -194,6 +214,7 @@ describe('handleMarkdownCompatibleHtmlPaste', () => {
   it('converts clipboard HTML into markdown-compatible text before insertion', runHtmlMarkdownCase);
   it('leaves plain text paste untouched when clipboard has no HTML', runHtmlMissingCase);
   it('keeps degraded HTML structures visible during rich text paste', runHtmlDegradedCase);
+  it('keeps VS Code copied markdown tables as plain markdown', runVsCodeMarkdownTableCase);
   it('converts external marked text into editable plain text without recreating child anchors', runExternalMarkedTextCase);
 });
 

@@ -114,7 +114,7 @@ final class FolioleCompanionSyncEventStore {
     private static boolean isConfirmedProgress(Context context, JSONObject event) throws Exception {
         String result = event.optString("result", "");
         if ("completed".equals(result) || "partial".equals(result)) return true;
-        if ("blocked".equals(result) || "failed".equals(result) || "cancelled".equals(result)) return false;
+        if ("blocked".equals(result) || "failed".equals(result) || "cancelled".equals(result) || "system_fault".equals(result) || "waiting".equals(result)) return false;
         String status = event.optString(syncEventRecordKey(context, "status"));
         String message = event.optString(syncEventRecordKey(context, "message"));
         return syncEventSkippedStatus(context).equals(status) ||

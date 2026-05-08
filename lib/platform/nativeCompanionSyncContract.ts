@@ -6,7 +6,7 @@ export interface NativeCompanionSyncEvent {
   kind?: 'diagnostic' | 'legacy_event' | 'run_finished' | 'run_started' | 'stage_finished';
   message: string;
   occurred_at: string;
-  result?: 'blocked' | 'cancelled' | 'completed' | 'failed' | 'partial';
+  result?: 'blocked' | 'cancelled' | 'completed' | 'failed' | 'partial' | 'retrying' | 'system_fault' | 'waiting';
   run_id?: string;
   started_at?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';

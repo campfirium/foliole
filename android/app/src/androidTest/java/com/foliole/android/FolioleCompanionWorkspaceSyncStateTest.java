@@ -64,31 +64,31 @@ public class FolioleCompanionWorkspaceSyncStateTest {
     }
 
     @Test
-    public void runFinishedBlockedEventKeepsRunMetadataWithoutLastSyncedAt() throws Exception {
-        JSObject blocked = helper.recordWorkspaceSyncEvent(
+    public void runFinishedWaitingEventKeepsRunMetadataWithoutLastSyncedAt() throws Exception {
+        JSObject waiting = helper.recordWorkspaceSyncEvent(
             "http://10.0.2.2:38641",
             "skipped",
-            "Sync checked; 2 device changes need review before sending.",
+            "Android changes are still waiting to settle.",
             "2026-05-01T02:01:00.000Z",
             "run_finished",
-            "blocked",
+            "waiting",
             "run-1",
             "2026-05-01T02:00:00.000Z"
         );
-        JSONArray events = blocked.getJSONArray("sync_events");
+        JSONArray events = waiting.getJSONArray("sync_events");
         JSONObject event = events.getJSONObject(0);
 
         assertEquals("run_finished", event.getString("kind"));
-        assertEquals("blocked", event.getString("result"));
+        assertEquals("waiting", event.getString("result"));
         assertEquals("run-1", event.getString("run_id"));
-        assertFalse(blocked.has("last_synced_at") && !blocked.isNull("last_synced_at"));
+        assertFalse(waiting.has("last_synced_at") && !waiting.isNull("last_synced_at"));
     }
 
     @Test
     public void syncEventHistoryKeepsTwentyFinishedRuns() throws Exception {
         for (int index = 0; index < 21; index += 1) {
             helper.recordWorkspaceSyncEvent("http://10.0.2.2:38641", "started", "Auto sync started.", "2026-05-01T02:00:00.000Z", "run_started", null, "run-" + index, "2026-05-01T02:00:00.000Z");
-            helper.recordWorkspaceSyncEvent("http://10.0.2.2:38641", "skipped", "Sync checked; 1 device change needs review before sending.", "2026-05-01T02:00:30.000Z", "run_finished", "blocked", "run-" + index, "2026-05-01T02:00:00.000Z");
+            helper.recordWorkspaceSyncEvent("http://10.0.2.2:38641", "skipped", "Android changes are still waiting to settle.", "2026-05-01T02:00:30.000Z", "run_finished", "waiting", "run-" + index, "2026-05-01T02:00:00.000Z");
         }
         JSObject state = helper.loadWorkspaceSyncState();
         JSONArray events = state.getJSONArray("sync_events");

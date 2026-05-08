@@ -63,6 +63,7 @@ function normalizeSyncEventKind(value: unknown): NativeCompanionSyncEvent['kind'
 
 function normalizeSyncEventResult(value: unknown): NativeCompanionSyncEvent['result'] {
   return value === 'blocked' || value === 'cancelled' || value === 'completed' || value === 'failed' || value === 'partial'
+    || value === 'retrying' || value === 'system_fault' || value === 'waiting'
     ? value
     : undefined;
 }

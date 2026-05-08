@@ -32,7 +32,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     }))).toEqual({
       message: 'Android changes are still waiting to settle.',
       outcome: 'skipped',
-      result: 'partial',
+      result: 'waiting',
       status: 'skipped'
     });
   });
@@ -44,7 +44,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     }))).toEqual({
       message: 'Android changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Resource downloads are still pending.',
       outcome: 'skipped',
-      result: 'partial',
+      result: 'retrying',
       status: 'skipped'
     });
   });
@@ -57,7 +57,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     }))).toEqual({
       message: '1 Android change was not sent after desktop rejected or conflicted it. Resource downloads are still pending.',
       outcome: 'skipped',
-      result: 'partial',
+      result: 'waiting',
       status: 'skipped'
     });
   });
@@ -68,7 +68,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     }))).toEqual({
       message: '1 Android change was not sent after desktop rejected or conflicted it.',
       outcome: 'skipped',
-      result: 'partial',
+      result: 'waiting',
       status: 'skipped'
     });
   });

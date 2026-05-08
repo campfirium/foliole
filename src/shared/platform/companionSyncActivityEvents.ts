@@ -12,7 +12,7 @@ export function createCompanionSyncRunId() {
 
 export function statusForSyncRunResult(result: CompanionSyncRunResult): NativeCompanionSyncEvent['status'] {
   if (result === 'completed') return 'completed';
-  if (result === 'failed' || result === 'cancelled') return 'failed';
+  if (result === 'failed' || result === 'cancelled' || result === 'system_fault') return 'failed';
   return 'skipped';
 }
 

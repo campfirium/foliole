@@ -118,7 +118,7 @@ describe('describeCompanionSyncPassResult push blocks', () => {
     }))).toEqual({
       message: '2 Android changes were not sent after desktop rejected or conflicted them. Resource downloads are still pending.',
       outcome: 'skipped',
-      result: 'partial',
+      result: 'waiting',
       status: 'skipped'
     });
   });
@@ -130,7 +130,7 @@ describe('describeCompanionSyncPassResult push blocks', () => {
     }))).toEqual({
       message: 'Android changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
       outcome: 'skipped',
-      result: 'partial',
+      result: 'retrying',
       status: 'skipped'
     });
   });

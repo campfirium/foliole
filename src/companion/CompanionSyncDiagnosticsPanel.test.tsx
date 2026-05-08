@@ -171,7 +171,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     convergenceMock.runSyncConvergenceCheck.mockResolvedValue({
       diagnostics: diagnosticResult,
       report: {
-        status: 'blocked',
+        status: 'system_fault',
         checks: [{
           code: 'completed_event_with_local_work',
           detail: 'A finished sync check was recorded while 1 device change and 1 desktop confirmation were still present.',
@@ -203,7 +203,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run convergence check' }));
 
     await waitFor(() => expect(screen.getByText('Sync check')).toBeInTheDocument());
-    expect(screen.getByText('Needs attention')).toBeInTheDocument();
+    expect(screen.getByText('System issue')).toBeInTheDocument();
     expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
     expect(screen.getByText('A finished sync check was recorded while 1 device change and 1 desktop confirmation were still present.')).toBeInTheDocument();
     expect(convergenceMock.runSyncConvergenceCheck).toHaveBeenCalledWith('http://10.0.2.2:38641');

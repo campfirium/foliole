@@ -39,7 +39,7 @@ function testBlocksErrorDiagnosticVerdicts() {
     }]
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('system_fault');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'diagnostic_error_android_recent_sync_failed',
@@ -77,7 +77,7 @@ function testBlocksStalePendingAck() {
     }
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('system_fault');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'pending_ack_survived_finished_pass',

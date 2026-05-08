@@ -1,5 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 
+import { decideClipboardPasteSource } from '../../../../lib/clipboard/clipboardPasteSource';
 import { convertHtmlToMarkdownCompatible } from '../../../../lib/core/import/htmlToMarkdownCompatible';
 import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { importClipboardImageAttachment } from '../../../shared/platform/attachmentImports';
@@ -67,11 +68,16 @@ export function handleMarkdownCompatibleHtmlPaste(clipboard: ClipboardLike | nul
   }
 
   const html = clipboard.getData('text/html');
-  if (!html) {
+  const source = decideClipboardPasteSource({ html, plainText });
+  if (!source || (source.kind !== 'plain-markdown' && source.kind !== 'rich-html')) {
     return false;
   }
+  if (source.kind === 'plain-markdown') {
+    dispatchInsertedText(view, source.content);
+    return true;
+  }
 
-  const converted = convertHtmlToMarkdownCompatible(html).content;
+  const converted = convertHtmlToMarkdownCompatible(source.content).content;
   if (!converted) {
     return false;
   }

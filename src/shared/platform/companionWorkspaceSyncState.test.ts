@@ -82,6 +82,26 @@ function testBlockedRunDoesNotUpdateLastSyncedAt() {
   expect(state.last_synced_at).toBeNull();
 }
 
+function testWaitingRunDoesNotUpdateLastSyncedAt() {
+  const state = normalizeWorkspaceSyncState({
+    endpoint_url: 'http://10.0.2.2:38641',
+    sync_events: [{
+      endpoint_url: 'http://10.0.2.2:38641',
+      id: 'run-waiting',
+      kind: 'run_finished',
+      message: 'Android changes are still waiting to settle.',
+      occurred_at: '2026-04-29T02:18:00.000Z',
+      result: 'waiting',
+      run_id: 'run-1',
+      started_at: '2026-04-29T02:17:00.000Z',
+      status: 'skipped'
+    }]
+  });
+
+  expect(state.last_synced_at).toBeNull();
+  expect(state.sync_events[0]?.result).toBe('waiting');
+}
+
 function testPreservesStageFinishedKind() {
   const state = normalizeWorkspaceSyncState({
     sync_events: [{
@@ -122,6 +142,7 @@ describe('normalizeWorkspaceSyncState', () => {
   it('uses the latest full sync event when last sync metadata is missing', testUsesLatestFullSyncEvent);
   it('uses a completed sync check when no changes were applied', testUsesLegacySkippedSyncCheck);
   it('does not treat blocked runs as synced progress', testBlockedRunDoesNotUpdateLastSyncedAt);
+  it('does not treat waiting local-change runs as synced progress', testWaitingRunDoesNotUpdateLastSyncedAt);
   it('preserves stage finished events as stage facts', testPreservesStageFinishedKind);
   it('keeps capacity by finished run instead of started event count', testCapacityUsesFinishedRuns);
   it('keeps a started run until its final result arrives', testKeepsCurrentStartedRunBeforeFinish);

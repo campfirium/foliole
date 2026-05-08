@@ -23,9 +23,9 @@ function isSupersededLegacyFailure(event: NativeCompanionSyncEvent, laterEvents:
 function statusClass(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
   if (isSupersededLegacyFailure(event, laterEvents)) return 'text-companion-text-secondary';
   const result = inferSyncRunResult(event);
-  if (result === 'failed') return 'text-error';
+  if (result === 'failed' || result === 'system_fault') return 'text-error';
   if (result === 'completed') return 'text-companion-accent';
-  if (result === 'blocked') return 'text-foreground';
+  if (result === 'blocked' || result === 'retrying' || result === 'waiting') return 'text-foreground';
   return 'text-companion-text-secondary';
 }
 
@@ -39,14 +39,18 @@ function activityFactKey(event: NativeCompanionSyncEvent) {
 }
 
 function visibleActivityEvents(events: NativeCompanionSyncEvent[]) {
-  const seenBlockedFacts = new Set<string>();
+  const seenNeedsAttentionFacts = new Set<string>();
   return events.filter(isReportableSyncEvent).filter((event) => {
-    if (inferSyncRunResult(event) !== 'blocked') return true;
+    if (!isDedupedAttentionResult(inferSyncRunResult(event))) return true;
     const key = activityFactKey(event);
-    if (seenBlockedFacts.has(key)) return false;
-    seenBlockedFacts.add(key);
+    if (seenNeedsAttentionFacts.has(key)) return false;
+    seenNeedsAttentionFacts.add(key);
     return true;
   });
+}
+
+function isDedupedAttentionResult(result: ReturnType<typeof inferSyncRunResult>) {
+  return result === 'blocked' || result === 'retrying' || result === 'system_fault' || result === 'waiting';
 }
 
 function formatCurrentActivityMessage(progress: CompanionDesktopSyncProgress | null) {

@@ -1,15 +1,18 @@
 /* global console, process */
 
 import Database from 'better-sqlite3';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { URL } from 'node:url';
 
-import { resolveSerial, runAdb, spawnAdb } from './android-adb-command.mjs';
+import { resolveSerial } from './android-adb-command.mjs';
+import {
+  pullResetDeviceDatabase,
+  writeResetDeviceDatabase
+} from './android-reset-sync-device-database.mjs';
 
 const DEFAULT_APP_ID = 'com.foliole.android';
-const DEVICE_DB_PATH = 'databases/foliole-companion.db';
 const RESET_CONFIRM_ENV = 'FOLIOLE_ANDROID_ALLOW_SYNC_DATA_RESET';
 const PRESERVED_COMPANION_META_KEYS = [
   'device_id',
@@ -188,24 +191,6 @@ function assertResetResult(before, after, endpointRewrite) {
   }
 }
 
-async function pullDeviceDatabase(options, destination) {
-  const { stdout } = await runAdb(
-    options,
-    ['exec-out', 'run-as', options.appId, 'cat', DEVICE_DB_PATH],
-    { encoding: 'buffer' }
-  );
-  await writeFile(destination, stdout);
-}
-
-async function writeDeviceDatabase(options, databasePath) {
-  const body = await readFile(databasePath);
-  await runAdb(options, ['shell', 'am', 'force-stop', options.appId]);
-  await spawnAdb(options, ['exec-in', 'run-as', options.appId, 'sh', '-c', `cat > ${DEVICE_DB_PATH}`], body);
-  await runAdb(options, ['shell', 'run-as', options.appId, 'rm', '-f', `${DEVICE_DB_PATH}-wal`, `${DEVICE_DB_PATH}-shm`]);
-  await runAdb(options, ['shell', 'run-as', options.appId, 'rm', '-rf', 'files/attachments']);
-  await runAdb(options, ['shell', 'run-as', options.appId, 'mkdir', '-p', 'files/attachments']);
-}
-
 async function run(options) {
   if (options.help) {
     printHelp();
@@ -221,13 +206,13 @@ async function run(options) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-android-reset-sync-data-'));
   const workingPath = path.join(tempDir, 'foliole-companion-reset.db');
   try {
-    await pullDeviceDatabase(resolved, workingPath);
+    const pulled = await pullResetDeviceDatabase(resolved, workingPath);
     const result = resetSyncDataInDatabase(workingPath, resolved);
-    await writeDeviceDatabase(resolved, workingPath);
+    await writeResetDeviceDatabase(resolved, workingPath, pulled.devicePath);
     const verifyPath = path.join(tempDir, 'foliole-companion-after-reset.db');
-    await pullDeviceDatabase(resolved, verifyPath);
+    await pullResetDeviceDatabase(resolved, verifyPath);
     const verified = inspectSyncDataCounts(verifyPath);
-    console.log(JSON.stringify({ reset: result, serial, verified }, null, 2));
+    console.log(JSON.stringify({ database: pulled.devicePath, reset: result, serial, verified }, null, 2));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

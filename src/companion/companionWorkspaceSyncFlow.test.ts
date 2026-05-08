@@ -148,7 +148,7 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: 'Android changes are still waiting to settle.',
-    result: 'partial',
+    result: 'waiting',
     status: 'skipped'
   }));
 }

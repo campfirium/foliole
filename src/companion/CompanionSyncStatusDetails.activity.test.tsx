@@ -71,10 +71,11 @@ describe('CompanionSyncStatusDetails activity', () => {
     expect(screen.getByText('No completed sync activity yet.')).toBeInTheDocument();
   });
 
-  it('shows one final blocked run instead of its started event', () => {
+  it('maps a legacy blocked run to a concrete local-change issue', () => {
     renderActivity([runFinishedEvent(), runStartedEvent()]);
 
-    expect(screen.getByText('Sync blocked; 2 device changes need review before sending.')).toBeInTheDocument();
+    expect(screen.getByText('Device changes were not sent; 2 device changes need desktop conflict review.')).toBeInTheDocument();
+    expect(screen.queryByText(/Sync blocked/)).not.toBeInTheDocument();
     expect(screen.queryByText('Auto sync started.')).not.toBeInTheDocument();
   });
 
@@ -101,7 +102,18 @@ describe('CompanionSyncStatusDetails activity', () => {
       { ...runFinishedEvent(), id: 'run-0-finished', run_id: 'run-0', occurred_at: '2026-05-07T23:11:00.000Z' }
     ]);
 
-    expect(screen.getAllByText('Sync blocked; 2 device changes need review before sending.')).toHaveLength(1);
+    expect(screen.getAllByText('Device changes were not sent; 2 device changes need desktop conflict review.')).toHaveLength(1);
+  });
+
+  it('shows new waiting and retrying facts without a blocked label', () => {
+    renderActivity([
+      { ...runFinishedEvent(), id: 'waiting', message: 'Android changes are still waiting to settle.', result: 'waiting' },
+      { ...runFinishedEvent(), id: 'retrying', message: 'Android changes were not sent: Desktop sync target returned 500.', result: 'retrying' }
+    ]);
+
+    expect(screen.getByText('Sync waiting; Android changes are still waiting to settle.')).toBeInTheDocument();
+    expect(screen.getByText('Sync retrying; Android changes were not sent: Desktop sync target returned 500.')).toBeInTheDocument();
+    expect(screen.queryByText(/Sync blocked/)).not.toBeInTheDocument();
   });
 });
 

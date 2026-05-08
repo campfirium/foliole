@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { clipboard } from 'electron';
 
+import { decideClipboardPasteSource } from '../../lib/clipboard/clipboardPasteSource.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -181,14 +182,15 @@ function createClipboardTextPreparedRecord(input: {
 
 function readClipboardTextContent() {
   const html = clipboard.readHTML().trim();
-  if (html) {
-    return { content: html, kind: 'html' as const };
-  }
   const text = clipboard.readText().trim();
-  if (text) {
-    return { content: text, kind: 'text' as const };
+  const source = decideClipboardPasteSource({ html, plainText: text });
+  if (!source) {
+    return null;
   }
-  return null;
+  return {
+    content: source.content,
+    kind: source.kind === 'rich-html' ? 'html' as const : 'text' as const
+  };
 }
 
 function runClipboardTextImport(args?: NativeTextImportArgs) {

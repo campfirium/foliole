@@ -51,9 +51,20 @@ export function formatSyncRunActivityMessage(event: NativeCompanionSyncEvent, la
   const result = inferSyncRunResult(event);
   if (result === 'completed') return `Sync completed${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
   if (result === 'partial') return `Sync made progress${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
-  if (result === 'blocked') return `Sync blocked${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
+  if (result === 'blocked') return formatLegacyBlockedActivityMessage(detail);
+  if (result === 'retrying') return `Sync retrying${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
+  if (result === 'waiting') return `Sync waiting${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
+  if (result === 'system_fault') return `System issue${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
   if (result === 'cancelled') return `Sync cancelled${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
   return `Sync failed; ${event.message}`;
+}
+
+function formatLegacyBlockedActivityMessage(detail: string) {
+  if (detail === 'No changes to sync.') return 'Device changes were not sent.';
+  if (detail.includes('need review before sending')) {
+    return `Device changes were not sent; ${detail.replace(/\bneed review before sending\b/g, 'need desktop conflict review')}`;
+  }
+  return `Sync needs attention; ${detail}`;
 }
 
 function formatLegacyActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {

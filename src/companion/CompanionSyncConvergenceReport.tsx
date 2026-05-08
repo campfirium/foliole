@@ -4,9 +4,9 @@ import type {
 } from '../shared/platform/companionSyncConvergence';
 
 function statusLabel(status: SyncConvergenceReport['status']) {
-  if (status === 'blocked') return 'Needs attention';
   if (status === 'converged') return 'Up to date';
   if (status === 'pending') return 'Still syncing';
+  if (status === 'system_fault') return 'System issue';
   return 'Unknown';
 }
 
