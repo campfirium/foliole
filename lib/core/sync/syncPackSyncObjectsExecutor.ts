@@ -19,7 +19,12 @@ interface SyncPackSyncObjectRow extends DbRow, SyncPackSyncObjectRecord {}
 
 export function isConsumableSyncPackSyncObject(record: Pick<SyncPackSyncObjectRecord, 'object_id' | 'object_type'>, deviceId: string) {
   if (record.object_type !== 'view_state') return true;
-  const parts = record.object_id.split(':', 5);
+  return isLocalAndroidViewStateObject(record.object_id, deviceId);
+}
+
+export function isLocalAndroidViewStateObject(objectId: string, deviceId?: string) {
+  if (!deviceId) return false;
+  const parts = objectId.split(':', 5);
   return parts.length === 5 && parts[1] === 'android' && parts[3] === deviceId;
 }
 

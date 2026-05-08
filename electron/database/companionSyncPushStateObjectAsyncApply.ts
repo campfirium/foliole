@@ -47,11 +47,9 @@ async function applyStateObjectPushWithDbPort(
     const current = await currentState(tx, item.identity);
     const record = buildStateObjectRecord(item, objectType);
     if (!record || item.base.kind !== 'content_hash') return emptyResult(rejectAck(item, `invalid_${objectType}_push`));
+    if (objectType === 'view_state') return emptyResult(rejectAck(item, 'device_private_view_state_push'));
     if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
       return emptyResult(stateAck(item, current, 'already_applied'));
-    }
-    if (objectType === 'view_state' && current?.content_hash !== item.base.baseContentHash) {
-      return await applyViewStateWithoutReview(tx, item, record, current);
     }
     if ((current && current.content_hash !== item.base.baseContentHash) || (!current && item.base.baseContentHash !== null)) {
       return emptyResult({
@@ -73,26 +71,6 @@ async function applyStateObjectPushWithDbPort(
       appliedReviewOpIds: []
     };
   });
-}
-
-async function applyViewStateWithoutReview(
-  port: DbPort,
-  item: CompanionSyncPushPayload,
-  record: NativeSyncObjectRecord,
-  current?: SyncObjectStateRow
-) {
-  if (current && record.updated_at < current.updated_at) {
-    return emptyResult(stateAck(item, current, 'already_applied'));
-  }
-  await applySyncObjectPayloadWithDbPort(port, record);
-  await upsertState(port, record);
-  const updated = await currentState(port, item.identity);
-  return {
-    acks: [stateAck(item, updated, 'accepted')],
-    appliedNodeIds: [],
-    appliedObjectIds: [`view_state:${record.object_id}`],
-    appliedReviewOpIds: []
-  };
 }
 
 function buildStateObjectRecord(

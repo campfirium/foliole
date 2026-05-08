@@ -55,10 +55,10 @@ async function applyReadingPosition(
 ) {
   if (!('reading_position' in payload)) return;
   const payloadDeviceId = text(payload.device_id);
-  if (payloadDeviceId && localDeviceId && payloadDeviceId !== localDeviceId) return;
+  if (!payloadDeviceId || payloadDeviceId !== localDeviceId) return;
   await port.run(
     `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at) VALUES (?, ?, ?, ?) ` +
     `ON CONFLICT(node_id, device_id) DO UPDATE SET reading_position = excluded.reading_position, updated_at = excluded.updated_at`,
-    [record.object_id, localDeviceId ?? payloadDeviceId ?? '*', integer(payload.reading_position), record.updated_at]
+    [record.object_id, localDeviceId, integer(payload.reading_position), record.updated_at]
   );
 }

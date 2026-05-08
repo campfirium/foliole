@@ -5,6 +5,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
 
 interface ApplySyncObjectsOptions {
+  deviceId?: string;
   includeAlreadyApplied?: boolean;
 }
 

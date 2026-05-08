@@ -25,6 +25,7 @@ interface ExistingSyncObjectState extends DbRow {
 
 export interface ApplySyncObjectsWithDbPortOptions {
   includeAlreadyApplied?: boolean;
+  deviceId?: string;
 }
 
 type SyncObjectApplyStatus = 'apply' | 'already_applied' | 'stale';
@@ -68,7 +69,8 @@ async function applySingleSyncObject(
       return options.includeAlreadyApplied ? `${record.object_type}:${record.object_id}` : null;
     }
     if (status === 'stale') return null;
-    await applySyncObjectPayloadWithDbPort(tx, record);
+    const appliedPayload = await applySyncObjectPayloadWithDbPort(tx, record, { deviceId: options.deviceId });
+    if (appliedPayload === false) return null;
     await tx.run(
       `INSERT INTO sync_object_state (` +
       `object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, deleted_at` +

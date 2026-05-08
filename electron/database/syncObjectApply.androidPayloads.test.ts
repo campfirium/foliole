@@ -51,7 +51,7 @@ function insertAttachment(attachmentId: string) {
   );
 }
 
-it('accepts Android-exported numeric strings when applying learning objects', async () => {
+it('accepts Android-exported numeric strings without importing device-private reading position', async () => {
   insertNode('node-1');
 
   await applySyncObjectsAsync([{
@@ -77,10 +77,10 @@ it('accepts Android-exported numeric strings when applying learning objects', as
     interval_growth_factor: number;
   }>('SELECT interval_duration_ms, interval_growth_factor FROM node_reading WHERE node_id = ?', ['node-1']))
     .toEqual({ interval_duration_ms: 2500, interval_growth_factor: 1.75 });
-  expect(openDatabaseConnection().driver.queryOne<{ reading_position: number }>(
-    'SELECT reading_position FROM node_reading_device_state WHERE node_id = ? AND device_id = ?',
-    ['node-1', '*']
-  )).toEqual({ reading_position: 42 });
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM node_reading_device_state WHERE node_id = ?',
+    ['node-1']
+  )).toEqual({ count: 0 });
 });
 
 it('accepts Android-exported numeric strings when applying pdf page text', async () => {

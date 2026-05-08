@@ -30,7 +30,7 @@ export async function applySyncObjectPayloadWithDbPort(
     case 'setting':
       return applySettingObject(port, record);
     case 'view_state':
-      return applyViewStateObject(port, record);
+      return applyViewStateObject(port, record, options);
     default:
       throw new Error(`Unsupported sync object type: ${String(record.object_type)}`);
   }
@@ -171,14 +171,19 @@ function normalizeAttachmentAvailability(blob: JsonObject) {
   return availability === 'local' ? 'remote_known' : availability;
 }
 
-async function applyViewStateObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function applyViewStateObject(
+  port: DbPort,
+  record: SyncPackSyncObjectRecord,
+  options: SyncObjectPayloadApplyOptions
+) {
+  if (!isLocalAndroidViewStateObject(record.object_id, options.deviceId)) return false;
   const parts = record.object_id.split(':');
   const deviceId = parts.length >= 5 ? parts[3] : '*';
   const key = parts.length >= 5 ? parts.slice(4).join(':') : record.object_id;
   if (record.deleted_at) {
     if (key === 'active_node') await port.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
     if (key.startsWith('node:')) await port.run('DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?', [key.slice(5), deviceId]);
-    return;
+    return true;
   }
   const payload = asObject(record);
   if (key === 'active_node') {
@@ -197,4 +202,11 @@ async function applyViewStateObject(port: DbPort, record: SyncPackSyncObjectReco
         Object.hasOwn(payload, 'source') ? 'sync-apply' : 'user-scroll', record.updated_at]
     );
   }
+  return true;
+}
+
+function isLocalAndroidViewStateObject(objectId: string, deviceId?: string) {
+  if (!deviceId) return false;
+  const parts = objectId.split(':', 5);
+  return parts.length === 5 && parts[1] === 'android' && parts[3] === deviceId;
 }

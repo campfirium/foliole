@@ -115,8 +115,9 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
     resultKey: 'metrics',
     sql:
       "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state " +
-      "UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 " +
+      "UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
       "UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 " +
+      "AND state.object_type <> 'view_state' " +
       'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id ' +
       'AND ' +
       BLOCKING_ACK_WHERE +
@@ -145,7 +146,8 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
       'LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE ' +
       REVIEW_REQUIRED_PUSH_ISSUE_WHERE +
       ' GROUP BY object_type) issues ' +
-      'ON issues.object_type = state.object_type GROUP BY state.object_type ORDER BY state.object_type ASC',
+      "ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' " +
+      'GROUP BY state.object_type ORDER BY state.object_type ASC',
     columns: [
       { key: 'object_type', source: 'object_type', type: 'string' },
       { key: 'count', source: 'count', type: 'long' },
@@ -161,7 +163,7 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
     resultKey: 'objects',
     sql:
       'SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash ' +
-      'FROM sync_object_state WHERE sync_dirty = 1 ' +
+      "FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
       'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type ' +
       'AND ack.object_id = sync_object_state.object_id AND ' +
       BLOCKING_ACK_WHERE +

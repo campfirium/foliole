@@ -26,7 +26,6 @@ final class FolioleCompanionViewStateSyncStore {
         database.beginTransaction();
         try {
             upsertActiveNode(context, database, nodeId, now);
-            writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -52,7 +51,6 @@ final class FolioleCompanionViewStateSyncStore {
         database.beginTransaction();
         try {
             upsertNodeViewState(context, database, nodeId, deviceId, payload.optInt(scrollTopKey, 0), source, now);
-            writeSyncRows(context, database, objectId, deviceId, contentHash, payload, now);
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
@@ -99,10 +97,6 @@ final class FolioleCompanionViewStateSyncStore {
                 FolioleCompanionViewStatePayloadRules.nodeUpdatedAt(context, record)
             );
         }
-    }
-
-    private static void writeSyncRows(Context context, SQLiteDatabase database, String objectId, String deviceId, String contentHash, JSONObject payload, String now) throws Exception {
-        FolioleCompanionGeneratedMutationRunner.upsertSyncStateRow(context, database, syncObjectType(context), objectId, null, contentHash, deviceId, now, null, 1);
     }
 
     private static void upsertActiveNode(Context context, SQLiteDatabase database, String nodeId, String now) throws Exception {
@@ -225,7 +219,4 @@ final class FolioleCompanionViewStateSyncStore {
         return FolioleCompanionSyncApplyMutationRules.string(context, "viewState", key);
     }
 
-    private static String syncObjectType(Context context) throws Exception {
-        return FolioleCompanionSyncProtocolDefinitions.syncObjectType(context, "viewState");
-    }
 }

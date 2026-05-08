@@ -171,8 +171,8 @@ describe('companion sync push apply', () => {
     )).toEqual({ content_hash: 'android-reading-next', sync_dirty: 0 });
     expect(openDatabaseConnection().driver.queryOne<{ reading_position: number }>(
       `SELECT reading_position FROM node_reading_device_state
-       WHERE node_id = 'node-1' AND device_id = '*'`
-    )).toEqual({ reading_position: 42 });
+       WHERE node_id = 'node-1'`
+    )).toBeUndefined();
   });
 
 });

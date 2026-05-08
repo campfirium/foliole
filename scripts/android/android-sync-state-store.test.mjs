@@ -195,15 +195,11 @@ describe('FolioleCompanionSyncObjectStore', () => {
     expect(saveReviewBody).toContain('database.setTransactionSuccessful();');
   });
 
-  it('marks local view-state writes dirty for push', async () => {
+  it('keeps local view-state writes out of sync state rows', async () => {
     const source = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
-    const writeStateBody = source.slice(
-      source.indexOf('private static void writeSyncRows'),
-      source.indexOf('private static void upsertActiveNode')
-    );
 
-    expect(writeStateBody).toContain('FolioleCompanionGeneratedMutationRunner.upsertSyncStateRow');
-    expect(writeStateBody).toContain(', 1)');
+    expect(source).not.toContain('upsertSyncStateRow');
+    expect(source).not.toContain('syncObjectType(context)');
   });
 
   it('exports Android node version ancestors for desktop fast-forward checks', async () => {

@@ -92,7 +92,7 @@ function localPushBlockers(db) {
   if (!tableExists(db, 'sync_object_state')) return emptyLocalPushBlockers();
   const dirtyRows = db.prepare(
     `SELECT object_type, COUNT(*) AS count FROM sync_object_state
-     WHERE sync_dirty = 1 GROUP BY object_type ORDER BY object_type`
+     WHERE sync_dirty = 1 AND object_type <> 'view_state' GROUP BY object_type ORDER BY object_type`
   ).all();
   const pushIssueRows = tableExists(db, 'sync_push_ack')
     ? db.prepare(

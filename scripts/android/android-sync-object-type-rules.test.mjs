@@ -30,7 +30,7 @@ describe('Android sync object type protocol rules', () => {
       viewState: 'view_state'
     });
     expect(stateWriteSource).toContain('FolioleCompanionSyncProtocolDefinitions.syncObjectType(context, key)');
-    expect(viewStateSource).toContain('FolioleCompanionSyncProtocolDefinitions.syncObjectType(context, "viewState")');
+    expect(viewStateSource).not.toContain('FolioleCompanionSyncProtocolDefinitions.syncObjectType');
     expect(stateWriteSource).not.toContain('"node_reading"');
     expect(stateWriteSource).not.toContain('"node_review"');
     expect(stateWriteSource).not.toContain('"setting"');

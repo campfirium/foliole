@@ -72,6 +72,31 @@ it('does not apply another device reading position from node reading payload', a
   expect(runs[0]).toContain('INSERT INTO node_reading');
 });
 
+it('does not apply legacy reading position payloads without an explicit local device id', async () => {
+  const runs: string[] = [];
+  const port = {
+    query: vi.fn(async () => [{
+      content_hash: 'hash-reading',
+      deleted_at: null,
+      object_id: 'node-1',
+      object_type: 'node_reading',
+      payload_json: JSON.stringify({ reading_position: 128 }),
+      updated_at: '2026-05-04T03:00:00.000Z'
+    }]),
+    run: vi.fn(async (sql: string) => {
+      runs.push(sql);
+      return { changes: 1, lastInsertRowId: null };
+    })
+  } as unknown as DbPort;
+
+  await expect(applySyncPackLearningObjectsWithDbPort(port, {
+    deviceId: 'device-1',
+    incomingAlias: 'incoming'
+  })).resolves.toBe(1);
+  expect(runs).toHaveLength(1);
+  expect(runs[0]).toContain('INSERT INTO node_reading');
+});
+
 it('deletes learning payload rows for tombstones', async () => {
   const runs: string[] = [];
   const port = {

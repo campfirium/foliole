@@ -74,7 +74,7 @@ function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPa
 function createViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
     base: { baseContentHash: 'desktop-view-base', kind: 'content_hash' },
-    clientOpId: 'view_state:session_resume:14',
+    clientOpId: 'view_state:session_resume:android:phone:device-1:node:node-1:14',
     contentHash: 'android-view-next',
     deletedAt: null,
     identity: { objectId: 'session_resume:android:phone', objectType: 'view_state', scope: 'session_resume' },
@@ -115,7 +115,7 @@ describe('companion sync push identity validation', () => {
     expect(result.acks).toMatchObject([{ conflictReason: 'invalid_view_state_push', status: 'rejected' }]);
   });
 
-  it('accepts newer view_state push even when the desktop base moved', async () => {
+  it('rejects valid view_state push because device-private state is not a desktop sync object', async () => {
     const objectId = 'session_resume:android:phone:device-1:node:node-1';
     insertBaseState('view_state', objectId, 'desktop-view-newer-than-base');
 
@@ -123,15 +123,15 @@ describe('companion sync push identity validation', () => {
       base: { baseContentHash: 'stale-android-base', kind: 'content_hash' }
     })]);
 
-    expect(result.appliedObjectIds).toEqual([`view_state:${objectId}`]);
-    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
+    expect(result.appliedObjectIds).toEqual([]);
+    expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);
     expect(readState('view_state', objectId)).toMatchObject({
-      content_hash: 'android-view-next',
-      state_seq: 2
+      content_hash: 'desktop-view-newer-than-base',
+      state_seq: 1
     });
   });
 
-  it('accepts newer view_state push when the desktop base row disappeared', async () => {
+  it('rejects view_state push when the desktop base row disappeared', async () => {
     const objectId = 'session_resume:android:phone:device-1:node:special-inbox';
 
     const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
@@ -139,15 +139,12 @@ describe('companion sync push identity validation', () => {
       identity: { objectId, objectType: 'view_state', scope: 'session_resume' }
     })]);
 
-    expect(result.appliedObjectIds).toEqual([`view_state:${objectId}`]);
-    expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'accepted' }]);
-    expect(readState('view_state', objectId)).toMatchObject({
-      content_hash: 'android-view-next',
-      state_seq: 1
-    });
+    expect(result.appliedObjectIds).toEqual([]);
+    expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);
+    expect(readState('view_state', objectId)).toBeUndefined();
   });
 
-  it('confirms older view_state push without requiring review', async () => {
+  it('rejects older view_state push without writing desktop state', async () => {
     const objectId = 'session_resume:android:phone:device-1:node:node-1';
     insertBaseState('view_state', objectId, 'desktop-view-newer-than-base');
 
@@ -157,7 +154,7 @@ describe('companion sync push identity validation', () => {
     })]);
 
     expect(result.appliedObjectIds).toEqual([]);
-    expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'already_applied' }]);
+    expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);
     expect(readState('view_state', objectId)).toMatchObject({
       content_hash: 'desktop-view-newer-than-base',
       state_seq: 1

@@ -61,7 +61,7 @@ it('applies legacy mobile view state payloads as user scroll source', async () =
     object_type: 'view_state',
     payload_json: JSON.stringify({ node_id: 'node-1', scroll_top: 128 }),
     updated_at: '2026-04-22T08:11:00.000Z'
-  }]);
+  }], { deviceId: 'android-test' });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"))
@@ -88,11 +88,31 @@ it('marks sourced view state sync payloads as sync apply writes', async () => {
       source: 'user-scroll'
     }),
     updated_at: '2026-04-22T08:11:00.000Z'
-  }]);
+  }], { deviceId: 'android-test' });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ source: string }>(
     'SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?',
     ['node-1', 'android-test']
   )).toEqual({ source: 'sync-apply' });
+});
+
+it('does not apply view state without the matching local Android device id', async () => {
+  insertNode('node-1');
+
+  await expect(applySyncObjectsAsync([{
+    content_hash: 'hash-active-view',
+    deleted_at: null,
+    object_id: 'session_resume:android:phone:other-device:active_node',
+    object_type: 'view_state',
+    payload_json: JSON.stringify({ active_node_id: 'node-1' }),
+    updated_at: '2026-04-22T08:10:00.000Z'
+  }], { deviceId: 'android-test' })).resolves.toEqual([]);
+
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryOne<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"))
+    .toBeUndefined();
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM sync_object_state WHERE object_type = 'view_state'"
+  )).toEqual({ count: 0 });
 });

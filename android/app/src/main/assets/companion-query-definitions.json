@@ -2,7 +2,7 @@
   "queries": {
     "syncIndex": {
       "resultKey": "entries",
-      "sql": "SELECT object_type, object_id, current_version_id, content_hash, updated_at FROM sync_object_state WHERE object_type <> 'node' ORDER BY updated_at ASC, object_type ASC, object_id ASC",
+      "sql": "SELECT object_type, object_id, current_version_id, content_hash, updated_at FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') ORDER BY updated_at ASC, object_type ASC, object_id ASC",
       "columns": [
         {
           "key": "object_type",
@@ -33,7 +33,7 @@
     },
     "syncStateChanges": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) ORDER BY state_seq ASC LIMIT ?",
+      "sql": "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) ORDER BY state_seq ASC LIMIT ?",
       "columns": [
         {
           "key": "object_type",
@@ -74,7 +74,7 @@
     },
     "syncObjects": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM sync_object_state WHERE object_type <> 'node' AND object_id IN (:objectIds) AND (? = 0 OR object_type IN (:objectTypes)) ORDER BY updated_at ASC, object_type ASC, object_id ASC",
+      "sql": "SELECT object_type, object_id, content_hash, updated_at, deleted_at FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND object_id IN (:objectIds) AND (? = 0 OR object_type IN (:objectTypes)) ORDER BY updated_at ASC, object_type ASC, object_id ASC",
       "columns": [
         {
           "key": "object_type",
@@ -1470,7 +1470,7 @@
     },
     "diagnosticSyncStateMetrics": {
       "resultKey": "metrics",
-      "sql": "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting')",
+      "sql": "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 AND state.object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting')",
       "columns": [
         {
           "key": "metric",
@@ -1486,7 +1486,7 @@
     },
     "diagnosticSyncStateCounts": {
       "resultKey": "counts",
-      "sql": "SELECT state.object_type, COUNT(*) AS count, SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count, MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') GROUP BY object_type) pending ON pending.object_type = state.object_type LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting') GROUP BY object_type) issues ON issues.object_type = state.object_type GROUP BY state.object_type ORDER BY state.object_type ASC",
+      "sql": "SELECT state.object_type, COUNT(*) AS count, SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count, MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') GROUP BY object_type) pending ON pending.object_type = state.object_type LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting') GROUP BY object_type) issues ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' GROUP BY state.object_type ORDER BY state.object_type ASC",
       "columns": [
         {
           "key": "object_type",
@@ -1532,7 +1532,7 @@
     },
     "diagnosticDirtyObjects": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash FROM sync_object_state WHERE sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) ORDER BY state_seq DESC LIMIT 50",
+      "sql": "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) ORDER BY state_seq DESC LIMIT 50",
       "columns": [
         {
           "key": "object_type",

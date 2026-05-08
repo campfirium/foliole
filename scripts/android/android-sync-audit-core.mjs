@@ -179,6 +179,7 @@ function formatAuditReport(report) {
     `device private view_state rows: ${report.statePolicy.devicePrivate.viewStateSyncRows}`,
     `node_view_state rows: ${formatDevicePrivateRows(report.statePolicy.devicePrivate.nodeViewStateRows, report.statePolicy.devicePrivate.nonLocalNodeViewStateRows)}`,
     `node_reading_device_state rows: ${formatDevicePrivateRows(report.statePolicy.devicePrivate.nodeReadingDeviceStateRows, report.statePolicy.devicePrivate.nonLocalNodeReadingDeviceStateRows)}`,
+    `device-private cleanup: node scripts/android/android-sync-cleanup-device-private.mjs --db <android.db>`,
     '',
     '=== Resource Backlog ===',
     `content_blob metadata missing from android: ${report.content.missingMetadata.length}`,

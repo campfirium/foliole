@@ -95,20 +95,20 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
   }];
 }
 
-it('makes Android-applied reading, review, and view state visible to desktop snapshots', async () => {
+it('makes Android-applied reading and review visible while keeping view state device-private', async () => {
   insertNode('node-1');
 
   await expect(applySyncObjectsAsync(androidStateRecords())).resolves.toEqual([
     'node_reading:node-1',
-    'node_review:node-1',
-    'view_state:session_resume:android:phone:android-test:active_node',
-    'view_state:session_resume:android:phone:android-test:node:node-1'
+    'node_review:node-1'
   ]);
 
   const workspaceSnapshot = loadWorkspaceSnapshot();
-  expect(workspaceSnapshot?.activeNodeId).toBe('node-1');
+  expect(openDatabaseConnection().sqlite
+    .prepare("SELECT value FROM workspace_meta WHERE key = 'active_node_id'")
+    .get()).toBeUndefined();
   expect(workspaceSnapshot?.nodesById['node-1']?.reading).toMatchObject({
-    readingPosition: 9,
+    readingPosition: 0,
     state: 'active'
   });
   expect(workspaceSnapshot?.nodesById['node-1']?.review).toMatchObject({
@@ -119,15 +119,10 @@ it('makes Android-applied reading, review, and view state visible to desktop sna
   });
 
   expect(loadReadingProgress()).toEqual({
-    activeNodeId: 'node-1',
+    activeNodeId: null,
     nodeViewStateById: {}
   });
   expect(openDatabaseConnection().sqlite
-    .prepare('SELECT scroll_top, selection_from, selection_to, source FROM node_view_state WHERE node_id = ? AND device_id = ?')
-    .get('node-1', 'android-test')).toEqual({
-      scroll_top: 128,
-      selection_from: 5,
-      selection_to: 13,
-      source: 'sync-apply'
-    });
+    .prepare('SELECT COUNT(*) AS count FROM node_view_state')
+    .get()).toEqual({ count: 0 });
 });

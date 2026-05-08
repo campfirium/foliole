@@ -5,7 +5,8 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     resultKey: 'entries',
     sql:
       'SELECT object_type, object_id, current_version_id, content_hash, updated_at ' +
-      "FROM sync_object_state WHERE object_type <> 'node' ORDER BY updated_at ASC, object_type ASC, object_id ASC",
+      "FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') " +
+      'ORDER BY updated_at ASC, object_type ASC, object_id ASC',
     columns: [
       { key: 'object_type', source: 'object_type', type: 'string' },
       { key: 'object_id', source: 'object_id', type: 'string' },
@@ -18,7 +19,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     resultKey: 'objects',
     sql:
       'SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash ' +
-      "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? " +
+      "FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? " +
       'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type ' +
       'AND ack.object_id = sync_object_state.object_id ' +
       `AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL}))) ` +
@@ -37,7 +38,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     resultKey: 'objects',
     sql:
       'SELECT object_type, object_id, content_hash, updated_at, deleted_at ' +
-      "FROM sync_object_state WHERE object_type <> 'node' AND object_id IN (:objectIds) " +
+      "FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND object_id IN (:objectIds) " +
       'AND (? = 0 OR object_type IN (:objectTypes)) ' +
       'ORDER BY updated_at ASC, object_type ASC, object_id ASC',
     columns: [
