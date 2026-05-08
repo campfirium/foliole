@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.cjs']);
 const DEFAULT_SOURCE_ROOTS = ['electron', path.join('lib', 'core'), path.join('lib', 'platform')];
+const DEFAULT_SOURCE_EXCLUDES = [path.join('lib', 'core', 'database', 'androidCompanion*.ts')];
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -54,6 +55,26 @@ function createRelativePath(repoRoot, targetPath) {
   return path.relative(repoRoot, targetPath) || path.basename(targetPath);
 }
 
+function normalizeRelativePath(filePath) {
+  return filePath.split(path.sep).join('/');
+}
+
+function matchesSourceExclude(relativePath, pattern) {
+  const normalizedPath = normalizeRelativePath(relativePath);
+  const normalizedPattern = normalizeRelativePath(pattern);
+  if (!normalizedPattern.includes('*')) {
+    return normalizedPath === normalizedPattern;
+  }
+
+  const [prefix, suffix] = normalizedPattern.split('*');
+  return normalizedPath.startsWith(prefix) && normalizedPath.endsWith(suffix);
+}
+
+function isExcludedSource(repoRoot, filePath, sourceExcludes) {
+  const relativePath = createRelativePath(repoRoot, filePath);
+  return sourceExcludes.some((pattern) => matchesSourceExclude(relativePath, pattern));
+}
+
 function resolveSourceRoots(repoRoot, sourceRoots) {
   return sourceRoots.map((sourceRoot) => (path.isAbsolute(sourceRoot) ? sourceRoot : path.join(repoRoot, sourceRoot)));
 }
@@ -69,13 +90,14 @@ function resolveExpectedDistPath(repoRoot, distRoot, sourcePath) {
 
 export function inspectElectronDistFreshness({
   repoRoot = resolveRepoRoot(),
+  sourceExcludes = DEFAULT_SOURCE_EXCLUDES,
   sourceRoots = DEFAULT_SOURCE_ROOTS,
   distRoot = path.join(repoRoot, 'electron-dist')
 } = {}) {
   const resolvedSourceRoots = resolveSourceRoots(repoRoot, sourceRoots);
   const sourceFiles = resolvedSourceRoots.flatMap((sourceRoot) =>
     collectFiles(sourceRoot).filter((filePath) => SOURCE_EXTENSIONS.has(path.extname(filePath)))
-  );
+  ).filter((filePath) => !isExcludedSource(repoRoot, filePath, sourceExcludes));
   const distFiles = collectFiles(distRoot);
   const newestSource = getNewestFile(sourceFiles);
   const newestDist = getNewestFile(distFiles);

@@ -26,7 +26,7 @@ describe('check-electron-dist-fresh', () => {
       await writeTimestampedFile(path.join(sourceRoot, 'preload.cjs'), 'module.exports = {};\n', 1_000);
       await writeTimestampedFile(path.join(distRoot, 'electron', 'main.js'), 'export {};\n', 2_000);
 
-      const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoot });
+      const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoots: [sourceRoot] });
 
       expect(result.ok).toBe(true);
       expect(result.problems).toEqual([]);
@@ -45,7 +45,7 @@ describe('check-electron-dist-fresh', () => {
       await writeTimestampedFile(path.join(sourceRoot, 'preload.cjs'), 'module.exports = {};\n', 3_000);
       await writeTimestampedFile(path.join(distRoot, 'electron', 'main.js'), 'export {};\n', 2_000);
 
-      const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoot });
+      const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoots: [sourceRoot] });
 
       expect(result.ok).toBe(false);
       expect(result.problems).toEqual([
@@ -55,6 +55,25 @@ describe('check-electron-dist-fresh', () => {
           reason: 'newest-source-newer-than-dist'
         })
       ]);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores sources that are excluded from the electron compile', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-excluded-'));
+    const sourceRoot = path.join(tempRoot, 'lib', 'core');
+    const distRoot = path.join(tempRoot, 'electron-dist');
+
+    try {
+      await writeTimestampedFile(path.join(sourceRoot, 'database', 'androidCompanionSyncPolicySql.ts'), 'export {};\n', 3_000);
+      await writeTimestampedFile(path.join(sourceRoot, 'sync', 'syncObjectPolicy.ts'), 'export {};\n', 1_000);
+      await writeTimestampedFile(path.join(distRoot, 'lib', 'core', 'sync', 'syncObjectPolicy.js'), 'export {};\n', 2_000);
+
+      const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoots: [sourceRoot] });
+
+      expect(result.ok).toBe(true);
+      expect(result.problems).toEqual([]);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
