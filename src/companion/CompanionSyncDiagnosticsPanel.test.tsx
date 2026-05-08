@@ -145,7 +145,7 @@ function expectDiagnosticSummary() {
   expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
   expect(screen.getByText('Sync status')).toBeInTheDocument();
   expect(screen.getByText('Sync check')).toBeInTheDocument();
-  expect(screen.getByText('Needs attention')).toBeInTheDocument();
+  expect(screen.getByText('Still syncing')).toBeInTheDocument();
   expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
   expect(screen.getByText('A finished sync check was recorded while 1 device change, 1 desktop confirmation, 1 change issue, 5 topic body files, 2 attachment files, 3 topic list changes were still present.')).toBeInTheDocument();
 }

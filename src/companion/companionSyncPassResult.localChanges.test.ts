@@ -32,7 +32,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     }))).toEqual({
       message: 'Android changes are still waiting to settle.',
       outcome: 'skipped',
-      result: 'blocked',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -42,9 +42,9 @@ describe('describeCompanionSyncPassResult local changes', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Android changes could not be sent: Desktop sync target returned 500 for /companion/sync-push.',
+      message: 'Android changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Resource downloads are still pending.',
       outcome: 'skipped',
-      result: 'blocked',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -55,9 +55,9 @@ describe('describeCompanionSyncPassResult local changes', () => {
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: '1 Android change needs review before sending.',
+      message: '1 Android change was not sent after desktop rejected or conflicted it. Resource downloads are still pending.',
       outcome: 'skipped',
-      result: 'blocked',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -66,9 +66,9 @@ describe('describeCompanionSyncPassResult local changes', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushIssueCount: 1
     }))).toEqual({
-      message: '1 Android change needs review before sending.',
+      message: '1 Android change was not sent after desktop rejected or conflicted it.',
       outcome: 'skipped',
-      result: 'blocked',
+      result: 'partial',
       status: 'skipped'
     });
   });

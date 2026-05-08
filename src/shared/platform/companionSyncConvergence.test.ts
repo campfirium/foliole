@@ -1,65 +1,36 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildSyncConvergenceReport } from './companionSyncConvergence';
-import type { CombinedSyncDiagnosticResult } from './companionSyncDiagnostics';
-
-function result(overrides: Partial<CombinedSyncDiagnosticResult> = {}): CombinedSyncDiagnosticResult {
-  return {
-    android: {
-      collected_at: '2026-05-01T00:00:00.000Z',
-      connection: { endpoint_url: 'http://10.0.2.2:38641', last_error: null, state: 'ready' },
-      content: { missing_content_blob_count: 0 },
-      events: [],
-      host: 'android',
-      identity: { app_version: null, device_id: 'android' },
-      storage: { active_node_count: 1, content_blob_count: 1, external_document_count: 0, missing_node_state_count: 0, missing_node_version_count: 0, node_blob_references_missing_rows: 0 },
-      sync_state: { local_dirty_count: 0, max_state_seq: 10, pack_cursor: 10, pending_ack_count: 0, state_counts: [] },
-      verdicts: []
-    },
-    desktop: {
-      collected_at: '2026-05-01T00:00:00.000Z',
-      connection: { endpoint_url: 'http://127.0.0.1:38641', last_error: null, state: 'running' },
-      content: { missing_content_blob_count: 0 },
-      events: [],
-      host: 'desktop',
-      identity: { app_version: '0.1.0', device_id: 'desktop' },
-      storage: { active_node_count: 1, content_blob_count: 1, external_document_count: 0, missing_node_state_count: 0, missing_node_version_count: 0, node_blob_references_missing_rows: 0 },
-      sync_state: { local_dirty_count: 0, max_state_seq: 10, pack_cursor: null, state_counts: [] },
-      verdicts: []
-    },
-    verdicts: [],
-    ...overrides
-  };
-}
+import { syncConvergenceResult } from './companionSyncConvergence.testHelpers';
 
 function testReportsConverged() {
-  expect(buildSyncConvergenceReport(result())).toMatchObject({
+  expect(buildSyncConvergenceReport(syncConvergenceResult())).toMatchObject({
     status: 'converged',
     checks: [{ code: 'sync_converged', severity: 'ok' }]
   });
 }
 
 function testBlocksFinishedPassWithDirtyWork() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
-      ...result().android!,
+      ...syncConvergenceResult().android!,
       events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Auto sync completed.', occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }],
-      sync_state: { ...result().android!.sync_state, local_dirty_count: 1, pending_ack_count: 1 }
+      sync_state: { ...syncConvergenceResult().android!.sync_state, local_dirty_count: 1, pending_ack_count: 1 }
     }
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('pending');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
       detail: 'A finished sync check was recorded while 1 device change, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files, 0 topic list changes were still present.',
-      severity: 'error'
+      severity: 'warning'
     })
   ]));
 }
 
 function testBlocksErrorDiagnosticVerdicts() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     verdicts: [{
       code: 'android_recent_sync_failed',
       evidence: { message: 'Failed to apply companion desktop sync pack.' },
@@ -85,8 +56,8 @@ function testDeduplicatesMergedErrorVerdicts() {
     message: 'Recent sync activity failed.',
     severity: 'error' as const
   };
-  const report = buildSyncConvergenceReport(result({
-    android: { ...result().android!, verdicts: [diagnosticError] },
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
+    android: { ...syncConvergenceResult().android!, verdicts: [diagnosticError] },
     verdicts: [diagnosticError]
   }));
 
@@ -94,12 +65,12 @@ function testDeduplicatesMergedErrorVerdicts() {
 }
 
 function testBlocksStalePendingAck() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
-      ...result().android!,
+      ...syncConvergenceResult().android!,
       events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync checked; local changes are still waiting to settle.', occurred_at: '2026-05-01T00:02:00.000Z', status: 'skipped' }],
       sync_state: {
-        ...result().android!.sync_state,
+        ...syncConvergenceResult().android!.sync_state,
         pending_ack_count: 1,
         pending_acks: [{ acked_at: '2026-05-01T00:01:00.000Z', client_op_id: 'node_review:node-1:9', object_id: 'node-1', object_type: 'node_review', state_seq: 12, status: 'accepted' }]
       }
@@ -117,12 +88,12 @@ function testBlocksStalePendingAck() {
 }
 
 function testDoesNotDoubleCountPendingAckAsReadyDirty() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
-      ...result().android!,
+      ...syncConvergenceResult().android!,
       events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync completed.', occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }],
       sync_state: {
-        ...result().android!.sync_state,
+        ...syncConvergenceResult().android!.sync_state,
         local_dirty_count: 1,
         pending_ack_count: 1,
         ready_dirty_count: 0
@@ -130,7 +101,7 @@ function testDoesNotDoubleCountPendingAckAsReadyDirty() {
     }
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('pending');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
@@ -145,94 +116,58 @@ function testDoesNotDoubleCountPendingAckAsReadyDirty() {
 }
 
 function testBlocksPushConflicts() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
-      ...result().android!,
+      ...syncConvergenceResult().android!,
       events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync checked; 2 device changes need review before sending.', occurred_at: '2026-05-01T00:03:00.000Z', status: 'skipped' }]
     }
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('pending');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'push_conflict_or_rejection_waiting',
       detail: 'Sync checked; 2 device changes need review before sending.',
-      severity: 'error'
+      severity: 'warning'
     })
   ]));
 }
 
 function testBlocksPersistedPushIssues() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
-      ...result().android!,
-      sync_state: { ...result().android!.sync_state, push_issue_count: 1 }
+      ...syncConvergenceResult().android!,
+      sync_state: { ...syncConvergenceResult().android!.sync_state, push_issue_count: 1 }
     }
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('pending');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'push_issue_not_converged',
       detail: '1 device change was rejected or conflicted during push.',
-      severity: 'error'
+      severity: 'warning'
     })
   ]));
 }
 
 function testBlocksFinishedPassWithResourceBacklog() {
-  const report = buildSyncConvergenceReport(result({
+  const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
-      ...result().android!,
+      ...syncConvergenceResult().android!,
       content: { missing_attachment_resource_count: 2, missing_content_blob_count: 3 },
       events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync completed.', occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }],
-      sync_state: { ...result().android!.sync_state, pack_cursor: 9 }
+      sync_state: { ...syncConvergenceResult().android!.sync_state, pack_cursor: 9 }
     }
   }));
 
-  expect(report.status).toBe('blocked');
+  expect(report.status).toBe('pending');
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
       detail: 'A finished sync check was recorded while 0 device changes, 0 desktop confirmations, 0 change issues, 3 topic body files, 2 attachment files, 1 topic list change were still present.',
-      severity: 'error'
+      severity: 'warning'
     })
-  ]));
-}
-
-function testKeepsBodyBacklogPending() {
-  const report = buildSyncConvergenceReport(result({
-    android: {
-      ...result().android!,
-      content: { missing_content_blob_count: 3, missing_external_document_body_count: 1, missing_topic_body_count: 2 },
-      sync_state: { ...result().android!.sync_state, pack_cursor: 8 }
-    }
-  }));
-
-  expect(report.status).toBe('pending');
-  expect(report.checks).toEqual(expect.arrayContaining([
-    expect.objectContaining({
-      code: 'content_backlog_exists',
-      detail: '3 topic body files remain to download: 2 topics, 1 external document.'
-    })
-  ]));
-  expect(report.checks.map((item) => item.code)).toEqual(expect.arrayContaining([
-    'content_backlog_exists',
-    'structure_lag_exists'
-  ]));
-}
-
-function testKeepsAttachmentBacklogPending() {
-  const report = buildSyncConvergenceReport(result({
-    android: {
-      ...result().android!,
-      content: { missing_attachment_resource_count: 2, missing_content_blob_count: 0 }
-    }
-  }));
-
-  expect(report.status).toBe('pending');
-  expect(report.checks).toEqual(expect.arrayContaining([
-    expect.objectContaining({ code: 'attachment_backlog_exists', severity: 'info' })
   ]));
 }
 
@@ -246,6 +181,4 @@ describe('buildSyncConvergenceReport', () => {
   it('blocks skipped passes that ended with push conflicts or rejections', testBlocksPushConflicts);
   it('blocks persisted push conflicts or rejections', testBlocksPersistedPushIssues);
   it('blocks finished sync passes that still have structure or resource backlog', testBlocksFinishedPassWithResourceBacklog);
-  it('keeps body backlog and structure lag as pending work', testKeepsBodyBacklogPending);
-  it('keeps attachment backlog as pending work', testKeepsAttachmentBacklogPending);
 });

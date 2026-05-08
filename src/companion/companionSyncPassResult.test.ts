@@ -116,9 +116,9 @@ describe('describeCompanionSyncPassResult push blocks', () => {
       remainingAttachmentResourceCount: 1,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: '2 Android changes need review before sending. Resource downloads are still pending.',
+      message: '2 Android changes were not sent after desktop rejected or conflicted them. Resource downloads are still pending.',
       outcome: 'skipped',
-      result: 'blocked',
+      result: 'partial',
       status: 'skipped'
     });
   });
@@ -128,9 +128,9 @@ describe('describeCompanionSyncPassResult push blocks', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingStructureChangeCount: 2
     }))).toEqual({
-      message: 'Android changes could not be sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
+      message: 'Android changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
       outcome: 'skipped',
-      result: 'blocked',
+      result: 'partial',
       status: 'skipped'
     });
   });

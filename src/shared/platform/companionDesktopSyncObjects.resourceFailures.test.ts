@@ -19,6 +19,12 @@ async function testContinuesContentBatchAfterSingleBodyFailure() {
     if (hash === failedHash) throw new Error('Desktop returned 404.');
     return { availability: 'cached', hash };
   });
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => {
+    const hashes = JSON.parse(body).hashes as string[];
+    if (hashes.length > 1) throw new Error('Batch endpoint unavailable.');
+    if (hashes[0] === failedHash) throw new Error('Desktop returned 404.');
+    return { synced_hashes: hashes };
+  });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [cachedHash], status: 'ok' }), { status: 200 })));
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -39,6 +45,11 @@ async function testKeepsEarlierContentWhenLaterBatchFails() {
   syncBridgeMock.syncCompanionContentBlob.mockImplementation(async ({ hash }: { hash: string }) => {
     if (hash === failedHash) throw new Error('Desktop returned 404.');
     return { availability: 'cached', hash };
+  });
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => {
+    const hashes = JSON.parse(body).hashes as string[];
+    if (hashes.includes(failedHash)) throw new Error('Desktop returned 404.');
+    return { synced_hashes: hashes };
   });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: cachedHashes, status: 'ok' }), { status: 200 })));
 
@@ -62,6 +73,9 @@ async function testAcknowledgesContentBodyBatchOnce() {
     new Response(JSON.stringify({ acked_hashes: [firstHash, secondHash], status: 'ok' }), { status: 200 })
   );
   vi.stubGlobal('fetch', fetchMock);
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => ({
+    synced_hashes: JSON.parse(body).hashes as string[]
+  }));
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
@@ -78,6 +92,9 @@ async function testKeepsDownloadedContentWhenAckFails() {
     .mockResolvedValueOnce([]);
   vi.stubGlobal('fetch', vi.fn(async () => {
     throw new Error('Desktop ack failed.');
+  }));
+  syncBridgeMock.syncCompanionContentBlobs.mockImplementation(async ({ body }: { body: string }) => ({
+    synced_hashes: JSON.parse(body).hashes as string[]
   }));
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');

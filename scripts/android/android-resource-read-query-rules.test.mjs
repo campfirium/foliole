@@ -133,7 +133,6 @@ describe('Android resource read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobCasString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.contentBlobCasBoolean(context, "manifestRules", key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentString(context, key)');
-    expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentRowString(context, row, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentBatchResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentResolveResponseKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionResourceReadQueryRules.attachmentSyncResponseKey(context, key)');
