@@ -1,4 +1,8 @@
 import { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.ts';
+import {
+  ANDROID_COMPANION_SYNC_OBJECT_POLICY_DEFINITIONS,
+  ANDROID_COMPANION_SYNC_OBJECT_TYPES
+} from './androidCompanionSyncObjectPolicyDefinitions.ts';
 
 export const ANDROID_COMPANION_RESOURCE_STATUSES = {
   cached: 'cached',
@@ -93,7 +97,7 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
       },
       hasPushIssues: {
         code: 'android_has_push_issues',
-        message: 'Some device changes need review before they can be sent.',
+        message: 'Some device changes were not sent.',
         severity: 'warning'
       },
       missingAttachmentResources: {
@@ -204,10 +208,6 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     scopedObjectTypes: ['setting', 'view_state'],
     scopePartIndex: 0
   },
-  syncObjectTypes: {
-    nodeReading: 'node_reading',
-    nodeReview: 'node_review',
-    settingRecord: 'setting',
-    viewState: 'view_state'
-  }
+  syncObjectTypes: ANDROID_COMPANION_SYNC_OBJECT_TYPES,
+  syncObjectPolicy: ANDROID_COMPANION_SYNC_OBJECT_POLICY_DEFINITIONS
 } as const;

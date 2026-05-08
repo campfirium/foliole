@@ -26,6 +26,9 @@ function createDatabase(name) {
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY, content_hash TEXT, availability TEXT);
     CREATE TABLE sync_push_ack (client_op_id TEXT PRIMARY KEY, object_type TEXT, object_id TEXT, state_seq INTEGER, status TEXT, acked_at TEXT);
+    CREATE TABLE node_view_state (node_id TEXT, device_id TEXT, scroll_top INTEGER);
+    CREATE TABLE node_reading_device_state (node_id TEXT, device_id TEXT, reading_position INTEGER, updated_at TEXT);
+    CREATE TABLE review_log (id TEXT PRIMARY KEY, op_id TEXT UNIQUE);
   `);
   return { db, dbPath };
 }
@@ -60,6 +63,17 @@ function seedAndroid(db) {
   db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run('available-without-data', 'cached');
   db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run('stale-unreferenced', 'missing');
   db.prepare('INSERT INTO attachment_blobs VALUES (?, ?, ?)').run('att-1', 'att-hash-1', 'missing');
+  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('device_id', 'android-test-device');
+  db.prepare('INSERT INTO node_view_state VALUES (?, ?, ?)').run('node-1', 'android-test-device', 24);
+  db.prepare('INSERT INTO node_view_state VALUES (?, ?, ?)').run('node-2', 'other-device', 36);
+  db.prepare('INSERT INTO node_reading_device_state VALUES (?, ?, ?, ?)').run('node-1', 'other-device', 128, 'now');
+}
+
+function seedCachedContent(db) {
+  for (const hash of ['blob-1', 'blob-2', 'blob-doc']) {
+    db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run(hash, 'cached');
+    db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(hash, Buffer.from('body'));
+  }
 }
 
 describe('android sync audit core', () => {
@@ -93,6 +107,14 @@ describe('android sync audit core', () => {
     expect(output).toContain('pending_live_changes');
     expect(output).toContain('pending_types');
     expect(output).toContain('local_dirty_changes');
+    expect(output).toContain('=== State Policy ===');
+    expect(output).toContain('node_view_state rows: 2 non_local=1');
+    expect(output).toContain('node_reading_device_state rows: 1 non_local=1');
+    expect(report.statePolicy.devicePrivate).toMatchObject({
+      localDeviceId: 'android-test-device',
+      nonLocalNodeReadingDeviceStateRows: 1,
+      nonLocalNodeViewStateRows: 1
+    });
     expect(output).toContain('=== Suspected Broken Layer ===');
   });
 
@@ -102,10 +124,7 @@ describe('android sync audit core', () => {
     const android = createDatabase('android.db');
     seedDesktop(desktop.db);
     seedDesktop(android.db);
-    for (const hash of ['blob-1', 'blob-2', 'blob-doc']) {
-      android.db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run(hash, 'cached');
-      android.db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(hash, Buffer.from('body'));
-    }
+    seedCachedContent(android.db);
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
     desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
@@ -118,12 +137,13 @@ describe('android sync audit core', () => {
     expect(report.suspectedBrokenLayer).toBe('pending tombstone-only changes; visible structure is converged');
   });
 
-  it('reports local push blockers before treating tombstone gaps as clean convergence', async () => {
+  it('does not treat view state conflicts as review blockers', async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));
     const desktop = createDatabase('desktop.db');
     const android = createDatabase('android.db');
     seedDesktop(desktop.db);
     seedDesktop(android.db);
+    seedCachedContent(android.db);
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
     android.db.prepare(
@@ -135,7 +155,29 @@ describe('android sync audit core', () => {
 
     const report = auditDatabases(desktop.dbPath, android.dbPath);
 
-    expect(report.localPush.issueTypes).toEqual([{ count: 1, objectType: 'view_state', status: 'conflict' }]);
-    expect(report.suspectedBrokenLayer).toBe('local push conflict or rejection blocks a clean sync finish');
+    expect(report.localPush.issueTypes).toEqual([]);
+    expect(report.suspectedBrokenLayer).toBe('pending tombstone-only changes; visible structure is converged');
+  });
+
+  it('reports review-required local push blockers before treating tombstone gaps as clean convergence', async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));
+    const desktop = createDatabase('desktop.db');
+    const android = createDatabase('android.db');
+    seedDesktop(desktop.db);
+    seedDesktop(android.db);
+    seedCachedContent(android.db);
+    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
+    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
+    android.db.prepare(
+      'INSERT INTO sync_push_ack VALUES (?, ?, ?, ?, ?, ?)'
+    ).run('node_review:node-1:11', 'node_review', 'node-1', null, 'conflict', 'now');
+    desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
+    desktop.db.close();
+    android.db.close();
+
+    const report = auditDatabases(desktop.dbPath, android.dbPath);
+
+    expect(report.localPush.issueTypes).toEqual([{ count: 1, objectType: 'node_review', status: 'conflict' }]);
+    expect(report.suspectedBrokenLayer).toBe('local push conflict or rejection left Android changes unsent');
   });
 });

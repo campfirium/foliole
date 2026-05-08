@@ -131,12 +131,12 @@ function describePushPass(
   result: CompanionSyncPassInput,
   withTiming: (message: string) => string
 ) {
-  const extra = describePullBacklogWhilePushBlocked(result);
+  const extra = describePullBacklogWhilePushPending(result);
   if (result.pushError) {
     return createPassResult(
-      withTiming(`Android changes could not be sent: ${result.pushError}${extra}`),
+      withTiming(`Android changes were not sent: ${result.pushError}${extra}`),
       'skipped',
-      'blocked'
+      'partial'
     );
   }
   const rejectedOrConflicted = Math.max(
@@ -145,15 +145,15 @@ function describePushPass(
   );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
-      withTiming(`${formatSyncPassCount(rejectedOrConflicted, 'Android change', 'Android changes')} ${rejectedOrConflicted === 1 ? 'needs' : 'need'} review before sending.${extra}`),
+      withTiming(`${formatSyncPassCount(rejectedOrConflicted, 'Android change was', 'Android changes were')} not sent after desktop rejected or conflicted ${rejectedOrConflicted === 1 ? 'it' : 'them'}.${extra}`),
       'skipped',
-      'blocked'
+      'partial'
     );
   }
   return null;
 }
 
-function describePullBacklogWhilePushBlocked(result: CompanionSyncPassInput) {
+function describePullBacklogWhilePushPending(result: CompanionSyncPassInput) {
   if (result.remainingStructureChangeCount === null || (result.remainingStructureChangeCount ?? 0) > 0) {
     return ' Topic list confirmation is still pending.';
   }
@@ -188,7 +188,7 @@ function describeUnfinishedPass(
     result.remainingAttachmentResourceCount === 0 &&
     (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0)
   ) {
-    return createPassResult(withTiming('Android changes are still waiting to settle.'), 'skipped', 'blocked');
+    return createPassResult(withTiming('Android changes are still waiting to settle.'), 'skipped', 'partial');
   }
   if (result.remainingStructureChangeCount === null || (result.remainingStructureChangeCount ?? 0) > 0) {
     return createPassResult(withTiming('Topic list confirmation is still pending.'), 'skipped', 'partial');

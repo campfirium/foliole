@@ -33,8 +33,8 @@ export function friendlySyncDiagnosticVerdict(verdict: SyncDiagnosticVerdict) {
   }
   if (verdict.code === 'android_has_push_issues') {
     return {
-      description: 'Open the sync diagnostic details to see which device changes need attention.',
-      title: 'Device changes need review'
+      description: 'The topic list and downloads can still finish; diagnostics show which local changes were not sent.',
+      title: 'Some device changes were not sent'
     };
   }
   if (verdict.code === 'desktop_ready') {

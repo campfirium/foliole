@@ -12,7 +12,7 @@ export async function applySyncPackLearningObjectsWithDbPort(
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
     .filter((record) => record.object_type === 'node_reading' || record.object_type === 'node_review');
   for (const record of records) {
-    await applySyncObjectPayloadWithDbPort(port, record);
+    await applySyncObjectPayloadWithDbPort(port, record, { deviceId: options.deviceId });
   }
   return records.length;
 }

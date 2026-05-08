@@ -131,6 +131,22 @@ describe('companion sync push identity validation', () => {
     });
   });
 
+  it('accepts newer view_state push when the desktop base row disappeared', async () => {
+    const objectId = 'session_resume:android:phone:device-1:node:special-inbox';
+
+    const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
+      base: { baseContentHash: 'stale-desktop-view-base', kind: 'content_hash' },
+      identity: { objectId, objectType: 'view_state', scope: 'session_resume' }
+    })]);
+
+    expect(result.appliedObjectIds).toEqual([`view_state:${objectId}`]);
+    expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'accepted' }]);
+    expect(readState('view_state', objectId)).toMatchObject({
+      content_hash: 'android-view-next',
+      state_seq: 1
+    });
+  });
+
   it('confirms older view_state push without requiring review', async () => {
     const objectId = 'session_resume:android:phone:device-1:node:node-1';
     insertBaseState('view_state', objectId, 'desktop-view-newer-than-base');

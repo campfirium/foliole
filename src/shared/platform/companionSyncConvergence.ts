@@ -113,8 +113,8 @@ function buildLocalStateChecks(result: CombinedSyncDiagnosticResult) {
   if (pushIssueCount > 0) {
     checks.push(check(
       'push_issue_not_converged',
-      'error',
-      'Device changes need review before sending',
+      'warning',
+      'Device changes were not sent',
       `${formatCount(pushIssueCount, 'device change was', 'device changes were')} rejected or conflicted during push.`
     ));
   }
@@ -185,8 +185,8 @@ function buildEventStateChecks(result: CombinedSyncDiagnosticResult) {
   if (!latest.message.includes('need review before')) return [];
   return [check(
     'push_conflict_or_rejection_waiting',
-    'error',
-    'Device changes need review before sending',
+    'warning',
+    'Device changes were not sent',
     latest.message
   )];
 }
@@ -229,7 +229,7 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   if (totalDirtyCount === 0 && pendingAckCount === 0 && pushIssueCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
   return [check(
     'completed_event_with_local_work',
-    'error',
+    'warning',
     'Latest sync check still has work left',
     `A finished sync check was recorded while ${formatRemainingSegments({
       dirtyCount,

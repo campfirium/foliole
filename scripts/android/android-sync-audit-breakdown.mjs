@@ -1,3 +1,5 @@
+import { isReviewRequiredPushIssueObjectType } from '../../lib/core/sync/syncObjectPolicy.ts';
+
 function tableExists(db, table) {
   return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) !== undefined;
 }
@@ -95,8 +97,9 @@ function localPushBlockers(db) {
   const pushIssueRows = tableExists(db, 'sync_push_ack')
     ? db.prepare(
         `SELECT status, object_type, COUNT(*) AS count FROM sync_push_ack
-         WHERE status IN ('conflict', 'rejected') GROUP BY status, object_type ORDER BY status, object_type`
-      ).all()
+         WHERE status IN ('conflict', 'rejected')
+         GROUP BY status, object_type ORDER BY status, object_type`
+      ).all().filter((row) => isReviewRequiredPushIssueObjectType(row.object_type))
     : [];
   return {
     dirtyCount: dirtyRows.reduce((sum, row) => sum + row.count, 0),
@@ -117,7 +120,7 @@ function emptyLocalPushBlockers() {
 function suspectLayer(report) {
   if (!report.identity.androidEndpoint) return 'pairing/source mismatch: Android workspace endpoint is missing';
   if (report.cursors.androidCursor > report.cursors.desktopMaxSeq) return 'cursor advancement: Android cursor is ahead of desktop';
-  if (report.localPush.issueCount > 0) return 'local push conflict or rejection blocks a clean sync finish';
+  if (report.localPush.issueCount > 0) return 'local push conflict or rejection left Android changes unsent';
   const nodeOrder = report.structural.find((item) => item.name === 'node_order');
   if (nodeOrder?.missingOnAndroid.length || nodeOrder?.positionMismatches.length) return 'node_order apply';
   if (report.structural.some((item) => item.missingOnAndroid.length)) return 'pack apply or pack builder';

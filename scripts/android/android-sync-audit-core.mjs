@@ -7,6 +7,7 @@ import {
   suspectLayer
 } from './android-sync-audit-breakdown.mjs';
 import { syncEventSummary } from './android-sync-audit-events.mjs';
+import { policyBreakdown } from './android-sync-audit-state-policy.mjs';
 
 const STRUCTURAL_TABLES = [
   { name: 'nodes', pk: 'id', sql: "SELECT id, title FROM nodes WHERE deleted_at IS NULL" },
@@ -127,6 +128,7 @@ function auditDatabases(desktopPath, androidPath, metadata = {}) {
       },
       localPush: localPushBlockers(android),
       objectTypes: mergeObjectTypeStats(objectTypeStats(desktop, androidCursor), objectTypeStats(android)),
+      statePolicy: policyBreakdown(android, metaValue(android, 'device_id')),
       resources: resourceBacklog(android),
       syncEvents: syncEventSummary(android),
       structural: compareStructures(desktop, android)
@@ -173,6 +175,11 @@ function formatAuditReport(report) {
   }
   lines.push(
     '',
+    '=== State Policy ===',
+    `device private view_state rows: ${report.statePolicy.devicePrivate.viewStateSyncRows}`,
+    `node_view_state rows: ${formatDevicePrivateRows(report.statePolicy.devicePrivate.nodeViewStateRows, report.statePolicy.devicePrivate.nonLocalNodeViewStateRows)}`,
+    `node_reading_device_state rows: ${formatDevicePrivateRows(report.statePolicy.devicePrivate.nodeReadingDeviceStateRows, report.statePolicy.devicePrivate.nonLocalNodeReadingDeviceStateRows)}`,
+    '',
     '=== Resource Backlog ===',
     `content_blob metadata missing from android: ${report.content.missingMetadata.length}`,
     `content_blob bytes missing but availability != missing: ${report.resources.availableWithoutData.length}`,
@@ -202,6 +209,10 @@ function formatLocalPushTypes(localPush) {
 function formatLatestRun(run) {
   if (!run) return 'none';
   return `${run.result ?? 'unknown'} ${run.message}`.trim();
+}
+
+function formatDevicePrivateRows(total, nonLocal) {
+  return nonLocal === null ? `${total} non_local=unknown` : `${total} non_local=${nonLocal}`;
 }
 
 export { auditDatabases, formatAuditReport };

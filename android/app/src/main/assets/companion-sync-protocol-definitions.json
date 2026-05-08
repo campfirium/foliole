@@ -117,7 +117,7 @@
       },
       "hasPushIssues": {
         "code": "android_has_push_issues",
-        "message": "Some device changes need review before they can be sent.",
+        "message": "Some device changes were not sent.",
         "severity": "warning"
       },
       "missingAttachmentResources": {
@@ -241,5 +241,256 @@
     "nodeReview": "node_review",
     "settingRecord": "setting",
     "viewState": "view_state"
+  },
+  "syncObjectPolicy": {
+    "devicePrivateObjectTypes": [
+      "node_reading",
+      "setting",
+      "view_state"
+    ],
+    "policies": [
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node",
+        "objectType": "node",
+        "pushIssue": "review_required",
+        "storage": [
+          "nodes",
+          "node_order"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node_order",
+        "objectType": "node",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_order"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "external_document",
+        "objectType": "external_document",
+        "pushIssue": "review_required",
+        "storage": [
+          "external_documents"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "external_folder",
+        "objectType": "external_folder",
+        "pushIssue": "review_required",
+        "storage": [
+          "external_search_folders"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "import_source",
+        "objectType": "import_source",
+        "pushIssue": "review_required",
+        "storage": [
+          "import_sources"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "resource",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "attachment",
+        "objectType": "attachment",
+        "pushIssue": "review_required",
+        "storage": [
+          "attachments",
+          "attachment_blobs"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "content",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "pdf_page_text",
+        "objectType": "pdf_page_text",
+        "pushIssue": "review_required",
+        "storage": [
+          "pdf_page_text"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "resource",
+        "conflict": "cache_refresh",
+        "deviceScope": "cache",
+        "key": "content_blobs",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "content_blobs",
+          "content_blob_data"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "reading",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node_reading",
+        "objectType": "node_reading",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_reading"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "reading",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "node_reading.reading_position",
+        "objectType": "node_reading",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_reading_device_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "reading",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "node_reading_device_state",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_reading_device_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "review",
+        "conflict": "review_merge",
+        "deviceScope": "workspace",
+        "key": "node_review",
+        "objectType": "node_review",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_review"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "review",
+        "conflict": "append_only_idempotent",
+        "deviceScope": "event",
+        "key": "review_log",
+        "objectType": null,
+        "pushIssue": "review_required",
+        "storage": [
+          "review_log"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "settings",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "setting.workspace",
+        "objectType": "setting",
+        "pushIssue": "review_required",
+        "storage": [
+          "setting_records"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "settings",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "setting.device",
+        "objectType": "setting",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "setting_records"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "ui_session",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "view_state.active_node",
+        "objectType": "view_state",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "workspace_meta"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "ui_session",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "view_state.node",
+        "objectType": "view_state",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_view_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "ui_session",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "node_view_state",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_view_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "diagnostic",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "sync_push_ack",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "sync_push_ack"
+        ],
+        "userVisible": false
+      }
+    ],
+    "reviewRequiredPushIssueObjectTypes": [
+      "attachment",
+      "external_document",
+      "external_folder",
+      "import_source",
+      "node",
+      "node_reading",
+      "node_review",
+      "pdf_page_text",
+      "setting"
+    ]
   }
 }

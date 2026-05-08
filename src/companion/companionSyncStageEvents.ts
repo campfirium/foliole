@@ -39,7 +39,7 @@ function stageEvent(message: string, result: NativeCompanionSyncEvent['result'] 
     kind: 'stage_finished' as const,
     message,
     result,
-    status: result === 'failed' ? 'failed' as const : result === 'blocked' ? 'skipped' as const : 'completed' as const
+    status: result === 'failed' ? 'failed' as const : 'completed' as const
   };
 }
 
@@ -76,18 +76,18 @@ function attachmentStage(result: CompanionDesktopSyncResult) {
 
 function pushStage(result: CompanionDesktopSyncResult) {
   const issueCount = Math.max(result.pushIssueCount ?? 0, result.pushConflictCount + result.pushRejectedCount);
-  if (result.pushError) return stageEvent(`Android changes were not sent; ${stripSentenceEnd(result.pushError)}.`, 'blocked');
+  if (result.pushError) return stageEvent(`Android changes were not sent; ${stripSentenceEnd(result.pushError)}.`, 'partial');
   if (issueCount > 0) {
     return stageEvent(
-      `Android changes need review; ${formatCount(issueCount, 'change was', 'changes were')} rejected or conflicted by desktop before sending.`,
-      'blocked'
+      `Android changes were not sent; ${formatCount(issueCount, 'change was', 'changes were')} rejected or conflicted by desktop.`,
+      'partial'
     );
   }
   if ((result.pendingAckCount ?? 0) > 0) {
-    return stageEvent(`Android changes are waiting for desktop confirmation; ${formatCount(result.pendingAckCount ?? 0, 'change', 'changes')} pending.`, 'blocked');
+    return stageEvent(`Android changes are waiting for desktop confirmation; ${formatCount(result.pendingAckCount ?? 0, 'change', 'changes')} pending.`, 'partial');
   }
   if ((result.localDirtyCount ?? 0) > 0) {
-    return stageEvent(`Android changes are waiting to be sent; ${formatCount(result.localDirtyCount ?? 0, 'change', 'changes')} pending.`, 'blocked');
+    return stageEvent(`Android changes are waiting to be sent; ${formatCount(result.localDirtyCount ?? 0, 'change', 'changes')} pending.`, 'partial');
   }
   return null;
 }

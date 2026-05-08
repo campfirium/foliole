@@ -1,3 +1,5 @@
+import { REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL } from './androidCompanionSyncPolicySql.ts';
+
 export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   syncIndex: {
     resultKey: 'entries',
@@ -18,7 +20,9 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
       'SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash ' +
       "FROM sync_object_state WHERE object_type <> 'node' AND sync_dirty = 1 AND state_seq > ? " +
       'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type ' +
-      'AND ack.object_id = sync_object_state.object_id) ORDER BY state_seq ASC LIMIT ?',
+      'AND ack.object_id = sync_object_state.object_id ' +
+      `AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL}))) ` +
+      'ORDER BY state_seq ASC LIMIT ?',
     columns: [
       { key: 'object_type', source: 'object_type', type: 'string' },
       { key: 'object_id', source: 'object_id', type: 'string' },

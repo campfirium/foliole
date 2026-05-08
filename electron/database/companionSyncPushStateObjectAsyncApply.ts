@@ -50,7 +50,7 @@ async function applyStateObjectPushWithDbPort(
     if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
-    if (objectType === 'view_state' && current && current.content_hash !== item.base.baseContentHash) {
+    if (objectType === 'view_state' && current?.content_hash !== item.base.baseContentHash) {
       return await applyViewStateWithoutReview(tx, item, record, current);
     }
     if ((current && current.content_hash !== item.base.baseContentHash) || (!current && item.base.baseContentHash !== null)) {
@@ -79,9 +79,9 @@ async function applyViewStateWithoutReview(
   port: DbPort,
   item: CompanionSyncPushPayload,
   record: NativeSyncObjectRecord,
-  current: SyncObjectStateRow
+  current?: SyncObjectStateRow
 ) {
-  if (record.updated_at < current.updated_at) {
+  if (current && record.updated_at < current.updated_at) {
     return emptyResult(stateAck(item, current, 'already_applied'));
   }
   await applySyncObjectPayloadWithDbPort(port, record);

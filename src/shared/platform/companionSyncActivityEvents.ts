@@ -21,7 +21,7 @@ export function inferSyncRunResult(event: NativeCompanionSyncEvent): CompanionSy
   if (event.status === 'completed') return 'completed';
   if (event.status === 'failed') return 'failed';
   if (event.status === 'started') return 'partial';
-  return event.message.includes('need review before sending') ? 'blocked' : 'partial';
+  return 'partial';
 }
 
 export function isSyncRunFinishedEvent(event: NativeCompanionSyncEvent) {

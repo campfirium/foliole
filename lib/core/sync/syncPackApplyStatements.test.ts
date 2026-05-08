@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildSyncPackApplyableRowsSql } from './syncPackApplyStatements';
+import { buildSyncPackApplyableRowsSql } from './syncPackApplyStatements.js';
 
 describe('buildSyncPackApplyableRowsSql', () => {
   it('lets view_state follow LWW while keeping dirty guards for content-backed state', () => {

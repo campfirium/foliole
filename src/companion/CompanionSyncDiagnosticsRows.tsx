@@ -13,7 +13,7 @@ function formatHash(value: string | null | undefined) {
 }
 
 function formatObjectTypeStatus(row: SyncDiagnosticCountRange) {
-  return `${row.ready_dirty_count ?? row.dirty_count ?? 0} ready to send · ${row.pending_ack_count ?? 0} confirming · ${row.push_issue_count ?? 0} review needed`;
+  return `${row.ready_dirty_count ?? row.dirty_count ?? 0} ready to send · ${row.pending_ack_count ?? 0} confirming · ${row.push_issue_count ?? 0} not sent`;
 }
 
 export function ObjectTypeRows(props: { rows: SyncDiagnosticCountRange[] }) {

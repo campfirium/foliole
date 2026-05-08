@@ -76,8 +76,8 @@ function SnapshotSection(props: {
                 <PendingAckRows rows={pendingAcks} />
               </section>
               <section>
-                <h4 className="text-xs font-semibold text-companion-text-secondary">Device changes needing review</h4>
-                <PendingAckRows emptyText="No device changes need review." rows={pushIssues} />
+                <h4 className="text-xs font-semibold text-companion-text-secondary">Device changes not sent</h4>
+                <PendingAckRows emptyText="No device changes failed to send." rows={pushIssues} />
               </section>
             </>
           ) : null}
