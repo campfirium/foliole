@@ -46,6 +46,18 @@ function insertBaseState(objectType: 'setting' | 'view_state', objectId: string,
   );
 }
 
+function readState(objectType: string, objectId: string) {
+  return openDatabaseConnection().driver.queryOne<{
+    content_hash: string;
+    state_seq: number;
+    updated_at: string;
+  }>(
+    `SELECT content_hash, state_seq, updated_at FROM sync_object_state
+     WHERE object_type = ? AND object_id = ?`,
+    [objectType, objectId]
+  );
+}
+
 function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
     base: { baseContentHash: 'desktop-setting-base', kind: 'content_hash' },
@@ -72,6 +84,18 @@ function createViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPush
   };
 }
 
+function createValidViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
+  return createViewStatePush({
+    identity: {
+      objectId: 'session_resume:android:phone:device-1:node:node-1',
+      objectType: 'view_state',
+      scope: 'session_resume'
+    },
+    payloadJson: '{"scroll_top":42}',
+    ...overrides
+  });
+}
+
 describe('companion sync push identity validation', () => {
   it('rejects malformed setting identity before applying payload', async () => {
     insertBaseState('setting', 'device', 'desktop-setting-base');
@@ -89,5 +113,38 @@ describe('companion sync push identity validation', () => {
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'invalid_view_state_push', status: 'rejected' }]);
+  });
+
+  it('accepts newer view_state push even when the desktop base moved', async () => {
+    const objectId = 'session_resume:android:phone:device-1:node:node-1';
+    insertBaseState('view_state', objectId, 'desktop-view-newer-than-base');
+
+    const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
+      base: { baseContentHash: 'stale-android-base', kind: 'content_hash' }
+    })]);
+
+    expect(result.appliedObjectIds).toEqual([`view_state:${objectId}`]);
+    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
+    expect(readState('view_state', objectId)).toMatchObject({
+      content_hash: 'android-view-next',
+      state_seq: 2
+    });
+  });
+
+  it('confirms older view_state push without requiring review', async () => {
+    const objectId = 'session_resume:android:phone:device-1:node:node-1';
+    insertBaseState('view_state', objectId, 'desktop-view-newer-than-base');
+
+    const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
+      base: { baseContentHash: 'stale-android-base', kind: 'content_hash' },
+      updatedAt: '2026-04-29T23:00:00.000Z'
+    })]);
+
+    expect(result.appliedObjectIds).toEqual([]);
+    expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'already_applied' }]);
+    expect(readState('view_state', objectId)).toMatchObject({
+      content_hash: 'desktop-view-newer-than-base',
+      state_seq: 1
+    });
   });
 });

@@ -5,7 +5,21 @@ import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncCon
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'android'),
   isNativePlatform: vi.fn(() => true),
+  lastDownloadedAttachmentIds: [] as string[],
   plugin: {
+    commitAttachmentResourceBatch: vi.fn(async () => ({
+      synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+    })),
+    downloadAttachmentResourceBatch: vi.fn(async ({ resources }: {
+      resources: Array<{ attachment_id: string }>;
+    }) => {
+      capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
+      return {
+        batch_token: 'attachment-batch-token',
+        failed_attachment_ids: [],
+        synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+      };
+    }),
     syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' })),
     syncAttachmentResources: vi.fn(async ({ resources }: {
       resources: Array<{ attachment_id: string }>;
@@ -16,21 +30,11 @@ const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
 }));
 const syncObjectsMock = vi.hoisted(() => ({
-  loadCompanionMissingAttachmentResource: vi.fn(async (): Promise<{
-    attachment_id: string;
-    content_hash: string;
-    size_bytes: number;
-  } | null> => ({
-    attachment_id: 'att-3',
-    content_hash: 'blob-hash-3',
-    size_bytes: 4096
-  })),
-  loadCompanionMissingAttachmentResources: vi.fn(async () => [
-    { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
-  ])
+  loadCompanionMissingAttachmentResource: vi.fn(),
+  loadCompanionMissingAttachmentResources: vi.fn()
 }));
-const attachmentResourceCacheMock = vi.hoisted(() => ({
-  invalidateAttachmentResourceResolution: vi.fn()
+const writerQueueMock = vi.hoisted(() => ({
+  run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -42,10 +46,14 @@ vi.mock('@capacitor/core', () => ({
 }));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('./companionSyncObjects', () => syncObjectsMock);
-vi.mock('./attachmentResources', () => attachmentResourceCacheMock);
+vi.mock('./attachmentResources', () => ({
+  invalidateAttachmentResourceResolution: vi.fn()
+}));
+vi.mock('./companionSyncWriterQueue', () => ({
+  runCompanionSyncWriterTask: writerQueueMock.run
+}));
 
 import {
-  syncCompanionAttachmentResourceFromDesktop,
   syncCompanionAttachmentResourceRequestsFromDesktop,
   syncCompanionAttachmentResourcesFromDesktop,
   toAttachmentResourceRequest
@@ -64,23 +72,30 @@ function attachmentRecord(payload: unknown): NativeSyncObjectRecord {
 
 function resetAttachmentResourceMocks() {
   vi.clearAllMocks();
+  capacitorMock.plugin.commitAttachmentResourceBatch.mockReset();
+  capacitorMock.plugin.downloadAttachmentResourceBatch.mockReset();
   capacitorMock.plugin.syncAttachmentResource.mockReset();
   capacitorMock.plugin.syncAttachmentResources.mockReset();
+  capacitorMock.lastDownloadedAttachmentIds = [];
+  capacitorMock.plugin.commitAttachmentResourceBatch.mockImplementation(async () => ({
+    synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+  }));
+  capacitorMock.plugin.downloadAttachmentResourceBatch.mockImplementation(async ({ resources }: {
+    resources: Array<{ attachment_id: string }>;
+  }) => {
+    capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
+    return {
+      batch_token: 'attachment-batch-token',
+      failed_attachment_ids: [],
+      synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+    };
+  });
   capacitorMock.plugin.syncAttachmentResource.mockResolvedValue({ attachment_id: 'att-1', availability: 'cached' });
   capacitorMock.plugin.syncAttachmentResources.mockImplementation(async ({ resources }: {
     resources: Array<{ attachment_id: string }>;
   }) => ({ synced_attachment_ids: resources.map((resource) => resource.attachment_id) }));
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
-  syncObjectsMock.loadCompanionMissingAttachmentResources.mockResolvedValue([
-    { attachment_id: 'att-3', content_hash: 'blob-hash-3', size_bytes: 4096 }
-  ]);
-  syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue({
-    attachment_id: 'att-3',
-    content_hash: 'blob-hash-3',
-    size_bytes: 4096
-  });
-  attachmentResourceCacheMock.invalidateAttachmentResourceResolution.mockReset();
 }
 
 describe('companion desktop attachment resource manifests', () => {
@@ -101,7 +116,7 @@ describe('companion desktop attachment resource manifests', () => {
       method: 'GET',
       pathWithQuery: '/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
     });
-    expect(capacitorMock.plugin.syncAttachmentResources).toHaveBeenCalledWith({
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
       resources: [{
         attachment_id: 'att-1',
         content_hash: 'blob-hash',
@@ -109,6 +124,13 @@ describe('companion desktop attachment resource manifests', () => {
         url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
       }]
     });
+    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledWith({
+      batch_token: 'attachment-batch-token'
+    });
+    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch.mock.invocationCallOrder[0])
+      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]);
   });
 
   it('downloads already enumerated missing attachment resources', async () => {
@@ -116,13 +138,16 @@ describe('companion desktop attachment resource manifests', () => {
       { attachmentId: 'att-2', contentHash: 'blob-hash-2' }
     ])).resolves.toEqual(['att-2']);
 
-    expect(capacitorMock.plugin.syncAttachmentResources).toHaveBeenCalledWith({
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
       resources: [{
         attachment_id: 'att-2',
         content_hash: 'blob-hash-2',
         headers: { 'X-Signature': 'signed' },
         url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=blob-hash-2'
       }]
+    });
+    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledWith({
+      batch_token: 'attachment-batch-token'
     });
   });
 });
@@ -131,23 +156,39 @@ describe('companion desktop attachment resource queue', () => {
   beforeEach(resetAttachmentResourceMocks);
 
   it('continues already enumerated attachment resources after one request fails', async () => {
-    capacitorMock.plugin.syncAttachmentResources.mockRejectedValue(new Error('Batch failed.'));
-    capacitorMock.plugin.syncAttachmentResource
+    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(new Error('Batch failed.'));
+    capacitorMock.plugin.downloadAttachmentResourceBatch
       .mockRejectedValueOnce(new Error('Desktop returned 404.'))
-      .mockResolvedValueOnce({ attachment_id: 'att-3', availability: 'cached' });
+      .mockImplementationOnce(async ({ resources }: { resources: Array<{ attachment_id: string }> }) => {
+        capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
+        return {
+          batch_token: 'attachment-batch-token',
+          failed_attachment_ids: [],
+          synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+        };
+      });
 
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
       { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
       { attachmentId: 'att-3', contentHash: 'blob-hash-3' }
     ])).resolves.toEqual(['att-3']);
 
-    expect(capacitorMock.plugin.syncAttachmentResource).toHaveBeenCalledTimes(2);
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(3);
+    expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
   });
 
   it('starts attachment resource downloads in a bounded parallel batch', async () => {
     let resolveFirst!: () => void;
-    capacitorMock.plugin.syncAttachmentResources.mockImplementationOnce(async () => new Promise((resolve) => {
-      resolveFirst = () => resolve({ synced_attachment_ids: ['att-2', 'att-3'] });
+    capacitorMock.plugin.downloadAttachmentResourceBatch.mockImplementationOnce(async ({ resources }: {
+      resources: Array<{ attachment_id: string }>;
+    }) => new Promise((resolve) => {
+      capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
+      resolveFirst = () => resolve({
+        batch_token: 'attachment-batch-token',
+        failed_attachment_ids: [],
+        synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
+      });
     }));
 
     const download = syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
@@ -159,15 +200,16 @@ describe('companion desktop attachment resource queue', () => {
     await Promise.resolve();
 
     await vi.waitFor(() => {
-      expect(capacitorMock.plugin.syncAttachmentResources).toHaveBeenCalledTimes(1);
+      expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
+      expect(capacitorMock.plugin.commitAttachmentResourceBatch).not.toHaveBeenCalled();
     });
     resolveFirst();
     await expect(download).resolves.toEqual(['att-2', 'att-3']);
+    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledTimes(1);
   });
 
   it('fails already enumerated attachment resources when the whole batch fails', async () => {
-    capacitorMock.plugin.syncAttachmentResources.mockRejectedValue(new Error('Batch failed.'));
-    capacitorMock.plugin.syncAttachmentResource.mockRejectedValue(new Error('Desktop returned 404.'));
+    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValue(new Error('Desktop returned 404.'));
 
     await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
       { attachmentId: 'att-2', contentHash: 'blob-hash-2' },
@@ -176,38 +218,8 @@ describe('companion desktop attachment resource queue', () => {
   });
 });
 
-describe('companion desktop active attachment resource priority', () => {
+describe('companion desktop attachment resource runtime guard', () => {
   beforeEach(resetAttachmentResourceMocks);
-
-  it('downloads a missing attachment resource by attachment id for active item priority', async () => {
-    await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
-      attachmentId: 'att-3',
-      status: 'cached'
-    });
-
-    expect(syncObjectsMock.loadCompanionMissingAttachmentResource).toHaveBeenCalledWith('att-3');
-    expect(syncObjectsMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.syncAttachmentResources).toHaveBeenCalledWith({
-      resources: [{
-        attachment_id: 'att-3',
-        content_hash: 'blob-hash-3',
-        headers: { 'X-Signature': 'signed' },
-        url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3'
-      }]
-    });
-    expect(attachmentResourceCacheMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('att-3');
-  });
-
-  it('reports an attachment resource as not queued when it is not missing locally', async () => {
-    syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue(null);
-
-    await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
-      attachmentId: 'att-3',
-      status: 'not_queued'
-    });
-
-    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
-  });
 
   it('skips attachment resource downloads outside native Android', async () => {
     capacitorMock.isNativePlatform.mockReturnValue(false);
@@ -216,6 +228,6 @@ describe('companion desktop active attachment resource priority', () => {
       attachmentRecord({ blob: { content_hash: 'blob-hash' } })
     ])).resolves.toEqual([]);
 
-    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).not.toHaveBeenCalled();
   });
 });

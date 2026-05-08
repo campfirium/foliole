@@ -30,21 +30,25 @@ async function testRoutesAckThroughNativeHttp() {
   }));
 }
 
-async function testFallsBackToSingleBodyRequestsWhenNativeBatchFails() {
+async function testFallsBackToSingleBodyBatchWhenNativeBatchFails() {
   const bodyHash = '4'.repeat(64);
   syncBridgeMock.loadCompanionMissingContentBlobs
     .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
     .mockResolvedValueOnce([]);
-  syncBridgeMock.syncCompanionContentBlobs.mockRejectedValue(new Error('Batch endpoint unavailable.'));
+  syncBridgeMock.syncCompanionContentBlobs.mockRejectedValueOnce(new Error('Batch endpoint unavailable.'));
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
 
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
   expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
-  expect(syncBridgeMock.syncCompanionContentBlob).toHaveBeenCalledWith(expect.objectContaining({
-    hash: bodyHash,
-    url: `http://10.0.2.2:38641/companion/content-blob?hash=${bodyHash}`
+  expect(syncBridgeMock.syncCompanionContentBlob).not.toHaveBeenCalled();
+  expect(syncBridgeMock.syncCompanionContentBlobs).toHaveBeenLastCalledWith(expect.objectContaining({
+    body: JSON.stringify({ hashes: [bodyHash] }),
+    headers: expect.objectContaining({
+      'X-Signature': 'signed:/companion/content-blobs'
+    }),
+    url: 'http://10.0.2.2:38641/companion/content-blobs'
   }));
 }
 
@@ -53,5 +57,5 @@ describe('companion desktop sync content transport', () => {
 
   it('routes content blob acknowledgements through native desktop HTTP on Android', testRoutesAckThroughNativeHttp);
 
-  it('falls back to single body requests when native batch sync fails', testFallsBackToSingleBodyRequestsWhenNativeBatchFails);
+  it('falls back to a single body split batch when native batch sync fails', testFallsBackToSingleBodyBatchWhenNativeBatchFails);
 });

@@ -216,7 +216,7 @@ final class FolioleCompanionSyncPayloadQueryStore {
     }
 
     private static JSONObject loadDefinitions(Context context) throws Exception {
-        return new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH));
+        return FolioleCompanionJsonAssetCache.object(context, QUERY_ASSET_PATH);
     }
 
     private static JSONObject syncPayloadRouting(Context context) throws Exception {

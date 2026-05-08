@@ -3,7 +3,9 @@ export const CLASSIFICATIONS = {
     responsibility: 'Read packaged assets and parse primitive host payload helpers without owning domain rules.',
     files: [
       'FolioleCompanionAssetReader.java',
+      'FolioleCompanionAttachmentResourceHash.java',
       'FolioleCompanionContentBlobCasRules.java',
+      'FolioleCompanionJsonAssetCache.java',
       'FolioleCompanionJsonValueParser.java',
       'FolioleCompanionSyncContentHash.java'
     ]
@@ -114,9 +116,13 @@ export const CLASSIFICATIONS = {
     responsibility: 'Persist and read resources, sync payloads, and host records as executor surfaces.',
     files: [
       'FolioleCompanionAttachmentResourceBatchStore.java',
+      'FolioleCompanionAttachmentResourceBatchCommitStore.java',
+      'FolioleCompanionAttachmentResourceBatchSessions.java',
       'FolioleCompanionAttachmentResourceMissingStore.java',
       'FolioleCompanionAttachmentResourceStore.java',
+      'FolioleCompanionContentBlobBatchCommitStore.java',
       'FolioleCompanionContentBlobBatchManifestStore.java',
+      'FolioleCompanionContentBlobBatchSessions.java',
       'FolioleCompanionContentBlobBatchStore.java',
       'FolioleCompanionContentBlobMissingStore.java',
       'FolioleCompanionContentBlobStore.java',

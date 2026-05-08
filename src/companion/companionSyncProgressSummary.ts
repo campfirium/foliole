@@ -49,7 +49,7 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress) {
   if (isActiveTopicProgress(progress)) return 'Current topic';
   if (isReviewQueueProgress(progress)) return 'Review resources';
   if (progress.phase === 'attachment') return 'Attachments';
-  return 'Topic bodies';
+  return 'Body downloads';
 }
 
 function formatBytes(bytes: number) {

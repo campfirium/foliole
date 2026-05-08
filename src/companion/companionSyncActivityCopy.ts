@@ -35,9 +35,6 @@ export function isReportableSyncEvent(event: { message: string; status: string }
   if ('kind' in event && event.kind === 'run_finished') {
     return !isSyncCheckOnlyMessage(event.message);
   }
-  if ('kind' in event && event.kind === 'stage_finished') {
-    return true;
-  }
   if ('kind' in event && event.kind && event.kind !== 'legacy_event') {
     return false;
   }

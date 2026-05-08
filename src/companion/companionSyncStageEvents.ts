@@ -56,11 +56,11 @@ function contentStage(result: CompanionDesktopSyncResult) {
   const count = result.syncedContentBlobHashes.length;
   if (count === 0 && !result.contentBlobError) return null;
   if (result.contentBlobError) {
-    return stageEvent(`Topic bodies failed; ${stripSentenceEnd(result.contentBlobError)}.`, 'failed');
+    return stageEvent(`Body downloads failed; ${stripSentenceEnd(result.contentBlobError)}.`, 'failed');
   }
-  const downloaded = withByteSuffix(formatCount(count, 'topic body', 'topic bodies'), result.syncedContentBlobBytes);
+  const downloaded = withByteSuffix(formatCount(count, 'body file', 'body files'), result.syncedContentBlobBytes);
   const elapsed = formatElapsed(result.syncedContentBlobElapsedMs);
-  return stageEvent(`Topic bodies downloaded; ${downloaded}${elapsed ? ` in ${elapsed}` : ''}.`, 'completed');
+  return stageEvent(`Body files downloaded; ${downloaded}${elapsed ? ` in ${elapsed}` : ''}.`, 'completed');
 }
 
 function attachmentStage(result: CompanionDesktopSyncResult) {

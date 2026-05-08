@@ -57,7 +57,7 @@ async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'stage_finished',
-    message: 'Topic bodies downloaded; 1 topic body.',
+    message: 'Body files downloaded; 1 body file.',
     status: 'completed'
   }));
 }

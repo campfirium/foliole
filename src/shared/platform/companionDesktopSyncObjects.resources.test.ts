@@ -63,6 +63,7 @@ async function testReportsAttachmentBreakdown() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   diagnosticsMock.loadLocalSyncDiagnostics
+    .mockResolvedValueOnce(null)
     .mockResolvedValueOnce({
       content: {
         missing_active_topic_attachment_resource_count: 1,
@@ -100,6 +101,49 @@ async function testReportsAttachmentBreakdown() {
     phase: 'attachment',
     total: 4,
     totalBytes: 8192
+  }));
+}
+
+async function testReportsContentBreakdown() {
+  const bodyHash = 'b'.repeat(64);
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: bodyHash, size_bytes: 1024 }])
+    .mockResolvedValueOnce([]);
+  diagnosticsMock.loadLocalSyncDiagnostics
+    .mockResolvedValueOnce({
+      content: {
+        missing_active_topic_body_count: 1,
+        missing_content_blob_bytes: 3072,
+        missing_content_blob_count: 3,
+        missing_due_review_body_count: 1,
+        missing_external_document_body_count: 1,
+        missing_nested_topic_body_count: 1,
+        missing_top_level_topic_body_count: 1,
+        missing_topic_body_count: 2
+      },
+      sync_state: { local_dirty_count: 0, pending_ack_count: 0, push_issue_count: 0 }
+    })
+    .mockResolvedValueOnce(null);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const onProgress = vi.fn();
+  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+
+  expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+    contentBreakdown: {
+      activeTopicBodies: 1,
+      dueReviewBodies: 1,
+      externalDocumentBodies: 1,
+      nestedTopicBodies: 1,
+      topLevelTopicBodies: 1,
+      topicBodies: 2
+    },
+    completed: 0,
+    completedBytes: 0,
+    phase: 'content',
+    total: 3,
+    totalBytes: 3072
   }));
 }
 
@@ -144,6 +188,8 @@ describe('companion desktop sync resources', () => {
   it('pulls missing attachment resources after structure sync', testPullsAttachmentResources);
 
   it('reports attachment resource breakdown in sync progress', testReportsAttachmentBreakdown);
+
+  it('reports topic and external document body breakdown in sync progress', testReportsContentBreakdown);
 
   it('starts topic body resource work before attachment resource work', testPullsBodiesBeforeAttachments);
 

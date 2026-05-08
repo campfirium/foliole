@@ -17,6 +17,7 @@ interface BufferJson {
 }
 
 export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbPort {
+  let transactionDepth = 0;
   const port: DbPort = {
     async run(sql, params = []) {
       try {
@@ -35,7 +36,11 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
       }
     },
     async transaction<T>(execute: (tx: DbPort) => Promise<T>) {
+      if (transactionDepth > 0) {
+        return execute(port);
+      }
       await connection.beginTransaction();
+      transactionDepth += 1;
       try {
         const result = await execute(port);
         await connection.commitTransaction();
@@ -43,6 +48,8 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
       } catch (error) {
         await connection.rollbackTransaction();
         throw normalizeSqliteError(error);
+      } finally {
+        transactionDepth -= 1;
       }
     }
   };
@@ -50,15 +57,10 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
 }
 
 async function runStatement(connection: SQLiteDBConnection, sql: string, params: DbParams) {
-  if (params.length === 0 && shouldExecuteWithoutImplicitTransaction(sql)) {
+  if (params.length === 0) {
     return connection.execute(sql, false);
   }
   return connection.run(sql, normalizeParams(params), false);
-}
-
-function shouldExecuteWithoutImplicitTransaction(sql: string) {
-  const statement = sql.trim().toUpperCase();
-  return statement.startsWith('ATTACH ') || statement.startsWith('DETACH ');
 }
 
 function normalizeParams(params: DbParams) {

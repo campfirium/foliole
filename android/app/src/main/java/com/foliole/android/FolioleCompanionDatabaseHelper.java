@@ -118,14 +118,13 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionSyncObjectStore.loadSyncObjects(context, database, objectIds, objectTypes);
     }
 
-    JSObject syncAttachmentResource(String attachmentId, String contentHash, String url, JSONObject headers) throws Exception {
-        SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionAttachmentResourceStore.syncResource(context, database, attachmentId, contentHash, url, headers);
+    JSObject downloadAttachmentResourceBatch(JSONArray resources) throws Exception {
+        return FolioleCompanionAttachmentResourceBatchStore.downloadResources(context, resources);
     }
 
-    JSObject syncAttachmentResources(org.json.JSONArray resources) throws Exception {
+    JSObject commitAttachmentResourceBatch(String batchToken) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionAttachmentResourceBatchStore.syncResources(context, database, resources);
+        return FolioleCompanionAttachmentResourceBatchStore.commitDownloadedResources(context, database, batchToken);
     }
 
     JSObject loadMissingAttachmentResources(int limit) throws Exception {
@@ -143,14 +142,13 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionContentBlobStore.loadMissingHashes(context, database, limit);
     }
 
-    JSObject syncContentBlob(String hash, String url, JSONObject headers) throws Exception {
-        SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionContentBlobStore.syncBlob(context, database, hash, url, headers);
+    JSObject downloadContentBlobBatch(String url, JSONObject headers, String body) throws Exception {
+        return FolioleCompanionContentBlobBatchStore.downloadBlobs(context, url, headers, body);
     }
 
-    JSObject syncContentBlobs(String url, JSONObject headers, String body) throws Exception {
+    JSObject commitContentBlobBatch(String batchToken) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
-        return FolioleCompanionContentBlobBatchStore.syncBlobs(context, database, url, headers, body);
+        return FolioleCompanionContentBlobBatchStore.commitDownloadedBlobs(context, database, batchToken);
     }
 
     JSObject resolveAttachmentResource(String attachmentId) throws Exception {

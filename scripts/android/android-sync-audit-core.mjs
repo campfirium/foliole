@@ -1,5 +1,13 @@
 import Database from 'better-sqlite3';
 
+import {
+  localPushBlockers,
+  pendingDesktopChanges,
+  resourceBacklog,
+  suspectLayer
+} from './android-sync-audit-breakdown.mjs';
+import { syncEventSummary } from './android-sync-audit-events.mjs';
+
 const STRUCTURAL_TABLES = [
   { name: 'nodes', pk: 'id', sql: "SELECT id, title FROM nodes WHERE deleted_at IS NULL" },
   {
@@ -88,23 +96,6 @@ function compareContentMetadata(desktop, android) {
   };
 }
 
-function resourceBacklog(android) {
-  return {
-    availableWithoutData: all(android,
-      "SELECT b.hash FROM content_blobs b LEFT JOIN content_blob_data d ON d.hash = b.hash WHERE b.availability <> 'missing' AND d.hash IS NULL LIMIT 20"
-    ).map((row) => row.hash),
-    missingAvailabilityCount: scalar(android, "SELECT COUNT(*) FROM content_blobs WHERE availability = 'missing'", 0),
-    missingExternalDocumentBodies: scalar(android,
-      'SELECT COUNT(*) FROM external_documents e LEFT JOIN content_blob_data d ON d.hash = e.body_blob_hash WHERE e.is_present = 1 AND e.body_blob_hash IS NOT NULL AND d.hash IS NULL',
-      0
-    ),
-    missingNodeBodies: scalar(android,
-      'SELECT COUNT(*) FROM nodes n LEFT JOIN content_blob_data d ON d.hash = n.body_blob_hash WHERE n.deleted_at IS NULL AND n.body_blob_hash IS NOT NULL AND d.hash IS NULL',
-      0
-    )
-  };
-}
-
 function mergeObjectTypeStats(desktopRows, androidRows) {
   const android = new Map(androidRows.map((row) => [row.object_type, row]));
   return desktopRows.map((row) => ({
@@ -114,19 +105,6 @@ function mergeObjectTypeStats(desktopRows, androidRows) {
     desktopMaxSeqToCursor: row.max_state_seq,
     objectType: row.object_type
   }));
-}
-
-function suspectLayer(report) {
-  if (!report.identity.androidEndpoint) return 'pairing/source mismatch: Android workspace endpoint is missing';
-  if (report.cursors.androidCursor > report.cursors.desktopMaxSeq) return 'cursor advancement: Android cursor is ahead of desktop';
-  const nodeOrder = report.structural.find((item) => item.name === 'node_order');
-  if (nodeOrder?.missingOnAndroid.length || nodeOrder?.positionMismatches.length) return 'node_order apply';
-  if (report.structural.some((item) => item.missingOnAndroid.length)) return 'pack apply or pack builder';
-  if (report.content.missingMetadata.length) return 'content_blobs metadata sync';
-  if (report.resources.availableWithoutData.length) return 'resource pull wrote availability without bytes';
-  if (report.resources.missingAvailabilityCount > 0) return 'resource pull backlog';
-  if (report.cursors.desktopMaxSeq > report.cursors.androidCursor) return 'structure pack not fully pulled';
-  return 'no obvious structural break';
 }
 
 function auditDatabases(desktopPath, androidPath, metadata = {}) {
@@ -140,14 +118,17 @@ function auditDatabases(desktopPath, androidPath, metadata = {}) {
       cursors: {
         androidCursor,
         desktopMaxSeq: scalar(desktop, 'SELECT COALESCE(MAX(state_seq), 0) FROM sync_object_state', 0),
-        gap: null
+        gap: null,
+        pending: pendingDesktopChanges(desktop, androidCursor)
       },
       identity: {
         androidEndpoint: metaValue(android, 'workspace_sync_endpoint_url'),
         androidSerial: metadata.serial ?? null
       },
+      localPush: localPushBlockers(android),
       objectTypes: mergeObjectTypeStats(objectTypeStats(desktop, androidCursor), objectTypeStats(android)),
       resources: resourceBacklog(android),
+      syncEvents: syncEventSummary(android),
       structural: compareStructures(desktop, android)
     };
     report.cursors.gap = report.cursors.desktopMaxSeq - report.cursors.androidCursor;
@@ -169,6 +150,14 @@ function formatAuditReport(report) {
     `desktop_max_state_seq : ${report.cursors.desktopMaxSeq}`,
     `android_sync_cursor   : ${report.cursors.androidCursor}`,
     `desktop_minus_android : ${report.cursors.gap}`,
+    `pending_live_changes  : ${report.cursors.pending.liveCount}`,
+    `pending_tombstones    : ${report.cursors.pending.tombstoneCount}`,
+    `pending_types         : ${formatPendingTypes(report.cursors.pending.types)}`,
+    `local_dirty_changes   : ${report.localPush.dirtyCount}`,
+    `local_push_issues     : ${report.localPush.issueCount}`,
+    `local_push_types      : ${formatLocalPushTypes(report.localPush)}`,
+    `sync_event_count      : ${report.syncEvents.count}`,
+    `latest_run            : ${formatLatestRun(report.syncEvents.latestRun)}`,
     '',
     '=== Per object_type ===',
     '| object_type | desktop_count_to_cursor | android_count | desktop_max_seq_to_cursor | android_local_max_seq |'
@@ -187,14 +176,32 @@ function formatAuditReport(report) {
     '=== Resource Backlog ===',
     `content_blob metadata missing from android: ${report.content.missingMetadata.length}`,
     `content_blob bytes missing but availability != missing: ${report.resources.availableWithoutData.length}`,
-    `content_blob availability=missing: ${report.resources.missingAvailabilityCount}`,
+    `referenced content blobs missing bytes: ${report.resources.missingReferencedContentBlobs}`,
+    `unreferenced content_blob availability=missing: ${report.resources.missingUnreferencedContentBlobs}`,
     `active node bodies missing bytes: ${report.resources.missingNodeBodies}`,
     `external document bodies missing bytes: ${report.resources.missingExternalDocumentBodies}`,
+    `attachment resources missing bytes: ${report.resources.missingAttachmentResources}`,
     '',
     '=== Suspected Broken Layer ===',
     report.suspectedBrokenLayer
   );
   return lines.join('\n');
+}
+
+function formatPendingTypes(types) {
+  if (types.length === 0) return 'none';
+  return types.map((row) => `${row.objectType}(live=${row.liveCount}, tombstone=${row.tombstoneCount})`).join(', ');
+}
+
+function formatLocalPushTypes(localPush) {
+  const dirty = localPush.dirtyTypes.map((row) => `${row.objectType}(dirty=${row.count})`);
+  const issues = localPush.issueTypes.map((row) => `${row.objectType}(${row.status}=${row.count})`);
+  return [...dirty, ...issues].join(', ') || 'none';
+}
+
+function formatLatestRun(run) {
+  if (!run) return 'none';
+  return `${run.result ?? 'unknown'} ${run.message}`.trim();
 }
 
 export { auditDatabases, formatAuditReport };

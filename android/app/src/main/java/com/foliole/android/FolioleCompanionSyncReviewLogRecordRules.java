@@ -38,7 +38,7 @@ final class FolioleCompanionSyncReviewLogRecordRules {
     }
 
     private static JSONObject query(Context context, String queryName) throws Exception {
-        JSONObject queries = new JSONObject(FolioleCompanionAssetReader.read(context, QUERY_ASSET_PATH))
+        JSONObject queries = FolioleCompanionJsonAssetCache.object(context, QUERY_ASSET_PATH)
             .optJSONObject(FolioleCompanionQueryAssetKeys.key(context, "queries"));
         JSONObject query = queries == null ? null : queries.optJSONObject(queryName);
         if (query == null) {

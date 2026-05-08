@@ -110,14 +110,19 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
 
 async function syncAttachmentResourceRequestBatch(endpoint: string, requests: AttachmentResourceRequest[]) {
   try {
-    const resources = await Promise.all(requests.map((request) => buildSignedAttachmentResourceRequest(endpoint, request)));
-    const result = await runCompanionSyncWriterTask(() => (
-      FolioleCompanionSync.syncAttachmentResources({ resources })
-    ));
-    return result.synced_attachment_ids;
+    return await syncAttachmentResourceRequestBatchOnce(endpoint, requests);
   } catch {
     return syncAttachmentResourceRequestFallback(endpoint, requests);
   }
+}
+
+async function syncAttachmentResourceRequestBatchOnce(endpoint: string, requests: AttachmentResourceRequest[]) {
+  const resources = await Promise.all(requests.map((request) => buildSignedAttachmentResourceRequest(endpoint, request)));
+  const download = await FolioleCompanionSync.downloadAttachmentResourceBatch({ resources });
+  const result = await runCompanionSyncWriterTask(() => FolioleCompanionSync.commitAttachmentResourceBatch({
+    batch_token: download.batch_token
+  }));
+  return result.synced_attachment_ids;
 }
 
 async function syncAttachmentResourceRequestFallback(endpoint: string, requests: AttachmentResourceRequest[]) {
@@ -127,10 +132,7 @@ async function syncAttachmentResourceRequestFallback(endpoint: string, requests:
 
 async function syncAttachmentResourceRequest(endpoint: string, request: AttachmentResourceRequest) {
   try {
-    await runCompanionSyncWriterTask(async () => (
-      FolioleCompanionSync.syncAttachmentResource(await buildSignedAttachmentResourceRequest(endpoint, request))
-    ));
-    return request.attachmentId;
+    return (await syncAttachmentResourceRequestBatchOnce(endpoint, [request]))[0] ?? null;
   } catch {
     return null;
   }

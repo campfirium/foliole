@@ -53,6 +53,8 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     directoryName: 'attachments',
     mimeTypeKey: 'mime_type',
     batchResponseKeys: {
+      batchToken: 'batch_token',
+      failedAttachmentIds: 'failed_attachment_ids',
       syncedAttachmentIds: 'synced_attachment_ids'
     },
     resolveResponseKeys: {
@@ -86,7 +88,9 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     hashKey: 'hash',
     hashesReplacement: '__HASH_FILTER__',
     batchResponseKeys: {
+      batchToken: 'batch_token',
       databaseElapsedMs: 'db_elapsed_ms',
+      failedHashes: 'failed_hashes',
       httpElapsedMs: 'http_elapsed_ms',
       parseElapsedMs: 'parse_elapsed_ms',
       syncedHashes: 'synced_hashes',

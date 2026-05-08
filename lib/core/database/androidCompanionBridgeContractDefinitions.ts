@@ -119,6 +119,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     },
     requestKeys: {
       attachmentId: 'attachment_id',
+      batchToken: 'batch_token',
       body: 'body',
       contentHash: 'content_hash',
       documentId: 'document_id',

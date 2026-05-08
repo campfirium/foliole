@@ -109,6 +109,33 @@ describe('describeCompanionSyncPassResult backlog', () => {
   });
 });
 
+describe('describeCompanionSyncPassResult push blocks', () => {
+  it('keeps resource backlog visible when Android changes need review', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      pushIssueCount: 2,
+      remainingAttachmentResourceCount: 1,
+      remainingContentBlobCount: 3
+    }))).toEqual({
+      message: '2 Android changes need review before sending. Resource downloads are still pending.',
+      outcome: 'skipped',
+      result: 'blocked',
+      status: 'skipped'
+    });
+  });
+
+  it('keeps structure confirmation visible when Android push fails', () => {
+    expect(describeCompanionSyncPassResult(passInput({
+      pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
+      remainingStructureChangeCount: 2
+    }))).toEqual({
+      message: 'Android changes could not be sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
+      outcome: 'skipped',
+      result: 'blocked',
+      status: 'skipped'
+    });
+  });
+});
+
 describe('describeCompanionSyncPassResult timing', () => {
   it('records stage timing when a pass completes', () => {
     expect(describeCompanionSyncPassResult(passInput({
@@ -150,7 +177,7 @@ describe('describeCompanionSyncPassResult errors', () => {
       contentBlobError: 'Topic body batch could not download any requested body.',
       remainingContentBlobCount: 5
     }))).toEqual({
-      message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body.',
+      message: 'Sync checked; body downloads could not finish in this pass: Topic body batch could not download any requested body.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'
@@ -173,7 +200,7 @@ describe('describeCompanionSyncPassResult errors', () => {
     expect(describeCompanionSyncPassResult(passInput({
       contentBlobError: 'Topic body batch could not download any requested body.'
     }))).toEqual({
-      message: 'Topic body download failed: Topic body batch could not download any requested body.',
+      message: 'Body download failed: Topic body batch could not download any requested body.',
       outcome: 'failed',
       result: 'failed',
       status: 'failed'

@@ -50,6 +50,25 @@ function createSearchPluginMocks() {
 
 function createWritePluginMocks() {
   return {
+    commitAttachmentResourceBatch: vi.fn(async () => ({
+      synced_attachment_ids: ['att-1']
+    })),
+    commitContentBlobBatch: vi.fn(async () => ({
+      db_elapsed_ms: 2,
+      synced_hashes: ['a'.repeat(64)]
+    })),
+    downloadAttachmentResourceBatch: vi.fn(async () => ({
+      batch_token: 'attachment-batch-token',
+      failed_attachment_ids: [],
+      synced_attachment_ids: ['att-1']
+    })),
+    downloadContentBlobBatch: vi.fn(async () => ({
+      batch_token: 'content-batch-token',
+      failed_hashes: [],
+      http_elapsed_ms: 3,
+      parse_elapsed_ms: 1,
+      synced_hashes: ['a'.repeat(64)]
+    })),
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
@@ -120,16 +139,6 @@ async function testNativePluginBridge() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   expect(capacitorMock.plugin.loadMissingAttachmentResources).toHaveBeenCalledWith({ limit: 4 });
-  await expect(api.syncCompanionContentBlob({
-    hash: 'a'.repeat(64),
-    headers: { 'X-Device-Id': 'android' },
-    url: 'http://desktop/companion/content-blob?hash=a'
-  })).resolves.toEqual({ availability: 'cached', hash: 'a'.repeat(64) });
-  expect(capacitorMock.plugin.syncContentBlob).toHaveBeenCalledWith({
-    hash: 'a'.repeat(64),
-    headers: { 'X-Device-Id': 'android' },
-    url: 'http://desktop/companion/content-blob?hash=a'
-  });
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
@@ -191,7 +200,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     stateSeq: 4,
     status: 'accepted'
   }])).resolves.toEqual(['op-1']);
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(7);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(6);
 }
 
 describe('companion sync objects bridge', () => {

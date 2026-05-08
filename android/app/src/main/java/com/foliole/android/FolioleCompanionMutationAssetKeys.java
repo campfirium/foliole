@@ -10,7 +10,7 @@ final class FolioleCompanionMutationAssetKeys {
     private FolioleCompanionMutationAssetKeys() {}
 
     static JSONObject section(Context context, String key) throws Exception {
-        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
+        JSONObject payload = FolioleCompanionJsonAssetCache.object(context, MUTATION_ASSET_PATH);
         JSONObject section = payload.optJSONObject(key(context, key));
         if (section == null) {
             throw new IllegalStateException("Companion mutation definitions asset is missing section: " + key);
@@ -40,7 +40,7 @@ final class FolioleCompanionMutationAssetKeys {
     }
 
     static String key(Context context, String key) throws Exception {
-        JSONObject payload = new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
+        JSONObject payload = FolioleCompanionJsonAssetCache.object(context, MUTATION_ASSET_PATH);
         return assetKey(payload, key);
     }
 

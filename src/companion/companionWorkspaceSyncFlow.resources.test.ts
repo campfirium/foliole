@@ -74,7 +74,7 @@ async function testRecordsDownloadedResourcesForPass() {
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'stage_finished',
-    message: 'Topic bodies downloaded; 1 topic body (1.0 MB).',
+    message: 'Body files downloaded; 1 body file (1.0 MB).',
     result: 'completed',
     status: 'completed'
   }));
@@ -118,13 +118,13 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'stage_finished',
-    message: 'Topic bodies failed; Topic body batch could not download any requested body.',
+    message: 'Body downloads failed; Topic body batch could not download any requested body.',
     result: 'failed',
     status: 'failed'
   }));
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
-    message: 'Sync checked; topic bodies could not download in this pass: Topic body batch could not download any requested body.',
+    message: 'Sync checked; body downloads could not finish in this pass: Topic body batch could not download any requested body.',
     status: 'skipped'
   }));
 }

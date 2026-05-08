@@ -65,17 +65,27 @@ async function pullAndroidDatabase(options, outputDir) {
   }
   const serial = await resolveSerial(options);
   const resolved = { ...options, serial };
+  let lastError = null;
   for (const devicePath of DATABASE_CANDIDATES) {
     try {
       const outputPath = path.join(outputDir, path.basename(devicePath));
-      await writeFile(outputPath, await readDeviceFile(resolved, devicePath));
+      const database = await readDeviceFile(resolved, devicePath);
+      assertSqliteDatabase(database, devicePath);
+      await writeFile(outputPath, database);
       const sidecars = await pullAndroidSidecars(resolved, devicePath, outputPath);
       return { devicePath, outputPath, serial, sidecars };
-    } catch {
+    } catch (error) {
+      lastError = error;
       // Try the next historical database file name.
     }
   }
-  throw new Error('No Android companion database was readable with run-as.');
+  throw new Error(`No Android companion database was readable with run-as.${lastError ? ` Last error: ${lastError.message}` : ''}`);
+}
+
+function assertSqliteDatabase(buffer, devicePath) {
+  if (buffer.subarray(0, 16).toString('utf8') === 'SQLite format 3\0') return;
+  const preview = buffer.subarray(0, 80).toString('utf8').replace(/\s+/g, ' ').trim();
+  throw new Error(`${devicePath} is not a SQLite database${preview ? ` (${preview})` : ''}`);
 }
 
 async function pullAndroidSidecars(options, devicePath, outputPath) {

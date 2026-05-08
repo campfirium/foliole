@@ -6,21 +6,17 @@ import com.getcapacitor.PluginCall;
 final class FolioleCompanionResourcePluginActions {
     private FolioleCompanionResourcePluginActions() {}
 
-    static JSObject syncAttachmentResource(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        android.content.Context context = databaseHelper.hostContext();
-        return databaseHelper.syncAttachmentResource(
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context)),
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)),
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
-            call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context))
-        );
-    }
-
-    static JSObject syncAttachmentResources(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        return databaseHelper.syncAttachmentResources(
+    static JSObject downloadAttachmentResourceBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        return databaseHelper.downloadAttachmentResourceBatch(
             call.getData().optJSONArray(
                 FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(databaseHelper.hostContext())
             )
+        );
+    }
+
+    static JSObject commitAttachmentResourceBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        return databaseHelper.commitAttachmentResourceBatch(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(databaseHelper.hostContext()))
         );
     }
 
@@ -50,21 +46,18 @@ final class FolioleCompanionResourcePluginActions {
         );
     }
 
-    static JSObject syncContentBlob(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+    static JSObject downloadContentBlobBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
-        return databaseHelper.syncContentBlob(
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)),
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
-            call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context))
-        );
-    }
-
-    static JSObject syncContentBlobs(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
-        android.content.Context context = databaseHelper.hostContext();
-        return databaseHelper.syncContentBlobs(
+        return databaseHelper.downloadContentBlobBatch(
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
             call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceBodyRequestKey(context))
+        );
+    }
+
+    static JSObject commitContentBlobBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        return databaseHelper.commitContentBlobBatch(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(databaseHelper.hostContext()))
         );
     }
 

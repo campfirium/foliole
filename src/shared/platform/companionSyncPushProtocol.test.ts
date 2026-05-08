@@ -5,7 +5,6 @@ import {
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
   settingSyncAdapter,
-  viewStateSyncAdapter,
   type SyncPushAck,
   type SyncableReviewLogRow,
   type SyncableStateObjectRow
@@ -72,20 +71,6 @@ function createSettingRow(overrides: Partial<SyncableStateObjectRow> = {}): Sync
   };
 }
 
-function createViewStateRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
-  return {
-    base_content_hash: 'desktop-view-base',
-    content_hash: 'android-view-next',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:active_node',
-    object_type: 'view_state',
-    payload_json: '{"active_node_id":"node-1"}',
-    state_seq: 15,
-    updated_at: '2026-04-30T01:07:00.000Z',
-    ...overrides
-  };
-}
-
 function createAck(row: SyncableStateObjectRow, overrides: Partial<SyncPushAck> = {}): SyncPushAck {
   return {
     clientOpId: `node_review:${row.object_id}:${row.state_seq}`,
@@ -134,20 +119,6 @@ function testBuildsSettingPayload() {
       objectId: 'device:android:phone:*:app_settings',
       objectType: 'setting',
       scope: 'device'
-    }
-  });
-}
-
-function testBuildsViewStatePayload() {
-  const row = createViewStateRow();
-
-  expect(viewStateSyncAdapter.buildPushPayload(row)).toMatchObject({
-    base: { baseContentHash: 'desktop-view-base', kind: 'content_hash' },
-    clientOpId: 'view_state:session_resume:android:phone:android-test:active_node:15',
-    identity: {
-      objectId: 'session_resume:android:phone:android-test:active_node',
-      objectType: 'view_state',
-      scope: 'session_resume'
     }
   });
 }
@@ -239,7 +210,6 @@ describe('companion sync push protocol adapters', () => {
   it('builds a node_review push payload with content-hash base reference', testBuildsNodeReviewPayload);
   it('builds a node_reading push payload with content-hash base reference', testBuildsNodeReadingPayload);
   it('builds a setting push payload scoped by the setting identity tuple', testBuildsSettingPayload);
-  it('builds a view_state push payload scoped by its state scope', testBuildsViewStatePayload);
   it('uses a null base reference for state object create attempts', testUsesNullBaseForCreateAttempts);
   it('blocks state pull payloads when local dirty state exists', testBlocksPullApplyForDirtyStateRows);
   it('applies state pull payloads when the local state is clean', testAppliesPullWhenLocalStateIsClean);

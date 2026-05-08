@@ -28,4 +28,12 @@ describe('formatSyncResultMessage', () => {
       status: 'started'
     })).toBe(false);
   });
+
+  it('keeps structured stage facts out of historical Activity', () => {
+    expect(isReportableSyncEvent({
+      kind: 'stage_finished',
+      message: 'Body files downloaded.',
+      status: 'completed'
+    })).toBe(false);
+  });
 });

@@ -33,13 +33,13 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
-    public void syncAttachmentResource(PluginCall call) {
-        withCall(call, "Failed to sync companion attachment resource.", FolioleCompanionResourcePluginActions::syncAttachmentResource);
+    public void downloadAttachmentResourceBatch(PluginCall call) {
+        withCall(call, "Failed to download companion attachment resources.", FolioleCompanionResourcePluginActions::downloadAttachmentResourceBatch);
     }
 
     @PluginMethod
-    public void syncAttachmentResources(PluginCall call) {
-        withCall(call, "Failed to sync companion attachment resources.", FolioleCompanionResourcePluginActions::syncAttachmentResources);
+    public void commitAttachmentResourceBatch(PluginCall call) {
+        withCall(call, "Failed to commit companion attachment resources.", FolioleCompanionResourcePluginActions::commitAttachmentResourceBatch);
     }
 
     @PluginMethod
@@ -58,13 +58,13 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
-    public void syncContentBlob(PluginCall call) {
-        withCall(call, "Failed to sync companion content blob.", FolioleCompanionResourcePluginActions::syncContentBlob);
+    public void downloadContentBlobBatch(PluginCall call) {
+        withCall(call, "Failed to download companion content blobs.", FolioleCompanionResourcePluginActions::downloadContentBlobBatch);
     }
 
     @PluginMethod
-    public void syncContentBlobs(PluginCall call) {
-        withCall(call, "Failed to sync companion content blobs.", FolioleCompanionResourcePluginActions::syncContentBlobs);
+    public void commitContentBlobBatch(PluginCall call) {
+        withCall(call, "Failed to commit companion content blobs.", FolioleCompanionResourcePluginActions::commitContentBlobBatch);
     }
 
     @PluginMethod

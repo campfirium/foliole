@@ -126,6 +126,7 @@ function resolveStateApplyStatus(
   localRow?: SyncableStateObjectRow | null
 ): SyncApplyResult['status'] {
   if (payload.object_type !== objectType) return 'ignored';
+  if (objectType === 'view_state') return 'applied';
   if (!localRow || !sameIdentity(stateObjectIdentity(payload), stateObjectIdentity(localRow))) return 'applied';
   if (localRow.local_status && localRow.local_status !== 'ready_to_push') return 'blocked_by_dirty';
   return localRow.local_status === 'ready_to_push' ? 'blocked_by_dirty' : 'applied';

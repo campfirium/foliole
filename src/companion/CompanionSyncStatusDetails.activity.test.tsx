@@ -78,6 +78,23 @@ describe('CompanionSyncStatusDetails activity', () => {
     expect(screen.queryByText('Auto sync started.')).not.toBeInTheDocument();
   });
 
+  it('does not show stage completions as historical run facts', () => {
+    renderActivity([{
+      endpoint_url: 'http://10.0.2.2:38641',
+      id: 'run-1-stage-body',
+      kind: 'stage_finished',
+      message: 'Body files downloaded.',
+      occurred_at: '2026-05-07T23:12:40.000Z',
+      run_id: 'run-1',
+      stage: 'resource_downloads',
+      started_at: '2026-05-07T23:12:00.000Z',
+      status: 'completed'
+    }]);
+
+    expect(screen.queryByText('Body files downloaded.')).not.toBeInTheDocument();
+    expect(screen.getByText('No completed sync activity yet.')).toBeInTheDocument();
+  });
+
   it('shows repeated unchanged blocked facts only once', () => {
     renderActivity([
       runFinishedEvent(),
@@ -125,7 +142,7 @@ describe('CompanionSyncStatusDetails activity progress', () => {
     expect(screen.getByText('Current sync')).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.getByText('Now')).toBeInTheDocument();
-    expect(screen.getByText('Topic bodies; 12/585 - 2.0 MB/9.6 MB')).toBeInTheDocument();
+    expect(screen.getByText('Body downloads; 12/585 - 2.0 MB/9.6 MB')).toBeInTheDocument();
     expect(screen.queryByText('Auto sync started.')).not.toBeInTheDocument();
   });
 

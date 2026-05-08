@@ -66,6 +66,29 @@ function expectCursorLagWithRecentFailure() {
   }));
 }
 
+function expectRecentFailureIncludesTimeoutOwner() {
+  const verdicts = mergeSyncDiagnosticVerdicts({
+    android: snapshot('android', {
+      events: [{
+        endpoint_url: null,
+        message: 'Topic list sync failed: Desktop sync timed out while applying the structure pack.',
+        occurred_at: '2026-04-29T01:26:00.000Z',
+        status: 'failed'
+      }]
+    }),
+    desktop: snapshot('desktop', {})
+  });
+
+  expect(verdicts).toContainEqual(expect.objectContaining({
+    code: 'sync_recent_android_failure',
+    evidence: expect.objectContaining({
+      timeout_cancels_underlying_work: false,
+      timeout_key: 'structure_pack_apply',
+      timeout_owner: 'foreground_sync_run'
+    })
+  }));
+}
+
 function expectOldFailureHiddenAfterCompletedAutoSync() {
   const verdicts = mergeSyncDiagnosticVerdicts({
     android: snapshot('android', {
@@ -167,6 +190,7 @@ function expectAttachmentBacklogSeparateFromStructure() {
 describe('mergeSyncDiagnosticVerdicts', () => {
   it('reports when Android has not caught up to the desktop state sequence', expectAndroidCursorLagVerdict);
   it('keeps cursor lag visible even when the latest Android sync failed', expectCursorLagWithRecentFailure);
+  it('adds timeout ownership to recent Android failure diagnostics', expectRecentFailureIncludesTimeoutOwner);
   it('ignores older failed events after a completed auto sync', expectOldFailureHiddenAfterCompletedAutoSync);
   it('identifies desktop object types that are still beyond the Android cursor', expectLaggingDesktopObjectTypes);
   it('reports aligned structure without using progress percentages', expectAlignedStructureWithoutPercentages);

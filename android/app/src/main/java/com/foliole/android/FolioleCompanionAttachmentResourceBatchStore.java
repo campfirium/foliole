@@ -10,9 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,24 +26,34 @@ final class FolioleCompanionAttachmentResourceBatchStore {
     private FolioleCompanionAttachmentResourceBatchStore() {}
 
     static JSObject syncResources(Context context, SQLiteDatabase database, JSONArray resources) throws Exception {
+        JSObject download = downloadResources(context, resources);
+        return commitDownloadedResources(context, database, download.getString(batchResponseKey(context, "batchToken")));
+    }
+
+    static JSObject downloadResources(Context context, JSONArray resources) throws Exception {
         if (resources == null) {
             throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context) + " is required.");
         }
-        DownloadResult result = downloadResources(context, resources);
-        for (String attachmentId : result.failedIds) {
-            markFailed(context, database, attachmentId);
-        }
-        markCached(context, database, result.syncedIds);
+        DownloadResult result = downloadResourceFiles(context, resources);
+        String token = FolioleCompanionAttachmentResourceBatchSessions.create(
+            result.tempFilesById,
+            result.contentHashesById,
+            result.failedIds
+        );
         JSArray syncedAttachmentIds = new JSArray();
-        for (String attachmentId : result.syncedIds) {
-            syncedAttachmentIds.put(attachmentId);
-        }
+        for (String attachmentId : result.syncedIds) syncedAttachmentIds.put(attachmentId);
         JSObject response = new JSObject();
+        response.put(batchResponseKey(context, "batchToken"), token);
+        response.put(batchResponseKey(context, "failedAttachmentIds"), strings(result.failedIds));
         response.put(batchResponseKey(context, "syncedAttachmentIds"), syncedAttachmentIds);
         return response;
     }
 
-    private static DownloadResult downloadResources(Context context, JSONArray resources) throws Exception {
+    static JSObject commitDownloadedResources(Context context, SQLiteDatabase database, String batchToken) throws Exception {
+        return FolioleCompanionAttachmentResourceBatchCommitStore.commitDownloadedResources(context, database, batchToken);
+    }
+
+    private static DownloadResult downloadResourceFiles(Context context, JSONArray resources) throws Exception {
         int workerCount = Math.max(1, Math.min(DOWNLOAD_CONCURRENCY, resources.length()));
         ExecutorService executor = Executors.newFixedThreadPool(workerCount);
         ExecutorCompletionService<SingleDownloadResult> completionService = new ExecutorCompletionService<>(executor);
@@ -54,18 +62,22 @@ final class FolioleCompanionAttachmentResourceBatchStore {
                 JSONObject resource = resources.getJSONObject(index);
                 completionService.submit(downloadTask(context, resource));
             }
-            List<String> syncedIds = new ArrayList<>();
+            Map<String, String> contentHashesById = new HashMap<>();
             List<String> failedIds = new ArrayList<>();
+            List<String> syncedIds = new ArrayList<>();
+            Map<String, File> tempFilesById = new HashMap<>();
             for (int index = 0; index < resources.length(); index += 1) {
                 Future<SingleDownloadResult> future = completionService.take();
                 SingleDownloadResult result = future.get();
                 if (result.synced) {
                     syncedIds.add(result.attachmentId);
+                    contentHashesById.put(result.attachmentId, result.contentHash);
+                    tempFilesById.put(result.attachmentId, result.tempFile);
                 } else {
                     failedIds.add(result.attachmentId);
                 }
             }
-            return new DownloadResult(syncedIds, failedIds);
+            return new DownloadResult(contentHashesById, failedIds, syncedIds, tempFilesById);
         } finally {
             executor.shutdownNow();
         }
@@ -76,97 +88,37 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             String attachmentIdKey = FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context);
             String attachmentId = requireText(resource.optString(attachmentIdKey, null), attachmentIdKey);
             try {
-                syncResourceFile(context, attachmentId, resource);
-                return new SingleDownloadResult(attachmentId, true);
+                return downloadResourceFile(context, attachmentId, resource);
             } catch (Exception error) {
-                return new SingleDownloadResult(attachmentId, false);
+                return SingleDownloadResult.failed(attachmentId);
             }
         };
     }
 
-    private static void syncResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
+    private static SingleDownloadResult downloadResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
         String contentHashKey = FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context);
         String urlKey = FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context);
         String contentHash = requireText(resource.optString(contentHashKey, null), contentHashKey);
-        File outputFile = attachmentFile(context, contentHash);
-        File parent = outputFile.getParentFile();
+        File tempFile = tempAttachmentFile(context, contentHash);
+        File parent = tempFile.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IllegalStateException("Failed to create attachment directory.");
         }
         FolioleCompanionDesktopHttpClient.downloadToFile(
             requireText(resource.optString(urlKey, null), urlKey),
             resource.optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
-            outputFile
+            tempFile
         );
+        if (!contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, tempFile))) {
+            tempFile.delete();
+            throw new IllegalStateException("Attachment resource hash mismatch.");
+        }
+        return SingleDownloadResult.synced(attachmentId, contentHash, tempFile);
     }
 
-    private static void markCached(Context context, SQLiteDatabase database, List<String> attachmentIds) throws Exception {
-        if (attachmentIds.isEmpty()) {
-            return;
-        }
-        String now = Instant.now().toString();
-        Map<String, String> contentHashes = loadContentHashes(context, database, attachmentIds);
-        database.beginTransaction();
-        try {
-            for (String attachmentId : attachmentIds) {
-                String contentHash = contentHashes.get(attachmentId);
-                if (contentHash == null) {
-                    throw new IllegalStateException("Attachment manifest is missing.");
-                }
-                int updated = FolioleCompanionGeneratedMutationRunner.executeChanged(
-                    context,
-                    database,
-                    mutationRule(context, "markCachedMutationName"),
-                    new Object[] { contentHash, now, now, attachmentId }
-                );
-                if (updated <= 0) {
-                    throw new IllegalStateException("Attachment manifest is missing.");
-                }
-            }
-            database.setTransactionSuccessful();
-        } finally {
-            database.endTransaction();
-        }
-    }
-
-    private static Map<String, String> loadContentHashes(Context context, SQLiteDatabase database, List<String> attachmentIds) throws Exception {
-        Map<String, String> hashes = new HashMap<>();
-        StringBuilder placeholders = new StringBuilder();
-        String[] args = new String[attachmentIds.size()];
-        for (int index = 0; index < attachmentIds.size(); index += 1) {
-            if (index > 0) placeholders.append(", ");
-            placeholders.append("?");
-            args[index] = attachmentIds.get(index);
-        }
-        JSONArray rows = FolioleCompanionGeneratedQueryRunner
-            .load(
-                context,
-                database,
-                resourceRule(context, "contentHashesByIdsQueryName"),
-                Collections.singletonMap(resourceRule(context, "contentHashesReplacement"), placeholders.toString()),
-                args
-            )
-            .getJSONArray(resourceRule(context, "resultKey"));
-        for (int index = 0; index < rows.length(); index += 1) {
-            JSONObject row = rows.getJSONObject(index);
-            String attachmentId = rowString(context, row, "attachmentIdKey");
-            String contentHash = rowString(context, row, "contentHashKey");
-            hashes.put(attachmentId, requireText(contentHash, resourceRule(context, "contentHashKey")));
-        }
-        return hashes;
-    }
-
-    private static void markFailed(Context context, SQLiteDatabase database, String attachmentId) throws Exception {
-        FolioleCompanionGeneratedMutationRunner.executeChanged(
-            context,
-            database,
-            mutationRule(context, "markFailedMutationName"),
-            new Object[] { attachmentId }
-        );
-    }
-
-    private static File attachmentFile(Context context, String storageKey) throws Exception {
-        return new File(new File(context.getFilesDir(), resourceRule(context, "directoryName")), storageKey);
+    private static File tempAttachmentFile(Context context, String contentHash) throws Exception {
+        File root = new File(new File(context.getFilesDir(), resourceRule(context, "directoryName")), ".tmp");
+        return new File(new File(root, java.util.UUID.randomUUID().toString()), contentHash);
     }
 
     private static String requireText(String value, String field) {
@@ -176,39 +128,58 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         return value.trim();
     }
 
-    private static String mutationRule(Context context, String key) throws Exception {
-        return FolioleCompanionResourceMutationRules.attachmentString(context, key);
-    }
-
     private static String resourceRule(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.attachmentString(context, key);
-    }
-
-    private static String rowString(Context context, JSONObject row, String key) throws Exception {
-        return FolioleCompanionResourceReadQueryRules.attachmentRowString(context, row, key);
     }
 
     private static String batchResponseKey(Context context, String key) throws Exception {
         return FolioleCompanionResourceReadQueryRules.attachmentBatchResponseKey(context, key);
     }
 
-    private static final class DownloadResult {
-        final List<String> syncedIds;
-        final List<String> failedIds;
+    private static JSArray strings(List<String> values) {
+        JSArray result = new JSArray();
+        for (String value : values) result.put(value);
+        return result;
+    }
 
-        DownloadResult(List<String> syncedIds, List<String> failedIds) {
-            this.syncedIds = syncedIds;
+    private static final class DownloadResult {
+        final Map<String, String> contentHashesById;
+        final List<String> failedIds;
+        final List<String> syncedIds;
+        final Map<String, File> tempFilesById;
+
+        DownloadResult(
+            Map<String, String> contentHashesById,
+            List<String> failedIds,
+            List<String> syncedIds,
+            Map<String, File> tempFilesById
+        ) {
+            this.contentHashesById = contentHashesById;
             this.failedIds = failedIds;
+            this.syncedIds = syncedIds;
+            this.tempFilesById = tempFilesById;
         }
     }
 
     private static final class SingleDownloadResult {
         final String attachmentId;
+        final String contentHash;
         final boolean synced;
+        final File tempFile;
 
-        SingleDownloadResult(String attachmentId, boolean synced) {
+        private SingleDownloadResult(String attachmentId, String contentHash, boolean synced, File tempFile) {
             this.attachmentId = attachmentId;
+            this.contentHash = contentHash;
             this.synced = synced;
+            this.tempFile = tempFile;
+        }
+
+        static SingleDownloadResult failed(String attachmentId) {
+            return new SingleDownloadResult(attachmentId, null, false, null);
+        }
+
+        static SingleDownloadResult synced(String attachmentId, String contentHash, File tempFile) {
+            return new SingleDownloadResult(attachmentId, contentHash, true, tempFile);
         }
     }
 }

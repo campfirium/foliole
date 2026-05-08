@@ -11,6 +11,7 @@ export interface BetterSqliteDbPortOptions {
 }
 
 export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: BetterSqliteDbPortOptions = {}): DbPort {
+  let transactionDepth = 0;
   const port: DbPort & { readonly __dbPortName?: string } = {
     __dbPortName: options.name,
     async run(sql, params = []) {
@@ -20,7 +21,11 @@ export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: Better
       return sqlite.prepare(sql).all(...params) as T[];
     },
     async transaction<T>(execute: (tx: DbPort) => Promise<T>) {
+      if (transactionDepth > 0) {
+        return execute(port);
+      }
       sqlite.prepare('BEGIN IMMEDIATE').run();
+      transactionDepth += 1;
       try {
         const result = await execute(port);
         sqlite.prepare('COMMIT').run();
@@ -28,6 +33,8 @@ export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: Better
       } catch (error) {
         sqlite.prepare('ROLLBACK').run();
         throw normalizeSqliteError(error);
+      } finally {
+        transactionDepth -= 1;
       }
     }
   };

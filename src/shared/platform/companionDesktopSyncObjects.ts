@@ -17,11 +17,18 @@ import {
   saveCompanionSyncPackCursor,
   saveCompanionSyncReviewLogPushCursor
 } from './companionSyncObjects';
+import {
+  companionSyncTimeoutOwnership,
+  createCompanionSyncTimeoutError,
+  type CompanionSyncTimeoutKey
+} from './companionSyncTimeoutOwnership';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
 const SYNC_PACK_PATH = '/companion/sync-pack';
-export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS = 60_000;
-export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS = 45_000;
+export const COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS =
+  companionSyncTimeoutOwnership('push_local_changes').timeoutMs;
+export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS =
+  companionSyncTimeoutOwnership('structure_pack_apply').timeoutMs;
 export {
   ATTACHMENT_RESOURCE_BATCH_LIMIT,
   CONTENT_BLOB_BATCH_LIMIT,
@@ -85,14 +92,14 @@ async function pullRemoteStructurePack(endpointUrl: string) {
 }
 
 async function withSyncStepTimeout<T>(
-  stage: string,
+  key: CompanionSyncTimeoutKey,
   work: Promise<T>,
-  timeoutMs = COMPANION_DESKTOP_SYNC_STEP_TIMEOUT_MS
 ): Promise<T> {
+  const timeoutMs = companionSyncTimeoutOwnership(key).timeoutMs;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error(`Desktop sync timed out while ${stage}.`));
+      reject(createCompanionSyncTimeoutError(key));
     }, timeoutMs);
   });
   try {
@@ -143,7 +150,7 @@ async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
-  const pushed = await withSyncStepTimeout('pushing local review changes', pushLocalDirtyObjects(endpointUrl))
+  const pushed = await withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl))
     .catch((error) => ({
       pushConflictCount: 0,
       pushedObjectIds: [],
@@ -151,7 +158,7 @@ async function runCompanionObjectsSync(
       pushError: pushErrorMessage(error),
       pushRejectedCount: 0
     }));
-  const pack = await withSyncStepTimeout('applying the structure pack', pullRemoteStructurePack(endpointUrl), COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS);
+  const pack = await withSyncStepTimeout('structure_pack_apply', pullRemoteStructurePack(endpointUrl));
   options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
   await options.onStructureSynced?.();
   const resources = options.includeResources === false

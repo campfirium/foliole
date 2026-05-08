@@ -58,7 +58,7 @@ function expectRemainingBodyBacklogLabel() {
     totalBytes: 5242880
   });
 
-  expect(summary.title).toBe('Topic bodies');
+  expect(summary.title).toBe('Body downloads');
   expect(summary.status).toBe('5 left - 0 B/5.0 MB');
 }
 

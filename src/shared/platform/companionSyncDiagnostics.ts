@@ -4,6 +4,7 @@ import type {
 } from '../../../lib/platform/syncDiagnosticsContract';
 
 import { fetchDesktopJson } from './companionDesktopSyncHttp';
+import { classifyCompanionSyncTimeoutMessage } from './companionSyncTimeoutOwnership';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
@@ -75,6 +76,19 @@ function findLatestFailedTerminalEvent(android: SyncDiagnosticSnapshot) {
   ))?.status === 'failed'
     ? android.events.find((event) => event.status === 'failed') ?? null
 	    : null;
+}
+
+function recentFailureEvidence(event: NonNullable<ReturnType<typeof findLatestFailedTerminalEvent>>) {
+  const timeout = classifyCompanionSyncTimeoutMessage(event.message);
+  return {
+    message: event.message,
+    occurred_at: event.occurred_at,
+    timeout_allows_new_run_before_underlying_work_settles:
+      timeout?.allowsNewRunBeforeUnderlyingWorkSettles,
+    timeout_cancels_underlying_work: timeout?.cancelsUnderlyingWork,
+    timeout_key: timeout?.key,
+    timeout_owner: timeout?.owner
+  };
 }
 
 function pushSyncLagVerdicts(args: {
@@ -155,8 +169,7 @@ export function mergeSyncDiagnosticVerdicts(args: {
   const latestFailed = findLatestFailedTerminalEvent(args.android);
   if (latestFailed) {
     verdicts.push(warningVerdict('sync_recent_android_failure', 'Recent Android sync failed.', {
-      message: latestFailed.message,
-      occurred_at: latestFailed.occurred_at
+      ...recentFailureEvidence(latestFailed)
     }));
   }
   pushSyncLagVerdicts({ android: args.android, cursorLag, desktop: args.desktop, desktopMaxSeq, verdicts });

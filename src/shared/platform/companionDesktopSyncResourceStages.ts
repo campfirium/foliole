@@ -1,20 +1,24 @@
 import {
-  COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS,
   pullMissingAttachmentResources,
   pullMissingContentBlobs
 } from './companionDesktopSyncResources';
 import type { CompanionDesktopSyncOptions } from './companionDesktopSyncTypes';
+import {
+  companionSyncTimeoutOwnership,
+  createCompanionSyncTimeoutError,
+  type CompanionSyncTimeoutKey
+} from './companionSyncTimeoutOwnership';
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Desktop content blob sync failed.';
 }
 
-async function withResourceTimeout<T>(stage: string, work: Promise<T>): Promise<T> {
+async function withResourceTimeout<T>(key: CompanionSyncTimeoutKey, work: Promise<T>): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error(`Desktop sync timed out while ${stage}.`));
-    }, COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS);
+      reject(createCompanionSyncTimeoutError(key));
+    }, companionSyncTimeoutOwnership(key).timeoutMs);
   });
   try {
     return await Promise.race([work, timeout]);
@@ -26,7 +30,7 @@ async function withResourceTimeout<T>(stage: string, work: Promise<T>): Promise<
 async function pullContentStage(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const startedAt = Date.now();
   const blobs = await withResourceTimeout(
-    'fetching topic bodies',
+    'content_body_downloads',
     pullMissingContentBlobs(endpointUrl, onProgress)
   );
   return { ...blobs, syncedContentBlobElapsedMs: Date.now() - startedAt };
@@ -35,7 +39,7 @@ async function pullContentStage(endpointUrl: string, onProgress?: CompanionDeskt
 async function pullAttachmentStage(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress']) {
   const startedAt = Date.now();
   const attachments = await withResourceTimeout(
-    'fetching attachment resources',
+    'attachment_resource_downloads',
     pullMissingAttachmentResources(endpointUrl, onProgress)
   );
   return { ...attachments, syncedAttachmentResourceElapsedMs: Date.now() - startedAt };

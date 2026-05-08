@@ -11,16 +11,16 @@ interface FakeConnection {
   run: ReturnType<typeof vi.fn>;
 }
 
-it('maps DbPort writes to Capacitor SQLite without implicit transactions for attach statements', async () => {
+it('maps parameterless DbPort writes to Capacitor execute without implicit transactions', async () => {
   const connection = createFakeConnection();
   const db = createCapacitorSqliteDbPort(connection as never);
 
-  await expect(db.run("ATTACH DATABASE '/tmp/incoming.db' AS incoming")).resolves.toEqual({
+  await expect(db.run('INSERT INTO target SELECT * FROM incoming.rows')).resolves.toEqual({
     changes: 7,
     lastInsertRowId: 9
   });
 
-  expect(connection.execute).toHaveBeenCalledWith("ATTACH DATABASE '/tmp/incoming.db' AS incoming", false);
+  expect(connection.execute).toHaveBeenCalledWith('INSERT INTO target SELECT * FROM incoming.rows', false);
   expect(connection.run).not.toHaveBeenCalled();
 });
 
@@ -51,6 +51,36 @@ it('commits successful transactions and rolls back failed transactions', async (
 
   expect(connection.beginTransaction).toHaveBeenCalledTimes(2);
   expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
+  expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
+});
+
+it('reuses the active transaction for nested shared-core apply helpers', async () => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never);
+
+  await db.transaction(async (outer) => {
+    await outer.transaction(async (inner) => {
+      await inner.run('INSERT INTO items (id) VALUES (?)', ['a']);
+    });
+  });
+
+  expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+  expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
+  expect(connection.rollbackTransaction).not.toHaveBeenCalled();
+});
+
+it('keeps the outer transaction rollback boundary when a nested helper fails', async () => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never);
+
+  await expect(db.transaction(async (outer) => {
+    await outer.transaction(async () => {
+      throw new Error('nested failure');
+    });
+  })).rejects.toThrow('nested failure');
+
+  expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+  expect(connection.commitTransaction).not.toHaveBeenCalled();
   expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
 });
 

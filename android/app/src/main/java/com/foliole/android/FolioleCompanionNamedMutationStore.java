@@ -108,7 +108,7 @@ final class FolioleCompanionNamedMutationStore {
     }
 
     private static JSONObject loadPayload(Context context) throws Exception {
-        return new JSONObject(FolioleCompanionAssetReader.read(context, MUTATION_ASSET_PATH));
+        return FolioleCompanionJsonAssetCache.object(context, MUTATION_ASSET_PATH);
     }
 
     private static String runtimeRule(Context context, String groupName, String key) throws Exception {

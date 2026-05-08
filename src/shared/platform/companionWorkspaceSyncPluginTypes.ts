@@ -16,13 +16,16 @@ import type {
 } from '../../../lib/platform/nativeSyncContract';
 import type { SyncDiagnosticSnapshot } from '../../../lib/platform/syncDiagnosticsContract';
 
+import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
+import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
 import type { SyncPushAck } from './companionSyncPushProtocol';
 
 export interface CompanionDiscoveryCandidatesPayload {
   endpoint_urls: string[];
 }
 
-export interface CompanionWorkspaceSyncPlugin {
+export interface CompanionWorkspaceSyncPlugin
+  extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
@@ -46,13 +49,6 @@ export interface CompanionWorkspaceSyncPlugin {
     hashes: string[];
     missing_content_blob_bytes?: number;
     missing_content_blob_count?: number;
-  }>;
-  syncContentBlobs(args: { body: string; headers: Record<string, string>; url: string }): Promise<{
-    db_elapsed_ms?: number;
-    http_elapsed_ms?: number;
-    parse_elapsed_ms?: number;
-    synced_hashes: string[];
-    total_elapsed_ms?: number;
   }>;
   loadMissingAttachmentResources(args: {
     limit?: number;
@@ -193,25 +189,6 @@ export interface CompanionWorkspaceSyncPlugin {
     resource_url: string | null;
     status: 'missing_file' | 'not_found' | 'ready';
   }>;
-  syncAttachmentResource(args: {
-    attachment_id: string;
-    content_hash: string;
-    headers: Record<string, string>;
-    url: string;
-  }): Promise<{ attachment_id: string; availability: string }>;
-  syncAttachmentResources(args: {
-    resources: Array<{
-      attachment_id: string;
-      content_hash: string;
-      headers: Record<string, string>;
-      url: string;
-    }>;
-  }): Promise<{ synced_attachment_ids: string[] }>;
-  syncContentBlob(args: {
-    hash: string;
-    headers: Record<string, string>;
-    url: string;
-  }): Promise<{ availability: string; hash: string }>;
   saveWorkspaceSyncEndpoint(args: { endpoint_url: string | null }): Promise<NativeCompanionWorkspaceSyncState>;
   signCompanionSyncRequest(args: {
     body_hash: string;

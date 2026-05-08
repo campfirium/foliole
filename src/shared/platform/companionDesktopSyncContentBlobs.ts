@@ -3,21 +3,22 @@ import type {
   CompanionContentBlobNativeTiming,
   CompanionDesktopSyncProgress
 } from './companionDesktopSyncTypes';
+import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   loadCompanionMissingContentBlobBatch,
   loadCompanionMissingContentBlobs,
-  syncCompanionContentBlob,
   syncCompanionContentBlobs
 } from './companionSyncObjects';
+import { companionSyncTimeoutOwnership } from './companionSyncTimeoutOwnership';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 
-const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
 const CONTENT_BLOB_BATCH_PATH = '/companion/content-blobs';
 const CONTENT_BLOB_ACK_PATH = '/companion/content-blob/ack';
 export const CONTENT_BLOB_BATCH_LIMIT = 32;
 export const CONTENT_BLOB_MAX_BATCHES_PER_SYNC = 20;
 export const CONTENT_BLOB_CONCURRENT_FETCH_LIMIT = 6;
-export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS = 60_000;
+export const COMPANION_DESKTOP_SYNC_RESOURCE_TIMEOUT_MS =
+  companionSyncTimeoutOwnership('content_body_downloads').timeoutMs;
 export const COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS = 45_000;
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
@@ -55,21 +56,23 @@ function sumNativeTiming(
   };
 }
 
-function buildContentBlobPath(hash: string) {
-  const params = new URLSearchParams();
-  params.set('hash', hash);
-  return `${CONTENT_BLOB_RESOURCE_PATH}?${params.toString()}`;
-}
-
 async function loadMissingContentBlobSummary() {
   const batch = await loadCompanionMissingContentBlobBatch(CONTENT_BLOB_BATCH_LIMIT);
+  const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
     batch: batch.blobs,
-    contentBreakdown: undefined,
-    failed: batch.failedCount,
-    failedBytes: batch.failedBytes,
-    total: batch.total,
-    totalBytes: batch.totalBytes
+    contentBreakdown: diagnostics ? {
+      activeTopicBodies: diagnostics.content.missing_active_topic_body_count,
+      dueReviewBodies: diagnostics.content.missing_due_review_body_count,
+      externalDocumentBodies: diagnostics.content.missing_external_document_body_count,
+      nestedTopicBodies: diagnostics.content.missing_nested_topic_body_count,
+      topLevelTopicBodies: diagnostics.content.missing_top_level_topic_body_count,
+      topicBodies: diagnostics.content.missing_topic_body_count
+    } : undefined,
+    failed: batch.failedCount ?? diagnostics?.content.failed_content_blob_count ?? null,
+    failedBytes: batch.failedBytes ?? diagnostics?.content.failed_content_blob_bytes ?? null,
+    total: batch.total ?? diagnostics?.content.missing_content_blob_count ?? null,
+    totalBytes: batch.totalBytes ?? diagnostics?.content.missing_content_blob_bytes ?? null
   };
 }
 
@@ -173,13 +176,8 @@ function normalizeNativeTiming(result: Awaited<ReturnType<typeof syncCompanionCo
 }
 
 async function pullContentBlob(endpoint: string, hash: string) {
-  const pathWithQuery = buildContentBlobPath(hash);
-  const result = await syncCompanionContentBlob({
-    hash,
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
-    url: `${endpoint}${pathWithQuery}`
-  });
-  return result.availability === 'cached' ? result.hash : null;
+  const result = await pullContentBlobNativeBatch(endpoint, [hash]);
+  return result.syncedContentBlobHashes.includes(hash) ? hash : null;
 }
 
 export async function syncCompanionContentBlobFromDesktop(endpointUrl: string, hash: string) {

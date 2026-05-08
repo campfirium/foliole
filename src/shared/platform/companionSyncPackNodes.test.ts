@@ -40,8 +40,10 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     "ATTACH DATABASE '/tmp/incoming pack.db' AS inc",
     false
   );
+  expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+  expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
   expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
-  expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO main.nodes'), [], false);
+  expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO main.nodes'), false);
 });
 
 it('loads and advances the pack cursor around the shared core apply', async () => {

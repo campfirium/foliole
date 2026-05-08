@@ -54,7 +54,15 @@ export async function syncCompanionContentBlob(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     return { availability: 'missing', hash: args.hash };
   }
-  return runCompanionSyncWriterTask(() => FolioleCompanionSync.syncContentBlob(args));
+  const result = await syncCompanionContentBlobs({
+    body: JSON.stringify({ hashes: [args.hash] }),
+    headers: args.headers,
+    url: args.url
+  });
+  return {
+    availability: result.synced_hashes.includes(args.hash) ? 'cached' : 'missing',
+    hash: args.hash
+  };
 }
 
 export async function syncCompanionContentBlobs(args: {
@@ -65,5 +73,15 @@ export async function syncCompanionContentBlobs(args: {
   if (!isNativeAndroidCompanionRuntime()) {
     throw new Error('Native content body batch sync is unavailable.');
   }
-  return runCompanionSyncWriterTask(() => FolioleCompanionSync.syncContentBlobs(args));
+  const download = await FolioleCompanionSync.downloadContentBlobBatch(args);
+  const commit = await runCompanionSyncWriterTask(() => FolioleCompanionSync.commitContentBlobBatch({
+    batch_token: download.batch_token
+  }));
+  return {
+    db_elapsed_ms: commit.db_elapsed_ms,
+    http_elapsed_ms: download.http_elapsed_ms,
+    parse_elapsed_ms: download.parse_elapsed_ms,
+    synced_hashes: commit.synced_hashes,
+    total_elapsed_ms: download.total_elapsed_ms
+  };
 }

@@ -11,6 +11,20 @@ function formatBacklogLabel(label: string, count: number | null, bytes?: number 
   return typeof bytes === 'number' && bytes > 0 ? `${countLabel} (${formatBytes(bytes)})` : countLabel;
 }
 
+function formatBodyBacklogLabel(result: CompanionSyncPassInput) {
+  const breakdown = result.remainingContentBreakdown;
+  if (!breakdown) return formatBacklogLabel('topic bodies', result.remainingContentBlobCount, result.remainingContentBlobBytes);
+  const topicCount = breakdown.topicBodies ?? 0;
+  const externalCount = breakdown.externalDocumentBodies ?? 0;
+  const labels = [];
+  if (topicCount > 0) labels.push(formatCount(topicCount, 'topic body', 'topic bodies'));
+  if (externalCount > 0) labels.push(formatCount(externalCount, 'external document body', 'external document bodies'));
+  const label = labels.length > 0 ? labels.join(' and ') : formatBacklogLabel('body downloads', result.remainingContentBlobCount);
+  return typeof result.remainingContentBlobBytes === 'number' && result.remainingContentBlobBytes > 0
+    ? `${label} (${formatBytes(result.remainingContentBlobBytes)})`
+    : label;
+}
+
 function formatCount(count: number, singular: string, plural: string) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -90,7 +104,7 @@ export function syncCheckedPrefix(result: CompanionSyncPassInput) {
 export function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInput) {
   const remainingBodies = result.remainingContentBlobCount;
   const remainingAttachments = result.remainingAttachmentResourceCount;
-  const bodyLabel = formatBacklogLabel('topic bodies', remainingBodies, result.remainingContentBlobBytes);
+  const bodyLabel = formatBodyBacklogLabel(result);
   const attachmentLabel = formatBacklogLabel('attachment files', remainingAttachments, result.remainingAttachmentResourceBytes);
   const suffixes: string[] = [];
   const failedBodies = result.remainingFailedContentBlobCount ?? 0;
@@ -103,7 +117,7 @@ export function appendBacklogSuffix(prefix: string, result: CompanionSyncPassInp
     suffixes.push(`${attachmentLabel} ${resourceBacklogVerb(result)}`);
   }
   if (failedBodies > 0) {
-    suffixes.push(`${formatDownloadLabel(failedBodies, 'topic body download', 'topic body downloads', result.remainingFailedContentBlobBytes)} failed earlier`);
+    suffixes.push(`${formatDownloadLabel(failedBodies, 'body download', 'body downloads', result.remainingFailedContentBlobBytes)} failed earlier`);
   }
   if (failedAttachments > 0) {
     suffixes.push(`${formatDownloadLabel(failedAttachments, 'attachment download', 'attachment downloads', result.remainingFailedAttachmentResourceBytes)} failed earlier`);

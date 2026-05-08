@@ -174,6 +174,10 @@ final class FolioleCompanionBridgeContractDefinitions {
         return resourceRequestKey(context, "attachmentId");
     }
 
+    static String resourceBatchTokenRequestKey(Context context) throws Exception {
+        return resourceRequestKey(context, "batchToken");
+    }
+
     static String resourceBodyRequestKey(Context context) throws Exception {
         return resourceRequestKey(context, "body");
     }

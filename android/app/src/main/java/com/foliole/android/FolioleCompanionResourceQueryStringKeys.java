@@ -159,6 +159,8 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "missingResourceRead.contentBlobs.summaryKeys.count": return "missing_content_blob_count";
             case "missingResourceRead.contentBlobs.summaryKeys.failedBytes": return "failed_content_blob_bytes";
             case "missingResourceRead.contentBlobs.summaryKeys.failedCount": return "failed_content_blob_count";
+            case "resourceRead.attachmentResources.batchResponseKeys.batchToken": return "batch_token";
+            case "resourceRead.attachmentResources.batchResponseKeys.failedAttachmentIds": return "failed_attachment_ids";
             case "resourceRead.attachmentResources.batchResponseKeys.syncedAttachmentIds": return "synced_attachment_ids";
             case "resourceRead.attachmentResources.resolveResponseKeys.mimeType": return "mime_type";
             case "resourceRead.attachmentResources.resolveResponseKeys.resourceUrl": return "resource_url";
@@ -172,7 +174,9 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "resourceRead.attachmentResources.syncRequestKeys.url": return "url";
             case "resourceRead.attachmentResources.syncResponseKeys.attachmentId": return "attachment_id";
             case "resourceRead.attachmentResources.syncResponseKeys.availability": return "availability";
+            case "resourceRead.contentBlobs.batchResponseKeys.batchToken": return "batch_token";
             case "resourceRead.contentBlobs.batchResponseKeys.databaseElapsedMs": return "db_elapsed_ms";
+            case "resourceRead.contentBlobs.batchResponseKeys.failedHashes": return "failed_hashes";
             case "resourceRead.contentBlobs.batchResponseKeys.httpElapsedMs": return "http_elapsed_ms";
             case "resourceRead.contentBlobs.batchResponseKeys.parseElapsedMs": return "parse_elapsed_ms";
             case "resourceRead.contentBlobs.batchResponseKeys.syncedHashes": return "synced_hashes";

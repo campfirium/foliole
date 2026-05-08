@@ -117,12 +117,12 @@ function describeErrorPass(
   if (result.contentBlobError) {
     if (hasRemainingResourceBacklog(result)) {
       return createPassResult(
-        withTiming(`Sync checked; topic bodies could not download in this pass: ${result.contentBlobError}`),
+        withTiming(`Sync checked; body downloads could not finish in this pass: ${result.contentBlobError}`),
         'skipped',
         'partial'
       );
     }
-    return createPassResult(withTiming(`Topic body download failed: ${result.contentBlobError}`), 'failed');
+    return createPassResult(withTiming(`Body download failed: ${result.contentBlobError}`), 'failed');
   }
   return null;
 }
@@ -131,9 +131,10 @@ function describePushPass(
   result: CompanionSyncPassInput,
   withTiming: (message: string) => string
 ) {
+  const extra = describePullBacklogWhilePushBlocked(result);
   if (result.pushError) {
     return createPassResult(
-      withTiming(`Android changes could not be sent: ${result.pushError}`),
+      withTiming(`Android changes could not be sent: ${result.pushError}${extra}`),
       'skipped',
       'blocked'
     );
@@ -144,12 +145,22 @@ function describePushPass(
   );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
-      withTiming(`${formatSyncPassCount(rejectedOrConflicted, 'Android change', 'Android changes')} ${rejectedOrConflicted === 1 ? 'needs' : 'need'} review before sending.`),
+      withTiming(`${formatSyncPassCount(rejectedOrConflicted, 'Android change', 'Android changes')} ${rejectedOrConflicted === 1 ? 'needs' : 'need'} review before sending.${extra}`),
       'skipped',
       'blocked'
     );
   }
   return null;
+}
+
+function describePullBacklogWhilePushBlocked(result: CompanionSyncPassInput) {
+  if (result.remainingStructureChangeCount === null || (result.remainingStructureChangeCount ?? 0) > 0) {
+    return ' Topic list confirmation is still pending.';
+  }
+  if (hasRemainingResourceBacklog(result)) {
+    return ' Resource downloads are still pending.';
+  }
+  return '';
 }
 
 function describeCompletedPass(

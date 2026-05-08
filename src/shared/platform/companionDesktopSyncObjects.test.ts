@@ -78,22 +78,20 @@ async function testStructureTimeoutStaysBelowMinute() {
 }
 
 async function testReportsRemainingStructureLagFromFinalDiagnostics() {
-  diagnosticsMock.loadLocalSyncDiagnostics
-    .mockResolvedValueOnce(null)
-    .mockResolvedValueOnce({
-      content: {
-        missing_attachment_resource_bytes: 0,
-        missing_attachment_resource_count: 0,
-        missing_content_blob_bytes: 0,
-        missing_content_blob_count: 0
-      },
-      sync_state: {
-        local_dirty_count: 0,
-        pack_cursor: 8,
-        pending_ack_count: 0,
-        push_issue_count: 0
-      }
-    });
+  diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
+    content: {
+      missing_attachment_resource_bytes: 0,
+      missing_attachment_resource_count: 0,
+      missing_content_blob_bytes: 0,
+      missing_content_blob_count: 0
+    },
+    sync_state: {
+      local_dirty_count: 0,
+      pack_cursor: 8,
+      pending_ack_count: 0,
+      push_issue_count: 0
+    }
+  });
   diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue({
     sync_state: {
       max_state_seq: 10
