@@ -33,9 +33,13 @@ function runQualityGate(cwd, env = {}, args = []) {
 }
 
 async function writePackageJson(rootDir, scripts) {
+  const fixtureScripts = {
+    'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+    ...scripts
+  };
   await writeFile(
     path.join(rootDir, 'package.json'),
-    `${JSON.stringify({ name: 'quality-gate-lib-routing-fixture', private: true, scripts }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'quality-gate-lib-routing-fixture', private: true, scripts: fixtureScripts }, null, 2)}\n`,
     'utf8'
   );
 }
@@ -68,7 +72,8 @@ describe('quality-gate-fast lib routing', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: full');
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
-      expect(result.stdout.match(/boundary ok/g)).toHaveLength(1);
+      expect(result.stdout).toContain('boundary ok');
+      expect(result.stdout).toContain('android boundary ok');
       expect(result.stdout).toContain('full test ok');
       expect(result.stdout).toContain('android web build ok');
     } finally {

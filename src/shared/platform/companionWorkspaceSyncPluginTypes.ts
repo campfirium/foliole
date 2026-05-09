@@ -140,6 +140,7 @@ export interface CompanionWorkspaceSyncPlugin
     run_id?: string;
     started_at?: string;
     status: 'completed' | 'failed' | 'skipped' | 'started';
+    summary?: NativeCompanionSyncEvent['summary'];
   }): Promise<NativeCompanionWorkspaceSyncState>;
   saveSyncOnboardingStatus(args: {
     status: NativeCompanionWorkspaceSyncState['sync_onboarding_status'];

@@ -81,19 +81,61 @@ function CompletedActivitySection(props: { currentMessage: string | null; events
       </div>
     );
   }
+  const visibleEvents = props.events.slice(0, 100);
+  const groupedEvents = groupActivityEvents(visibleEvents);
   return (
     <div className={props.currentMessage ? 'pt-4' : ''}>
       <div className="mb-1 text-xs font-medium text-companion-text-secondary">Completed</div>
-      {props.events.slice(0, 20).map((event, index, mappedEvents) => (
-        <div className="grid grid-cols-[4.5rem_1fr] gap-3 border-b border-companion-divider py-3 text-sm leading-5" key={event.id}>
-          <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at)}</span>
-          <span className={statusClass(event, mappedEvents.slice(0, index))}>
-            {formatActivityMessage(event, mappedEvents.slice(0, index))}
-          </span>
+      {groupedEvents.map((group) => (
+        <div key={group.key}>
+          {group.label ? <div className="pt-4 text-xs font-medium text-companion-text-secondary">{group.label}</div> : null}
+          {group.events.map(({ event, index }) => (
+            <div className="grid grid-cols-[3.75rem_1fr] gap-3 border-b border-companion-divider py-3 text-sm leading-5" key={event.id}>
+              <span className="text-xs text-companion-text-secondary">{formatClock(event.occurred_at)}</span>
+              <span className={statusClass(event, visibleEvents.slice(0, index))}>
+                {formatActivityMessage(event, visibleEvents.slice(0, index))}
+              </span>
+            </div>
+          ))}
         </div>
       ))}
     </div>
   );
+}
+
+function groupActivityEvents(events: NativeCompanionSyncEvent[]) {
+  const today = localDateKey(new Date());
+  const groups: Array<{
+    events: Array<{ event: NativeCompanionSyncEvent; index: number }>;
+    key: string;
+    label: string | null;
+  }> = [];
+  events.forEach((event, index) => {
+    const date = new Date(event.occurred_at);
+    const key = localDateKey(date);
+    const latestGroup = groups.at(-1);
+    if (!latestGroup || latestGroup.key !== key) {
+      groups.push({ events: [], key, label: key === today ? null : formatDateGroupLabel(date) });
+    }
+    groups.at(-1)?.events.push({ event, index });
+  });
+  return groups;
+}
+
+function localDateKey(date: Date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function formatDateGroupLabel(date: Date) {
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  if (date.getFullYear() !== new Date().getFullYear()) {
+    options.year = 'numeric';
+  }
+  return date.toLocaleDateString([], options);
 }
 
 export function CompanionSyncActivityPage(props: {

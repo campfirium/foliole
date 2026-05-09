@@ -32,7 +32,8 @@ final class FolioleCompanionWorkspaceSyncPluginActions {
             call.getString("kind"),
             call.getString("result"),
             call.getString("run_id"),
-            call.getString("started_at")
+            call.getString("started_at"),
+            call.getData().optJSONObject("summary")
         );
     }
 

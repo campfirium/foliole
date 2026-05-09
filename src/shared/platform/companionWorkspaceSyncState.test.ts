@@ -122,12 +122,37 @@ function testPreservesStageFinishedKind() {
 
 function testCapacityUsesFinishedRuns() {
   const initial = normalizeWorkspaceSyncState({ sync_events: [] });
-  const state = Array.from({ length: 21 }).reduce((current, _, index) => (
+  const state = Array.from({ length: 101 }).reduce((current, _, index) => (
     prependSyncEvent(prependSyncEvent(current, runEvent(index, 'run_started')), runEvent(index, 'run_finished'))
   ), initial);
 
-  expect(state.sync_events.filter((event) => event.kind === 'run_finished')).toHaveLength(20);
+  expect(state.sync_events.filter((event) => event.kind === 'run_finished')).toHaveLength(100);
   expect(state.sync_events.some((event) => event.run_id === 'run-0')).toBe(false);
+}
+
+function testNormalizesSyncEventSummary() {
+  const state = normalizeWorkspaceSyncState({
+    sync_events: [{
+      endpoint_url: 'http://10.0.2.2:38641',
+      id: 'run-summary',
+      kind: 'run_finished',
+      message: 'All stages completed.',
+      occurred_at: '2026-04-29T02:18:08.000Z',
+      result: 'completed',
+      run_id: 'run-1',
+      started_at: '2026-04-29T02:18:00.000Z',
+      status: 'completed',
+      summary: {
+        change_count: 5,
+        duration_ms: 8_000
+      }
+    }]
+  });
+
+  expect(state.sync_events[0]?.summary).toEqual({
+    change_count: 5,
+    duration_ms: 8_000
+  });
 }
 
 function testKeepsCurrentStartedRunBeforeFinish() {
@@ -146,4 +171,5 @@ describe('normalizeWorkspaceSyncState', () => {
   it('preserves stage finished events as stage facts', testPreservesStageFinishedKind);
   it('keeps capacity by finished run instead of started event count', testCapacityUsesFinishedRuns);
   it('keeps a started run until its final result arrives', testKeepsCurrentStartedRunBeforeFinish);
+  it('normalizes structured sync event summaries', testNormalizesSyncEventSummary);
 });

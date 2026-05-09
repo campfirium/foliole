@@ -8,7 +8,7 @@ export function formatClock(timestamp: string | null) {
   if (!timestamp) {
     return 'Never';
   }
-  return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', hour12: false, minute: '2-digit' });
 }
 
 export function resolveLastSyncRow(props: {

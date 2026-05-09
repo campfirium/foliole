@@ -115,6 +115,7 @@ describe('CompanionSyncStatusDetails activity', () => {
     expect(screen.getByText('Sync retrying; Android changes were not sent: Desktop sync target returned 500.')).toBeInTheDocument();
     expect(screen.queryByText(/Sync blocked/)).not.toBeInTheDocument();
   });
+
 });
 
 describe('CompanionSyncStatusDetails activity progress', () => {

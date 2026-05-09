@@ -77,10 +77,14 @@ function isPidAlive(pid) {
 }
 
 async function writePackageJson(rootDir, scripts) {
+  const fixtureScripts = {
+    'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+    ...scripts
+  };
   const packageJson = {
     name: 'quality-gate-fixture',
     private: true,
-    scripts
+    scripts: fixtureScripts
   };
   await writeFile(path.join(rootDir, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
 }

@@ -21,6 +21,7 @@ import {
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
 import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
+import { buildCompanionSyncRunSummary } from './companionSyncRunSummary';
 import { recordCompanionSyncStageEvents } from './companionSyncStageEvents';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
@@ -138,14 +139,17 @@ export async function runCompanionStreamSync(args: {
   }
   await recordCompanionSyncStageEvents(args, result);
   const passResult = describeCompanionSyncPassResult(result);
+  const occurredAt = new Date().toISOString();
   const completedState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,
     kind: 'run_finished',
     message: passResult.message,
+    occurredAt,
     result: passResult.result,
     runId: args.runId,
     startedAt: args.startedAt,
-    status: statusForSyncRunResult(passResult.result)
+    status: statusForSyncRunResult(passResult.result),
+    summary: buildCompanionSyncRunSummary({ occurredAt, result, startedAt: args.startedAt })
   });
   await showCompletedStructure({
     setReadableArticle: args.setReadableArticle,

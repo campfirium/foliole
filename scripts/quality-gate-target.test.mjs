@@ -33,9 +33,13 @@ function runTargetGate(cwd, target, env = {}) {
 }
 
 async function writePackageJson(rootDir, scripts) {
+  const fixtureScripts = {
+    'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+    ...scripts
+  };
   await writeFile(
     path.join(rootDir, 'package.json'),
-    `${JSON.stringify({ name: 'quality-gate-target-fixture', private: true, scripts }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'quality-gate-target-fixture', private: true, scripts: fixtureScripts }, null, 2)}\n`,
     'utf8'
   );
 }
@@ -105,7 +109,7 @@ describe('quality-gate-target.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
-        'check:android-boundary': 'node -e "console.log(\'android boundary duplicate should stay unused\')"',
+        'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
@@ -127,7 +131,7 @@ describe('quality-gate-target.sh', () => {
       expect(result.stdout).toContain('android host lint ok');
       expect(result.stdout).toContain('android host test ok');
       expect(result.stdout).toContain('repository root boundary ok');
-      expect(result.stdout).not.toContain('android boundary duplicate should stay unused');
+      expect(result.stdout).toContain('android boundary ok');
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

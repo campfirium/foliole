@@ -30,7 +30,7 @@ function useCompanionReviewGradeAction(
     setReviewError(null);
     try {
       const result = await gradeCompanionReviewCard({ grade, nodeId: reviewSession.currentCard.nodeId, snapshot });
-      if (!result) throw new Error('The current review item is no longer available.');
+      if (!result) throw new Error('The current item is no longer available.');
       await persistCompanionReviewSyncObject({
         itemKind: 'fsrs',
         nodeId: reviewSession.currentCard.nodeId,
@@ -78,7 +78,7 @@ function useCompanionReadingReviewActions(
       await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
       floatingBar.revealBar();
     } catch (error) {
-      setReadingError(error instanceof Error ? error.message : 'Failed to update the reading review item.');
+      setReadingError(error instanceof Error ? error.message : 'Failed to update the reading item.');
     } finally {
       setIsSubmittingReadingAction(false);
     }

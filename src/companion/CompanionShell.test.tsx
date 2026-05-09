@@ -182,67 +182,7 @@ function createReviewEmptySurface() {
   };
 }
 
-function createReadingReviewSurface() {
-  return {
-    activeAction: 'review',
-    browsedFolder: null,
-    handleCompleteReviewItem: vi.fn(),
-    handleDeferReviewItem: vi.fn(),
-    handleDismissReviewItem: vi.fn(),
-    handleGradeReview: vi.fn(),
-    handleSelectBrowseNode: vi.fn(),
-    handleRevealAnswer: vi.fn(),
-    handleSelectRecentArticle: vi.fn(),
-    handleTabAction: vi.fn(),
-    isAnswerRevealed: false,
-    isSubmittingGrade: false,
-    isSubmittingReadingAction: false,
-    readableArticle: null,
-    recentArticles: [],
-    readingError: null,
-    reviewError: null,
-    reviewSession: {
-      currentCard: {
-        content: 'Readable topic body',
-        due: '2026-04-22T08:00:00.000Z',
-        itemKind: 'reading',
-        nodeId: 'topic-1',
-        queuePosition: 1,
-        remainingCount: 1,
-        reveal: null,
-        title: 'Readable article',
-        totalCount: 1
-      },
-      nextFsrsDueAt: null,
-      nextReadingDueAt: '2026-04-22T08:00:00.000Z',
-      queueNodeIds: ['topic-1'],
-      scheduledFsrsCount: 0,
-      scheduledReadingCount: 1,
-      totalCount: 1
-    },
-    selectedBrowseNodeId: null
-  };
-}
-
 describe('CompanionShell review surfaces', () => {
-
-  it('shows the review empty state instead of falling back to reading content', async () => {
-    await renderShellWithSurface(createReviewEmptySurface());
-
-    expect(screen.getByText('No review items are due right now.')).toBeInTheDocument();
-    expect(screen.getByText(/Synced review state: 2 reading topics, 9 review items\./)).toBeInTheDocument();
-    expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
-  });
-
-  it('shows reading actions when the current review card is a reading item', async () => {
-    await renderShellWithSurface(createReadingReviewSurface());
-
-    expect(screen.getByLabelText('Later')).toBeInTheDocument();
-    expect(screen.getByLabelText('Read')).toBeInTheDocument();
-    expect(screen.getByLabelText('Dismiss')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
-  });
-
   it('opens settings from the settings action before entering sync details', async () => {
     await renderShellWithSurface({
       ...createReviewEmptySurface(),

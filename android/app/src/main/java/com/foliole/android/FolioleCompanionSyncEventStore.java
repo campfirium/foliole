@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 
 final class FolioleCompanionSyncEventStore {
-    private static final int MAX_FINISHED_RUNS = 20;
+    private static final int MAX_FINISHED_RUNS = 100;
 
     private FolioleCompanionSyncEventStore() {}
 
@@ -60,6 +60,7 @@ final class FolioleCompanionSyncEventStore {
         putOptional(event, "result", input.result);
         putOptional(event, "run_id", input.runId);
         putOptional(event, "started_at", input.startedAt);
+        if (input.summary != null) event.put("summary", input.summary);
         return event;
     }
 
@@ -168,9 +169,10 @@ final class FolioleCompanionSyncEventStore {
         final String result;
         final String runId;
         final String startedAt;
+        final JSONObject summary;
         final String status;
 
-        SyncEventInput(String endpointUrl, String status, String message, String occurredAt, String kind, String result, String runId, String startedAt) {
+        SyncEventInput(String endpointUrl, String status, String message, String occurredAt, String kind, String result, String runId, String startedAt, JSONObject summary) {
             this.endpointUrl = endpointUrl;
             this.status = status;
             this.message = message;
@@ -179,6 +181,7 @@ final class FolioleCompanionSyncEventStore {
             this.result = result;
             this.runId = runId;
             this.startedAt = startedAt;
+            this.summary = summary;
         }
     }
 }

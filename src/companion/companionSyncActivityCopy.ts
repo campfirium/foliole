@@ -47,6 +47,8 @@ export function isReportableSyncEvent(event: { message: string; status: string }
 export function formatSyncRunActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[]) {
   if (!isSyncRunFinishedEvent(event)) return event.message;
   if (!event.kind || event.kind === 'legacy_event') return formatLegacyActivityMessage(event, laterEvents);
+  const summaryMessage = formatSummaryActivityMessage(event);
+  if (summaryMessage) return summaryMessage;
   const detail = formatSyncResultMessage(event.message);
   const result = inferSyncRunResult(event);
   if (result === 'completed') return `Sync completed${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
@@ -57,6 +59,43 @@ export function formatSyncRunActivityMessage(event: NativeCompanionSyncEvent, la
   if (result === 'system_fault') return `System issue${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
   if (result === 'cancelled') return `Sync cancelled${detail === 'No changes to sync.' ? '' : `; ${detail}`}`;
   return `Sync failed; ${event.message}`;
+}
+
+function formatSummaryActivityMessage(event: NativeCompanionSyncEvent) {
+  const summary = event.summary;
+  if (!summary) return null;
+  const duration = formatDuration(summary.duration_ms);
+  const durationSuffix = duration ? ` in ${duration}` : '';
+  if (event.result === 'completed') {
+    return summary.change_count > 0
+      ? `Synced ${formatChangeCount(summary.change_count)}${durationSuffix}`
+      : `No changes, checked${durationSuffix}`;
+  }
+  if ((summary.desktop_review_count ?? 0) > 0) {
+    return `${formatChangeCount(summary.desktop_review_count ?? 0)} need desktop review`;
+  }
+  if ((summary.waiting_confirmation_count ?? 0) > 0) {
+    return `${formatChangeCount(summary.waiting_confirmation_count ?? 0)} waiting for desktop confirmation`;
+  }
+  if ((summary.waiting_send_count ?? 0) > 0) {
+    return `${formatChangeCount(summary.waiting_send_count ?? 0)} waiting to send`;
+  }
+  if (event.result === 'partial' && summary.change_count > 0) {
+    return `Synced ${formatChangeCount(summary.change_count)}${durationSuffix}`;
+  }
+  return null;
+}
+
+function formatChangeCount(count: number) {
+  return `${count} ${count === 1 ? 'change' : 'changes'}`;
+}
+
+function formatDuration(durationMs: number | undefined) {
+  if (typeof durationMs !== 'number' || !Number.isFinite(durationMs) || durationMs < 0) return null;
+  if (durationMs < 1000) return `${(durationMs / 1000).toFixed(1)}s`;
+  const seconds = Math.round(durationMs / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
 function formatLegacyBlockedActivityMessage(detail: string) {

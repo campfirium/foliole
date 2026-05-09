@@ -10,6 +10,15 @@ export interface NativeCompanionSyncEvent {
   run_id?: string;
   started_at?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';
+  summary?: NativeCompanionSyncEventSummary;
+}
+
+export interface NativeCompanionSyncEventSummary {
+  change_count: number;
+  desktop_review_count?: number;
+  duration_ms?: number;
+  waiting_confirmation_count?: number;
+  waiting_send_count?: number;
 }
 
 export interface NativeCompanionWorkspaceSyncState {

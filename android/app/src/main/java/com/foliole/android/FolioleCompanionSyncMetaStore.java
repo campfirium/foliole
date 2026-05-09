@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.getcapacitor.JSObject;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -47,12 +48,13 @@ final class FolioleCompanionSyncMetaStore {
         String kind,
         String result,
         String runId,
-        String startedAt
+        String startedAt,
+        JSONObject summary
     ) throws Exception {
         FolioleCompanionSyncEventStore.save(
             context,
             database,
-            new FolioleCompanionSyncEventStore.SyncEventInput(endpointUrl, status, message, occurredAt, kind, result, runId, startedAt)
+            new FolioleCompanionSyncEventStore.SyncEventInput(endpointUrl, status, message, occurredAt, kind, result, runId, startedAt, summary)
         );
         return loadWorkspaceSyncState(context, database, false);
     }

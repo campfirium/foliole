@@ -47,8 +47,27 @@ function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
     result: normalizeSyncEventResult(raw.result),
     run_id: typeof raw.run_id === 'string' && raw.run_id.trim() ? raw.run_id.trim() : undefined,
     started_at: typeof raw.started_at === 'string' && raw.started_at.trim() ? raw.started_at.trim() : undefined,
-    status
+    status,
+    summary: normalizeSyncEventSummary(raw.summary)
   };
+}
+
+function normalizeSyncEventSummary(value: unknown): NativeCompanionSyncEvent['summary'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  const changeCount = normalizeNonNegativeNumber(raw.change_count);
+  if (changeCount === undefined) return undefined;
+  return {
+    change_count: changeCount,
+    desktop_review_count: normalizeNonNegativeNumber(raw.desktop_review_count),
+    duration_ms: normalizeNonNegativeNumber(raw.duration_ms),
+    waiting_confirmation_count: normalizeNonNegativeNumber(raw.waiting_confirmation_count),
+    waiting_send_count: normalizeNonNegativeNumber(raw.waiting_send_count)
+  };
+}
+
+function normalizeNonNegativeNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
 function normalizeSyncEventKind(value: unknown): NativeCompanionSyncEvent['kind'] {

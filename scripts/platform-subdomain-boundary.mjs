@@ -16,8 +16,15 @@ const PATH_SUBDOMAINS = [
 
 const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/appLifecycle.ts', 'companion-runtime-plugin'],
+  ['src/shared/platform/companionAttachmentResourceSyncPluginTypes.ts', 'companion-sync-writer'],
+  ['src/shared/platform/companionContentBlobSyncPluginTypes.ts', 'companion-sync-writer'],
+  ['src/shared/platform/companionSyncActivityEvents.ts', 'companion-runtime-plugin'],
+  ['src/shared/platform/companionSyncConvergence.testHelpers.ts', 'companion-sync-diagnostics'],
+  ['src/shared/platform/companionSyncConvergenceFormatting.ts', 'companion-sync-diagnostics'],
+  ['src/shared/platform/companionSyncConvergenceStatus.ts', 'companion-sync-diagnostics'],
   ['src/shared/platform/companionSyncInstrumentationProbe.ts', 'companion-sync-pack-apply'],
   ['src/shared/platform/companionSyncObjects.ts', 'companion-runtime-plugin'],
+  ['src/shared/platform/companionSyncTimeoutOwnership.ts', 'companion-sync-transfer'],
   ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin']
 ]);
 

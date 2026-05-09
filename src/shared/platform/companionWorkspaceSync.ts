@@ -106,6 +106,7 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
   runId?: string;
   startedAt?: string;
   status: 'completed' | 'failed' | 'skipped' | 'started';
+  summary?: NativeCompanionSyncEvent['summary'];
 }) {
   const occurredAt = args.occurredAt ?? new Date().toISOString();
   if (!isNativeAndroidCompanionRuntime()) {
@@ -118,7 +119,8 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
       result: args.result,
       run_id: args.runId,
       started_at: args.startedAt,
-      status: args.status
+      status: args.status,
+      summary: args.summary
     }));
   }
   return runCompanionSyncWriterTask(async () => (
@@ -130,7 +132,8 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
       result: args.result,
       run_id: args.runId,
       started_at: args.startedAt,
-      status: args.status
+      status: args.status,
+      summary: args.summary
     }))
   ));
 }

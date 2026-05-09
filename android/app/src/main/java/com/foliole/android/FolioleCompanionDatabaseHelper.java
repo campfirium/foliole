@@ -60,7 +60,7 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         String message,
         String occurredAt
     ) throws Exception {
-        return recordWorkspaceSyncEvent(endpointUrl, status, message, occurredAt, null, null, null, null);
+        return recordWorkspaceSyncEvent(endpointUrl, status, message, occurredAt, null, null, null, null, null);
     }
 
     JSObject recordWorkspaceSyncEvent(
@@ -73,6 +73,20 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         String runId,
         String startedAt
     ) throws Exception {
+        return recordWorkspaceSyncEvent(endpointUrl, status, message, occurredAt, kind, result, runId, startedAt, null);
+    }
+
+    JSObject recordWorkspaceSyncEvent(
+        String endpointUrl,
+        String status,
+        String message,
+        String occurredAt,
+        String kind,
+        String result,
+        String runId,
+        String startedAt,
+        JSONObject summary
+    ) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionSyncMetaStore.recordWorkspaceSyncEvent(
             context,
@@ -84,7 +98,8 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
             kind,
             result,
             runId,
-            startedAt
+            startedAt,
+            summary
         );
     }
 

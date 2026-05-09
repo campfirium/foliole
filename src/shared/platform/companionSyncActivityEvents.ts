@@ -35,7 +35,7 @@ export function isSyncEventConfirmedProgress(event: NativeCompanionSyncEvent) {
   return result === 'completed' || result === 'partial';
 }
 
-export function compactSyncEvents(events: NativeCompanionSyncEvent[], maxRuns = 20) {
+export function compactSyncEvents(events: NativeCompanionSyncEvent[], maxRuns = 100) {
   const compacted: NativeCompanionSyncEvent[] = [];
   const keptRunIds = keptSyncRunIds(events, maxRuns);
   let legacyRunCount = 0;
