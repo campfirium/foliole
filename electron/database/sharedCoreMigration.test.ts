@@ -141,6 +141,51 @@ it('adds source to device-scoped node view state rows', () => {
     .get('node-1', 'desktop-test')).toEqual({ source: 'user-scroll' });
 });
 
+it('migrates the legacy desktop device id setting to the shared device id key', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec(`
+    CREATE TABLE settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO settings (key, value, updated_at)
+    VALUES ('desktop_device_id', '"desktop-test"', '2026-04-27T00:00:00.000Z');
+  `);
+  connection.sqlite.pragma('user_version = 33');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite
+    .prepare('SELECT value FROM settings WHERE key = ?')
+    .get('device_id')).toEqual({ value: '"desktop-test"' });
+});
+
+it('adds primary device commit columns to existing sync peers', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec(`
+    CREATE TABLE sync_peers (
+      peer_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'paired',
+      last_synced_at TEXT,
+      last_seen_version_cursor TEXT,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  connection.sqlite.pragma('user_version = 34');
+
+  initializeDatabaseConnection(connection);
+
+  const columns = connection.sqlite.prepare('PRAGMA table_info(sync_peers)').all() as Array<{ name: string }>;
+  expect(columns.map((column) => column.name)).toEqual(expect.arrayContaining([
+    'primary_committed_at',
+    'primary_device_epoch',
+    'primary_updated_by_device_id'
+  ]));
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+});
+
 it('migrates reading position to device-scoped rows', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.exec(`

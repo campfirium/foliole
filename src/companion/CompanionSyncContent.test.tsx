@@ -29,12 +29,14 @@ function createWorkspaceSync() {
       device_kind: null,
       device_name: null,
       is_paired: false,
-      paired_at: null
+      paired_at: null,
+      primary_device_id: null
     },
     pairingStatus: 'idle',
     pendingPairRequest: null,
     pullFromDesktop: vi.fn(async () => undefined),
     removeRememberedTarget: vi.fn(async () => undefined),
+    requestPrimaryDeviceTakeover: vi.fn(async () => undefined),
     requestPairing: vi.fn(async () => undefined),
     saveEndpoint: vi.fn(async () => undefined),
     state: {
@@ -76,7 +78,8 @@ describe('CompanionSyncContent', () => {
       device_kind: 'android-capacitor',
       device_name: 'Android Emulator',
       is_paired: true,
-      paired_at: '2026-04-24T10:03:00.000Z'
+      paired_at: '2026-04-24T10:03:00.000Z',
+      primary_device_id: 'device-desktop'
     };
 
     render(<CompanionSyncContent page="syncHandoff" workspaceSync={workspaceSync} />);
@@ -109,64 +112,87 @@ describe('CompanionSyncContent', () => {
   });
 });
 
-describe('CompanionSyncContent paired flow', () => {
-  it('shows sync status details for a paired device', () => {
-    const workspaceSync = createWorkspaceSync();
-    workspaceSync.pairingState = {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android Emulator',
-      is_paired: true,
-      paired_at: '2026-04-24T10:03:00.000Z'
-    };
-    workspaceSync.state = {
-      ...workspaceSync.state,
+function pairedWorkspaceSync() {
+  const workspaceSync = createWorkspaceSync();
+  workspaceSync.pairingState = {
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Android Emulator',
+    is_paired: true,
+    paired_at: '2026-04-24T10:03:00.000Z',
+    primary_device_id: 'device-desktop'
+  };
+  return workspaceSync;
+}
+
+function testShowsSyncStatusDetails() {
+  const workspaceSync = pairedWorkspaceSync();
+  workspaceSync.state = {
+    ...workspaceSync.state,
+    endpoint_url: 'http://10.0.2.2:38641',
+    last_synced_at: '2026-04-24T10:04:00.000Z',
+    sync_events: [{
       endpoint_url: 'http://10.0.2.2:38641',
-      last_synced_at: '2026-04-24T10:04:00.000Z',
-      sync_events: [{
-        endpoint_url: 'http://10.0.2.2:38641',
-        id: 'sync-event-1',
-        message: 'Sync fully completed; downloaded 1 topic body in this sync.',
-        occurred_at: '2026-04-24T10:04:00.000Z',
-        status: 'completed'
-      }]
-    };
+      id: 'sync-event-1',
+      message: 'Sync fully completed; downloaded 1 topic body in this sync.',
+      occurred_at: '2026-04-24T10:04:00.000Z',
+      status: 'completed'
+    }]
+  };
 
-    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
-    expect(screen.getByText('Last sync')).toBeInTheDocument();
-    expect(screen.getByText('Android Emulator')).toBeInTheDocument();
-    expect(screen.getByText('Activity')).toBeInTheDocument();
-    expect(screen.getByText('Downloaded 1 topic body in this sync.')).toBeInTheDocument();
-    expect(screen.getByText(/^Checked \d/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
-  });
+  expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.getByText('Android Emulator')).toBeInTheDocument();
+  expect(screen.getByText('Activity')).toBeInTheDocument();
+  expect(screen.getByText('Downloaded 1 topic body in this sync.')).toBeInTheDocument();
+  expect(screen.getByText(/^Checked \d/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
+}
 
-  it('automatically completes pairing after desktop approval', async () => {
-    vi.useFakeTimers();
-    const workspaceSync = createWorkspaceSync();
-    workspaceSync.completePairing = vi.fn(async () => ({
+function testRequestsPrimaryTakeover() {
+  const workspaceSync = pairedWorkspaceSync();
+  workspaceSync.state = {
+    ...workspaceSync.state,
+    endpoint_url: 'http://10.0.2.2:38641'
+  };
+
+  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
+
+  expect(workspaceSync.requestPrimaryDeviceTakeover).toHaveBeenCalledWith('http://10.0.2.2:38641');
+}
+
+async function testCompletesApprovedPairing() {
+  vi.useFakeTimers();
+  const workspaceSync = createWorkspaceSync();
+  workspaceSync.completePairing = vi.fn(async () => ({
       device_id: 'android-test-device',
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: true,
-      paired_at: '2026-04-24T10:03:00.000Z'
-    }));
-    workspaceSync.pendingPairRequest = {
-      endpointUrl: 'http://192.168.1.8:38641',
-      expiresAt: '2026-04-24T10:02:00.000Z',
-      pairRequestId: 'pair-request-1'
-    };
-    workspaceSync.pairingStatus = 'awaiting-approval';
+      paired_at: '2026-04-24T10:03:00.000Z',
+      primary_device_id: 'device-desktop'
+  }));
+  workspaceSync.pendingPairRequest = {
+    endpointUrl: 'http://192.168.1.8:38641',
+    expiresAt: '2026-04-24T10:02:00.000Z',
+    pairRequestId: 'pair-request-1'
+  };
+  workspaceSync.pairingStatus = 'awaiting-approval';
 
-    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(workspaceSync.completePairing).toHaveBeenCalled();
-    expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://192.168.1.8:38641');
+  await act(async () => {
+    await Promise.resolve();
   });
 
+  expect(workspaceSync.completePairing).toHaveBeenCalled();
+  expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://192.168.1.8:38641');
+}
+
+describe('CompanionSyncContent paired flow', () => {
+  it('shows sync status details for a paired device', testShowsSyncStatusDetails);
+  it('lets a synced secondary device request primary takeover', testRequestsPrimaryTakeover);
+  it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
 });

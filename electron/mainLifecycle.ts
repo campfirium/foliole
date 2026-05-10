@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
 import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
+import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
@@ -140,7 +141,7 @@ async function startCompanionSyncIfEnabled() {
   if (!isDesktopCompanionSyncEnabled()) {
     return;
   }
-  await ensureLanWorkspaceSyncServer({ appVersion: app.getVersion(), peerId: 'desktop-local' });
+  await ensureLanWorkspaceSyncServer({ appVersion: app.getVersion(), peerId: loadOrCreateDesktopDeviceId() });
 }
 
 function installPairingFocusHandler() {

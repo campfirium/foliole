@@ -16,6 +16,7 @@ import {
   CONTENT_BLOB_RESOURCE_PATH,
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
+import { loadReadwiseCredentialBag, READWISE_CREDENTIAL_BAG_PATH } from './companionLanCredentialBag.js';
 import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import {
   buildDiscoveryPayload,
@@ -130,6 +131,7 @@ function handleWorkspaceMetadataGet(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
+    authenticatedDeviceId: string;
     getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
     peerId: string;
   }
@@ -177,6 +179,7 @@ async function handleAuthenticatedGet(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
+    authenticatedDeviceId: string;
     getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
     peerId: string;
   }
@@ -204,6 +207,10 @@ async function handleAuthenticatedGet(
     } else {
       writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     }
+    return;
+  }
+  if (parsedRequestUrl.pathname === READWISE_CREDENTIAL_BAG_PATH) {
+    writeJson(request, response, 200, loadReadwiseCredentialBag(args.authenticatedDeviceId), 'GET, OPTIONS');
     return;
   }
   if (await handleSyncPackGet(request, response, parsedRequestUrl, writeJson)) return;
@@ -252,6 +259,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
     }
     await handleAuthenticatedGet(request, response, parsedRequestUrl, {
       ...args,
+      authenticatedDeviceId: auth.device_id,
       getSyncStatus: args.getSyncStatus ?? (() => null)
     });
   };

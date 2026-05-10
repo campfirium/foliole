@@ -71,7 +71,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
-      pairedAt: 'paired_at'
+      pairedAt: 'paired_at',
+      primaryDeviceId: 'primary_device_id'
     },
     preferenceKeys: {
       deviceId: 'device_id',
@@ -79,7 +80,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
       deviceSecretIv: 'device_secret_iv',
-      pairedAt: 'paired_at'
+      pairedAt: 'paired_at',
+      primaryDeviceId: 'primary_device_id'
     },
     storageKeys: {
       keyAlias: 'foliole_companion_pairing_secret',
@@ -108,7 +110,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       isPaired: 'is_paired',
-      pairedAt: 'paired_at'
+      pairedAt: 'paired_at',
+      primaryDeviceId: 'primary_device_id'
     }
   },
   resourcePlugin: {

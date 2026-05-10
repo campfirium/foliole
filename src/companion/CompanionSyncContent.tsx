@@ -35,6 +35,7 @@ function buildSyncPanelProps(args: {
     onOpenSettingsPage: args.onOpenSettingsPage ?? (() => undefined),
     onPull: workspaceSync.pullFromDesktop,
     onRemoveRememberedTarget: workspaceSync.removeRememberedTarget,
+    onRequestPrimaryDeviceTakeover: workspaceSync.requestPrimaryDeviceTakeover,
     onRequestPairing: workspaceSync.requestPairing,
     onSaveEndpoint: workspaceSync.saveEndpoint,
     page: args.page,

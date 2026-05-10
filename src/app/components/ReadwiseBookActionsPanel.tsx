@@ -34,6 +34,9 @@ function formatDownloadMessage(
   if (result.status === 'missing_link') {
     return `No EPUB download link was found for ${label}.`;
   }
+  if (result.status === 'blocked_secondary') {
+    return 'Readwise actions run on the current primary device.';
+  }
   return `Opened the EPUB download for ${label}.`;
 }
 
@@ -47,6 +50,9 @@ function formatLoadMessage(result: NativeReadwiseBookEpubLoadResult | null, book
   }
   if (result.status === 'failed') {
     return result.error_message?.trim() || `Could not load an EPUB for ${label}.`;
+  }
+  if (result.status === 'blocked_secondary') {
+    return result.error_message?.trim() || 'Readwise actions run on the current primary device.';
   }
   return `Loaded an EPUB for ${label}.`;
 }

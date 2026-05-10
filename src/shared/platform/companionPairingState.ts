@@ -11,7 +11,8 @@ export function normalizePairingState(value: unknown): NativeCompanionPairingSta
       device_kind: null,
       device_name: null,
       is_paired: false,
-      paired_at: null
+      paired_at: null,
+      primary_device_id: null
     };
   }
   const raw = value as Record<string, unknown>;
@@ -20,7 +21,8 @@ export function normalizePairingState(value: unknown): NativeCompanionPairingSta
     device_kind: typeof raw.device_kind === 'string' && raw.device_kind.trim() ? raw.device_kind.trim() : null,
     device_name: typeof raw.device_name === 'string' && raw.device_name.trim() ? raw.device_name.trim() : null,
     is_paired: raw.is_paired === true,
-    paired_at: typeof raw.paired_at === 'string' && raw.paired_at.trim() ? raw.paired_at.trim() : null
+    paired_at: typeof raw.paired_at === 'string' && raw.paired_at.trim() ? raw.paired_at.trim() : null,
+    primary_device_id: typeof raw.primary_device_id === 'string' && raw.primary_device_id.trim() ? raw.primary_device_id.trim() : null
   };
 }
 

@@ -1,10 +1,12 @@
 import type {
   NativeCompanionPairingState,
+  NativeCredentialBagPayload,
   NativeCompanionReadableArticlePayload,
   NativeCompanionSignedRequestHeaders,
   NativeCompanionSyncEvent,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
+import type { NativeReadwiseTokenConnection } from '../../../lib/platform/nativeReadwiseContract';
 import type {
   NativeSyncChangeCursor,
   NativeSyncIndexEntry,
@@ -184,7 +186,12 @@ export interface CompanionWorkspaceSyncPlugin
     device_name: string;
     device_secret: string;
     paired_at: string;
+    primary_device_id: string;
   }): Promise<NativeCompanionPairingState>;
+  savePrimaryDeviceId(args: {
+    primary_device_id: string;
+  }): Promise<NativeCompanionPairingState>;
+  saveReadwiseCredentialBag(args: NativeCredentialBagPayload): Promise<NativeReadwiseTokenConnection>;
   resolveAttachmentResource(args: { attachment_id: string }): Promise<{
     mime_type?: string | null;
     resource_url: string | null;

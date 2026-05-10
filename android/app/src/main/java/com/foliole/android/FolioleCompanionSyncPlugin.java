@@ -8,9 +8,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     @PluginMethod
-    public void desktopHttpRequest(PluginCall call) {
-        FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call);
-    }
+    public void desktopHttpRequest(PluginCall call) { FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call); }
 
     @PluginMethod
     public void loadDiscoveryCandidates(PluginCall call) {
@@ -26,6 +24,12 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     public void savePairingCredentials(PluginCall call) {
         FolioleCompanionPairingPluginActions.savePairingCredentials(getContext(), call);
     }
+
+    @PluginMethod
+    public void savePrimaryDeviceId(PluginCall call) { FolioleCompanionPairingPluginActions.savePrimaryDeviceId(getContext(), call); }
+
+    @PluginMethod
+    public void saveReadwiseCredentialBag(PluginCall call) { FolioleCompanionPairingPluginActions.saveReadwiseCredentialBag(getContext(), call); }
 
     @PluginMethod
     public void signCompanionSyncRequest(PluginCall call) {

@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver } from './driver.js';
 
-const DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
+const DEVICE_ID_KEY = 'device_id';
+const LEGACY_DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
 
 function parseSettingValue(value: string | null | undefined) {
   if (!value) return null;
@@ -19,21 +20,26 @@ export function loadOrCreateDatabaseDeviceId(driver: DatabaseDriver, now: string
   if (existingDeviceId) {
     return existingDeviceId;
   }
-  const deviceId = `desktop-${randomUUID()}`;
+  const deviceId = `device-${randomUUID()}`;
   driver.execute(
     `INSERT INTO settings (key, value, updated_at)
      VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [DESKTOP_DEVICE_ID_KEY, JSON.stringify(deviceId), now]
+    [DEVICE_ID_KEY, JSON.stringify(deviceId), now]
   );
   return deviceId;
 }
 
 export function loadDatabaseDeviceId(driver: DatabaseDriver) {
-  const existing = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DESKTOP_DEVICE_ID_KEY]);
+  const existing = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DEVICE_ID_KEY]);
   const existingDeviceId = parseSettingValue(existing?.value);
   if (existingDeviceId) {
     return existingDeviceId;
+  }
+  const legacy = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [LEGACY_DESKTOP_DEVICE_ID_KEY]);
+  const legacyDeviceId = parseSettingValue(legacy?.value);
+  if (legacyDeviceId) {
+    return legacyDeviceId;
   }
   return null;
 }

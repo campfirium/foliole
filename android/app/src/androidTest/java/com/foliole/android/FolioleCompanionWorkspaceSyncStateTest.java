@@ -137,6 +137,15 @@ public class FolioleCompanionWorkspaceSyncStateTest {
         assertEquals(1, countRows("companion_meta"));
     }
 
+    @Test
+    public void bootstrapCreatesStablePlatformNeutralDeviceId() throws Exception {
+        JSObject first = helper.loadBootstrapState(context).toJsObject();
+        JSObject second = helper.loadBootstrapState(context).toJsObject();
+
+        assertTrue(first.getString("device_id").startsWith("device-"));
+        assertEquals(first.getString("device_id"), second.getString("device_id"));
+    }
+
     private void insertNode() {
         SQLiteDatabase database = helper.getWritableDatabase();
         database.execSQL(

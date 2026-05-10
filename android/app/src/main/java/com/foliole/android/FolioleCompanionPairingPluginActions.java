@@ -22,17 +22,20 @@ final class FolioleCompanionPairingPluginActions {
             String deviceNameKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceNameCredentialRequestKey(context);
             String deviceSecretKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretCredentialRequestKey(context);
             String pairedAtKey = FolioleCompanionBridgeContractDefinitions.pairingPairedAtCredentialRequestKey(context);
+            String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
             String deviceId = call.getString(deviceIdKey);
             String deviceKind = call.getString(deviceKindKey);
             String deviceName = call.getString(deviceNameKey);
             String deviceSecret = call.getString(deviceSecretKey);
             String pairedAt = call.getString(pairedAtKey);
+            String primaryDeviceId = call.getString(primaryDeviceIdKey);
             if (
                 rejectIfBlank(call, deviceIdKey, deviceId) ||
                 rejectIfBlank(call, deviceKindKey, deviceKind) ||
                 rejectIfBlank(call, deviceNameKey, deviceName) ||
                 rejectIfBlank(call, deviceSecretKey, deviceSecret) ||
-                rejectIfBlank(call, pairedAtKey, pairedAt)
+                rejectIfBlank(call, pairedAtKey, pairedAt) ||
+                rejectIfBlank(call, primaryDeviceIdKey, primaryDeviceId)
             ) {
                 return;
             }
@@ -42,7 +45,8 @@ final class FolioleCompanionPairingPluginActions {
                 deviceKind,
                 deviceName,
                 deviceSecret,
-                pairedAt
+                pairedAt,
+                primaryDeviceId
             ));
         } catch (Exception exception) {
             call.reject("Failed to save companion pairing credentials.", exception);
@@ -80,6 +84,46 @@ final class FolioleCompanionPairingPluginActions {
             ));
         } catch (Exception exception) {
             call.reject("Failed to sign companion sync request.", exception);
+        }
+    }
+
+    static void savePrimaryDeviceId(Context context, PluginCall call) {
+        try {
+            String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
+            String primaryDeviceId = call.getString(primaryDeviceIdKey);
+            if (rejectIfBlank(call, primaryDeviceIdKey, primaryDeviceId)) {
+                return;
+            }
+            call.resolve(FolioleCompanionPairingStore.savePrimaryDeviceId(context, primaryDeviceId));
+        } catch (Exception exception) {
+            call.reject("Failed to save companion primary device id.", exception);
+        }
+    }
+
+    static void saveReadwiseCredentialBag(Context context, PluginCall call) {
+        try {
+            String algorithm = call.getString("algorithm");
+            String service = call.getString("service");
+            String salt = call.getString("salt");
+            String iv = call.getString("iv");
+            String ciphertext = call.getString("ciphertext");
+            if (
+                rejectIfBlank(call, "algorithm", algorithm) ||
+                rejectIfBlank(call, "service", service) ||
+                rejectIfBlank(call, "salt", salt) ||
+                rejectIfBlank(call, "iv", iv) ||
+                rejectIfBlank(call, "ciphertext", ciphertext)
+            ) {
+                return;
+            }
+            if (!"HKDF-SHA256-AES-GCM".equals(algorithm) || !"readwise_token".equals(service)) {
+                call.reject("Unsupported credential package.");
+                return;
+            }
+            String token = FolioleCompanionPairingStore.decryptCredentialBag(context, service, salt, iv, ciphertext);
+            call.resolve(FolioleReadwiseTokenStore.saveImportedToken(context, token));
+        } catch (Exception exception) {
+            call.reject("Failed to save Readwise credential package.", exception);
         }
     }
 

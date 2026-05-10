@@ -53,6 +53,9 @@ function useReadwiseBooksInventoryState(enabled: boolean) {
 
 async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
   const result = await resetRuntimeReadwiseBookImport(input.nodeId);
+  if (result?.status === 'blocked_secondary') {
+    throw new Error('Readwise actions run on the current primary device.');
+  }
   if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
     throw new Error(`Could not import ${input.title}.`);
   }

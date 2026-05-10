@@ -1,114 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { DesktopCompanionPairingOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import {
+  EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW,
+  useCompanionPairingPolling,
+  useCompanionPairingPushRefresh,
+  useCompanionPairingRefresh
+} from './desktopCompanionPairingOverviewHooks';
 import {
   disableDesktopCompanionSync,
   enableDesktopCompanionSync,
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
-  loadDesktopCompanionPairingOverview,
-  onDesktopCompanionPairingRequestsChanged,
   removeDesktopCompanionPairedDevice,
   rejectDesktopCompanionPairRequest
 } from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 
-const EMPTY_OVERVIEW: DesktopCompanionPairingOverviewPayload = {
-  paired_devices: [],
-  pending_requests: [],
-  server_status: {
-    advertised_urls: [],
-    last_error: null,
-    paired_device_count: 0,
-    pending_pair_request_count: 0,
-    port: null,
-    state: 'stopped'
-  },
-  sync_enabled: false
-};
-
 function useDesktopCompanionPairingOverviewState() {
-  const [overview, setOverview] = useState<DesktopCompanionPairingOverviewPayload>(EMPTY_OVERVIEW);
+  const [overview, setOverview] = useState<DesktopCompanionPairingOverviewPayload>(
+    EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   return { error, isLoading, overview, pendingActionId, setError, setIsLoading, setOverview, setPendingActionId };
-}
-
-function useCompanionPairingRefresh(
-  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
-  setError: (value: string | null) => void,
-  setIsLoading: (value: boolean) => void
-) {
-  return useCallback(async () => {
-    if (!isDesktopRuntime()) {
-      setOverview(EMPTY_OVERVIEW);
-      setIsLoading(false);
-      setError(null);
-      return EMPTY_OVERVIEW;
-    }
-    const nextOverview = await loadDesktopCompanionPairingOverview();
-    setOverview(nextOverview);
-    setError(null);
-    setIsLoading(false);
-    return nextOverview;
-  }, [setError, setIsLoading, setOverview]);
-}
-
-function useCompanionPairingPolling(
-  pollMs: number,
-  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
-  setError: (value: string | null) => void,
-  setIsLoading: (value: boolean) => void
-) {
-  useEffect(() => {
-    let cancelled = false;
-    const safeRefresh = async () => {
-      try {
-        const nextOverview = await loadDesktopCompanionPairingOverview();
-        if (cancelled) {
-          return;
-        }
-        setOverview(nextOverview);
-        setError(null);
-      } catch (loadError) {
-        if (cancelled) {
-          return;
-        }
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load companion pairing requests.');
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void safeRefresh();
-    if (!isDesktopRuntime()) {
-      return () => {
-        cancelled = true;
-      };
-    }
-    const timer = window.setInterval(() => {
-      void safeRefresh();
-    }, pollMs);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [pollMs, setError, setIsLoading, setOverview]);
-}
-
-function useCompanionPairingPushRefresh(refresh: () => Promise<DesktopCompanionPairingOverviewPayload>) {
-  useEffect(() => {
-    if (!isDesktopRuntime()) {
-      return undefined;
-    }
-    return onDesktopCompanionPairingRequestsChanged(() => {
-      void refresh();
-    }) ?? undefined;
-  }, [refresh]);
 }
 
 function useCompanionPairingAction(

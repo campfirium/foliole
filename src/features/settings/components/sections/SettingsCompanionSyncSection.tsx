@@ -16,6 +16,24 @@ function renderSyncError(overview: ReturnType<typeof useDesktopCompanionPairingR
   return undefined;
 }
 
+function formatPrimaryDeviceRole(role: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['primary_device_state']['local_role']) {
+  if (role === 'primary') return 'Primary device';
+  if (role === 'secondary') return 'Secondary device';
+  return 'Role unavailable';
+}
+
+function formatPrimaryDeviceDetail(state: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['primary_device_state']) {
+  if (state.local_role === 'primary' && state.source === 'self-unpaired') {
+    return 'This desktop runs local sync and external sources until another device is paired.';
+  }
+  if (state.local_role === 'primary') {
+    return 'This desktop runs sync and external sources for paired devices.';
+  }
+  if (state.local_role === 'secondary') {
+    return 'This device follows the current primary device.';
+  }
+  return 'Primary device status is not available from the current sync state.';
+}
 
 function formatDeviceKind(deviceKind: string) {
   if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
@@ -157,6 +175,16 @@ export function SettingsCompanionSyncSection() {
           {syncError}
         </p>
       ) : null}
+      <SettingsRow
+        description={formatPrimaryDeviceDetail(overview.primary_device_state)}
+        title="Device role"
+      >
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <span className="text-sm font-medium text-foreground">
+            {formatPrimaryDeviceRole(overview.primary_device_state.local_role)}
+          </span>
+        </SettingsControlSlot>
+      </SettingsRow>
       <ConnectedDevicesRow
         devices={overview.paired_devices}
         isLoading={state.isLoading}

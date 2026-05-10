@@ -97,7 +97,8 @@ export function storeWebPairingState() {
       device_name: 'Preview',
       device_secret: 'test-secret',
       is_paired: true,
-      paired_at: '2026-04-22T12:00:00.000Z'
+      paired_at: '2026-04-22T12:00:00.000Z',
+      primary_device_id: 'device-desktop'
     })
   );
 }

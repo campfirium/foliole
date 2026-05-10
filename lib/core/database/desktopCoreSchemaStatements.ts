@@ -50,6 +50,9 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     status TEXT NOT NULL DEFAULT 'paired',
     last_synced_at TEXT,
     last_seen_version_cursor TEXT,
+    primary_device_epoch INTEGER,
+    primary_committed_at TEXT,
+    primary_updated_by_device_id TEXT,
     updated_at TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS node_review (

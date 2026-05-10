@@ -36,6 +36,7 @@ export interface NativeCompanionPairingState {
   device_name: string | null;
   is_paired: boolean;
   paired_at: string | null;
+  primary_device_id: string | null;
 }
 
 export interface NativeCompanionSignedRequestHeaders {
@@ -125,9 +126,62 @@ export interface DesktopCompanionSyncServerStatusPayload {
   state: 'failed' | 'running' | 'stopped';
 }
 
+export type NativePrimaryDeviceRole = 'primary' | 'secondary' | 'unknown';
+export type NativePrimaryDeviceSource =
+  | 'committed-primary-device'
+  | 'companion-paired-primary'
+  | 'desktop-paired-default'
+  | 'paired-primary-missing'
+  | 'self-unpaired';
+export type NativePrimaryDeviceTakeoverBlockedReason =
+  | 'control-message-carrier-missing'
+  | 'no-current-primary-device'
+  | 'release-ack-missing'
+  | 'sync-latest-confirmation-missing';
+
+export interface NativePrimaryDeviceStatePayload {
+  can_initiate_takeover: boolean;
+  local_role: NativePrimaryDeviceRole;
+  primary_device_id: string | null;
+  source: NativePrimaryDeviceSource;
+  takeover_blocked_reasons: NativePrimaryDeviceTakeoverBlockedReason[];
+}
+
+export interface NativePrimaryDeviceTakeoverPayload {
+  android_pack_cursor: number;
+  candidate_device_id: string;
+  desktop_max_state_seq: number;
+  local_dirty_count: number;
+  pending_ack_count: number;
+  push_issue_count: number;
+}
+
+export interface NativePrimaryDeviceTakeoverResponse {
+  committed_at: string;
+  primary_device_epoch: number;
+  primary_device_id: string;
+  release_ack: true;
+  updated_by_device_id: string;
+}
+
+export interface NativeCredentialBagPayload {
+  algorithm: 'HKDF-SHA256-AES-GCM';
+  ciphertext: string;
+  exported_at: string;
+  iv: string;
+  salt: string;
+  service: 'readwise_token';
+}
+
+export interface NativeCredentialBagResponse {
+  credential: NativeCredentialBagPayload | null;
+  status: 'not_available' | 'ready';
+}
+
 export interface DesktopCompanionPairingOverviewPayload {
   paired_devices: DesktopCompanionPairedDevicePayload[];
   pending_requests: DesktopCompanionPairRequestPayload[];
+  primary_device_state: NativePrimaryDeviceStatePayload;
   server_status: DesktopCompanionSyncServerStatusPayload;
   sync_enabled: boolean;
 }

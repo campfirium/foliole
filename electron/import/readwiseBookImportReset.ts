@@ -9,6 +9,7 @@ import {
   findPersistedReadwiseBookByNodeId,
   savePersistedReadwiseBookMovedToTop
 } from './readwiseBooksInventoryState.js';
+import { canRunReadwiseExternalSource } from './readwiseExternalSourceGuard.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -183,6 +184,17 @@ export async function resetReadwiseBookImport(nodeId: string): Promise<NativeRea
   const { book, inventory } = await loadBookByNodeId(nodeId);
   if (!book) {
     return createBookNotFoundResult();
+  }
+  if (!canRunReadwiseExternalSource()) {
+    return {
+      book_key: book.bookKey,
+      content: null,
+      node_id: book.generatedNodeId ?? null,
+      removed_node_ids: [],
+      status: 'blocked_secondary',
+      title: book.title,
+      updated_at: null
+    };
   }
 
   const activeNode = readActiveNode(nodeId);

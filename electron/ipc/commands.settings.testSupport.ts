@@ -94,6 +94,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshots: vi.fn()
 }));
+vi.mock('../database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
 vi.mock('../database/syncPeers.js', () => ({ loadSyncPeers, saveSyncPeers }));
 vi.mock('../sync/companionPairingRequests.js', () => companionPairingMocks);
 vi.mock('../sync/companionPairingStore.js', () => ({
@@ -133,6 +134,15 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
     pending_pair_request_count: 0,
     port: null,
     state: 'stopped'
+  })
+}));
+vi.mock('../sync/primaryDeviceState.js', () => ({
+  loadDesktopPrimaryDeviceStatePayload: vi.fn().mockReturnValue({
+    can_initiate_takeover: false,
+    local_role: 'primary',
+    primary_device_id: 'device-desktop',
+    source: 'desktop-paired-default',
+    takeover_blocked_reasons: []
   })
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({

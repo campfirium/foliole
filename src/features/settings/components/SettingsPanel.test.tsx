@@ -79,17 +79,20 @@ it('groups settings sidebar entries by workspace, storage, and sources', async (
   expect(labels).toContain('Library');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
+  expect(labels).toContain('Readwise Reader (Obsidian)');
   expect(labels).toContain('External sources');
   expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
   expect(labels.indexOf('Library')).toBeGreaterThan(labels.indexOf('Action bar'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Library'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
-  expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('Backups'));
+  expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Readwise Reader'));
   expect(labels.indexOf('External sources')).toBeGreaterThan(labels.indexOf('Watched folders'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External sources'));
+  expect(labels.indexOf('Readwise Reader (Obsidian)')).toBeGreaterThan(labels.indexOf('External sources'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Readwise Reader (Obsidian)' })).toBeInTheDocument();
 });
 
 it('renders direct Import content in the right panel instead of a jump button', async () => {
@@ -105,17 +108,17 @@ it('renders direct Import content in the right panel instead of a jump button', 
   expect(screen.getByText('Restored import panel content')).toBeInTheDocument();
 });
 
-it('renders direct Readwise Reader content in the right panel instead of a jump button', async () => {
+it('renders direct Readwise Reader Obsidian content in the right panel instead of a jump button', async () => {
   renderWithMouseGestureProvider(
     <SettingsPanel
       {...createProps()}
-      readwiseReaderCategoryContent={<div>Restored Readwise Reader content</div>}
-      requestedCategory="readwise-reader"
+      readwiseReaderCategoryContent={<div>Restored Readwise Reader Obsidian content</div>}
+      requestedCategory="readwise-reader-obsidian"
     />
   );
 
-  expect(screen.getByRole('heading', { level: 2, name: 'Readwise Reader' })).toBeInTheDocument();
-  expect(screen.getByText('Restored Readwise Reader content')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Readwise Reader (Obsidian)' })).toBeInTheDocument();
+  expect(screen.getByText('Restored Readwise Reader Obsidian content')).toBeInTheDocument();
 });
 
 it('keeps font selects disabled until system fonts are loaded', async () => {

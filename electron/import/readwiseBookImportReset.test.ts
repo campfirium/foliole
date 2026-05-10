@@ -11,6 +11,9 @@ let mockedAppDataDir = '/tmp/foliole-readwise-book-import-reset-tests';
 const { showOpenDialog } = vi.hoisted(() => ({
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/selected-book.epub'] })
 }));
+const primaryDeviceMock = vi.hoisted(() => ({
+  canRunExternalSources: true
+}));
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog },
@@ -24,6 +27,9 @@ vi.mock('../ipc/paths.js', () => ({
     app_config_dir: path.join(mockedAppDataDir, 'config'),
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
+}));
+vi.mock('../sync/primaryDeviceState.js', () => ({
+  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
 }));
 
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
@@ -41,6 +47,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-book-import-reset-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  primaryDeviceMock.canRunExternalSources = true;
   initializeDatabase();
   showOpenDialog.mockReset();
 });
@@ -140,6 +147,34 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
     .prepare('SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL')
     .all(nodeId) as Array<{ id: string }>;
   expect(childNodes).toEqual([]);
+});
+
+it('blocks readwise book import reset when this desktop is secondary', async () => {
+  const { fullDocumentDir, highlightDir } = await createBooksFixture();
+  const selectedEpubPath = await createBookEpub('selected-book.epub');
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
+
+  const inventory = await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: fullDocumentDir,
+    highlightDirectoryPath: highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
+  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  expect(nodeId).toBeTruthy();
+  await expect(loadReadwiseBookEpub(nodeId!)).resolves.toMatchObject({ status: 'selected' });
+
+  primaryDeviceMock.canRunExternalSources = false;
+  await expect(resetReadwiseBookImport(nodeId!)).resolves.toMatchObject({
+    book_key: 'manual book',
+    node_id: nodeId,
+    status: 'blocked_secondary',
+    title: 'Manual Book'
+  });
+
+  const childNodes = openDatabaseConnection().sqlite
+    .prepare('SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL')
+    .all(nodeId) as Array<{ id: string }>;
+  expect(childNodes.length).toBeGreaterThan(0);
 });
 
 it('recreates a deleted readwise book node when re-import is triggered', async () => {

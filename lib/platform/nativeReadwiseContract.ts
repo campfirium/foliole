@@ -15,9 +15,24 @@ export interface NativeReadwiseDetectionResult {
   success: boolean;
 }
 
+export type NativeReadwiseTokenConnectionStatus =
+  | 'connected'
+  | 'not_connected'
+  | 'invalid_token'
+  | 'rate_limited'
+  | 'storage_unavailable'
+  | 'network_error';
+
+export interface NativeReadwiseTokenConnection {
+  checked_at: string | null;
+  connected: boolean;
+  message: string;
+  status: NativeReadwiseTokenConnectionStatus;
+}
+
 export interface NativeReadwiseBookDownloadResult {
   book_key: string | null;
-  status: 'book_not_found' | 'missing_link' | 'opened';
+  status: 'book_not_found' | 'missing_link' | 'opened' | 'blocked_secondary';
   title: string | null;
   url: string | null;
 }
@@ -33,7 +48,7 @@ export interface NativeReadwiseBookEpubLoadResult {
   book_key: string | null;
   error_message?: string | null;
   epub_path: string | null;
-  status: 'book_not_found' | 'cancelled' | 'selected' | 'failed';
+  status: 'book_not_found' | 'cancelled' | 'selected' | 'failed' | 'blocked_secondary';
   title: string | null;
 }
 
@@ -42,7 +57,7 @@ export interface NativeReadwiseBookImportResetResult {
   content: string | null;
   node_id: string | null;
   removed_node_ids: string[];
-  status: 'book_not_found' | 'reset';
+  status: 'book_not_found' | 'reset' | 'blocked_secondary';
   title: string | null;
   updated_at: string | null;
 }

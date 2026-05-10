@@ -37,13 +37,15 @@ function mockCompanionWorkspaceSync() {
       device_kind: null,
       device_name: null,
       is_paired: false,
-      paired_at: null
+      paired_at: null,
+      primary_device_id: null
     },
     pairingStatus: 'idle',
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     removeRememberedTarget: vi.fn(),
     replaceSnapshot: vi.fn(),
+    requestPrimaryDeviceTakeover: vi.fn(),
     requestPairing: vi.fn(),
     saveEndpoint: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(),

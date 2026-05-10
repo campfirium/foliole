@@ -12,6 +12,7 @@ import {
 } from '../model/settingsPanelOptions';
 
 import { HotkeySettingsSection } from './HotkeySettingsSection';
+import { ReadwiseTokenConnectionSection } from './sections/ReadwiseTokenConnectionSection';
 import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
 import { SettingsBackupsSection } from './sections/SettingsBackupsSection';
@@ -167,8 +168,11 @@ function renderFallbackCategory(props: SettingsCategoryContentProps) {
     return props.importCategoryContent ?? <p className="text-sm text-foreground/65">Import content is not available yet.</p>;
   }
   if (props.activeCategory === 'readwise-reader') {
+    return <ReadwiseTokenConnectionSection />;
+  }
+  if (props.activeCategory === 'readwise-reader-obsidian') {
     return props.readwiseReaderCategoryContent ?? (
-      <p className="text-sm text-foreground/65">Readwise Reader content is not available yet.</p>
+      <p className="text-sm text-foreground/65">Readwise Reader Obsidian import is not available yet.</p>
     );
   }
   if (props.activeCategory === 'review') {

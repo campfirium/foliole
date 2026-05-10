@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(FolioleCompanionBootstrapPlugin.class);
         registerPlugin(FolioleCompanionAppDataPlugin.class);
+        registerPlugin(FolioleReadwiseTokenPlugin.class);
         registerPlugin(FolioleCompanionSyncPackTransferPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
         super.onCreate(savedInstanceState);

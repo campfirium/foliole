@@ -6,6 +6,7 @@ import {
   CONTENT_BLOB_BATCH_PATH,
   loadCompanionContentBlobBatch
 } from './companionLanContentBlobs.js';
+import { handlePrimaryDeviceTakeover, PRIMARY_DEVICE_TAKEOVER_PATH } from './companionLanPrimaryDeviceTakeover.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
@@ -63,6 +64,11 @@ export async function handleAuthenticatedPost(
         error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
       }, 'POST, OPTIONS');
     }
+    return true;
+  }
+  if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) {
+    const result = handlePrimaryDeviceTakeover(bodyText, auth.device_id);
+    writeJson(request, response, result.statusCode, result.value, 'POST, OPTIONS');
     return true;
   }
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) {

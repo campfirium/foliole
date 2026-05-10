@@ -9,9 +9,11 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { ensureReadwiseBookNodes } from './readwiseBookNodes.js';
 import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
 import {
+  loadPersistedReadwiseBooksInventory,
   mergePersistedReadwiseBooksInventory,
   savePersistedReadwiseBooksInventory
 } from './readwiseBooksInventoryState.js';
+import { canRunReadwiseExternalSource } from './readwiseExternalSourceGuard.js';
 
 export type ReadwiseBookAnnotationStatus = 'has_highlights' | 'no_highlights';
 export type ReadwiseBookNodeStatus = 'generated' | 'missing';
@@ -211,9 +213,19 @@ export async function scanReadwiseBooksInventory(input: {
 export async function loadReadwiseBooksInventory() {
   const settings = loadImportManagerSettings();
   const booksSource = settings.readwiseSources.find((source) => source.kind === 'books');
-  return scanReadwiseBooksInventory({
+  const paths = {
     fullDocumentDirectoryPath: booksSource?.primaryPath.trim() ?? '',
-    highlightDirectoryPath: booksSource?.highlightPath.trim() ?? '',
+    highlightDirectoryPath: booksSource?.highlightPath.trim() ?? ''
+  };
+  if (!canRunReadwiseExternalSource()) {
+    return loadPersistedReadwiseBooksInventory(paths) ?? {
+      books: [],
+      ...paths,
+      scannedAt: new Date().toISOString()
+    };
+  }
+  return scanReadwiseBooksInventory({
+    ...paths,
     readwiseConfig: settings.readwiseReaderConfig
   });
 }

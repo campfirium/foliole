@@ -48,6 +48,13 @@ it('loads desktop companion pairing overview through the native bridge', async (
         status: 'pending'
       }
     ],
+    primary_device_state: {
+      can_initiate_takeover: false,
+      local_role: 'primary',
+      primary_device_id: 'device-desktop',
+      source: 'desktop-paired-default',
+      takeover_blocked_reasons: []
+    },
     server_status: {
       advertised_urls: ['http://127.0.0.1:38641'],
       last_error: null,
@@ -63,6 +70,7 @@ it('loads desktop companion pairing overview through the native bridge', async (
   await expect(loadDesktopCompanionPairingOverview()).resolves.toMatchObject({
     paired_devices: [{ client_address: '192.168.1.22', device_id: 'android-1', device_kind: 'android-capacitor' }],
     pending_requests: [{ client_address: '192.168.1.22', device_name: 'Pixel 9', pair_request_id: 'pair-request-1' }],
+    primary_device_state: { local_role: 'primary', primary_device_id: 'device-desktop' },
     server_status: { state: 'running' },
     sync_enabled: true
   });

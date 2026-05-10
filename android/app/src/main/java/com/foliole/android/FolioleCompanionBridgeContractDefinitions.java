@@ -50,6 +50,10 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingCredentialRequestKey(context, "pairedAt");
     }
 
+    static String pairingPrimaryDeviceIdCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "primaryDeviceId");
+    }
+
     static String pairingPreferenceKey(Context context, String key) throws Exception {
         return string(context, "pairingPlugin", "preferenceKeys", key);
     }
@@ -76,6 +80,10 @@ final class FolioleCompanionBridgeContractDefinitions {
 
     static String pairingPairedAtPreferenceKey(Context context) throws Exception {
         return pairingPreferenceKey(context, "pairedAt");
+    }
+
+    static String pairingPrimaryDeviceIdPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "primaryDeviceId");
     }
 
     static String pairingStorageKey(Context context, String key) throws Exception {
@@ -164,6 +172,10 @@ final class FolioleCompanionBridgeContractDefinitions {
 
     static String pairingPairedAtStateKey(Context context) throws Exception {
         return pairingStateKey(context, "pairedAt");
+    }
+
+    static String pairingPrimaryDeviceIdStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "primaryDeviceId");
     }
 
     static String resourceRequestKey(Context context, String key) throws Exception {

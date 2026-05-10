@@ -1,14 +1,16 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
-const DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
+const DEVICE_ID_KEY = 'device_id';
+const LEGACY_DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
 const PLATFORM = 'windows';
 const FORM_FACTOR = 'desktop';
 
 const USER_SPACE_KEYS = new Set(['app_settings', 'import_manager_settings', 'review_scheduler_settings']);
 const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);
 const LOCAL_ONLY_KEYS = new Set([
-  DESKTOP_DEVICE_ID_KEY,
+  DEVICE_ID_KEY,
+  LEGACY_DESKTOP_DEVICE_ID_KEY,
   'readwise_books_inventory_state',
   'watch_import_cursor_state'
 ]);
@@ -34,7 +36,9 @@ function classifySettingScope(key: string): SettingScope {
 
 function readDesktopDeviceId(driver: DatabaseDriver) {
   const row = driver.queryOne<SettingDeviceRow>('SELECT value FROM settings WHERE key = ?', [
-    DESKTOP_DEVICE_ID_KEY
+    DEVICE_ID_KEY
+  ]) ?? driver.queryOne<SettingDeviceRow>('SELECT value FROM settings WHERE key = ?', [
+    LEGACY_DESKTOP_DEVICE_ID_KEY
   ]);
   if (!row) return null;
   try {

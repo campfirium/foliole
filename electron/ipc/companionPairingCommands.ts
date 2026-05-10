@@ -1,6 +1,7 @@
 import { app } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import {
   approveCompanionPairRequest,
   loadPendingCompanionPairRequests,
@@ -17,6 +18,7 @@ import {
   refreshLanWorkspaceSyncServerPairingStatus,
   stopLanWorkspaceSyncServer
 } from '../sync/lanWorkspaceSyncServer.js';
+import { loadDesktopPrimaryDeviceStatePayload } from '../sync/primaryDeviceState.js';
 
 import { asString } from './commandParsers.js';
 
@@ -24,6 +26,7 @@ function buildDesktopCompanionPairingOverview() {
   return {
     paired_devices: loadPairedCompanionDevices(),
     pending_requests: loadPendingCompanionPairRequests(),
+    primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
     server_status: refreshLanWorkspaceSyncServerPairingStatus(),
     sync_enabled: isDesktopCompanionSyncEnabled()
   };
@@ -50,6 +53,7 @@ export function handleCompanionPairingCommand(command: string, args: Record<stri
     return {
       paired_devices: loadPairedCompanionDevices(),
       pending_requests: loadPendingCompanionPairRequests(),
+      primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
       server_status: getLanWorkspaceSyncServerStatus(),
       sync_enabled: isDesktopCompanionSyncEnabled()
     };
@@ -58,7 +62,7 @@ export function handleCompanionPairingCommand(command: string, args: Record<stri
     setDesktopCompanionSyncEnabled(true);
     return ensureLanWorkspaceSyncServer({
       appVersion: app.getVersion(),
-      peerId: 'desktop-local'
+      peerId: loadOrCreateDesktopDeviceId()
     }).then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.disableCompanionSync) {

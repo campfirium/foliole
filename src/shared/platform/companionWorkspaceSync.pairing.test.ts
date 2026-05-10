@@ -56,7 +56,7 @@ function mockApprovedDesktopPairing(deviceId = 'web-preview-device') {
     device_id: deviceId,
     encrypted_device_secret: createEncryptedSecretFixture(),
     paired_at: '2026-04-22T12:00:00.000Z',
-    peer_id: 'desktop-local'
+    peer_id: 'device-desktop'
   });
 }
 
@@ -75,7 +75,7 @@ function mockNativePairingHttp() {
         device_id: 'android-test-device',
         encrypted_device_secret: createEncryptedSecretFixture(),
         paired_at: '2026-04-22T12:00:00.000Z',
-        peer_id: 'desktop-local'
+        peer_id: 'device-desktop'
       }),
       status: 200
     });
@@ -88,12 +88,12 @@ beforeEach(() => {
 
 describe('companionWorkspaceSync pairing', () => {
   it('discovers the desktop, requests pairing, and stores web preview credentials after approval', async () => {
-    mockFetchJson({ app_version: '0.1.0', desktop_name: 'Foliole Desktop', pairing_mode: 'desktop-confirm', peer_id: 'desktop-local' });
+    mockFetchJson({ app_version: '0.1.0', desktop_name: 'Foliole Desktop', pairing_mode: 'desktop-confirm', peer_id: 'device-desktop' });
 
     await expect(loadCompanionDiscovery('http://10.0.2.2:38641/')).resolves.toMatchObject({
       desktop_name: 'Foliole Desktop',
       pairing_mode: 'desktop-confirm',
-      peer_id: 'desktop-local'
+      peer_id: 'device-desktop'
     });
 
     mockFetchJson({ expires_at: '2026-04-22T12:02:00.000Z', pair_request_id: 'pair-request-1', status: 'pending' }, 202);
@@ -111,7 +111,7 @@ describe('companionWorkspaceSync pairing', () => {
       endpointUrl: 'http://10.0.2.2:38641/',
       pairRequestId: 'pair-request-1'
     })).resolves.toMatchObject({ is_paired: true, paired_at: '2026-04-22T12:00:00.000Z' });
-    await expect(loadCompanionPairingState()).resolves.toMatchObject({ is_paired: true });
+    await expect(loadCompanionPairingState()).resolves.toMatchObject({ is_paired: true, primary_device_id: 'device-desktop' });
   });
 });
 
@@ -124,14 +124,16 @@ it('verifies native pairing credentials are readable after saving', async () => 
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
     is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z'
+    paired_at: '2026-04-22T12:00:00.000Z',
+    primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
     is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z'
+    paired_at: '2026-04-22T12:00:00.000Z',
+    primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({
     headers: {
@@ -160,6 +162,9 @@ it('verifies native pairing credentials are readable after saving', async () => 
     method: 'POST',
     url: 'http://10.0.2.2:38641/companion/pair'
   });
+  expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
+    primary_device_id: 'device-desktop'
+  }));
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
   expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
   expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
@@ -198,14 +203,16 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
     is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z'
+    paired_at: '2026-04-22T12:00:00.000Z',
+    primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
     is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z'
+    paired_at: '2026-04-22T12:00:00.000Z',
+    primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.signCompanionSyncRequest.mockRejectedValue(new Error('Failed to sign companion sync request.'));
 

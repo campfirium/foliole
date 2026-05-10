@@ -6,14 +6,18 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-book-manual-action-failure-tests';
 
-const { runEpubImport, showOpenDialog } = vi.hoisted(() => ({
+const { openExternal, runEpubImport, showOpenDialog } = vi.hoisted(() => ({
+  openExternal: vi.fn().mockResolvedValue(undefined),
   runEpubImport: vi.fn(),
   showOpenDialog: vi.fn()
+}));
+const primaryDeviceMock = vi.hoisted(() => ({
+  canRunExternalSources: true
 }));
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog },
-  shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
+  shell: { openExternal }
 }));
 
 vi.mock('../ipc/paths.js', () => ({
@@ -23,6 +27,9 @@ vi.mock('../ipc/paths.js', () => ({
     app_config_dir: path.join(mockedAppDataDir, 'config'),
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
+}));
+vi.mock('../sync/primaryDeviceState.js', () => ({
+  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
 }));
 
 vi.mock('../ipc/epubImport.js', () => ({
@@ -86,11 +93,12 @@ vi.mock('../ipc/importSourcePipeline.js', () => ({
   }))
 }));
 
-import { loadReadwiseBookEpub } from './readwiseBookManualActions.js';
+import { loadReadwiseBookEpub, openReadwiseBookDownload } from './readwiseBookManualActions.js';
 
 beforeEach(() => {
   mockedAppDataDir = '/tmp/foliole-readwise-book-manual-action-failure-tests';
   vi.clearAllMocks();
+  primaryDeviceMock.canRunExternalSources = true;
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/broken.epub'] });
   runEpubImport.mockRejectedValue(new Error('broken epub'));
 });
@@ -103,4 +111,23 @@ it('returns a failed result instead of throwing when epub import fails', async (
     status: 'failed',
     title: 'Book One'
   });
+});
+
+it('blocks manual readwise download and EPUB import when this desktop is secondary', async () => {
+  primaryDeviceMock.canRunExternalSources = false;
+
+  await expect(openReadwiseBookDownload('node-book-1')).resolves.toEqual({
+    book_key: 'book-1',
+    status: 'blocked_secondary',
+    title: 'Book One',
+    url: null
+  });
+  await expect(loadReadwiseBookEpub('node-book-1')).resolves.toMatchObject({
+    book_key: 'book-1',
+    epub_path: null,
+    status: 'blocked_secondary',
+    title: 'Book One'
+  });
+  expect(openExternal).not.toHaveBeenCalled();
+  expect(showOpenDialog).not.toHaveBeenCalled();
 });

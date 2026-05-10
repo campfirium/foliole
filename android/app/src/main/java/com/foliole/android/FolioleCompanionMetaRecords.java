@@ -22,7 +22,7 @@ final class FolioleCompanionMetaRecords {
         if (deviceId != null) {
             return deviceId;
         }
-        String nextDeviceId = "android-" + UUID.randomUUID();
+        String nextDeviceId = "device-" + UUID.randomUUID();
         saveValue(context, database, DEVICE_ID_KEY, nextDeviceId, now);
         return nextDeviceId;
     }

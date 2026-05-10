@@ -57,10 +57,10 @@ function readStore(): PairedDeviceStorePayload {
 function writeStore(payload: PairedDeviceStorePayload) {
   ensureEncryptionAvailable();
   fs.mkdirSync(path.dirname(resolveStorePath()), { recursive: true });
-  const encrypted = safeStorage.encryptString(JSON.stringify(payload));
+  const encrypted = safeStorage.encryptString(JSON.stringify({ devices: dedupePairedDevices(payload.devices) }));
   fs.writeFileSync(resolveStorePath(), encrypted);
   cachedStore = {
-    devices: payload.devices.map((device) => ({ ...device }))
+    devices: dedupePairedDevices(payload.devices)
   };
   cachedStorePath = resolveStorePath();
 }
@@ -81,11 +81,11 @@ function isPairedDeviceRecord(value: unknown): value is PairedCompanionDevice {
 }
 
 export function countPairedCompanionDevices() {
-  return readStore().devices.length;
+  return dedupePairedDevices(readStore().devices).length;
 }
 
 export function loadPairedCompanionDevices() {
-  return readStore().devices.map((device) => ({
+  return dedupePairedDevices(readStore().devices).map((device) => ({
     client_address: device.client_address ?? null,
     device_id: device.device_id,
     device_kind: device.device_kind,
@@ -133,7 +133,7 @@ export function registerPairedCompanionDevice(args: {
     paired_at: now
   };
   const store = readStore();
-  store.devices = store.devices.filter((device) => device.device_id !== next.device_id);
+  store.devices = store.devices.filter((device) => !isSamePairedDevice(device, next));
   store.devices.push(next);
   writeStore(store);
   return next;
@@ -141,4 +141,29 @@ export function registerPairedCompanionDevice(args: {
 
 export function clearPairedCompanionDevices() {
   writeStore({ devices: [] });
+}
+
+function isSamePairedDevice(left: PairedCompanionDevice, right: PairedCompanionDevice) {
+  if (left.device_id === right.device_id) {
+    return true;
+  }
+  return Boolean(
+    left.client_address &&
+    right.client_address &&
+    left.client_address === right.client_address &&
+    left.device_kind === right.device_kind &&
+    left.device_name === right.device_name
+  );
+}
+
+function dedupePairedDevices(devices: PairedCompanionDevice[]) {
+  const deduped: PairedCompanionDevice[] = [];
+  for (const device of devices) {
+    const existingIndex = deduped.findIndex((existing) => isSamePairedDevice(existing, device));
+    if (existingIndex >= 0) {
+      deduped.splice(existingIndex, 1);
+    }
+    deduped.push({ ...device, client_address: device.client_address ?? null });
+  }
+  return deduped;
 }

@@ -67,7 +67,7 @@ it('overwrites existing key with upsert and keeps a single row', () => {
 
 
 it('mirrors syncable settings into setting records and sync object state', () => {
-  saveJsonSetting('desktop_device_id', 'desktop-test', '2026-03-06T00:00:00.000Z');
+  saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
   saveJsonSetting('app_settings', { theme: 'dark' }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('watch_import_cursor_state', { cursor: 'local' }, '2026-03-06T00:02:00.000Z');
 
@@ -104,7 +104,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
     value_json: '{"theme":"dark"}'
   });
   expect(syncState).toMatchObject({
-    last_modified_by_device_id: 'desktop-test',
+    last_modified_by_device_id: 'device-test',
     object_id: 'user_space:windows:desktop:*:app_settings',
     object_type: 'setting',
     sync_dirty: 1

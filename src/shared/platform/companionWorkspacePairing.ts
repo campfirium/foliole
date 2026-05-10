@@ -184,7 +184,8 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       device_name: args.deviceName,
       device_secret: deviceSecret,
       is_paired: true,
-      paired_at: payload.paired_at
+      paired_at: payload.paired_at,
+      primary_device_id: payload.peer_id
     });
   }
   await runCompanionSyncWriterTask(() => FolioleCompanionSync.savePairingCredentials({
@@ -192,7 +193,8 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     device_kind: args.deviceKind,
     device_name: args.deviceName,
     device_secret: deviceSecret,
-    paired_at: payload.paired_at
+    paired_at: payload.paired_at,
+    primary_device_id: payload.peer_id
   }));
   const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
   if (!storedPairingState.is_paired) {
