@@ -33,8 +33,8 @@ describe('android-reset-sync-data', () => {
       attachments: 0,
       contentBlobData: 0,
       contentBlobs: 0,
-      documentSources: 0,
       externalDocuments: 0,
+      importSources: 0,
       nodes: 0,
       reviewLog: 0,
       settings: 0,
@@ -80,8 +80,8 @@ async function createDatabase() {
       CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
       CREATE TABLE attachments (id TEXT PRIMARY KEY);
       CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY);
-      CREATE TABLE document_sources (source_id TEXT PRIMARY KEY);
       CREATE TABLE external_documents (document_id TEXT PRIMARY KEY);
+      CREATE TABLE import_sources (id TEXT PRIMARY KEY);
       CREATE TABLE review_log (id TEXT PRIMARY KEY);
       CREATE TABLE setting_records (key TEXT PRIMARY KEY);
       CREATE TABLE sync_push_ack (client_op_id TEXT PRIMARY KEY);
@@ -108,8 +108,8 @@ function seedDatabase(databasePath) {
       INSERT INTO content_blob_data VALUES ('body-hash', X'00');
       INSERT INTO attachments VALUES ('attachment-1');
       INSERT INTO attachment_blobs VALUES ('attachment-1');
-      INSERT INTO document_sources VALUES ('source-1');
       INSERT INTO external_documents VALUES ('doc-1');
+      INSERT INTO import_sources VALUES ('source-1');
       INSERT INTO review_log VALUES ('review-1');
       INSERT INTO setting_records VALUES ('setting-1');
       INSERT INTO sync_push_ack VALUES ('op-1');

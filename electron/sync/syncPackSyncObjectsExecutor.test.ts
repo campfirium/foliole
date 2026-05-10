@@ -82,7 +82,7 @@ it('applies setting payload records from sync objects', async () => {
   }]);
 });
 
-it('applies document source and external folder payload records', async () => {
+it('applies import source and external folder payload records', async () => {
   const runs: Array<{ params: unknown[]; sql: string }> = [];
   const port = {
     query: vi.fn(async () => [
@@ -90,14 +90,8 @@ it('applies document source and external folder payload records', async () => {
         content_hash: 'hash-source',
         deleted_at: null,
         object_id: 'source-1',
-        object_type: 'document_source',
-        payload_json: JSON.stringify({
-          provider: 'readwise_reader',
-          provider_document_id: 'reader-doc-1',
-          source_fingerprint: 'source-1',
-          source_kind: 'readwise_reader',
-          source_name: 'Library'
-        }),
+        object_type: 'import_source',
+        payload_json: JSON.stringify({ provider: 'readwise', source_name: 'Library' }),
         updated_at: '2026-05-04T02:00:00.000Z'
       },
       {
@@ -119,8 +113,8 @@ it('applies document source and external folder payload records', async () => {
     deviceId: 'device-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(2);
-  expect(runs[0]?.sql).toContain('INSERT INTO document_sources');
-  expect(runs[0]?.params.slice(0, 4)).toEqual(['source-1', 'readwise_reader', 'reader-doc-1', 'readwise_reader']);
+  expect(runs[0]?.sql).toContain('INSERT INTO import_sources');
+  expect(runs[0]?.params.slice(0, 4)).toEqual(['source-1', 'readwise', 'unknown', 'Library']);
   expect(runs[1]?.sql).toContain('INSERT INTO external_search_folders');
   expect(runs[1]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
 });

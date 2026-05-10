@@ -69,16 +69,8 @@
       "statementName": "appDataClearExternalSearchFolders"
     },
     {
-      "table": "document_sources",
-      "statementName": "appDataClearDocumentSources"
-    },
-    {
-      "table": "readwise_source_annotations",
-      "statementName": "appDataClearReadwiseSourceAnnotations"
-    },
-    {
-      "table": "readwise_sources",
-      "statementName": "appDataClearReadwiseSources"
+      "table": "import_sources",
+      "statementName": "appDataClearImportSources"
     },
     {
       "table": "review_log",
@@ -221,9 +213,7 @@
     "appDataClearContentBlobs": "DELETE FROM content_blobs",
     "appDataClearExternalDocuments": "DELETE FROM external_documents",
     "appDataClearExternalSearchFolders": "DELETE FROM external_search_folders",
-    "appDataClearDocumentSources": "DELETE FROM document_sources",
-    "appDataClearReadwiseSourceAnnotations": "DELETE FROM readwise_source_annotations",
-    "appDataClearReadwiseSources": "DELETE FROM readwise_sources",
+    "appDataClearImportSources": "DELETE FROM import_sources",
     "appDataClearReviewLog": "DELETE FROM review_log",
     "appDataClearNodeReading": "DELETE FROM node_reading",
     "appDataClearNodeReview": "DELETE FROM node_review",

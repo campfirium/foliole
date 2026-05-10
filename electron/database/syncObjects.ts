@@ -6,7 +6,6 @@ import type {
 } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { readReadwiseSourcePayloadJson } from './readwiseSourceSyncPayload.js';
 
 type JsonSyncObjectType = Exclude<NativeSyncObjectType, 'external_document' | 'import_run' | 'node'>;
 
@@ -42,31 +41,6 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
   ) AS payload_json
   FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id
   WHERE a.id = ?`,
-  document_source: `SELECT json_object(
-    'source_id', source_id,
-    'provider', provider,
-    'provider_document_id', provider_document_id,
-    'source_kind', source_kind,
-    'source_name', source_name,
-    'source_locator', source_locator,
-    'source_fingerprint', source_fingerprint,
-    'content_fingerprint', content_fingerprint,
-    'presentation_state', presentation_state,
-    'availability_state', availability_state,
-    'sync_status', sync_status,
-    'internal_node_id', internal_node_id,
-    'internalized_at', internalized_at,
-    'title', title,
-    'author', author,
-    'source_url', source_url,
-    'remote_updated_at', remote_updated_at,
-    'tags_json', tags_json,
-    'first_seen_at', first_seen_at,
-    'last_seen_at', last_seen_at,
-    'created_at', created_at,
-    'updated_at', updated_at
-  ) AS payload_json
-  FROM document_sources WHERE source_id = ?`,
   external_folder: `SELECT json_object(
     'id', id,
     'folder_path', folder_path,
@@ -81,6 +55,18 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
     'updated_at', updated_at
   ) AS payload_json
   FROM external_search_folders WHERE id = ?`,
+  import_source: `SELECT json_object(
+    'source_fingerprint', source_fingerprint,
+    'provider', provider,
+    'source_kind', source_kind,
+    'source_name', source_name,
+    'source_locator', source_locator,
+    'first_imported_at', first_imported_at,
+    'last_imported_at', last_imported_at,
+    'last_content_fingerprint', last_content_fingerprint,
+    'latest_node_id', latest_node_id
+  ) AS payload_json
+  FROM import_sources WHERE source_fingerprint = ?`,
   node_reading: `SELECT json_object(
     'node_id', node_id,
     'interval_duration_ms', interval_duration_ms,
@@ -157,7 +143,6 @@ function readViewStatePayloadJson(objectId: string) {
 
 function readPayloadJson(type: JsonSyncObjectType, objectId: string) {
   if (type === 'view_state') return readViewStatePayloadJson(objectId);
-  if (type === 'readwise_source') return readReadwiseSourcePayloadJson(objectId);
   const sql = PAYLOAD_SQL_BY_TYPE[type];
   if (!sql) return null;
   return openDatabaseConnection().driver.queryOne<{ payload_json: string | null }>(sql, [objectId])?.payload_json ?? null;

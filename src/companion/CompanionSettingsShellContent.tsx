@@ -1,4 +1,3 @@
-import { CompanionReadwiseSettingsContent } from './CompanionReadwiseSettingsContent';
 import { CompanionSettingsDetail, CompanionSettingsList } from './CompanionSettingsContent';
 import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
@@ -22,7 +21,6 @@ export function renderCompanionSettingsContent(props: {
   if (props.settingsPage === 'list') {
     return (
       <CompanionSettingsList
-        onOpenReadwise={() => props.onOpenSyncSettingsPage('readwise')}
         onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
         onOpenSync={props.onOpenSyncSettings}
         onOpenTabs={props.onOpenTabsSettings}
@@ -33,13 +31,6 @@ export function renderCompanionSettingsContent(props: {
     return (
       <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="storage" title="Storage">
         <CompanionStorageSettingsContent />
-      </CompanionSettingsDetail>
-    );
-  }
-  if (props.settingsPage === 'readwise') {
-    return (
-      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="readwise" title="Readwise Reader">
-        <CompanionReadwiseSettingsContent />
       </CompanionSettingsDetail>
     );
   }

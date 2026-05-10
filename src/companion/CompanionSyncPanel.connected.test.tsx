@@ -32,7 +32,6 @@ function createConnectedProps() {
     onCompletePairing: vi.fn(async () => undefined),
     onPull: vi.fn(async () => undefined),
     onRemoveRememberedTarget: vi.fn(async () => undefined),
-    onRequestPrimaryDeviceTakeover: vi.fn(async () => undefined),
     onRequestPairing: vi.fn(async () => undefined),
     onSaveEndpoint: vi.fn(async () => undefined),
     onOpenSettingsPage: vi.fn(),
@@ -43,8 +42,7 @@ function createConnectedProps() {
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: true,
-      paired_at: '2026-04-22T09:00:00.000Z',
-      primary_device_id: 'device-desktop'
+      paired_at: '2026-04-22T09:00:00.000Z'
     },
     pairingStatus: 'idle' as const,
     status: 'idle' as const
@@ -85,6 +83,10 @@ function testShowsPairedState() {
   render(<CompanionSyncPanel {...createConnectedProps()} />);
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
+  expect(screen.getByText('Handoff reminders')).toBeInTheDocument();
+  expect(screen.queryByText('Topics on this device')).not.toBeInTheDocument();
+  expect(screen.queryByText('Sync check')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
 }
 
 function testShowsPendingSyncConflicts() {

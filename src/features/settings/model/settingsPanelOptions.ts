@@ -15,7 +15,6 @@ export type SettingsCategoryId =
   | 'library'
   | 'import'
   | 'readwise-reader'
-  | 'readwise-reader-obsidian'
   | 'review'
   | 'hotkeys';
 
@@ -32,8 +31,7 @@ export const SETTINGS_CATEGORIES: Array<{ description: string; id: SettingsCateg
   { id: 'backups', label: 'Backups', description: 'Manage backup location and retention.' },
   { id: 'import', label: 'Watched folders', description: 'Configure folders watched for import.' },
   { id: 'external-search', label: 'External sources', description: 'Search and import from external folders.' },
-  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Connect Readwise Reader with a token.' },
-  { id: 'readwise-reader-obsidian', label: 'Readwise Reader (Obsidian)', description: 'Configure the legacy Obsidian folder import.' }
+  { id: 'readwise-reader', label: 'Readwise Reader', description: 'Configure Readwise Reader import.' }
 ];
 
 export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]; label: string }> = [
@@ -47,7 +45,7 @@ export const SETTINGS_CATEGORY_GROUPS: Array<{ categoryIds: SettingsCategoryId[]
   },
   {
     label: 'Sources',
-    categoryIds: ['readwise-reader', 'import', 'external-search', 'readwise-reader-obsidian']
+    categoryIds: ['import', 'external-search', 'readwise-reader']
   }
 ];
 

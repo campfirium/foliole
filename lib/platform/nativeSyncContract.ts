@@ -1,6 +1,5 @@
 export type NativeSyncObjectType =
   | 'attachment'
-  | 'document_source'
   | 'external_document'
   | 'external_folder'
   | 'import_run'
@@ -9,7 +8,6 @@ export type NativeSyncObjectType =
   | 'node_reading'
   | 'node_review'
   | 'pdf_page_text'
-  | 'readwise_source'
   | 'setting'
   | 'view_state';
 

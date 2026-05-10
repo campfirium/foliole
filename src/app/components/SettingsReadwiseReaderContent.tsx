@@ -41,9 +41,9 @@ function ReadwiseSetupSection(props: {
     <div className="space-y-6">
       <SettingsSection
         actions={<AppStatusBadge label={props.configured ? 'Configured' : 'Needs preview'} tone={props.configured ? 'success' : 'warning'} />}
-        ariaLabel="Readwise Reader Obsidian import setup"
-        description="Legacy Readwise Reader for Obsidian folder import. The Token connector is configured in the Readwise Reader panel."
-        title="Readwise Reader (Obsidian)"
+        ariaLabel="Readwise Reader import setup"
+        description="Readwise Reader for Obsidian folder import."
+        title="Readwise Reader"
       >
         <ReadwiseDirectorySection
           onChooseFolder={props.draft.chooseFolder}

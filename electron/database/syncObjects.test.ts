@@ -69,7 +69,7 @@ function insertImportSourceRecord() {
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
-    ['document_source', 'source-1', 'hash-document-source', 'desktop', '2026-04-21T16:00:00.000Z', 1]
+    ['import_source', 'source-1', 'hash-import-source', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
 }
 
@@ -169,22 +169,21 @@ it('loads generic sync object payloads from object state rows', () => {
   });
 });
 
-it('loads document source and external folder sync object payloads', () => {
+it('loads import source and external folder sync object payloads', () => {
   insertImportSourceRecord();
   insertExternalFolderRecord();
 
-  const records = loadSyncObjects(['source-1', 'folder-1'], ['document_source', 'external_folder']);
+  const records = loadSyncObjects(['source-1', 'folder-1'], ['import_source', 'external_folder']);
 
   expect(records.map((record) => `${record.object_type}:${record.object_id}`)).toEqual([
-    'document_source:source-1',
     'external_folder:folder-1',
+    'import_source:source-1'
   ]);
-  expect(JSON.parse(records[0].payload_json ?? '{}')).toMatchObject({
-    provider_document_id: 'source-1',
+  expect(JSON.parse(records[1].payload_json ?? '{}')).toMatchObject({
     source_fingerprint: 'source-1',
     source_name: 'alpha.md'
   });
-  expect(JSON.parse(records[1].payload_json ?? '{}')).toMatchObject({
+  expect(JSON.parse(records[0].payload_json ?? '{}')).toMatchObject({
     folder_path: '/docs',
     excluded_dirs_json: '[".git"]'
   });
@@ -249,7 +248,7 @@ it('exports view state source but excludes it from canonical content hash', () =
   }))).toBe('6fb29bb8de16468ec732071d8ed30ca9d673f862b19fca933d01362c9c33ae46');
 });
 
-it('records document sources as sync objects when imports are written', () => {
+it('records import sources as sync objects when written', () => {
   const record: PersistedImportRecord = {
     contentFingerprint: 'content-1',
     degradedReason: null,
@@ -268,8 +267,8 @@ it('records document sources as sync objects when imports are written', () => {
 
   writeImportSource(openDatabaseConnection().driver, record);
 
-  expect(loadSyncObjects(['source-1'], ['document_source'])).toHaveLength(1);
+  expect(loadSyncObjects(['source-1'], ['import_source'])).toHaveLength(1);
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'document_source' AND object_id = 'source-1'`
+    `SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'import_source' AND object_id = 'source-1'`
   )).toEqual({ count: 0 });
 });

@@ -237,7 +237,6 @@
     "scopePartIndex": 0
   },
   "syncObjectTypes": {
-    "documentSource": "document_source",
     "nodeReading": "node_reading",
     "nodeReview": "node_review",
     "settingRecord": "setting",
@@ -279,18 +278,6 @@
         "category": "structure",
         "conflict": "lww",
         "deviceScope": "workspace",
-        "key": "document_source",
-        "objectType": "document_source",
-        "pushIssue": "review_required",
-        "storage": [
-          "document_sources"
-        ],
-        "userVisible": true
-      },
-      {
-        "category": "structure",
-        "conflict": "lww",
-        "deviceScope": "workspace",
         "key": "external_document",
         "objectType": "external_document",
         "pushIssue": "review_required",
@@ -315,12 +302,11 @@
         "category": "structure",
         "conflict": "lww",
         "deviceScope": "workspace",
-        "key": "readwise_source",
-        "objectType": "readwise_source",
+        "key": "import_source",
+        "objectType": "import_source",
         "pushIssue": "review_required",
         "storage": [
-          "readwise_sources",
-          "readwise_source_annotations"
+          "import_sources"
         ],
         "userVisible": true
       },
@@ -497,14 +483,13 @@
     ],
     "reviewRequiredPushIssueObjectTypes": [
       "attachment",
-      "document_source",
       "external_document",
       "external_folder",
+      "import_source",
       "node",
       "node_reading",
       "node_review",
       "pdf_page_text",
-      "readwise_source",
       "setting"
     ]
   }

@@ -1,8 +1,3 @@
-import {
-  DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
-  IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS
-} from './documentSourceSchemaStatements.ts';
-
 export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS attachment_blobs (
     attachment_id TEXT PRIMARY KEY,
@@ -48,8 +43,17 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     page_height REAL,
     PRIMARY KEY (attachment_id, page)
   )`,
-  ...DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
-  ...IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS,
+  `CREATE TABLE IF NOT EXISTS import_sources (
+    source_fingerprint TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    source_kind TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    source_locator TEXT NOT NULL,
+    first_imported_at TEXT NOT NULL,
+    last_imported_at TEXT NOT NULL,
+    last_content_fingerprint TEXT NOT NULL,
+    latest_node_id TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS external_search_folders (
     id TEXT PRIMARY KEY,
     folder_path TEXT NOT NULL UNIQUE,
@@ -82,43 +86,5 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     missing_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS readwise_sources (
-    source_id TEXT PRIMARY KEY,
-    reader_document_id TEXT NOT NULL,
-    readwise_book_id TEXT,
-    title TEXT NOT NULL DEFAULT '',
-    author TEXT,
-    category TEXT,
-    location TEXT,
-    tags_json TEXT NOT NULL DEFAULT '[]',
-    source_url TEXT,
-    raw_source_url TEXT,
-    raw_source_url_status TEXT NOT NULL DEFAULT 'unknown',
-    remote_updated_at TEXT,
-    sync_cursor TEXT,
-    sync_status TEXT NOT NULL DEFAULT 'idle',
-    source_state TEXT NOT NULL DEFAULT 'external',
-    promotion_lock INTEGER NOT NULL DEFAULT 0,
-    internal_node_id TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(reader_document_id)
-  )`,
-  `CREATE TABLE IF NOT EXISTS readwise_source_annotations (
-    source_id TEXT NOT NULL,
-    readwise_book_id TEXT NOT NULL,
-    highlight_id TEXT NOT NULL,
-    reader_document_id TEXT NOT NULL,
-    parent_id TEXT,
-    annotation_kind TEXT NOT NULL DEFAULT 'highlight',
-    text TEXT,
-    note TEXT,
-    location TEXT,
-    remote_updated_at TEXT,
-    deleted_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    PRIMARY KEY (readwise_book_id, highlight_id)
   )`
 ];

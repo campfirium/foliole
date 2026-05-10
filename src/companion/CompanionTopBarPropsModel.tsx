@@ -63,7 +63,6 @@ function resolveSettingsTopBar(
   onBackToSyncSettings: () => void
 ) {
   if (settingsPage === 'sync') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Device sync' };
-  if (settingsPage === 'readwise') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Readwise Reader' };
   if (settingsPage === 'storage') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Storage' };
   if (settingsPage === 'tabs') return { backLabel: 'Settings', onBack: onBackToSettingsList, title: 'Tabs' };
   if (settingsPage === 'syncActivity') return { backLabel: 'Device sync', onBack: onBackToSyncSettings, title: 'Activity' };

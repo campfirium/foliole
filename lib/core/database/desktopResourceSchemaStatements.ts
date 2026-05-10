@@ -1,8 +1,3 @@
-import {
-  DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
-  IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS
-} from './documentSourceSchemaStatements.js';
-
 export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS mirror_articles (
     article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
@@ -28,8 +23,17 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     PRIMARY KEY (node_id, attachment_id, role)
   )`,
   'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)',
-  ...DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
-  ...IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS,
+  `CREATE TABLE IF NOT EXISTS import_sources (
+    source_fingerprint TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    source_kind TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    source_locator TEXT NOT NULL,
+    first_imported_at TEXT NOT NULL,
+    last_imported_at TEXT NOT NULL,
+    last_content_fingerprint TEXT NOT NULL,
+    latest_node_id TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS import_runs (
     id TEXT PRIMARY KEY,
     source_fingerprint TEXT NOT NULL,

@@ -53,9 +53,7 @@ export async function applySyncPackMetadataObjectsWithDbPort(
   options: SyncPackSyncObjectsOptions
 ) {
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
-    .filter((record) => record.object_type === 'document_source' ||
-      record.object_type === 'external_folder' ||
-      record.object_type === 'readwise_source');
+    .filter((record) => record.object_type === 'import_source' || record.object_type === 'external_folder');
   for (const record of records) {
     await applySyncObjectPayloadWithDbPort(port, record);
   }

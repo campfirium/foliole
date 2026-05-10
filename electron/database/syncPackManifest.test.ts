@@ -66,12 +66,11 @@ it('builds the pack manifest from the explicit table map', () => {
 it('declares the stage one payload object inventory explicitly', () => {
   expect([...SYNC_PACK_PAYLOAD_OBJECT_TYPES]).toEqual([
     'attachment',
-    'document_source',
     'external_folder',
+    'import_source',
     'node_reading',
     'node_review',
     'pdf_page_text',
-    'readwise_source',
     'setting',
     'view_state'
   ]);

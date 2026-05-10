@@ -120,25 +120,20 @@ it('applies generic sync object payloads through the shared async executor', asy
   )).toEqual({ value_json: '{"mode":"async"}' });
 });
 
-it('applies document source and external folder payloads', async () => {
+it('applies import source and external folder payloads', async () => {
   const records: NativeSyncObjectRecord[] = [{
-    content_hash: 'hash-document-source',
+    content_hash: 'hash-import-source',
     deleted_at: null,
     object_id: 'source-1',
-    object_type: 'document_source',
+    object_type: 'import_source',
     payload_json: JSON.stringify({
-      availability_state: 'available',
-      content_fingerprint: 'content-1',
-      first_seen_at: '2026-04-21T10:00:00.000Z',
-      last_seen_at: '2026-04-21T16:00:00.000Z',
-      presentation_state: 'external',
+      first_imported_at: '2026-04-21T10:00:00.000Z',
+      last_content_fingerprint: 'content-1',
+      last_imported_at: '2026-04-21T16:00:00.000Z',
       provider: 'manual',
-      provider_document_id: 'source-1',
-      source_fingerprint: 'source-1',
       source_kind: 'markdown',
       source_locator: '/docs/alpha.md',
-      source_name: 'alpha.md',
-      sync_status: 'synced'
+      source_name: 'alpha.md'
     }),
     updated_at: '2026-04-21T16:00:00.000Z'
   }, {
@@ -154,10 +149,10 @@ it('applies document source and external folder payloads', async () => {
     updated_at: '2026-04-21T16:00:00.000Z'
   }];
 
-  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['document_source:source-1', 'external_folder:folder-1']);
+  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['import_source:source-1', 'external_folder:folder-1']);
 
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ source_name: string }>('SELECT source_name FROM document_sources WHERE source_id = ?', ['source-1']))
+  expect(driver.queryOne<{ source_name: string }>('SELECT source_name FROM import_sources WHERE source_fingerprint = ?', ['source-1']))
     .toEqual({ source_name: 'alpha.md' });
   expect(driver.queryOne<{ folder_path: string }>('SELECT folder_path FROM external_search_folders WHERE id = ?', ['folder-1']))
     .toEqual({ folder_path: '/docs' });

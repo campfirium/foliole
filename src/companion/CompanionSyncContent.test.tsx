@@ -143,9 +143,7 @@ function testShowsSyncStatusDetails() {
   render(<CompanionSyncContent workspaceSync={workspaceSync} />);
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
-  expect(screen.getByText('Connection')).toBeInTheDocument();
-  expect(screen.getAllByText('Paired desktop').length).toBeGreaterThan(0);
-  expect(screen.getByText('Desktop · 10.0.2.2:38641')).toBeInTheDocument();
+  expect(screen.getByText('Android Emulator')).toBeInTheDocument();
   expect(screen.getByText('Activity')).toBeInTheDocument();
   expect(screen.getByText('Downloaded 1 topic body in this sync.')).toBeInTheDocument();
   expect(screen.getByText(/^Checked \d/)).toBeInTheDocument();
@@ -159,25 +157,10 @@ function testRequestsPrimaryTakeover() {
     endpoint_url: 'http://10.0.2.2:38641'
   };
 
-  render(<CompanionSyncContent page="syncConnection" workspaceSync={workspaceSync} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Set as primary' }));
+  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
 
   expect(workspaceSync.requestPrimaryDeviceTakeover).toHaveBeenCalledWith('http://10.0.2.2:38641');
-}
-
-function testShowsPrimaryStatusForThisDevice() {
-  const workspaceSync = pairedWorkspaceSync();
-  workspaceSync.pairingState = {
-    ...workspaceSync.pairingState,
-    primary_device_id: 'android-test-device'
-  };
-
-  render(<CompanionSyncContent page="syncConnection" workspaceSync={workspaceSync} />);
-
-  expect(screen.getByText('Android Emulator')).toBeInTheDocument();
-  expect(screen.getByText('Android · This device')).toBeInTheDocument();
-  expect(screen.getByText('Primary')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Set as primary' })).not.toBeInTheDocument();
 }
 
 async function testCompletesApprovedPairing() {
@@ -211,6 +194,5 @@ async function testCompletesApprovedPairing() {
 describe('CompanionSyncContent paired flow', () => {
   it('shows sync status details for a paired device', testShowsSyncStatusDetails);
   it('lets a synced secondary device request primary takeover', testRequestsPrimaryTakeover);
-  it('shows primary status on the local device row', testShowsPrimaryStatusForThisDevice);
   it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
 });

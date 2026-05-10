@@ -212,5 +212,3 @@ export {
   syncObjectState,
   syncPeerCursors
 } from './schemaSyncExtras.js';
-export { readwiseSourceAnnotations, readwiseSources } from './readwiseSourceSchema.js';
-export { documentSources } from './documentSourceSchema.js';

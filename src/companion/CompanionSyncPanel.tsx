@@ -55,17 +55,15 @@ function resolveDesktopDiscoveries(props: CompanionSyncPanelProps) {
 }
 
 function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
-  desktopDiscovery: CompanionDesktopDiscovery | null;
   endpointUrl: string;
   onSync(): void;
 }) {
+  const isPrimary = props.pairingState.device_id !== null && props.pairingState.primary_device_id === props.pairingState.device_id;
   return (
     <>
       <CompanionSyncStatusDetails
         endpointUrl={props.endpointUrl}
-        desktopDiscovery={props.desktopDiscovery}
         lastSyncedAt={props.lastSyncedAt}
-        onRequestPrimaryDeviceTakeover={props.onRequestPrimaryDeviceTakeover}
         pairingState={props.pairingState}
         status={props.status}
         syncConflictCount={props.syncConflictCount}
@@ -82,12 +80,27 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
       >
         {props.status === 'syncing' ? 'Syncing' : 'Sync'}
       </button>
+      <div className="rounded-2xl border border-border bg-bg-subtle px-4 py-3">
+        <div className="text-sm font-medium text-foreground">Device role</div>
+        <div className="mt-1 text-sm text-companion-text-secondary">
+          {isPrimary ? 'This device is the primary device.' : 'This device follows the current primary device.'}
+        </div>
+        {!isPrimary ? (
+          <button
+            className="mt-3 w-full rounded-2xl border border-border-strong bg-bg-elevated px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={props.status === 'syncing'}
+            onClick={() => void props.onRequestPrimaryDeviceTakeover(props.endpointUrl)}
+            type="button"
+          >
+            Set as primary device
+          </button>
+        ) : null}
+      </div>
     </>
   );
 }
 
 function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
-  desktopDiscovery: CompanionDesktopDiscovery | null;
   endpointUrl: string;
   isBusy: boolean;
   isDiscovering: boolean;
@@ -97,7 +110,6 @@ function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | '
   if (props.pairingState.is_paired) {
     return props.page === 'syncHandoff' ? null : (
       <ConnectedState
-        desktopDiscovery={props.desktopDiscovery}
         endpointUrl={props.endpointUrl}
         lastSyncedAt={props.lastSyncedAt}
         pairingState={props.pairingState}
@@ -145,7 +157,6 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
       <div className="flex flex-col gap-5">
         <MainSyncContent
           {...props}
-          desktopDiscovery={props.desktopDiscovery}
           endpointUrl={endpointUrl}
           isBusy={isBusy}
           isDiscovering={isDiscovering}

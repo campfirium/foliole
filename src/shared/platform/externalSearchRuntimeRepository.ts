@@ -23,7 +23,6 @@ export interface RuntimeExternalSearchFolder {
   id: string;
   indexedAt: string | null;
   lastError: string | null;
-  sourceKind?: 'folder' | 'readwise_reader';
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updatedAt: string;
 }
@@ -61,12 +60,6 @@ function notifyRuntimeExternalSearchFolders(folders: RuntimeExternalSearchFolder
   externalSearchFoldersListeners.forEach((listener) => listener(folders));
 }
 
-export async function refreshRuntimeExternalSearchFolders() {
-  const folders = await loadRuntimeExternalSearchFolders();
-  if (folders) notifyRuntimeExternalSearchFolders(folders);
-  return folders;
-}
-
 function toFolder(value: NativeExternalSearchFolder): RuntimeExternalSearchFolder {
   return {
     attachmentMode: value.attachment_mode,
@@ -78,7 +71,6 @@ function toFolder(value: NativeExternalSearchFolder): RuntimeExternalSearchFolde
     id: value.id,
     indexedAt: value.indexed_at,
     lastError: value.last_error,
-    sourceKind: value.source_kind ?? 'folder',
     status: value.status,
     updatedAt: value.updated_at
   };
@@ -125,10 +117,10 @@ export async function saveRuntimeExternalSearchFolders(folders: RuntimeExternalS
     return null;
   }
   const result = await runtimeInvoke(NATIVE_COMMANDS.saveExternalSearchFolders, {
-      folders: folders.filter((folder) => folder.sourceKind !== 'readwise_reader').map((folder) => ({
-        attachment_mode: 'document_relative_first_then_fixed_root',
-        attachment_root_path: folder.attachmentRootPath,
-        excluded_dirs: folder.excludedDirs,
+    folders: folders.map((folder) => ({
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: folder.attachmentRootPath,
+      excluded_dirs: folder.excludedDirs,
       folder_path: folder.folderPath,
       id: folder.id
     }))

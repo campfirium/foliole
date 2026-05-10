@@ -15,32 +15,6 @@ export interface NativeReadwiseDetectionResult {
   success: boolean;
 }
 
-export type NativeReadwiseTokenConnectionStatus =
-  | 'connected'
-  | 'not_connected'
-  | 'invalid_token'
-  | 'rate_limited'
-  | 'storage_unavailable'
-  | 'network_error';
-
-export interface NativeReadwiseTokenConnection {
-  checked_at: string | null;
-  connected: boolean;
-  message: string;
-  status: NativeReadwiseTokenConnectionStatus;
-}
-
-export interface NativeReadwiseTokenSyncResult {
-  checked_at: string;
-  document_count: number;
-  has_more: boolean;
-  message: string;
-  page_count: number;
-  retry_after_seconds: number | null;
-  source_count: number;
-  status: 'blocked_secondary' | 'failed' | 'invalid_token' | 'not_connected' | 'partial' | 'rate_limited' | 'synced';
-}
-
 export interface NativeReadwiseBookDownloadResult {
   book_key: string | null;
   status: 'book_not_found' | 'missing_link' | 'opened' | 'blocked_secondary';

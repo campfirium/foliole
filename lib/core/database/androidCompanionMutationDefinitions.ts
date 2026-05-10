@@ -1,5 +1,4 @@
 import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
-import { ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS } from './androidCompanionAppDataClearDefinitions.ts';
 
 const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 
@@ -95,9 +94,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearContentBlobs: 'DELETE FROM content_blobs',
   appDataClearExternalDocuments: 'DELETE FROM external_documents',
   appDataClearExternalSearchFolders: 'DELETE FROM external_search_folders',
-  appDataClearDocumentSources: 'DELETE FROM document_sources',
-  appDataClearReadwiseSourceAnnotations: 'DELETE FROM readwise_source_annotations',
-  appDataClearReadwiseSources: 'DELETE FROM readwise_sources',
+  appDataClearImportSources: 'DELETE FROM import_sources',
   appDataClearReviewLog: 'DELETE FROM review_log',
   appDataClearNodeReading: 'DELETE FROM node_reading',
   appDataClearNodeReview: 'DELETE FROM node_review',
@@ -111,7 +108,32 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 };
 
-export { ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS } from './androidCompanionAppDataClearDefinitions.ts';
+export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
+  { table: 'sync_push_ack', statementName: 'appDataClearSyncPushAck' },
+  { table: 'sync_peer_cursors', statementName: 'appDataClearSyncPeerCursors' },
+  { table: 'sync_change_log', statementName: 'appDataClearSyncChangeLog' },
+  { table: 'sync_object_state', statementName: 'appDataClearSyncObjectState' },
+  { table: 'node_sync_conflicts', statementName: 'appDataClearNodeSyncConflicts' },
+  { table: 'node_sync_versions', statementName: 'appDataClearNodeSyncVersions' },
+  { table: 'node_view_state', statementName: 'appDataClearNodeViewState' },
+  { table: 'node_reading_device_state', statementName: 'appDataClearNodeReadingDeviceState' },
+  { table: 'node_order', statementName: 'appDataClearNodeOrder' },
+  { table: 'node_attachments', statementName: 'appDataClearNodeAttachments' },
+  { table: 'attachment_blobs', statementName: 'appDataClearAttachmentBlobs' },
+  { table: 'attachments', statementName: 'appDataClearAttachments' },
+  { table: 'pdf_page_text', statementName: 'appDataClearPdfPageText' },
+  { table: 'content_blob_data', statementName: 'appDataClearContentBlobData' },
+  { table: 'content_blobs', statementName: 'appDataClearContentBlobs' },
+  { table: 'external_documents', statementName: 'appDataClearExternalDocuments' },
+  { table: 'external_search_folders', statementName: 'appDataClearExternalSearchFolders' },
+  { table: 'import_sources', statementName: 'appDataClearImportSources' },
+  { table: 'review_log', statementName: 'appDataClearReviewLog' },
+  { table: 'node_reading', statementName: 'appDataClearNodeReading' },
+  { table: 'node_review', statementName: 'appDataClearNodeReview' },
+  { table: 'setting_records', statementName: 'appDataClearSettingRecords' },
+  { table: 'nodes', statementName: 'appDataClearNodes' },
+  { table: 'workspace_meta', statementName: 'appDataClearWorkspaceMeta' }
+] as const;
 
 export const ANDROID_COMPANION_MUTATION_ASSET_KEYS = {
   appDataClearMutations: 'appDataClearMutations',

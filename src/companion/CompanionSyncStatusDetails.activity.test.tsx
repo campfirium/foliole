@@ -10,11 +10,9 @@ function renderActivity(
 ) {
   render(
     <CompanionSyncStatusDetails
-      desktopDiscovery={null}
       endpointUrl="http://10.0.2.2:38641"
       lastSyncedAt={null}
       onOpenPage={vi.fn()}
-      onRequestPrimaryDeviceTakeover={vi.fn(async () => undefined)}
       page="syncActivity"
       pairingState={{
         device_id: 'android-test-device',

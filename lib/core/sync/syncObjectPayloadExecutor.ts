@@ -5,8 +5,6 @@ import {
   applyNodeReviewObject,
   type SyncObjectPayloadApplyOptions
 } from './syncObjectLearningPayloadExecutor.js';
-import { applyDocumentSourceObject } from './documentSourcePayloadExecutor.js';
-import { applyReadwiseSourceObject } from './readwiseSourcePayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 export async function applySyncObjectPayloadWithDbPort(
@@ -17,8 +15,6 @@ export async function applySyncObjectPayloadWithDbPort(
   switch (record.object_type) {
     case 'attachment':
       return applyAttachmentObject(port, record);
-    case 'document_source':
-      return applyDocumentSourceObject(port, record);
     case 'external_document':
       return applyExternalDocumentObject(port, record);
     case 'external_folder':
@@ -31,8 +27,6 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeReviewObject(port, record);
     case 'pdf_page_text':
       return applyPdfPageTextObject(port, record);
-    case 'readwise_source':
-      return applyReadwiseSourceObject(port, record);
     case 'setting':
       return applySettingObject(port, record);
     case 'view_state':

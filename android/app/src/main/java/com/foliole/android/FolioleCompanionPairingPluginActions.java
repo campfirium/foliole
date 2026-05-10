@@ -100,33 +100,6 @@ final class FolioleCompanionPairingPluginActions {
         }
     }
 
-    static void saveReadwiseCredentialBag(Context context, PluginCall call) {
-        try {
-            String algorithm = call.getString("algorithm");
-            String service = call.getString("service");
-            String salt = call.getString("salt");
-            String iv = call.getString("iv");
-            String ciphertext = call.getString("ciphertext");
-            if (
-                rejectIfBlank(call, "algorithm", algorithm) ||
-                rejectIfBlank(call, "service", service) ||
-                rejectIfBlank(call, "salt", salt) ||
-                rejectIfBlank(call, "iv", iv) ||
-                rejectIfBlank(call, "ciphertext", ciphertext)
-            ) {
-                return;
-            }
-            if (!"HKDF-SHA256-AES-GCM".equals(algorithm) || !"readwise_token".equals(service)) {
-                call.reject("Unsupported credential package.");
-                return;
-            }
-            String token = FolioleCompanionPairingStore.decryptCredentialBag(context, service, salt, iv, ciphertext);
-            call.resolve(FolioleReadwiseTokenStore.saveImportedToken(context, token));
-        } catch (Exception exception) {
-            call.reject("Failed to save Readwise credential package.", exception);
-        }
-    }
-
     private static boolean rejectIfBlank(PluginCall call, String key, String value) {
         if (value == null || value.trim().isEmpty()) {
             call.reject(key + " is required.");

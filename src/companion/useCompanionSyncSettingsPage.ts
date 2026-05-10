@@ -6,7 +6,6 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 export type CompanionSettingsPage =
   | 'list'
   | 'sync'
-  | 'readwise'
   | 'storage'
   | 'tabs'
   | 'syncActivity'

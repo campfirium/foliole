@@ -7,13 +7,12 @@ import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js'
 const REMOTE_DEVICE_ID = 'sync-remote';
 const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'attachment',
-  'document_source',
   'external_document',
   'external_folder',
+  'import_source',
   'node_reading',
   'node_review',
   'pdf_page_text',
-  'readwise_source',
   'setting',
   'view_state'
 ]);

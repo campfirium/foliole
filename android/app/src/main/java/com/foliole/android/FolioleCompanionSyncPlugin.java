@@ -29,9 +29,6 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     public void savePrimaryDeviceId(PluginCall call) { FolioleCompanionPairingPluginActions.savePrimaryDeviceId(getContext(), call); }
 
     @PluginMethod
-    public void saveReadwiseCredentialBag(PluginCall call) { FolioleCompanionPairingPluginActions.saveReadwiseCredentialBag(getContext(), call); }
-
-    @PluginMethod
     public void signCompanionSyncRequest(PluginCall call) {
         FolioleCompanionPairingPluginActions.signCompanionSyncRequest(getContext(), call);
     }

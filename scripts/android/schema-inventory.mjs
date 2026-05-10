@@ -26,11 +26,8 @@ const DESKTOP_SCHEMA_FILES = {
   DESKTOP_CORE_SCHEMA_STATEMENTS: 'lib/core/database/desktopCoreSchemaStatements.ts',
   DESKTOP_FRESH_SCHEMA_STATEMENTS: 'lib/core/database/desktopFreshSchemaStatements.ts',
   DESKTOP_RESOURCE_SCHEMA_STATEMENTS: 'lib/core/database/desktopResourceSchemaStatements.ts',
-  DOCUMENT_SOURCE_SCHEMA_STATEMENTS: 'lib/core/database/documentSourceSchemaStatements.ts',
-  DOCUMENT_SOURCE_WITH_IMPORT_COMPAT_SCHEMA_STATEMENTS: 'lib/core/database/documentSourceSchemaStatements.ts',
   EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS: 'lib/core/database/externalDocumentSchemaStatements.ts',
   KEEP_IMPORT_SCHEMA_STATEMENTS: 'lib/core/database/keepImportSchemaStatements.ts',
-  READWISE_SOURCE_SCHEMA_STATEMENTS: 'lib/core/database/readwiseSourceSchemaStatements.ts',
   SYNC_SCHEMA_STATEMENTS: 'lib/core/database/syncSchemaStatements.ts'
 };
 
@@ -63,10 +60,6 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
       name,
       extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name)
     ])
-  );
-  arrays.DESKTOP_RESOURCE_SCHEMA_STATEMENTS = extractStatementsFromBody(
-    extractArrayBody(readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_RESOURCE_SCHEMA_STATEMENTS), 'DESKTOP_RESOURCE_SCHEMA_STATEMENTS'),
-    arrays
   );
   const source = readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_FRESH_SCHEMA_STATEMENTS);
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');

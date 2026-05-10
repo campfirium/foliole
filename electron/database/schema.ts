@@ -14,8 +14,6 @@ export {
   nodeViewState,
   pdfPageText,
   reviewLog,
-  readwiseSourceAnnotations,
-  readwiseSources,
   settingRecords,
   settings,
   syncChangeLog,

@@ -164,20 +164,6 @@ export interface NativePrimaryDeviceTakeoverResponse {
   updated_by_device_id: string;
 }
 
-export interface NativeCredentialBagPayload {
-  algorithm: 'HKDF-SHA256-AES-GCM';
-  ciphertext: string;
-  exported_at: string;
-  iv: string;
-  salt: string;
-  service: 'readwise_token';
-}
-
-export interface NativeCredentialBagResponse {
-  credential: NativeCredentialBagPayload | null;
-  status: 'not_available' | 'ready';
-}
-
 export interface DesktopCompanionPairingOverviewPayload {
   paired_devices: DesktopCompanionPairedDevicePayload[];
   pending_requests: DesktopCompanionPairRequestPayload[];
