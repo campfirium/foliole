@@ -4,7 +4,9 @@ import {
   connectReadwiseTokenInRuntime,
   disconnectReadwiseTokenInRuntime,
   loadReadwiseTokenConnectionFromRuntime,
-  type RuntimeReadwiseTokenConnection
+  syncReadwiseTokenLibraryInRuntime,
+  type RuntimeReadwiseTokenConnection,
+  type RuntimeReadwiseTokenSyncResult
 } from '../../../../shared/platform/readwiseTokenConnectorRuntimeRepository';
 
 const EMPTY_CONNECTION: RuntimeReadwiseTokenConnection = {
@@ -18,6 +20,7 @@ export function useReadwiseTokenConnection() {
   const [connection, setConnection] = useState<RuntimeReadwiseTokenConnection>(EMPTY_CONNECTION);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [syncResult, setSyncResult] = useState<RuntimeReadwiseTokenSyncResult | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -60,5 +63,20 @@ export function useReadwiseTokenConnection() {
     }
   }, []);
 
-  return { connect, connection, disconnect, error, isPending };
+  const sync = useCallback(async () => {
+    setIsPending(true);
+    setError(null);
+    try {
+      const next = await syncReadwiseTokenLibraryInRuntime();
+      setSyncResult(next);
+      return next;
+    } catch {
+      setError('Could not sync Readwise.');
+      return null;
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return { connect, connection, disconnect, error, isPending, sync, syncResult };
 }

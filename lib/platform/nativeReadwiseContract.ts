@@ -30,6 +30,14 @@ export interface NativeReadwiseTokenConnection {
   status: NativeReadwiseTokenConnectionStatus;
 }
 
+export interface NativeReadwiseTokenSyncResult {
+  checked_at: string;
+  document_count: number;
+  message: string;
+  source_count: number;
+  status: 'blocked_secondary' | 'failed' | 'invalid_token' | 'not_connected' | 'rate_limited' | 'synced';
+}
+
 export interface NativeReadwiseBookDownloadResult {
   book_key: string | null;
   status: 'book_not_found' | 'missing_link' | 'opened' | 'blocked_secondary';

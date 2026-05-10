@@ -5,6 +5,7 @@ import { previewKeepImportRule } from '../import/keepImportService.js';
 import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
 import { loadReadwiseBookEpub, openReadwiseBookDownload } from '../import/readwiseBookManualActions.js';
 import { connectReadwiseToken, disconnectReadwiseToken, loadReadwiseTokenConnection } from '../readwise/readwiseTokenConnector.js';
+import { syncReadwiseTokenLibrary } from '../readwise/readwiseTokenSync.js';
 
 import { asString } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
@@ -57,6 +58,9 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   }
   if (request.command === NATIVE_COMMANDS.disconnectReadwiseToken) {
     return disconnectReadwiseToken();
+  }
+  if (request.command === NATIVE_COMMANDS.syncReadwiseTokenLibrary) {
+    return syncReadwiseTokenLibrary();
   }
   if (request.command === NATIVE_COMMANDS.openReadwiseBookDownload) {
     return openReadwiseBookDownload(asString(args.node_id, 'node_id'));

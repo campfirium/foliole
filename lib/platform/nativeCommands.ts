@@ -10,6 +10,7 @@ export const NATIVE_COMMANDS = {
   loadReadwiseTokenConnection: 'load_readwise_token_connection',
   connectReadwiseToken: 'connect_readwise_token',
   disconnectReadwiseToken: 'disconnect_readwise_token',
+  syncReadwiseTokenLibrary: 'sync_readwise_token_library',
   loadReadwiseBooksInventory: 'load_readwise_books_inventory',
   openReadwiseBookDownload: 'open_readwise_book_download',
   loadReadwiseBookEpub: 'load_readwise_book_epub',

@@ -5,7 +5,7 @@ import { useReadwiseTokenConnection } from '../features/settings/components/sect
 export function CompanionReadwiseSettingsContent() {
   const [token, setToken] = useState('');
   const connector = useReadwiseTokenConnection();
-  const message = connector.error ?? connector.connection.message;
+  const message = connector.error ?? connector.syncResult?.message ?? connector.connection.message;
   const disabled = connector.isPending;
 
   return (
@@ -39,14 +39,24 @@ export function CompanionReadwiseSettingsContent() {
           Connect
         </button>
         {connector.connection.connected ? (
-          <button
-            className="min-h-11 rounded-md border border-companion-divider px-4 text-sm font-medium text-foreground disabled:opacity-50"
-            disabled={disabled}
-            onClick={connector.disconnect}
-            type="button"
-          >
-            Disconnect
-          </button>
+          <>
+            <button
+              className="min-h-11 rounded-md border border-companion-divider px-4 text-sm font-medium text-foreground disabled:opacity-50"
+              disabled={disabled}
+              onClick={connector.sync}
+              type="button"
+            >
+              Sync library
+            </button>
+            <button
+              className="min-h-11 rounded-md border border-companion-divider px-4 text-sm font-medium text-foreground disabled:opacity-50"
+              disabled={disabled}
+              onClick={connector.disconnect}
+              type="button"
+            >
+              Disconnect
+            </button>
+          </>
         ) : null}
       </div>
     </div>

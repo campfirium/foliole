@@ -28,7 +28,7 @@ function statusLabel(status: ReturnType<typeof useReadwiseTokenConnection>['conn
 export function ReadwiseTokenConnectionSection() {
   const [token, setToken] = useState('');
   const connector = useReadwiseTokenConnection();
-  const message = connector.error ?? connector.connection.message;
+  const message = connector.error ?? connector.syncResult?.message ?? connector.connection.message;
 
   return (
     <SettingsSection
@@ -62,9 +62,14 @@ export function ReadwiseTokenConnectionSection() {
             </button>
           </div>
           {connector.connection.connected ? (
-            <button className={settingsButtonClassName()} disabled={connector.isPending} onClick={connector.disconnect} type="button">
-              Disconnect
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button className={settingsButtonClassName()} disabled={connector.isPending} onClick={connector.sync} type="button">
+                Sync library
+              </button>
+              <button className={settingsButtonClassName()} disabled={connector.isPending} onClick={connector.disconnect} type="button">
+                Disconnect
+              </button>
+            </div>
           ) : null}
         </SettingsControlSlot>
       </SettingsRow>

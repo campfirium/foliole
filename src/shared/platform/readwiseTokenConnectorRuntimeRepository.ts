@@ -2,7 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 
 import { canRunPrimaryDeviceExternalSource, resolvePrimaryDeviceState } from '../../../lib/core/sync/primaryDeviceResolver';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeReadwiseTokenConnection } from '../../../lib/platform/nativeReadwiseContract';
+import type { NativeReadwiseTokenConnection, NativeReadwiseTokenSyncResult } from '../../../lib/platform/nativeReadwiseContract';
 
 import { syncReadwiseCredentialBagFromDesktop } from './companionCredentialBag';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
@@ -11,6 +11,7 @@ import { loadCompanionWorkspaceSyncState } from './companionWorkspaceSync';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeReadwiseTokenConnection = NativeReadwiseTokenConnection;
+export type RuntimeReadwiseTokenSyncResult = NativeReadwiseTokenSyncResult;
 
 interface ReadwiseTokenPlugin {
   loadReadwiseTokenConnection(): Promise<NativeReadwiseTokenConnection>;
@@ -35,6 +36,16 @@ function secondaryConnection(): NativeReadwiseTokenConnection {
     connected: false,
     message: 'Readwise can be connected only on the current primary device.',
     status: 'not_connected'
+  };
+}
+
+function unavailableSyncResult(message: string): NativeReadwiseTokenSyncResult {
+  return {
+    checked_at: new Date().toISOString(),
+    document_count: 0,
+    message,
+    source_count: 0,
+    status: 'blocked_secondary'
   };
 }
 
@@ -95,4 +106,18 @@ export async function disconnectReadwiseTokenInRuntime(): Promise<NativeReadwise
     return FolioleReadwiseToken.disconnectReadwiseToken();
   }
   return unavailableConnection();
+}
+
+export async function syncReadwiseTokenLibraryInRuntime(): Promise<NativeReadwiseTokenSyncResult> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (runtimeInvoke) {
+    return runtimeInvoke(NATIVE_COMMANDS.syncReadwiseTokenLibrary);
+  }
+  if (isNativeAndroidCompanionRuntime()) {
+    if (!(await canCompanionConnectExternalSource())) {
+      return unavailableSyncResult('Readwise sync runs on the current primary device.');
+    }
+    return unavailableSyncResult('Readwise library sync on Android is not connected yet.');
+  }
+  return unavailableSyncResult('Readwise sync is available in the desktop app and Android app.');
 }

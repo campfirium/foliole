@@ -5,7 +5,8 @@ import type {
   NativeReadwiseBookEpubLoadResult,
   NativeReadwiseBooksInventory,
   NativeReadwiseDetectionResult,
-  NativeReadwiseTokenConnection
+  NativeReadwiseTokenConnection,
+  NativeReadwiseTokenSyncResult
 } from './nativeReadwiseContract.js';
 
 export type NativeReadwiseCommandMap = {
@@ -32,6 +33,10 @@ export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.disconnectReadwiseToken]: {
     args: undefined;
     result: NativeReadwiseTokenConnection;
+  };
+  [NATIVE_COMMANDS.syncReadwiseTokenLibrary]: {
+    args: undefined;
+    result: NativeReadwiseTokenSyncResult;
   };
   [NATIVE_COMMANDS.loadReadwiseBooksInventory]: {
     args: undefined;
