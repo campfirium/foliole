@@ -1,5 +1,6 @@
 import { BrowserWindow, type WebContents } from 'electron';
 
+import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import type { InvokeRequest } from './contracts.js';
 import { handleImportCommand } from './importCommands.js';
 import { handleReviewCommand } from './reviewCommands.js';
@@ -24,6 +25,7 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   const command = request.command;
   const args = (request.args ?? {}) as Record<string, unknown>;
   const handlers = [
+    () => handleCompanionPairingCommand(command, args),
     () => handleImportCommand(request, context),
     () => handleStorageCommand(command, args, resolveTargetWindow(context)),
     () => handleWindowAndUtilityCommand(request, context),

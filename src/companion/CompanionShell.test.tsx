@@ -203,6 +203,7 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByText('Last sync')).toBeInTheDocument();
     expect(screen.getByText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Connection')).toBeInTheDocument();
+    expect(screen.getAllByText('Paired desktop').length).toBeGreaterThan(0);
     expect(screen.getByText('No activity')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });

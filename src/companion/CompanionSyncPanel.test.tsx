@@ -32,6 +32,7 @@ function createProps() {
     onCompletePairing: vi.fn(async () => undefined),
     onPull: vi.fn(async () => undefined),
     onRemoveRememberedTarget: vi.fn(async () => undefined),
+    onRequestPrimaryDeviceTakeover: vi.fn(async () => undefined),
     onRequestPairing: vi.fn(async () => undefined),
     onSaveEndpoint: vi.fn(async () => undefined),
     onOpenSettingsPage: vi.fn(),

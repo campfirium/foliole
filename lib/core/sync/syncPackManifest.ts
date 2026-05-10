@@ -37,6 +37,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'node_reading',
   'node_review',
   'pdf_page_text',
+  'readwise_source',
   'setting',
   'view_state'
 ]);

@@ -8,6 +8,7 @@ export type NativeSyncObjectType =
   | 'node_reading'
   | 'node_review'
   | 'pdf_page_text'
+  | 'readwise_source'
   | 'setting'
   | 'view_state';
 

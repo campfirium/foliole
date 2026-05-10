@@ -13,6 +13,7 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_reading',
   'node_review',
   'pdf_page_text',
+  'readwise_source',
   'setting',
   'view_state'
 ]);

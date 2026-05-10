@@ -8,6 +8,7 @@ import {
   backfillTextBodyBlobData,
   backfillTextBodyBlobOwners
 } from './numberedMigrationTextBodyBackfill.js';
+import { READWISE_SOURCE_SCHEMA_STATEMENTS } from './readwiseSourceSchemaStatements.js';
 
 export const NUMBERED_MIGRATION_BASE_VERSION = 28;
 
@@ -97,6 +98,14 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       addColumnIfMissing(sqlite, 'sync_peers', 'primary_device_epoch', 'INTEGER');
       addColumnIfMissing(sqlite, 'sync_peers', 'primary_committed_at', 'TEXT');
       addColumnIfMissing(sqlite, 'sync_peers', 'primary_updated_by_device_id', 'TEXT');
+    }
+  },
+  {
+    version: 36,
+    migrate: (sqlite) => {
+      for (const statement of READWISE_SOURCE_SCHEMA_STATEMENTS) {
+        sqlite.exec(statement);
+      }
     }
   }
 ];

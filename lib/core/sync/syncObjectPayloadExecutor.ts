@@ -5,6 +5,7 @@ import {
   applyNodeReviewObject,
   type SyncObjectPayloadApplyOptions
 } from './syncObjectLearningPayloadExecutor.js';
+import { applyReadwiseSourceObject } from './readwiseSourcePayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 export async function applySyncObjectPayloadWithDbPort(
@@ -27,6 +28,8 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeReviewObject(port, record);
     case 'pdf_page_text':
       return applyPdfPageTextObject(port, record);
+    case 'readwise_source':
+      return applyReadwiseSourceObject(port, record);
     case 'setting':
       return applySettingObject(port, record);
     case 'view_state':

@@ -311,6 +311,19 @@
         "userVisible": true
       },
       {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "readwise_source",
+        "objectType": "readwise_source",
+        "pushIssue": "review_required",
+        "storage": [
+          "readwise_sources",
+          "readwise_source_annotations"
+        ],
+        "userVisible": true
+      },
+      {
         "category": "resource",
         "conflict": "lww",
         "deviceScope": "workspace",
@@ -490,6 +503,7 @@
       "node_reading",
       "node_review",
       "pdf_page_text",
+      "readwise_source",
       "setting"
     ]
   }

@@ -4,24 +4,10 @@ import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventS
 
 import { isReportableSyncEvent } from './companionSyncActivityCopy';
 import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
+import { CompanionSyncConnectionPage, resolveDesktopDeviceInfo } from './CompanionSyncDevicesCard';
 import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
-
-function formatDeviceKind(deviceKind: string | null) {
-  if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
-    return 'Android';
-  }
-  return deviceKind ?? 'Device';
-}
-
-function formatPairedDevice(pairingState: NativeCompanionPairingState) {
-  const name = pairingState.device_name?.trim() || 'This device';
-  return `${name} (${formatDeviceKind(pairingState.device_kind)})`;
-}
-
-function formatDeviceName(pairingState: NativeCompanionPairingState) {
-  return pairingState.device_name?.trim() || 'This device';
-}
+import type { CompanionDesktopDiscovery } from './useCompanionWorkspacePairing';
 
 function SettingsRow(props: {
   detail?: string;
@@ -73,6 +59,33 @@ function SettingsLinkRow(props: {
   );
 }
 
+function ConnectionSummary(props: {
+  desktopDiscovery: CompanionDesktopDiscovery | null;
+  endpointUrl: string;
+  onOpen(): void;
+}) {
+  const desktop = resolveDesktopDeviceInfo(props.endpointUrl, props.desktopDiscovery);
+  return (
+    <button
+      className="flex w-full items-start justify-between gap-4 border-b border-companion-divider py-4 text-left"
+      onClick={props.onOpen}
+      type="button"
+    >
+      <span>
+        <span className="block text-sm font-medium text-foreground">Connection</span>
+        <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">Paired desktop</span>
+      </span>
+      <span className="flex max-w-48 shrink-0 items-start gap-2 text-right">
+        <span>
+          <span className="block text-sm font-medium text-foreground">{desktop.name}</span>
+          <span className="mt-1 block text-xs leading-5 text-companion-text-secondary">{desktop.detail}</span>
+        </span>
+        <span className="mt-0.5 text-companion-text-secondary"><ChevronIcon /></span>
+      </span>
+    </button>
+  );
+}
+
 function formatEventStatus(event: NativeCompanionSyncEvent) {
   if (event.status === 'completed') {
     return isFullSyncCompletedEvent(event) ? 'Synced' : 'Checked';
@@ -99,37 +112,12 @@ function SyncActivitySummary(props: {
   );
 }
 
-function ConnectionSummary(props: {
-  onOpen(): void;
-  pairingState: NativeCompanionPairingState;
-}) {
-  return (
-    <SettingsLinkRow
-      detail="Paired desktop details"
-      label="Connection"
-      onClick={props.onOpen}
-      value={formatDeviceName(props.pairingState)}
-    />
-  );
-}
-
-function ConnectionPage(props: {
-  endpointUrl: string;
-  pairingState: NativeCompanionPairingState;
-}) {
-  return (
-    <section className="border-t border-companion-divider">
-      <SettingsRow label="Paired device" value={formatPairedDevice(props.pairingState)} />
-      <SettingsRow label="Desktop address" value={props.endpointUrl} />
-    </section>
-  );
-}
-
 export function CompanionSyncStatusDetails(props: {
+  desktopDiscovery: CompanionDesktopDiscovery | null;
   endpointUrl: string;
   lastSyncedAt: string | null;
+  onRequestPrimaryDeviceTakeover(endpointUrl: string): Promise<unknown>;
   pairingState: NativeCompanionPairingState;
-  readwiseCredentialStatus: string;
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   syncProgress: CompanionDesktopSyncProgress | null;
@@ -141,7 +129,17 @@ export function CompanionSyncStatusDetails(props: {
     return <CompanionSyncActivityPage events={props.syncEvents} status={props.status} syncProgress={props.syncProgress} />;
   }
   if (props.page === 'syncConnection') {
-    return <ConnectionPage endpointUrl={props.endpointUrl} pairingState={props.pairingState} />;
+    const isPrimary = props.pairingState.device_id !== null && props.pairingState.primary_device_id === props.pairingState.device_id;
+    return (
+      <CompanionSyncConnectionPage
+        desktopDiscovery={props.desktopDiscovery}
+        endpointUrl={props.endpointUrl}
+        isPrimary={isPrimary}
+        isSyncing={props.status === 'syncing'}
+        pairingState={props.pairingState}
+        onSetPrimary={(endpointUrl) => void props.onRequestPrimaryDeviceTakeover(endpointUrl)}
+      />
+    );
   }
 
   const lastSync = resolveLastSyncRow(props);
@@ -156,27 +154,9 @@ export function CompanionSyncStatusDetails(props: {
       {props.syncConflictCount > 0 ? (
         <SettingsRow label="Issues to resolve" value={`${props.syncConflictCount}`} valueTone="error" />
       ) : null}
-      <SettingsRow
-        detail="External sources follow the current primary device."
-        label="Device role"
-        value={
-          props.pairingState.device_id && props.pairingState.primary_device_id === props.pairingState.device_id
-            ? 'Primary device'
-            : 'Secondary device'
-        }
-      />
-      <SettingsRow
-        detail="Device id currently responsible for sync authority."
-        label="Current primary"
-        value={props.pairingState.primary_device_id ?? 'Unavailable'}
-      />
-      <SettingsRow
-        detail="Credentials stay in local secure storage."
-        label="Readwise credentials"
-        value={props.readwiseCredentialStatus}
-      />
       <ConnectionSummary
-        pairingState={props.pairingState}
+        desktopDiscovery={props.desktopDiscovery}
+        endpointUrl={props.endpointUrl}
         onOpen={() => props.onOpenPage('syncConnection')}
       />
       <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />

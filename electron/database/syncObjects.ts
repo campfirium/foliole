@@ -6,6 +6,7 @@ import type {
 } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { readReadwiseSourcePayloadJson } from './readwiseSourceSyncPayload.js';
 
 type JsonSyncObjectType = Exclude<NativeSyncObjectType, 'external_document' | 'import_run' | 'node'>;
 
@@ -143,6 +144,7 @@ function readViewStatePayloadJson(objectId: string) {
 
 function readPayloadJson(type: JsonSyncObjectType, objectId: string) {
   if (type === 'view_state') return readViewStatePayloadJson(objectId);
+  if (type === 'readwise_source') return readReadwiseSourcePayloadJson(objectId);
   const sql = PAYLOAD_SQL_BY_TYPE[type];
   if (!sql) return null;
   return openDatabaseConnection().driver.queryOne<{ payload_json: string | null }>(sql, [objectId])?.payload_json ?? null;

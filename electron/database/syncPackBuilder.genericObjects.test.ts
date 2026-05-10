@@ -2,6 +2,9 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { upsertReadwiseSourceWithSyncState } from '../../lib/core/database/readwiseSources.js';
+
+import { openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import {
   insertAttachmentSyncState,
@@ -87,6 +90,30 @@ it('packs import source metadata as a generic sync object', async () => {
       object_id: 'source-1',
       object_type: 'import_source',
       payload_json: expect.stringContaining('notes.md')
+    })]
+  });
+});
+
+it('packs Readwise source metadata as a generic sync object', async () => {
+  upsertReadwiseSourceWithSyncState(openDatabaseConnection().driver, {
+    annotations: [{ highlightId: 'highlight-1', parentId: 'parent-1', readwiseBookId: 'book-1', text: 'Quote' }],
+    readerDocumentId: 'reader-doc-1',
+    readwiseBookId: 'book-1',
+    syncCursor: 'cursor-1',
+    syncStatus: 'synced',
+    title: 'Readwise article',
+    updatedAt: '2026-05-10T00:00:00.000Z'
+  }, 'desktop');
+  const packPath = resolveSyncPackPath('incoming-readwise-source.db');
+
+  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-readwise-source-1', fromStateSeq: 0 });
+
+  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-readwise-source-1' });
+  expect(readPackRows(packPath)).toMatchObject({
+    stateRows: [{ object_type: 'readwise_source' }],
+    syncObjects: [expect.objectContaining({
+      object_type: 'readwise_source',
+      payload_json: expect.stringContaining('highlight-1')
     })]
   });
 });

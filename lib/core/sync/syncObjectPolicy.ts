@@ -26,6 +26,10 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('external_document', 'external_document', 'structure', 'workspace', 'lww', ['external_documents'], true),
   policy('external_folder', 'external_folder', 'structure', 'workspace', 'lww', ['external_search_folders'], true),
   policy('import_source', 'import_source', 'structure', 'workspace', 'lww', ['import_sources'], true),
+  policy('readwise_source', 'readwise_source', 'structure', 'workspace', 'lww', [
+    'readwise_sources',
+    'readwise_source_annotations'
+  ], true),
   policy('attachment', 'attachment', 'resource', 'workspace', 'lww', ['attachments', 'attachment_blobs'], true),
   policy('pdf_page_text', 'pdf_page_text', 'content', 'workspace', 'lww', ['pdf_page_text'], true),
   policy('content_blobs', null, 'resource', 'cache', 'cache_refresh', ['content_blobs', 'content_blob_data'], true, 'diagnostic'),

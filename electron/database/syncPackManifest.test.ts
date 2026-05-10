@@ -71,6 +71,7 @@ it('declares the stage one payload object inventory explicitly', () => {
     'node_reading',
     'node_review',
     'pdf_page_text',
+    'readwise_source',
     'setting',
     'view_state'
   ]);

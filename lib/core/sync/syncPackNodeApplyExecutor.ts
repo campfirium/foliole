@@ -139,6 +139,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'external_document',
   'setting',
   'import_source',
+  'readwise_source',
   'external_folder',
   'node_reading',
   'node_review',
