@@ -9,30 +9,14 @@ import {
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
 
+import { SettingsCompanionSyncPrimaryRows } from './SettingsCompanionSyncPrimaryRows';
+import { useReadwiseTokenConnection } from './useReadwiseTokenConnection';
+
 function renderSyncError(overview: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']) {
   if (overview.server_status.last_error) {
     return `Could not open sync. ${overview.server_status.last_error}`;
   }
   return undefined;
-}
-
-function formatPrimaryDeviceRole(role: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['primary_device_state']['local_role']) {
-  if (role === 'primary') return 'Primary device';
-  if (role === 'secondary') return 'Secondary device';
-  return 'Role unavailable';
-}
-
-function formatPrimaryDeviceDetail(state: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['primary_device_state']) {
-  if (state.local_role === 'primary' && state.source === 'self-unpaired') {
-    return 'This desktop runs local sync and external sources until another device is paired.';
-  }
-  if (state.local_role === 'primary') {
-    return 'This desktop runs sync and external sources for paired devices.';
-  }
-  if (state.local_role === 'secondary') {
-    return 'This device follows the current primary device.';
-  }
-  return 'Primary device status is not available from the current sync state.';
 }
 
 function formatDeviceKind(deviceKind: string) {
@@ -153,6 +137,7 @@ function DeviceSyncSwitch(props: {
 
 export function SettingsCompanionSyncSection() {
   const state = useDesktopCompanionPairingRequests(3_000);
+  const readwise = useReadwiseTokenConnection();
   const overview = state.overview;
   const syncError = renderSyncError(overview);
 
@@ -175,16 +160,7 @@ export function SettingsCompanionSyncSection() {
           {syncError}
         </p>
       ) : null}
-      <SettingsRow
-        description={formatPrimaryDeviceDetail(overview.primary_device_state)}
-        title="Device role"
-      >
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <span className="text-sm font-medium text-foreground">
-            {formatPrimaryDeviceRole(overview.primary_device_state.local_role)}
-          </span>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <SettingsCompanionSyncPrimaryRows overview={overview} readwise={readwise} />
       <ConnectedDevicesRow
         devices={overview.paired_devices}
         isLoading={state.isLoading}

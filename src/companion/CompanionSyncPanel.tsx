@@ -1,5 +1,6 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import { useReadwiseTokenConnection } from '../features/settings/components/sections/useReadwiseTokenConnection';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
@@ -59,12 +60,15 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
   onSync(): void;
 }) {
   const isPrimary = props.pairingState.device_id !== null && props.pairingState.primary_device_id === props.pairingState.device_id;
+  const readwise = useReadwiseTokenConnection();
+  const readwiseCredentialStatus = readwise.connection.connected ? 'Ready' : 'Not connected';
   return (
     <>
       <CompanionSyncStatusDetails
         endpointUrl={props.endpointUrl}
         lastSyncedAt={props.lastSyncedAt}
         pairingState={props.pairingState}
+        readwiseCredentialStatus={readwise.error ?? readwiseCredentialStatus}
         status={props.status}
         syncConflictCount={props.syncConflictCount}
         syncEvents={props.syncEvents}

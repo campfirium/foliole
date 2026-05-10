@@ -129,6 +129,7 @@ export function CompanionSyncStatusDetails(props: {
   endpointUrl: string;
   lastSyncedAt: string | null;
   pairingState: NativeCompanionPairingState;
+  readwiseCredentialStatus: string;
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   syncProgress: CompanionDesktopSyncProgress | null;
@@ -155,6 +156,25 @@ export function CompanionSyncStatusDetails(props: {
       {props.syncConflictCount > 0 ? (
         <SettingsRow label="Issues to resolve" value={`${props.syncConflictCount}`} valueTone="error" />
       ) : null}
+      <SettingsRow
+        detail="External sources follow the current primary device."
+        label="Device role"
+        value={
+          props.pairingState.device_id && props.pairingState.primary_device_id === props.pairingState.device_id
+            ? 'Primary device'
+            : 'Secondary device'
+        }
+      />
+      <SettingsRow
+        detail="Device id currently responsible for sync authority."
+        label="Current primary"
+        value={props.pairingState.primary_device_id ?? 'Unavailable'}
+      />
+      <SettingsRow
+        detail="Credentials stay in local secure storage."
+        label="Readwise credentials"
+        value={props.readwiseCredentialStatus}
+      />
       <ConnectionSummary
         pairingState={props.pairingState}
         onOpen={() => props.onOpenPage('syncConnection')}
