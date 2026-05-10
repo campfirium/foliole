@@ -1,11 +1,21 @@
+import { saveLocalPrimaryDeviceId } from './companionPrimaryDeviceIdentity';
 import {
   loadDesktopSyncDiagnostics,
   loadLocalSyncDiagnostics
 } from './companionSyncDiagnostics';
+import { loadCompanionPairingState } from './companionWorkspacePairing';
+
+async function syncLocalPrimaryDeviceId(primaryDeviceId: string | null | undefined) {
+  if (!primaryDeviceId) return;
+  const pairing = await loadCompanionPairingState();
+  if (!pairing.is_paired || pairing.primary_device_id === primaryDeviceId) return;
+  await saveLocalPrimaryDeviceId(primaryDeviceId);
+}
 
 export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   const desktopDiagnostics = await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
+  await syncLocalPrimaryDeviceId(desktopDiagnostics?.identity?.primary_device_id);
   const desktopStateSeq = desktopDiagnostics?.sync_state?.max_state_seq;
   const androidCursor = diagnostics?.sync_state?.pack_cursor;
   return {

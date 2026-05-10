@@ -54,6 +54,25 @@ export const pairingMock = {
   createSignedRequestHeaders: vi.fn(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Device-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`
+  })),
+  loadCompanionPairingState: vi.fn(async () => ({
+    device_id: 'android-test-device',
+    device_kind: 'android',
+    device_name: 'Android test device',
+    is_paired: true,
+    paired_at: '2026-05-10T00:00:00.000Z',
+    primary_device_id: 'android-test-device'
+  }))
+};
+
+export const primaryDeviceIdentityMock = {
+  saveLocalPrimaryDeviceId: vi.fn(async (primaryDeviceId: string) => ({
+    device_id: 'android-test-device',
+    device_kind: 'android',
+    device_name: 'Android test device',
+    is_paired: true,
+    paired_at: '2026-05-10T00:00:00.000Z',
+    primary_device_id: primaryDeviceId
   }))
 };
 
@@ -75,6 +94,7 @@ vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
 vi.mock('./attachmentResources', () => attachmentResolutionMock);
 vi.mock('./companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companionPrimaryDeviceIdentity', () => primaryDeviceIdentityMock);
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: capacitorMock.getPlatform,
@@ -125,5 +145,21 @@ export function resetCompanionDesktopSyncMocks() {
   pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
     'X-Device-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`
+  }));
+  pairingMock.loadCompanionPairingState.mockResolvedValue({
+    device_id: 'android-test-device',
+    device_kind: 'android',
+    device_name: 'Android test device',
+    is_paired: true,
+    paired_at: '2026-05-10T00:00:00.000Z',
+    primary_device_id: 'android-test-device'
+  });
+  primaryDeviceIdentityMock.saveLocalPrimaryDeviceId.mockImplementation(async (primaryDeviceId: string) => ({
+    device_id: 'android-test-device',
+    device_kind: 'android',
+    device_name: 'Android test device',
+    is_paired: true,
+    paired_at: '2026-05-10T00:00:00.000Z',
+    primary_device_id: primaryDeviceId
   }));
 }

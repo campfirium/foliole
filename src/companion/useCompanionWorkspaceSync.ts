@@ -101,6 +101,11 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     onError: setError,
     onSaveEndpoint: snapshotActions.saveEndpoint
   });
+  const pullFromDesktop = useCallback(async (endpointUrl: string) => {
+    const nextState = await snapshotActions.pullFromDesktop(endpointUrl);
+    await pairing.refreshPairingState();
+    return nextState;
+  }, [pairing.refreshPairingState, snapshotActions]);
   useWorkspaceSyncBootstrap(setReadableArticle, setSyncConflictCount, setState, setStatus);
   useForegroundAutoSync(
     setError,
@@ -122,7 +127,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     syncConflictCount,
     syncProgress,
     status,
-    pullFromDesktop: snapshotActions.pullFromDesktop,
+    pullFromDesktop,
     refreshFromDevice: snapshotActions.refreshFromDevice,
     removeRememberedTarget: snapshotActions.removeRememberedTarget,
     replaceSnapshot: snapshotActions.replaceSnapshot,

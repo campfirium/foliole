@@ -80,6 +80,11 @@ export function useCompanionWorkspacePairing(args: PairingHookArgs) {
     pairingStateRef.current = state;
     setPairingState(state);
   }, []);
+  const refreshPairingState = useCallback(async () => {
+    const nextPairingState = await loadCompanionPairingState();
+    hydratePairingState(nextPairingState);
+    return nextPairingState;
+  }, [hydratePairingState]);
   useStoredPairingStateLoader({
     pairingMutationVersionRef,
     onError: args.onError,
@@ -113,6 +118,7 @@ export function useCompanionWorkspacePairing(args: PairingHookArgs) {
       pendingPairRequest
     }),
     requestPrimaryDeviceTakeover: requestPrimaryTakeover,
-    requestPairing: actions.requestPairing
+    requestPairing: actions.requestPairing,
+    refreshPairingState
   };
 }

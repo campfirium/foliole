@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   diagnosticsMock,
+  primaryDeviceIdentityMock,
   resetCompanionDesktopSyncMocks,
   syncBridgeMock
 } from './companionDesktopSyncObjects.testHarness';
@@ -105,6 +106,22 @@ async function testReportsRemainingStructureLagFromFinalDiagnostics() {
   expect(result.remainingStructureChangeCount).toBe(2);
 }
 
+async function testStoresPrimaryDeviceFromDesktopDiagnostics() {
+  diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue({
+    identity: {
+      primary_device_id: 'device-desktop'
+    },
+    sync_state: {
+      max_state_seq: 8
+    }
+  });
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+
+  expect(primaryDeviceIdentityMock.saveLocalPrimaryDeviceId).toHaveBeenCalledWith('device-desktop');
+}
+
 describe('companion desktop sync objects', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
@@ -117,4 +134,6 @@ describe('companion desktop sync objects', () => {
   it('keeps structure sync timeout below a minute', testStructureTimeoutStaysBelowMinute);
 
   it('reports remaining structure lag from final diagnostics', testReportsRemainingStructureLagFromFinalDiagnostics);
+
+  it('stores the primary device from desktop diagnostics after sync', testStoresPrimaryDeviceFromDesktopDiagnostics);
 });

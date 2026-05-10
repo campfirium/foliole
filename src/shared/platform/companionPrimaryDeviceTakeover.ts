@@ -5,15 +5,10 @@ import type {
 
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import {
-  readStoredWebPairingState,
-  writeWebPairingState
-} from './companionPairingState';
+  saveLocalPrimaryDeviceId
+} from './companionPrimaryDeviceIdentity';
 import { runSyncConvergenceCheck } from './companionSyncConvergence';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
-import {
-  FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
-} from './companionWorkspaceRuntimeRepository';
 
 export const PRIMARY_DEVICE_TAKEOVER_PATH = '/companion/primary-device/takeover';
 
@@ -44,20 +39,6 @@ function buildTakeoverPayload(
     pending_ack_count: android.sync_state.pending_ack_count ?? 0,
     push_issue_count: android.sync_state.push_issue_count ?? 0
   };
-}
-
-async function saveLocalPrimaryDeviceId(primaryDeviceId: string) {
-  if (isNativeAndroidCompanionRuntime()) {
-    return await FolioleCompanionSync.savePrimaryDeviceId({ primary_device_id: primaryDeviceId });
-  }
-  const current = readStoredWebPairingState();
-  if (!current) {
-    throw new Error('Companion pairing state is missing.');
-  }
-  return writeWebPairingState({
-    ...current,
-    primary_device_id: primaryDeviceId
-  });
 }
 
 export async function requestPrimaryDeviceTakeover(endpointUrl: string) {

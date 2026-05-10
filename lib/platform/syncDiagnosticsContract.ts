@@ -36,6 +36,7 @@ export interface SyncDiagnosticIdentity {
   device_id: string | null;
   device_name?: string | null;
   database_path?: string | null;
+  primary_device_id?: string | null;
 }
 
 export interface SyncDiagnosticConnection {
