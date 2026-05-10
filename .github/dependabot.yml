@@ -1,0 +1,69 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
+      include: scope
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+    groups:
+      electron-native:
+        patterns:
+          - electron
+          - electron-builder
+          - better-sqlite3
+        update-types:
+          - minor
+          - patch
+      production-minor-patch:
+        dependency-type: production
+        exclude-patterns:
+          - electron
+          - electron-builder
+          - better-sqlite3
+        update-types:
+          - minor
+          - patch
+      development-minor-patch:
+        dependency-type: development
+        exclude-patterns:
+          - electron
+          - electron-builder
+          - better-sqlite3
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: ci
+      include: scope
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch
