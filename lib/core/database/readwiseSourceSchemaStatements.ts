@@ -1,6 +1,7 @@
 export const READWISE_SOURCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS readwise_sources (
     source_id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL DEFAULT 'default',
     reader_document_id TEXT NOT NULL,
     readwise_book_id TEXT,
     title TEXT NOT NULL DEFAULT '',
@@ -19,7 +20,7 @@ export const READWISE_SOURCE_SCHEMA_STATEMENTS = [
     internal_node_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    UNIQUE(reader_document_id)
+    UNIQUE(account_id, reader_document_id)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_readwise_sources_state
     ON readwise_sources (source_state, updated_at)`,

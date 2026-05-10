@@ -1,3 +1,8 @@
+import {
+  DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
+  IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS
+} from './documentSourceSchemaStatements.ts';
+
 export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS attachment_blobs (
     attachment_id TEXT PRIMARY KEY,
@@ -43,17 +48,8 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     page_height REAL,
     PRIMARY KEY (attachment_id, page)
   )`,
-  `CREATE TABLE IF NOT EXISTS import_sources (
-    source_fingerprint TEXT PRIMARY KEY,
-    provider TEXT NOT NULL,
-    source_kind TEXT NOT NULL,
-    source_name TEXT NOT NULL,
-    source_locator TEXT NOT NULL,
-    first_imported_at TEXT NOT NULL,
-    last_imported_at TEXT NOT NULL,
-    last_content_fingerprint TEXT NOT NULL,
-    latest_node_id TEXT
-  )`,
+  ...DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
+  ...IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS external_search_folders (
     id TEXT PRIMARY KEY,
     folder_path TEXT NOT NULL UNIQUE,

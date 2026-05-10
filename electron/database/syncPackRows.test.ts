@@ -123,13 +123,13 @@ it('loads only payload objects that match changed state row pairs', () => {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES
        ('attachment', 'att-1', 1, 'attachment-hash', 'desktop', '2026-04-27T00:01:00.000Z', 0),
-       ('import_source', 'source-1', 2, 'source-hash', 'desktop', '2026-04-27T00:02:00.000Z', 0),
-       ('import_source', 'att-1', 99, 'stale-source-hash', 'desktop', '2026-04-27T00:03:00.000Z', 0)`
+       ('document_source', 'source-1', 2, 'source-hash', 'desktop', '2026-04-27T00:02:00.000Z', 0),
+       ('document_source', 'att-1', 99, 'stale-source-hash', 'desktop', '2026-04-27T00:03:00.000Z', 0)`
   );
 
   expect(loadPackRows(0, 2).syncObjects.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
     'attachment:att-1',
-    'import_source:source-1'
+    'document_source:source-1'
   ]);
 });
 

@@ -1,5 +1,6 @@
 export type NativeSyncObjectType =
   | 'attachment'
+  | 'document_source'
   | 'external_document'
   | 'external_folder'
   | 'import_run'

@@ -135,3 +135,44 @@ it('accepts Android-exported numeric strings when applying external documents', 
   }>('SELECT body_blob_hash, is_present, source_modified_ms, source_size_bytes FROM external_documents WHERE document_id = ?', ['document-1']))
     .toEqual({ body_blob_hash: 'blob-document-1', is_present: 0, source_modified_ms: 1777, source_size_bytes: 88 });
 });
+
+it('applies Android-exported document sources into the unified source table', async () => {
+  insertNode('node-1');
+
+  await applySyncObjectsAsync([{
+    content_hash: 'hash-source',
+    deleted_at: null,
+    object_id: 'source-1',
+    object_type: 'document_source',
+    payload_json: JSON.stringify({
+      availability_state: 'available',
+      content_fingerprint: 'content-1',
+      first_seen_at: '2026-04-25T08:00:00.000Z',
+      internal_node_id: 'node-1',
+      internalized_at: '2026-04-25T08:05:00.000Z',
+      last_seen_at: '2026-04-25T08:05:00.000Z',
+      presentation_state: 'internal',
+      provider: 'readwise_reader',
+      provider_document_id: 'reader-doc-1',
+      source_fingerprint: 'source-1',
+      source_kind: 'readwise_reader',
+      source_locator: 'https://read.readwise.io/read/reader-doc-1',
+      source_name: 'Article',
+      sync_status: 'synced'
+    }),
+    updated_at: '2026-04-25T08:05:00.000Z'
+  }]);
+
+  expect(openDatabaseConnection().driver.queryOne<{
+    internal_node_id: string;
+    presentation_state: string;
+    provider: string;
+    provider_document_id: string;
+  }>('SELECT provider, provider_document_id, presentation_state, internal_node_id FROM document_sources WHERE source_id = ?', ['source-1']))
+    .toEqual({
+      internal_node_id: 'node-1',
+      presentation_state: 'internal',
+      provider: 'readwise_reader',
+      provider_document_id: 'reader-doc-1'
+    });
+});

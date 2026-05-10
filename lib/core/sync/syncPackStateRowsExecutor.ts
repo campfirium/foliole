@@ -33,8 +33,8 @@ async function loadNextStateSeq(port: DbPort) {
 function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
   return options.objectTypes ?? [
     'attachment',
+    'document_source',
     'external_folder',
-    'import_source',
     'node',
     'external_document',
     'node_reading',

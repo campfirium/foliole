@@ -24,6 +24,7 @@ describe('Android sync object type protocol rules', () => {
     const viewStateSource = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
 
     expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncObjectTypes).toEqual({
+      documentSource: 'document_source',
       nodeReading: 'node_reading',
       nodeReview: 'node_review',
       settingRecord: 'setting',

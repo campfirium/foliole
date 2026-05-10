@@ -6,6 +6,7 @@ import { computeNodeSyncHash } from './nodeSyncHash.js';
 
 export type SyncObjectType =
   | 'attachment'
+  | 'document_source'
   | 'external_document'
   | 'external_folder'
   | 'import_run'

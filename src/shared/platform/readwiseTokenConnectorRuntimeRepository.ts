@@ -8,6 +8,7 @@ import { syncReadwiseCredentialBagFromDesktop } from './companionCredentialBag';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
 import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from './companionWorkspaceSync';
+import { refreshRuntimeExternalSearchFolders } from './externalSearchRuntimeRepository';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeReadwiseTokenConnection = NativeReadwiseTokenConnection;
@@ -43,7 +44,10 @@ function unavailableSyncResult(message: string): NativeReadwiseTokenSyncResult {
   return {
     checked_at: new Date().toISOString(),
     document_count: 0,
+    has_more: false,
     message,
+    page_count: 0,
+    retry_after_seconds: null,
     source_count: 0,
     status: 'blocked_secondary'
   };
@@ -111,7 +115,11 @@ export async function disconnectReadwiseTokenInRuntime(): Promise<NativeReadwise
 export async function syncReadwiseTokenLibraryInRuntime(): Promise<NativeReadwiseTokenSyncResult> {
   const runtimeInvoke = getRuntimeInvoke();
   if (runtimeInvoke) {
-    return runtimeInvoke(NATIVE_COMMANDS.syncReadwiseTokenLibrary);
+    const result = await runtimeInvoke(NATIVE_COMMANDS.syncReadwiseTokenLibrary) as NativeReadwiseTokenSyncResult;
+    if (result.source_count > 0 || result.status === 'synced') {
+      await refreshRuntimeExternalSearchFolders();
+    }
+    return result;
   }
   if (isNativeAndroidCompanionRuntime()) {
     if (!(await canCompanionConnectExternalSource())) {

@@ -14,6 +14,7 @@ export interface ReadwiseSourceAnnotation {
 }
 
 export interface ReadwiseSourceInput {
+  accountId?: string;
   annotations?: ReadwiseSourceAnnotation[];
   author?: string | null;
   category?: string | null;
@@ -35,8 +36,9 @@ export interface ReadwiseSourceInput {
 }
 
 export interface ReadwiseSourceRecord extends Required<Omit<ReadwiseSourceInput,
-  'annotations' | 'author' | 'category' | 'internalNodeId' | 'location' | 'rawSourceUrl' |
+  'accountId' | 'annotations' | 'author' | 'category' | 'internalNodeId' | 'location' | 'rawSourceUrl' |
   'readwiseBookId' | 'remoteUpdatedAt' | 'sourceUrl' | 'syncCursor' | 'tags'>> {
+  accountId: string;
   annotations: ReadwiseSourceAnnotation[];
   author: string | null;
   category: string | null;

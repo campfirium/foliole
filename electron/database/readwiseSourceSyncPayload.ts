@@ -3,6 +3,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { openDatabaseConnection } from './connection.js';
 
 interface ReadwiseSourcePayloadRow extends DatabaseRow {
+  account_id: string;
   author: string | null;
   category: string | null;
   internal_node_id: string | null;
@@ -39,7 +40,7 @@ export function readReadwiseSourcePayloadJson(sourceId: string) {
   const driver = openDatabaseConnection().driver;
   const row = driver.queryOne<ReadwiseSourcePayloadRow>(
     `SELECT source_id, reader_document_id, readwise_book_id, title, author, category, location,
-       tags_json, source_url, raw_source_url, raw_source_url_status, remote_updated_at, sync_cursor,
+       account_id, tags_json, source_url, raw_source_url, raw_source_url_status, remote_updated_at, sync_cursor,
        sync_status, source_state, promotion_lock, internal_node_id, updated_at
      FROM readwise_sources WHERE source_id = ?`,
     [sourceId]
@@ -53,6 +54,7 @@ export function readReadwiseSourcePayloadJson(sourceId: string) {
     [sourceId]
   );
   return JSON.stringify({
+    account_id: row.account_id,
     annotations,
     author: row.author,
     category: row.category,

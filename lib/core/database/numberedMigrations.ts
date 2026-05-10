@@ -8,6 +8,10 @@ import {
   backfillTextBodyBlobData,
   backfillTextBodyBlobOwners
 } from './numberedMigrationTextBodyBackfill.js';
+import {
+  DOCUMENT_SOURCE_SCHEMA_STATEMENTS,
+  IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS
+} from './documentSourceSchemaStatements.js';
 import { READWISE_SOURCE_SCHEMA_STATEMENTS } from './readwiseSourceSchemaStatements.js';
 
 export const NUMBERED_MIGRATION_BASE_VERSION = 28;
@@ -107,6 +111,20 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         sqlite.exec(statement);
       }
     }
+  },
+  {
+    version: 37,
+    migrate: (sqlite) => {
+      migrateImportSourcesToDocumentSources(sqlite);
+    }
+  },
+  {
+    version: 38,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'readwise_sources', 'account_id', "TEXT NOT NULL DEFAULT 'default'");
+      sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_readwise_sources_account_reader_document
+        ON readwise_sources (account_id, reader_document_id)`);
+    }
   }
 ];
 
@@ -173,4 +191,38 @@ function addColumnIfMissing(sqlite: DatabaseMigrationTarget, tableName: string, 
   const columns = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
   if (columns.some((column) => column.name === columnName)) return;
   sqlite.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnSql}`);
+}
+
+function migrateImportSourcesToDocumentSources(sqlite: DatabaseMigrationTarget) {
+  for (const statement of DOCUMENT_SOURCE_SCHEMA_STATEMENTS) {
+    sqlite.exec(statement);
+  }
+  if (tableExists(sqlite, 'import_sources')) {
+    sqlite.exec(`INSERT INTO document_sources (
+      source_id, provider, provider_document_id, source_kind, source_name, source_locator,
+      source_fingerprint, content_fingerprint, presentation_state, availability_state, sync_status,
+      internal_node_id, internalized_at, title, first_seen_at, last_seen_at, created_at, updated_at
+    )
+    SELECT
+      source_fingerprint, provider, source_fingerprint, source_kind, source_name, source_locator,
+      source_fingerprint, last_content_fingerprint,
+      CASE WHEN latest_node_id IS NULL THEN 'external' ELSE 'internal' END,
+      'available', 'synced', latest_node_id,
+      CASE WHEN latest_node_id IS NULL THEN NULL ELSE last_imported_at END,
+      source_name, first_imported_at, last_imported_at, first_imported_at, last_imported_at
+    FROM import_sources`);
+    sqlite.exec('DROP TABLE import_sources');
+  }
+  for (const statement of IMPORT_SOURCES_COMPAT_VIEW_STATEMENTS) {
+    sqlite.exec(statement);
+  }
+  rewriteSyncObjectType(sqlite, 'import_source', 'document_source');
+}
+
+function rewriteSyncObjectType(sqlite: DatabaseMigrationTarget, fromType: string, toType: string) {
+  if (!tableExists(sqlite, 'sync_object_state')) return;
+  sqlite.exec(`UPDATE sync_object_state SET object_type = '${toType}' WHERE object_type = '${fromType}'`);
+  if (tableExists(sqlite, 'sync_change_log')) {
+    sqlite.exec(`UPDATE sync_change_log SET object_type = '${toType}' WHERE object_type = '${fromType}'`);
+  }
 }

@@ -16,7 +16,7 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'content_blobs', statementName: 'appDataClearContentBlobs' },
   { table: 'external_documents', statementName: 'appDataClearExternalDocuments' },
   { table: 'external_search_folders', statementName: 'appDataClearExternalSearchFolders' },
-  { table: 'import_sources', statementName: 'appDataClearImportSources' },
+  { table: 'document_sources', statementName: 'appDataClearDocumentSources' },
   { table: 'readwise_source_annotations', statementName: 'appDataClearReadwiseSourceAnnotations' },
   { table: 'readwise_sources', statementName: 'appDataClearReadwiseSources' },
   { table: 'review_log', statementName: 'appDataClearReviewLog' },

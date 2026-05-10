@@ -77,18 +77,18 @@ it('packs external folder metadata as a generic sync object', async () => {
   });
 });
 
-it('packs import source metadata as a generic sync object', async () => {
+it('packs document source metadata as a generic sync object', async () => {
   insertImportSourceSyncState();
-  const packPath = resolveSyncPackPath('incoming-import-source.db');
+  const packPath = resolveSyncPackPath('incoming-document-source.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-import-source-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-document-source-1', fromStateSeq: 0 });
 
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-import-source-1', toStateSeq: 5 });
+  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-document-source-1', toStateSeq: 5 });
   expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_id: 'source-1', object_type: 'import_source', state_seq: 5 }],
+    stateRows: [{ object_id: 'source-1', object_type: 'document_source', state_seq: 5 }],
     syncObjects: [expect.objectContaining({
       object_id: 'source-1',
-      object_type: 'import_source',
+      object_type: 'document_source',
       payload_json: expect.stringContaining('notes.md')
     })]
   });
@@ -108,13 +108,22 @@ it('packs Readwise source metadata as a generic sync object', async () => {
 
   const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-readwise-source-1', fromStateSeq: 0 });
 
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-readwise-source-1' });
+  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-readwise-source-1' });
   expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_type: 'readwise_source' }],
-    syncObjects: [expect.objectContaining({
-      object_type: 'readwise_source',
-      payload_json: expect.stringContaining('highlight-1')
-    })]
+    stateRows: expect.arrayContaining([
+      expect.objectContaining({ object_type: 'document_source' }),
+      expect.objectContaining({ object_type: 'readwise_source' })
+    ]),
+    syncObjects: expect.arrayContaining([
+      expect.objectContaining({
+        object_type: 'document_source',
+        payload_json: expect.stringContaining('readwise_reader')
+      }),
+      expect.objectContaining({
+        object_type: 'readwise_source',
+        payload_json: expect.stringContaining('highlight-1')
+      })
+    ])
   });
 });
 

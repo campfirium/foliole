@@ -24,6 +24,7 @@ it('normalizes Reader library documents and skips feed entries', () => {
       title: 'Reader article'
     }],
     fetchedAt: '2026-05-10T00:02:00Z',
+    location: null,
     nextPageCursor: null
   });
 

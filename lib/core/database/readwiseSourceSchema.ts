@@ -4,6 +4,7 @@ export const readwiseSources = sqliteTable(
   'readwise_sources',
   {
     sourceId: text('source_id').primaryKey(),
+    accountId: text('account_id').notNull().default('default'),
     readerDocumentId: text('reader_document_id').notNull(),
     readwiseBookId: text('readwise_book_id'),
     title: text('title').notNull().default(''),
@@ -23,7 +24,7 @@ export const readwiseSources = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull()
   },
-  (table) => [uniqueIndex('idx_readwise_sources_reader_document').on(table.readerDocumentId)]
+  (table) => [uniqueIndex('idx_readwise_sources_account_reader_document').on(table.accountId, table.readerDocumentId)]
 );
 
 export const readwiseSourceAnnotations = sqliteTable(

@@ -5,6 +5,7 @@ import {
 } from '../sync/syncObjectPolicy.ts';
 
 export const ANDROID_COMPANION_SYNC_OBJECT_TYPES = {
+  documentSource: 'document_source',
   nodeReading: 'node_reading',
   nodeReview: 'node_review',
   settingRecord: 'setting',

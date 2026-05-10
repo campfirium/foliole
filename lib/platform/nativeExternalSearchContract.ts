@@ -13,6 +13,7 @@ export interface NativeExternalSearchFolder {
   id: string;
   indexed_at: string | null;
   last_error: string | null;
+  source_kind?: 'folder' | 'readwise_reader';
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updated_at: string;
 }

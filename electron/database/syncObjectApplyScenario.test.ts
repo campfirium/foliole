@@ -90,19 +90,25 @@ function reviewRecord(overrides: Partial<NativeSyncObjectRecord> = {}): NativeSy
 
 function importSourceRecord(): NativeSyncObjectRecord {
   return {
-    content_hash: 'import-source-hash-1',
+    content_hash: 'document-source-hash-1',
     deleted_at: null,
     object_id: 'source-1',
-    object_type: 'import_source',
+    object_type: 'document_source',
     payload_json: JSON.stringify({
-      first_imported_at: '2026-04-21T10:00:00.000Z',
-      last_content_fingerprint: 'document-hash-1',
-      last_imported_at: '2026-04-21T16:00:00.000Z',
-      latest_node_id: 'node-1',
+      availability_state: 'available',
+      content_fingerprint: 'document-hash-1',
+      first_seen_at: '2026-04-21T10:00:00.000Z',
+      internal_node_id: 'node-1',
+      internalized_at: '2026-04-21T16:00:00.000Z',
+      last_seen_at: '2026-04-21T16:00:00.000Z',
+      presentation_state: 'internal',
       provider: 'manual',
+      provider_document_id: 'source-1',
+      source_fingerprint: 'source-1',
       source_kind: 'markdown',
       source_locator: '/docs/article.md',
-      source_name: 'article.md'
+      source_name: 'article.md',
+      sync_status: 'synced'
     }),
     updated_at: '2026-04-21T16:00:00.000Z'
   };
@@ -183,7 +189,7 @@ it('covers reading and review state apply, idempotency, stale ignore, and fresh 
 
 it('covers imported article source and external document presence transitions', async () => {
   await expect(applySyncObjectsAsync([importSourceRecord(), externalDocumentRecord()])).resolves.toEqual([
-    'import_source:source-1',
+    'document_source:source-1',
     'external_document:folder-1:article.md'
   ]);
   await expect(applySyncObjectsAsync([importSourceRecord(), externalDocumentRecord()])).resolves.toEqual([]);
@@ -197,10 +203,10 @@ it('covers imported article source and external document presence transitions', 
   ])).resolves.toEqual(['external_document:folder-1:article.md']);
 
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ latest_node_id: string; source_name: string }>(
-    'SELECT latest_node_id, source_name FROM import_sources WHERE source_fingerprint = ?',
+  expect(driver.queryOne<{ internal_node_id: string; source_name: string }>(
+    'SELECT internal_node_id, source_name FROM document_sources WHERE source_id = ?',
     ['source-1']
-  )).toEqual({ latest_node_id: 'node-1', source_name: 'article.md' });
+  )).toEqual({ internal_node_id: 'node-1', source_name: 'article.md' });
   expect(driver.queryOne<{ body_blob_hash: string; is_present: number; missing_at: string }>(
     'SELECT body_blob_hash, is_present, missing_at FROM external_documents WHERE document_id = ?',
     ['folder-1:article.md']

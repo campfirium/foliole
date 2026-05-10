@@ -25,10 +25,21 @@ function statusLabel(status: ReturnType<typeof useReadwiseTokenConnection>['conn
   return 'Needs reconnect';
 }
 
+function syncStatusText(connector: ReturnType<typeof useReadwiseTokenConnection>) {
+  if (connector.pendingAction === 'sync') return 'Syncing Readwise library.';
+  if (!connector.syncResult) return null;
+  const progress = connector.syncResult.has_more
+    ? ` ${connector.syncResult.source_count} documents updated so far.`
+    : '';
+  return `${connector.syncResult.message}${progress}`;
+}
+
 export function ReadwiseTokenConnectionSection() {
   const [token, setToken] = useState('');
   const connector = useReadwiseTokenConnection();
-  const message = connector.error ?? connector.syncResult?.message ?? connector.connection.message;
+  const syncStatus = syncStatusText(connector);
+  const message = connector.error ?? syncStatus ?? connector.connection.message;
+  const syncButtonLabel = connector.pendingAction === 'sync' ? 'Syncing...' : 'Sync library';
 
   return (
     <SettingsSection
@@ -64,7 +75,7 @@ export function ReadwiseTokenConnectionSection() {
           {connector.connection.connected ? (
             <div className="flex flex-wrap justify-end gap-2">
               <button className={settingsButtonClassName()} disabled={connector.isPending} onClick={connector.sync} type="button">
-                Sync library
+                {syncButtonLabel}
               </button>
               <button className={settingsButtonClassName()} disabled={connector.isPending} onClick={connector.disconnect} type="button">
                 Disconnect

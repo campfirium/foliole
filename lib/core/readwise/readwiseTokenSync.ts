@@ -7,6 +7,7 @@ export interface ReadwiseTokenSyncFetchResult {
   documents: unknown[];
   exportBooks: unknown[];
   fetchedAt: string;
+  location: string | null;
   nextPageCursor: string | null;
 }
 
@@ -18,26 +19,32 @@ export interface ReadwiseTokenSyncNormalizedBatch {
 export interface ReadwiseTokenSyncResult {
   checked_at: string;
   document_count: number;
+  has_more: boolean;
   message: string;
+  page_count: number;
+  retry_after_seconds: number | null;
   source_count: number;
-  status: 'blocked_secondary' | 'failed' | 'invalid_token' | 'not_connected' | 'rate_limited' | 'synced';
+  status: 'blocked_secondary' | 'failed' | 'invalid_token' | 'not_connected' | 'partial' | 'rate_limited' | 'synced';
 }
 
 export async function fetchReadwiseTokenSyncBatch(input: {
   fetchImpl?: typeof fetch;
+  includeExport?: boolean;
+  location?: string | null;
   pageCursor?: string | null;
   token: string;
   updatedAfter?: string | null;
 }): Promise<ReadwiseTokenSyncFetchResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const documents = await fetchReadwiseJson(fetchImpl, buildReaderListUrl(input), input.token);
-  const exportBooks = input.pageCursor
+  const exportBooks = input.includeExport === false
     ? { results: [] as unknown[] }
     : await fetchReadwiseJson(fetchImpl, buildExportUrl(input.updatedAfter), input.token);
   return {
     documents: Array.isArray(documents.results) ? documents.results : [],
     exportBooks: Array.isArray(exportBooks.results) ? exportBooks.results : [],
     fetchedAt: new Date().toISOString(),
+    location: input.location ?? null,
     nextPageCursor: stringValue(documents.nextPageCursor) ?? stringValue(documents.next_page_cursor)
   };
 }
@@ -53,19 +60,27 @@ export function normalizeReadwiseTokenSyncBatch(batch: ReadwiseTokenSyncFetchRes
 async function fetchReadwiseJson(fetchImpl: typeof fetch, url: string, token: string) {
   const response = await fetchImpl(url, { headers: { Authorization: `Token ${token}` }, method: 'GET' });
   if (response.status === 401 || response.status === 403) throw new ReadwiseSyncHttpError('invalid_token');
-  if (response.status === 429) throw new ReadwiseSyncHttpError('rate_limited');
+  if (response.status === 429) throw new ReadwiseSyncHttpError('rate_limited', readRetryAfterSeconds(response));
   if (!response.ok) throw new ReadwiseSyncHttpError('failed');
   return response.json() as Promise<Record<string, unknown>>;
 }
 
 export class ReadwiseSyncHttpError extends Error {
-  constructor(readonly status: ReadwiseTokenSyncResult['status']) {
+  constructor(readonly status: ReadwiseTokenSyncResult['status'], readonly retryAfterSeconds: number | null = null) {
     super(status);
   }
 }
 
-function buildReaderListUrl(input: { pageCursor?: string | null; updatedAfter?: string | null }) {
+function readRetryAfterSeconds(response: Response) {
+  const value = response.headers.get('retry-after');
+  if (!value) return null;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+}
+
+function buildReaderListUrl(input: { location?: string | null; pageCursor?: string | null; updatedAfter?: string | null }) {
   const url = new URL(READWISE_READER_LIST_URL);
+  if (input.location) url.searchParams.set('location', input.location);
   if (input.updatedAfter) url.searchParams.set('updatedAfter', input.updatedAfter);
   if (input.pageCursor) url.searchParams.set('pageCursor', input.pageCursor);
   return url.toString();

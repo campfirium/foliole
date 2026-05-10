@@ -9,6 +9,18 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at)) AS payload_json " +
       'FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1'
   },
+  syncPayloadDocumentSource: {
+    syncPayload: { argMode: 'object_id', objectType: 'document_source' },
+    sql:
+      "SELECT json_object('source_id', source_id, 'provider', provider, 'provider_document_id', provider_document_id, " +
+      "'source_kind', source_kind, 'source_name', source_name, 'source_locator', source_locator, " +
+      "'source_fingerprint', source_fingerprint, 'content_fingerprint', content_fingerprint, " +
+      "'presentation_state', presentation_state, 'availability_state', availability_state, 'sync_status', sync_status, " +
+      "'internal_node_id', internal_node_id, 'internalized_at', internalized_at, 'title', title, 'author', author, " +
+      "'source_url', source_url, 'remote_updated_at', remote_updated_at, 'tags_json', tags_json, " +
+      "'first_seen_at', first_seen_at, 'last_seen_at', last_seen_at, 'created_at', created_at, 'updated_at', updated_at) " +
+      'AS payload_json FROM document_sources WHERE source_id = ? LIMIT 1'
+  },
   syncPayloadExternalDocument: {
     syncPayload: {
       argMode: 'object_id',

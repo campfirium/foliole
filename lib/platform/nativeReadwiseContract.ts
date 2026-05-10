@@ -33,9 +33,12 @@ export interface NativeReadwiseTokenConnection {
 export interface NativeReadwiseTokenSyncResult {
   checked_at: string;
   document_count: number;
+  has_more: boolean;
   message: string;
+  page_count: number;
+  retry_after_seconds: number | null;
   source_count: number;
-  status: 'blocked_secondary' | 'failed' | 'invalid_token' | 'not_connected' | 'rate_limited' | 'synced';
+  status: 'blocked_secondary' | 'failed' | 'invalid_token' | 'not_connected' | 'partial' | 'rate_limited' | 'synced';
 }
 
 export interface NativeReadwiseBookDownloadResult {

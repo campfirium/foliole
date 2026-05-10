@@ -95,7 +95,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearContentBlobs: 'DELETE FROM content_blobs',
   appDataClearExternalDocuments: 'DELETE FROM external_documents',
   appDataClearExternalSearchFolders: 'DELETE FROM external_search_folders',
-  appDataClearImportSources: 'DELETE FROM import_sources',
+  appDataClearDocumentSources: 'DELETE FROM document_sources',
   appDataClearReadwiseSourceAnnotations: 'DELETE FROM readwise_source_annotations',
   appDataClearReadwiseSources: 'DELETE FROM readwise_sources',
   appDataClearReviewLog: 'DELETE FROM review_log',

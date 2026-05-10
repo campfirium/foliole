@@ -6,6 +6,7 @@ import type {
   ReadwiseSourceState,
   ReadwiseSourceSyncStatus
 } from './readwiseSourceTypes.js';
+import { toReadwiseDocumentSourcePayload, upsertReadwiseDocumentSource } from './readwiseDocumentSources.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export type {
@@ -16,7 +17,10 @@ export type {
   ReadwiseSourceSyncStatus
 } from './readwiseSourceTypes.js';
 
+export const DEFAULT_READWISE_ACCOUNT_ID = 'default';
+
 interface ReadwiseSourceRow extends DatabaseRow {
+  account_id: string;
   author: string | null;
   category: string | null;
   created_at: string;
@@ -56,6 +60,7 @@ export function toReadwiseSourceId(readerDocumentId: string) {
 
 export function toReadwiseSourcePayload(input: ReadwiseSourceInput) {
   return {
+    account_id: input.accountId ?? DEFAULT_READWISE_ACCOUNT_ID,
     annotations: normalizeAnnotations(input),
     author: input.author ?? null,
     category: input.category ?? null,
@@ -80,14 +85,17 @@ export function toReadwiseSourcePayload(input: ReadwiseSourceInput) {
 
 export function upsertReadwiseSource(driver: DatabaseDriver, input: ReadwiseSourceInput) {
   const payload = toReadwiseSourcePayload(input);
+  const documentSource = toReadwiseDocumentSourcePayload(input);
   driver.transaction((tx) => {
+    upsertReadwiseDocumentSource(tx, documentSource);
     tx.execute(
       `INSERT INTO readwise_sources (
-         source_id, reader_document_id, readwise_book_id, title, author, category, location,
+         source_id, account_id, reader_document_id, readwise_book_id, title, author, category, location,
          tags_json, source_url, raw_source_url, raw_source_url_status, remote_updated_at, sync_cursor,
          sync_status, source_state, promotion_lock, internal_node_id, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(source_id) DO UPDATE SET
+         account_id = excluded.account_id,
          readwise_book_id = excluded.readwise_book_id, title = excluded.title, author = excluded.author,
          category = excluded.category, location = excluded.location, tags_json = excluded.tags_json,
          source_url = excluded.source_url, raw_source_url = excluded.raw_source_url,
@@ -95,7 +103,7 @@ export function upsertReadwiseSource(driver: DatabaseDriver, input: ReadwiseSour
          sync_cursor = excluded.sync_cursor, sync_status = excluded.sync_status, source_state = excluded.source_state,
          promotion_lock = excluded.promotion_lock, internal_node_id = excluded.internal_node_id,
          updated_at = excluded.updated_at`,
-      [payload.source_id, payload.reader_document_id, payload.readwise_book_id, payload.title,
+      [payload.source_id, payload.account_id, payload.reader_document_id, payload.readwise_book_id, payload.title,
         payload.author, payload.category, payload.location, JSON.stringify(payload.tags), payload.source_url,
         payload.raw_source_url, payload.raw_source_url_status, payload.remote_updated_at, payload.sync_cursor,
         payload.sync_status, payload.source_state, payload.promotion_lock, payload.internal_node_id,
@@ -109,6 +117,14 @@ export function upsertReadwiseSource(driver: DatabaseDriver, input: ReadwiseSour
 export function upsertReadwiseSourceWithSyncState(driver: DatabaseDriver, input: ReadwiseSourceInput, deviceId: string) {
   const sourceId = upsertReadwiseSource(driver, input);
   upsertSyncObjectState(driver, {
+    objectType: 'document_source',
+    objectId: sourceId,
+    contentHash: computeSyncContentHash('document_source', toReadwiseDocumentSourcePayload(input)),
+    lastModifiedByDeviceId: deviceId,
+    syncDirty: true,
+    updatedAt: input.updatedAt
+  });
+  upsertSyncObjectState(driver, {
     objectType: 'readwise_source',
     objectId: sourceId,
     contentHash: computeSyncContentHash('readwise_source', toReadwiseSourcePayload(input)),
@@ -119,11 +135,13 @@ export function upsertReadwiseSourceWithSyncState(driver: DatabaseDriver, input:
   return sourceId;
 }
 
+
 export function readReadwiseSource(driver: DatabaseDriver, sourceId: string): ReadwiseSourceRecord | null {
   const row = driver.queryOne<ReadwiseSourceRow>('SELECT * FROM readwise_sources WHERE source_id = ?', [sourceId]);
   if (!row) return null;
   return {
     annotations: readAnnotations(driver, sourceId),
+    accountId: row.account_id,
     author: row.author,
     category: row.category,
     createdAt: row.created_at,

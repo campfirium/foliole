@@ -4,6 +4,7 @@ import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorag
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadReadwiseExternalFolder } from './readwiseExternalLibrary.js';
 
 interface ExternalSearchFolderRow extends DatabaseRow {
   attachment_mode: string;
@@ -70,7 +71,9 @@ function readRows() {
 }
 
 export function loadExternalSearchFolders() {
-  return readRows().map((row) => toFolder(row));
+  const folders = readRows().map((row) => toFolder(row));
+  const readwiseFolder = loadReadwiseExternalFolder();
+  return readwiseFolder ? [...folders, readwiseFolder] : folders;
 }
 
 function normalizeFolders(folders: SaveFolderInput[]) {

@@ -16,29 +16,44 @@ const EMPTY_CONNECTION: RuntimeReadwiseTokenConnection = {
   status: 'not_connected'
 };
 
-export function useReadwiseTokenConnection() {
-  const [connection, setConnection] = useState<RuntimeReadwiseTokenConnection>(EMPTY_CONNECTION);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
-  const [syncResult, setSyncResult] = useState<RuntimeReadwiseTokenSyncResult | null>(null);
+type PendingAction = 'connect' | 'disconnect' | 'load' | 'sync' | null;
 
+function useInitialReadwiseTokenConnection(
+  setConnection: (connection: RuntimeReadwiseTokenConnection) => void,
+  setError: (error: string | null) => void,
+  setPendingAction: (action: PendingAction) => void
+) {
   useEffect(() => {
     let alive = true;
+    setPendingAction('load');
     void loadReadwiseTokenConnectionFromRuntime()
       .then((next) => {
         if (alive) setConnection(next);
       })
       .catch(() => {
         if (alive) setError('Could not load Readwise connection.');
+      })
+      .finally(() => {
+        if (alive) setPendingAction(null);
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [setConnection, setError, setPendingAction]);
+}
+
+export function useReadwiseTokenConnection() {
+  const [connection, setConnection] = useState<RuntimeReadwiseTokenConnection>(EMPTY_CONNECTION);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>('load');
+  const [syncResult, setSyncResult] = useState<RuntimeReadwiseTokenSyncResult | null>(null);
+
+  useInitialReadwiseTokenConnection(setConnection, setError, setPendingAction);
 
   const connect = useCallback(async (token: string) => {
-    setIsPending(true);
+    setPendingAction('connect');
     setError(null);
+    setSyncResult(null);
     try {
       const next = await connectReadwiseTokenInRuntime(token);
       setConnection(next);
@@ -47,25 +62,27 @@ export function useReadwiseTokenConnection() {
       setError('Could not connect Readwise.');
       return null;
     } finally {
-      setIsPending(false);
+      setPendingAction(null);
     }
   }, []);
 
   const disconnect = useCallback(async () => {
-    setIsPending(true);
+    setPendingAction('disconnect');
     setError(null);
+    setSyncResult(null);
     try {
       setConnection(await disconnectReadwiseTokenInRuntime());
     } catch {
       setError('Could not disconnect Readwise.');
     } finally {
-      setIsPending(false);
+      setPendingAction(null);
     }
   }, []);
 
   const sync = useCallback(async () => {
-    setIsPending(true);
+    setPendingAction('sync');
     setError(null);
+    setSyncResult(null);
     try {
       const next = await syncReadwiseTokenLibraryInRuntime();
       setSyncResult(next);
@@ -74,9 +91,9 @@ export function useReadwiseTokenConnection() {
       setError('Could not sync Readwise.');
       return null;
     } finally {
-      setIsPending(false);
+      setPendingAction(null);
     }
   }, []);
 
-  return { connect, connection, disconnect, error, isPending, sync, syncResult };
+  return { connect, connection, disconnect, error, isPending: pendingAction !== null, pendingAction, sync, syncResult };
 }

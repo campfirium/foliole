@@ -5,7 +5,8 @@ import { useReadwiseTokenConnection } from '../features/settings/components/sect
 export function CompanionReadwiseSettingsContent() {
   const [token, setToken] = useState('');
   const connector = useReadwiseTokenConnection();
-  const message = connector.error ?? connector.syncResult?.message ?? connector.connection.message;
+  const syncMessage = connector.pendingAction === 'sync' ? 'Syncing Readwise library.' : connector.syncResult?.message;
+  const message = connector.error ?? syncMessage ?? connector.connection.message;
   const disabled = connector.isPending;
 
   return (
@@ -46,7 +47,7 @@ export function CompanionReadwiseSettingsContent() {
               onClick={connector.sync}
               type="button"
             >
-              Sync library
+              {connector.pendingAction === 'sync' ? 'Syncing...' : 'Sync library'}
             </button>
             <button
               className="min-h-11 rounded-md border border-companion-divider px-4 text-sm font-medium text-foreground disabled:opacity-50"

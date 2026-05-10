@@ -11,11 +11,12 @@ export async function applyReadwiseSourceObject(port: DbPort, record: SyncPackSy
   const payload = asObject(record);
   await port.run(
     `INSERT INTO readwise_sources (
-       source_id, reader_document_id, readwise_book_id, title, author, category, location,
+       source_id, account_id, reader_document_id, readwise_book_id, title, author, category, location,
        tags_json, source_url, raw_source_url, raw_source_url_status, remote_updated_at, sync_cursor,
        sync_status, source_state, promotion_lock, internal_node_id, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(source_id) DO UPDATE SET
+       account_id = excluded.account_id,
        readwise_book_id = excluded.readwise_book_id, title = excluded.title, author = excluded.author,
        category = excluded.category, location = excluded.location, tags_json = excluded.tags_json,
        source_url = excluded.source_url, raw_source_url = excluded.raw_source_url,
@@ -23,7 +24,7 @@ export async function applyReadwiseSourceObject(port: DbPort, record: SyncPackSy
        sync_cursor = excluded.sync_cursor, sync_status = excluded.sync_status, source_state = excluded.source_state,
        promotion_lock = excluded.promotion_lock, internal_node_id = excluded.internal_node_id,
        updated_at = excluded.updated_at`,
-    [record.object_id, text(payload.reader_document_id) ?? record.object_id,
+    [record.object_id, text(payload.account_id) ?? 'default', text(payload.reader_document_id) ?? record.object_id,
       text(payload.readwise_book_id), text(payload.title) ?? '', text(payload.author), text(payload.category),
       text(payload.location), JSON.stringify(readTags(payload)), text(payload.source_url), text(payload.raw_source_url),
       text(payload.raw_source_url_status) ?? 'unknown', text(payload.remote_updated_at), text(payload.sync_cursor),

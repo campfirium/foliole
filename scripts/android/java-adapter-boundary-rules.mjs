@@ -30,7 +30,9 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncPackTransferPlugin.java',
       'FolioleCompanionSyncPlugin.java',
       'FolioleCompanionSyncStatePluginActions.java',
-      'FolioleCompanionWorkspaceSyncPluginActions.java'
+      'FolioleCompanionWorkspaceSyncPluginActions.java',
+      'FolioleReadwiseTokenPlugin.java',
+      'FolioleReadwiseTokenPluginActions.java'
     ]
   },
   generated_definition_reader: {
@@ -79,6 +81,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionNetworkPluginActions.java',
       'FolioleCompanionNsdDiscovery.java',
       'FolioleCompanionPairingStore.java',
+      'FolioleReadwiseTokenStore.java',
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionWebView.java',
       'MainActivity.java'
