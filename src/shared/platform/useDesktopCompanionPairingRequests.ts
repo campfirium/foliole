@@ -14,7 +14,8 @@ import {
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
   removeDesktopCompanionPairedDevice,
-  rejectDesktopCompanionPairRequest
+  rejectDesktopCompanionPairRequest,
+  setDesktopAsPrimaryDevice
 } from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 
@@ -124,6 +125,29 @@ function useToggleCompanionSyncAction(
   }, [setError, setIsLoading, setOverview, setPendingActionId]);
 }
 
+function useSetDesktopAsPrimaryAction(
+  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
+  setError: (value: string | null) => void,
+  setIsLoading: (value: boolean) => void,
+  setPendingActionId: (value: string | null) => void
+) {
+  return useCallback(async () => {
+    setPendingActionId('set-desktop-primary-device');
+    try {
+      const nextOverview = await setDesktopAsPrimaryDevice();
+      setOverview(nextOverview);
+      setError(null);
+      return nextOverview;
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to set this desktop as primary.');
+      throw actionError;
+    } finally {
+      setPendingActionId(null);
+      setIsLoading(false);
+    }
+  }, [setError, setIsLoading, setOverview, setPendingActionId]);
+}
+
 export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
   const state = useDesktopCompanionPairingOverviewState();
   const refresh = useCompanionPairingRefresh(state.setOverview, state.setError, state.setIsLoading);
@@ -151,6 +175,12 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     state.setIsLoading,
     state.setPendingActionId
   );
+  const setDesktopPrimary = useSetDesktopAsPrimaryAction(
+    state.setOverview,
+    state.setError,
+    state.setIsLoading,
+    state.setPendingActionId
+  );
   useCompanionPairingPushRefresh(refresh);
   useCompanionPairingPolling(pollMs, state.setOverview, state.setError, state.setIsLoading);
 
@@ -167,8 +197,9 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       overview: state.overview,
       pendingActionId: state.pendingActionId,
       refresh,
-      rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject')
+      rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject'),
+      setDesktopAsPrimaryDevice: setDesktopPrimary
     }),
-    [clearPairedDevices, removePairedDevice, refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
+    [clearPairedDevices, removePairedDevice, refresh, runAction, setDesktopPrimary, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
   );
 }

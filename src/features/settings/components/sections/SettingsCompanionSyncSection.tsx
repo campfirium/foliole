@@ -160,7 +160,13 @@ export function SettingsCompanionSyncSection() {
           {syncError}
         </p>
       ) : null}
-      <SettingsCompanionSyncPrimaryRows overview={overview} readwise={readwise} />
+      <SettingsCompanionSyncPrimaryRows
+        isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
+        overview={overview}
+        pendingActionId={state.pendingActionId}
+        readwise={readwise}
+        onSetDesktopAsPrimary={() => void state.setDesktopAsPrimaryDevice()}
+      />
       <ConnectedDevicesRow
         devices={overview.paired_devices}
         isLoading={state.isLoading}

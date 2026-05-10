@@ -70,6 +70,10 @@ export type NativeSyncCommandMap = {
     args: { device_id: string };
     result: DesktopCompanionPairingOverviewPayload;
   };
+  [NATIVE_COMMANDS.setDesktopAsPrimaryDevice]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
   [NATIVE_COMMANDS.approveCompanionPairRequest]: {
     args: { pair_request_id: string };
     result: DesktopCompanionPairingOverviewPayload;

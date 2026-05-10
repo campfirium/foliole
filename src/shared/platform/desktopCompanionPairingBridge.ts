@@ -6,5 +6,6 @@ export {
   loadDesktopCompanionPairingOverview,
   onDesktopCompanionPairingRequestsChanged,
   rejectDesktopCompanionPairRequest,
-  removeDesktopCompanionPairedDevice
+  removeDesktopCompanionPairedDevice,
+  setDesktopAsPrimaryDevice
 } from './desktopCompanionPairingRuntimeRepository';

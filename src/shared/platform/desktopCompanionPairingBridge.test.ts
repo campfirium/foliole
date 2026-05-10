@@ -9,7 +9,8 @@ import {
   enableDesktopCompanionSync,
   loadDesktopCompanionPairingOverview,
   removeDesktopCompanionPairedDevice,
-  rejectDesktopCompanionPairRequest
+  rejectDesktopCompanionPairRequest,
+  setDesktopAsPrimaryDevice
 } from './desktopCompanionPairingBridge';
 
 function createMockElectronApi(invoke: NativeInvoke) {
@@ -147,4 +148,36 @@ it('toggles desktop companion sync through the native bridge', async () => {
 
   expect(invoke).toHaveBeenNthCalledWith(1, 'enable_companion_sync');
   expect(invoke).toHaveBeenNthCalledWith(2, 'disable_companion_sync');
+});
+
+it('sets the desktop as primary through the native bridge', async () => {
+  const invoke = vi.fn().mockResolvedValue({
+    pending_requests: [],
+    primary_device_state: {
+      can_initiate_takeover: false,
+      local_role: 'primary',
+      primary_device_id: 'device-desktop',
+      source: 'committed-primary-device',
+      takeover_blocked_reasons: []
+    },
+    server_status: {
+      advertised_urls: [],
+      last_error: null,
+      paired_device_count: 1,
+      pending_pair_request_count: 0,
+      port: 38641,
+      state: 'running'
+    },
+    sync_enabled: true
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(setDesktopAsPrimaryDevice()).resolves.toMatchObject({
+    primary_device_state: {
+      local_role: 'primary',
+      primary_device_id: 'device-desktop'
+    }
+  });
+
+  expect(invoke).toHaveBeenCalledWith('set_desktop_as_primary_device');
 });

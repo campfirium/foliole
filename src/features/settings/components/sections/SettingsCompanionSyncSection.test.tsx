@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
@@ -50,6 +50,7 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     refresh: vi.fn(),
     rejectRequest: vi.fn(),
     removePairedDevice: vi.fn(),
+    setDesktopAsPrimaryDevice: vi.fn(),
     ...overrides
   };
 }
@@ -76,4 +77,26 @@ it('shows the current primary device role in sync settings', () => {
   expect(screen.getByText('Readwise credentials')).toBeInTheDocument();
   expect(screen.getByText('Ready')).toBeInTheDocument();
   expect(screen.getByText('This desktop runs sync and external sources for paired devices.')).toBeInTheDocument();
+});
+
+it('lets a secondary desktop become the primary device from sync settings', async () => {
+  const setDesktopAsPrimaryDevice = vi.fn();
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    overview: {
+      ...createState().overview,
+      primary_device_state: {
+        can_initiate_takeover: false,
+        local_role: 'secondary',
+        primary_device_id: 'device-android',
+        source: 'committed-primary-device',
+        takeover_blocked_reasons: ['sync-latest-confirmation-missing']
+      }
+    },
+    setDesktopAsPrimaryDevice
+  }));
+
+  render(<SettingsCompanionSyncSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
+
+  expect(setDesktopAsPrimaryDevice).toHaveBeenCalledTimes(1);
 });

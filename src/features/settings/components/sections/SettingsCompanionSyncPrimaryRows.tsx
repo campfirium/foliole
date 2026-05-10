@@ -8,6 +8,7 @@ import {
 import type { useReadwiseTokenConnection } from './useReadwiseTokenConnection';
 
 type CompanionSyncOverview = ReturnType<typeof useDesktopCompanionPairingRequests>['overview'];
+const SET_DESKTOP_PRIMARY_ACTION_ID = 'set-desktop-primary-device';
 
 function formatPrimaryDeviceRole(role: CompanionSyncOverview['primary_device_state']['local_role']) {
   if (role === 'primary') return 'Primary device';
@@ -44,14 +45,31 @@ function ValueText(props: { children: string }) {
 }
 
 export function SettingsCompanionSyncPrimaryRows(props: {
+  isBusy: boolean;
+  onSetDesktopAsPrimary(): void;
   overview: CompanionSyncOverview;
+  pendingActionId: string | null;
   readwise: ReturnType<typeof useReadwiseTokenConnection>;
 }) {
+  const isSecondary = props.overview.primary_device_state.local_role === 'secondary';
+  const isSettingPrimary = props.pendingActionId === SET_DESKTOP_PRIMARY_ACTION_ID;
   return (
     <>
       <SettingsRow description={formatPrimaryDeviceDetail(props.overview.primary_device_state)} title="Device role">
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <ValueText>{formatPrimaryDeviceRole(props.overview.primary_device_state.local_role)}</ValueText>
+          <div className="flex items-center gap-3">
+            <ValueText>{formatPrimaryDeviceRole(props.overview.primary_device_state.local_role)}</ValueText>
+            {isSecondary ? (
+              <button
+                className="text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={props.isBusy}
+                onClick={props.onSetDesktopAsPrimary}
+                type="button"
+              >
+                {isSettingPrimary ? 'Setting...' : 'Set as primary device'}
+              </button>
+            ) : null}
+          </div>
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow description="Device id used for sync authority and external source ownership." title="Current primary">

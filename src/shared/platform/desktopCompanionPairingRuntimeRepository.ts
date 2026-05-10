@@ -165,6 +165,7 @@ async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.disableCompanionSync
     | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
     | typeof NATIVE_COMMANDS.removeCompanionPairedDevice
+    | typeof NATIVE_COMMANDS.setDesktopAsPrimaryDevice
     | typeof NATIVE_COMMANDS.approveCompanionPairRequest
     | typeof NATIVE_COMMANDS.rejectCompanionPairRequest
 >(
@@ -190,6 +191,10 @@ export function removeDesktopCompanionPairedDevice(deviceId: string) {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeCompanionPairedDevice, {
     device_id: deviceId
   });
+}
+
+export function setDesktopAsPrimaryDevice() {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.setDesktopAsPrimaryDevice);
 }
 
 export function enableDesktopCompanionSync() {

@@ -2,6 +2,7 @@ import { app } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
+import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import {
   approveCompanionPairRequest,
   loadPendingCompanionPairRequests,
@@ -48,6 +49,15 @@ function handleCompanionPairRequestMutation(
   return buildDesktopCompanionPairingOverview();
 }
 
+function setDesktopAsPrimaryDevice() {
+  const desktopDeviceId = loadOrCreateDesktopDeviceId();
+  commitPrimaryDeviceToPeer({
+    primaryDeviceId: desktopDeviceId,
+    updatedByDeviceId: desktopDeviceId
+  });
+  return buildDesktopCompanionPairingOverview();
+}
+
 export function handleCompanionPairingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadCompanionPairingOverview) {
     return {
@@ -83,6 +93,9 @@ export function handleCompanionPairingCommand(command: string, args: Record<stri
     const deviceId = asString(args.device_id, 'device_id');
     removePairedCompanionDevice(deviceId);
     return buildDesktopCompanionPairingOverview();
+  }
+  if (command === NATIVE_COMMANDS.setDesktopAsPrimaryDevice) {
+    return setDesktopAsPrimaryDevice();
   }
   return undefined;
 }
