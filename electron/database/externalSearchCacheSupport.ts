@@ -3,6 +3,13 @@ import path from 'node:path';
 
 import type { NativeExternalSearchFolder, NativeWorkspaceSearchResult } from '../../lib/platform/nativeStorageContract.js';
 
+import {
+  createExternalSearchScanRuntime,
+  shouldSkipExternalSearchDirectory,
+  yieldExternalSearchScanWork,
+  type ExternalSearchScanRuntime
+} from './externalSearchPathExclusions.js';
+
 export interface ExternalSearchRow {
   absolute_path: string;
   file_name: string;
@@ -35,52 +42,16 @@ export interface ScannedDocumentEntry {
   sizeBytes: number;
 }
 
-interface ScanRuntime {
-  processedCount: number;
-  yieldEvery: number;
-}
-
-function normalizeSegments(values: string[]) {
-  return new Set(values.map((value) => value.trim().replace(/\\/g, '/')).filter(Boolean));
-}
-
-function createScanRuntime() {
-  return {
-    processedCount: 0,
-    yieldEvery: 25
-  } satisfies ScanRuntime;
-}
-
-async function yieldScanWork(runtime: ScanRuntime) {
-  runtime.processedCount += 1;
-  if (runtime.processedCount % runtime.yieldEvery !== 0) {
-    return;
-  }
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, 0);
-  });
-}
-
-function shouldSkipDirectory(args: {
-  defaultExcludedNames: Set<string>;
-  folder: NativeExternalSearchFolder;
-  relativeDirectoryPath: string;
-}) {
-  const normalizedRelative = args.relativeDirectoryPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-  if (!normalizedRelative) return false;
-  const excludedSegments = normalizeSegments(args.folder.excluded_dirs);
-  return normalizedRelative.split('/').some((segment) => excludedSegments.has(normalizedRelative) || excludedSegments.has(segment) || args.defaultExcludedNames.has(segment));
-}
-
 export async function scanFolder(
   folder: NativeExternalSearchFolder,
   rootPath: string,
   currentPath: string,
   defaultExcludedNames: Set<string>,
-  items: ScannedDocument[]
+  items: ScannedDocument[],
+  autoExcludedPaths: string[] = []
 ): Promise<void> {
   const entries: ScannedDocumentEntry[] = [];
-  await scanFolderEntries(folder, rootPath, currentPath, defaultExcludedNames, entries, createScanRuntime());
+  await scanFolderEntries(folder, rootPath, currentPath, defaultExcludedNames, entries, createExternalSearchScanRuntime(autoExcludedPaths));
   for (const entry of entries) {
     items.push(await loadScannedDocument(entry));
   }
@@ -92,16 +63,24 @@ export async function scanFolderEntries(
   currentPath: string,
   defaultExcludedNames: Set<string>,
   items: ScannedDocumentEntry[],
-  runtime: ScanRuntime = createScanRuntime()
+  runtime: ExternalSearchScanRuntime | undefined = undefined,
+  autoExcludedPaths: string[] = []
 ): Promise<void> {
+  const scanRuntime = runtime ?? createExternalSearchScanRuntime(autoExcludedPaths);
   const relativeDirectoryPath = path.relative(rootPath, currentPath);
-  if (shouldSkipDirectory({ defaultExcludedNames, folder, relativeDirectoryPath })) return;
+  if (shouldSkipExternalSearchDirectory({
+    autoExcludedPaths: scanRuntime.autoExcludedPaths,
+    currentPath,
+    defaultExcludedNames,
+    folder,
+    relativeDirectoryPath
+  })) return;
   const entries = await fs.readdir(currentPath, { withFileTypes: true });
   for (const entry of entries) {
     const absolutePath = path.join(currentPath, entry.name);
     if (entry.isDirectory()) {
-      await scanFolderEntries(folder, rootPath, absolutePath, defaultExcludedNames, items, runtime);
-      await yieldScanWork(runtime);
+      await scanFolderEntries(folder, rootPath, absolutePath, defaultExcludedNames, items, scanRuntime);
+      await yieldExternalSearchScanWork(scanRuntime);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -117,7 +96,7 @@ export async function scanFolderEntries(
       relativePath: path.relative(rootPath, absolutePath).replace(/\\/g, '/'),
       sizeBytes: stat.size
     });
-    await yieldScanWork(runtime);
+    await yieldExternalSearchScanWork(scanRuntime);
   }
 }
 

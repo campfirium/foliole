@@ -1,3 +1,5 @@
+import { loadImportManagerSettings } from '../import/importManagerSettings.js';
+
 import {
   markExternalDocumentsMissing,
   replaceExternalDocumentsForFolder,
@@ -24,6 +26,11 @@ import {
 type SqliteDatabase = import('better-sqlite3').Database;
 interface CachedFolderDocumentRow { absolute_path: string; is_present: number; modified_ms: number; relative_path: string; size_bytes: number }
 
+function resolveAutoExcludedPaths() {
+  const readwiseRootPath = loadImportManagerSettings().readwiseRootPath.trim();
+  return readwiseRootPath ? [readwiseRootPath] : [];
+}
+
 function readCachedFolderDocuments(db: SqliteDatabase, folderId: string) {
   return db
     .prepare(
@@ -36,8 +43,9 @@ function readCachedFolderDocuments(db: SqliteDatabase, folderId: string) {
 
 async function syncExternalSearchFolder(db: SqliteDatabase, folder: ReturnType<typeof loadExternalSearchFolders>[number]) {
   const defaultExcludedNames = new Set(['.git', '.obsidian', '.trash', 'node_modules']);
+  const autoExcludedPaths = resolveAutoExcludedPaths();
   const scannedEntries: ScannedDocumentEntry[] = [];
-  await scanFolderEntries(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, scannedEntries);
+  await scanFolderEntries(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, scannedEntries, undefined, autoExcludedPaths);
 
   const existingRows = readCachedFolderDocuments(db, folder.id);
   const existingByAbsolutePath = new Map(existingRows.map((row) => [row.absolute_path, row]));
@@ -73,6 +81,7 @@ async function syncExternalSearchFolder(db: SqliteDatabase, folder: ReturnType<t
 
 export async function rebuildExternalSearchIndexes(folderId?: string) {
   const defaultExcludedNames = new Set(['.git', '.obsidian', '.trash', 'node_modules']);
+  const autoExcludedPaths = resolveAutoExcludedPaths();
   const folders = loadExternalSearchFolders().filter((folder) => !folderId || folder.id === folderId);
   for (const folder of folders) {
     updateExternalSearchFolderIndexState({
@@ -84,7 +93,7 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
     });
     try {
       const documents: ScannedDocument[] = [];
-      await scanFolder(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, documents);
+      await scanFolder(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, documents, autoExcludedPaths);
       const indexedAt = replaceFolderDocuments(openExternalSearchCacheDatabase(), folder, documents);
       replaceExternalDocumentsForFolder(folder, documents, indexedAt);
       updateExternalSearchFolderIndexState({

@@ -2,6 +2,8 @@ import type { ImportManagerSettings } from '../core/import/importManagerSettings
 
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
+  NativeReadwiseCleanupPreviewResult,
+  NativeReadwiseCleanupRunResult,
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from './nativeImportContract.js';
@@ -35,6 +37,14 @@ export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.runReadwiseReaderImport]: {
     args: { settings?: ImportManagerSettings } | undefined;
     result: NativeReadwiseImportRunResult;
+  };
+  [NATIVE_COMMANDS.previewReadwiseImportCleanup]: {
+    args: undefined;
+    result: NativeReadwiseCleanupPreviewResult;
+  };
+  [NATIVE_COMMANDS.runReadwiseImportCleanup]: {
+    args: undefined;
+    result: NativeReadwiseCleanupRunResult;
   };
   [NATIVE_COMMANDS.loadReadwiseBooksInventory]: {
     args: undefined;

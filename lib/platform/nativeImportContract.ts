@@ -89,6 +89,35 @@ export interface NativeReadwiseImportRunResult {
   status: 'completed' | 'failed';
 }
 
+export type NativeReadwiseCleanupAction = 'delete' | 'keep';
+
+export interface NativeReadwiseCleanupEntry {
+  action: NativeReadwiseCleanupAction;
+  node_id: string;
+  reason: string;
+  rule_id: string;
+  source_path: string;
+  title: string;
+}
+
+export interface NativeReadwiseCleanupPreviewResult {
+  delete_count: number;
+  entries: NativeReadwiseCleanupEntry[];
+  external_document_count: number;
+  external_folder_count: number;
+  keep_count: number;
+  previewed_at: string;
+  total_count: number;
+}
+
+export interface NativeReadwiseCleanupRunResult extends NativeReadwiseCleanupPreviewResult {
+  cleaned_at: string;
+  deleted_count: number;
+  detached_count: number;
+  external_deleted_count: number;
+  status: 'completed';
+}
+
 export interface NativeImportedTextFile {
   file_name: string;
   file_path: string;

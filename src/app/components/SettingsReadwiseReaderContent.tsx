@@ -1,5 +1,7 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type {
+  NativeReadwiseCleanupPreviewResult,
+  NativeReadwiseCleanupRunResult,
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeContract';
@@ -12,6 +14,7 @@ import {
 } from '../../shared/ui';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
+import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
 import { ReadwiseReaderImportBehavior } from './ReadwiseReaderImportBehavior';
 import {
   ReadwiseIntegrationSwitch,
@@ -20,6 +23,7 @@ import {
 import { ReadwiseDirectorySection, ReadwiseParserFields } from './ReadwiseReaderSetupParts';
 import { ReadwiseReaderSyncRow } from './ReadwiseReaderSyncControls';
 import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
+import { useReadwiseCleanup } from './useReadwiseCleanup';
 import {
   useReadwiseSetupController,
   type ReadwiseSetupPayload
@@ -49,7 +53,9 @@ function ReadwiseSetupSection(props: {
   onChangeIntegration: () => void;
   onCheck: () => void;
   onSync: () => void;
+  onCleanup: () => void;
   syncStatus: { message: string | null; tone: 'error' | 'normal' };
+  cleanupDisabled: boolean;
   syncDisabled: boolean;
   syncIsRunning: boolean;
 }) {
@@ -76,7 +82,7 @@ function ReadwiseSetupSection(props: {
           onSync={props.onSync}
           status={props.syncStatus}
         />
-        <ReadwiseCleanupRow />
+        <ReadwiseCleanupRow disabled={props.cleanupDisabled} onCleanup={props.onCleanup} />
       </SettingsSection>
       <ReadwiseBehaviorSection draft={props.draft} />
       <ReadwiseImportSettingsSection draft={props.draft} />
@@ -106,14 +112,14 @@ function ReadwiseImportSettingsSection({ draft }: { draft: ReadwiseSetupDraft })
   );
 }
 
-function ReadwiseCleanupRow() {
+function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void }) {
   return (
     <SettingsRow
       description="Remove unchanged Readwise imports and keep changed topics in Foliole."
       title="Clean up imports"
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <AppButton disabled size="sm" variant="primary">
+        <AppButton disabled={props.disabled} onClick={props.onCleanup} size="sm" variant="primary">
           Clean up...
         </AppButton>
       </SettingsControlSlot>
@@ -123,7 +129,9 @@ function ReadwiseCleanupRow() {
 
 interface SettingsReadwiseReaderContentProps {
   config: ReadwiseReaderConfig;
+  onPreviewCleanup?: () => Promise<NativeReadwiseCleanupPreviewResult | null>;
   onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
+  onRunCleanup?: () => Promise<NativeReadwiseCleanupRunResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
   onSave: (input: ReadwiseSetupPayload) => void;
   readwiseRootPath: string;
@@ -132,6 +140,10 @@ interface SettingsReadwiseReaderContentProps {
 
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
   const setup = useReadwiseSetupController(props);
+  const cleanup = useReadwiseCleanup({
+    onPreviewCleanup: props.onPreviewCleanup,
+    onRunCleanup: props.onRunCleanup
+  });
 
   return (
     <>
@@ -140,6 +152,8 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
         canPreview={setup.canPreview}
         draft={setup.draft}
         integrationEnabled={setup.integrationEnabled}
+        cleanupDisabled={cleanup.cleanupDisabled}
+        onCleanup={() => void cleanup.openCleanupDialog()}
         onChangeIntegration={setup.handleChangeIntegration}
         onCheck={setup.handleCheck}
         onSync={() => void setup.handleRunSync()}
@@ -156,6 +170,14 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
         onStart={setup.startSync}
         open={setup.syncIntent !== null}
         preview={setup.syncPreview}
+      />
+      <ReadwiseCleanupDialog
+        error={cleanup.cleanupError}
+        isRunning={cleanup.isCleanupRunning}
+        onCancel={cleanup.closeCleanupDialog}
+        onRun={() => void cleanup.runCleanup()}
+        open={cleanup.isCleanupDialogOpen}
+        preview={cleanup.cleanupPreview}
       />
     </>
   );

@@ -1,6 +1,10 @@
 import type { ImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import {
+  previewReadwiseImportCleanupInRuntime,
+  runReadwiseImportCleanupInRuntime
+} from '../../shared/platform/readwiseImportCleanupRuntimeRepository';
+import {
   previewReadwiseReaderImportInRuntime,
   runReadwiseReaderImportInRuntime
 } from '../../shared/platform/readwiseReaderImportRuntimeRepository';
@@ -36,6 +40,8 @@ export function createReadwiseReaderImportActions(
       const nextSettings = mergeReadwiseSetup(input);
       setSettings(() => nextSettings);
       return runReadwiseReaderImportInRuntime(nextSettings);
-    }
+    },
+    previewReadwiseImportCleanup: previewReadwiseImportCleanupInRuntime,
+    runReadwiseImportCleanup: runReadwiseImportCleanupInRuntime
   };
 }

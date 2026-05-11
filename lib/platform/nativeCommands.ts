@@ -9,6 +9,8 @@ export const NATIVE_COMMANDS = {
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
   previewReadwiseReaderImport: 'preview_readwise_reader_import',
   runReadwiseReaderImport: 'run_readwise_reader_import',
+  previewReadwiseImportCleanup: 'preview_readwise_import_cleanup',
+  runReadwiseImportCleanup: 'run_readwise_import_cleanup',
   loadReadwiseBooksInventory: 'load_readwise_books_inventory',
   openReadwiseBookDownload: 'open_readwise_book_download',
   loadReadwiseBookEpub: 'load_readwise_book_epub',

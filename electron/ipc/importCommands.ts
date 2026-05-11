@@ -7,6 +7,10 @@ import {
   loadReadwiseBookEpub,
   openReadwiseBookDownload
 } from '../import/readwiseBookManualActions.js';
+import {
+  previewReadwiseImportCleanup,
+  runReadwiseImportCleanup
+} from '../import/readwiseImportCleanup.js';
 import { runReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from '../import/readwiseSyncPreview.js';
 
@@ -58,6 +62,12 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseReaderImport) {
     return runReadwiseReaderImport(args);
+  }
+  if (request.command === NATIVE_COMMANDS.previewReadwiseImportCleanup) {
+    return previewReadwiseImportCleanup();
+  }
+  if (request.command === NATIVE_COMMANDS.runReadwiseImportCleanup) {
+    return runReadwiseImportCleanup();
   }
   if (request.command === NATIVE_COMMANDS.openReadwiseBookDownload) {
     return openReadwiseBookDownload(asString(args.node_id, 'node_id'));

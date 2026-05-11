@@ -38,6 +38,38 @@ export function createReadwiseImportRunResult() {
   };
 }
 
+export function createReadwiseCleanupPreview() {
+  return {
+    delete_count: 1,
+    entries: [
+      {
+        action: 'delete' as const,
+        node_id: 'node-readwise-1',
+        reason: 'Readwise import is unchanged.',
+        rule_id: 'draft-import-source-1',
+        source_path: 'Plain.md',
+        title: 'Plain'
+      }
+    ],
+    external_document_count: 0,
+    external_folder_count: 0,
+    keep_count: 0,
+    previewed_at: '2026-05-11T00:00:00.000Z',
+    total_count: 1
+  };
+}
+
+export function createReadwiseCleanupRunResult() {
+  return {
+    ...createReadwiseCleanupPreview(),
+    cleaned_at: '2026-05-11T00:02:00.000Z',
+    deleted_count: 1,
+    detached_count: 0,
+    external_deleted_count: 0,
+    status: 'completed' as const
+  };
+}
+
 export function createEnabledReadwiseConfig() {
   return {
     ...createDefaultReadwiseReaderConfig(),

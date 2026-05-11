@@ -81,6 +81,8 @@ function WorkspaceSettingsOverlayContent({
           config={importSettings.readwiseReaderConfig}
           onSave={importSettings.handleSaveReadwiseReaderSetup}
           onPreviewSync={importSettings.previewReadwiseReaderImport}
+          onPreviewCleanup={importSettings.previewReadwiseImportCleanup}
+          onRunCleanup={importSettings.runReadwiseImportCleanup}
           onRunSync={importSettings.runReadwiseReaderImport}
           readwiseRootPath={importSettings.readwiseRootPath}
           readwiseSources={importSettings.readwiseSources}
