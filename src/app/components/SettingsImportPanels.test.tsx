@@ -46,8 +46,37 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
     />
   );
 
-  expect(screen.getByText('Readwise Reader integration')).toBeInTheDocument();
+  expect(screen.getByText('Readwise Reader Import')).toBeInTheDocument();
   expect(screen.getByText('Readwise root folder')).toBeInTheDocument();
-  expect(screen.getByLabelText('Readwise import scope')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Check setup' })).toBeDisabled();
+  expect(screen.getByText('Clean up imports')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Import behavior' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Import settings' })).toBeInTheDocument();
+  expect(
+    screen.getByText('Source topics with parsed Readwise highlights go to this destination.')
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      'Source topics without parsed highlights can still be imported, indexed externally, or skipped.'
+    )
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('radiogroup', { name: 'With highlights destination' })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('radiogroup', { name: 'Without highlights destination' })
+  ).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toHaveValue('hourly');
+  expect(screen.queryByLabelText('Readwise import scope')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sync' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Preview' })).toBeDisabled();
+  expect(
+    screen
+      .getByRole('button', { name: 'Sync' })
+      .compareDocumentPosition(screen.getByRole('heading', { name: 'Import behavior' }))
+  ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(
+    screen
+      .getByText('With highlights')
+      .compareDocumentPosition(screen.getByText('Readwise root folder'))
+  ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });

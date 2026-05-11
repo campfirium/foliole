@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'android'),
@@ -90,7 +90,7 @@ describe('companion desktop active attachment resource priority', () => {
   });
 
   it('reports an attachment resource as not queued when it is not missing locally', async () => {
-    syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue(null);
+    (syncObjectsMock.loadCompanionMissingAttachmentResource as Mock).mockResolvedValue(null);
 
     await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
       attachmentId: 'att-3',

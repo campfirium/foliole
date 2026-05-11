@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, type Mock, vi } from 'vitest';
 
 const takeoverMocks = vi.hoisted(() => ({
   isNativeAndroidCompanionRuntime: vi.fn(() => true),
@@ -90,8 +90,22 @@ it('requests takeover only after convergence and stores the released primary id 
 });
 
 it('blocks takeover when convergence is still pending', async () => {
-  takeoverMocks.runSyncConvergenceCheck.mockResolvedValueOnce({
-    diagnostics: { android: null, desktop: null },
+  (takeoverMocks.runSyncConvergenceCheck as Mock).mockResolvedValueOnce({
+    diagnostics: {
+      android: {
+        sync_state: {
+          local_dirty_count: 0,
+          pack_cursor: null,
+          pending_ack_count: 0,
+          push_issue_count: 0
+        }
+      },
+      desktop: {
+        sync_state: {
+          max_state_seq: null
+        }
+      }
+    },
     report: { status: 'pending' }
   });
   const { requestPrimaryDeviceTakeover } = await import('./companionPrimaryDeviceTakeover');

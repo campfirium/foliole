@@ -31,6 +31,7 @@ function syncResult(overrides: Partial<CompanionDesktopSyncResult> = {}): Compan
     remainingFailedAttachmentResourceCount: 0,
     remainingFailedContentBlobBytes: 0,
     remainingFailedContentBlobCount: 0,
+    remainingStructureChangeCount: 0,
     requestedObjectIds: [],
     syncedAttachmentIds: [],
     syncedAttachmentResourceBytes: 0,

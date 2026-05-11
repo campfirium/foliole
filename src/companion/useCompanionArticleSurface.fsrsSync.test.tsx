@@ -13,6 +13,27 @@ const syncObjectMock = vi.hoisted(() => ({
 }));
 const schedulerGrade = vi.hoisted(() => vi.fn());
 
+function createTakeoverResponse() {
+  return {
+    committed_at: '2026-04-22T08:04:00.000Z',
+    primary_device_epoch: 1,
+    primary_device_id: 'android-test-device',
+    release_ack: true as const,
+    updated_by_device_id: 'android-test-device'
+  };
+}
+
+function createPairingState() {
+  return {
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Android companion',
+    is_paired: true,
+    paired_at: '2026-04-22T08:03:00.000Z',
+    primary_device_id: 'android-test-device'
+  };
+}
+
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
 vi.mock('../features/review/model/reviewSchedulerFactory', () => ({
   createReviewSchedulerAdapter: () => ({ grade: schedulerGrade })
@@ -80,18 +101,14 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     desktopDiscovery: null,
     error: null,
     pendingPairRequest: null,
-    pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
-      is_paired: true,
-      paired_at: '2026-04-22T08:03:00.000Z'
-    },
+    pairingState: createPairingState(),
     pairingStatus: 'idle' as const,
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     replaceSnapshot: vi.fn(async () => state),
+    requestPrimaryDeviceTakeover: vi.fn(async () => createTakeoverResponse()),
     refreshFromDevice: vi.fn(async () => state),
+    refreshPairingState: vi.fn(async () => createPairingState()),
     removeRememberedTarget: vi.fn(),
     requestPairing: vi.fn(),
     saveEndpoint: vi.fn(),

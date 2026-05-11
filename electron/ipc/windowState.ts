@@ -14,6 +14,10 @@ export interface PersistedWindowState {
   isFullScreen: boolean;
 }
 
+function isMissingSettingsTableError(error: unknown) {
+  return error instanceof Error && /no such table:\s*settings/i.test(error.message);
+}
+
 function toFiniteNumber(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return null;
@@ -44,7 +48,14 @@ function normalizeWindowStatePayload(payload: unknown): PersistedWindowState | n
 }
 
 export async function loadWindowState(): Promise<PersistedWindowState | null> {
-  return normalizeWindowStatePayload(loadJsonSetting(WINDOW_STATE_KEY));
+  try {
+    return normalizeWindowStatePayload(loadJsonSetting(WINDOW_STATE_KEY));
+  } catch (error) {
+    if (isMissingSettingsTableError(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {

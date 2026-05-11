@@ -1,8 +1,7 @@
-import type { ReadwiseImportScope, ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
-  SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   settingsFieldClassName
@@ -137,7 +136,11 @@ export function ReadwiseParserFields(props: {
   config: ReadwiseReaderConfig;
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
 }) {
-  const fields: Array<{ field: keyof ReadwiseReaderConfig; label: string; description: string }> = [
+  type ReadwiseParserField = Extract<
+    keyof ReadwiseReaderConfig,
+    'highlightSeparator' | 'highlightsHeading' | 'newHighlightsHeading' | 'noteKeyword' | 'tagKeyword'
+  >;
+  const fields: Array<{ field: ReadwiseParserField; label: string; description: string }> = [
     { field: 'highlightsHeading', label: 'Highlights heading', description: 'The heading that starts the normal highlights section.' },
     { field: 'newHighlightsHeading', label: 'New highlights heading', description: 'The heading that starts the new-highlights section.' },
     {
@@ -159,7 +162,6 @@ export function ReadwiseParserFields(props: {
 
   return (
     <>
-      <ReadwiseImportScopeField importScope={props.config.importScope} onChange={(value) => props.onChange('importScope', value)} />
       {fields.map((entry) => (
         <SettingsRow description={entry.description} key={entry.field} title={entry.label}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
@@ -174,40 +176,5 @@ export function ReadwiseParserFields(props: {
         </SettingsRow>
       ))}
     </>
-  );
-}
-
-function ReadwiseImportScopeField(props: {
-  importScope: ReadwiseImportScope;
-  onChange: (value: ReadwiseImportScope) => void;
-}) {
-  const importScopeOptions: Array<{ description: string; label: string; value: ReadwiseImportScope }> = [
-    {
-      description: 'Skip files that do not have any parsed highlights.',
-      label: 'Only with highlights',
-      value: 'highlights_only'
-    },
-    {
-      description: 'Import every file from the selected Readwise content folder.',
-      label: 'Import all',
-      value: 'all'
-    }
-  ];
-
-  return (
-    <SettingsRow
-      description={importScopeOptions.find((option) => option.value === props.importScope)?.description}
-      title="Import scope"
-    >
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <select aria-label="Readwise import scope" className={settingsFieldClassName(`w-auto ${SETTINGS_SELECT_WIDTH_CLASS_NAME}`)} onChange={(event) => props.onChange(event.target.value as ReadwiseImportScope)} value={props.importScope}>
-          {importScopeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </SettingsControlSlot>
-    </SettingsRow>
   );
 }

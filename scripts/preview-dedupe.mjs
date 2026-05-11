@@ -143,9 +143,12 @@ async function main() {
     return 0;
   }
 
-  await writeStoredHash(target, currentHash);
   console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
-  return runCommand(command);
+  const exitCode = await runCommand(command);
+  if (exitCode === 0) {
+    await writeStoredHash(target, currentHash);
+  }
+  return exitCode;
 }
 
 main()

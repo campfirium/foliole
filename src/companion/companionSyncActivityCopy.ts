@@ -28,7 +28,10 @@ export function isSyncCheckOnlyMessage(message: string) {
     displayMessage === 'Sync fully completed.';
 }
 
-export function isReportableSyncEvent(event: { message: string; status: string }) {
+type ReportableSyncEventInput = Pick<NativeCompanionSyncEvent, 'message' | 'status'> &
+  Partial<Pick<NativeCompanionSyncEvent, 'kind'>>;
+
+export function isReportableSyncEvent(event: ReportableSyncEventInput) {
   if ('kind' in event && (event.kind === 'run_started' || event.kind === 'diagnostic')) {
     return false;
   }

@@ -1,6 +1,17 @@
 import { vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { NativePrimaryDeviceTakeoverResponse } from '../../lib/platform/nativeCompanionSyncContract';
+
+function createTakeoverResponse(): NativePrimaryDeviceTakeoverResponse {
+  return {
+    committed_at: '2026-04-22T08:04:00.000Z',
+    primary_device_epoch: 1,
+    primary_device_id: 'android-test-device',
+    release_ack: true,
+    updated_by_device_id: 'android-test-device'
+  };
+}
 
 export function createCompanionArticleSnapshot(): WorkspaceSnapshot {
   return {
@@ -63,7 +74,9 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     pullFromDesktop: vi.fn(async () => createSyncState(snapshot)),
     readableArticle: createReadableArticle(),
     replaceSnapshot: vi.fn(async () => state),
+    requestPrimaryDeviceTakeover: vi.fn(async () => createTakeoverResponse()),
     refreshFromDevice: vi.fn(async () => state),
+    refreshPairingState: vi.fn(async () => createPairingState(true)),
     removeRememberedTarget: vi.fn(),
     requestPairing: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(async () => state),
@@ -92,7 +105,8 @@ function createPairingState(isPaired: boolean) {
     device_kind: 'android-capacitor',
     device_name: 'Android companion',
     is_paired: isPaired,
-    paired_at: isPaired ? '2026-04-22T08:03:00.000Z' : null
+    paired_at: isPaired ? '2026-04-22T08:03:00.000Z' : null,
+    primary_device_id: isPaired ? 'android-test-device' : null
   };
 }
 

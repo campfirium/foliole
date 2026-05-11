@@ -1,83 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { CompanionSyncPanel } from './CompanionSyncPanel';
-
-function createConnectedProps() {
-  return {
-    bootstrapState: {
-      booted_at: '2026-04-22T09:05:00.000Z',
-      database_path: 'foliole-companion-preview.db',
-      database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor' as const
-    },
-    desktopDiscoveries: [],
-    desktopDiscovery: null,
-    endpointUrl: 'http://10.0.2.2:38641',
-    error: null,
-    handoffReminderSettings: {
-      fixedTime: null,
-      shortDelay: 'off' as const
-    },
-    lastSyncedAt: null,
-    rememberedTargets: [],
-    syncConflictCount: 0,
-    syncEvents: [],
-    syncProgress: null,
-    onCancelPairing: vi.fn(),
-    onCheckDesktop: vi.fn(async () => undefined),
-    onChangeHandoffReminderSettings: vi.fn(),
-    onClearError: vi.fn(),
-    onCompletePairing: vi.fn(async () => undefined),
-    onPull: vi.fn(async () => undefined),
-    onRemoveRememberedTarget: vi.fn(async () => undefined),
-    onRequestPairing: vi.fn(async () => undefined),
-    onSaveEndpoint: vi.fn(async () => undefined),
-    onOpenSettingsPage: vi.fn(),
-    page: 'sync' as const,
-    pairingRequest: null,
-    pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
-      is_paired: true,
-      paired_at: '2026-04-22T09:00:00.000Z'
-    },
-    pairingStatus: 'idle' as const,
-    status: 'idle' as const
-  };
-}
-
-function completedEvent() {
-  return {
-    endpoint_url: 'http://10.0.2.2:38641',
-    id: 'completed-event',
-    message: 'Auto sync completed.',
-    occurred_at: '2026-04-29T02:24:44.000Z',
-    status: 'completed' as const
-  };
-}
-
-function failedEvent() {
-  return {
-    endpoint_url: 'http://10.0.2.2:38641',
-    id: 'failed-event',
-    message: 'Desktop sync timed out while fetching content blobs.',
-    occurred_at: '2026-04-29T02:18:33.000Z',
-    status: 'failed' as const
-  };
-}
-
-function backlogEvent() {
-  return {
-    endpoint_url: 'http://10.0.2.2:38641',
-    id: 'backlog-event',
-    message: 'Some topic bodies are still downloading.',
-    occurred_at: '2026-04-29T02:24:44.000Z',
-    status: 'skipped' as const
-  };
-}
+import { backlogEvent, completedEvent, createConnectedProps, failedEvent } from './CompanionSyncPanel.connected.testSupport';
 
 function testShowsPairedState() {
   render(<CompanionSyncPanel {...createConnectedProps()} />);

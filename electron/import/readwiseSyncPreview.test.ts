@@ -1,0 +1,160 @@
+// @vitest-environment node
+
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+let mockedAppDataDir = '/tmp/foliole-readwise-sync-preview-tests';
+
+vi.mock('../ipc/paths.js', () => ({
+  resolveAppPaths: () => ({
+    app_data_dir: mockedAppDataDir,
+    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
+    app_config_dir: path.join(mockedAppDataDir, 'config'),
+    app_log_dir: path.join(mockedAppDataDir, 'logs')
+  })
+}));
+
+import { closeDatabaseConnection } from '../database/connection.js';
+import { upsertKeepImportItem } from '../database/keepImportItems.js';
+import { initializeDatabase } from '../database/migrate.js';
+
+import { saveImportManagerSettings } from './importManagerSettings.js';
+import { previewReadwiseReaderImport } from './readwiseSyncPreview.js';
+
+let tempRoot = '';
+
+beforeEach(async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-sync-preview-'));
+  mockedAppDataDir = path.join(tempRoot, 'app-data');
+  initializeDatabase();
+});
+
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+async function seedReadwiseFixture() {
+  const readwiseRoot = path.join(tempRoot, 'Readwise');
+  const primaryPath = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
+  const highlightPath = path.join(readwiseRoot, 'Articles');
+  await fs.mkdir(primaryPath, { recursive: true });
+  await fs.mkdir(highlightPath, { recursive: true });
+  await fs.writeFile(path.join(primaryPath, 'Highlighted.md'), '# Highlighted\n\nBefore important sentence after.\n', 'utf8');
+  await fs.writeFile(path.join(highlightPath, 'Highlighted.md'), '# Highlighted\n\n## Highlights\nimportant sentence\n', 'utf8');
+  await fs.writeFile(path.join(primaryPath, 'Plain.md'), '# Plain\n\nNo sidecar highlights.\n', 'utf8');
+  return { highlightPath, primaryPath, readwiseRoot };
+}
+
+function saveReadwiseSettings(
+  paths: Awaited<ReturnType<typeof seedReadwiseFixture>>,
+  behavior: { withHighlightsDestination: 'external' | 'inbox'; withoutHighlightsDestination: 'external' | 'inbox' | 'off' }
+) {
+  saveImportManagerSettings({
+    readwiseReaderConfig: {
+      ...behavior,
+      highlightsHeading: '## Highlights',
+      importScope: 'highlights_only',
+      validatedAt: '2026-05-11T00:00:00.000Z'
+    },
+    readwiseRootPath: paths.readwiseRoot,
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: paths.highlightPath,
+        id: 'draft-import-source-1',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'articles',
+        primaryPath: paths.primaryPath
+      }
+    ]
+  });
+}
+
+it('previews Readwise sources with highlight type and destination', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, { withHighlightsDestination: 'external', withoutHighlightsDestination: 'off' });
+
+  const preview = await previewReadwiseReaderImport();
+
+  expect(preview).toMatchObject({
+    external_count: 1,
+    inbox_count: 0,
+    off_count: 1,
+    total_count: 2,
+    with_highlights_count: 1,
+    without_highlights_count: 1,
+    write_count: 1
+  });
+  expect(preview.entries).toEqual([
+    expect.objectContaining({
+      destination: 'external',
+      detected_highlight_count: 1,
+      highlight_type: 'with_highlights',
+      source_path: 'Highlighted.md',
+      status: 'new'
+    }),
+    expect.objectContaining({
+      destination: 'off',
+      highlight_type: 'without_highlights',
+      source_path: 'Plain.md',
+      status: 'off'
+    })
+  ]);
+});
+
+it('counts external no-highlight sources as writes when configured', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'external' });
+
+  await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
+    external_count: 1,
+    inbox_count: 1,
+    off_count: 0,
+    write_count: 2
+  });
+});
+
+it('marks tracked unchanged sources without writing during preview', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
+  const primaryStats = await fs.stat(path.join(fixture.primaryPath, 'Highlighted.md'));
+  const highlightStats = await fs.stat(path.join(fixture.highlightPath, 'Highlighted.md'));
+  upsertKeepImportItem({
+    hasSourceUpdate: false,
+    highlightSourceMtimeMs: highlightStats.mtimeMs,
+    highlightSourceSizeBytes: highlightStats.size,
+    lastImportedAt: '2026-05-11T00:00:00.000Z',
+    lastNodeId: null,
+    lastSeenAt: '2026-05-11T00:00:00.000Z',
+    lastStatus: 'imported',
+    ruleId: 'draft-import-source-1',
+    sourceMtimeMs: primaryStats.mtimeMs,
+    sourcePath: 'Highlighted.md',
+    sourceSizeBytes: primaryStats.size
+  });
+
+  const preview = await previewReadwiseReaderImport();
+
+  expect(preview.entries).toContainEqual(expect.objectContaining({ source_path: 'Highlighted.md', status: 'unchanged' }));
+});
+
+it('returns a failed entry when a configured Readwise folder cannot be scanned', async () => {
+  const fixture = await seedReadwiseFixture();
+  const invalidPrimaryPath = path.join(tempRoot, 'readwise-file-instead-of-folder.md');
+  await fs.writeFile(invalidPrimaryPath, 'not a folder', 'utf8');
+  saveReadwiseSettings(
+    { ...fixture, primaryPath: invalidPrimaryPath },
+    { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' }
+  );
+
+  await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
+    failed_count: 1,
+    total_count: 1,
+    write_count: 0
+  });
+});

@@ -48,6 +48,35 @@ export interface NativeKeepImportPreviewResult {
   updated_count: number;
 }
 
+export type NativeReadwiseSyncPreviewDestination = 'external' | 'inbox' | 'off';
+export type NativeReadwiseSyncPreviewHighlightType = 'with_highlights' | 'without_highlights';
+export type NativeReadwiseSyncPreviewSourceKind = 'articles' | 'books' | 'podcasts' | 'tweets';
+export type NativeReadwiseSyncPreviewStatus = 'failed' | 'new' | 'off' | 'unchanged' | 'updated';
+
+export interface NativeReadwiseSyncPreviewEntry {
+  destination: NativeReadwiseSyncPreviewDestination;
+  detail: string | null;
+  detected_highlight_count: number;
+  highlight_type: NativeReadwiseSyncPreviewHighlightType;
+  source_kind: NativeReadwiseSyncPreviewSourceKind;
+  source_path: string;
+  status: NativeReadwiseSyncPreviewStatus;
+}
+
+export interface NativeReadwiseSyncPreviewResult {
+  entries: NativeReadwiseSyncPreviewEntry[];
+  external_count: number;
+  failed_count: number;
+  inbox_count: number;
+  off_count: number;
+  previewed_at: string;
+  readwise_root_path: string;
+  total_count: number;
+  with_highlights_count: number;
+  without_highlights_count: number;
+  write_count: number;
+}
+
 export interface NativeImportedTextFile {
   file_name: string;
   file_path: string;

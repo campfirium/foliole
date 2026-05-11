@@ -1,8 +1,5 @@
 import type { ImportNodeTitleStrategy } from './importedNodeTitle.js';
-import {
-  normalizeImportSourceAction,
-  type ImportSourceAction
-} from './importSourceActions.js';
+import { normalizeImportSourceAction, type ImportSourceAction } from './importSourceActions.js';
 import {
   normalizeKeepImportPreview,
   type KeepImportPreviewSummary
@@ -210,6 +207,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
         return accumulator;
       }, {})
     : {};
+  const legacyReadwiseImportEnabled = isRecord(readwiseByKind.articles) && readwiseByKind.articles.keepState === 'enabled';
   const sources = Array.isArray(value.sources)
     ? value.sources
         .map((item, index) => normalizeSource(item, createDraftImportSource(index + 101)))
@@ -218,7 +216,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
 
   return {
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
-    readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig),
+    readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
     readwiseSources: defaultReadwiseSources.map((source) =>
       normalizeSource(readwiseByKind[source.kind as ReadwiseSourceKind], source, source.kind)
@@ -239,7 +237,6 @@ export function createNextImportSourceIndex(sources: ImportManagerSourceDraft[],
     return Math.max(maxIndex, Number(match[1]));
   }, fallback - 1) + 1;
 }
-
 export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
   return READWISE_FOLDER_NAMES[kind];
 }

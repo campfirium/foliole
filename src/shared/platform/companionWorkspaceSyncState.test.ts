@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
+
 import {
   normalizeWorkspaceSyncState,
   prependSyncEvent
@@ -122,7 +124,7 @@ function testPreservesStageFinishedKind() {
 
 function testCapacityUsesFinishedRuns() {
   const initial = normalizeWorkspaceSyncState({ sync_events: [] });
-  const state = Array.from({ length: 101 }).reduce((current, _, index) => (
+  const state = Array.from({ length: 101 }).reduce<NativeCompanionWorkspaceSyncState>((current, _, index) => (
     prependSyncEvent(prependSyncEvent(current, runEvent(index, 'run_started')), runEvent(index, 'run_finished'))
   ), initial);
 

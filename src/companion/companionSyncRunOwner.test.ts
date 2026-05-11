@@ -105,7 +105,7 @@ function countRunEvents() {
 }
 
 async function startBlockedSync() {
-  let releaseSync = () => undefined;
+  let releaseSync: () => void = () => undefined;
   const syncStarted = new Promise<void>((resolveStarted) => {
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async () => {
       resolveStarted();

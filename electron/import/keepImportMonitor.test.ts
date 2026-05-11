@@ -14,6 +14,7 @@ it('watches both readwise full document and highlight folders', async () => {
     loadSettings: () => ({
       ...createDefaultImportManagerSettings(),
       readwiseReaderConfig: {
+        ...createDefaultImportManagerSettings().readwiseReaderConfig,
         highlightSeparator: '\\n\\n',
         highlightsHeading: '## Highlights',
         importScope: 'highlights_only',

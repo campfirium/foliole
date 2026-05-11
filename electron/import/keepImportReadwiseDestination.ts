@@ -1,0 +1,97 @@
+import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
+import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
+import { upsertKeepImportItem } from '../database/keepImportItems.js';
+import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
+
+import { loadImportManagerSettings } from './importManagerSettings.js';
+import type { KeepImportRuleConfig } from './keepImportService.js';
+import { upsertReadwiseExternalDocument } from './readwiseExternalDocuments.js';
+import {
+  loadPreparedReadwiseImportRecord,
+  resolveReadwiseSourceImportDecision,
+  resolveReadwiseSourceSignature
+} from './readwisePreparedImport.js';
+
+type ResolvedReadwiseSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
+
+function resolveReadwiseSource(config: KeepImportRuleConfig) {
+  if (config.sourceType !== 'readwise') {
+    return null;
+  }
+  const settings = loadImportManagerSettings();
+  const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
+  if (!readwiseSource?.highlightPath.trim() || !readwiseSource.primaryPath.trim() || !readwiseSource.kind) {
+    return null;
+  }
+  return {
+    readwiseConfig: settings.readwiseReaderConfig,
+    readwiseSource: readwiseSource as ResolvedReadwiseSource
+  } satisfies { readwiseConfig: ReadwiseReaderConfig; readwiseSource: ResolvedReadwiseSource };
+}
+
+export async function resolveReadwiseKeepImportDestination(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
+  const resolved = resolveReadwiseSource(config);
+  if (!resolved) {
+    return 'inbox';
+  }
+  const decision = await resolveReadwiseSourceImportDecision(source, {
+    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
+    readwiseConfig: resolved.readwiseConfig
+  });
+  return decision.destination;
+}
+
+export async function runReadwiseExternalDocumentImport(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
+  const resolved = resolveReadwiseSource(config);
+  if (!resolved) {
+    return { detail: 'Readwise source is not configured.', failureReason: 'Readwise source is not configured.', importStatus: 'failed' as const };
+  }
+  const importedAt = new Date().toISOString();
+  const sourceSignature = await resolveReadwiseSourceSignature(source, {
+    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim()
+  });
+  try {
+    const prepared = await loadPreparedReadwiseImportRecord(source, {
+      highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
+      highlightPolicy: config.highlightPolicy,
+      importedAt,
+      kind: resolved.readwiseSource.kind,
+      readwiseConfig: resolved.readwiseConfig
+    });
+    const result = upsertReadwiseExternalDocument({
+      content: prepared.content,
+      indexedAt: importedAt,
+      kind: resolved.readwiseSource.kind,
+      primaryPath: resolved.readwiseSource.primaryPath.trim(),
+      source
+    });
+    persistReadwiseExternalTracking(config, source, sourceSignature, importedAt, 'imported');
+    return { detail: result.documentId, failureReason: null, importStatus: 'imported' as const };
+  } catch (error) {
+    const failureReason = error instanceof Error ? error.message : 'Unknown Readwise external import failure';
+    persistReadwiseExternalTracking(config, source, sourceSignature, importedAt, 'failed');
+    return { detail: failureReason, failureReason, importStatus: 'failed' as const };
+  }
+}
+
+function persistReadwiseExternalTracking(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  sourceSignature: Awaited<ReturnType<typeof resolveReadwiseSourceSignature>>,
+  importedAt: string,
+  status: 'failed' | 'imported'
+) {
+  upsertKeepImportItem({
+    hasSourceUpdate: false,
+    highlightSourceMtimeMs: sourceSignature.highlight?.mtimeMs ?? null,
+    highlightSourceSizeBytes: sourceSignature.highlight?.sizeBytes ?? null,
+    lastImportedAt: status === 'imported' ? importedAt : null,
+    lastNodeId: null,
+    lastSeenAt: importedAt,
+    lastStatus: status,
+    ruleId: config.ruleId,
+    sourceMtimeMs: sourceSignature.primary.mtimeMs,
+    sourcePath: source.sourceName,
+    sourceSizeBytes: sourceSignature.primary.sizeBytes
+  });
+}

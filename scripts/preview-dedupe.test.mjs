@@ -66,7 +66,7 @@ async function readHash(repoRoot, target) {
 }
 
 describe('preview-dedupe', () => {
-  it('claims a new tracked diff before running preview and skips the same hash later', async () => {
+  it('stores a new tracked diff after successful preview and skips the same hash later', async () => {
     const repoRoot = await createRepo();
     try {
       const runLog = path.join(repoRoot, 'runs.log');
@@ -75,20 +75,38 @@ describe('preview-dedupe', () => {
       const first = await runDedupe(repoRoot, 'windows', [
         'bash',
         '-c',
-        'cat .lab/internal/runtime/windows-preview.hash > before-run.hash && echo run >> runs.log && echo "[windows-preview] status: STARTED"'
+        'echo run >> runs.log && echo "[windows-preview] status: STARTED"'
       ]);
       const storedHash = await readHash(repoRoot, 'windows');
-      const hashSeenByPreview = await readFile(path.join(repoRoot, 'before-run.hash'), 'utf8');
       expect(first.code).toBe(0);
       expect(first.stdout).toContain('[windows-preview] dedupe: claimed hash=');
       expect(first.stdout).toContain('[windows-preview] status: STARTED');
-      expect(hashSeenByPreview).toBe(storedHash);
+      expect(storedHash.trim()).not.toBe('');
 
       const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo run >> runs.log']);
       expect(second.code).toBe(0);
       expect(second.stdout).toContain('[windows-preview] dedupe: covered hash=');
       expect(second.stdout).toContain('[windows-preview] status: SYNCED');
       expect(await readFile(runLog, 'utf8')).toBe('run\n');
+    } finally {
+      await rm(repoRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('does not mark a failed preview hash as covered', async () => {
+    const repoRoot = await createRepo();
+    try {
+      await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
+
+      const first = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo fail >> runs.log; exit 7']);
+      expect(first.code).toBe(7);
+      await expect(readHash(repoRoot, 'windows')).rejects.toThrow();
+
+      const second = await runDedupe(repoRoot, 'windows', ['bash', '-c', 'echo pass >> runs.log']);
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain('[windows-preview] dedupe: claimed hash=');
+      expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('fail\npass\n');
+      expect((await readHash(repoRoot, 'windows')).trim()).not.toBe('');
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }

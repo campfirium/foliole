@@ -19,7 +19,8 @@ function renderActivity(
         device_kind: 'android-capacitor',
         device_name: 'Android companion',
         is_paired: true,
-        paired_at: '2026-04-22T09:00:00.000Z'
+        paired_at: '2026-04-22T09:00:00.000Z',
+        primary_device_id: 'android-test-device'
       }}
       status={overrides.status ?? 'idle'}
       syncConflictCount={0}
@@ -87,7 +88,6 @@ describe('CompanionSyncStatusDetails activity', () => {
       message: 'Body files downloaded.',
       occurred_at: '2026-05-07T23:12:40.000Z',
       run_id: 'run-1',
-      stage: 'resource_downloads',
       started_at: '2026-05-07T23:12:00.000Z',
       status: 'completed'
     }]);

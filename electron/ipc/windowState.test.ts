@@ -157,3 +157,11 @@ it('returns null for malformed payload', async () => {
 
   await expect(loadWindowState()).resolves.toBeNull();
 });
+
+it('returns null when startup reads window state before settings schema exists', async () => {
+  const dbPath = openDatabaseConnection().dbPath;
+  closeDatabaseConnection();
+  await fs.rm(dbPath, { force: true });
+
+  await expect(loadWindowState()).resolves.toBeNull();
+});

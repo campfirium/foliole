@@ -3,12 +3,22 @@ import path from 'node:path';
 
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { extractReadwiseSidecarHighlights, transformReadwiseFullDocument } from '../../lib/core/import/readwiseReaderParsing.js';
-import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
+import {
+  resolveReadwiseImportDestination,
+  type ReadwiseReaderConfig,
+  type ReadwiseWithoutHighlightsDestination
+} from '../../lib/core/import/readwiseReaderSettings.js';
 import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 export interface ReadwiseSourceSignature {
   highlight: { mtimeMs: number; sizeBytes: number } | null;
   primary: { mtimeMs: number; sizeBytes: number };
+}
+
+export interface ReadwiseSourceImportDecision {
+  destination: ReadwiseWithoutHighlightsDestination;
+  detectedHighlightCount: number;
+  hasHighlights: boolean;
 }
 
 function buildReadwiseSourceIdentity(kind: ReadwiseSourceKind, sourceName: string) {
@@ -44,6 +54,29 @@ export async function resolveReadwiseSourceSignature(
   }
 }
 
+export async function resolveReadwiseSourceImportDecision(
+  source: DirectoryImportSourceDescriptor,
+  options: {
+    highlightDirectoryPath: string;
+    readwiseConfig: ReadwiseReaderConfig;
+  }
+) {
+  const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
+  let detectedHighlightCount = 0;
+  try {
+    const articleMarkdown = await fs.readFile(articlePath, 'utf8');
+    detectedHighlightCount = extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig).length;
+  } catch {
+    detectedHighlightCount = 0;
+  }
+  const hasHighlights = detectedHighlightCount > 0;
+  return {
+    destination: resolveReadwiseImportDestination(options.readwiseConfig, hasHighlights),
+    detectedHighlightCount,
+    hasHighlights
+  };
+}
+
 export async function shouldImportReadwiseSource(
   source: DirectoryImportSourceDescriptor,
   options: {
@@ -51,16 +84,8 @@ export async function shouldImportReadwiseSource(
     readwiseConfig: ReadwiseReaderConfig;
   }
 ) {
-  if (options.readwiseConfig.importScope === 'all') {
-    return true;
-  }
-  const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
-  try {
-    const articleMarkdown = await fs.readFile(articlePath, 'utf8');
-    return extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig).length > 0;
-  } catch {
-    return false;
-  }
+  const decision = await resolveReadwiseSourceImportDecision(source, options);
+  return decision.destination !== 'off';
 }
 
 export async function loadPreparedReadwiseImportRecord(

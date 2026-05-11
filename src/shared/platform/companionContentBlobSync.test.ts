@@ -13,7 +13,14 @@ const capacitorMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'android'),
   plugin: {
     commitContentBlobBatch: vi.fn(async () => ({ db_elapsed_ms: 2, synced_hashes: ['a'.repeat(64)] })),
-    downloadContentBlobBatch: vi.fn(async () => ({
+    downloadContentBlobBatch: vi.fn(async (): Promise<{
+      batch_token: string;
+      failed_hashes: string[];
+      http_elapsed_ms?: number;
+      parse_elapsed_ms?: number;
+      synced_hashes: string[];
+      total_elapsed_ms?: number;
+    }> => ({
       batch_token: 'content-batch-token',
       failed_hashes: [],
       http_elapsed_ms: 3,

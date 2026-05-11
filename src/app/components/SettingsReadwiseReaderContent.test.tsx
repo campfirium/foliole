@@ -48,11 +48,12 @@ it('checks Readwise setup inline and turns on the integration from the settings 
   );
 
   expect(screen.queryByRole('dialog', { name: 'Readwise preview' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Check setup' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
 
   await waitFor(() => {
-    expect(screen.getByText('Ready to enable')).toBeInTheDocument();
+    expect(screen.getByText('Found 1 article, including 1 with highlights.')).toBeInTheDocument();
   });
+  expect(screen.getByText('Import preview')).toBeInTheDocument();
   expect(screen.getByText('highlighted passage')).toBeInTheDocument();
   expect(inspectReadwiseReaderSetup).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -66,10 +67,11 @@ it('checks Readwise setup inline and turns on the integration from the settings 
   );
   expect(onSave).toHaveBeenCalledTimes(1);
 
-  fireEvent.click(screen.getByRole('switch', { name: 'Readwise Reader integration' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Readwise import' }));
 
   expect(onSave).toHaveBeenCalledTimes(2);
   const saved = onSave.mock.calls[1][0] as { config: typeof config; readwiseSources: DraftImportSource[] };
+  expect(saved.config.enabled).toBe(true);
   expect(saved.config.validatedAt).not.toBe('');
   expect(saved.readwiseSources.filter((source) => source.kind).every((source) => source.keepState === 'enabled')).toBe(true);
 });
