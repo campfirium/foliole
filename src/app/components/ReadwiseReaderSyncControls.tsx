@@ -17,13 +17,31 @@ const SYNC_FREQUENCY_OPTIONS = [
 
 export function ReadwiseReaderSyncRow(props: {
   config: ReadwiseReaderConfig;
+  disabled: boolean;
+  isSyncing?: boolean;
   onChange: (field: keyof ReadwiseReaderConfig, value: string) => void;
+  onSync: () => void;
+  status?: { message: string | null; tone: 'error' | 'normal' };
 }) {
+  const description = (
+    <>
+      Automatically scan while Foliole is open, or start a scan with the current settings.
+      {props.status?.message ? (
+        <span
+          className={
+            props.status.tone === 'error'
+              ? 'mt-1 block text-red-700'
+              : 'mt-1 block text-foreground/70'
+          }
+        >
+          {props.status.message}
+        </span>
+      ) : null}
+    </>
+  );
+
   return (
-    <SettingsRow
-      description="Automatically scan while Foliole is open, or start a scan with the current settings."
-      title="Sync"
-    >
+    <SettingsRow description={description} title="Sync">
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <select
           aria-label="Sync frequency"
@@ -37,8 +55,8 @@ export function ReadwiseReaderSyncRow(props: {
             </option>
           ))}
         </select>
-        <AppButton disabled size="sm" variant="primary">
-          Sync
+        <AppButton disabled={props.disabled} onClick={props.onSync} size="sm" variant="primary">
+          {props.isSyncing ? 'Syncing...' : 'Sync'}
         </AppButton>
       </SettingsControlSlot>
     </SettingsRow>

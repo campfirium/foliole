@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest';
 
-import { buildExternalLibraryFolderBrowseState } from './externalLibraryBrowseModel';
+import {
+  buildExternalLibraryFolderBrowseState,
+  resolveExternalFolderDisplayLabel,
+  resolveReadwiseExternalChildLabel
+} from './externalLibraryBrowseModel';
 
 const folder = {
   attachmentMode: 'document_relative_first_then_fixed_root' as const,
@@ -68,4 +72,13 @@ it('returns all descendant documents for the selected directory instead of child
 
   expect(state.selectedDirectoryPath).toBe('sub');
   expect(state.documentItems.map((item) => item.relativePath)).toEqual(['sub/b.md', 'sub/deep/c.txt']);
+});
+
+it('uses stable Readwise labels for managed external folders', () => {
+  const folder = {
+    folderPath: '/Readwise/Full Document Contents/Articles',
+    id: 'readwise-reader-import-articles'
+  };
+  expect(resolveExternalFolderDisplayLabel(folder)).toBe('Readwise Articles');
+  expect(resolveReadwiseExternalChildLabel(folder)).toBe('Articles');
 });

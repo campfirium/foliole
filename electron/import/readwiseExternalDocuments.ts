@@ -4,9 +4,11 @@ import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSett
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 import { upsertExternalDocuments } from '../database/externalDocuments.js';
 import type { ScannedDocument } from '../database/externalSearchCacheSupport.js';
+import {
+  buildReadwiseExternalDocumentId,
+  buildReadwiseExternalFolderId
+} from '../database/readwiseManagedExternalDocuments.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
-
-const READWISE_EXTERNAL_FOLDER_PREFIX = 'readwise-reader-import';
 
 export function buildReadwiseExternalFolder(
   kind: ReadwiseSourceKind,
@@ -20,16 +22,12 @@ export function buildReadwiseExternalFolder(
     document_count: 0,
     excluded_dirs: [],
     folder_path: primaryPath,
-    id: `${READWISE_EXTERNAL_FOLDER_PREFIX}-${kind}`,
+    id: buildReadwiseExternalFolderId(kind),
     indexed_at: indexedAt,
     last_error: null,
     status: 'ready',
     updated_at: indexedAt
   };
-}
-
-export function buildReadwiseExternalDocumentId(kind: ReadwiseSourceKind, sourceName: string) {
-  return `${READWISE_EXTERNAL_FOLDER_PREFIX}-${kind}:${sourceName.replace(/\\/g, '/')}`;
 }
 
 export function upsertReadwiseExternalDocument(input: {

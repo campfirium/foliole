@@ -22,10 +22,17 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { searchExternalDocuments } from '../database/externalSearchCache.js';
+import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
+import {
+  loadExternalSearchBrowseEntries,
+  loadExternalSearchPreview
+} from '../database/externalSearchCacheRead.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { runKeepImportRule } from './keepImportService.js';
+import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 
 let tempRoot = '';
 
@@ -36,6 +43,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -111,6 +119,24 @@ it('writes External destination files into the Readwise-managed external documen
   expect(readRows("SELECT object_id FROM sync_object_state WHERE object_type = 'external_document'")).toEqual([
     { object_id: 'readwise-reader-import-articles:Highlighted.md' }
   ]);
+  const entries = loadExternalSearchBrowseEntries('readwise-reader-import-articles');
+  expect(entries).toEqual([
+    expect.objectContaining({
+      absolute_path: path.join(fixture.fullDocumentDir, 'Highlighted.md'),
+      folder_id: 'readwise-reader-import-articles',
+      relative_path: 'Highlighted.md',
+      title: 'Same Title'
+    })
+  ]);
+  expect(searchExternalDocuments('Highlighted body').map((result) => result.id)).toContain(
+    path.join(fixture.fullDocumentDir, 'Highlighted.md')
+  );
+  expect(loadExternalSearchPreview(path.join(fixture.fullDocumentDir, 'Highlighted.md'))).toEqual(
+    expect.objectContaining({
+      content: expect.stringContaining('Highlighted body.'),
+      folder_id: 'readwise-reader-import-articles'
+    })
+  );
 });
 
 it('skips Off destination without creating Inbox, External, or tracking rows', async () => {
@@ -123,6 +149,43 @@ it('skips Off destination without creating Inbox, External, or tracking rows', a
   expect(readRows('SELECT source_name FROM import_sources')).toEqual([]);
   expect(readRows('SELECT document_id FROM external_documents')).toEqual([]);
   expect(readRows('SELECT source_path FROM keep_import_items')).toEqual([]);
+});
+
+it('imports no-highlight sources into External after the behavior changes from Off', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, {
+    withHighlightsDestination: 'inbox',
+    withoutHighlightsDestination: 'off'
+  });
+  await fs.rm(path.join(fixture.highlightDir, 'Highlighted.md'));
+
+  await runReadwiseReaderImport();
+  expect(readRows('SELECT document_id FROM external_documents')).toEqual([]);
+
+  saveReadwiseSettings(fixture, {
+    withHighlightsDestination: 'inbox',
+    withoutHighlightsDestination: 'external'
+  });
+  const result = await runReadwiseReaderImport();
+
+  expect(result).toMatchObject({
+    failed_count: 0,
+    imported_count: 2,
+    source_count: 1,
+    status: 'completed'
+  });
+  expect(
+    readRows('SELECT document_id, relative_path FROM external_documents ORDER BY relative_path ASC')
+  ).toEqual([
+    {
+      document_id: 'readwise-reader-import-articles:Highlighted.md',
+      relative_path: 'Highlighted.md'
+    },
+    {
+      document_id: 'readwise-reader-import-articles:Plain.md',
+      relative_path: 'Plain.md'
+    }
+  ]);
 });
 
 it('imports a previously skipped no-highlight source after highlights appear', async () => {

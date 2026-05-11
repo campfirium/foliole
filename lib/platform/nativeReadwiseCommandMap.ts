@@ -1,4 +1,10 @@
+import type { ImportManagerSettings } from '../core/import/importManagerSettings.js';
+
 import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type {
+  NativeReadwiseImportRunResult,
+  NativeReadwiseSyncPreviewResult
+} from './nativeImportContract.js';
 import type {
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookImportResetResult,
@@ -21,6 +27,14 @@ export type NativeReadwiseCommandMap = {
       tagKeyword: string;
     };
     result: NativeReadwiseDetectionResult;
+  };
+  [NATIVE_COMMANDS.previewReadwiseReaderImport]: {
+    args: { settings?: ImportManagerSettings } | undefined;
+    result: NativeReadwiseSyncPreviewResult;
+  };
+  [NATIVE_COMMANDS.runReadwiseReaderImport]: {
+    args: { settings?: ImportManagerSettings } | undefined;
+    result: NativeReadwiseImportRunResult;
   };
   [NATIVE_COMMANDS.loadReadwiseBooksInventory]: {
     args: undefined;

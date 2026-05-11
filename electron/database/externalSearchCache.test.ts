@@ -20,11 +20,11 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
-  loadExternalSearchBrowseEntries,
   rebuildExternalSearchIndexes,
   refreshExternalSearchIndexes,
   searchExternalDocuments
 } from './externalSearchCache.js';
+import { loadExternalSearchBrowseEntries } from './externalSearchCacheRead.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';

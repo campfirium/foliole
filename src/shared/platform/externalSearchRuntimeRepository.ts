@@ -111,6 +111,14 @@ export async function loadRuntimeExternalSearchFolders() {
   return Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
 }
 
+export async function refreshRuntimeExternalSearchFolders() {
+  const folders = await loadRuntimeExternalSearchFolders();
+  if (folders) {
+    notifyRuntimeExternalSearchFolders(folders);
+  }
+  return folders;
+}
+
 export async function saveRuntimeExternalSearchFolders(folders: RuntimeExternalSearchFolder[]) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {

@@ -9,10 +9,14 @@ import type {
 
 import {
   buildExternalLibraryFolderBrowseState,
-  resolveExternalFolderLabel,
+  isReadwiseExternalFolder,
+  resolveExternalFolderDisplayLabel,
+  resolveReadwiseExternalChildLabel,
   type ExternalLibraryDirectoryNode,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
+
+const READWISE_GROUP_ROW_ID = 'external-library-readwise-group';
 
 export interface ExternalTreeRowRecord {
   depth: number;
@@ -22,7 +26,7 @@ export interface ExternalTreeRowRecord {
   label: string;
   secondaryIconKind?: 'external-folder';
   secondaryLabel?: string;
-  selection: Extract<ExternalLibrarySelection, { folderId: string }>;
+  selection: Extract<ExternalLibrarySelection, { folderId: string }> | null;
 }
 
 function buildDirectoryRowId(folderId: string, directoryPath: string) {
@@ -51,10 +55,11 @@ function buildVisibleDirectoryNodes(
 
 function buildDirectoryTreeRow(
   node: ExternalLibraryDirectoryNode,
+  depthOffset: number,
   selection: ExternalLibrarySelection
 ): ExternalTreeRowRecord {
   return {
-    depth: node.directoryPath.split('/').length,
+    depth: node.directoryPath.split('/').length + depthOffset,
     hasChildren: node.hasChildren,
     id: buildDirectoryRowId(node.folderId, node.directoryPath),
     isSelected: selection.kind === 'directory' && selection.folderId === node.folderId && selection.directoryPath === node.directoryPath,
@@ -72,11 +77,12 @@ function buildFolderTreeRows(
   entries: ExternalLibraryBrowseEntry[],
   selection: ExternalLibrarySelection,
   isExternalViewOpen: boolean,
-  collapsedIds: Set<string>
+  collapsedIds: Set<string>,
+  options: { depth: number; label: string }
 ) {
   const browseState = buildExternalLibraryFolderBrowseState(folder, entries, { folderId: folder.id, kind: 'folder' });
   const rows: ExternalTreeRowRecord[] = [{
-    depth: 0,
+    depth: options.depth,
     hasChildren: browseState.directoryNodes.length > 0 || (entries.length === 0 && folder.documentCount > 0),
     id: buildFolderRowId(folder.id),
     isSelected:
@@ -84,14 +90,46 @@ function buildFolderTreeRows(
       selection.kind !== 'root' &&
       selection.folderId === folder.id &&
       (selection.kind === 'folder' || browseState.selectedDirectoryPath === null),
-    label: resolveExternalFolderLabel(folder.folderPath),
+    label: options.label,
     secondaryIconKind: 'external-folder',
     selection: { folderId: folder.id, kind: 'folder' }
   }];
   buildVisibleDirectoryNodes(folder.id, browseState.directoryNodes, collapsedIds).forEach((node) => {
-    rows.push(buildDirectoryTreeRow(node, selection));
+    rows.push(buildDirectoryTreeRow(node, options.depth, selection));
   });
   return rows;
+}
+
+function buildReadwiseGroupRows(
+  folders: ExternalLibraryFolder[],
+  entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>,
+  selection: ExternalLibrarySelection,
+  isExternalViewOpen: boolean,
+  collapsedIds: Set<string>
+) {
+  if (folders.length === 0) {
+    return [];
+  }
+  const rows: ExternalTreeRowRecord[] = [{
+    depth: 0,
+    hasChildren: true,
+    id: READWISE_GROUP_ROW_ID,
+    isSelected: false,
+    label: 'Readwise',
+    selection: null
+  }];
+  if (collapsedIds.has(READWISE_GROUP_ROW_ID)) {
+    return rows;
+  }
+  return [
+    ...rows,
+    ...folders.flatMap((folder) =>
+      buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds, {
+        depth: 1,
+        label: resolveReadwiseExternalChildLabel(folder)
+      })
+    )
+  ];
 }
 
 export function buildExternalTreeRows(
@@ -101,7 +139,17 @@ export function buildExternalTreeRows(
   isExternalViewOpen: boolean,
   collapsedIds: Set<string>
 ) {
-  return folders.flatMap((folder) => buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds));
+  const readwiseFolders = folders.filter(isReadwiseExternalFolder);
+  const regularFolders = folders.filter((folder) => !isReadwiseExternalFolder(folder));
+  return [
+    ...regularFolders.flatMap((folder) =>
+      buildFolderTreeRows(folder, entriesByFolderId[folder.id] ?? [], selection, isExternalViewOpen, collapsedIds, {
+        depth: 0,
+        label: resolveExternalFolderDisplayLabel(folder)
+      })
+    ),
+    ...buildReadwiseGroupRows(readwiseFolders, entriesByFolderId, selection, isExternalViewOpen, collapsedIds)
+  ];
 }
 
 export function createKeyboardRow(row: ExternalTreeRowRecord): NodeTreeRowModel {
@@ -132,7 +180,7 @@ export function openRowSelection(
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void
 ) {
   const row = rows.find((candidate) => candidate.id === rowId);
-  if (row) onOpenExternalSelection(row.selection);
+  if (row?.selection) onOpenExternalSelection(row.selection);
 }
 
 export function createExternalRowKeyDown(args: {

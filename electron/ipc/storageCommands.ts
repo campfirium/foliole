@@ -1,12 +1,4 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
-import {
-  loadExternalSearchBrowseEntries,
-  loadExternalSearchPreview,
-  pruneExternalSearchCache,
-  rebuildExternalSearchIndexes
-} from '../database/externalSearchCache.js';
-import { loadExternalSearchFolders, saveExternalSearchFolders } from '../database/externalSearchFolders.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
   deleteNodesPermanently,
@@ -17,34 +9,19 @@ import {
   updateNodeAnchorLinks,
   upsertNodeSnapshot
 } from '../database/nodeMutations.js';
-import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
-import { notifyExternalSearchFoldersChanged } from '../externalSearchBackgroundRefreshRuntime.js';
-import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
-import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
-import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
-import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
-import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
-import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
-import {
-  loadReviewSchedulerSettings,
-  saveReviewSchedulerSettings
-} from '../reviewSchedulerSettings.js';
 
 import {
-  asNullableString,
   parseNodeAnchorLocatorUpdateArray,
   asString,
   asStringArray,
   parseNodeCreationArgs,
   parseNodeSnapshotArgs
 } from './commandParsers.js';
-import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
-import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
 import {
   parseDeleteNodesPermanentlyArgs,
   parseRestoreNodesArgs,
@@ -53,14 +30,13 @@ import {
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 import { toNativePdfImportsInventory } from './pdfImportsInventoryPayload.js';
 import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.js';
-import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
 import {
   handleSqliteMaintenanceCommand,
-  readObjectArg,
-  readSettingsObject
+  readObjectArg
 } from './storageCommandSupport.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
+import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
 
 function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
@@ -124,74 +100,6 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
   return undefined;
 }
 
-async function handleSettingsStorageCommand(
-  command: string,
-  args: Record<string, unknown>,
-  window: Parameters<typeof handleStorageAttachmentCommand>[2] = null
-) {
-  const externalSearchResult = handleExternalSearchStorageCommand(command, args);
-  if (externalSearchResult !== undefined) return externalSearchResult;
-  const companionPairingResult = handleCompanionPairingCommand(command, args);
-  if (companionPairingResult !== undefined) return companionPairingResult;
-  if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
-  if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
-  if (command === NATIVE_COMMANDS.saveAppSettingsState) {
-    await saveAppSettingsState(readSettingsObject(args.settings));
-    await refreshManagedInboxMonitorFromSettings();
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.loadSyncPeers) return loadSyncPeers();
-  if (command === NATIVE_COMMANDS.saveSyncPeers) {
-    return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
-  }
-  if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
-  if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
-  if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
-  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
-  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
-  if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
-    const location = asString(args.location, 'location') as 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
-    const result = await updateLibraryPathSetting({
-      location,
-      path: asNullableString(args.path, 'path')
-    });
-    if (location === 'assets_dir' || location === 'library_home') {
-      await rebuildMirrorAttachmentLinks();
-    }
-    await refreshManagedInboxMonitorFromSettings();
-    return result;
-  }
-  if (command === NATIVE_COMMANDS.saveBackupSettings) return saveBackupSettings(readSettingsObject(args.settings));
-  if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
-    const result = saveImportManagerSettings(readSettingsObject(args.settings));
-    await refreshKeepImportMonitorFromSettings();
-    return result;
-  }
-  if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) return loadReviewSchedulerSettings();
-  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) return saveReviewSchedulerSettings(readSettingsObject(args.settings));
-  return undefined;
-}
-
-function handleExternalSearchStorageCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.loadExternalSearchFolders) return loadExternalSearchFolders();
-  if (command === NATIVE_COMMANDS.saveExternalSearchFolders) {
-    const folders = Array.isArray(args.folders) ? args.folders : [];
-    const savedFolders = saveExternalSearchFolders(folders as Parameters<typeof saveExternalSearchFolders>[0]);
-    pruneExternalSearchCache(savedFolders.map((folder) => folder.id));
-    notifyExternalSearchFoldersChanged();
-    return savedFolders;
-  }
-  if (command === NATIVE_COMMANDS.rebuildExternalSearchIndex) {
-    return rebuildExternalSearchIndexes(asNullableString(args.folder_id, 'folder_id') ?? undefined);
-  }
-  if (command === NATIVE_COMMANDS.loadExternalSearchBrowseEntries) {
-    return loadExternalSearchBrowseEntries(asString(args.folder_id, 'folder_id'));
-  }
-  if (command === NATIVE_COMMANDS.loadExternalSearchPreview) {
-    return loadExternalSearchPreview(asString(args.absolute_path, 'absolute_path'));
-  }
-  return undefined;
-}
 export async function handleStorageCommand(
   command: string,
   args: Record<string, unknown>,

@@ -1,7 +1,3 @@
-import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
-import type { NativeExternalSearchBrowseEntry, NativeExternalSearchPreview } from '../../lib/platform/nativeStorageContract.js';
-
 import {
   markExternalDocumentsMissing,
   replaceExternalDocumentsForFolder,
@@ -20,7 +16,10 @@ import {
   toExternalResult
 } from './externalSearchCacheSupport.js';
 import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from './externalSearchFolders.js';
-import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
+import {
+  loadReadwiseExternalSearchFolders,
+  searchReadwiseExternalDocuments
+} from './readwiseManagedExternalDocuments.js';
 
 type SqliteDatabase = import('better-sqlite3').Database;
 interface CachedFolderDocumentRow { absolute_path: string; is_present: number; modified_ms: number; relative_path: string; size_bytes: number }
@@ -105,7 +104,7 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
       });
     }
   }
-  return loadExternalSearchFolders();
+  return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
 }
 
 export async function refreshExternalSearchIndexes(folderId?: string) {
@@ -138,7 +137,7 @@ export async function refreshExternalSearchIndexes(folderId?: string) {
       });
     }
   }
-  return loadExternalSearchFolders();
+  return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
 }
 
 export function searchExternalDocuments(query: string) {
@@ -186,87 +185,8 @@ export function searchExternalDocuments(query: string) {
              LIMIT 20`
           )
           .all(normalizedQuery) as ExternalSearchRow[];
-  return rows.map((row) => toExternalResult(row, normalizedQuery));
+  return [
+    ...rows.map((row) => toExternalResult(row, normalizedQuery)),
+    ...searchReadwiseExternalDocuments(normalizedQuery)
+  ];
 }
-
-export function loadExternalSearchBrowseEntries(folderId: string): NativeExternalSearchBrowseEntry[] {
-  return (
-    openExternalSearchCacheDatabase()
-    .prepare(
-      `SELECT absolute_path, content, extension, file_name, folder_id, folder_path, modified_at, relative_path
-       FROM external_search_documents
-       WHERE folder_id = ? AND is_present = 1
-       ORDER BY relative_path COLLATE NOCASE ASC`
-    )
-    .all(folderId) as Array<{
-      absolute_path: string;
-      content: string;
-      extension: 'md' | 'txt';
-      file_name: string;
-      folder_id: string;
-      folder_path: string;
-      modified_at: string;
-      relative_path: string;
-    }>
-  ).map((row) => {
-    const title = resolveImportedNodeTitle({
-      content: row.content,
-      sourceName: row.relative_path,
-      titleStrategy: 'heading'
-    });
-    return {
-      absolute_path: row.absolute_path,
-      extension: row.extension,
-      file_name: row.file_name,
-      folder_id: row.folder_id,
-      folder_path: row.folder_path,
-      modified_at: row.modified_at,
-      opening_text: resolveNodeOpeningText(row.content, title),
-      relative_path: row.relative_path,
-      title
-    } satisfies NativeExternalSearchBrowseEntry;
-  });
-}
-
-export function loadExternalSearchPreview(absolutePath: string): NativeExternalSearchPreview | null {
-  const row = openExternalSearchCacheDatabase()
-    .prepare(
-      `SELECT absolute_path, folder_id, folder_path, relative_path, file_name, extension, content
-       FROM external_search_documents
-       WHERE absolute_path = ? AND is_present = 1`
-    )
-    .get(absolutePath) as {
-    absolute_path: string;
-    content: string;
-    extension: 'md' | 'txt';
-    file_name: string;
-    folder_id: string;
-    folder_path: string;
-    relative_path: string;
-  } | undefined;
-  if (!row) {
-    return null;
-  }
-  const folder = loadExternalSearchFolders().find((item) => item.id === row.folder_id) ?? null;
-  const previewContent = resolveExternalPreviewSourceContent(row.content, row.absolute_path);
-  return {
-    ...row,
-    content: row.extension === 'md' ? rewriteExternalPreviewContent(previewContent, row.absolute_path, folder) : previewContent
-  };
-}
-
-export function pruneExternalSearchCache(validFolderIds: string[]) {
-  const db = openExternalSearchCacheDatabase();
-  const placeholders = validFolderIds.map(() => '?').join(', ');
-  const deleteDocumentsSql = placeholders
-    ? `DELETE FROM external_search_documents WHERE folder_id NOT IN (${placeholders})`
-    : 'DELETE FROM external_search_documents';
-  const deleteFtsSql = placeholders
-    ? `DELETE FROM external_search_fts WHERE folder_id NOT IN (${placeholders})`
-    : 'DELETE FROM external_search_fts';
-  db.transaction(() => {
-    db.prepare(deleteDocumentsSql).run(...validFolderIds);
-    db.prepare(deleteFtsSql).run(...validFolderIds);
-  })();
-}
-

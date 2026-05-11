@@ -37,10 +37,7 @@ export function WorkspaceSettingsOverlay({
   }
 
   return (
-    <WorkspaceSettingsOverlayContent
-      onClose={onClose}
-      requestedCategory={requestedCategory}
-    />
+    <WorkspaceSettingsOverlayContent onClose={onClose} requestedCategory={requestedCategory} />
   );
 }
 
@@ -60,12 +57,20 @@ function WorkspaceSettingsOverlayContent({
           onChange={importSettings.handleChangeSource}
           onChangeAction={importSettings.handleChangeAction}
           onChangeTitleStrategy={importSettings.handleChangeTitleStrategy}
-          onChooseHighlightFolder={(sourceId) => void importSettings.handleChooseFolder(sourceId, 'highlightPath')}
-          onChoosePrimaryFolder={(sourceId) => void importSettings.handleChooseFolder(sourceId, 'primaryPath')}
+          onChooseHighlightFolder={(sourceId) =>
+            void importSettings.handleChooseFolder(sourceId, 'highlightPath')
+          }
+          onChoosePrimaryFolder={(sourceId) =>
+            void importSettings.handleChooseFolder(sourceId, 'primaryPath')
+          }
           onCopySource={importSettings.handleCopySource}
           onDeleteSource={importSettings.handleDeleteSource}
-          onDisableKeepImport={(sourceId) => importSettings.handleDisableKeepImport(sourceId, 'sources')}
-          onPreviewKeepImport={(sourceId) => void importSettings.handlePreviewKeepImport(sourceId, 'sources')}
+          onDisableKeepImport={(sourceId) =>
+            importSettings.handleDisableKeepImport(sourceId, 'sources')
+          }
+          onPreviewKeepImport={(sourceId) =>
+            void importSettings.handlePreviewKeepImport(sourceId, 'sources')
+          }
           sources={importSettings.sources}
           titleStrategy={importSettings.titleStrategy}
         />
@@ -75,6 +80,8 @@ function WorkspaceSettingsOverlayContent({
         <SettingsReadwiseReaderContent
           config={importSettings.readwiseReaderConfig}
           onSave={importSettings.handleSaveReadwiseReaderSetup}
+          onPreviewSync={importSettings.previewReadwiseReaderImport}
+          onRunSync={importSettings.runReadwiseReaderImport}
           readwiseRootPath={importSettings.readwiseRootPath}
           readwiseSources={importSettings.readwiseSources}
         />

@@ -1,7 +1,8 @@
-import {
-  isReadwiseReaderConfigReady,
-  type ReadwiseReaderConfig
-} from '../../../lib/core/import/readwiseReaderSettings';
+import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type {
+  NativeReadwiseImportRunResult,
+  NativeReadwiseSyncPreviewResult
+} from '../../../lib/platform/nativeContract';
 import {
   AppButton,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -16,68 +17,46 @@ import {
   ReadwiseIntegrationSwitch,
   ReadwiseReaderSetupCheckPanel
 } from './ReadwiseReaderSetupCheckPanel';
-import { inspectReadwiseReaderSetup } from './readwiseReaderSetupInspection';
 import { ReadwiseDirectorySection, ReadwiseParserFields } from './ReadwiseReaderSetupParts';
 import { ReadwiseReaderSyncRow } from './ReadwiseReaderSyncControls';
-import { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
+import { ReadwiseSyncPreviewDialog } from './ReadwiseSyncPreviewDialog';
+import {
+  useReadwiseSetupController,
+  type ReadwiseSetupPayload
+} from './useReadwiseSetupController';
+import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
 
-function enableReadwiseImportSource(sources: DraftImportSource[]) {
-  return sources.map((source) =>
-    source.kind && source.highlightPath.trim() && source.primaryPath.trim()
-      ? { ...source, keepState: 'enabled' as const }
-      : source
-  );
-}
+type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
 
-function disableReadwiseImportSource(sources: DraftImportSource[]) {
-  return sources.map((source) =>
-    source.kind ? { ...source, keepState: 'draft' as const } : source
-  );
-}
-
-function canPreviewReadwiseSetup(input: {
-  config: ReadwiseReaderConfig;
-  readwiseRootPath: string;
-  readwiseSources: DraftImportSource[];
+function ReadwiseSetupActions(props: {
+  integrationEnabled: boolean;
+  onChangeIntegration: () => void;
 }) {
   return (
-    input.readwiseRootPath.trim().length > 0 &&
-    input.readwiseSources.some((source) => source.kind) &&
-    input.readwiseSources.every(
-      (source) => !source.kind || Boolean(source.highlightPath.trim() && source.primaryPath.trim())
-    ) &&
-    input.config.highlightsHeading.trim().length > 0 &&
-    input.config.newHighlightsHeading.trim().length > 0 &&
-    input.config.highlightSeparator.trim().length > 0 &&
-    input.config.tagKeyword.trim().length > 0 &&
-    input.config.noteKeyword.trim().length > 0
+    <ReadwiseIntegrationSwitch
+      disabled={false}
+      enabled={props.integrationEnabled}
+      onToggle={props.onChangeIntegration}
+    />
   );
-}
-
-function getValidatedReadwiseConfig(draft: ReturnType<typeof useReadwiseSetupDraft>) {
-  return draft.previewResult?.success
-    ? { ...draft.draftConfig, validatedAt: new Date().toISOString() }
-    : draft.draftConfig;
 }
 
 function ReadwiseSetupSection(props: {
   canChangeIntegration: boolean;
   canPreview: boolean;
-  draft: ReturnType<typeof useReadwiseSetupDraft>;
+  draft: ReadwiseSetupDraft;
   integrationEnabled: boolean;
   onChangeIntegration: () => void;
   onCheck: () => void;
+  onSync: () => void;
+  syncStatus: { message: string | null; tone: 'error' | 'normal' };
+  syncDisabled: boolean;
+  syncIsRunning: boolean;
 }) {
   return (
     <div className="space-y-6">
       <SettingsSection
-        actions={
-          <ReadwiseIntegrationSwitch
-            disabled={!props.canChangeIntegration}
-            enabled={props.integrationEnabled}
-            onToggle={props.onChangeIntegration}
-          />
-        }
+        actions={<ReadwiseSetupActions {...props} />}
         ariaLabel="Readwise Reader import setup"
         description="Readwise Reader for Obsidian folder import."
         title="Readwise Reader Import"
@@ -91,29 +70,39 @@ function ReadwiseSetupSection(props: {
         />
         <ReadwiseReaderSyncRow
           config={props.draft.draftConfig}
+          disabled={props.syncDisabled}
+          isSyncing={props.syncIsRunning}
           onChange={props.draft.updateConfig}
+          onSync={props.onSync}
+          status={props.syncStatus}
         />
         <ReadwiseCleanupRow />
       </SettingsSection>
-      <SettingsSection ariaLabel="Readwise Reader import behavior" title="Import behavior">
-        <ReadwiseReaderImportBehavior
-          config={props.draft.draftConfig}
-          onChange={props.draft.updateConfig}
-        />
-      </SettingsSection>
-      <SettingsSection ariaLabel="Readwise Reader import settings" title="Import settings">
-        <ReadwiseDirectorySection
-          onChooseFolder={props.draft.chooseFolder}
-          onChooseRootFolder={props.draft.chooseRootFolder}
-          readwiseRootPath={props.draft.draftRootPath}
-          sources={props.draft.draftSources}
-        />
-        <ReadwiseParserFields
-          config={props.draft.draftConfig}
-          onChange={props.draft.updateConfig}
-        />
-      </SettingsSection>
+      <ReadwiseBehaviorSection draft={props.draft} />
+      <ReadwiseImportSettingsSection draft={props.draft} />
     </div>
+  );
+}
+
+function ReadwiseBehaviorSection({ draft }: { draft: ReadwiseSetupDraft }) {
+  return (
+    <SettingsSection ariaLabel="Readwise Reader import behavior" title="Import behavior">
+      <ReadwiseReaderImportBehavior config={draft.draftConfig} onChange={draft.updateConfig} />
+    </SettingsSection>
+  );
+}
+
+function ReadwiseImportSettingsSection({ draft }: { draft: ReadwiseSetupDraft }) {
+  return (
+    <SettingsSection ariaLabel="Readwise Reader import settings" title="Import settings">
+      <ReadwiseDirectorySection
+        onChooseFolder={draft.chooseFolder}
+        onChooseRootFolder={draft.chooseRootFolder}
+        readwiseRootPath={draft.draftRootPath}
+        sources={draft.draftSources}
+      />
+      <ReadwiseParserFields config={draft.draftConfig} onChange={draft.updateConfig} />
+    </SettingsSection>
   );
 }
 
@@ -134,87 +123,40 @@ function ReadwiseCleanupRow() {
 
 interface SettingsReadwiseReaderContentProps {
   config: ReadwiseReaderConfig;
-  onSave: (input: {
-    config: ReadwiseReaderConfig;
-    readwiseRootPath: string;
-    readwiseSources: DraftImportSource[];
-  }) => void;
+  onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
+  onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
+  onSave: (input: ReadwiseSetupPayload) => void;
   readwiseRootPath: string;
   readwiseSources: DraftImportSource[];
-}
-
-function useReadwiseSetupController(props: SettingsReadwiseReaderContentProps) {
-  const draft = useReadwiseSetupDraft({
-    config: props.config,
-    onPreview: (input) =>
-      inspectReadwiseReaderSetup({
-        articleDirectoryPath: input.articleDirectoryPath,
-        config: input.config,
-        fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
-        sources: input.sources
-      }),
-    open: true,
-    readwiseRootPath: props.readwiseRootPath,
-    readwiseSources: props.readwiseSources
-  });
-  const canPreview = canPreviewReadwiseSetup({
-    config: draft.draftConfig,
-    readwiseRootPath: draft.draftRootPath,
-    readwiseSources: draft.draftSources
-  });
-  const configured =
-    props.readwiseRootPath.trim().length > 0 && isReadwiseReaderConfigReady(props.config);
-  const integrationEnabled = props.config.enabled;
-  const canChangeIntegration =
-    integrationEnabled ||
-    Boolean(draft.previewResult?.success) ||
-    (configured && !draft.hasDraftChanges);
-
-  function saveReadwiseSetup(readwiseSources: DraftImportSource[], config: ReadwiseReaderConfig) {
-    props.onSave({
-      config,
-      readwiseRootPath: draft.draftRootPath,
-      readwiseSources
-    });
-  }
-
-  function handleChangeIntegration() {
-    saveReadwiseSetup(
-      integrationEnabled
-        ? disableReadwiseImportSource(draft.draftSources)
-        : enableReadwiseImportSource(draft.draftSources),
-      integrationEnabled
-        ? { ...draft.draftConfig, enabled: false }
-        : { ...getValidatedReadwiseConfig(draft), enabled: true }
-    );
-  }
-
-  function handleCheck() {
-    saveReadwiseSetup(draft.draftSources, draft.draftConfig);
-    void draft.runPreview();
-  }
-
-  return {
-    canChangeIntegration,
-    canPreview,
-    draft,
-    handleChangeIntegration,
-    handleCheck,
-    integrationEnabled
-  };
 }
 
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
   const setup = useReadwiseSetupController(props);
 
   return (
-    <ReadwiseSetupSection
-      canChangeIntegration={setup.canChangeIntegration}
-      canPreview={setup.canPreview}
-      draft={setup.draft}
-      integrationEnabled={setup.integrationEnabled}
-      onChangeIntegration={setup.handleChangeIntegration}
-      onCheck={setup.handleCheck}
-    />
+    <>
+      <ReadwiseSetupSection
+        canChangeIntegration={setup.canChangeIntegration}
+        canPreview={setup.canPreview}
+        draft={setup.draft}
+        integrationEnabled={setup.integrationEnabled}
+        onChangeIntegration={setup.handleChangeIntegration}
+        onCheck={setup.handleCheck}
+        onSync={() => void setup.handleRunSync()}
+        syncStatus={setup.manualSyncStatus}
+        syncDisabled={setup.syncDisabled}
+        syncIsRunning={setup.syncIsRunning}
+      />
+      <ReadwiseSyncPreviewDialog
+        error={setup.syncError}
+        isPreviewing={setup.isSyncPreviewing}
+        isStarting={setup.isStartingSync}
+        notice={setup.syncNotice}
+        onCancel={setup.closeSyncPreview}
+        onStart={setup.startSync}
+        open={setup.syncIntent !== null}
+        preview={setup.syncPreview}
+      />
+    </>
   );
 }

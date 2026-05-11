@@ -52,6 +52,32 @@ export function resolveExternalFolderLabel(folderPath: string) {
   return normalizedPath.split('/').filter(Boolean).at(-1) ?? folderPath;
 }
 
+const READWISE_EXTERNAL_FOLDER_LABELS: Record<string, string> = {
+  'readwise-reader-import-articles': 'Readwise Articles',
+  'readwise-reader-import-books': 'Readwise Books',
+  'readwise-reader-import-podcasts': 'Readwise Podcasts',
+  'readwise-reader-import-tweets': 'Readwise Tweets'
+};
+
+const READWISE_EXTERNAL_CHILD_LABELS: Record<string, string> = {
+  'readwise-reader-import-articles': 'Articles',
+  'readwise-reader-import-books': 'Books',
+  'readwise-reader-import-podcasts': 'Podcasts',
+  'readwise-reader-import-tweets': 'Tweets'
+};
+
+export function isReadwiseExternalFolder(folder: Pick<ExternalLibraryFolder, 'id'>) {
+  return Object.prototype.hasOwnProperty.call(READWISE_EXTERNAL_FOLDER_LABELS, folder.id);
+}
+
+export function resolveExternalFolderDisplayLabel(folder: Pick<ExternalLibraryFolder, 'folderPath' | 'id'>) {
+  return READWISE_EXTERNAL_FOLDER_LABELS[folder.id] ?? resolveExternalFolderLabel(folder.folderPath);
+}
+
+export function resolveReadwiseExternalChildLabel(folder: Pick<ExternalLibraryFolder, 'folderPath' | 'id'>) {
+  return READWISE_EXTERNAL_CHILD_LABELS[folder.id] ?? resolveExternalFolderLabel(folder.folderPath);
+}
+
 export function resolveExternalEntryDirectoryPath(relativePath: string) {
   const normalizedPath = normalizeExternalDirectoryPath(relativePath);
   const segments = normalizedPath.split('/');
@@ -103,7 +129,7 @@ function buildDirectoryNode(folder: ExternalLibraryFolder, directoryPath: string
     documentCount,
     folderId: folder.id,
     hasChildren,
-    name: normalizedDirectoryPath.split('/').filter(Boolean).at(-1) ?? resolveExternalFolderLabel(folder.folderPath),
+    name: normalizedDirectoryPath.split('/').filter(Boolean).at(-1) ?? resolveExternalFolderDisplayLabel(folder),
     parentDirectoryPath: normalizedDirectoryPath.includes('/')
       ? normalizedDirectoryPath.slice(0, normalizedDirectoryPath.lastIndexOf('/'))
       : null

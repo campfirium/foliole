@@ -54,3 +54,23 @@ it('shows external folders in the persisted manual order', () => {
     expect.stringContaining('1act')
   ]);
 });
+
+it('groups Readwise-managed external folders under one Readwise row', () => {
+  render(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[
+        externalFolder('readwise-reader-import-articles', '/library/Articles'),
+        externalFolder('readwise-reader-import-books', '/library/Books')
+      ]}
+      isExternalViewOpen={false}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  expect(screen.getByRole('treeitem', { name: /^Readwise$/i })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: /Articles/i })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: /Books/i })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /Readwise Articles/i })).toBeNull();
+});

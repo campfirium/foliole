@@ -2,7 +2,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import {
   normalizeExternalDirectoryPath,
-  resolveExternalFolderLabel,
+  resolveExternalFolderDisplayLabel,
   type ExternalLibraryFolder
 } from './externalLibraryBrowseModel';
 import {
@@ -74,7 +74,7 @@ export function sortExternalLibraryFolders<T extends Pick<ExternalLibraryFolder,
     if (leftRank >= 0 && rightRank >= 0 && leftRank !== rightRank) return leftRank - rightRank;
     if (leftRank >= 0) return -1;
     if (rightRank >= 0) return 1;
-    return compareNaturalName(resolveExternalFolderLabel(left.folderPath), resolveExternalFolderLabel(right.folderPath));
+    return compareNaturalName(resolveExternalFolderDisplayLabel(left), resolveExternalFolderDisplayLabel(right));
   });
 }
 

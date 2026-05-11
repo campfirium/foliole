@@ -1,0 +1,70 @@
+import type { BrowserWindow } from 'electron';
+
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
+import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
+import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
+import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
+import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
+import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
+import { rebuildMirrorAttachmentLinks } from '../mirror/rebuildAttachmentLinks.js';
+import { rebuildMirrorOutput } from '../mirror/rebuildMirrorOutput.js';
+import {
+  loadReviewSchedulerSettings,
+  saveReviewSchedulerSettings
+} from '../reviewSchedulerSettings.js';
+
+import { asNullableString, asString } from './commandParsers.js';
+import { handleCompanionPairingCommand } from './companionPairingCommands.js';
+import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
+import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
+import { readSettingsObject } from './storageCommandSupport.js';
+import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
+
+export async function handleSettingsStorageCommand(
+  command: string,
+  args: Record<string, unknown>,
+  window: BrowserWindow | null = null
+) {
+  const externalSearchResult = handleExternalSearchStorageCommand(command, args);
+  if (externalSearchResult !== undefined) return externalSearchResult;
+  const companionPairingResult = handleCompanionPairingCommand(command, args);
+  if (companionPairingResult !== undefined) return companionPairingResult;
+  if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
+  if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
+  if (command === NATIVE_COMMANDS.saveAppSettingsState) {
+    await saveAppSettingsState(readSettingsObject(args.settings));
+    await refreshManagedInboxMonitorFromSettings();
+    return null;
+  }
+  if (command === NATIVE_COMMANDS.loadSyncPeers) return loadSyncPeers();
+  if (command === NATIVE_COMMANDS.saveSyncPeers) {
+    return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
+  }
+  if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
+  if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
+  if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
+  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
+  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
+  if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
+    const location = asString(args.location, 'location') as 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
+    const result = await updateLibraryPathSetting({
+      location,
+      path: asNullableString(args.path, 'path')
+    });
+    if (location === 'assets_dir' || location === 'library_home') {
+      await rebuildMirrorAttachmentLinks();
+    }
+    await refreshManagedInboxMonitorFromSettings();
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.saveBackupSettings) return saveBackupSettings(readSettingsObject(args.settings));
+  if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
+    const result = saveImportManagerSettings(readSettingsObject(args.settings));
+    await refreshKeepImportMonitorFromSettings();
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) return loadReviewSchedulerSettings();
+  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) return saveReviewSchedulerSettings(readSettingsObject(args.settings));
+  return undefined;
+}

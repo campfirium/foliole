@@ -7,7 +7,10 @@ import { ReviewSchedulerSettingsProvider } from '../features/settings/context/Re
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
-import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
+import {
+  reportRuntimeAppReady,
+  reportRuntimeBootStage
+} from '../shared/platform/runtimeBootTelemetry';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
 import { CommandPalette } from './components/CommandPalette';
@@ -18,12 +21,14 @@ import { GoToNodePalette } from './components/GoToNodePalette';
 import { SearchPalette } from './components/SearchPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useAppController } from './hooks/useAppController';
+import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
 import { useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 
 type AppController = ReturnType<typeof useAppController>;
 
 function AppContent() {
-  const [externalPreviewRequest, setExternalPreviewRequest] = useState<ExternalDocumentPreviewRequest | null>(null);
+  const [externalPreviewRequest, setExternalPreviewRequest] =
+    useState<ExternalDocumentPreviewRequest | null>(null);
   const handleOpenExternalPreview = useCallback((request: ExternalDocumentPreviewRequest) => {
     setExternalPreviewRequest(request);
   }, []);
@@ -31,6 +36,7 @@ function AppContent() {
     onOpenExternalPreview: handleOpenExternalPreview
   });
   useWorkspaceSyncAppliedRefresh();
+  useReadwiseAutoSync();
 
   useEffect(() => {
     installWorkspaceDebugBridge();

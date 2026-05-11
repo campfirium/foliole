@@ -7,6 +7,8 @@ export const NATIVE_COMMANDS = {
   openExternalUrl: 'open_external_url',
   openLocalPath: 'open_local_path',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
+  previewReadwiseReaderImport: 'preview_readwise_reader_import',
+  runReadwiseReaderImport: 'run_readwise_reader_import',
   loadReadwiseBooksInventory: 'load_readwise_books_inventory',
   openReadwiseBookDownload: 'open_readwise_book_download',
   loadReadwiseBookEpub: 'load_readwise_book_epub',

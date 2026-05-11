@@ -8,7 +8,11 @@ import {
   loadPreparedKeepImportRecord,
   resolveKeepImportSourceSignature
 } from './keepImportPreparedRecord.js';
-import { resolveReadwiseKeepImportDestination, runReadwiseExternalDocumentImport } from './keepImportReadwiseDestination.js';
+import {
+  resolveReadwiseKeepImportDestination,
+  runReadwiseExternalDocumentImport,
+  shouldRunUnchangedReadwiseDestination
+} from './keepImportReadwiseDestination.js';
 import type { KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 import { persistKeepImportState } from './keepImportServiceState.js';
@@ -61,11 +65,24 @@ export async function runSingleKeepImportSource(
   source: DirectoryImportSourceDescriptor
 ): Promise<KeepImportRunEntry> {
   const preview = await classifySource(config, source);
-  if (preview.status === 'unchanged' || preview.status === 'failed') {
+  if (
+    preview.status === 'unchanged' &&
+    !(await shouldRunUnchangedReadwiseDestination(config, source))
+  ) {
     return {
       action: 'skipped',
       detail: preview.detail,
-      failureReason: preview.status === 'failed' ? preview.detail : null,
+      failureReason: null,
+      importStatus: null,
+      previewStatus: preview.status,
+      sourcePath: source.sourceName
+    };
+  }
+  if (preview.status === 'failed') {
+    return {
+      action: 'skipped',
+      detail: preview.detail,
+      failureReason: preview.detail,
       importStatus: null,
       previewStatus: preview.status,
       sourcePath: source.sourceName

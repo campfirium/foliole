@@ -57,7 +57,9 @@ function ReadwiseConfigDialogBody(props: {
         <SettingsSection ariaLabel="Readwise Reader sync">
           <ReadwiseReaderSyncRow
             config={props.draft.draftConfig}
+            disabled
             onChange={props.draft.updateConfig}
+            onSync={() => undefined}
           />
         </SettingsSection>
         <SettingsSection ariaLabel="Readwise Reader import behavior" title="Import behavior">

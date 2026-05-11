@@ -10,26 +10,23 @@ import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseRead
 import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
 import { previewRuntimeKeepImportRule } from '../../shared/platform/keepImportPreviewRuntimeRepository';
 
+import { createGenericSourceActions, replaceSource } from './importSourceGenericActions';
+import { createReadwiseReaderImportActions } from './importSourceReadwiseRuntimeActions';
 import {
   applyReadwiseRootPath,
-  cloneDraftImportSource,
-  createNextImportSourceIndex,
   type DraftImportSource,
   type DraftImportSourceField,
   updateDraftImportSource
 } from './importSourceWorkspaceModel';
-import { loadImportSourceWorkspaceSettings, saveImportSourceWorkspaceSettings } from './importSourceWorkspaceSettings';
+import {
+  loadImportSourceWorkspaceSettings,
+  saveImportSourceWorkspaceSettings
+} from './importSourceWorkspaceSettings';
 type SetSettings = ReturnType<typeof usePersistedImportSourceWorkspaceSettings>[1];
 
-function replaceSource(
-  sources: DraftImportSource[],
-  sourceId: string,
-  updater: (source: DraftImportSource) => DraftImportSource
+function toKeepPreviewSummary(
+  result: NonNullable<Awaited<ReturnType<typeof previewRuntimeKeepImportRule>>>
 ) {
-  return sources.map((source) => (source.id === sourceId ? updater(source) : source));
-}
-
-function toKeepPreviewSummary(result: NonNullable<Awaited<ReturnType<typeof previewRuntimeKeepImportRule>>>) {
   return {
     blockedCount: result.blockedCount,
     discoveredCount: result.discoveredCount,
@@ -50,7 +47,9 @@ function toKeepPreviewSummary(result: NonNullable<Awaited<ReturnType<typeof prev
 }
 
 function usePersistedImportSourceWorkspaceSettings() {
-  const [settings, setSettings] = useState<ImportManagerSettings>(createDefaultImportManagerSettings);
+  const [settings, setSettings] = useState<ImportManagerSettings>(
+    createDefaultImportManagerSettings
+  );
   const [hydrated, setHydrated] = useState(false);
   const localChangesRef = useRef(false);
   const setDirtySettings: typeof setSettings = (updater) => {
@@ -67,7 +66,9 @@ function usePersistedImportSourceWorkspaceSettings() {
       if (localChangesRef.current) {
         return;
       }
-      setSettings((current) => (JSON.stringify(current) === JSON.stringify(nextSettings) ? current : nextSettings));
+      setSettings((current) =>
+        JSON.stringify(current) === JSON.stringify(nextSettings) ? current : nextSettings
+      );
     });
     return () => {
       active = false;
@@ -87,55 +88,17 @@ async function selectFolderPath() {
   return selectRuntimeFolder();
 }
 
-function createGenericSourceActions(setSettings: SetSettings) {
-  const handleChangeSource = (sourceId: string, field: DraftImportSourceField, value: string) => {
-    setSettings((current) => ({
-      ...current,
-      sources: replaceSource(current.sources, sourceId, (source) => updateDraftImportSource(source, field, value))
-    }));
-  };
-  return {
-    handleChangeAction(sourceId: string, value: string) {
-      handleChangeSource(sourceId, 'actionMode', value);
-    },
-    handleChangeSource,
-    async handleChooseFolder(sourceId: string, field: 'primaryPath' | 'highlightPath') {
-      const selectedPath = await selectFolderPath();
-      if (selectedPath) {
-        handleChangeSource(sourceId, field, selectedPath);
-      }
-    },
-    handleCopySource(sourceId: string) {
-      setSettings((current) => {
-        const source = current.sources.find((entry) => entry.id === sourceId);
-        if (!source) {
-          return current;
-        }
-        return {
-          ...current,
-          sources: [...current.sources, cloneDraftImportSource(source, createNextImportSourceIndex(current.sources))]
-        };
-      });
-    },
-    handleDeleteSource(sourceId: string) {
-      setSettings((current) => {
-        if (current.sources.length <= 1) {
-          return current;
-        }
-        return {
-          ...current,
-          sources: current.sources.filter((source) => source.id !== sourceId)
-        };
-      });
-    }
-  };
-}
-
 function createReadwiseSourceActions(setSettings: SetSettings) {
-  const handleChangeReadwiseSource = (sourceId: string, field: DraftImportSourceField, value: string) => {
+  const handleChangeReadwiseSource = (
+    sourceId: string,
+    field: DraftImportSourceField,
+    value: string
+  ) => {
     setSettings((current) => ({
       ...current,
-      readwiseSources: replaceSource(current.readwiseSources, sourceId, (source) => updateDraftImportSource(source, field, value))
+      readwiseSources: replaceSource(current.readwiseSources, sourceId, (source) =>
+        updateDraftImportSource(source, field, value)
+      )
     }));
   };
   return {
@@ -165,7 +128,9 @@ function createKeepImportActions(settings: ImportManagerSettings, setSettings: S
     handleConfirmKeepImport(sourceId: string, scope: 'readwiseSources' | 'sources') {
       setSettings((current) => ({
         ...current,
-        [scope]: replaceSource(current[scope], sourceId, (source) => (source.keepPreview ? { ...source, keepState: 'enabled' } : source))
+        [scope]: replaceSource(current[scope], sourceId, (source) =>
+          source.keepPreview ? { ...source, keepState: 'enabled' } : source
+        )
       }));
     },
     handleDisableKeepImport(sourceId: string, scope: 'readwiseSources' | 'sources') {
@@ -184,7 +149,8 @@ function createKeepImportActions(settings: ImportManagerSettings, setSettings: S
       }
       const result = await previewRuntimeKeepImportRule({
         directoryPath: source.primaryPath,
-        highlightPolicy: scope === 'sources' && source.highlightMode === 'merged' ? 'adopt' : 'reference_only',
+        highlightPolicy:
+          scope === 'sources' && source.highlightMode === 'merged' ? 'adopt' : 'reference_only',
         ruleId: source.id,
         sourceType: scope === 'readwiseSources' ? 'readwise' : 'generic'
       });
@@ -244,8 +210,9 @@ export function useImportSourceWorkspaceState() {
   const [settings, setSettings] = usePersistedImportSourceWorkspaceSettings();
   return {
     detailsOpen: settings.detailsOpen,
-    ...createGenericSourceActions(setSettings),
+    ...createGenericSourceActions(setSettings, selectFolderPath),
     ...createKeepImportActions(settings, setSettings),
+    ...createReadwiseReaderImportActions(settings, setSettings),
     ...createReadwiseSourceActions(setSettings),
     ...createWorkspaceMetaActions(setSettings),
     readwiseReaderConfig: settings.readwiseReaderConfig,

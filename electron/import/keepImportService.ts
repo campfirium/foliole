@@ -50,6 +50,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
         ruleId: config.ruleId
       });
     }
+    return runEntries;
   } catch (error) {
     if (shouldLogReadwiseScan(config.sourceType)) {
       await logReadwiseScanFailed({

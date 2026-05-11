@@ -5,6 +5,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { ElectronAPI } from '../../shared/platform/electronApi';
 import {
   rebuildRuntimeExternalSearchIndex,
+  refreshRuntimeExternalSearchFolders,
   saveRuntimeExternalSearchFolders
 } from '../../shared/platform/externalSearchRuntimeRepository';
 
@@ -117,5 +118,45 @@ it('reloads cached external entries when a folder index update arrives', async (
 
   await waitFor(() => {
     expect(result.current.entriesByFolderId['folder-ext']?.map((entry) => entry.relativePath)).toEqual(['a.md']);
+  });
+});
+
+it('shows Readwise-managed external folders after a runtime refresh', async () => {
+  let folders = [createNativeFolder()];
+  const invoke = vi.fn(async (command: string) => {
+    if (command === NATIVE_COMMANDS.loadExternalSearchFolders) {
+      return folders;
+    }
+    if (command === NATIVE_COMMANDS.loadExternalSearchBrowseEntries) {
+      return [];
+    }
+    return null;
+  });
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  const { result } = renderHook(() => useExternalLibraryView());
+
+  await waitFor(() => {
+    expect(result.current.folders.map((folder) => folder.id)).toEqual(['folder-ext']);
+  });
+
+  folders = [
+    ...folders,
+    {
+      ...createNativeFolder(),
+      folder_path: '/Readwise/Full Document Contents/Articles',
+      id: 'readwise-reader-import-articles'
+    }
+  ];
+
+  await act(async () => {
+    await refreshRuntimeExternalSearchFolders();
+  });
+
+  await waitFor(() => {
+    expect(result.current.folders.map((folder) => folder.id)).toEqual([
+      'folder-ext',
+      'readwise-reader-import-articles'
+    ]);
   });
 });

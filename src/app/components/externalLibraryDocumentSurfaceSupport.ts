@@ -1,6 +1,9 @@
 import type { ExternalLibraryFolder } from '../../shared/platform/externalLibraryBrowseRepository';
 
-import { resolveExternalFolderLabel, type ExternalLibrarySelection } from './externalLibraryBrowseModel';
+import {
+  resolveExternalFolderDisplayLabel,
+  type ExternalLibrarySelection
+} from './externalLibraryBrowseModel';
 
 export function resolveExternalSurfaceTitle(
   selection: ExternalLibrarySelection,
@@ -10,7 +13,7 @@ export function resolveExternalSurfaceTitle(
     return 'External library';
   }
   if (selection.kind === 'folder') {
-    return selectedFolder ? resolveExternalFolderLabel(selectedFolder.folderPath) : 'External folder';
+    return selectedFolder ? resolveExternalFolderDisplayLabel(selectedFolder) : 'External folder';
   }
   if (selection.kind === 'directory') {
     return selection.directoryPath.split('/').filter(Boolean).at(-1) ?? 'Directory';
@@ -31,7 +34,7 @@ export function resolveExternalSurfaceDescription(
   }
   if (selection.kind === 'folder') {
     return selectedFolder
-      ? `Browse Markdown and text files from ${resolveExternalFolderLabel(selectedFolder.folderPath)}.`
+      ? `Browse Markdown and text files from ${resolveExternalFolderDisplayLabel(selectedFolder)}.`
       : 'Select a folder to browse.';
   }
   if (selection.kind === 'directory') {

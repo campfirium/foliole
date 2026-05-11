@@ -1,6 +1,7 @@
 import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { upsertKeepImportItem } from '../database/keepImportItems.js';
+import { readKeepImportItem, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
+import { hasReadwiseExternalDocument } from '../database/readwiseManagedExternalDocuments.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -39,6 +40,25 @@ export async function resolveReadwiseKeepImportDestination(config: KeepImportRul
     readwiseConfig: resolved.readwiseConfig
   });
   return decision.destination;
+}
+
+export async function shouldRunUnchangedReadwiseDestination(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor
+) {
+  const resolved = resolveReadwiseSource(config);
+  if (!resolved) {
+    return false;
+  }
+  const destination = await resolveReadwiseKeepImportDestination(config, source);
+  if (destination === 'off') {
+    return false;
+  }
+  if (destination === 'external') {
+    return !hasReadwiseExternalDocument(resolved.readwiseSource.kind, source.sourceName);
+  }
+  const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
+  return !existingItem?.last_node_id || !readKeepImportNodeState(existingItem.last_node_id);
 }
 
 export async function runReadwiseExternalDocumentImport(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {

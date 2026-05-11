@@ -3,7 +3,9 @@ import type { NativeReadwiseDetectionSample } from './nativeReadwiseContract.js'
 export type NativeImportHighlightPolicy = 'adopt' | 'reference_only';
 export type NativeImportNodeTitleStrategy = 'file_name' | 'heading';
 
-export type NativeDirectoryImportSourceAdapter = 'external_directory' | 'foliole_managed_inbox_folder';
+export type NativeDirectoryImportSourceAdapter =
+  | 'external_directory'
+  | 'foliole_managed_inbox_folder';
 
 export type NativeManagedInboxConsumePolicy = 'archive' | 'clear';
 
@@ -75,6 +77,16 @@ export interface NativeReadwiseSyncPreviewResult {
   with_highlights_count: number;
   without_highlights_count: number;
   write_count: number;
+}
+
+export interface NativeReadwiseImportRunResult {
+  completed_at: string;
+  entry_count?: number;
+  failed_count: number;
+  imported_count?: number;
+  source_count: number;
+  skipped_count?: number;
+  status: 'completed' | 'failed';
 }
 
 export interface NativeImportedTextFile {
