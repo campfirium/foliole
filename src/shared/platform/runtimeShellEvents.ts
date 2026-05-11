@@ -1,7 +1,12 @@
-import { getElectronAPI, type WorkspaceSyncAppliedPayload } from './electronApi';
+import {
+  getElectronAPI,
+  type WorkspaceContentChangedPayload,
+  type WorkspaceSyncAppliedPayload
+} from './electronApi';
 import { isDesktopRuntime } from './runtime';
 
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
+export type WorkspaceContentChangedUnlisten = (() => void) | null;
 export type WorkspaceSyncAppliedUnlisten = (() => void) | null;
 
 function getElectronBridge() {
@@ -39,6 +44,21 @@ export async function onWorkspaceSyncApplied(
       payload.appliedObjectIds.length === 0 &&
       payload.appliedReviewOpIds.length === 0
     ) {
+      return;
+    }
+    handler(payload);
+  });
+}
+
+export async function onWorkspaceContentChanged(
+  handler: (payload: WorkspaceContentChangedPayload) => void
+): Promise<WorkspaceContentChangedUnlisten> {
+  const bridge = getElectronBridge();
+  if (!bridge?.onWorkspaceContentChanged) {
+    return null;
+  }
+  return bridge.onWorkspaceContentChanged((payload) => {
+    if (payload.scope !== 'workspace') {
       return;
     }
     handler(payload);

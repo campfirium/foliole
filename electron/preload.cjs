@@ -9,6 +9,7 @@ const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
+const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
 const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
@@ -24,6 +25,7 @@ function subscribe(channel, handler) {
     channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
     channel !== IPC_MENU_EVENT_CHANNEL &&
     channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
+    channel !== IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL &&
     channel !== IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL &&
     channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL &&
     channel !== IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL &&
@@ -70,6 +72,12 @@ function subscribe(channel, handler) {
       });
       return;
     }
+    if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
+      handler({
+        scope: payload?.scope === 'workspace' ? 'workspace' : ''
+      });
+      return;
+    }
     handler();
   };
 
@@ -86,6 +94,7 @@ const electronApi = {
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onNativeKeyboardInput: (handler) => subscribe(IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL, handler),
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
+  onWorkspaceContentChanged: (handler) => subscribe(IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),

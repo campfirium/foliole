@@ -22,7 +22,10 @@ import { SearchPalette } from './components/SearchPalette';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useAppController } from './hooks/useAppController';
 import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
-import { useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
+import {
+  useWorkspaceContentChangedRefresh,
+  useWorkspaceSyncAppliedRefresh
+} from './hooks/useWorkspaceSyncAppliedRefresh';
 
 type AppController = ReturnType<typeof useAppController>;
 
@@ -36,6 +39,7 @@ function AppContent() {
     onOpenExternalPreview: handleOpenExternalPreview
   });
   useWorkspaceSyncAppliedRefresh();
+  useWorkspaceContentChangedRefresh();
   useReadwiseAutoSync();
 
   useEffect(() => {

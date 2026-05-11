@@ -61,6 +61,7 @@ function executePreload(env: Record<string, string | undefined> = {}) {
         onNativeKeyboardInput: expect.any(Function),
         onNativeMenuCommand: expect.any(Function),
         onCompanionPairingRequestsChanged: expect.any(Function),
+        onWorkspaceContentChanged: expect.any(Function),
         onWorkspaceSyncApplied: expect.any(Function),
         onWindowResized: expect.any(Function),
         setNativeHotkeyRecordingActive: expect.any(Function)
@@ -137,6 +138,21 @@ function executePreload(env: Record<string, string | undefined> = {}) {
       appliedObjectIds: ['node_reading:node-1'],
       appliedReviewOpIds: ['op-1']
     });
+  });
+
+  it('forwards sanitized workspace content changed events through preload', () => {
+    const { exposeInMainWorld, ipcOn } = executePreload();
+    const electronApi = exposeInMainWorld.mock.calls[0]?.[1];
+    const handler = vi.fn();
+
+    electronApi.onWorkspaceContentChanged(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, { scope: 'workspace', ignored: 'value' });
+    listener({}, { scope: 'other' });
+
+    expect(ipcOn).toHaveBeenCalledWith('foliole:workspace-content-changed', expect.any(Function));
+    expect(handler).toHaveBeenNthCalledWith(1, { scope: 'workspace' });
+    expect(handler).toHaveBeenNthCalledWith(2, { scope: '' });
   });
 
   it('sends native hotkey recorder active state through preload', () => {

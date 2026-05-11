@@ -23,6 +23,10 @@ export interface WorkspaceSyncAppliedPayload {
   appliedReviewOpIds: string[];
 }
 
+export interface WorkspaceContentChangedPayload {
+  scope: 'workspace';
+}
+
 export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
@@ -33,6 +37,7 @@ export interface ElectronAPI {
   onReadwiseBookEpubProgress?: (
     handler: (payload: { detail: string; nodeId: string; phase: string; progress: number }) => void
   ) => () => void;
+  onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;

@@ -8,8 +8,10 @@ const {
   loadReadwiseBookEpub,
   mockWindow,
   openReadwiseBookDownload,
+  previewReadwiseImportCleanup,
   previewReadwiseReaderImport,
   resetReadwiseBookImport,
+  runReadwiseImportCleanup,
   runReadwiseReaderImport
 } = vi.hoisted(() => ({
   loadReadwiseBookEpub: vi.fn(),
@@ -23,8 +25,10 @@ const {
     webContents: { send: vi.fn(), toggleDevTools: vi.fn() }
   },
   openReadwiseBookDownload: vi.fn(),
+  previewReadwiseImportCleanup: vi.fn(),
   previewReadwiseReaderImport: vi.fn(),
   resetReadwiseBookImport: vi.fn(),
+  runReadwiseImportCleanup: vi.fn(),
   runReadwiseReaderImport: vi.fn()
 }));
 
@@ -48,6 +52,10 @@ vi.mock('../import/readwiseBookImportReset.js', () => ({
 }));
 vi.mock('../import/readwiseReaderImportRun.js', () => ({ runReadwiseReaderImport }));
 vi.mock('../import/readwiseSyncPreview.js', () => ({ previewReadwiseReaderImport }));
+vi.mock('../import/readwiseImportCleanup.js', () => ({
+  previewReadwiseImportCleanup,
+  runReadwiseImportCleanup
+}));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
@@ -110,8 +118,32 @@ beforeEach(() => {
   runReadwiseReaderImport.mockResolvedValue({
     completed_at: '2026-05-11T00:00:00.000Z',
     failed_count: 0,
+    imported_count: 1,
     source_count: 1,
     status: 'completed'
+  });
+  previewReadwiseImportCleanup.mockReturnValue({
+    delete_count: 1,
+    entries: [],
+    external_document_count: 0,
+    external_folder_count: 0,
+    keep_count: 0,
+    previewed_at: '2026-05-11T00:00:00.000Z',
+    total_count: 1
+  });
+  runReadwiseImportCleanup.mockReturnValue({
+    cleaned_at: '2026-05-11T00:00:00.000Z',
+    delete_count: 1,
+    deleted_count: 1,
+    detached_count: 0,
+    entries: [],
+    external_deleted_count: 0,
+    external_document_count: 0,
+    external_folder_count: 0,
+    keep_count: 0,
+    previewed_at: '2026-05-11T00:00:00.000Z',
+    status: 'completed',
+    total_count: 1
   });
 });
 
@@ -150,6 +182,9 @@ it('routes readwise book manual actions through the native invoke handler', asyn
   expect(openReadwiseBookDownload).toHaveBeenCalledWith('node-book-1');
   expect(loadReadwiseBookEpub).toHaveBeenCalledWith('node-book-1', mockWindow);
   expect(resetReadwiseBookImport).toHaveBeenCalledWith('node-book-1');
+  expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
+    scope: 'workspace'
+  });
 });
 
 it('routes Readwise Reader preview and run commands through native invoke', async () => {
@@ -169,5 +204,24 @@ it('routes Readwise Reader preview and run commands through native invoke', asyn
   expect(previewReadwiseReaderImport).toHaveBeenCalledWith({ readwiseRootPath: '/Readwise' });
   expect(runReadwiseReaderImport).toHaveBeenCalledWith({
     settings: { readwiseRootPath: '/Readwise' }
+  });
+  expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
+    scope: 'workspace'
+  });
+});
+
+it('routes Readwise cleanup and notifies workspace content changes only after cleanup runs', async () => {
+  await expect(
+    handleInvokeRequest({ command: 'preview_readwise_import_cleanup', args: {} })
+  ).resolves.toMatchObject({ delete_count: 1 });
+  expect(mockWindow.webContents.send).not.toHaveBeenCalledWith('foliole:workspace-content-changed', expect.anything());
+
+  await expect(
+    handleInvokeRequest({ command: 'run_readwise_import_cleanup', args: {} })
+  ).resolves.toMatchObject({ deleted_count: 1, status: 'completed' });
+
+  expect(runReadwiseImportCleanup).toHaveBeenCalledTimes(1);
+  expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
+    scope: 'workspace'
   });
 });

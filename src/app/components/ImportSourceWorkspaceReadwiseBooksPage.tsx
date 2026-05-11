@@ -67,7 +67,6 @@ async function runReadwiseBookReset(input: { nodeId: string; title: string }) {
     title: result.title ?? input.title,
     updated_at: result.updated_at
   });
-  await useWorkspaceStore.persist.rehydrate();
   return result.node_id;
 }
 

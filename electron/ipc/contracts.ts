@@ -6,6 +6,7 @@ export const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion
 export const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 export const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
 export const IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL = 'foliole:readwise-book-epub-progress';
+export const IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL = 'foliole:workspace-content-changed';
 export const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 export const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
 export const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
@@ -41,4 +42,8 @@ export interface WorkspaceSyncAppliedEvent {
   appliedNodeIds: string[];
   appliedObjectIds: string[];
   appliedReviewOpIds: string[];
+}
+
+export interface WorkspaceContentChangedEvent {
+  scope: 'workspace';
 }

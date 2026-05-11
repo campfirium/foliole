@@ -5,7 +5,6 @@ import {
 } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
-import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -128,13 +127,9 @@ function createMergeHighlightsIntoTopicHandler(args: {
       args.closeContextMenu();
       return;
     }
-    void mergeRuntimeReadwiseTopicHighlights(args.primaryTargetId).then(async (result) => {
+    void mergeRuntimeReadwiseTopicHighlights(args.primaryTargetId).then((result) => {
       if (!result || result.status === 'error') {
         window.alert('Merge failed.');
-        return;
-      }
-      if (result.status === 'merged') {
-        await useWorkspaceStore.persist.rehydrate();
       }
     });
     args.closeContextMenu();

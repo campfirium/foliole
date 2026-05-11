@@ -10,8 +10,10 @@ export {
 export { appendReadingPositionTraceLog } from './readingPositionTraceRuntimeRepository';
 export {
   onManagedInboxUpdated,
+  onWorkspaceContentChanged,
   onWorkspaceSyncApplied,
   type ManagedInboxUpdateUnlisten,
+  type WorkspaceContentChangedUnlisten,
   type WorkspaceSyncAppliedUnlisten
 } from './runtimeShellEvents';
 export {

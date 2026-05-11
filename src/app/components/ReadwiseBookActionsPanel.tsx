@@ -13,7 +13,6 @@ import {
   type RuntimeReadwiseBookInventoryItem
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppButton } from '../../shared/ui';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
 function resolveBook(activeNodeId: string, books: RuntimeReadwiseBookInventoryItem[]) {
   return books.find((book) => book.generatedNodeId === activeNodeId) ?? null;
@@ -156,7 +155,6 @@ function useReadwiseBookActions(activeNodeId: string | null) {
             ? { ...current, epubStatus: 'received', importStatus: 'completed', nodeStatus: 'generated' }
             : current
         );
-        await useWorkspaceStore.persist.rehydrate();
         setLoadProgress({ detail: 'Done.', progress: 1 });
       } else {
         setLoadProgress(createIdleProgress());

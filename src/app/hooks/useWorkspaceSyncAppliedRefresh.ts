@@ -1,24 +1,27 @@
 import { useEffect } from 'react';
 
-import { onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
+import {
+  onWorkspaceContentChanged,
+  onWorkspaceSyncApplied
+} from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-let workspaceSyncRefreshInFlight: Promise<void> | null = null;
-let workspaceSyncRefreshQueued = false;
+let workspaceRefreshInFlight: Promise<void> | null = null;
+let workspaceRefreshQueued = false;
 
-async function refreshWorkspaceFromRuntime() {
-  if (workspaceSyncRefreshInFlight) {
-    workspaceSyncRefreshQueued = true;
-    await workspaceSyncRefreshInFlight;
+export async function scheduleWorkspaceRehydrate() {
+  if (workspaceRefreshInFlight) {
+    workspaceRefreshQueued = true;
+    await workspaceRefreshInFlight;
     return;
   }
-  workspaceSyncRefreshQueued = false;
-  workspaceSyncRefreshInFlight = Promise.resolve(useWorkspaceStore.persist.rehydrate()).finally(() => {
-    workspaceSyncRefreshInFlight = null;
+  workspaceRefreshQueued = false;
+  workspaceRefreshInFlight = Promise.resolve(useWorkspaceStore.persist.rehydrate()).finally(() => {
+    workspaceRefreshInFlight = null;
   });
-  await workspaceSyncRefreshInFlight;
-  if (workspaceSyncRefreshQueued) {
-    await refreshWorkspaceFromRuntime();
+  await workspaceRefreshInFlight;
+  if (workspaceRefreshQueued) {
+    await scheduleWorkspaceRehydrate();
   }
 }
 
@@ -28,7 +31,29 @@ export function useWorkspaceSyncAppliedRefresh() {
     let unlisten: (() => void) | null = null;
     void onWorkspaceSyncApplied(() => {
       if (!disposed) {
-        void refreshWorkspaceFromRuntime();
+        void scheduleWorkspaceRehydrate();
+      }
+    }).then((nextUnlisten) => {
+      if (disposed) {
+        nextUnlisten?.();
+        return;
+      }
+      unlisten = nextUnlisten;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+}
+
+export function useWorkspaceContentChangedRefresh() {
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    void onWorkspaceContentChanged(() => {
+      if (!disposed) {
+        void scheduleWorkspaceRehydrate();
       }
     }).then((nextUnlisten) => {
       if (disposed) {

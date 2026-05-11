@@ -38,31 +38,37 @@ import {
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
+
+function completeWorkspaceMutation(result: unknown = null) {
+  notifyWorkspaceContentChanged();
+  return result;
+}
 
 function handleNodeMutationCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createFolder) {
     const parsed = parseNodeCreationArgs(args, 'folder');
     upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.createTopic) {
     const parsed = parseNodeCreationArgs(args, 'topic');
     upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.createItem) {
     const parsed = parseNodeCreationArgs(args, 'item');
     upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
     const parsed = parseNodeSnapshotArgs(args);
     upsertNodeSnapshot(parsed);
     scheduleMirrorSync([parsed.nodeId]);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
     const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
@@ -70,32 +76,32 @@ function handleNodeMutationCommand(command: string, args: Record<string, unknown
     upsertNodeSnapshot(parent);
     updateNodeAnchorLinks(affectedAnchors);
     scheduleMirrorSync([parent.nodeId, ...affectedAnchors.map((node) => node.nodeId)]);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
     return flushAllDirtyNodeSyncVersions();
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.softDeleteNodes) {
     const parsed = parseSoftDeleteNodesArgs(args);
     softDeleteNodes(parsed);
     scheduleMirrorSync(parsed.nodeIds);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
     const parsed = parseRestoreNodesArgs(args);
     restoreNodes(parsed);
     scheduleMirrorSync(parsed.nodeIds);
-    return null;
+    return completeWorkspaceMutation();
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
     const parsed = parseDeleteNodesPermanentlyArgs(args);
     const affectedParentNodeIds = deleteNodesPermanently(parsed);
     scheduleMirrorSync([...new Set([...parsed.nodeIds, ...affectedParentNodeIds])]);
-    return null;
+    return completeWorkspaceMutation();
   }
   return undefined;
 }
@@ -125,6 +131,26 @@ export async function handleStorageCommand(
   if (attachmentResult !== undefined) {
     return attachmentResult;
   }
+  const storageReadResult = await handleStorageReadCommand(command, args);
+  if (storageReadResult !== undefined) {
+    return storageReadResult;
+  }
+  const importMutationResult = await handleImportMutationCommand(command, args, window);
+  if (importMutationResult !== undefined) {
+    return importMutationResult;
+  }
+  const settingsResult = await handleSettingsStorageCommand(command, args, window);
+  if (settingsResult !== undefined) {
+    return settingsResult;
+  }
+  const readingAndReviewResult = handleReadingAndReviewCommand(command, args);
+  if (readingAndReviewResult !== undefined) {
+    return readingAndReviewResult;
+  }
+  return undefined;
+}
+
+async function handleStorageReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.searchWorkspace) {
     return searchWorkspace(asString(args.query, 'query'));
   }
@@ -143,19 +169,27 @@ export async function handleStorageCommand(
   if (command === NATIVE_COMMANDS.loadNodeSourceUpdatePreview) {
     return loadNodeSourceUpdatePreview(asString(args.node_id, 'node_id'));
   }
+  return undefined;
+}
+
+async function handleImportMutationCommand(
+  command: string,
+  args: Record<string, unknown>,
+  window: Parameters<typeof handleStorageAttachmentCommand>[2]
+) {
   if (command === NATIVE_COMMANDS.mergeReadwiseTopicHighlights) {
-    return mergeReadwiseTopicHighlights(asString(args.node_id, 'node_id'), window);
+    const result = await mergeReadwiseTopicHighlights(asString(args.node_id, 'node_id'), window);
+    if (result.status === 'merged') {
+      notifyWorkspaceContentChanged();
+    }
+    return result;
   }
   if (command === NATIVE_COMMANDS.resetImportData) {
-    return resetImportData();
-  }
-  const settingsResult = await handleSettingsStorageCommand(command, args, window);
-  if (settingsResult !== undefined) {
-    return settingsResult;
-  }
-  const readingAndReviewResult = handleReadingAndReviewCommand(command, args);
-  if (readingAndReviewResult !== undefined) {
-    return readingAndReviewResult;
+    const result = resetImportData();
+    if (result.deletedNodeCount > 0) {
+      notifyWorkspaceContentChanged();
+    }
+    return result;
   }
   return undefined;
 }
