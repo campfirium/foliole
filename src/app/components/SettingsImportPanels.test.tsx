@@ -46,8 +46,8 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
     />
   );
 
-  expect(screen.getByText('Readwise Reader')).toBeInTheDocument();
+  expect(screen.getByText('Readwise Reader integration')).toBeInTheDocument();
   expect(screen.getByText('Readwise root folder')).toBeInTheDocument();
   expect(screen.getByLabelText('Readwise import scope')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Preview' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Check setup' })).toBeDisabled();
 });

@@ -1,13 +1,5 @@
 import type { ReadwiseImportScope, ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
-import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeReadwiseContract';
 import {
-  AppButton,
-  AppDialog,
-  AppDialogContent,
-  AppDialogOverlay,
-  AppDialogPortal,
-  AppDialogTitle,
-  AppStatusBadge,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
@@ -19,8 +11,6 @@ import {
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { formatReadwiseSourceLabel } from './importSourceWorkspaceModel';
 import { FolderButton, resolveFolderPathHint, resolveFolderPathLabel } from './ImportSourceWorkspaceTableParts';
-import { ReadwisePreviewSampleList } from './ReadwisePreviewSampleList';
-
 
 export function getArticlesSource(sources: DraftImportSource[]) {
   return sources.find((source) => source.kind === 'articles') ?? null;
@@ -219,56 +209,5 @@ function ReadwiseImportScopeField(props: {
         </select>
       </SettingsControlSlot>
     </SettingsRow>
-  );
-}
-
-export function ReadwisePreviewDialog(props: {
-  onCancel: () => void;
-  onEnable: () => void;
-  open: boolean;
-  result: NativeReadwiseDetectionResult | null;
-}) {
-  const canEnable = Boolean(props.result?.success);
-  const previewSourceName = props.result?.samples[0]?.sourceName ?? 'Sample article';
-  const hasPreviewGap = Boolean(props.result && props.result.detectedHighlightCount > props.result.samples.length && props.result.samples.length >= 3);
-
-  return (
-    <AppDialog onOpenChange={(open) => !open && props.onCancel()} open={props.open}>
-      <AppDialogPortal>
-        <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="left-1/2 top-1/2 w-[min(720px,calc(100vw-80px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0">
-          <section className="flex max-h-[min(720px,calc(100vh-80px))] min-h-0 flex-col">
-            <header className="border-b border-border/70 px-5 pb-4 pt-5">
-              <AppDialogTitle className="text-base font-semibold">Readwise preview</AppDialogTitle>
-              <p className="mt-1 text-sm text-foreground/65">Preview the extracted highlights before enabling this setup.</p>
-            </header>
-            <div className="min-h-0 space-y-4 overflow-auto px-5 py-5">
-              {props.result ? (
-                <div className="rounded-lg border border-border bg-bg-elevated px-3 py-3">
-                  <div className="flex items-center gap-2">
-                    <AppStatusBadge label={props.result.success ? 'Preview passed' : 'Preview failed'} tone={props.result.success ? 'success' : 'warning'} />
-                    <span className="text-sm text-foreground/70">
-                      {props.result.matchedHighlightCount}/{props.result.sampleCount} sampled highlights matched
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-foreground/65">{props.result.message}</p>
-                </div>
-              ) : null}
-              {props.result?.samples.length ? (
-                <ReadwisePreviewSampleList hasGap={hasPreviewGap} samples={props.result.samples} sourceName={previewSourceName} />
-              ) : null}
-            </div>
-            <footer className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-4">
-              <AppButton onClick={props.onCancel} variant="ghost">
-                Cancel
-              </AppButton>
-              <AppButton disabled={!canEnable} onClick={props.onEnable} variant="primary">
-                Enable
-              </AppButton>
-            </footer>
-          </section>
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
   );
 }

@@ -8,11 +8,19 @@ export interface NativeReadwiseDetectionSample {
 export interface NativeReadwiseDetectionResult {
   checkedSourceCount: number;
   detectedHighlightCount: number;
+  highlightedArticleCount: number;
   matchedHighlightCount: number;
   message: string;
   sampleCount: number;
   samples: NativeReadwiseDetectionSample[];
   success: boolean;
+  totalArticleCount: number;
+}
+
+export interface NativeReadwiseDetectionSource {
+  articleDirectoryPath: string;
+  fullDocumentDirectoryPath: string;
+  label: string;
 }
 
 export interface NativeReadwiseBookDownloadResult {

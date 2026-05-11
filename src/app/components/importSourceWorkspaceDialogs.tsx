@@ -34,7 +34,8 @@ export function ReadwiseReaderConfigDialogHost(props: {
         inspectReadwiseReaderSetup({
           articleDirectoryPath: input.articleDirectoryPath,
           config: input.config,
-          fullDocumentDirectoryPath: input.fullDocumentDirectoryPath
+          fullDocumentDirectoryPath: input.fullDocumentDirectoryPath,
+          sources: input.sources
         })
       }
       onOpenChange={props.onOpenChange}

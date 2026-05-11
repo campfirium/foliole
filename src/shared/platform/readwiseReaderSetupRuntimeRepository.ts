@@ -1,5 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeReadwiseDetectionResult } from '../../../lib/platform/nativeContract';
+import type { NativeReadwiseDetectionResult, NativeReadwiseDetectionSource } from '../../../lib/platform/nativeContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 
@@ -16,6 +16,7 @@ export async function inspectReadwiseReaderSetupInRuntime(input: {
   highlightSeparator: string;
   newHighlightsHeading: string;
   noteKeyword: string;
+  sources?: NativeReadwiseDetectionSource[];
   tagKeyword: string;
 }): Promise<RuntimeReadwiseDetectionResult | null> {
   const runtimeInvoke = getRuntimeInvoke();

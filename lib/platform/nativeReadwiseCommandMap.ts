@@ -4,6 +4,7 @@ import type {
   NativeReadwiseBookImportResetResult,
   NativeReadwiseBookEpubLoadResult,
   NativeReadwiseBooksInventory,
+  NativeReadwiseDetectionSource,
   NativeReadwiseDetectionResult
 } from './nativeReadwiseContract.js';
 
@@ -16,6 +17,7 @@ export type NativeReadwiseCommandMap = {
       highlightSeparator: string;
       newHighlightsHeading: string;
       noteKeyword: string;
+      sources?: NativeReadwiseDetectionSource[];
       tagKeyword: string;
     };
     result: NativeReadwiseDetectionResult;

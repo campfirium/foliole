@@ -1,4 +1,5 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type { NativeReadwiseDetectionSource } from '../../../lib/platform/nativeReadwiseContract';
 import {
   hasReadwiseReaderSetupRuntimeRepository,
   inspectReadwiseReaderSetupInRuntime,
@@ -9,6 +10,7 @@ export async function inspectReadwiseReaderSetup(input: {
   articleDirectoryPath: string;
   config: ReadwiseReaderConfig;
   fullDocumentDirectoryPath: string;
+  sources?: NativeReadwiseDetectionSource[];
 }): Promise<RuntimeReadwiseDetectionResult> {
   if (!hasReadwiseReaderSetupRuntimeRepository()) {
     return createUnavailableResult();
@@ -21,6 +23,7 @@ export async function inspectReadwiseReaderSetup(input: {
     highlightSeparator: input.config.highlightSeparator,
     newHighlightsHeading: input.config.newHighlightsHeading,
     noteKeyword: input.config.noteKeyword,
+    sources: input.sources,
     tagKeyword: input.config.tagKeyword
   });
   return result ?? createUnavailableResult();
@@ -30,10 +33,12 @@ function createUnavailableResult(): RuntimeReadwiseDetectionResult {
   return {
     checkedSourceCount: 0,
     detectedHighlightCount: 0,
+    highlightedArticleCount: 0,
     matchedHighlightCount: 0,
     message: 'Readwise detection is only available in the desktop app.',
     sampleCount: 0,
     samples: [],
-    success: false
+    success: false,
+    totalArticleCount: 0
   };
 }

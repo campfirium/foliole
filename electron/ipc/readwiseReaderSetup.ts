@@ -1,77 +1,48 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
+import type { NativeReadwiseDetectionResult, NativeReadwiseDetectionSource } from '../../lib/platform/nativeReadwiseContract.js';
 
-import { probeReadwiseArticleContent } from '../../lib/core/import/readwiseReaderProbe.js';
-import type { NativeReadwiseDetectionResult, NativeReadwiseDetectionSample } from '../../lib/platform/nativeReadwiseContract.js';
-
-async function listMarkdownFiles(directoryPath: string) {
-  const entries = await fs.readdir(directoryPath, { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md'))
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-}
+import { inspectReadwiseSources } from './readwiseReaderSetupScan.js';
 
 function createEmptyResult(message: string): NativeReadwiseDetectionResult {
   return {
     checkedSourceCount: 0,
     detectedHighlightCount: 0,
+    highlightedArticleCount: 0,
     matchedHighlightCount: 0,
     message,
     sampleCount: 0,
     samples: [],
-    success: false
+    success: false,
+    totalArticleCount: 0
   };
 }
 
-function resolveReadwiseSampleDirectories(input: {
+function resolveLegacyReadwiseSource(input: {
   articleDirectoryPath: string;
   fullDocumentDirectoryPath: string;
-}) {
-  const articleDirectory = input.articleDirectoryPath.trim();
-  const fullDocumentDirectory = input.fullDocumentDirectoryPath.trim();
-  if (!articleDirectory || !fullDocumentDirectory) {
+}): NativeReadwiseDetectionSource | null {
+  const articleDirectoryPath = input.articleDirectoryPath.trim();
+  const fullDocumentDirectoryPath = input.fullDocumentDirectoryPath.trim();
+  if (!articleDirectoryPath || !fullDocumentDirectoryPath) {
     return null;
   }
-  return { articleDirectory, fullDocumentDirectory };
+  return { articleDirectoryPath, fullDocumentDirectoryPath, label: 'Articles' };
 }
 
-async function inspectReadwiseSampleFiles(input: {
-  articleDirectory: string;
-  fullDocumentDirectory: string;
-  highlightsHeading: string;
-  highlightSeparator: string;
-  newHighlightsHeading: string;
-  noteKeyword: string;
-  tagKeyword: string;
+function resolveReadwiseDetectionSources(input: {
+  articleDirectoryPath: string;
+  fullDocumentDirectoryPath: string;
+  sources?: NativeReadwiseDetectionSource[];
 }) {
-  const markdownFiles = await listMarkdownFiles(input.articleDirectory);
-  for (const fileName of markdownFiles) {
-    try {
-      const articlePath = path.join(input.articleDirectory, fileName);
-      const fullDocumentPath = path.join(input.fullDocumentDirectory, fileName);
-      const [articleMarkdown, fullDocumentMarkdown] = await Promise.all([
-        fs.readFile(articlePath, 'utf8'),
-        fs.readFile(fullDocumentPath, 'utf8')
-      ]);
-      const result = probeReadwiseArticleContent({
-        articleMarkdown,
-        fullDocumentMarkdown,
-        highlightsHeading: input.highlightsHeading,
-        highlightSeparator: input.highlightSeparator,
-        newHighlightsHeading: input.newHighlightsHeading,
-        noteKeyword: input.noteKeyword,
-        sourceName: fileName.replace(/\.md$/i, ''),
-        tagKeyword: input.tagKeyword
-      });
-      if (result.sampleCount > 0) {
-        return { candidateNames: markdownFiles, sampledArticle: result };
-      }
-    } catch {
-      continue;
-    }
-  }
-  return { candidateNames: markdownFiles, sampledArticle: null };
+  const legacySource = resolveLegacyReadwiseSource(input);
+  const sources = input.sources?.length ? input.sources : legacySource ? [legacySource] : [];
+  const resolvedSources = sources
+    .map((source) => ({
+      articleDirectoryPath: source.articleDirectoryPath.trim(),
+      fullDocumentDirectoryPath: source.fullDocumentDirectoryPath.trim(),
+      label: source.label.trim() || 'Source'
+    }))
+    .filter((source) => source.articleDirectoryPath && source.fullDocumentDirectoryPath);
+  return resolvedSources.length ? resolvedSources : null;
 }
 
 export async function inspectReadwiseReaderSetup(input: {
@@ -81,49 +52,17 @@ export async function inspectReadwiseReaderSetup(input: {
   highlightSeparator: string;
   newHighlightsHeading: string;
   noteKeyword: string;
+  sources?: NativeReadwiseDetectionSource[];
   tagKeyword: string;
 }): Promise<NativeReadwiseDetectionResult> {
-  const directories = resolveReadwiseSampleDirectories(input);
-  if (!directories) {
-    return createEmptyResult('Choose both the Readwise Articles folders before previewing.');
+  const sources = resolveReadwiseDetectionSources(input);
+  if (!sources) {
+    return createEmptyResult('Choose the Readwise category folders before checking setup.');
   }
 
-  let inspectedFiles: Awaited<ReturnType<typeof inspectReadwiseSampleFiles>>;
   try {
-    inspectedFiles = await inspectReadwiseSampleFiles({
-      articleDirectory: directories.articleDirectory,
-      fullDocumentDirectory: directories.fullDocumentDirectory,
-      highlightsHeading: input.highlightsHeading,
-      highlightSeparator: input.highlightSeparator,
-      newHighlightsHeading: input.newHighlightsHeading,
-      noteKeyword: input.noteKeyword,
-      tagKeyword: input.tagKeyword
-    });
+    return await inspectReadwiseSources({ ...input, sources });
   } catch {
-    return createEmptyResult('The Articles folder could not be read from the selected Readwise root.');
+    return createEmptyResult('The selected Readwise folders could not be read.');
   }
-
-  if (inspectedFiles.candidateNames.length === 0) {
-    return createEmptyResult('No article samples were found in the Articles folder.');
-  }
-
-  if (!inspectedFiles.sampledArticle) {
-    return createEmptyResult('No matching full document samples were found for the Articles entries.');
-  }
-
-  const samples = inspectedFiles.sampledArticle.samples;
-  const matchedHighlightCount = samples.filter((sample: NativeReadwiseDetectionSample) => sample.matched).length;
-
-  return {
-    checkedSourceCount: 1,
-    detectedHighlightCount: inspectedFiles.sampledArticle.detectedHighlightCount,
-    matchedHighlightCount,
-    message:
-      matchedHighlightCount === samples.length
-        ? 'Checked 1 article sample successfully.'
-        : 'Detection finished, but some sampled highlights could not be matched back to the article body.',
-    sampleCount: samples.length,
-    samples,
-    success: samples.length > 0 && matchedHighlightCount === samples.length
-  };
 }
