@@ -1,51 +1,9 @@
-function normalizeLineEndings(value: string) {
-  return value.replace(/\r\n?/g, '\n');
-}
-
-function normalizeLooseWhitespaceWithMap(value: string) {
-  const raw = normalizeLineEndings(value);
-  let normalized = '';
-  const rawIndexes: number[] = [];
-  let pendingWhitespaceStart: number | null = null;
-
-  for (let index = 0; index < raw.length; index += 1) {
-    const character = raw[index];
-    if (/\s/.test(character)) {
-      if (pendingWhitespaceStart === null) {
-        pendingWhitespaceStart = index;
-      }
-      continue;
-    }
-
-    if (pendingWhitespaceStart !== null && normalized.length > 0) {
-      normalized += ' ';
-      rawIndexes.push(pendingWhitespaceStart);
-      pendingWhitespaceStart = null;
-    }
-
-    normalized += character;
-    rawIndexes.push(index);
-  }
-
-  return { normalized: normalized.trim(), raw, rawIndexes };
-}
-
-function stripMarkdown(value: string) {
-  return value
-    .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
-    .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
-    .replace(/\[\[([^\]]+)]]/g, '$1')
-    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
-    .replace(/[|`*_>#]/g, ' ');
-}
-
-function compactWhitespace(value: string) {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-function normalizeText(value: string) {
-  return compactWhitespace(stripMarkdown(normalizeLineEndings(value)));
-}
+import {
+  collectBoundaryFragments,
+  normalizeLineEndings,
+  normalizeLooseWhitespaceWithMap,
+  normalizeText
+} from './controlledContextText.js';
 
 function findAllIndexes(content: string, fragment: string) {
   const indexes: number[] = [];
@@ -58,13 +16,6 @@ function findAllIndexes(content: string, fragment: string) {
     indexes.push(index);
     startIndex = index + 1;
   }
-}
-
-function collectBoundaryFragments(quote: string) {
-  return normalizeLineEndings(quote)
-    .split(/[\s。！？；：:，,•✔❌]+/)
-    .map((fragment) => normalizeText(fragment))
-    .filter((fragment) => fragment.length > 0);
 }
 
 function collectLineRanges(rawExcerpt: string) {
@@ -267,6 +218,13 @@ export function trimMatchedExcerpt(rawExcerpt: string, quote: string, anchorFrag
   });
   if (headIndex === null || tailIndex === null || headIndex > tailIndex) {
     return rawExcerpt.trim();
+  }
+
+  const locatedExcerpt = normalizeLooseWhitespaceWithMap(rawExcerpt);
+  const rawStart = locatedExcerpt.rawIndexes[headIndex];
+  const rawEnd = locatedExcerpt.rawIndexes[tailIndex + lastFragment.length - 1];
+  if (rawStart !== undefined && rawEnd !== undefined) {
+    return locatedExcerpt.raw.slice(rawStart, rawEnd + 1).trim();
   }
 
   const { lines, ranges } = collectLineRanges(rawExcerpt);

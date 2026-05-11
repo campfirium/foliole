@@ -107,7 +107,7 @@ it('refreshes imported highlight child nodes when a generic merged import change
   ]);
 });
 
-it('keeps merged child text from the highlight file while storing the matched parent text for location', () => {
+it('keeps merged child text from the highlight file while anchoring only the exact parent text', () => {
   const imported = runPreparedImport(
     createPreparedDesktopTextImport({
       content: ['# Imported', '', 'Before the quote. This is the highlighted sentence. After the quote.'].join('\n'),
@@ -143,7 +143,7 @@ it('keeps merged child text from the highlight file while storing the matched pa
       anchorLink: expect.objectContaining({
         id: importedAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'Before the quote. This is the highlighted sentence. After the quote.' })
+        locator: expect.objectContaining({ originalText: 'This is the highlighted sentence.' })
       }),
       content: 'This is the highlighted sentence.\n※ Reader note',
       parent_id: updated.nodeId,

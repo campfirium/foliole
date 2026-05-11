@@ -13,6 +13,7 @@ const { showOpenDialog } = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => mockedAppDataDir) },
   dialog: { showOpenDialog },
   shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }));
@@ -195,7 +196,7 @@ it('anchors readwise book highlights under the matched imported chapters', async
       anchorLink: expect.objectContaining({
         id: chapterOneAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'First chapter keeps the early remembered quote in place.' })
+        locator: expect.objectContaining({ originalText: 'early remembered quote' })
       }),
       content: 'early remembered quote',
       title: 'early remembered quote'
@@ -210,7 +211,7 @@ it('anchors readwise book highlights under the matched imported chapters', async
       anchorLink: expect.objectContaining({
         id: chapterTwoAnchorLink.id,
         kind: 'highlight',
-        locator: expect.objectContaining({ originalText: 'Second chapter saves the later insight for a different section.' })
+        locator: expect.objectContaining({ originalText: 'later insight' })
       }),
       content: 'later insight',
       title: 'later insight'

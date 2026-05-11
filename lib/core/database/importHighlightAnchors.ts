@@ -1,4 +1,6 @@
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
+import { collectBoundaryFragments } from '../import/controlledContextText.js';
+import { trimMatchedExcerpt } from '../import/controlledContextTrim.js';
 
 export interface AnchoredImportedHighlightRecord extends PreparedImportHighlightRecord {
   anchorId: string;
@@ -92,6 +94,23 @@ function findAvailableOccurrence(
   return null;
 }
 
+function collectAnchorExcerptCandidates(highlight: PreparedImportHighlightRecord) {
+  const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
+  const candidates = highlight.locatorText
+    ? collectBoundaryFragments(highlightText)
+        .map((fragment) => trimMatchedExcerpt(highlight.locatorText ?? '', highlightText, fragment))
+        .filter((candidate) => !isUntrimmedLocatorCandidate(candidate, highlight.locatorText ?? '', highlightText))
+    : [];
+  candidates.push(highlightText, highlight.content.trim());
+  return Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
+}
+
+function isUntrimmedLocatorCandidate(candidate: string, locatorText: string, highlightText: string) {
+  const normalizedCandidate = candidate.trim();
+  const normalizedLocator = locatorText.trim();
+  return normalizedCandidate === normalizedLocator && normalizedCandidate.length >= 120 && normalizedCandidate.length > highlightText.length * 3;
+}
+
 export function applyImportedHighlightAnchors(input: {
   content: string;
   highlights: PreparedImportHighlightRecord[] | undefined;
@@ -106,11 +125,12 @@ export function applyImportedHighlightAnchors(input: {
   const locatedHighlights: AnchoredImportedHighlightRecord[] = [];
 
   input.highlights.forEach((highlight) => {
-    const excerpt = (highlight.locatorText ?? highlight.content).trim();
-    if (!excerpt) {
+    if (!highlight.content.trim()) {
       return;
     }
-    const range = findAvailableOccurrence(content, excerpt, searchFrom, occupiedRanges);
+    const range = collectAnchorExcerptCandidates(highlight)
+      .map((excerpt) => findAvailableOccurrence(content, excerpt, searchFrom, occupiedRanges))
+      .find((candidate) => candidate !== null);
     if (!range) {
       return;
     }

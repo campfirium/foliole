@@ -1,32 +1,93 @@
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { applyImportedHighlightAnchors } from '../../../lib/core/database/importHighlightAnchors.js';
 
-describe('applyImportedHighlightAnchors', () => {
-  it('wraps matched excerpts with the shared highlight serializer', () => {
-    vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('11111111-1111-1111-1111-111111111111');
-    const anchorId = 'imported-highlight-11111111-1111-1111-1111-111111111111';
+it('wraps matched excerpts with the shared highlight serializer', () => {
+  vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('11111111-1111-1111-1111-111111111111');
+  const anchorId = 'imported-highlight-11111111-1111-1111-1111-111111111111';
 
-    const anchored = applyImportedHighlightAnchors({
-      content: 'Alpha Beta Gamma',
-      highlights: [{ content: 'Beta', label: null }]
-    });
-
-    expect(anchored).toEqual({
-      content: 'Alpha Beta Gamma',
-      highlights: [{ anchorId, content: 'Beta', from: 6, kind: 'highlight', label: null, locatorText: 'Beta', to: 10 }]
-    });
+  const anchored = applyImportedHighlightAnchors({
+    content: 'Alpha Beta Gamma',
+    highlights: [{ content: 'Beta', label: null }]
   });
 
-  it('does not infer anchors when no matched highlights are provided', () => {
-    const anchored = applyImportedHighlightAnchors({
-      content: 'Alpha Beta Gamma',
-      highlights: undefined
-    });
+  expect(anchored).toEqual({
+    content: 'Alpha Beta Gamma',
+    highlights: [{ anchorId, content: 'Beta', from: 6, kind: 'highlight', label: null, locatorText: 'Beta', to: 10 }]
+  });
+});
 
-    expect(anchored).toEqual({
-      content: 'Alpha Beta Gamma',
-      highlights: []
-    });
+it('uses locator text as context while anchoring only the highlight text', () => {
+  vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('22222222-2222-2222-2222-222222222222');
+  const anchorId = 'imported-highlight-22222222-2222-2222-2222-222222222222';
+  const anchored = applyImportedHighlightAnchors({
+    content: 'Intro. Target sentence. Long paragraph tail that must stay outside the highlight.',
+    highlights: [
+      {
+        content: 'Target sentence.\n※ Reader note',
+        label: null,
+        locatorText: 'Intro. Target sentence. Long paragraph tail that must stay outside the highlight.'
+      }
+    ]
+  });
+
+  expect(anchored.highlights).toEqual([
+    {
+      anchorId,
+      content: 'Target sentence.\n※ Reader note',
+      from: 7,
+      kind: 'highlight',
+      label: null,
+      locatorText: 'Target sentence.',
+      to: 23
+    }
+  ]);
+});
+
+it('anchors a fragment-bounded parent range when the highlight text differs in the middle', () => {
+  vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('33333333-3333-3333-3333-333333333333');
+  const anchored = applyImportedHighlightAnchors({
+    content: 'Lead. Alpha parent wording changed before Omega. Tail.',
+    highlights: [
+      {
+        content: 'Alpha reader wording before Omega.',
+        label: null,
+        locatorText: 'Lead. Alpha parent wording changed before Omega. Tail.'
+      }
+    ]
+  });
+
+  expect(anchored.highlights[0]).toMatchObject({
+    from: 6,
+    locatorText: 'Alpha parent wording changed before Omega.',
+    to: 48
+  });
+});
+
+it('does not anchor a full locator context when it cannot be narrowed', () => {
+  const longContext = `${'Context sentence. '.repeat(20)}Tail.`;
+  const anchored = applyImportedHighlightAnchors({
+    content: `Intro. ${longContext} Outro.`,
+    highlights: [
+      {
+        content: 'Missing highlighted sentence.',
+        label: null,
+        locatorText: longContext
+      }
+    ]
+  });
+
+  expect(anchored.highlights).toEqual([]);
+});
+
+it('does not infer anchors when no matched highlights are provided', () => {
+  const anchored = applyImportedHighlightAnchors({
+    content: 'Alpha Beta Gamma',
+    highlights: undefined
+  });
+
+  expect(anchored).toEqual({
+    content: 'Alpha Beta Gamma',
+    highlights: []
   });
 });
