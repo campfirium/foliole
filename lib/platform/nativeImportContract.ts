@@ -107,6 +107,7 @@ export interface NativeReadwiseCleanupPreviewResult {
   external_folder_count: number;
   keep_count: number;
   previewed_at: string;
+  tracking_only_count: number;
   total_count: number;
 }
 

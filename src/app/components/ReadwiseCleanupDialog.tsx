@@ -29,6 +29,11 @@ function ReadwiseCleanupSummary({ preview }: { preview: NativeReadwiseCleanupPre
           {preview.external_document_count} external documents will be removed
         </span>
       ) : null}
+      {preview.tracking_only_count > 0 ? (
+        <span className="rounded-md border border-border/70 px-2.5 py-1 text-sm text-foreground/72">
+          {preview.tracking_only_count} tracking records will be cleared
+        </span>
+      ) : null}
     </div>
   );
 }

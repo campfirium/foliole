@@ -8,6 +8,7 @@ import { deleteNodesPermanently } from '../database/nodeMutations.js';
 import { isReadwiseExternalFolderId } from '../database/readwiseManagedExternalDocuments.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { readReadwiseBookCleanupEntries } from './readwiseImportCleanupBooks.js';
 
 interface KeepImportCleanupRow {
   last_imported_at: string | null;
@@ -47,7 +48,6 @@ function readKeepImportRows() {
     .prepare(
       `SELECT rule_id, source_path, last_node_id, last_imported_at
        FROM keep_import_items
-       WHERE last_node_id IS NOT NULL
        ORDER BY source_path COLLATE NOCASE ASC`
     )
     .all() as KeepImportCleanupRow[];
@@ -121,7 +121,8 @@ function resolveCleanupAction(row: KeepImportCleanupRow, subtree: NodeCleanupRow
 function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewResult {
   const nodes = readNodeRows();
   const externalRows = readReadwiseExternalRows();
-  const entries = readKeepImportRows().map((row) => {
+  const keepRows = readKeepImportRows();
+  const keepEntries = keepRows.filter((row) => row.last_node_id).map((row) => {
     const subtree = collectSubtree(row.last_node_id ?? '', nodes);
     const root = subtree[0];
     const action = resolveCleanupAction(row, subtree);
@@ -133,6 +134,8 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
       title: root?.title ?? row.source_path
     } satisfies NativeReadwiseCleanupEntry;
   });
+  const entries = [...keepEntries, ...readReadwiseBookCleanupEntries()];
+  const trackingOnlyCount = keepRows.filter((row) => !row.last_node_id).length;
   return {
     delete_count: entries.filter((entry) => entry.action === 'delete').length,
     entries,
@@ -140,7 +143,8 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
     external_folder_count: new Set(externalRows.map((row) => row.folder_id)).size,
     keep_count: entries.filter((entry) => entry.action === 'keep').length,
     previewed_at: previewedAt,
-    total_count: entries.length + externalRows.length
+    tracking_only_count: trackingOnlyCount,
+    total_count: entries.length + externalRows.length + trackingOnlyCount
   };
 }
 

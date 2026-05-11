@@ -55,6 +55,7 @@ export function createReadwiseCleanupPreview() {
     external_folder_count: 0,
     keep_count: 0,
     previewed_at: '2026-05-11T00:00:00.000Z',
+    tracking_only_count: 0,
     total_count: 1
   };
 }
