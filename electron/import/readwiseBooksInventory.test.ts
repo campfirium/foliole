@@ -201,13 +201,9 @@ it('keeps deleted book nodes missing during inventory refresh', async () => {
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
 
-  expect(reloadedInventory.books[0]).toMatchObject({
-    bookKey: 'plain book',
-    importStatus: 'pending',
-    nodeStatus: 'missing'
-  });
   expect(reloadedInventory.books.find((book) => book.bookKey === 'plain book')).toMatchObject({
     generatedNodeId: null,
+    importStatus: 'pending',
     nodeStatus: 'missing'
   });
 });

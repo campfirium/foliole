@@ -8,9 +8,7 @@ import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
 import {
-  loadPersistedReadwiseBooksInventory,
-  mergePersistedReadwiseBooksInventory,
-  savePersistedReadwiseBooksInventory
+  mergePersistedReadwiseBooksInventory
 } from './readwiseBooksInventoryState.js';
 import { canRunReadwiseExternalSource } from './readwiseExternalSourceGuard.js';
 
@@ -199,9 +197,7 @@ export async function scanReadwiseBooksInventory(input: {
     highlightDirectoryPath: input.highlightDirectoryPath,
     scannedAt
   } satisfies ReadwiseBooksInventory;
-  const inventory = mergePersistedReadwiseBooksInventory({ currentInventory: scannedInventory });
-  savePersistedReadwiseBooksInventory(inventory);
-  return inventory;
+  return mergePersistedReadwiseBooksInventory({ currentInventory: scannedInventory });
 }
 
 export async function loadReadwiseBooksInventory() {
@@ -216,7 +212,7 @@ export async function loadReadwiseBooksInventory() {
     booksSource?.keepState === 'enabled' &&
     canRunReadwiseExternalSource();
   if (!canScanBooks) {
-    return loadPersistedReadwiseBooksInventory(paths) ?? createEmptyInventory(paths);
+    return createEmptyInventory(paths);
   }
   return scanReadwiseBooksInventory({
     ...paths,

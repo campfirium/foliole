@@ -43,7 +43,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('returns persisted readwise books without scanning or writing when this desktop is secondary', async () => {
+it('returns an empty books inventory without scanning when this desktop is secondary', async () => {
   const readwiseRoot = path.join(tempRoot, 'Readwise');
   const highlightDir = path.join(readwiseRoot, 'Books');
   await fs.mkdir(highlightDir, { recursive: true });
@@ -75,6 +75,7 @@ it('returns persisted readwise books without scanning or writing when this deskt
 
   const secondaryInventory = await loadReadwiseBooksInventory();
 
-  expect(secondaryInventory.books).toEqual(primaryInventory.books);
+  expect(primaryInventory.books.map((book) => book.bookKey)).toContain('primary book');
+  expect(secondaryInventory.books).toEqual([]);
   expect(secondaryInventory.books.map((book) => book.bookKey)).not.toContain('secondary only book');
 });
