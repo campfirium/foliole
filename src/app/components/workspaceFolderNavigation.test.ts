@@ -5,6 +5,8 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 
 import {
   buildFolderNavigationNodeOrder,
+  buildFolderNavigationNodesById,
+  buildTopicNavigationNodesById,
   collectTopicColumnNodeIds,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
@@ -122,5 +124,25 @@ it('pins trash to the end of the folder navigation', () => {
     'folder-a',
     'folder-b',
     TRASH_NODE_ID
+  ]);
+});
+
+it('builds sparse navigation node maps for the active columns only', () => {
+  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-child'];
+  const nodesById: WorkspaceListNodesById = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+    'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-a', title: 'Topic A' }),
+    'topic-child': createNode({ id: 'topic-child', kind: 'item', parentNodeId: 'topic-a', title: 'Child' })
+  };
+
+  expect(Object.keys(buildFolderNavigationNodesById(nodeOrder, nodesById, []))).toEqual([
+    INBOX_NODE_ID,
+    'folder-a',
+    TRASH_NODE_ID
+  ]);
+  expect(Object.keys(buildTopicNavigationNodesById(['topic-a', 'topic-child'], nodesById))).toEqual([
+    'topic-a',
+    'topic-child'
   ]);
 });

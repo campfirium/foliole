@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
+import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
 
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
@@ -62,8 +62,6 @@ export function useWorkspaceTopicTreeCollapse(
   treeRows: ReturnType<typeof buildNodeTree>['rows'],
   parentById: Record<string, string | null>
 ) {
-  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
-  const previousActiveFolderIdRef = useRef<string | null>(null);
   const collapsibleNodeIds = useMemo(
     () => treeRows.filter((row) => row.hasChildren).map((row) => row.node.id),
     [treeRows]
@@ -72,47 +70,123 @@ export function useWorkspaceTopicTreeCollapse(
     () => new Map(treeRows.map((row) => [row.node.id, row])),
     [treeRows]
   );
+  const expandedNodeIds = useMemo(
+    () => collectExpandedNodeIds(activeNodeId, treeRowById, parentById),
+    [activeNodeId, parentById, treeRowById]
+  );
+  const [collapseState, setCollapseState] = useState(() => createInitialCollapseState(
+    activeFolderId,
+    collapsibleNodeIds,
+    expandedNodeIds
+  ));
+  const syncedState = syncCollapseState({
+    activeFolderId,
+    activeNodeId,
+    collapsibleNodeIds,
+    collapseState,
+    expandedNodeIds
+  });
 
-  useEffect(() => {
-    const isNewFolder = previousActiveFolderIdRef.current !== activeFolderId;
-    previousActiveFolderIdRef.current = activeFolderId;
-    setCollapsedNodeIds((current) =>
-      isNewFolder ? new Set(collapsibleNodeIds) : new Set(pruneCollapsedNodeIds(current, collapsibleNodeIds))
-    );
-  }, [activeFolderId, collapsibleNodeIds]);
+  if (syncedState !== collapseState) {
+    setCollapseState(syncedState);
+  }
 
-  useEffect(() => {
-    if (!activeNodeId) {
-      return;
-    }
-    const activeRow = treeRowById.get(activeNodeId);
-    if (!activeRow || activeRow.node.kind === 'folder') {
-      return;
-    }
-    const expandedNodeIds = new Set(collectNodeAncestorIds(activeNodeId, parentById));
-    if (activeRow.hasChildren) {
-      expandedNodeIds.add(activeNodeId);
-    }
-    setCollapsedNodeIds((current) => {
-      if ([...expandedNodeIds].every((nodeId) => !current.has(nodeId))) {
-        return current;
-      }
-      const next = new Set(current);
-      expandedNodeIds.forEach((nodeId) => next.delete(nodeId));
-      return next;
-    });
-  }, [activeNodeId, parentById, treeRowById]);
+  const setCollapsedNodeIds = useCallback<Dispatch<SetStateAction<Set<string>>>>((value) => {
+    setCollapseState((current) => ({
+      activeFolderId: current.activeFolderId,
+      activeNodeId: current.activeNodeId,
+      collapsedNodeIds: typeof value === 'function' ? value(current.collapsedNodeIds) : value
+    }));
+  }, []);
 
-  return { collapsedNodeIds, setCollapsedNodeIds };
+  return { collapsedNodeIds: syncedState.collapsedNodeIds, setCollapsedNodeIds };
 }
 
-function pruneCollapsedNodeIds(
-  current: ReadonlySet<string>,
-  collapsibleNodeIds: readonly string[]
+interface CollapseState {
+  activeFolderId: string;
+  activeNodeId: string | null;
+  collapsedNodeIds: Set<string>;
+}
+
+function collectExpandedNodeIds(
+  activeNodeId: string | null,
+  treeRowById: Map<string, ReturnType<typeof buildNodeTree>['rows'][number]>,
+  parentById: Record<string, string | null>
 ) {
+  const expandedNodeIds = new Set<string>();
+  if (!activeNodeId) {
+    return expandedNodeIds;
+  }
+  const activeRow = treeRowById.get(activeNodeId);
+  if (!activeRow || activeRow.node.kind === 'folder') {
+    return expandedNodeIds;
+  }
+  collectNodeAncestorIds(activeNodeId, parentById).forEach((nodeId) => expandedNodeIds.add(nodeId));
+  if (activeRow.hasChildren) {
+    expandedNodeIds.add(activeNodeId);
+  }
+  return expandedNodeIds;
+}
+
+function createCollapsedNodeIds(collapsibleNodeIds: readonly string[], expandedNodeIds: ReadonlySet<string>) {
+  return new Set(collapsibleNodeIds.filter((nodeId) => !expandedNodeIds.has(nodeId)));
+}
+
+function createInitialCollapseState(
+  activeFolderId: string,
+  collapsibleNodeIds: readonly string[],
+  expandedNodeIds: ReadonlySet<string>
+): CollapseState {
+  return {
+    activeFolderId,
+    activeNodeId: null,
+    collapsedNodeIds: createCollapsedNodeIds(collapsibleNodeIds, expandedNodeIds)
+  };
+}
+
+function pruneCollapsedNodeIds(current: ReadonlySet<string>, collapsibleNodeIds: readonly string[]) {
   const validNodeIds = new Set(collapsibleNodeIds);
   const next = new Set([...current].filter((nodeId) => validNodeIds.has(nodeId)));
   return next.size === current.size ? current : next;
+}
+
+function syncExpandedNodeIds(current: ReadonlySet<string>, expandedNodeIds: ReadonlySet<string>) {
+  if ([...expandedNodeIds].every((nodeId) => !current.has(nodeId))) {
+    return current;
+  }
+  const next = new Set(current);
+  expandedNodeIds.forEach((nodeId) => next.delete(nodeId));
+  return next;
+}
+
+function syncCollapseState(args: {
+  activeFolderId: string;
+  activeNodeId: string | null;
+  collapsibleNodeIds: readonly string[];
+  collapseState: CollapseState;
+  expandedNodeIds: ReadonlySet<string>;
+}) {
+  if (args.collapseState.activeFolderId !== args.activeFolderId) {
+    return {
+      ...createInitialCollapseState(args.activeFolderId, args.collapsibleNodeIds, args.expandedNodeIds),
+      activeNodeId: args.activeNodeId
+    };
+  }
+  const pruned = pruneCollapsedNodeIds(args.collapseState.collapsedNodeIds, args.collapsibleNodeIds);
+  const shouldAutoExpand = args.collapseState.activeNodeId !== args.activeNodeId;
+  const expanded = shouldAutoExpand ? syncExpandedNodeIds(pruned, args.expandedNodeIds) : pruned;
+  if (
+    args.collapseState.activeNodeId === args.activeNodeId &&
+    pruned === args.collapseState.collapsedNodeIds &&
+    expanded === pruned
+  ) {
+    return args.collapseState;
+  }
+  return {
+    activeFolderId: args.activeFolderId,
+    activeNodeId: args.activeNodeId,
+    collapsedNodeIds: expanded
+  };
 }
 
 export function useWorkspaceTopicTreeRows(

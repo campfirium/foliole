@@ -2,6 +2,11 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it } from 'vitest';
 
+import {
+  markNodeSelectionRequested,
+  readPerformanceDiagnosticsProbe,
+  resetPerformanceDiagnosticsProbe
+} from '../../shared/platform/performanceDiagnosticsProbe';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -120,6 +125,7 @@ function WorkspaceTopicTreeSortedSelectionHarness() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetPerformanceDiagnosticsProbe();
   useWorkspaceStore.setState((state) => ({
     ...state,
     trashedNodeIds: []
@@ -206,4 +212,31 @@ it('collapses a newly opened folder by default but expands the selected topic it
   expect(within(itemColumn).getByRole('treeitem', { name: 'Section B' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Child B' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
+});
+
+it('does not mount collapsed topic descendants during the first folder render', () => {
+  const nodesById = {
+    'topic-active': createNode({ id: 'topic-active', title: 'Active Topic' }),
+    'topic-collapsed': createNode({ id: 'topic-collapsed', title: 'Collapsed Topic' }),
+    'hidden-child': createNode({ id: 'hidden-child', parentNodeId: 'topic-collapsed', title: 'Hidden Child' })
+  };
+  markNodeSelectionRequested('topic-active', nodesById);
+
+  render(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="topic-active"
+      itemIds={['topic-active', 'topic-collapsed', 'hidden-child']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Active Topic' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Collapsed Topic' })).toBeInTheDocument();
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Hidden Child' })).toBeNull();
+  expect(readPerformanceDiagnosticsProbe().flow.renderedRowUniqueCount).toBe(2);
 });

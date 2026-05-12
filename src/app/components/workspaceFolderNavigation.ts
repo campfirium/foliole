@@ -98,16 +98,13 @@ export function buildFolderNavigationNodesById(
   nodesById: WorkspaceListNodesById,
   trashedNodeIds: readonly string[]
 ) {
-  const visibleFolderIds = new Set(buildFolderNavigationNodeOrder(nodeOrder, nodesById, trashedNodeIds));
-  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = [
-    ...Object.entries(nodesById),
-    [TRASH_NODE_ID, createNavigationTrashNode()]
-  ];
+  const folderEntries: Array<[string, WorkspaceListNode | undefined]> = buildFolderNavigationNodeOrder(
+    nodeOrder,
+    nodesById,
+    trashedNodeIds
+  ).map((nodeId) => [nodeId, nodeId === TRASH_NODE_ID ? createNavigationTrashNode() : nodesById[nodeId]]);
   return Object.fromEntries(
-    folderEntries.map(([nodeId, node]) => [
-      nodeId,
-      visibleFolderIds.has(nodeId) ? node : undefined
-    ])
+    folderEntries.filter((entry): entry is [string, WorkspaceListNode] => Boolean(entry[1]))
   );
 }
 
@@ -233,8 +230,9 @@ export function buildTopicNavigationNodesById(
   topicNodeIds: string[],
   nodesById: WorkspaceListNodesById
 ) {
-  const visibleTopicIds = new Set(topicNodeIds);
   return Object.fromEntries(
-    Object.entries(nodesById).map(([nodeId, node]) => [nodeId, visibleTopicIds.has(nodeId) ? node : undefined])
+    topicNodeIds
+      .map((nodeId) => [nodeId, nodesById[nodeId]] as const)
+      .filter((entry): entry is readonly [string, WorkspaceListNode] => Boolean(entry[1]))
   );
 }

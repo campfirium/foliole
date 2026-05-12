@@ -1,10 +1,9 @@
 import type { CSSProperties } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
-  TRASH_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
@@ -24,15 +23,8 @@ import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
 import { TrashResultListPanel } from './TrashResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
+import { useWorkspaceDualListState } from './workspaceDualListState';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
-import {
-  buildFolderNavigationNodeOrder,
-  buildFolderNavigationNodesById,
-  buildTopicNavigationNodesById,
-  collectTopicColumnNodeIds,
-  resolveActiveFolderColumnNodeId,
-  resolveFocusedFolderNodeId
-} from './workspaceFolderNavigation';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 interface WorkspaceDualListContentProps {
@@ -58,54 +50,6 @@ interface WorkspaceDualListContentProps {
   onSelectTrashNode: (nodeId: string) => void;
   selectedTrashNodeId: string | null;
   trashedNodeIds: string[];
-}
-
-function useWorkspaceDualListState(args: WorkspaceDualListContentProps) {
-  return useMemo(() => {
-    const folderNodeOrder = buildFolderNavigationNodeOrder(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
-    const activeFolderId = args.isTrashViewOpen
-      ? TRASH_NODE_ID
-      : resolveFocusedFolderNodeId(
-          args.activeNodeId,
-          args.nodeOrder,
-          args.listNodesById,
-          args.trashedNodeIds
-        );
-    const activeFolderColumnId = args.isTrashViewOpen
-      ? TRASH_NODE_ID
-      : resolveActiveFolderColumnNodeId(
-          args.activeNodeId,
-          args.nodeOrder,
-          args.listNodesById,
-          args.trashedNodeIds
-        );
-
-    const topicNodeOrder = collectTopicColumnNodeIds(
-      activeFolderColumnId,
-      args.nodeOrder,
-      args.listNodesById,
-      args.trashedNodeIds
-    );
-
-    return {
-      activeFolderColumnId,
-      activeFolderId,
-      folderNodeOrder,
-      folderNodesById: buildFolderNavigationNodesById(
-        args.nodeOrder,
-        args.listNodesById,
-        args.trashedNodeIds
-      ),
-      topicNodeOrder,
-      topicNodesById: buildTopicNavigationNodesById(topicNodeOrder, args.listNodesById)
-    };
-  }, [
-    args.activeNodeId,
-    args.isTrashViewOpen,
-    args.listNodesById,
-    args.nodeOrder,
-    args.trashedNodeIds
-  ]);
 }
 
 function collectVirtualContentItemIds(args: WorkspaceDualListContentProps) {
