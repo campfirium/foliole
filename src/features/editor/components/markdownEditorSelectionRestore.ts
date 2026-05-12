@@ -1,16 +1,13 @@
-import { useLayoutEffect, useRef, type MutableRefObject } from 'react';
+import { useRef, type MutableRefObject } from 'react';
 
-import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
+import type { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
 
+import { useSelectionRestoreExecution } from './markdownEditorSelectionRestoreExecution';
 import {
   usePendingRestoreKey,
   useRestoreCompletionCleanup
 } from './markdownEditorSelectionRestoreHooks';
-import {
-  handleSelectionRestore,
-  resolveRestoreTarget
-} from './markdownEditorSelectionRestoreSupport';
 import type { EditorViewState } from './markdownEditorTypes';
 
 function useSelectionRestoreRefs() {
@@ -26,50 +23,6 @@ function useSelectionRestoreRefs() {
     restoreCompletionFrameRef: useRef<number | null>(null),
     restoreCompletionTimeoutRef: useRef<number | null>(null)
   };
-}
-
-function useSelectionRestoreExecution(args: {
-  adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>;
-  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  activeRestoreValueLengthRef: MutableRefObject<number>;
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
-  isRestoreApplyingActiveRef: MutableRefObject<boolean>;
-  lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
-  nodeId: string | null;
-  nodeViewState: EditorViewState | undefined;
-  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: EditorViewportMode | null | undefined;
-  readingTargetViewportRatio: number | null | undefined;
-  restoreCompletionFrame2Ref: MutableRefObject<number | null>;
-  restoreCompletionFrameRef: MutableRefObject<number | null>;
-  restoreCompletionTimeoutRef: MutableRefObject<number | null>;
-  shouldSuppressSelectionRestore: (() => boolean) | undefined;
-  value: string;
-}) {
-  useLayoutEffect(() => {
-    runSelectionRestore({
-      adapter: args.adapterRef.current,
-      activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
-      activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
-      beginApplyingReadingPosition: args.beginApplyingReadingPosition,
-      completeApplyingReadingPosition: args.completeApplyingReadingPosition,
-      isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
-      lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
-      nodeId: args.nodeId,
-      nodeViewState: args.nodeViewState,
-      pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
-      readingSelection: args.readingSelection,
-      readingTargetViewportMode: args.readingTargetViewportMode,
-      readingTargetViewportRatio: args.readingTargetViewportRatio,
-      restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
-      restoreCompletionFrameRef: args.restoreCompletionFrameRef,
-      restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
-      shouldSuppressSelectionRestore: args.shouldSuppressSelectionRestore,
-      value: args.value
-    });
-  }, [args]);
 }
 
 export type SelectionRestoreRefs = ReturnType<typeof useSelectionRestoreRefs>;
@@ -170,60 +123,5 @@ function useSelectionRestorePreparation(args: {
     ...args,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     readingTargetViewportMode: args.readingTargetViewportMode
-  });
-}
-
-function runSelectionRestore(args: {
-  adapter: CodeMirrorEditorAdapter | null;
-  activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  activeRestoreValueLengthRef: MutableRefObject<number>;
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
-  isRestoreApplyingActiveRef: MutableRefObject<boolean>;
-  lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
-  nodeId: string | null;
-  nodeViewState: EditorViewState | undefined;
-  pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  readingSelection: EditorViewState['selection'] | null | undefined;
-  readingTargetViewportMode: EditorViewportMode | null | undefined;
-  readingTargetViewportRatio: number | null | undefined;
-  restoreCompletionFrame2Ref: MutableRefObject<number | null>;
-  restoreCompletionFrameRef: MutableRefObject<number | null>;
-  restoreCompletionTimeoutRef: MutableRefObject<number | null>;
-  shouldSuppressSelectionRestore: (() => boolean) | undefined;
-  value: string;
-}) {
-  const restoreTarget = resolveRestoreTarget({
-    adapter: args.adapter,
-    activeRestoreSelectionKey: args.activeRestoreSelectionKeyRef.current,
-    activeRestoreValueLength: args.activeRestoreValueLengthRef.current,
-    lastRestoredSelectionKey: args.lastRestoredSelectionKeyRef.current,
-    nodeId: args.nodeId,
-    nodeViewState: args.nodeViewState,
-    pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
-    readingSelection: args.readingSelection,
-    readingTargetViewportMode: args.readingTargetViewportMode,
-    readingTargetViewportRatio: args.readingTargetViewportRatio,
-    value: args.value
-  });
-  handleSelectionRestore({
-    activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
-    activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
-    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
-    completeApplyingReadingPosition: args.completeApplyingReadingPosition,
-    isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
-    lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
-    nodeId: args.nodeId,
-    nodeViewState: args.nodeViewState,
-    pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
-    readingSelection: args.readingSelection,
-    readingTargetViewportMode: args.readingTargetViewportMode,
-    readingTargetViewportRatio: args.readingTargetViewportRatio,
-    restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
-    restoreCompletionFrameRef: args.restoreCompletionFrameRef,
-    restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
-    restoreTarget,
-    shouldSuppressSelectionRestore: args.shouldSuppressSelectionRestore,
-    valueLength: args.value.length
   });
 }
