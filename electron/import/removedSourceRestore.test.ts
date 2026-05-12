@@ -66,8 +66,11 @@ function saveGenericKeepSettings(sourceDir: string) {
 
 it('restores a removed import by importing a fresh initial topic', async () => {
   const sourceDir = path.join(tempRoot, 'watch');
+  const imageDir = path.join(sourceDir, 'images');
   await fs.mkdir(sourceDir, { recursive: true });
-  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\nFresh body\n', 'utf8');
+  await fs.mkdir(imageDir, { recursive: true });
+  await fs.writeFile(path.join(imageDir, 'cover.png'), 'png', 'utf8');
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\n![Cover](images/cover.png)\n\nFresh body\n', 'utf8');
   saveGenericKeepSettings(sourceDir);
   await runKeepImportRule({
     directoryPath: sourceDir,
@@ -87,7 +90,8 @@ it('restores a removed import by importing a fresh initial topic', async () => {
 
   expect(loadRemovedSources().entries).toEqual([
     expect.objectContaining({
-      content_preview: 'Fresh body',
+      content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      content_preview: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
       source_path: 'entry.md',
       title: 'Entry'
     })

@@ -24,6 +24,7 @@ import { setSelectedRemovedSource } from './removedSourceSelectionStore';
 
 function createRemovedSource() {
   return {
+    content: '# Alpha Removed\n\nFull source text',
     contentPreview: 'Preview text',
     firstSeenAt: '2026-05-12T00:00:00.000Z',
     hasSourceUpdate: false,
@@ -62,6 +63,7 @@ it('renders Removed selection as an external-document style preview with Import 
   expect(screen.getByRole('region', { name: 'Document area' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Import to Foliole' })).toBeInTheDocument();
   expect(screen.getByText(/Alpha Removed/)).toBeInTheDocument();
+  expect(screen.getByText(/Full source text/)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Import to Foliole' }));
 

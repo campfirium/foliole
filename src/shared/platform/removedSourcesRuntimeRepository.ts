@@ -8,6 +8,7 @@ import type {
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export interface RuntimeRemovedSourceEntry {
+  content: string | null;
   contentPreview: string | null;
   firstSeenAt: string;
   hasSourceUpdate: boolean;
@@ -32,6 +33,7 @@ function titleFromSourcePath(sourcePath: string) {
 
 function toRuntimeEntry(entry: NativeRemovedSourceEntry): RuntimeRemovedSourceEntry {
   return {
+    content: entry.content,
     contentPreview: entry.content_preview,
     firstSeenAt: entry.first_seen_at,
     hasSourceUpdate: entry.has_source_update,

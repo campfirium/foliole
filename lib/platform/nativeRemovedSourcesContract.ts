@@ -1,4 +1,5 @@
 export interface NativeRemovedSourceEntry {
+  content: string | null;
   content_preview: string | null;
   first_seen_at: string;
   has_source_update: boolean;

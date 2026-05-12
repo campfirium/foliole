@@ -30,8 +30,7 @@ function createHeaderNode(id: string, parentNodeId: string | null, title: string
 }
 
 function buildPreviewContent(entry: SelectedRemovedSource) {
-  const preview = entry.contentPreview?.trim();
-  return [`# ${entry.title}`, '', entry.sourcePath, preview ? `\n${preview}` : ''].join('\n');
+  return entry.content?.trim() || `# ${entry.title}`;
 }
 
 function RemovedImportAction(props: {
