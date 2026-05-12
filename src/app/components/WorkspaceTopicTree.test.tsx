@@ -143,15 +143,14 @@ it('places title search in the item column and keeps matches visible while searc
   expect(within(itemColumn).getByRole('tree', { name: 'Topic list' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
-  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all topics' }));
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).not.toBeInTheDocument();
+  expect(within(itemColumn).getByText('(1)')).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Expand all topics' })).toBeInTheDocument();
-  expect(within(itemColumn).queryByRole('button', { name: 'Collapse all topics' })).toBeNull();
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand all topics' }));
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all topics' }));
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).not.toBeInTheDocument();
 
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Open title search' }));
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
@@ -161,6 +160,19 @@ it('places title search in the item column and keeps matches visible while searc
   expect(within(itemColumn).getByRole('treeitem', { name: 'React Notes' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
   expect(within(itemColumn).queryByRole('treeitem', { name: 'Vue Notes' })).toBeNull();
+});
+
+it('opens a collapsed parent row without expanding its children', () => {
+  render(<WorkspaceTopicTreeHarness />);
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).toBeNull();
+
+  fireEvent.click(within(itemColumn).getByRole('treeitem', { name: 'React Notes' }));
+
+  expect(within(itemColumn).getByRole('treeitem', { name: 'React Notes' })).toHaveAttribute('aria-current', 'page');
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).toBeNull();
 });
 
 it('shows every ctrl-selected current-folder topic as selected', () => {
@@ -180,6 +192,7 @@ it('keeps an expanded branch open when selecting another current-folder topic', 
   render(<WorkspaceTopicTreeHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  fireEvent.click(within(itemColumn).getByRole('button', { name: 'Expand React Notes' }));
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
 
@@ -203,18 +216,18 @@ it('selects shift ranges by the sorted visible order in the item column', () => 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Middle Notes' })).toHaveAttribute('aria-selected', 'false');
 });
 
-it('collapses a newly opened folder by default but expands the selected topic itself', () => {
+it('collapses a newly opened folder by default', () => {
   render(<WorkspaceTopicTreeCollapseHarness />);
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
 
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Hook Summary' })).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: 'Open folder B' }));
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Section B' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Child B' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
+  expect(within(itemColumn).queryByRole('treeitem', { name: 'Child B' })).toBeNull();
+  expect(within(itemColumn).getByRole('button', { name: 'Expand all topics' })).toBeInTheDocument();
 });
 
 it('does not mount collapsed topic descendants during the first folder render', () => {

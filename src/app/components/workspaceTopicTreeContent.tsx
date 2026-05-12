@@ -122,9 +122,6 @@ function collectExpandedNodeIds(
     return expandedNodeIds;
   }
   collectNodeAncestorIds(activeNodeId, parentById).forEach((nodeId) => expandedNodeIds.add(nodeId));
-  if (activeRow.hasChildren) {
-    expandedNodeIds.add(activeNodeId);
-  }
   return expandedNodeIds;
 }
 
