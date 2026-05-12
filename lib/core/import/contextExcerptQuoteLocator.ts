@@ -8,10 +8,13 @@ const MIN_FRAGMENT_LENGTH = 4;
 
 function stripQuoteMarkdown(value: string) {
   return value
+    .replace(/\\([\\`*_{}[\]()#+.!<>|-])/g, '$1')
+    .replace(/<([^>\s]+)>/g, ' $1 ')
     .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
     .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
     .replace(/\[\[([^\]]+)]]/g, '$1')
     .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/(^|\s)•\s+/g, '$1')
     .replace(/[|`*_>#]/g, ' ');
 }
 
@@ -21,7 +24,7 @@ function compactWhitespace(value: string) {
 
 function stripLeadingListMarker(value: string) {
   return value
-    .replace(/^[-*+]\s+/, '')
+    .replace(/^[-*+•]\s+/, '')
     .replace(/^\d+[.)]\s+/, '');
 }
 

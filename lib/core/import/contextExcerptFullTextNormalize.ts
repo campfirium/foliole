@@ -102,7 +102,11 @@ export function normalizeFullTextWithMap(value: string) {
       continue;
     }
     const character = raw[index] ?? '';
-    if (/[|`*_>#]/u.test(character)) {
+    if (character === '\\' && /[\\`*_{}[\]()#+.!<>|-]/u.test(raw[index + 1] ?? '')) {
+      lineStart = false;
+      continue;
+    }
+    if (/[|`*_<>#]/u.test(character)) {
       appendCompactWhitespace(state, index);
       lineStart = false;
       continue;
@@ -116,4 +120,3 @@ export function normalizeFullTextWithMap(value: string) {
   }
   return { normalized: state.normalized, raw, rawIndexes: state.rawIndexes };
 }
-

@@ -1,5 +1,4 @@
-import { normalizeQuoteText, type ContextExcerptQuoteLocator } from './contextExcerptQuoteLocator.js';
-import { containsOrderedQuoteLines } from './controlledContextTrim.js';
+import { normalizeLineEndings, normalizeQuoteText, type ContextExcerptQuoteLocator } from './contextExcerptQuoteLocator.js';
 
 const MAX_LENGTH_DELTA = 6;
 
@@ -63,13 +62,32 @@ function isLengthClose(match: string, quote: string) {
   return Math.abs(left - right) <= MAX_LENGTH_DELTA;
 }
 
+function containsOrderedQuoteParts(match: string, quote: string) {
+  const normalizedMatch = normalizeQuoteText(match);
+  let cursor = 0;
+  for (const rawLine of normalizeLineEndings(quote).split('\n')) {
+    const line = normalizeQuoteText(rawLine);
+    if (!line) {
+      continue;
+    }
+    const foundAt = normalizedMatch.indexOf(line, cursor);
+    if (foundAt < 0) {
+      return false;
+    }
+    cursor = foundAt + line.length;
+  }
+  return true;
+}
+
 function uniqueValidRawMatch(locator: FullTextLocator, ranges: Range[], quote: string, exactMatcher: RegExp | null) {
-  const valid = ranges
+  const validRanges = ranges
     .map((range) => toRawRange(locator, range.start, range.end))
     .filter((range): range is Range => range !== null)
-    .map((range) => sliceRaw(locator, range))
-    .filter((match) => containsOrderedQuoteLines(match, quote) && (!exactMatcher || exactMatcher.test(match) || isLengthClose(match, quote)));
-  return Array.from(new Set(valid)).length === 1 ? valid[0] : null;
+    .filter((range) => {
+      const match = sliceRaw(locator, range);
+      return containsOrderedQuoteParts(match, quote) && (exactMatcher?.test(match) || isLengthClose(match, quote));
+    });
+  return validRanges.length === 1 ? sliceRaw(locator, validRanges[0]) : null;
 }
 
 function collectBoundaryFragments(normalizedQuote: string) {

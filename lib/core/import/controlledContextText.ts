@@ -32,10 +32,13 @@ export function normalizeLooseWhitespaceWithMap(value: string) {
 
 function stripMarkdown(value: string) {
   return value
+    .replace(/\\([\\`*_{}[\]()#+.!<>|-])/g, '$1')
+    .replace(/<([^>\s]+)>/g, ' $1 ')
     .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
     .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
     .replace(/\[\[([^\]]+)]]/g, '$1')
     .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/(^|\s)•\s+/g, '$1')
     .replace(/[|`*_>#]/g, ' ');
 }
 
