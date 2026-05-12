@@ -24,9 +24,11 @@ import {
 import { collectMarkdownCalloutPrefixRanges, type MarkdownCalloutPrefixRange } from '../model/markdownOblikeBlockProjection';
 import {
   collectMarkdownTablePlans,
+} from '../model/markdownTablePlans';
+import {
   collectViewportMarkdownTablePlans,
   isPositionInsideInactiveTable
-} from '../model/markdownTablePlans';
+} from '../model/markdownTableViewport';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { addFootnoteDecorations } from './liveMarkdownFootnotes';

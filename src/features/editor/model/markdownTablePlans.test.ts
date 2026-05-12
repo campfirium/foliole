@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectMarkdownTablePlans, collectViewportMarkdownTablePlans } from './markdownTablePlans';
+import { collectMarkdownTablePlans } from './markdownTablePlans';
+import { collectViewportMarkdownTablePlans } from './markdownTableViewport';
 
 describe('markdownTablePlans', () => {
   it('collects GFM table block, row, and cell ranges', () => {
@@ -16,6 +17,15 @@ describe('markdownTablePlans', () => {
     expect(table?.rows.map((row) => row.kind)).toEqual(['header', 'body']);
     expect(table?.rows[0]?.cells.map((cell) => cell.text)).toEqual(['A', 'B']);
     expect(table?.rows[1]?.cells.map((cell) => cell.text)).toEqual(['1', '2']);
+  });
+
+  it('keeps tables renderable when header and leading body cells are empty', () => {
+    const text = '|  |  |  |\n| --- | --- | --- |\n|  |  |  Reply text |';
+    const table = collectMarkdownTablePlans({ activePosition: null, from: 0, text })[0];
+
+    expect(table?.columnCount).toBe(3);
+    expect(table?.rows[0]?.cells.map((cell) => cell.text)).toEqual(['', '', '']);
+    expect(table?.rows[1]?.cells.map((cell) => cell.text)).toEqual(['', '', 'Reply text']);
   });
 
   it('marks the whole table active when the cursor is inside the table block', () => {

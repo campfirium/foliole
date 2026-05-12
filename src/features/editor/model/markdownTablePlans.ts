@@ -2,6 +2,7 @@ import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
 
 import { folioleMarkdownParser } from './folioleMarkdownParser';
 import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import { collectPipeSeparatedTableCells } from './markdownTableCells';
 
 type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -51,6 +52,9 @@ function collectChildCells(
   offset: number,
   alignments: readonly MarkdownTableCellAlignment[]
 ): MarkdownTableCellPlan[] {
+  const pipeCells = collectPipeSeparatedCells(node, source, offset, alignments);
+  if (pipeCells.length > 0) return pipeCells;
+
   const cells: MarkdownTableCellPlan[] = [];
   let cellIndex = 0;
   for (let child = node.firstChild; child; child = child.nextSibling) {
@@ -64,6 +68,21 @@ function collectChildCells(
     cellIndex += 1;
   }
   return cells;
+}
+
+function collectPipeSeparatedCells(
+  node: MarkdownSyntaxNode,
+  source: string,
+  offset: number,
+  alignments: readonly MarkdownTableCellAlignment[]
+): MarkdownTableCellPlan[] {
+  return collectPipeSeparatedTableCells({
+    alignments,
+    offset,
+    rowFrom: node.from,
+    rowTo: node.to,
+    source
+  });
 }
 
 function collectTableRows(
@@ -199,46 +218,4 @@ export function collectMarkdownTablePlans(args: {
   });
 
   return tables;
-}
-
-function rangesOverlap(first: { from: number; to: number }, second: { from: number; to: number }) {
-  return first.from < second.to && first.to > second.from;
-}
-
-function getVisibleTableRows(
-  table: MarkdownTablePlan,
-  viewport: { from: number; to: number }
-): MarkdownTableRowPlan[] {
-  const visibleRows = table.rows.filter((row) => rangesOverlap(row, viewport));
-  const header = table.rows.find((row) => row.kind === 'header');
-  if (!header || visibleRows.some((row) => row.kind === 'header')) return visibleRows;
-  return [header, ...visibleRows.filter((row) => row.kind === 'body')];
-}
-
-function getTableRenderFrom(table: MarkdownTablePlan, viewport: { from: number; to: number }) {
-  const visibleRow = table.rows.find((row) => rangesOverlap(row, viewport));
-  if (visibleRow) return visibleRow.from;
-  return Math.max(table.from, viewport.from);
-}
-
-export function collectViewportMarkdownTablePlans(
-  tables: readonly MarkdownTablePlan[],
-  viewport: { from: number; to: number }
-): MarkdownTablePlan[] {
-  return tables
-    .filter((table) => !table.active && rangesOverlap(table, viewport))
-    .map((table) => {
-      const rows = getVisibleTableRows(table, viewport);
-      return {
-        ...table,
-        anchorDecorations: table.anchorDecorations.filter((decoration) => rangesOverlap(decoration, viewport)),
-        renderFrom: getTableRenderFrom(table, viewport),
-        renderTo: Math.min(table.to, viewport.to),
-        rows: rows.length > 0 ? rows : table.rows.slice(0, 1)
-      };
-    });
-}
-
-export function isPositionInsideInactiveTable(position: number, tables: readonly MarkdownTablePlan[]) {
-  return tables.some((table) => !table.active && position >= table.from && position < table.to);
 }
