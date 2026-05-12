@@ -3,6 +3,14 @@ import { useCallback, useMemo, useState, type DragEvent as ReactDragEvent } from
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import {
+  clearNodeListDragSource,
+  isInvalidNodeListDropTarget,
+  readNodeListDragSource,
+  resolveDragSourceNodeIds,
+  writeNodeListDragSource
+} from './NodeListDragSource';
+
 const DROP_INTENT_EDGE_RATIO = 0.25;
 
 type DropIntent = 'before' | 'after' | 'child';
@@ -46,19 +54,6 @@ function createInitialDragState(): DragState {
   };
 }
 
-function resolveDragSourceNodeIds(
-  nodeId: string,
-  noteRowIds: string[],
-  selectedNodeIds: string[]
-): string[] {
-  if (!selectedNodeIds.includes(nodeId)) {
-    return [nodeId];
-  }
-  const selectedSet = new Set(selectedNodeIds);
-  const scopedSelection = noteRowIds.filter((candidateId) => selectedSet.has(candidateId));
-  return scopedSelection.length > 0 ? scopedSelection : [nodeId];
-}
-
 function resolveDropIntent(event: ReactDragEvent<HTMLElement>): DropIntent {
   const rowRect = event.currentTarget.getBoundingClientRect();
   const topEdge = rowRect.top + rowRect.height * DROP_INTENT_EDGE_RATIO;
@@ -72,25 +67,6 @@ function resolveDropIntent(event: ReactDragEvent<HTMLElement>): DropIntent {
   return 'child';
 }
 
-function isInvalidDropTarget(
-  targetNodeId: string,
-  sourceNodeIds: string[],
-  nodesById: WorkspaceListNodesById
-) {
-  const sourceSet = new Set(sourceNodeIds);
-  if (sourceSet.has(targetNodeId)) {
-    return true;
-  }
-  let cursorId = nodesById[targetNodeId]?.parentNodeId ?? null;
-  while (cursorId) {
-    if (sourceSet.has(cursorId)) {
-      return true;
-    }
-    cursorId = nodesById[cursorId]?.parentNodeId ?? null;
-  }
-  return false;
-}
-
 function createNodeDropHandler(
   isTrashViewOpen: boolean,
   state: DragState,
@@ -99,17 +75,19 @@ function createNodeDropHandler(
 ) {
   return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
+    const sourceNodeIds = readNodeListDragSource(event, state.sourceNodeIds);
     if (
       isTrashViewOpen ||
-      state.sourceNodeIds.length === 0 ||
+      sourceNodeIds.length === 0 ||
       !state.dropIntent ||
-      state.sourceNodeIds.includes(targetNodeId)
+      sourceNodeIds.includes(targetNodeId)
     ) {
       setState(createInitialDragState());
       return;
     }
 
-    moveNodes(state.sourceNodeIds, targetNodeId, state.dropIntent);
+    moveNodes(sourceNodeIds, targetNodeId, state.dropIntent);
+    clearNodeListDragSource();
     setState(createInitialDragState());
   };
 }
@@ -122,11 +100,13 @@ function createRootDropHandler(
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
-    if (disableRootDrop || sourceNodeIds.length === 0) {
+    const effectiveSourceNodeIds = readNodeListDragSource(event, sourceNodeIds);
+    if (disableRootDrop || effectiveSourceNodeIds.length === 0) {
       setState(createInitialDragState());
       return;
     }
-    moveNodes(sourceNodeIds, null, 'root');
+    moveNodes(effectiveSourceNodeIds, null, 'root');
+    clearNodeListDragSource();
     setState(createInitialDragState());
   };
 }
@@ -138,11 +118,12 @@ function createNodeDragOverHandler(
   setState: (updater: (prev: DragState) => DragState) => void
 ) {
   return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
+    const effectiveSourceNodeIds = readNodeListDragSource(event, sourceNodeIds);
     if (
       isTrashViewOpen ||
-      sourceNodeIds.length === 0 ||
+      effectiveSourceNodeIds.length === 0 ||
       !nodesById[targetNodeId] ||
-      isInvalidDropTarget(targetNodeId, sourceNodeIds, nodesById)
+      isInvalidNodeListDropTarget(targetNodeId, effectiveSourceNodeIds, nodesById)
     ) {
       return;
     }
@@ -172,13 +153,13 @@ function createDragStartHandler(
       event.preventDefault();
       return;
     }
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', nodeId);
+    const sourceNodeIds = resolveDragSourceNodeIds(nodeId, noteRowIds, selectedNodeIds);
+    writeNodeListDragSource(event, sourceNodeIds);
     setState({
       dropIntent: null,
       dropTargetNodeId: null,
       isRootDropActive: false,
-      sourceNodeIds: resolveDragSourceNodeIds(nodeId, noteRowIds, selectedNodeIds)
+      sourceNodeIds
     });
   };
 }
@@ -189,7 +170,8 @@ function createDragOverRootHandler(
   setState: (updater: (prev: DragState) => DragState) => void
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
-    if (disableRootDrop || sourceNodeIds.length === 0) {
+    const effectiveSourceNodeIds = readNodeListDragSource(event, sourceNodeIds);
+    if (disableRootDrop || effectiveSourceNodeIds.length === 0) {
       return;
     }
     event.preventDefault();
@@ -238,7 +220,10 @@ export function useNodeListDragController({
     dropTargetNodeId: state.dropTargetNodeId,
     dropIntent: state.dropIntent,
     isRootDropActive: state.isRootDropActive,
-    onDragEnd: useCallback(() => setState(createInitialDragState()), []),
+    onDragEnd: useCallback(() => {
+      clearNodeListDragSource();
+      setState(createInitialDragState());
+    }, []),
     onDragEnterNode: onDragOverNode,
     onDragOverNode,
     onDragOverRoot,

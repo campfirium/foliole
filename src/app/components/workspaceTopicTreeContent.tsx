@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
 
+import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
 import { useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { buildNodeTree, buildVisibleNodeTreeRows, collectNodeAncestorIds, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
@@ -12,6 +13,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
   contextMenu: NodeListContextMenuController;
+  drag: ReturnType<typeof useNodeListDragController>;
   emptyStateDescription: string;
   emptyStateTitle: string;
   nodesById: WorkspaceListNodesById;
@@ -43,6 +45,7 @@ export function renderWorkspaceTopicTreeBody(args: {
         <WorkspaceTopicTreeRows
           activeNodeId={args.activeNodeId}
           collapsedNodeIds={args.collapsedNodeIds}
+          drag={args.drag}
           nodesById={args.nodesById}
           onContextMenu={args.contextMenu.openContextMenu}
           onRenameNode={args.onRenameNode}

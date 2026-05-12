@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
@@ -50,6 +51,7 @@ function useWorkspaceTopicTreeActions() {
     deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
+    moveNodes: useWorkspaceStore((state) => state.moveNodes),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     returnNode: useWorkspaceStore((state) => state.relearnNode),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
@@ -63,6 +65,22 @@ function useWorkspaceTopicTreeCollapseState(props: WorkspaceTopicTreeProps, tree
     tree.rows,
     tree.parentById
   );
+}
+
+function useWorkspaceTopicTreeDrag(args: {
+  itemIds: string[];
+  moveNodes: ReturnType<typeof useWorkspaceTopicTreeActions>['moveNodes'];
+  nodesById: WorkspaceListNodesById;
+  selectedNodeIds: string[];
+}) {
+  return useNodeListDragController({
+    disableRootDrop: true,
+    isTrashViewOpen: false,
+    moveNodes: args.moveNodes,
+    nodesById: args.nodesById,
+    noteRowIds: args.itemIds,
+    selectedNodeIds: args.selectedNodeIds
+  });
 }
 
 function useWorkspaceTopicTreeInteraction(args: {
@@ -94,31 +112,48 @@ function useWorkspaceTopicTreeInteraction(args: {
     trashedNodeIds: []
   });
   const contextMenu = useNodeListContextMenu(topicTreeState.selectedNodeIds, []);
+  const drag = useWorkspaceTopicTreeDrag({
+    itemIds: args.itemIds,
+    moveNodes: actions.moveNodes,
+    nodesById: args.nodesById,
+    selectedNodeIds: topicTreeState.selectedNodeIds
+  });
 
   return {
     ...actions,
     contextMenu,
+    drag,
     handleSelectNode,
     topicTreeState,
-    topicTreeMenu: (
-      <NodeListTreeMenu
-        contextMenu={contextMenu}
-        createChildNode={actions.createChildNode}
-        createGlobalNode={(content = '', kind = 'topic') => actions.createChildNode(args.activeFolderId, content, kind)}
-        createVirtualNode={actions.createVirtualNode}
-        deleteNodes={actions.deleteNodes}
-        deleteNodesPermanently={actions.deleteNodesPermanently}
-        dismissNode={actions.dismissNode}
-        isVirtualViewOpen={false}
-        nodesById={args.nodesById}
-        onOpenMoveToNode={args.onOpenMoveToNode}
-        onSelect={handleSelectNode}
-        restoreNode={actions.restoreNode}
-        returnNode={actions.returnNode}
-        state={topicTreeState}
-      />
-    )
+    topicTreeMenu: renderWorkspaceTopicTreeMenu(args, actions, contextMenu, handleSelectNode, topicTreeState)
   };
+}
+
+function renderWorkspaceTopicTreeMenu(
+  args: Parameters<typeof useWorkspaceTopicTreeInteraction>[0],
+  actions: ReturnType<typeof useWorkspaceTopicTreeActions>,
+  contextMenu: ReturnType<typeof useNodeListContextMenu>,
+  handleSelectNode: ReturnType<typeof useNodeSelectionHandler>,
+  topicTreeState: ReturnType<typeof useNodeListState>
+) {
+  return (
+    <NodeListTreeMenu
+      contextMenu={contextMenu}
+      createChildNode={actions.createChildNode}
+      createGlobalNode={(content = '', kind = 'topic') => actions.createChildNode(args.activeFolderId, content, kind)}
+      createVirtualNode={actions.createVirtualNode}
+      deleteNodes={actions.deleteNodes}
+      deleteNodesPermanently={actions.deleteNodesPermanently}
+      dismissNode={actions.dismissNode}
+      isVirtualViewOpen={false}
+      nodesById={args.nodesById}
+      onOpenMoveToNode={args.onOpenMoveToNode}
+      onSelect={handleSelectNode}
+      restoreNode={actions.restoreNode}
+      returnNode={actions.returnNode}
+      state={topicTreeState}
+    />
+  );
 }
 
 export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
@@ -156,6 +191,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
         activeNodeId: props.activeNodeId,
         collapsedNodeIds,
         contextMenu: interaction.contextMenu,
+        drag: interaction.drag,
         emptyStateDescription: props.emptyStateDescription ?? 'Add a topic to get started.',
         emptyStateTitle: props.emptyStateTitle ?? 'No topics in this folder',
         nodesById: props.nodesById,

@@ -8,6 +8,7 @@ import {
   getNodeListRowSpacing,
   resolveNodeListRowGap
 } from '../../features/nodes/components/nodeListRowSpacingSettings';
+import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from '../../features/nodes/components/NodeTreeRow';
@@ -19,6 +20,7 @@ import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceLis
 interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
+  drag: ReturnType<typeof useNodeListDragController>;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
   onRenameNode: (nodeId: string, title: string) => void;
@@ -33,6 +35,7 @@ function renderWorkspaceTopicTreeRow(
   args: {
     activeNodeId: string | null;
     collapsedNodeIds: ReadonlySet<string>;
+    drag: ReturnType<typeof useNodeListDragController>;
     nodesById: WorkspaceListNodesById;
     onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
     onRenameNode: (nodeId: string, title: string) => void;
@@ -49,9 +52,7 @@ function renderWorkspaceTopicTreeRow(
   const isReviewCard = isFsrsWorkspaceListNode(node);
   const nodeIconState = resolveNodeTreeRowIconState({
     isDismissed: node?.reading?.state === 'dismissed',
-    hasEnteredSchedule: isReviewCard
-      ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
-      : (node?.reading?.repetitionCount ?? 0) > 0
+    hasEnteredSchedule: resolveHasEnteredSchedule(node, isReviewCard)
   });
   const nodeIconKind = resolveNodeTreeRowIconKind({
     hasChildren: row.hasChildren,
@@ -82,12 +83,39 @@ function renderWorkspaceTopicTreeRow(
       showIcon
       onContextMenu={args.onContextMenu}
       rowSpacing={args.rowSpacing}
+      {...resolveWorkspaceTopicTreeRowDragProps(row.node.id, isDerivedNode, args.drag)}
       onKeyDown={args.onRowKeyDown}
       onRename={args.onRenameNode}
       onSelect={args.onSelectNode}
       onToggleCollapse={args.onToggleCollapse}
     />
   );
+}
+
+function resolveHasEnteredSchedule(
+  node: WorkspaceListNodesById[string] | undefined,
+  isReviewCard: boolean
+) {
+  return isReviewCard
+    ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
+    : (node?.reading?.repetitionCount ?? 0) > 0;
+}
+
+function resolveWorkspaceTopicTreeRowDragProps(
+  nodeId: string,
+  isDerivedNode: boolean,
+  drag: ReturnType<typeof useNodeListDragController>
+) {
+  return {
+    dropIntent: drag.dropTargetNodeId === nodeId ? drag.dropIntent : null,
+    isDragDisabled: isDerivedNode,
+    isDropTarget: drag.dropTargetNodeId === nodeId,
+    onDragEnd: drag.onDragEnd,
+    onDragEnter: drag.onDragEnterNode,
+    onDragOver: drag.onDragOverNode,
+    onDragStart: drag.onDragStartNode,
+    onDrop: drag.onDropOnNode
+  };
 }
 
 function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
@@ -97,6 +125,7 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
 export function WorkspaceTopicTreeRows({
   activeNodeId,
   collapsedNodeIds,
+  drag,
   nodesById,
   onContextMenu,
   onRenameNode,
@@ -131,6 +160,7 @@ export function WorkspaceTopicTreeRows({
         renderWorkspaceTopicTreeRow(row, {
           activeNodeId,
           collapsedNodeIds,
+          drag,
           nodesById,
           onContextMenu,
           onRenameNode,

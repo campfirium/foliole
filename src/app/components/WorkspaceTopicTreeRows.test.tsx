@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -18,6 +19,21 @@ function createRow(node: NonNullable<WorkspaceListNodesById[string]>): NodeTreeR
     depth: 0,
     hasChildren: false,
     node
+  };
+}
+
+function createDragMock(): ReturnType<typeof useNodeListDragController> {
+  return {
+    dropIntent: null,
+    dropTargetNodeId: null,
+    isRootDropActive: false,
+    onDragEnd: vi.fn(),
+    onDragEnterNode: vi.fn(),
+    onDragOverNode: vi.fn(),
+    onDragOverRoot: vi.fn(),
+    onDragStartNode: vi.fn(),
+    onDropOnNode: vi.fn(),
+    onDropRoot: vi.fn()
   };
 }
 
@@ -56,6 +72,7 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
     <WorkspaceTopicTreeRows
       activeNodeId={null}
       collapsedNodeIds={new Set()}
+      drag={createDragMock()}
       nodesById={nodesById}
       onContextMenu={vi.fn()}
       onRenameNode={vi.fn()}
