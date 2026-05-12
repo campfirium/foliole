@@ -121,7 +121,7 @@ function renderStandardContentColumn(
 function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
-    return <RemovedSourcesPanel />;
+    return <RemovedSourcesPanel onSelectNode={props.onSelectNode} />;
   }
   const itemIds = collectVirtualContentItemIds(props);
   const items = itemIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));

@@ -1,5 +1,5 @@
 import { ChevronsDownUp, ChevronsUpDown, RefreshCw } from 'lucide-react';
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
@@ -8,7 +8,16 @@ import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { resolveNodeTreeRowIconKind } from '../../features/nodes/components/NodeTreeRowIconModel';
 import type { NodeTreeRow as RemovedTreeRow } from '../../features/nodes/model/nodeTree';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
-import { AppEmptyState, AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
+import {
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuTrigger,
+  AppEmptyState,
+  AppIconButton,
+  AppToolbar,
+  ToolbarActionGroup
+} from '../../shared/ui';
 
 import type { WorkspaceContentSortDirection, WorkspaceContentSortKey } from './workspaceContentSort';
 import { WorkspaceContentSortControls } from './WorkspaceContentSortControls';
@@ -72,6 +81,7 @@ export function RemovedSourcesToolbar(props: {
 export function RemovedSourceRows(props: {
   collapsedNodeIds: ReadonlySet<string>;
   entryByNodeId: Record<string, RuntimeRemovedSourceEntry | undefined>;
+  onOpenContextMenu: (entry: RuntimeRemovedSourceEntry, event: ReactMouseEvent<HTMLElement>) => void;
   rows: RemovedTreeRow[];
   selectedId: string | null;
   onSelect: (entry: RuntimeRemovedSourceEntry) => void;
@@ -113,6 +123,7 @@ function renderRemovedSourceRow(
   args: {
     collapsedNodeIds: ReadonlySet<string>;
     entryByNodeId: Record<string, RuntimeRemovedSourceEntry | undefined>;
+    onOpenContextMenu: (entry: RuntimeRemovedSourceEntry, event: ReactMouseEvent<HTMLElement>) => void;
     onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
     onSelect: (entry: RuntimeRemovedSourceEntry) => void;
     onToggleCollapse: (nodeId: string) => void;
@@ -141,6 +152,9 @@ function renderRemovedSourceRow(
         kind: row.node.kind ?? 'topic'
       })}
       nodeId={row.node.id}
+      onContextMenu={(_, event) => {
+        if (entry) args.onOpenContextMenu(entry, event);
+      }}
       onKeyDown={args.onRowKeyDown}
       onSelect={(nodeId) => {
         const selectedEntry = args.entryByNodeId[nodeId];
@@ -155,5 +169,37 @@ function renderRemovedSourceRow(
       showIcon
       trailingLabelContent={entry?.hasSourceUpdate ? <span className="text-xs text-foreground/55">Updated</span> : null}
     />
+  );
+}
+
+export function RemovedSourceContextMenu(props: {
+  entry: RuntimeRemovedSourceEntry | null;
+  left: number;
+  onClose: () => void;
+  onImport: (entry: RuntimeRemovedSourceEntry) => void;
+  top: number;
+}) {
+  if (!props.entry) {
+    return null;
+  }
+  return (
+    <AppDropdownMenu onOpenChange={(open) => (open ? undefined : props.onClose())} open>
+      <AppDropdownMenuTrigger asChild>
+        <button
+          aria-hidden="true"
+          className="pointer-events-none fixed h-0 w-0 opacity-0"
+          style={{ left: `${props.left}px`, top: `${props.top}px` }}
+          type="button"
+        />
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        onContextMenu={(event) => event.preventDefault()}
+        sideOffset={0}
+      >
+        <AppDropdownMenuItem onSelect={() => props.onImport(props.entry!)}>Import to Foliole</AppDropdownMenuItem>
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
   );
 }

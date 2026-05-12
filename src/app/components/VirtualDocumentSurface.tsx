@@ -62,7 +62,7 @@ export function VirtualDocumentSurface(props: VirtualDocumentSurfaceProps) {
     return (
       <>
         {props.pdfCache}
-        <RemovedSourcesPanel />
+        <RemovedSourcesPanel onSelectNode={props.onSelectNode} />
       </>
     );
   }

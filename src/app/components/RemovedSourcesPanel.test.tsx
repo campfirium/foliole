@@ -105,3 +105,28 @@ it('collapses and expands Removed source folders with the standard list control'
 
   expect(await screen.findByRole('treeitem', { name: 'Beta Removed' })).toBeInTheDocument();
 });
+
+it('imports a Removed source from the row context menu', async () => {
+  const onSelectNode = vi.fn();
+  const entry = createRemovedSource();
+  mocks.loadRuntimeRemovedSources.mockResolvedValue({
+    entries: [entry],
+    loadedAt: '2026-05-12T00:00:00.000Z'
+  });
+  mocks.restoreRuntimeRemovedSource.mockResolvedValue({
+    node_id: 'topic-new',
+    restored_at: '2026-05-12T00:00:01.000Z',
+    status: 'restored'
+  });
+
+  render(<RemovedSourcesPanel onSelectNode={onSelectNode} />);
+
+  fireEvent.contextMenu(await screen.findByRole('treeitem', { name: 'Alpha Removed' }), {
+    clientX: 160,
+    clientY: 120
+  });
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Import to Foliole' }));
+
+  await waitFor(() => expect(mocks.restoreRuntimeRemovedSource).toHaveBeenCalledWith(entry));
+  expect(onSelectNode).toHaveBeenCalledWith('topic-new');
+});
