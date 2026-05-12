@@ -5,7 +5,7 @@ import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   VIRTUAL_ROOT_NODE_ID,
-  VIRTUAL_UNSYNCED_NODE_ID,
+  VIRTUAL_REMOVED_NODE_ID,
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import {
@@ -21,8 +21,8 @@ import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualLis
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibraryListPanel } from './ExternalLibraryListPanel';
+import { RemovedSourcesPanel } from './RemovedSourcesPanel';
 import { TrashResultListPanel } from './TrashResultListPanel';
-import { UnsyncedSourcesPanel } from './UnsyncedSourcesPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
@@ -120,8 +120,8 @@ function renderStandardContentColumn(
 
 function renderVirtualContentColumn(props: WorkspaceDualListContentProps) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
-  if (activeVirtualNodeId === VIRTUAL_UNSYNCED_NODE_ID) {
-    return <UnsyncedSourcesPanel onSelectNode={props.onSelectNode} />;
+  if (activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
+    return <RemovedSourcesPanel />;
   }
   const itemIds = collectVirtualContentItemIds(props);
   const items = itemIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));

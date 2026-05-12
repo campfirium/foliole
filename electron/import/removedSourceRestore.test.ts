@@ -27,11 +27,11 @@ vi.mock('./managedInboxEvents.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { deleteNodesPermanently } from '../database/nodeMutations.js';
-import { loadUnsyncedSources } from '../ipc/unsyncedSourcesPayload.js';
+import { loadRemovedSources } from '../ipc/removedSourcesPayload.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { runKeepImportRule } from './keepImportService.js';
-import { restoreUnsyncedSource } from './unsyncedSourceRestore.js';
+import { restoreRemovedSource } from './removedSourceRestore.js';
 
 let tempRoot = '';
 
@@ -85,7 +85,7 @@ it('restores a removed import by importing a fresh initial topic', async () => {
     nodeOrder: nodeOrder.map((row) => row.node_id)
   });
 
-  expect(loadUnsyncedSources().entries).toEqual([
+  expect(loadRemovedSources().entries).toEqual([
     expect.objectContaining({
       content_preview: 'Fresh body',
       source_path: 'entry.md',
@@ -93,7 +93,7 @@ it('restores a removed import by importing a fresh initial topic', async () => {
     })
   ]);
 
-  const result = await restoreUnsyncedSource('draft-import-source-301', 'entry.md');
+  const result = await restoreRemovedSource('draft-import-source-301', 'entry.md');
 
   expect(result).toMatchObject({ status: 'restored' });
   expect(result.node_id).toEqual(expect.any(String));

@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import { extractNodeOpeningPreview } from '../../lib/core/nodes/nodeOpeningPreview.js';
-import type { NativeUnsyncedSourcesResult } from '../../lib/platform/nativeUnsyncedSourcesContract.js';
+import type { NativeRemovedSourcesResult } from '../../lib/platform/nativeRemovedSourcesContract.js';
 import { listRemovedKeepImportItems } from '../database/keepImportItems.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
@@ -30,7 +30,7 @@ function loadSourcePreview(ruleId: string, sourcePath: string) {
   }
 }
 
-export function loadUnsyncedSources(): NativeUnsyncedSourcesResult {
+export function loadRemovedSources(): NativeRemovedSourcesResult {
   return {
     entries: listRemovedKeepImportItems().map((entry) => {
       const preview = loadSourcePreview(entry.rule_id, entry.source_path);

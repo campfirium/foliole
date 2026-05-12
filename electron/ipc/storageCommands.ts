@@ -12,7 +12,7 @@ import {
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
-import { restoreUnsyncedSource } from '../import/unsyncedSourceRestore.js';
+import { restoreRemovedSource } from '../import/removedSourceRestore.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import {
@@ -31,6 +31,7 @@ import {
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 import { toNativePdfImportsInventory } from './pdfImportsInventoryPayload.js';
 import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.js';
+import { loadRemovedSources } from './removedSourcesPayload.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
 import {
   handleSqliteMaintenanceCommand,
@@ -39,7 +40,6 @@ import {
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
-import { loadUnsyncedSources } from './unsyncedSourcesPayload.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function completeWorkspaceMutation(result: unknown = null) {
@@ -159,8 +159,8 @@ async function handleStorageReadCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();
   }
-  if (command === NATIVE_COMMANDS.loadUnsyncedSources) {
-    return loadUnsyncedSources();
+  if (command === NATIVE_COMMANDS.loadRemovedSources) {
+    return loadRemovedSources();
   }
   if (command === NATIVE_COMMANDS.loadPdfImportsInventory) {
     return toNativePdfImportsInventory();
@@ -196,8 +196,8 @@ async function handleImportMutationCommand(
     }
     return result;
   }
-  if (command === NATIVE_COMMANDS.restoreUnsyncedSource) {
-    const result = await restoreUnsyncedSource(asString(args.rule_id, 'rule_id'), asString(args.source_path, 'source_path'));
+  if (command === NATIVE_COMMANDS.restoreRemovedSource) {
+    const result = await restoreRemovedSource(asString(args.rule_id, 'rule_id'), asString(args.source_path, 'source_path'));
     if (result.status === 'restored' && result.node_id) {
       notifyWorkspaceContentChanged();
     }

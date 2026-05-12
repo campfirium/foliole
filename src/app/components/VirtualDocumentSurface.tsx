@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 
 import { VirtualNodeDetailView } from '../../features/nodes/components/VirtualNodeDetailView';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { VIRTUAL_UNSYNCED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import { VIRTUAL_REMOVED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { getVirtualRootResultNodes } from '../../features/nodes/model/virtualNodeDetail';
 
 import { FolderListView } from './FolderListView';
-import { UnsyncedSourcesPanel } from './UnsyncedSourcesPanel';
+import { RemovedSourcesPanel } from './RemovedSourcesPanel';
 
 interface VirtualDocumentSurfaceProps {
   activeNode: Node;
@@ -58,11 +58,11 @@ function VirtualRootAggregateView({
 }
 
 export function VirtualDocumentSurface(props: VirtualDocumentSurfaceProps) {
-  if (props.activeNode.id === VIRTUAL_UNSYNCED_NODE_ID) {
+  if (props.activeNode.id === VIRTUAL_REMOVED_NODE_ID) {
     return (
       <>
         {props.pdfCache}
-        <UnsyncedSourcesPanel onSelectNode={props.onSelectNode} />
+        <RemovedSourcesPanel />
       </>
     );
   }

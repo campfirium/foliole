@@ -5,6 +5,7 @@ import type {
   NativeExternalSearchPreview
 } from '../../lib/platform/nativeStorageContract.js';
 
+import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
@@ -18,6 +19,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
   if (isReadwiseExternalFolderId(folderId)) {
     return loadReadwiseExternalSearchBrowseEntries(folderId);
   }
+  const activeImportedLocators = loadActiveImportedSourceLocators();
   return (
     openExternalSearchCacheDatabase()
       .prepare(
@@ -36,7 +38,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
       modified_at: string;
       relative_path: string;
     }>
-  ).map((row) => {
+  ).filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators)).map((row) => {
     const title = resolveImportedNodeTitle({
       content: row.content,
       sourceName: row.relative_path,
@@ -57,6 +59,9 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
 }
 
 export function loadExternalSearchPreview(absolutePath: string): NativeExternalSearchPreview | null {
+  if (!isExternalDocumentVisible(absolutePath)) {
+    return null;
+  }
   const row = openExternalSearchCacheDatabase()
     .prepare(
       `SELECT absolute_path, folder_id, folder_path, relative_path, file_name, extension, content

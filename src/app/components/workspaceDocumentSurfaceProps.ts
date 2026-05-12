@@ -11,6 +11,7 @@ export type WorkspaceDocumentSurfaceSource = Pick<
   | 'readingPosition'
   | 'review'
   | 'trash'
+  | 'virtualView'
 >;
 
 type WorkspaceDocumentSurfaceFlatSource =
@@ -33,7 +34,8 @@ type WorkspaceDocumentSurfaceFlatSource =
   Pick<WorkspaceLayoutProps['nodeList'], 'nodeOrder' | 'nodesById' | 'onOpenMoveToNode'> &
   WorkspaceLayoutProps['readingPosition'] &
   Pick<WorkspaceLayoutProps['review'], 'reviewSchedulerSettings'> &
-  Pick<WorkspaceLayoutProps['trash'], 'isTrashViewOpen' | 'trashedNodeIds'>;
+  Pick<WorkspaceLayoutProps['trash'], 'isTrashViewOpen' | 'trashedNodeIds'> &
+  Pick<WorkspaceLayoutProps['virtualView'], 'activeVirtualNodeId' | 'isVirtualViewOpen'>;
 
 export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceFlatSource & {
   documentNodeId: string | null;
@@ -59,6 +61,7 @@ function selectDocumentSurfaceState({
   props
 }: WorkspaceDocumentSurfaceSelectorArgs) {
   return {
+    activeVirtualNodeId: props.virtualView.activeVirtualNodeId,
     documentNodeId,
     isEditorReadOnly: props.document.isEditorReadOnly,
     isExternalViewOpen: props.externalLibrary.isExternalViewOpen,
@@ -66,6 +69,7 @@ function selectDocumentSurfaceState({
     isImmersiveMode: props.layoutChrome.isImmersiveMode,
     isPriorityQuickSetActive: props.document.isPriorityQuickSetActive,
     isTrashViewOpen: props.trash.isTrashViewOpen,
+    isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
     isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated,
     onEnterImmersiveEdit,
     onShouldSuppressSelectionRestore,

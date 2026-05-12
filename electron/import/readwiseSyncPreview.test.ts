@@ -190,7 +190,7 @@ it('marks locally deleted Readwise sources as blocked instead of new', async () 
 
   const preview = await previewReadwiseReaderImport();
 
-  expect(preview).toMatchObject({ blocked_count: 1, removed_import_count: 0, trash_count: 1, write_count: 0 });
+  expect(preview).toMatchObject({ blocked_count: 1, trash_count: 1, removed_count: 0, write_count: 0 });
   expect(preview.entries).toContainEqual(
     expect.objectContaining({
       blocked_location: 'trash',
@@ -215,10 +215,10 @@ it('counts hard-deleted Readwise sources as removed imports during preview', asy
 
   const preview = await previewReadwiseReaderImport();
 
-  expect(preview).toMatchObject({ blocked_count: 1, removed_import_count: 1, trash_count: 0, write_count: 0 });
+  expect(preview).toMatchObject({ blocked_count: 1, trash_count: 0, removed_count: 1, write_count: 0 });
   expect(preview.entries).toContainEqual(
     expect.objectContaining({
-      blocked_location: 'removed_import',
+      blocked_location: 'removed',
       source_path: 'Highlighted.md',
       status: 'blocked_deleted'
     })

@@ -12,6 +12,7 @@ import type {
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
 
 const READWISE_EXTERNAL_FOLDER_PREFIX = 'readwise-reader-import';
 
@@ -133,7 +134,10 @@ export function loadReadwiseExternalSearchFolders(): NativeExternalSearchFolder[
 }
 
 export function loadReadwiseExternalSearchBrowseEntries(folderId: string) {
-  return readReadwiseExternalDocumentRows(folderId).map(toBrowseEntry);
+  const activeImportedLocators = loadActiveImportedSourceLocators();
+  return readReadwiseExternalDocumentRows(folderId)
+    .map(toBrowseEntry)
+    .filter((entry) => isExternalDocumentVisible(entry.absolute_path, activeImportedLocators));
 }
 
 export function loadReadwiseExternalSearchPreview(
@@ -142,7 +146,7 @@ export function loadReadwiseExternalSearchPreview(
   const row = readReadwiseExternalDocumentRows().find(
     (entry) => resolveDocumentAbsolutePath(entry) === absolutePath
   );
-  if (!row) {
+  if (!row || !isExternalDocumentVisible(absolutePath)) {
     return null;
   }
   return {
@@ -161,7 +165,9 @@ export function searchReadwiseExternalDocuments(query: string): NativeWorkspaceS
   if (!normalizedQuery) {
     return [];
   }
+  const activeImportedLocators = loadActiveImportedSourceLocators();
   return readReadwiseExternalDocumentRows()
+    .filter((row) => isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
     .filter((row) =>
       [row.file_name, row.relative_path, row.content].some((value) =>
         value.toLowerCase().includes(normalizedQuery)

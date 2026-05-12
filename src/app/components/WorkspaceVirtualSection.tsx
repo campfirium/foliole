@@ -6,7 +6,7 @@ import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import {
   VIRTUAL_ROOT_NODE_ID,
-  VIRTUAL_UNSYNCED_NODE_ID,
+  VIRTUAL_REMOVED_NODE_ID,
   isVirtualNode,
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
@@ -35,21 +35,21 @@ function toggleCollapsed(nodeId: string, setCollapsedIds: React.Dispatch<React.S
   });
 }
 
-function renderUnsyncedRow(props: Pick<WorkspaceVirtualSectionProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & { rowSpacing: number }) {
+function renderRemovedRow(props: Pick<WorkspaceVirtualSectionProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & { rowSpacing: number }) {
   return (
     <NodeTreeRow
       depth={1}
       hasChildren={false}
-      isActive={props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_UNSYNCED_NODE_ID}
+      isActive={props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID}
       isCollapsed={false}
-      isSelected={props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_UNSYNCED_NODE_ID}
-      key={VIRTUAL_UNSYNCED_NODE_ID}
-      label="Removed Imports"
-      nodeId={VIRTUAL_UNSYNCED_NODE_ID}
+      isSelected={props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID}
+      key={VIRTUAL_REMOVED_NODE_ID}
+      label="Removed"
+      nodeId={VIRTUAL_REMOVED_NODE_ID}
       rowSpacing={props.rowSpacing}
       showIcon={false}
       onKeyDown={() => undefined}
-      onSelect={() => props.onOpenVirtualView?.(VIRTUAL_UNSYNCED_NODE_ID)}
+      onSelect={() => props.onOpenVirtualView?.(VIRTUAL_REMOVED_NODE_ID)}
       onToggleCollapse={() => undefined}
     />
   );
@@ -63,9 +63,9 @@ function renderVirtualRows(args: {
   rows: ReturnType<typeof buildVisibleNodeTreeRows>;
   setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
-  return args.rows.map((row) => {
+  return args.rows.flatMap((row) => {
     const isSelected = args.props.isVirtualViewOpen && (args.props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID) === row.node.id;
-    return (
+    const virtualRow = (
       <NodeTreeRow
         depth={row.depth}
         hasChildren={row.hasChildren}
@@ -85,6 +85,9 @@ function renderVirtualRows(args: {
         onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
       />
     );
+    return row.node.id === VIRTUAL_ROOT_NODE_ID
+      ? [virtualRow, renderRemovedRow({ ...args.props, rowSpacing: args.rowSpacing })]
+      : [virtualRow];
   });
 }
 
@@ -120,7 +123,6 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     <div className="mt-1 flex min-w-0 flex-col">
       <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       <section aria-label="Virtual folder tree" className="flex flex-col pt-1" role="tree">
-        {renderUnsyncedRow({ ...props, rowSpacing })}
         {renderVirtualRows({ collapsedIds, onRowKeyDown, props, rowSpacing, rows, setCollapsedIds })}
       </section>
     </div>

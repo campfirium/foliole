@@ -37,7 +37,7 @@ function ReadwisePreviewSummary({ preview }: { preview: NativeReadwiseSyncPrevie
   const rows = [
     { count: preview.active_count, label: 'already in Foliole' },
     { count: preview.trash_count, label: 'in Trash' },
-    { count: preview.removed_import_count, label: 'in Removed Imports' },
+    { count: preview.removed_count, label: 'in Removed' },
     {
       count: countEntries(preview.entries, 'with_highlights', 'inbox'),
       label: 'with highlights to Inbox'
@@ -93,7 +93,7 @@ function ReadwisePreviewList({ entries }: { entries: NativeReadwiseSyncPreviewEn
             {entry.status === 'blocked_deleted'
               ? entry.blocked_location === 'trash'
                 ? 'Trash'
-                : 'Removed Imports'
+                : 'Removed'
               : entry.status === 'unchanged'
                 ? 'Synced'
                 : DESTINATION_LABELS[entry.destination]}

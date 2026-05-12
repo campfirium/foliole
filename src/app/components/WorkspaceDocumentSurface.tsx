@@ -1,7 +1,9 @@
+import { VIRTUAL_REMOVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
+import { RemovedSourcePreviewSurface } from './RemovedSourcePreviewSurface';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 
@@ -24,6 +26,19 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
         }}
         onOpenSelection={props.onOpenExternalSelection}
         selection={props.externalSelection}
+      />
+    );
+  }
+
+  if (props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
+    return (
+      <RemovedSourcePreviewSurface
+        canGoBack={props.canGoBack}
+        canGoForward={props.canGoForward}
+        documentMaxWidth={readingContentWidth}
+        onGoBack={props.onGoBack}
+        onGoForward={props.onGoForward}
+        onSelectNode={props.onSelectNode}
       />
     );
   }

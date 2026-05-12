@@ -67,7 +67,7 @@ function resolveBlockedLocation(ruleId: string, source: DirectoryImportSourceDes
   const nodeState = existingItem?.last_node_id
     ? readKeepImportNodeState(existingItem.last_node_id)
     : null;
-  return nodeState?.deleted_at ? 'trash' : 'removed_import';
+  return nodeState?.deleted_at ? 'trash' : 'removed';
 }
 
 function resolveLocationCounts(entries: ReadwiseSyncPreviewEntry[]) {
@@ -76,7 +76,7 @@ function resolveLocationCounts(entries: ReadwiseSyncPreviewEntry[]) {
   return {
     activeCount,
     blockedCount: blockedEntries.length,
-    removedImportCount: blockedEntries.filter((entry) => entry.blocked_location !== 'trash').length,
+    removedCount: blockedEntries.filter((entry) => entry.blocked_location !== 'trash').length,
     trashCount: blockedEntries.filter((entry) => entry.blocked_location === 'trash').length,
   };
 }
@@ -164,9 +164,9 @@ export async function previewReadwiseReaderImport(
       off_count: 0,
       previewed_at: new Date().toISOString(),
       readwise_root_path: settings.readwiseRootPath,
-      removed_import_count: 0,
       trash_count: 0,
       total_count: 0,
+      removed_count: 0,
       with_highlights_count: 0,
       without_highlights_count: 0,
       write_count: 0
@@ -190,9 +190,9 @@ export async function previewReadwiseReaderImport(
     off_count: entries.filter((entry) => entry.destination === 'off').length,
     previewed_at: new Date().toISOString(),
     readwise_root_path: settings.readwiseRootPath,
-    removed_import_count: locationCounts.removedImportCount,
     trash_count: locationCounts.trashCount,
     total_count: entries.length,
+    removed_count: locationCounts.removedCount,
     with_highlights_count: entries.filter((entry) => entry.highlight_type === 'with_highlights')
       .length,
     without_highlights_count: entries.filter(

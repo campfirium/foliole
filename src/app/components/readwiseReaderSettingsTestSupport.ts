@@ -23,7 +23,7 @@ export function createReadwiseImportPreview() {
     readwise_root_path: '/Readwise',
     trash_count: 0,
     total_count: 1,
-    removed_import_count: 0,
+    removed_count: 0,
     with_highlights_count: 1,
     without_highlights_count: 0,
     write_count: 1

@@ -1,13 +1,13 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
-  NativeRestoreUnsyncedSourceResult,
-  NativeUnsyncedSourceEntry,
-  NativeUnsyncedSourcesResult
-} from '../../../lib/platform/nativeUnsyncedSourcesContract';
+  NativeRestoreRemovedSourceResult,
+  NativeRemovedSourceEntry,
+  NativeRemovedSourcesResult
+} from '../../../lib/platform/nativeRemovedSourcesContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 
-export interface RuntimeUnsyncedSourceEntry {
+export interface RuntimeRemovedSourceEntry {
   contentPreview: string | null;
   firstSeenAt: string;
   hasSourceUpdate: boolean;
@@ -20,8 +20,8 @@ export interface RuntimeUnsyncedSourceEntry {
   title: string;
 }
 
-export interface RuntimeUnsyncedSourcesResult {
-  entries: RuntimeUnsyncedSourceEntry[];
+export interface RuntimeRemovedSourcesResult {
+  entries: RuntimeRemovedSourceEntry[];
   loadedAt: string;
 }
 
@@ -30,7 +30,7 @@ function titleFromSourcePath(sourcePath: string) {
   return fileName.replace(/\.(md|markdown|html|txt)$/i, '').trim() || fileName;
 }
 
-function toRuntimeEntry(entry: NativeUnsyncedSourceEntry): RuntimeUnsyncedSourceEntry {
+function toRuntimeEntry(entry: NativeRemovedSourceEntry): RuntimeRemovedSourceEntry {
   return {
     contentPreview: entry.content_preview,
     firstSeenAt: entry.first_seen_at,
@@ -45,25 +45,25 @@ function toRuntimeEntry(entry: NativeUnsyncedSourceEntry): RuntimeUnsyncedSource
   };
 }
 
-export async function loadRuntimeUnsyncedSources(): Promise<RuntimeUnsyncedSourcesResult> {
+export async function loadRuntimeRemovedSources(): Promise<RuntimeRemovedSourcesResult> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return { entries: [], loadedAt: new Date().toISOString() };
   }
-  const result = await runtimeInvoke(NATIVE_COMMANDS.loadUnsyncedSources) as NativeUnsyncedSourcesResult | null;
+  const result = await runtimeInvoke(NATIVE_COMMANDS.loadRemovedSources) as NativeRemovedSourcesResult | null;
   return {
     entries: Array.isArray(result?.entries) ? result.entries.map(toRuntimeEntry) : [],
     loadedAt: result?.loaded_at ?? new Date().toISOString()
   };
 }
 
-export async function restoreRuntimeUnsyncedSource(entry: Pick<RuntimeUnsyncedSourceEntry, 'ruleId' | 'sourcePath'>) {
+export async function restoreRuntimeRemovedSource(entry: Pick<RuntimeRemovedSourceEntry, 'ruleId' | 'sourcePath'>) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
-  return runtimeInvoke(NATIVE_COMMANDS.restoreUnsyncedSource, {
+  return runtimeInvoke(NATIVE_COMMANDS.restoreRemovedSource, {
     rule_id: entry.ruleId,
     source_path: entry.sourcePath
-  }) as Promise<NativeRestoreUnsyncedSourceResult | null>;
+  }) as Promise<NativeRestoreRemovedSourceResult | null>;
 }

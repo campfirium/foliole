@@ -3,7 +3,7 @@ import type { Node } from './nodeTypes';
 export const INBOX_NODE_ID = 'special-inbox';
 export const TRASH_NODE_ID = 'special-trash';
 export const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
-export const VIRTUAL_UNSYNCED_NODE_ID = 'special-virtual-unsynced';
+export const VIRTUAL_REMOVED_NODE_ID = 'special-virtual-removed';
 
 interface WorkspaceNodeSnapshot {
   activeNodeId: string | null;

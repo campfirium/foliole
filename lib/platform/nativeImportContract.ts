@@ -56,7 +56,7 @@ export type NativeReadwiseSyncPreviewSourceKind = 'articles' | 'books' | 'podcas
 export type NativeReadwiseSyncPreviewStatus = 'blocked_deleted' | 'failed' | 'new' | 'off' | 'unchanged' | 'updated';
 
 export interface NativeReadwiseSyncPreviewEntry {
-  blocked_location?: 'removed_import' | 'trash';
+  blocked_location?: 'trash' | 'removed';
   destination: NativeReadwiseSyncPreviewDestination;
   detail: string | null;
   detected_highlight_count: number;
@@ -76,9 +76,9 @@ export interface NativeReadwiseSyncPreviewResult {
   off_count: number;
   previewed_at: string;
   readwise_root_path: string;
-  removed_import_count: number;
   trash_count: number;
   total_count: number;
+  removed_count: number;
   with_highlights_count: number;
   without_highlights_count: number;
   write_count: number;

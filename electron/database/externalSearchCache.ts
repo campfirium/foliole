@@ -1,5 +1,6 @@
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
+import { isExternalDocumentVisible, loadActiveImportedSourceLocators } from './externalDocumentImportVisibility.js';
 import {
   markExternalDocumentsMissing,
   replaceExternalDocumentsForFolder,
@@ -194,8 +195,11 @@ export function searchExternalDocuments(query: string) {
              LIMIT 20`
           )
           .all(normalizedQuery) as ExternalSearchRow[];
+  const activeImportedLocators = loadActiveImportedSourceLocators();
   return [
-    ...rows.map((row) => toExternalResult(row, normalizedQuery)),
+    ...rows
+      .filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators))
+      .map((row) => toExternalResult(row, normalizedQuery)),
     ...searchReadwiseExternalDocuments(normalizedQuery)
   ];
 }

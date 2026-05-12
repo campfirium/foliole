@@ -1,4 +1,4 @@
-export interface NativeUnsyncedSourceEntry {
+export interface NativeRemovedSourceEntry {
   content_preview: string | null;
   first_seen_at: string;
   has_source_update: boolean;
@@ -11,17 +11,17 @@ export interface NativeUnsyncedSourceEntry {
   title: string;
 }
 
-export interface NativeUnsyncedSourcesResult {
-  entries: NativeUnsyncedSourceEntry[];
+export interface NativeRemovedSourcesResult {
+  entries: NativeRemovedSourceEntry[];
   loaded_at: string;
 }
 
-export interface NativeRestoreUnsyncedSourceArgs {
+export interface NativeRestoreRemovedSourceArgs {
   rule_id: string;
   source_path: string;
 }
 
-export interface NativeRestoreUnsyncedSourceResult {
+export interface NativeRestoreRemovedSourceResult {
   detail: string | null;
   node_id: string | null;
   restored_at: string;
