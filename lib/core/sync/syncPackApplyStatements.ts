@@ -61,6 +61,7 @@ export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOp
   const alias = incomingAlias(options);
   return `INSERT OR REPLACE INTO main.node_order (node_id, position) ` +
     `SELECT incoming.node_id, incoming.position FROM ${alias}.node_order incoming ` +
+    `INNER JOIN main.nodes node ON node.id = incoming.node_id AND node.kind = 'folder' ` +
     `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,
       objectType: 'node'

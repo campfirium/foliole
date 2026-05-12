@@ -67,11 +67,6 @@ function readExistingHighlightContents(nodeId: string) {
   );
 }
 
-function readNextNodePosition() {
-  const row = openDatabaseConnection().driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return typeof row?.position === 'number' ? row.position + 1 : 0;
-}
-
 function resolveSourceKind(sourceNode: SourceNodeRow, highlightFilePath: string) {
   try {
     return resolveImportKind(highlightFilePath);
@@ -127,8 +122,7 @@ function persistMergedHighlights(input: {
         highlights: input.update.highlights,
         importedAt: input.importedAt,
         parentNodeId: input.nodeId,
-        parentContent: input.update.content,
-        startPosition: readNextNodePosition()
+        parentContent: input.update.content
       });
     }
   });

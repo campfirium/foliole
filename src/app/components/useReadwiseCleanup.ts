@@ -38,6 +38,7 @@ function useReadwiseCleanupPreviewState(onPreviewCleanup?: PreviewCleanup) {
 }
 
 export function useReadwiseCleanup(input: {
+  onCleanupComplete?: (result: NativeReadwiseCleanupRunResult) => void;
   onPreviewCleanup?: PreviewCleanup;
   onRunCleanup?: RunCleanup;
 }) {
@@ -79,6 +80,7 @@ export function useReadwiseCleanup(input: {
         const result = await input.onRunCleanup();
         if (result) {
           previewState.setPreview(result);
+          input.onCleanupComplete?.(result);
         }
         setIsDialogOpen(false);
       } catch (nextError) {

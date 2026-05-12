@@ -185,7 +185,7 @@ function syncCollapseState(args: {
   return {
     activeFolderId: args.activeFolderId,
     activeNodeId: args.activeNodeId,
-    collapsedNodeIds: expanded
+    collapsedNodeIds: new Set(expanded)
   };
 }
 

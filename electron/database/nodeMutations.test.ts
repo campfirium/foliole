@@ -17,10 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
   deleteNodesPermanently,
+  replaceNodeOrder,
   restoreNodes,
   softDeleteNodes,
   upsertNodeSnapshot
@@ -83,10 +84,26 @@ it('writes node body blob metadata when storing node content', () => {
   expect(Buffer.from(getContentBlobData(row?.body_blob_hash ?? '')?.data ?? []).toString('utf8')).toBe('# node-root');
 });
 
-it('deletes subtree nodes and rewrites node_order while clearing review side tables', () => {
+function seedFolderNode(nodeId: string, position: number) {
+  upsertNodeSnapshot({
+    nodeId,
+    parentNodeId: null,
+    kind: 'folder',
+    title: nodeId,
+    isTitleManual: true,
+    content: '',
+    reveal: null,
+    anchorLink: null,
+    position,
+    createdAt: '2026-03-06T00:00:00.000Z',
+    updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+}
+
+it('deletes subtree nodes and rewrites folder node_order while clearing review side tables', () => {
   seedNode('node-root', null, 0);
   seedDismissedReadingNode('node-child', 'node-root', 1);
-  seedNode('node-keep', null, 2);
+  seedFolderNode('node-keep', 2);
   applySeedReviewGrade('node-child');
 
   expect(getReviewCounts('node-child')).toEqual({ reviewCount: 1, reviewLogCount: 1 });
@@ -103,6 +120,59 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeOrderRows()).toEqual([{ node_id: 'node-keep', position: 0 }]);
   expect(getReviewCounts('node-child')).toEqual({ reviewCount: 0, reviewLogCount: 0 });
   expect(getNodeReadingRow('node-child')).toBeUndefined();
+});
+
+it('rewrites folder order without changing node updated_at or nodes.position', () => {
+  seedFolderNode('node-a', 0);
+  seedFolderNode('node-b', 1);
+  const connection = openDatabaseConnection();
+  connection.sqlite
+    .prepare('UPDATE nodes SET sync_dirty = 0, last_modified_by_device_id = NULL WHERE id IN (?, ?)')
+    .run('node-a', 'node-b');
+
+  replaceNodeOrder(['node-b', 'node-a']);
+
+  expect(getNodeOrderRows()).toEqual([
+    { node_id: 'node-b', position: 0 },
+    { node_id: 'node-a', position: 1 }
+  ]);
+  expect(
+    connection.sqlite
+      .prepare(
+        `SELECT id, position, updated_at, sync_dirty, last_modified_by_device_id
+         FROM nodes
+         WHERE id IN (?, ?)
+         ORDER BY id ASC`
+      )
+      .all('node-a', 'node-b')
+  ).toEqual([
+    {
+      id: 'node-a',
+      last_modified_by_device_id: expect.stringMatching(/^device-/),
+      position: null,
+      sync_dirty: 1,
+      updated_at: '2026-03-06T00:00:00.000Z'
+    },
+    {
+      id: 'node-b',
+      last_modified_by_device_id: expect.stringMatching(/^device-/),
+      position: null,
+      sync_dirty: 1,
+      updated_at: '2026-03-06T00:00:00.000Z'
+    }
+  ]);
+});
+
+it('filters non-folder ids out of order writes and clears old non-folder rows', () => {
+  seedFolderNode('folder-a', 0);
+  seedNode('node-topic', null, 1);
+  openDatabaseConnection().sqlite
+    .prepare('INSERT OR REPLACE INTO node_order (node_id, position) VALUES (?, ?)')
+    .run('node-topic', 99);
+
+  replaceNodeOrder(['node-topic', 'folder-a']);
+
+  expect(getNodeOrderRows()).toEqual([{ node_id: 'folder-a', position: 0 }]);
 });
 
 it('keeps surviving parent content unchanged when permanently deleting linked child nodes', () => {

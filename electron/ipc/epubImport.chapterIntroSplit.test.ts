@@ -51,9 +51,8 @@ function readChildren(parentNodeId: string) {
     .prepare(
       `SELECT n.id, n.title, n.content
        FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
        WHERE n.parent_id = ?
-       ORDER BY o.position ASC`
+       ORDER BY n.title ASC`
     )
     .all(parentNodeId) as Array<{ content: string; id: string; title: string }>;
 }
@@ -104,8 +103,8 @@ it('splits chapter intro content into the first child section when toc chapter a
   expect(chapterRows[0]?.content).toBe('**第三章 越少越好**');
 
   const sectionRows = readChildren(chapterRows[0]!.id);
-  expect(sectionRows.map((node) => node.title)).toEqual(['越少越好', '从流程开始', '最后创建']);
-  expect(sectionRows[0]?.content).toContain('告诉你一个秘密。');
-  expect(sectionRows[1]?.content).toBe('');
-  expect(sectionRows[2]?.content).toBe('');
+  expect(sectionRows.map((node) => node.title).sort()).toEqual(['从流程开始', '最后创建', '越少越好']);
+  expect(sectionRows.find((node) => node.title === '越少越好')?.content).toContain('告诉你一个秘密。');
+  expect(sectionRows.find((node) => node.title === '从流程开始')?.content).toBe('');
+  expect(sectionRows.find((node) => node.title === '最后创建')?.content).toBe('');
 });

@@ -49,10 +49,14 @@ it('persists the workspace content sort preference', () => {
   expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'asc', key: 'name' });
 });
 
-it('migrates the previous saved time sort key to import time', () => {
+it('migrates previous saved/import time sort keys to modified time', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort, JSON.stringify({ direction: 'desc', key: 'savedAt' }));
 
-  expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'desc', key: 'importedAt' });
+  expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'desc', key: 'modifiedAt' });
+
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceContentSort, JSON.stringify({ direction: 'desc', key: 'importedAt' }));
+
+  expect(loadWorkspaceContentSortPreference()).toEqual({ direction: 'desc', key: 'modifiedAt' });
 });
 
 it('sorts external documents by newest date by default and supports name descending', () => {
@@ -85,4 +89,13 @@ it('sorts workspace content by import time instead of later edits', () => {
   ];
 
   expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'importedAt' }).map((row) => row.node.id)).toEqual(['imported-later', 'edited-later']);
+});
+
+it('sorts workspace content by modified time using updatedAt', () => {
+  const rows = [
+    createRow('edited-later', 'Edited later', '2026-04-25T00:00:00.000Z', '2026-04-20T00:00:00.000Z'),
+    createRow('imported-later', 'Imported later', '2026-04-21T00:00:00.000Z', '2026-04-24T00:00:00.000Z')
+  ];
+
+  expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'modifiedAt' }).map((row) => row.node.id)).toEqual(['edited-later', 'imported-later']);
 });

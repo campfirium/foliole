@@ -51,7 +51,6 @@ export function insertImportedHighlightNodes(input: {
   importedAt: string;
   parentNodeId: string;
   parentContent: string;
-  startPosition: number;
 }) {
   if (!input.highlights?.length) {
     return 0;
@@ -69,11 +68,9 @@ export function insertImportedHighlightNodes(input: {
        content, opening_text, reveal, anchor_link, created_at, updated_at, deleted_at
      ) VALUES (?, ?, 'item', NULL, NULL, ?, 0, ?, ?, ?, ?, ?, ?, NULL)`
   );
-  const insertOrder = input.driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
-
   const insertedNodeIds: string[] = [];
 
-  input.highlights.forEach((highlight, index) => {
+  input.highlights.forEach((highlight) => {
     const nodeId = `node-${randomUUID()}`;
     insertedNodeIds.push(nodeId);
     if ('kind' in highlight && highlight.kind === 'cloze') {
@@ -103,7 +100,6 @@ export function insertImportedHighlightNodes(input: {
         input.importedAt
       ]);
     }
-    insertOrder.run([nodeId, input.startPosition + index]);
   });
 
   syncWorkspaceSearchIndexForNodeIds(input.driver, insertedNodeIds);

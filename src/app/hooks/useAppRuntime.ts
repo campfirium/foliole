@@ -9,6 +9,7 @@ import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/works
 import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
+import { useMoveToNodeSourceState } from './appMoveToNodeSourceState';
 import { useWindowHotkeys } from './useAppRuntimeHotkeys';
 
 export interface ReadingPositionSyncState {
@@ -85,7 +86,7 @@ function buildRuntimeState(args: {
   setIsGoToNodePaletteOpen: Dispatch<SetStateAction<boolean>>;
   setIsImportManagementOpen: Dispatch<SetStateAction<boolean>>;
   setIsImmersiveMode: Dispatch<SetStateAction<boolean>>;
-  setIsMoveToNodePaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setIsMoveToNodePaletteOpen: (open: boolean) => void;
   setIsSearchPaletteOpen: Dispatch<SetStateAction<boolean>>;
   setIsSettingsOpen: Dispatch<SetStateAction<boolean>>;
   setIsViewingTrashNode: Dispatch<SetStateAction<boolean>>;
@@ -182,12 +183,13 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const refs = createRuntimeRefs(initialListWidth, initialRightSidebarWidth);
   const [, setReadingPositionRequestVersion] = useState(0);
   const flags = useRuntimeFlags();
+  const moveToNodeSource = useMoveToNodeSourceState(flags.setIsMoveToNodePaletteOpen);
   const settingsRequest = useSettingsRequestState();
   const recentHistory = useRecentHistory();
   useWindowHotkeys({
     setIsCommandPaletteOpen: flags.setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
-    setIsMoveToNodePaletteOpen: flags.setIsMoveToNodePaletteOpen,
+    setIsMoveToNodePaletteOpen: moveToNodeSource.setIsMoveToNodePaletteOpen,
     setIsSearchPaletteOpen: flags.setIsSearchPaletteOpen
   });
 
@@ -214,7 +216,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
       setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
       setIsImportManagementOpen: flags.setIsImportManagementOpen,
       setIsImmersiveMode: flags.setIsImmersiveMode,
-      setIsMoveToNodePaletteOpen: flags.setIsMoveToNodePaletteOpen,
+      setIsMoveToNodePaletteOpen: moveToNodeSource.setIsMoveToNodePaletteOpen,
       setIsSearchPaletteOpen: flags.setIsSearchPaletteOpen,
       setIsSettingsOpen: flags.setIsSettingsOpen,
       setIsViewingTrashNode: flags.setIsViewingTrashNode,
@@ -231,6 +233,9 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
         isViewingTrashNode: flags.isViewingTrashNode
       }
     }),
+    closeMoveToNodePalette: moveToNodeSource.closeMoveToNodePalette,
+    moveToNodeSourceSnapshot: moveToNodeSource.moveToNodeSourceSnapshot,
+    openMoveToNodePalette: moveToNodeSource.openMoveToNodePalette,
     ...editorDraftFlush
   };
 }

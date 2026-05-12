@@ -6,14 +6,14 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
+import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
+import { createDocumentPanelPdfCache } from './documentPanelPdfCache';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
 import type { LinkPanelRecord } from './linkPanelState';
-import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
 import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
-import { ReadwiseBookActionsPanel } from './ReadwiseBookActionsPanel';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
 
 interface DocumentPanelContentProps {
@@ -30,6 +30,7 @@ interface DocumentPanelContentProps {
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
+  onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView?: (nodeId: string) => void;
@@ -56,52 +57,6 @@ function isLikelyPdfSourceReference(content: string) {
     return true;
   }
   return /(?:file:\/\/|[A-Za-z]:[\\/]|\/)/.test(normalized);
-}
-
-function createPdfCache(args: {
-  activeNodeId: string | null;
-  bodyProps: ComponentProps<typeof DocumentPanelBody>;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
-  pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
-  pdfHighlightLocators: ReturnType<typeof collectPdfHighlightLocators>;
-  setIsActivePdfCachedVisible: (visible: boolean) => void;
-}) {
-  return (
-    <>
-      <PdfDocumentSurfaceCache
-        activeNodeId={args.activeNodeId}
-        activePersistedPageCount={args.pdfDocumentSurface?.state === 'ready'
-          ? args.pdfDocumentSurface.details.pdfPageDimensions.reduce((maxPage, entry) => Math.max(maxPage, entry.page), 0) || null
-          : null}
-        activePersistedPageDimensions={
-          args.pdfDocumentSurface?.state === 'ready'
-            ? Object.fromEntries(
-                args.pdfDocumentSurface.details.pdfPageDimensions.flatMap((entry) =>
-                  typeof entry.pageWidth === 'number' &&
-                  Number.isFinite(entry.pageWidth) &&
-                  entry.pageWidth > 0 &&
-                  typeof entry.pageHeight === 'number' &&
-                  Number.isFinite(entry.pageHeight) &&
-                  entry.pageHeight > 0
-                    ? [[entry.page, { height: entry.pageHeight, width: entry.pageWidth }] as const]
-                    : []
-                )
-              )
-            : {}
-        }
-        activePdfState={args.pdfDocumentSurface?.state ?? null}
-        activeSourceHint={args.pdfDocumentSurface?.sourceHint ?? null}
-        editorNodeId={args.bodyProps.editorNodeId}
-        editorNodeViewState={args.bodyProps.editorNodeViewState}
-        highlightLocators={args.pdfHighlightLocators}
-        onActiveCacheVisibilityChange={args.setIsActivePdfCachedVisible}
-        onCreatePdfHighlight={args.onCreatePdfHighlight}
-        onPersistPdfViewState={args.onPersistPdfViewState}
-      />
-      <ReadwiseBookActionsPanel activeNodeId={args.activeNodeId} />
-    </>
-  );
 }
 
 function getDocumentPanelFlags(args: {
@@ -213,6 +168,7 @@ function buildDocumentPanelContentBodyArgs(
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onNodeContentChange: props.onNodeContentChange,
     onOpenExternalLink: props.onOpenExternalLink,
+    onOpenMoveToNode: props.onOpenMoveToNode,
     onPersistPdfViewState: props.onPersistPdfViewState,
     onSelectNode: props.onSelectNode,
     onSelectNodeInVirtualView: props.onSelectNodeInVirtualView ?? props.onSelectNode,
@@ -246,7 +202,7 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
   });
   useResetEditorReadyWhenHidden(props.bodyProps, shouldRenderEditorBody);
 
-  const pdfCache = createPdfCache({
+  const pdfCache = createDocumentPanelPdfCache({
     activeNodeId: props.activeNodeId,
     bodyProps: props.bodyProps,
     onCreatePdfHighlight: props.onCreatePdfHighlight,

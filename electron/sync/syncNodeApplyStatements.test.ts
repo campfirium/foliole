@@ -66,7 +66,7 @@ it('builds the canonical remote node upsert params', () => {
     'answer',
     null,
     null,
-    4,
+    null,
     'phone#1',
     'phone',
     '2026-04-21T10:00:00.000Z',
@@ -89,10 +89,20 @@ it('builds remote version upsert only for complete version metadata', () => {
 });
 
 it('builds node order replace as upsert or delete', () => {
-  expect(buildNodeOrderReplace(createNodeRecord()).params).toEqual(['node-1', 4]);
+  expect(buildNodeOrderReplace(createNodeRecord())).toMatchObject({
+    params: ['node-1'],
+    sql: 'DELETE FROM node_order WHERE node_id = ?'
+  });
   expect(buildNodeOrderReplace(createNodeRecord({
     snapshot: {
       ...createNodeRecord().snapshot,
+      kind: 'folder'
+    }
+  })).params).toEqual(['node-1', 4]);
+  expect(buildNodeOrderReplace(createNodeRecord({
+    snapshot: {
+      ...createNodeRecord().snapshot,
+      kind: 'folder',
       position: null
     }
   }))).toMatchObject({

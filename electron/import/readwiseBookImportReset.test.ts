@@ -204,7 +204,7 @@ it('recreates a deleted readwise book node when re-import is triggered', async (
   expect(restoredNode?.content).toContain('Book import pending');
 });
 
-it('places re-imported book node at the top of inbox children', async () => {
+it('re-imports book placeholders without writing inbox topic order', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
   const inventory = await scanReadwiseBooksInventory({
     fullDocumentDirectoryPath: fullDocumentDir,
@@ -227,15 +227,5 @@ it('places re-imported book node at the top of inbox children', async () => {
 
   await resetReadwiseBookImport(nodeId!);
 
-  const orderedInboxChildren = connection
-    .prepare(
-      `SELECT n.id
-       FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
-       WHERE n.parent_id = 'special-inbox' AND n.deleted_at IS NULL
-       ORDER BY o.position ASC`
-    )
-    .all() as Array<{ id: string }>;
-
-  expect(orderedInboxChildren[0]?.id).toBe(nodeId);
+  expect(connection.prepare('SELECT node_id FROM node_order WHERE node_id = ?').get(nodeId)).toBeUndefined();
 });

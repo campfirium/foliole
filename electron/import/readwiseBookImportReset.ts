@@ -22,7 +22,6 @@ interface ActiveNodeRow {
   is_title_manual: number;
   kind: NodeKind;
   parent_id: string | null;
-  position: number | null;
   priority: number | null;
   title: string;
 }
@@ -51,10 +50,8 @@ function readActiveNode(nodeId: string) {
               n.title,
               n.is_title_manual,
               n.hide_title_heading,
-              n.created_at,
-              o.position
+              n.created_at
        FROM nodes n
-       LEFT JOIN node_order o ON o.node_id = n.id
        WHERE n.id = ? AND n.deleted_at IS NULL`,
       [nodeId]
     ) ?? null
@@ -80,28 +77,15 @@ function listDescendantNodeIds(rootNodeId: string) {
 
 function listNodeOrderWithout(removedNodeIds: Set<string>) {
   return openDatabaseConnection()
-    .driver.queryAll<{ node_id: string }>('SELECT node_id FROM node_order ORDER BY position ASC')
+    .driver.queryAll<{ node_id: string }>(
+      `SELECT node_order.node_id
+       FROM node_order
+       JOIN nodes ON nodes.id = node_order.node_id
+       WHERE nodes.kind = 'folder'
+       ORDER BY node_order.position ASC`
+    )
     .map((row) => row.node_id)
     .filter((nodeId) => !removedNodeIds.has(nodeId));
-}
-
-function resolveNextNodePosition() {
-  const row = openDatabaseConnection().driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return (row?.position ?? -1) + 1;
-}
-
-function resolveInboxTopPosition(ignoredNodeId?: string) {
-  const ignoredClause = ignoredNodeId ? 'AND n.id <> ?' : '';
-  const row = openDatabaseConnection().driver.queryOne<{ position: number | null }>(
-    `SELECT MIN(o.position) AS position
-     FROM nodes n
-     JOIN node_order o ON o.node_id = n.id
-     WHERE n.parent_id = ?
-       AND n.deleted_at IS NULL
-       ${ignoredClause}`,
-    ignoredNodeId ? [INBOX_NODE_ID, ignoredNodeId] : [INBOX_NODE_ID]
-  );
-  return typeof row?.position === 'number' ? row.position - 1 : resolveNextNodePosition();
 }
 
 function buildResetBook(book: ReadwiseBookInventoryItem, nodeId: string) {
@@ -141,7 +125,7 @@ function rebuildPlaceholderNode(book: ReadwiseBookInventoryItem, nodeId: string)
     nodeId,
     openingText: null,
     parentNodeId: INBOX_NODE_ID,
-    position: resolveInboxTopPosition(nodeId),
+    position: null,
     reveal: null,
     title: resetBook.title,
     updatedAt
@@ -173,7 +157,7 @@ function resetImportedTree(activeNode: ActiveNodeRow, book: ReadwiseBookInventor
     openingText: null,
     reveal: null,
     anchorLink: null,
-    position: activeNode.parent_id === INBOX_NODE_ID ? resolveInboxTopPosition(activeNode.id) : activeNode.position,
+    position: null,
     createdAt: activeNode.created_at,
     updatedAt
   });

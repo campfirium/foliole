@@ -24,8 +24,8 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
 }
 
 describe('folderListOrdering defaults', () => {
-  it('defaults folder lists to last opened time descending', () => {
-    expect(DEFAULT_FOLDER_LIST_SORT_KEY).toBe('dateLastOpened');
+  it('defaults folder lists to saved time descending', () => {
+    expect(DEFAULT_FOLDER_LIST_SORT_KEY).toBe('dateSaved');
     expect(DEFAULT_FOLDER_LIST_SORT_DIRECTION).toBe('desc');
   });
 

@@ -15,7 +15,7 @@ export interface WorkspaceContentSortState {
 
 export const DEFAULT_WORKSPACE_CONTENT_SORT: WorkspaceContentSortState = {
   direction: 'desc',
-  key: 'importedAt'
+  key: 'modifiedAt'
 };
 
 function compareText(left: string, right: string) {
@@ -76,7 +76,7 @@ export function loadWorkspaceContentSortPreference(): WorkspaceContentSortState 
 }
 
 function migrateWorkspaceContentSortKey(value: string) {
-  if (value === 'date' || value === 'savedAt') return 'importedAt';
+  if (value === 'date' || value === 'savedAt' || value === 'importedAt') return 'modifiedAt';
   if (value === 'title') return 'name';
   return isWorkspaceContentSortKey(value) ? value : null;
 }
@@ -110,6 +110,9 @@ export function compareWorkspaceContentNodes(
     if (titleResult !== 0) return titleResult;
   } else if (sort.key === 'lastOpenedAt') {
     const dateResult = compareTimestampDesc(nodeViewById[left.id]?.updatedAt, nodeViewById[right.id]?.updatedAt) * directionMultiplier(sort.direction);
+    if (dateResult !== 0) return dateResult;
+  } else if (sort.key === 'modifiedAt') {
+    const dateResult = compareTimestampDesc(left.updatedAt, right.updatedAt) * directionMultiplier(sort.direction);
     if (dateResult !== 0) return dateResult;
   } else {
     const dateResult = compareTimestampDesc(left.createdAt, right.createdAt) * directionMultiplier(sort.direction);

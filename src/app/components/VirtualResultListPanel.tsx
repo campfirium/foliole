@@ -27,6 +27,13 @@ interface VirtualResultListPanelProps {
   onSelectNode: (nodeId: string) => void;
 }
 
+const VIRTUAL_RESULT_SORT_OPTIONS = [
+  { key: 'modifiedAt' as const, label: 'Date modified' },
+  { key: 'lastOpenedAt' as const, label: 'Last opened' },
+  { key: 'importedAt' as const, label: 'Date imported' },
+  { key: 'name' as const, label: 'Name' }
+];
+
 function useVirtualResultRows(
   nodes: Node[],
   nodesById: Record<string, Node>,
@@ -34,7 +41,7 @@ function useVirtualResultRows(
   sort: ReturnType<typeof useWorkspaceContentSort>['sort'],
   nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
 ) {
-  const normalizedSort = normalizeWorkspaceContentSort(sort, ['importedAt', 'lastOpenedAt', 'name']);
+  const normalizedSort = normalizeWorkspaceContentSort(sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
   return useMemo(() => {
     const rows = buildFlatNodeRows(nodes.map((node) => node.id), nodesById as WorkspaceListNodesById);
     const sortedRows = sortWorkspaceContentRows(rows, normalizedSort, nodeViewById);
@@ -47,7 +54,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['importedAt', 'lastOpenedAt', 'name']);
+  const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
   const rowSpacing = getNodeListRowSpacing();
   const rows = useVirtualResultRows(props.nodes, props.nodesById, searchQuery, contentSort.sort, nodeViewById);
   const selectedNodeIds = props.activeNodeId && rows.some((row) => row.node.id === props.activeNodeId) ? [props.activeNodeId] : [];
@@ -60,11 +67,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
           <WorkspaceContentSortControls
             onChangeSortDirection={contentSort.setSortDirection}
             onChangeSortKey={contentSort.setSortKey}
-            options={[
-              { key: 'importedAt', label: 'Date imported' },
-              { key: 'lastOpenedAt', label: 'Last opened' },
-              { key: 'name', label: 'Name' }
-            ]}
+            options={VIRTUAL_RESULT_SORT_OPTIONS}
             sortDirection={normalizedSort.direction}
             sortKey={normalizedSort.key}
           />

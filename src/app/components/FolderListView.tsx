@@ -6,19 +6,13 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import {
-  WORKSPACE_LIST_OPENING_FALLBACK,
-  getWorkspaceListNodeAuthor,
-  getWorkspaceListNodeDateLabel,
-  getWorkspaceListNodeLastOpenedLabel,
-  getWorkspaceListNodeOpening
-} from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
+import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
-import { FolderListTextItem } from './FolderListItemRow';
-import { resolveFolderListLocationPath } from './folderListLocationPath';
+import { FolderListViewItem, type FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListViewState } from './useFolderListViewState';
+import { WorkspaceTopicTreeCurrentViewActions } from './WorkspaceTopicTreeCurrentViewActions';
 
 interface FolderListViewProps {
   folderNodeId?: string;
@@ -30,6 +24,7 @@ interface FolderListViewProps {
   onChangeSearchQuery?: (searchQuery: string) => void;
   onChangeSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeSortKey?: (sortKey: FolderListSortKey) => void;
+  onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodePath?: (nodeId: string) => void;
   searchQuery?: string;
@@ -39,7 +34,7 @@ interface FolderListViewProps {
   };
   regionLabel?: string;
   showEmbeddedHeader?: boolean;
-  itemLayout?: 'default' | 'virtual-result';
+  itemLayout?: FolderListItemLayout;
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
   trashedNodeIds?: string[];
@@ -71,78 +66,6 @@ function resolveFolderTitle(folderTitle: string | undefined, folderNodeId: strin
   return 'Folder';
 }
 
-type FolderListItemProps = {
-  itemLayout: NonNullable<FolderListViewProps['itemLayout']>;
-  node: Node;
-  nodeViewState?: NodeViewState;
-  onSelectNode: (nodeId: string) => void;
-  onSelectNodePath?: (nodeId: string) => void;
-  nodesById: Record<string, Node>;
-  sortKey: FolderListSortKey;
-};
-
-function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: string; locationPath: string }) {
-  return (
-    <li>
-      <div className="flex flex-col gap-2 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <button
-            aria-label={`Open ${props.node.title}`}
-            className="min-w-0 flex-1 text-left text-[17px] font-normal leading-7 text-foreground transition-colors hover:text-accent-strong focus-visible:outline-none"
-            onClick={() => props.onSelectNode(props.node.id)}
-            type="button"
-          >
-            <span className="line-clamp-2 block break-words" data-testid={`folder-list-title-${props.node.id}`}>
-              {props.node.title}
-            </span>
-          </button>
-          <span
-            className="shrink-0 pt-1 text-[13px] leading-5 text-foreground/56"
-            data-testid={`folder-list-date-${props.node.id}`}
-          >
-            {props.dateLabel}
-          </span>
-        </div>
-        <button
-          aria-label={`Open real location for ${props.node.title}`}
-          className="w-fit max-w-full truncate text-left text-[13px] leading-5 text-foreground/56 underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none"
-          onClick={() => (props.onSelectNodePath ?? props.onSelectNode)(props.node.id)}
-          type="button"
-        >
-          {props.locationPath}
-        </button>
-      </div>
-    </li>
-  );
-}
-
-function FolderListItem(props: FolderListItemProps) {
-  const author = getWorkspaceListNodeAuthor(props.node);
-  const opening = getWorkspaceListNodeOpening(props.node);
-  const summary = opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : opening;
-  const dateLabel =
-    props.sortKey === 'dateLastOpened'
-      ? getWorkspaceListNodeLastOpenedLabel(props.nodeViewState)
-      : getWorkspaceListNodeDateLabel(props.node);
-  const locationPath = resolveFolderListLocationPath(props.node, props.nodesById);
-
-  if (props.itemLayout === 'virtual-result') {
-    return renderVirtualResultItem({ ...props, dateLabel, locationPath });
-  }
-
-  return (
-    <FolderListTextItem
-      ariaLabel={`Open ${props.node.title}`}
-      author={author}
-      dateLabel={dateLabel}
-      nodeId={props.node.id}
-      onClick={() => props.onSelectNode(props.node.id)}
-      summary={summary}
-      title={props.node.title}
-    />
-  );
-}
-
 function resolveListedNodes(props: FolderListViewProps) {
   if (props.nodes) {
     return props.nodes;
@@ -165,6 +88,17 @@ function buildFolderListEmptyState(
   }
 
   return resolvedEmptyState ?? DEFAULT_EMPTY_STATE;
+}
+
+function buildCurrentViewTopicSnapshots(filteredNodes: Node[]): CurrentViewTopicSnapshot[] {
+  return filteredNodes
+    .filter((node) => node.kind === 'topic')
+    .map((node) => ({
+      anchorLink: node.anchorLink,
+      id: node.id,
+      kind: 'topic',
+      parentNodeId: node.parentNodeId
+    }));
 }
 
 function useResolvedFolderListState(props: FolderListViewProps) {
@@ -205,13 +139,24 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 
 export function FolderListView(props: FolderListViewProps) {
   const { nodeViewById, resolvedEmptyState, resolvedFolderTitle, state } = useResolvedFolderListState(props);
+  const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
   const headerMode = props.showEmbeddedHeader === false ? 'hidden' : 'full';
+  const currentViewActions = props.onOpenMoveToNode ? (
+    <WorkspaceTopicTreeCurrentViewActions
+      deleteNodes={deleteNodes}
+      nodesById={props.nodesById}
+      onOpenMoveToNode={props.onOpenMoveToNode}
+      topicSnapshots={buildCurrentViewTopicSnapshots(state.filteredNodes)}
+      trashedNodeIds={props.trashedNodeIds ?? []}
+    />
+  ) : null;
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <section aria-label={props.regionLabel ?? 'Folder list view'} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentEmptyState={resolvedEmptyState}
+          currentViewActions={currentViewActions}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
           headerMode={headerMode}
@@ -220,7 +165,7 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
           onRenderItem={(node) => (
-            <FolderListItem
+            <FolderListViewItem
               itemLayout={props.itemLayout ?? 'default'}
               key={node.id}
               node={node}

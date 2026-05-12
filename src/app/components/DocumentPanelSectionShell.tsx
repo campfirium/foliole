@@ -8,10 +8,9 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
-import { DocumentPanelHeader } from './DocumentPanelHeader';
+import { renderDocumentPanelHeader } from './DocumentPanelHeaderChrome';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
@@ -98,48 +97,6 @@ function renderDocumentSearchToolbar(
   );
 }
 
-function renderDocumentPanelHeader(args: {
-  backlinks: BacklinkItem[];
-  folderListSortDirection: FolderListSortDirection;
-  folderListSortKey: FolderListSortKey;
-  isFolderListView: boolean;
-  isSourceUpdatePanelOpen: boolean;
-  onChangeSortDirection: (value: FolderListSortDirection) => void;
-  onChangeSortKey: (value: FolderListSortKey) => void;
-  onToggleSourceUpdatePanel: () => void;
-  props: DocumentPanelSectionProps;
-  showSourceUpdateAction: boolean;
-}) {
-  if (args.isFolderListView) {
-    return null;
-  }
-
-  return (
-    <DocumentPanelHeader
-      activeNodeId={args.props.activeNodeId}
-      backlinks={args.backlinks}
-      canGoBack={args.props.canGoBack}
-      canGoForward={args.props.canGoForward}
-      canGoParent={args.props.canGoParent}
-      editableNodeId={args.props.editableNodeId}
-      folderListToolbar={null}
-      isFolderListView={args.isFolderListView}
-      isSourceUpdatePanelOpen={args.isSourceUpdatePanelOpen}
-      nodesById={args.props.nodesById}
-      onGoBack={args.props.onGoBack}
-      onGoForward={args.props.onGoForward}
-      onGoParent={args.props.onGoParent}
-      onNodePriorityChange={args.props.onNodePriorityChange ?? (() => undefined)}
-      onSelectBacklinkNode={args.props.onSelectNode}
-      onSelectBreadcrumbNode={args.props.onSelectBreadcrumbNode}
-      onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
-      priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
-      reviewSchedulerSettings={args.props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS}
-      showSourceUpdateAction={args.showSourceUpdateAction}
-    />
-  );
-}
-
 function renderDocumentPanelContent(args: {
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
   folderListSortDirection: FolderListSortDirection;
@@ -171,6 +128,7 @@ function renderDocumentPanelContent(args: {
       onCreatePdfHighlight={args.props.onCreatePdfHighlight}
       onNodeContentChange={args.props.onNodeContentChange}
       onOpenExternalLink={args.onOpenExternalLink}
+      onOpenMoveToNode={args.props.onOpenMoveToNode}
       onPersistPdfViewState={args.props.onPersistPdfViewState}
       onSelectNode={args.props.onSelectNode}
       onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView ?? args.props.onSelectNode}

@@ -88,6 +88,10 @@ function readRows<T>(sql: string, ...params: unknown[]) {
   return openDatabaseConnection().sqlite.prepare(sql).all(...params) as T[];
 }
 
+function addMilliseconds(timestamp: string, milliseconds: number) {
+  return new Date(new Date(timestamp).getTime() + milliseconds).toISOString();
+}
+
 async function importReadwiseFixture() {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture);
@@ -120,11 +124,43 @@ it('deletes unchanged Readwise import topics and tracking rows', async () => {
   expect(nodeId).toBeTruthy();
 });
 
-it('keeps changed Readwise topics and removes their import tracking', async () => {
+it('deletes unchanged topics after import tracking advances without rewriting the topic', async () => {
   const nodeId = await importReadwiseFixture();
   openDatabaseConnection().sqlite
+    .prepare('UPDATE keep_import_items SET last_imported_at = ?, last_seen_at = ? WHERE last_node_id = ?')
+    .run('2999-01-01T00:00:00.000Z', '2999-01-01T00:00:00.000Z', nodeId);
+
+  expect(previewReadwiseImportCleanup()).toMatchObject({
+    delete_count: 1,
+    keep_count: 0,
+    total_count: 1
+  });
+});
+
+it('deletes topics with timestamp drift inside the import tolerance', async () => {
+  const nodeId = await importReadwiseFixture();
+  const keepItem = openDatabaseConnection().sqlite
+    .prepare('SELECT last_imported_at FROM keep_import_items WHERE last_node_id = ?')
+    .get(nodeId) as { last_imported_at: string };
+  openDatabaseConnection().sqlite
+    .prepare('UPDATE nodes SET updated_at = ? WHERE id = ?')
+    .run(addMilliseconds(keepItem.last_imported_at, 999), nodeId);
+
+  expect(previewReadwiseImportCleanup()).toMatchObject({
+    delete_count: 1,
+    keep_count: 0,
+    total_count: 1
+  });
+});
+
+it('keeps changed Readwise topics and removes their import tracking', async () => {
+  const nodeId = await importReadwiseFixture();
+  const keepItem = openDatabaseConnection().sqlite
+    .prepare('SELECT last_imported_at FROM keep_import_items WHERE last_node_id = ?')
+    .get(nodeId) as { last_imported_at: string };
+  openDatabaseConnection().sqlite
     .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
-    .run('User changed body', '2026-05-11T08:00:00.000Z', nodeId);
+    .run('User changed body', addMilliseconds(keepItem.last_imported_at, 1001), nodeId);
 
   expect(previewReadwiseImportCleanup()).toMatchObject({
     delete_count: 0,

@@ -145,11 +145,10 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
 
 async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, importedAt: string, nodes: PreparedBookNode[]) {
   const connection = openDatabaseConnection();
-  const firstPosition = (connection.driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order')?.position ?? -1) + 1;
   const nodeIdsByKey = new Map<string, string>();
 
   connection.driver.transaction((driver) => {
-    nodes.forEach((node, index) => {
+    nodes.forEach((node) => {
       const nodeId = createChapterNodeId(sourceFingerprint, node.key);
       nodeIdsByKey.set(node.key, nodeId);
       upsertNodeSnapshot(driver, {
@@ -161,7 +160,7 @@ async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, im
         kind: 'topic',
         nodeId,
         parentNodeId: node.parentKey ? (nodeIdsByKey.get(node.parentKey) ?? parentNodeId) : parentNodeId,
-        position: firstPosition + index,
+        position: null,
         reveal: null,
         title: node.title,
         updatedAt: importedAt

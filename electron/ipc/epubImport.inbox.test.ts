@@ -90,9 +90,8 @@ function readImportedChildren(parentNodeId: string) {
     .prepare(
       `SELECT n.title
        FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
        WHERE n.parent_id = ?
-       ORDER BY o.position ASC`
+       ORDER BY n.title ASC`
     )
     .all(parentNodeId) as Array<{ title: string }>;
 }

@@ -5,6 +5,7 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
+import { deleteNonFolderOrderRows, filterFolderOrderIds } from './folderOrderRows.js';
 import { ensureSpecialRootNodesForInput, ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
@@ -154,12 +155,12 @@ export function upsertNodeSnapshot(driver: DatabaseDriver, input: UpsertNodeSnap
       input.reveal,
       toAnchorLinkValue(input.anchorLink),
       toImageRegionsValue(input.imageRegions),
-      input.position,
+      null,
       input.deviceId ?? null,
       input.createdAt,
       input.updatedAt
     ]);
-    if (typeof input.position === 'number') {
+    if (input.kind === 'folder' && typeof input.position === 'number') {
       upsertNodeOrderStatement.run([input.nodeId, input.position]);
     }
     writeNodeReadingSnapshotWithSync(driver, input, {
@@ -182,10 +183,12 @@ export function replaceNodeOrder(driver: DatabaseDriver, nodeIds: string[]): voi
   const insertOrderStatement = driver.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
 
   driver.transaction(() => {
-    ensureSpecialRootNodesForOrder(driver, nodeIds);
+    const folderNodeIds = filterFolderOrderIds(driver, nodeIds);
+    ensureSpecialRootNodesForOrder(driver, folderNodeIds);
+    deleteNonFolderOrderRows(driver);
     deleteOrderStatement.run();
-    for (let index = 0; index < nodeIds.length; index += 1) {
-      insertOrderStatement.run([nodeIds[index], index]);
+    for (let index = 0; index < folderNodeIds.length; index += 1) {
+      insertOrderStatement.run([folderNodeIds[index], index]);
     }
   });
 }
@@ -248,9 +251,11 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     for (const nodeId of [...input.nodeIds].reverse()) {
       deleteNodeStatement.run([nodeId]);
     }
+    const folderNodeOrder = filterFolderOrderIds(driver, input.nodeOrder);
+    deleteNonFolderOrderRows(driver);
     clearOrderStatement.run();
-    for (let index = 0; index < input.nodeOrder.length; index += 1) {
-      insertOrderStatement.run([input.nodeOrder[index], index]);
+    for (let index = 0; index < folderNodeOrder.length; index += 1) {
+      insertOrderStatement.run([folderNodeOrder[index], index]);
     }
     syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
   });

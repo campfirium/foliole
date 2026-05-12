@@ -43,6 +43,7 @@ export function useWorkspaceSelectors() {
       gradeReviewCard: state.gradeReviewCard,
       jumpToAncestorNode: state.jumpToAncestorNode,
       moveNode: state.moveNode,
+      moveNodes: state.moveNodes,
       navigation: state.navigation,
       nodesById: state.nodesById,
       nodeOrder: state.nodeOrder,

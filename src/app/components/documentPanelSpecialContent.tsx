@@ -9,8 +9,9 @@ import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLink
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
+import { DocumentPanelFolderContent } from './DocumentPanelFolderContent';
 import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
-import { FolderListView } from './FolderListView';
+import type { FolderListView } from './FolderListView';
 import { LinkPanelStack } from './LinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
@@ -33,38 +34,6 @@ function renderDocumentBody(activeNodeId: string | null, bodyProps: ComponentPro
     <div className="flex min-h-0 flex-1 flex-col" data-testid="document-panel-content-body">
       <DocumentPanelBody {...bodyProps} />
     </div>
-  );
-}
-
-function renderFolderContent(
-  activeNodeId: string,
-  folderTitle: string,
-  folderListSortDirection: FolderListSortDirection,
-  folderListSortKey: FolderListSortKey,
-  onChangeFolderListSortDirection: (sortDirection: FolderListSortDirection) => void,
-  onChangeFolderListSortKey: (sortKey: FolderListSortKey) => void,
-  nodeOrder: string[],
-  nodesById: Record<string, Node>,
-  onSelectNode: (nodeId: string) => void,
-  pdfCache: JSX.Element,
-  trashedNodeIds: string[]
-) {
-  return (
-    <>
-      {pdfCache}
-      <FolderListView
-        folderNodeId={activeNodeId}
-        folderTitle={folderTitle}
-        nodeOrder={nodeOrder}
-        nodesById={nodesById}
-        onChangeSortDirection={onChangeFolderListSortDirection}
-        onChangeSortKey={onChangeFolderListSortKey}
-        onSelectNode={onSelectNode}
-        sortDirection={folderListSortDirection}
-        sortKey={folderListSortKey}
-        trashedNodeIds={trashedNodeIds}
-      />
-    </>
   );
 }
 
@@ -172,6 +141,7 @@ export function resolveDocumentPanelContentBody(args: {
   ) => void;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
+  onOpenMoveToNode?: ComponentProps<typeof FolderListView>['onOpenMoveToNode'];
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
@@ -220,18 +190,21 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
     );
   }
   if (args.isFolderListView && args.activeNodeId) {
-    return renderFolderContent(
-      args.activeNodeId,
-      args.activeNode?.title ?? 'Folder',
-      args.folderListSortDirection,
-      args.folderListSortKey,
-      args.onChangeFolderListSortDirection,
-      args.onChangeFolderListSortKey,
-      args.nodeOrder,
-      args.nodesById,
-      args.onSelectNode,
-      args.pdfCache,
-      args.trashedNodeIds
+    return (
+      <DocumentPanelFolderContent
+        activeNodeId={args.activeNodeId}
+        folderListSortDirection={args.folderListSortDirection}
+        folderListSortKey={args.folderListSortKey}
+        folderTitle={args.activeNode?.title ?? 'Folder'}
+        nodeOrder={args.nodeOrder}
+        nodesById={args.nodesById}
+        onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
+        onChangeFolderListSortKey={args.onChangeFolderListSortKey}
+        onOpenMoveToNode={args.onOpenMoveToNode}
+        onSelectNode={args.onSelectNode}
+        pdfCache={args.pdfCache}
+        trashedNodeIds={args.trashedNodeIds}
+      />
     );
   }
   if (args.activeNode && isLegacyImageClozeNode(args.activeNode)) {

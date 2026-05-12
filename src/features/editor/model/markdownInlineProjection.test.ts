@@ -53,4 +53,24 @@ describe('markdownInlineProjection Markdown Compatibility', () => {
       }
     ]);
   });
+
+});
+
+describe('markdownInlineProjection nested Markdown Compatibility', () => {
+  it('projects lenient strong emphasis around inline links with valid syntax ranges', () => {
+    expect(collectMarkdownInlineRanges('**[标日高级班](https://class.hujiang.com/course/30789?source=16483)**这一段')).toEqual([
+      {
+        contentFrom: 2,
+        contentTo: 62,
+        from: 0,
+        kind: 'strong',
+        syntaxRanges: [
+          { from: 0, to: 2 },
+          { from: 62, to: 64 }
+        ],
+        text: '[标日高级班](https://class.hujiang.com/course/30789?source=16483)',
+        to: 64
+      }
+    ]);
+  });
 });

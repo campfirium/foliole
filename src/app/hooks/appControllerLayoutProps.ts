@@ -206,7 +206,7 @@ function createLayoutHandlerArgs(
     ...createReadingPositionHandlers(args),
     onNodeDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => args.ws.updateNodeDesiredRetention(nodeId, desiredRetention),
     onNodePriorityChange: (nodeId: string, priority: number | null) => args.ws.updateNodePriority(nodeId, priority),
-    onOpenMoveToNode: () => args.runtime.setIsMoveToNodePaletteOpen(true),
+    onOpenMoveToNode: args.runtime.openMoveToNodePalette,
     onOpenSettings: createOpenSettingsHandler(args.runtime),
     onOpenExternalView: args.externalView.openExternalFolder,
     onOpenExternalSelection: createOpenExternalSelection(args),

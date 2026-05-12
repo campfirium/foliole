@@ -215,7 +215,7 @@ export function createChildNodeAction(
     });
     if (createdNode) {
       onNodeCreated?.(createdNode);
-      if (nextNodeOrder) {
+      if (kind === 'folder' && nextNodeOrder) {
         onNodeOrderChanged?.(nextNodeOrder);
       }
     }
@@ -252,7 +252,7 @@ export function createMoveNodesAction(
     });
     if (moved && movedRootNodeSnapshots.length > 0) {
       onNodesMoved?.(movedRootNodeSnapshots);
-      if (nextNodeOrder) {
+      if (movedRootNodeSnapshots.every((node) => node.kind === 'folder') && nextNodeOrder) {
         onNodeOrderChanged?.(nextNodeOrder);
       }
     }

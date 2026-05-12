@@ -129,6 +129,23 @@ function registerBoundaryEditContextRemapTests() {
       to: 11
     });
   });
+
+  it('keeps surrounding multi-point rewrites outside the anchor', () => {
+    const previousContent = 'A img-one Beta img-two Z';
+    const nextContent = 'A asset-one Beta asset-two Z';
+
+    expect(
+      remapTextAnchorLocator(nextContent, {
+        from: previousContent.indexOf('Beta'),
+        originalText: 'Beta',
+        to: previousContent.indexOf('Beta') + 'Beta'.length
+      }, previousContent)
+    ).toEqual({
+      from: nextContent.indexOf('Beta'),
+      originalText: 'Beta',
+      to: nextContent.indexOf('Beta') + 'Beta'.length
+    });
+  });
 }
 
 describe('textAnchorLocatorResolution remap without edit context', () => {

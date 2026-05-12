@@ -112,7 +112,7 @@ it('ignores trashed nodes when resolving the folder and topic columns', () => {
 });
 
 it('pins trash to the end of the folder navigation', () => {
-  const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'folder-b'];
+  const nodeOrder = [INBOX_NODE_ID, 'folder-b', 'folder-a'];
   const nodesById: WorkspaceListNodesById = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
     'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
@@ -121,8 +121,8 @@ it('pins trash to the end of the folder navigation', () => {
 
   expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, [])).toEqual([
     INBOX_NODE_ID,
-    'folder-a',
     'folder-b',
+    'folder-a',
     TRASH_NODE_ID
   ]);
 });

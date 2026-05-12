@@ -74,6 +74,58 @@ function mapPositionThroughContentChange(args: {
   return args.side === 'left' ? args.nextChangeFrom : args.nextChangeTo;
 }
 
+function resolveMaximumRemappedSpan(args: {
+  locator: TextAnchorLocator;
+  nextChangeFrom: number;
+  nextChangeTo: number;
+  previousChangeFrom: number;
+  previousChangeTo: number;
+}) {
+  const previousSpan = Math.max(0, args.locator.to - args.locator.from);
+  const previousChangeLength = args.previousChangeTo - args.previousChangeFrom;
+  const nextChangeLength = args.nextChangeTo - args.nextChangeFrom;
+  const changeIsInsideAnchor =
+    args.previousChangeFrom >= args.locator.from &&
+    args.previousChangeTo <= args.locator.to;
+  return changeIsInsideAnchor
+    ? Math.max(0, previousSpan + nextChangeLength - previousChangeLength)
+    : previousSpan;
+}
+
+function resolveOriginalTextInChangedRange(args: {
+  locator: TextAnchorLocator;
+  nextChangeFrom: number;
+  nextChangeTo: number;
+  nextContent: string;
+  previousChangeFrom: number;
+  previousChangeTo: number;
+}) {
+  const originalText = args.locator.originalText;
+  if (
+    originalText.length === 0 ||
+    args.locator.from < args.previousChangeFrom ||
+    args.locator.to > args.previousChangeTo
+  ) {
+    return null;
+  }
+  const preferredIndex = args.nextChangeFrom + (args.locator.from - args.previousChangeFrom);
+  let closestIndex = -1;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  let index = args.nextContent.indexOf(originalText, args.nextChangeFrom);
+  while (index >= 0 && index + originalText.length <= args.nextChangeTo) {
+    const distance = Math.abs(index - preferredIndex);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+    index = args.nextContent.indexOf(originalText, index + 1);
+  }
+  if (closestIndex < 0) {
+    return null;
+  }
+  return { from: closestIndex, originalText, to: closestIndex + originalText.length };
+}
+
 function remapTextAnchorLocatorThroughContentChange(
   previousContent: string,
   nextContent: string,
@@ -85,6 +137,17 @@ function remapTextAnchorLocatorThroughContentChange(
   const previousChangeTo = previousContent.length - sharedSuffixLength;
   const nextChangeFrom = sharedPrefixLength;
   const nextChangeTo = nextContent.length - sharedSuffixLength;
+  const exactChangedRangeMatch = resolveOriginalTextInChangedRange({
+    locator,
+    nextChangeFrom,
+    nextChangeTo,
+    nextContent,
+    previousChangeFrom,
+    previousChangeTo
+  });
+  if (exactChangedRangeMatch) {
+    return exactChangedRangeMatch;
+  }
   const nextFrom = mapPositionThroughContentChange({
     nextChangeFrom,
     nextChangeTo,
@@ -102,7 +165,15 @@ function remapTextAnchorLocatorThroughContentChange(
     side: 'right'
   });
   const normalizedFrom = Math.max(0, Math.min(nextFrom, nextTo, nextContent.length));
-  const normalizedTo = Math.max(normalizedFrom, Math.min(Math.max(nextFrom, nextTo), nextContent.length));
+  const maximumSpan = resolveMaximumRemappedSpan({
+    locator,
+    nextChangeFrom,
+    nextChangeTo,
+    previousChangeFrom,
+    previousChangeTo
+  });
+  const unclampedTo = Math.max(normalizedFrom, Math.min(Math.max(nextFrom, nextTo), nextContent.length));
+  const normalizedTo = Math.min(unclampedTo, normalizedFrom + maximumSpan);
   return {
     from: normalizedFrom,
     originalText:

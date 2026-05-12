@@ -103,7 +103,7 @@ it('applies remote nodes through the shared async DbPort executor', async () => 
     content: 'remote body',
     current_version_id: 'phone#1',
     last_modified_by_device_id: 'phone',
-    position: 4,
+    position: null,
     sync_dirty: 0,
     title: 'Remote Node'
   });

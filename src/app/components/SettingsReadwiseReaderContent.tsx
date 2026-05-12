@@ -29,6 +29,10 @@ import {
   type ReadwiseSetupPayload
 } from './useReadwiseSetupController';
 import type { useReadwiseSetupDraft } from './useReadwiseSetupDraft';
+import {
+  createReadwiseSetupPayload,
+  disableReadwiseImportSource
+} from './useReadwiseSyncPreviewFlow';
 
 type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
 
@@ -141,6 +145,15 @@ interface SettingsReadwiseReaderContentProps {
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
   const setup = useReadwiseSetupController(props);
   const cleanup = useReadwiseCleanup({
+    onCleanupComplete: () => {
+      props.onSave(
+        createReadwiseSetupPayload(
+          setup.draft,
+          { ...setup.draft.draftConfig, enabled: false },
+          disableReadwiseImportSource(setup.draft.draftSources)
+        )
+      );
+    },
     onPreviewCleanup: props.onPreviewCleanup,
     onRunCleanup: props.onRunCleanup
   });

@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 
-import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
 import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
@@ -32,16 +31,11 @@ interface SectionHighlightLocator {
   sectionIndex: number;
 }
 
-function readNextNodePosition(driver: DatabaseDriver) {
-  const row = driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return (row?.position ?? -1) + 1;
-}
-
 function readImportedBookSections(rootNodeId: string) {
   const connection = openDatabaseConnection();
   return connection.driver.queryAll<ImportedBookSection>(
     `WITH RECURSIVE book_sections(id, parent_id, title, content, anchor_link, sort_path) AS (
-       SELECT n.id, n.parent_id, n.title, n.content, n.anchor_link, '' AS sort_path
+       SELECT n.id, n.parent_id, n.title, n.content, n.anchor_link, n.created_at || ':' || n.id AS sort_path
        FROM nodes n
        WHERE n.id = ? AND n.deleted_at IS NULL
        UNION ALL
@@ -50,9 +44,8 @@ function readImportedBookSections(rootNodeId: string) {
               child.title,
               child.content,
               child.anchor_link,
-              book_sections.sort_path || '.' || printf('%020d', COALESCE(o.position, 0))
+              book_sections.sort_path || '.' || child.created_at || ':' || child.id
        FROM nodes child
-       LEFT JOIN node_order o ON o.node_id = child.id
        JOIN book_sections ON child.parent_id = book_sections.id
        WHERE child.deleted_at IS NULL
      )
@@ -157,19 +150,16 @@ function persistSectionHighlights(input: {
 }) {
   const connection = openDatabaseConnection();
   connection.driver.transaction((driver) => {
-    let nextPosition = readNextNodePosition(driver);
     input.sections.forEach((section) => {
       const sectionHighlights = input.groupedBySection.get(section.id) ?? [];
       const anchored = applyImportedHighlightAnchors({ content: section.content, highlights: sectionHighlights });
-      const insertedCount = replaceImportedHighlightNodes({
+      replaceImportedHighlightNodes({
         driver,
         highlights: anchored.highlights,
         importedAt: input.importedAt,
         parentNodeId: section.id,
-        parentContent: anchored.content,
-        startPosition: nextPosition
+        parentContent: anchored.content
       });
-      nextPosition += insertedCount;
     });
   });
 }

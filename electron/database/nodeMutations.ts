@@ -54,12 +54,15 @@ export function replaceNodeOrder(nodeIds: string[]): void {
   const deviceId = loadOrCreateDesktopDeviceId(now);
   withTransaction(connection.driver, () => {
     replaceNodeOrderViaDriver(connection.driver, nodeIds);
-    for (let index = 0; index < nodeIds.length; index += 1) {
+    const folderOrderRows = connection.driver.queryAll<{ node_id: string }>(
+      'SELECT node_id FROM node_order ORDER BY position ASC'
+    );
+    for (const row of folderOrderRows) {
       connection.driver.execute(
         `UPDATE nodes
-         SET position = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+         SET last_modified_by_device_id = ?, sync_dirty = 1
          WHERE id = ?`,
-        [index, now, deviceId, nodeIds[index]]
+        [deviceId, row.node_id]
       );
     }
   });

@@ -58,7 +58,9 @@ function syncCreatedNode(node: WorkspaceNode | null, nodeOrder: string[] | null,
     return;
   }
   handlers.syncNodeContent(node);
-  handlers.syncNodeOrder(nodeOrder);
+  if (node.kind === 'folder') {
+    handlers.syncNodeOrder(nodeOrder);
+  }
 }
 
 function resolveRootCreationParentId(kind: NodeKind, state: WorkspaceState) {
@@ -143,7 +145,9 @@ export function createRootNodeAction(
     });
     if (createdNode && nextNodeOrder) {
       handlers.syncNodeCreation(createdNode);
-      handlers.syncNodeOrder(nextNodeOrder);
+      if (kind === 'folder') {
+        handlers.syncNodeOrder(nextNodeOrder);
+      }
     }
     return nodeId;
   };
@@ -216,8 +220,7 @@ export function createQAFromSelectionAction(
       return null;
     }
 
-    const childNodeId = `node-${crypto.randomUUID()}`;
-    const timestamp = new Date().toISOString();
+    const childNodeId = `node-${crypto.randomUUID()}`, timestamp = new Date().toISOString();
     let createdNode: WorkspaceState['nodesById'][string] | null = null;
     let nextNodeOrder: string[] | null = null;
 
@@ -259,9 +262,8 @@ export function createQAFromSelectionAction(
         })
       };
     });
-    if (createdNode && nextNodeOrder) {
+    if (createdNode) {
       handlers.syncNodeContent(createdNode);
-      handlers.syncNodeOrder(nextNodeOrder);
     }
     return childNodeId;
   };

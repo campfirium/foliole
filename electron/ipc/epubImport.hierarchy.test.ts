@@ -51,7 +51,6 @@ function readImportedTree(parentNodeId: string) {
     .prepare(
       `SELECT n.id, n.parent_id, n.title, n.content
        FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
        WHERE n.id = ? OR n.parent_id = ? OR n.parent_id IN (
          SELECT id FROM nodes WHERE parent_id = ?
        ) OR n.parent_id IN (
@@ -59,7 +58,7 @@ function readImportedTree(parentNodeId: string) {
            SELECT id FROM nodes WHERE parent_id = ?
          )
        )
-       ORDER BY o.position ASC`
+       ORDER BY n.title ASC`
     )
     .all(parentNodeId, parentNodeId, parentNodeId, parentNodeId) as Array<{
       content: string;

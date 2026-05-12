@@ -61,7 +61,7 @@ export function androidReadableArticleSql(whereClause: string) {
     `${readableArticleContentSql()} AS content, ${READABLE_ARTICLE_STATUS} AS content_status, ` +
     `(${READABLE_ARTICLE_PDF_ATTACHMENT_ID}) AS pdf_attachment_id ` +
     'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
-    'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash LEFT JOIN node_order no ON no.node_id = n.id ' +
+    'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ' +
     whereClause
   );
 }

@@ -79,7 +79,15 @@ function listImportedNodeIds(rootNodeIds: string[]) {
 
 function listRemainingRootNodeIds(deletedNodeIds: Set<string>) {
   const rows = openDatabaseConnection().sqlite
-    .prepare('SELECT node_id FROM node_order ORDER BY position ASC')
+    .prepare(
+      `SELECT nodes.id AS node_id, node_order.position AS position
+       FROM nodes
+       LEFT JOIN node_order ON node_order.node_id = nodes.id
+       WHERE nodes.kind = 'folder' AND nodes.deleted_at IS NULL
+       ORDER BY CASE WHEN node_order.position IS NULL THEN 1 ELSE 0 END,
+         node_order.position ASC,
+         nodes.title COLLATE NOCASE ASC`
+    )
     .all() as OrderedNodeRow[];
   return rows.map((row) => row.node_id).filter((nodeId) => !deletedNodeIds.has(nodeId));
 }

@@ -14,6 +14,7 @@ import type {
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
+import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
@@ -121,7 +122,7 @@ export interface WorkspaceLayoutFlatProps {
   onRightSidebarSplitterKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpenNotesView: () => void;
-  onOpenMoveToNode: () => void;
+  onOpenMoveToNode: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
   onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: (nodeId?: string) => void;

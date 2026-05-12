@@ -81,6 +81,7 @@ export function buildDocumentSectionProps(
     onGoBack: props.onGoBack,
     onGoForward: props.onGoForward,
     onGoParent: props.onGoParent,
+    onOpenMoveToNode: props.onOpenMoveToNode,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode: props.onSelectNode,
     onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,

@@ -50,6 +50,7 @@ export function createWorkspaceState() {
     jumpToAncestorNode: vi.fn(),
     listWidth: 280,
     moveNode: vi.fn(),
+    moveNodes: vi.fn(),
     navigation: {
       backStack: [],
       forwardStack: []

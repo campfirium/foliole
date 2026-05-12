@@ -14,8 +14,6 @@ import {
 } from './importPipelineRecords.js';
 import { resolveReadwiseHighlightUpdate } from './importReadwiseHighlightUpdates.js';
 
-const INBOX_NODE_ID = 'special-inbox';
-
 interface ImportSourceRow {
   [column: string]: unknown;
   latest_node_id: string | null;
@@ -29,7 +27,6 @@ interface ExistingNodeRow {
   deleted_at: string | null;
   id: string;
   parent_id: string | null;
-  position: number | null;
 }
 
 function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
@@ -46,31 +43,12 @@ function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
 function readExistingNode(driver: DatabaseDriver, nodeId: string) {
   return (
     driver.queryOne<ExistingNodeRow>(
-      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at, o.position
+      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at
        FROM nodes n
-       LEFT JOIN node_order o ON o.node_id = n.id
        WHERE n.id = ?`,
       [nodeId]
     ) ?? null
   );
-}
-
-function readNextNodePosition(driver: DatabaseDriver) {
-  const row = driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return typeof row?.position === 'number' ? row.position + 1 : 0;
-}
-
-function readInboxTopPosition(driver: DatabaseDriver, ignoredNodeId?: string) {
-  const ignoredClause = ignoredNodeId ? 'AND n.id <> ?' : '';
-  const row = driver.queryOne<{ position: number | null }>(
-    `SELECT MIN(o.position) AS position
-     FROM nodes n
-     JOIN node_order o ON o.node_id = n.id
-     WHERE n.parent_id = ?
-       ${ignoredClause}`,
-    ignoredNodeId ? [INBOX_NODE_ID, ignoredNodeId] : [INBOX_NODE_ID]
-  );
-  return typeof row?.position === 'number' ? row.position - 1 : readNextNodePosition(driver);
 }
 
 function updateExistingReadwiseNode(
@@ -90,8 +68,6 @@ function updateExistingReadwiseNode(
     existingNode,
     hideTitleHeading: prepared.hideTitleHeading,
     importedAt: record.importedAt,
-    nextInboxTopPosition: readInboxTopPosition(driver, existingNode.id),
-    nextNodePosition: readNextNodePosition(driver),
     title: prepared.nodeTitle
   });
   if (readwiseUpdate.highlights.length > 0) {
@@ -100,8 +76,7 @@ function updateExistingReadwiseNode(
       highlights: readwiseUpdate.highlights,
       importedAt: record.importedAt,
       parentNodeId: nodeId,
-      parentContent: readwiseUpdate.content,
-      startPosition: readNextNodePosition(driver)
+      parentContent: readwiseUpdate.content
     });
   }
   return nodeId;
@@ -122,8 +97,7 @@ function persistImportedHighlightNodes(input: {
       highlights: input.matchedAnchoredHighlights as ReturnType<typeof applyImportedHighlightAnchors>['highlights'],
       importedAt: input.importedAt,
       parentNodeId: input.nodeId,
-      parentContent: input.anchoredContent,
-      startPosition: readNextNodePosition(input.driver)
+      parentContent: input.anchoredContent
     });
     return;
   }
@@ -135,8 +109,7 @@ function persistImportedHighlightNodes(input: {
     highlights: input.matchedAnchoredHighlights,
     importedAt: input.importedAt,
     parentNodeId: input.nodeId,
-    parentContent: input.anchoredContent,
-    startPosition: readNextNodePosition(input.driver)
+    parentContent: input.anchoredContent
   });
 }
 
@@ -180,8 +153,6 @@ function resolvePreparedNodeId(input: {
       existingNode: input.existingNode,
       hideTitleHeading: input.prepared.hideTitleHeading,
       importedAt: input.baseRecord.importedAt,
-      nextInboxTopPosition: readInboxTopPosition(input.driver, input.existingNode.id),
-      nextNodePosition: readNextNodePosition(input.driver),
       title: input.prepared.nodeTitle
     });
   }
@@ -190,7 +161,6 @@ function resolvePreparedNodeId(input: {
     driver: input.driver,
     hideTitleHeading: input.prepared.hideTitleHeading,
     importedAt: input.baseRecord.importedAt,
-    nextInboxTopPosition: readInboxTopPosition(input.driver),
     title: input.prepared.nodeTitle
   });
 }

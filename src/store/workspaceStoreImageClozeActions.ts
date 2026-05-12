@@ -165,7 +165,6 @@ function syncCreatedImageClozeNodes(
   if (updatedParentNode) {
     handlers.syncNodeContent(updatedParentNode);
   }
-  handlers.syncNodeOrder(nextNodeOrder);
   return createdNodes.map((node) => node.id);
 }
 

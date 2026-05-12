@@ -8,6 +8,7 @@ import { AppEmptyState, AppInput } from '../../shared/ui';
 import { FolderListSortControls } from './FolderListSortControls';
 
 function FolderListHeader({
+  currentViewActions,
   folderTitle,
   itemCountLabel,
   onChangeSearchQuery,
@@ -19,6 +20,7 @@ function FolderListHeader({
   sortDirection,
   sortKey
 }: {
+  currentViewActions?: ReactNode;
   folderTitle: string;
   itemCountLabel: string;
   searchQuery: string;
@@ -32,7 +34,13 @@ function FolderListHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
-      {showCountAndTitle ? <FolderListHeaderSummary folderTitle={folderTitle} itemCountLabel={itemCountLabel} /> : null}
+      {showCountAndTitle ? (
+        <FolderListHeaderSummary
+          currentViewActions={currentViewActions}
+          folderTitle={folderTitle}
+          itemCountLabel={itemCountLabel}
+        />
+      ) : null}
       <div className="w-[248px] max-w-full max-[900px]:w-full max-[900px]:basis-full">
         <FolderListSearchBox
           onChangeSearchQuery={onChangeSearchQuery}
@@ -107,15 +115,18 @@ function FolderListSearchClearButton({ onClear }: { onClear: () => void }) {
 }
 
 function FolderListHeaderSummary({
+  currentViewActions,
   folderTitle,
   itemCountLabel
 }: {
+  currentViewActions?: ReactNode;
   folderTitle: string;
   itemCountLabel: string;
 }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
+    <div className="flex min-w-0 items-center gap-1">
       <h2 className="truncate text-[13px] font-medium text-foreground">{folderTitle}</h2>
+      {currentViewActions}
       <p
         aria-label={`Folder result count ${itemCountLabel}`}
         className="shrink-0 text-sm font-medium text-foreground/58"
@@ -165,6 +176,7 @@ function FolderListBody({
 
 export function FolderListViewLayout(props: {
   currentEmptyState: { description: string; title: string };
+  currentViewActions?: ReactNode;
   filteredNodes: Node[];
   folderTitle: string;
   itemCountLabel: string;
@@ -183,6 +195,7 @@ export function FolderListViewLayout(props: {
       <section aria-label="Folder list body" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
         {props.headerMode === 'hidden' ? null : (
           <FolderListHeader
+            currentViewActions={props.currentViewActions}
             folderTitle={props.folderTitle}
             itemCountLabel={props.itemCountLabel}
             onChangeSearchQuery={props.onChangeSearchQuery}

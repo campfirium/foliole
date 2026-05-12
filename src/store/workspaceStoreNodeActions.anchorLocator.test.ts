@@ -130,7 +130,7 @@ function runCreateHighlightLocatorCase() {
 
   expect(nodeId).not.toBeNull();
   expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
+  expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
   expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
       id: nodeId,

@@ -129,7 +129,13 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
 }
 
 function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
-  return driver.queryAll<NodeOrderRow>('SELECT node_id FROM node_order ORDER BY position ASC');
+  return driver.queryAll<NodeOrderRow>(
+    `SELECT node_order.node_id
+     FROM node_order
+     JOIN nodes ON nodes.id = node_order.node_id
+     WHERE nodes.kind = 'folder'
+     ORDER BY node_order.position ASC`
+  );
 }
 
 function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshotRow[] {

@@ -29,6 +29,7 @@ it('blocks moving derived topics and items', () => {
       anchorLink: { id: 'hl-1', kind: 'highlight' }
     }))
   ).toBe(false);
+  expect(canNodeBeMoved(createNode({ id: 'topic-1', title: 'Topic', content: 'Body', kind: 'topic' }))).toBe(true);
   expect(canNodeBeMoved(createNode({ id: 'item-1', title: 'Card', content: 'Prompt', kind: 'item' }))).toBe(false);
 });
 

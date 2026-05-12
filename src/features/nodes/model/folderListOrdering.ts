@@ -5,7 +5,7 @@ import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 export type FolderListSortKey = 'dateImported' | 'dateLastOpened' | 'dateSaved';
 export type FolderListSortDirection = 'desc' | 'asc';
 
-export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateLastOpened';
+export const DEFAULT_FOLDER_LIST_SORT_KEY: FolderListSortKey = 'dateSaved';
 export const DEFAULT_FOLDER_LIST_SORT_DIRECTION: FolderListSortDirection = 'desc';
 
 export function resolveDefaultFolderListSortDirection(): FolderListSortDirection {

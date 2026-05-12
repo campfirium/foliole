@@ -89,7 +89,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
 
     expect(createdNodeId).toContain('node-');
     expect(syncCreateNodeToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
     expect(syncCreateNodeToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: createdNodeId,
@@ -188,7 +188,7 @@ describe('createWorkspaceNodeActions create sync', () => {
 
     expect(childNodeId).toContain('node-');
     expect(syncCreateNodeToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
     expect(syncCreateNodeToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: childNodeId,

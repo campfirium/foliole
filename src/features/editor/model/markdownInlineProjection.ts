@@ -50,22 +50,50 @@ function sliceWithoutRanges(source: string, from: number, to: number, ranges: Re
   return parts.join('');
 }
 
+function resolveMarkCandidates(kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong') {
+  if (kind === 'inlineCode') return ['`'];
+  if (kind === 'sourceHighlight') return ['=='];
+  if (kind === 'strikethrough') return ['~~'];
+  if (kind === 'strong') return ['**', '__'];
+  return ['*', '_'];
+}
+
+function normalizeMarkRange(
+  source: string,
+  range: { from: number; to: number },
+  kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong'
+) {
+  if (range.from <= range.to) return range;
+
+  for (const mark of resolveMarkCandidates(kind)) {
+    const from = range.to - mark.length;
+    if (from >= 0 && source.slice(from, range.to) === mark) {
+      return { from, to: range.to };
+    }
+  }
+
+  return range;
+}
+
 function createMarkedTextCandidate(
   node: MarkdownSyntaxNode,
   source: string,
   kind: 'emphasis' | 'inlineCode' | 'sourceHighlight' | 'strikethrough' | 'strong'
 ): InlineProjectionCandidate {
   const markName = resolveMarkNodeName(kind);
-  const markRanges = collectChildRanges(node, new Set([markName]));
+  const markRanges = collectChildRanges(node, new Set([markName]))
+    .map((range) => normalizeMarkRange(source, range, kind))
+    .filter((range) => range.from <= range.to);
   const contentFrom = markRanges[0]?.to ?? node.from;
   const contentTo = markRanges[markRanges.length - 1]?.from ?? node.to;
+  const from = Math.min(node.from, contentFrom, ...markRanges.map((range) => range.from));
   return {
     contentFrom,
     contentTo,
-    from: node.from,
+    from,
     kind,
     syntaxRanges: markRanges,
-    text: sliceWithoutRanges(source, node.from, node.to, markRanges),
+    text: sliceWithoutRanges(source, from, node.to, markRanges),
     to: node.to
   };
 }

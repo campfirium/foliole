@@ -57,6 +57,26 @@ describe('inlineTextDecorationPlans', () => {
 
 });
 
+describe('inlineTextDecorationPlans Markdown Compatibility', () => {
+  it('hides both strong markers when lenient strong wraps an inline link', () => {
+    expect(
+      collectInlineTokenDecorationPlan(
+        0,
+        '**[标日高级班](https://class.hujiang.com/course/30789?source=16483)**这一段',
+        false,
+        false,
+        []
+      )
+    ).toEqual({
+      markRanges: [],
+      replaceRanges: [
+        { from: 0, to: 2 },
+        { from: 62, to: 64 }
+      ]
+    });
+  });
+});
+
 describe('inline semantic decoration plans', () => {
   it('marks strikethrough content ranges', () => {
     expect(collectStrikethroughTextDecorationPlan(0, 'A ~~gone~~ item', false)).toEqual({

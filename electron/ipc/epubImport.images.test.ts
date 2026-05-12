@@ -78,9 +78,8 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
       `SELECT n.id, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-       JOIN node_order o ON o.node_id = n.id
        WHERE n.parent_id = ?
-       ORDER BY o.position ASC
+       ORDER BY n.title ASC
        LIMIT 1`
     )
     .get(imported.nodeId) as { body_blob_data: string; body_blob_hash: string; content: string; id: string };

@@ -19,7 +19,6 @@ interface ActiveNodeRow {
   is_title_manual: number;
   kind: 'folder' | 'item' | 'topic';
   parent_id: string | null;
-  position: number | null;
   priority: number | null;
   reveal: string | null;
   title: string;
@@ -59,12 +58,6 @@ export function buildReadwiseBookPlaceholderContent(book: ReadwiseBookInventoryI
   ].join('\n');
 }
 
-function resolveNextNodePosition() {
-  const connection = openDatabaseConnection();
-  const row = connection.driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return (row?.position ?? -1) + 1;
-}
-
 function readActiveNode(nodeId: string) {
   const connection = openDatabaseConnection();
   return (
@@ -80,10 +73,8 @@ function readActiveNode(nodeId: string) {
               n.content,
               n.reveal,
               n.anchor_link,
-              n.created_at,
-              o.position
+              n.created_at
        FROM nodes n
-       LEFT JOIN node_order o ON o.node_id = n.id
        WHERE n.id = ? AND n.deleted_at IS NULL`,
       [nodeId]
     ) ?? null
@@ -91,7 +82,7 @@ function readActiveNode(nodeId: string) {
 }
 
 function ensureReadwiseBookNodeInInbox(node: ActiveNodeRow, updatedAt: string) {
-  if (node.parent_id === INBOX_NODE_ID && typeof node.position === 'number') {
+  if (node.parent_id === INBOX_NODE_ID) {
     return node.id;
   }
 
@@ -105,7 +96,7 @@ function ensureReadwiseBookNodeInInbox(node: ActiveNodeRow, updatedAt: string) {
     kind: node.kind,
     nodeId: node.id,
     parentNodeId: INBOX_NODE_ID,
-    position: resolveNextNodePosition(),
+    position: null,
     priority: node.priority,
     reveal: node.reveal,
     title: node.title,
@@ -115,7 +106,7 @@ function ensureReadwiseBookNodeInInbox(node: ActiveNodeRow, updatedAt: string) {
   return node.id;
 }
 
-function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: number, updatedAt: string) {
+function createReadwiseBookNode(book: ReadwiseBookInventoryItem, updatedAt: string) {
   const nodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
   upsertNodeSnapshot({
     anchorLink: null,
@@ -127,7 +118,7 @@ function createReadwiseBookNode(book: ReadwiseBookInventoryItem, position: numbe
     nodeId,
     openingText: null,
     parentNodeId: INBOX_NODE_ID,
-    position,
+    position: null,
     reveal: null,
     title: book.title,
     updatedAt
@@ -144,11 +135,10 @@ export function shouldAutoGenerateReadwiseBookNode(book: ReadwiseBookInventoryIt
 }
 
 export function ensureReadwiseBookNodes(inventory: ReadwiseBooksInventory): ReadwiseBooksInventory {
-  let nextNodePosition = resolveNextNodePosition();
-
   return {
     ...inventory,
     books: inventory.books.map((book) => {
+      const placeholderNodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
       if (book.generatedNodeId) {
         const activeNode = readActiveNode(book.generatedNodeId);
         if (activeNode) {
@@ -160,11 +150,10 @@ export function ensureReadwiseBookNodes(inventory: ReadwiseBooksInventory): Read
         return { ...book, generatedNodeId: null, nodeStatus: 'missing' } satisfies ReadwiseBookInventoryItem;
       }
 
-      const placeholderNodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
       const existingNode = readActiveNode(placeholderNodeId);
       const generatedNodeId = existingNode
         ? ensureReadwiseBookNodeInInbox(existingNode, inventory.scannedAt)
-        : createReadwiseBookNode(book, nextNodePosition++, inventory.scannedAt);
+        : createReadwiseBookNode(book, inventory.scannedAt);
 
       return {
         ...book,

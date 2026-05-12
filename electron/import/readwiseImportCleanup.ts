@@ -30,6 +30,12 @@ interface ReadwiseExternalCleanupRow {
   folder_id: string;
 }
 
+const IMPORT_TIMESTAMP_TOLERANCE_MS = 1000;
+
+function isAfterImportTolerance(timestamp: string, importedAt: string) {
+  return Date.parse(timestamp) > Date.parse(importedAt) + IMPORT_TIMESTAMP_TOLERANCE_MS;
+}
+
 function readReadwiseRuleIds() {
   return new Set(
     loadImportManagerSettings()
@@ -105,12 +111,15 @@ function resolveCleanupAction(row: KeepImportCleanupRow, subtree: NodeCleanupRow
   if (!row.last_imported_at || subtree.length === 0) {
     return { action: 'keep', reason: 'Topic is missing or has no import timestamp.' };
   }
+  const lastImportedAt = row.last_imported_at;
   const nodeIds = subtree.map((node) => node.id);
   if (hasLearningState(nodeIds)) {
     return { action: 'keep', reason: 'Topic has reading or review state.' };
   }
   const changedNode = subtree.find(
-    (node) => node.updated_at !== row.last_imported_at || node.created_at > row.last_imported_at
+    (node) =>
+      isAfterImportTolerance(node.updated_at, lastImportedAt) ||
+      isAfterImportTolerance(node.created_at, lastImportedAt)
   );
   if (changedNode) {
     return { action: 'keep', reason: 'Topic or child topics were changed after import.' };
@@ -151,7 +160,13 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
 function readRemainingNodeOrder(deletedIds: Set<string>) {
   return (
     openDatabaseConnection().sqlite
-      .prepare('SELECT node_id FROM node_order ORDER BY position ASC')
+      .prepare(
+        `SELECT node_order.node_id
+         FROM node_order
+         JOIN nodes ON nodes.id = node_order.node_id
+         WHERE nodes.kind = 'folder'
+         ORDER BY node_order.position ASC`
+      )
       .all() as Array<{ node_id: string }>
   ).map((row) => row.node_id).filter((nodeId) => !deletedIds.has(nodeId));
 }

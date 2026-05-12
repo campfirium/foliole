@@ -20,7 +20,6 @@ interface ExistingNodeRow {
   deleted_at: string | null;
   id: string;
   parent_id: string | null;
-  position: number | null;
 }
 
 function escapeLikePattern(value: string) {
@@ -67,7 +66,6 @@ export function writeNewNode(input: {
   driver: DatabaseDriver;
   hideTitleHeading: boolean;
   importedAt: string;
-  nextInboxTopPosition: number;
   title: string;
 }) {
   ensureInboxNode(input.driver, input.importedAt);
@@ -92,7 +90,6 @@ export function writeNewNode(input: {
       input.importedAt
     ]
   );
-  input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [nodeId, input.nextInboxTopPosition]);
   syncWorkspaceSearchIndexForNodeIds(input.driver, [nodeId]);
   return nodeId;
 }
@@ -102,8 +99,6 @@ export function updateExistingNode(input: {
   driver: DatabaseDriver;
   existingNode: ExistingNodeRow;
   hideTitleHeading: boolean;
-  nextInboxTopPosition: number;
-  nextNodePosition: number;
   importedAt: string;
   title: string;
 }) {
@@ -124,18 +119,6 @@ export function updateExistingNode(input: {
       input.existingNode.id
     ]
   );
-  if (input.existingNode.parent_id === INBOX_NODE_ID) {
-    if (typeof input.existingNode.position === 'number') {
-      input.driver.execute('UPDATE node_order SET position = ? WHERE node_id = ?', [input.nextInboxTopPosition, input.existingNode.id]);
-    } else {
-      input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [input.existingNode.id, input.nextInboxTopPosition]);
-    }
-    syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
-    return input.existingNode.id;
-  }
-  if (typeof input.existingNode.position !== 'number') {
-    input.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [input.existingNode.id, input.nextNodePosition]);
-  }
   syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
   return input.existingNode.id;
 }

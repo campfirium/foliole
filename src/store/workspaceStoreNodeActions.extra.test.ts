@@ -100,7 +100,7 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
 
     expect(nodeId).not.toBeNull();
     expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
     expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: nodeId,
@@ -123,18 +123,19 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
   it('syncs moved root nodes through runtime command bridge', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
-    const rootNodeId = actions.createRootNode('Root B');
+    const firstFolderId = actions.createRootNode('Folder A', 'folder');
+    const secondFolderId = actions.createRootNode('Folder B', 'folder');
 
     vi.clearAllMocks();
-    const moved = actions.moveNode(rootNodeId, 'node-1');
+    const moved = actions.moveNodes([secondFolderId], firstFolderId, 'before');
 
     expect(moved).toBe(true);
     expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
     expect(syncNodeOrderToRuntime).toHaveBeenCalledTimes(1);
     expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: rootNodeId,
-        parentNodeId: 'node-1'
+        id: secondFolderId,
+        parentNodeId: null
       })
     );
   });

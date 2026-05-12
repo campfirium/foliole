@@ -37,7 +37,6 @@ export function replaceImportedHighlightNodes(input: {
   importedAt: string;
   parentNodeId: string;
   parentContent: string;
-  startPosition: number;
 }) {
   const existingChildren = readExistingChildHighlights(input.driver, input.parentNodeId).filter((row) =>
     isImportedAnchorLink(row.anchor_link)
@@ -58,7 +57,6 @@ export function replaceImportedHighlightNodes(input: {
     highlights: input.highlights,
     importedAt: input.importedAt,
     parentNodeId: input.parentNodeId,
-    parentContent: input.parentContent,
-    startPosition: input.startPosition
+    parentContent: input.parentContent
   });
 }

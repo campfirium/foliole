@@ -25,6 +25,7 @@ import { VirtualResultListPanel } from './VirtualResultListPanel';
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
 import { useWorkspaceDualListState } from './workspaceDualListState';
 import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
+import type { WorkspaceLayoutFlatProps } from './workspaceLayoutProps';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 interface WorkspaceDualListContentProps {
@@ -39,7 +40,7 @@ interface WorkspaceDualListContentProps {
   listNodesById: WorkspaceListNodesById;
   nodesById: Record<string, Node>;
   nodeOrder: string[];
-  onOpenMoveToNode: () => void;
+  onOpenMoveToNode: WorkspaceLayoutFlatProps['onOpenMoveToNode'];
   onOpenNotesView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;

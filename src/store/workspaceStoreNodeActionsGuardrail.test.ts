@@ -118,7 +118,7 @@ describe('workspace node actions runtime guardrail', () => {
 
     actions.createChildNode(seedNodeId, 'Child body');
 
-    expect(getInvokedCommands(invoke)).toEqual(['create_topic', 'replace_node_order']);
+    expect(getInvokedCommands(invoke)).toEqual(['create_topic']);
     expectNoWorkspacePersist(invoke);
   });
 
@@ -132,11 +132,12 @@ describe('workspace node actions runtime guardrail', () => {
   });
 
   it('moveNode uses sqlite commands and never save_workspace_state', () => {
-    const { actions, invoke, seedNodeId } = createActionsHarness();
-    const rootNodeId = actions.createRootNode('Root B');
+    const { actions, invoke } = createActionsHarness();
+    const firstFolderId = actions.createRootNode('Folder A', 'folder');
+    const secondFolderId = actions.createRootNode('Folder B', 'folder');
 
     vi.clearAllMocks();
-    actions.moveNode(rootNodeId, seedNodeId);
+    actions.moveNodes([secondFolderId], firstFolderId, 'before');
 
     expect(getInvokedCommands(invoke)).toEqual(['update_node_content', 'replace_node_order']);
     expectNoWorkspacePersist(invoke);

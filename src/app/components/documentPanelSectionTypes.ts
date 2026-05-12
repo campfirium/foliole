@@ -9,6 +9,7 @@ import type { ReviewSchedulerSettings } from '../../features/settings/model/revi
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
+import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -64,6 +65,7 @@ export interface DocumentPanelSectionProps {
   onGoBack: () => void;
   onGoForward: () => void;
   onGoParent: () => void;
+  onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;

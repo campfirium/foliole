@@ -84,7 +84,6 @@ function insertInitialOrder(connection: DatabaseConnection) {
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_ROOT_FOLDER_NODE_ID, 1]);
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_VIRTUAL_ROOT_NODE_ID, 2]);
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_VIRTUAL_EXAMPLE_NODE_ID, 3]);
-  connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_WELCOME_NODE_ID, 4]);
 }
 
 function setInitialActiveNode(connection: DatabaseConnection, timestamp: string) {

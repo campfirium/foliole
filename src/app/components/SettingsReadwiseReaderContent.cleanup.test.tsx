@@ -13,6 +13,7 @@ import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 it('previews and runs Readwise cleanup from the setup action row', async () => {
   const onPreviewCleanup = vi.fn().mockResolvedValue(createReadwiseCleanupPreview());
   const onRunCleanup = vi.fn().mockResolvedValue(createReadwiseCleanupRunResult());
+  const onSave = vi.fn();
 
   render(
     <SettingsReadwiseReaderContent
@@ -23,7 +24,7 @@ it('previews and runs Readwise cleanup from the setup action row', async () => {
       }}
       onPreviewCleanup={onPreviewCleanup}
       onRunCleanup={onRunCleanup}
-      onSave={vi.fn()}
+      onSave={onSave}
       readwiseRootPath="/Readwise"
       readwiseSources={createReadwiseImportSources('/Readwise')}
     />
@@ -34,7 +35,9 @@ it('previews and runs Readwise cleanup from the setup action row', async () => {
   });
   fireEvent.click(screen.getByRole('button', { name: 'Clean up...' }));
 
-  expect(await screen.findByRole('dialog', { name: 'Clean up Readwise imports' })).toBeInTheDocument();
+  expect(
+    await screen.findByRole('dialog', { name: 'Clean up Readwise imports' })
+  ).toBeInTheDocument();
   expect(screen.getByText('1 will be deleted')).toBeInTheDocument();
   expect(screen.getByText('Plain')).toBeInTheDocument();
 
@@ -43,4 +46,12 @@ it('previews and runs Readwise cleanup from the setup action row', async () => {
   await waitFor(() => {
     expect(onRunCleanup).toHaveBeenCalledTimes(1);
   });
+  expect(onSave).toHaveBeenCalledWith(
+    expect.objectContaining({
+      config: expect.objectContaining({ enabled: false }),
+      readwiseSources: expect.arrayContaining([
+        expect.objectContaining({ kind: 'articles', keepState: 'draft' })
+      ])
+    })
+  );
 });

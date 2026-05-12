@@ -51,9 +51,8 @@ function readImportedChildren(parentNodeId: string) {
     .prepare(
       `SELECT n.title, n.content
        FROM nodes n
-       JOIN node_order o ON o.node_id = n.id
        WHERE n.parent_id = ?
-       ORDER BY o.position ASC`
+       ORDER BY n.title ASC`
     )
     .all(parentNodeId) as Array<{ content: string; title: string }>;
 }
@@ -85,9 +84,9 @@ it('imports chapters in spine order and uses page title before first heading', a
   const children = readImportedChildren(imported.nodeId as string);
 
   expect(imported.resultStatus).toBe('imported');
-  expect(children.map((child) => child.title)).toEqual(['Page First', 'Fallback Heading']);
-  expect(children[0]?.content).toContain('First spine body.');
-  expect(children[1]?.content).toContain('Second spine body.');
+  expect(children.map((child) => child.title)).toEqual(['Fallback Heading', 'Page First']);
+  expect(children.find((child) => child.title === 'Page First')?.content).toContain('First spine body.');
+  expect(children.find((child) => child.title === 'Fallback Heading')?.content).toContain('Second spine body.');
 });
 
 it('keeps nav documents as real chapters while still skipping guide-marked cover pages', async () => {
@@ -123,10 +122,10 @@ it('keeps nav documents as real chapters while still skipping guide-marked cover
   const children = readImportedChildren(imported.nodeId as string);
 
   expect(children).toHaveLength(2);
-  expect(children[0]?.title).toBe('Contents');
-  expect(children[0]?.content).toContain('# Contents');
-  expect(children[0]?.content).toContain('[Chapter 1](text/chapter.xhtml)');
-  expect(children[1]).toEqual({
+  const contentsNode = children.find((child) => child.title === 'Contents');
+  expect(contentsNode?.content).toContain('# Contents');
+  expect(contentsNode?.content).toContain('[Chapter 1](text/chapter.xhtml)');
+  expect(children.find((child) => child.title === 'Real Chapter')).toEqual({
     content: '# Real Chapter\n\nHello world.',
     title: 'Real Chapter'
   });
@@ -193,12 +192,12 @@ it('keeps toc-like chapters even when the epub does not mark them as nav documen
   const children = readImportedChildren(imported.nodeId as string);
 
   expect(children).toHaveLength(2);
-  expect(children[0]?.title).toBe('Contents');
-  expect(children[0]?.content).toContain('# Contents');
-  expect(children[0]?.content).toContain('目录');
-  expect(children[0]?.content).toContain('[One](chapter.xhtml#c1)');
-  expect(children[0]?.content).toContain('[Five](chapter.xhtml#c5)');
-  expect(children[1]).toEqual({
+  const contentsNode = children.find((child) => child.title === 'Contents');
+  expect(contentsNode?.content).toContain('# Contents');
+  expect(contentsNode?.content).toContain('目录');
+  expect(contentsNode?.content).toContain('[One](chapter.xhtml#c1)');
+  expect(contentsNode?.content).toContain('[Five](chapter.xhtml#c5)');
+  expect(children.find((child) => child.title === 'Real Chapter')).toEqual({
     content: '# Real Chapter\n\nHello world.',
     title: 'Real Chapter'
   });
@@ -236,6 +235,8 @@ it('keeps valid chapters and marks the run degraded when one chapter is missing'
   expect(imported.resultStatus).toBe('degraded');
   expect(imported.degradedReason).toContain('EPUB chapter missing entry: OPS/text/missing.xhtml');
   expect(children).toHaveLength(2);
-  expect(children[0]?.title).toBe('Good Chapter');
-  expect(children[1]?.content).toContain('EPUB chapter missing entry: OPS/text/missing.xhtml');
+  expect(children.find((child) => child.title === 'Good Chapter')).toBeDefined();
+  expect(children.find((child) => child.content.includes('EPUB chapter missing entry'))?.content).toContain(
+    'EPUB chapter missing entry: OPS/text/missing.xhtml'
+  );
 });

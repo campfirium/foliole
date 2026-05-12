@@ -134,9 +134,11 @@ function loadNodeAttachmentRows(nodeIds: string[]) {
 
 function loadNodeOrderRows(nodeIds: string[]) {
   return queryRowsByIds<NodeOrderPackRow>(
-    `SELECT node_id, position
-     FROM node_order WHERE node_id IN (__IDS__)
-     ORDER BY position ASC, node_id ASC`,
+    `SELECT node_order.node_id, node_order.position
+     FROM node_order
+     JOIN nodes ON nodes.id = node_order.node_id
+     WHERE node_order.node_id IN (__IDS__) AND nodes.kind = 'folder'
+     ORDER BY node_order.position ASC, node_order.node_id ASC`,
     nodeIds
   );
 }

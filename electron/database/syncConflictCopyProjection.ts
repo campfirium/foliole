@@ -10,21 +10,6 @@ import { conflictCopyTitle, conflictCopyVersionId } from './syncConflictCopyIden
 
 const INBOX_NODE_ID = 'special-inbox';
 
-function readInboxTopPosition(driver: DatabaseDriver) {
-  const row = driver.queryOne<{ position: number | null }>(
-    `SELECT MIN(o.position) AS position
-     FROM nodes n
-     JOIN node_order o ON o.node_id = n.id
-     WHERE n.parent_id = ?`,
-    [INBOX_NODE_ID]
-  );
-  if (typeof row?.position === 'number') {
-    return row.position - 1;
-  }
-  const maxRow = driver.queryOne<{ position: number | null }>('SELECT MAX(position) AS position FROM node_order');
-  return typeof maxRow?.position === 'number' ? maxRow.position + 1 : 0;
-}
-
 function ensureInboxNode(driver: DatabaseDriver, now: string) {
   if (driver.queryOne('SELECT id FROM nodes WHERE id = ?', [INBOX_NODE_ID])) {
     return;
@@ -157,18 +142,6 @@ function upsertConflictCopyVersion(args: {
   );
 }
 
-function upsertConflictCopyOrder(args: { copyNodeId: string; driver: DatabaseDriver; placeAtTop: boolean }) {
-  if (!args.placeAtTop && args.driver.queryOne('SELECT node_id FROM node_order WHERE node_id = ?', [args.copyNodeId])) {
-    return;
-  }
-  args.driver.execute(
-    `INSERT INTO node_order (node_id, position)
-     VALUES (?, ?)
-     ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`,
-    [args.copyNodeId, readInboxTopPosition(args.driver)]
-  );
-}
-
 export function upsertConflictCopyProjection(args: {
   copyNodeId: string;
   driver: DatabaseDriver;
@@ -188,6 +161,5 @@ export function upsertConflictCopyProjection(args: {
   ensureInboxNode(args.driver, args.timestamp);
   upsertConflictCopyNode({ bodyBlobHash, content, copyNodeId: args.copyNodeId, deviceId, driver: args.driver, openingText, record: args.record, timestamp: args.timestamp, title, versionId });
   upsertConflictCopyVersion({ contentHash, copyNodeId: args.copyNodeId, deviceId, driver: args.driver, snapshot, timestamp: args.timestamp, versionId });
-  upsertConflictCopyOrder({ copyNodeId: args.copyNodeId, driver: args.driver, placeAtTop: args.placeAtTop });
   upsertNodeSyncState({ contentHash, currentVersionId: versionId, deletedAt: null, deviceId, nodeId: args.copyNodeId, updatedAt: args.timestamp });
 }

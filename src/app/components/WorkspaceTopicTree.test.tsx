@@ -20,11 +20,14 @@ function createNode(args: {
 }) {
   return {
     anchorLink: null,
+    content: 'Body',
     createdAt: args.createdAt ?? '2026-04-20T00:00:00.000Z',
     hasContent: true,
     hasReveal: false,
     id: args.id,
+    kind: 'topic' as const,
     parentNodeId: args.parentNodeId ?? null,
+    reveal: null,
     review: null,
     title: args.title,
     updatedAt: args.updatedAt ?? '2026-04-20T00:00:00.000Z'
@@ -139,7 +142,7 @@ it('places title search in the item column and keeps matches visible while searc
 
   expect(within(itemColumn).getByRole('tree', { name: 'Topic list' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
-  expect(within(itemColumn).getByRole('button', { name: 'Sort list by Date imported' })).toBeInTheDocument();
+  expect(within(itemColumn).getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
   fireEvent.click(within(itemColumn).getByRole('button', { name: 'Collapse all topics' }));

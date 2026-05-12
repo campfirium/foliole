@@ -30,7 +30,7 @@ type WorkspaceDocumentSurfaceFlatSource =
     | 'onSelectNode'
     | 'onSelectNodeInVirtualView'
   > &
-  Pick<WorkspaceLayoutProps['nodeList'], 'nodeOrder' | 'nodesById'> &
+  Pick<WorkspaceLayoutProps['nodeList'], 'nodeOrder' | 'nodesById' | 'onOpenMoveToNode'> &
   WorkspaceLayoutProps['readingPosition'] &
   Pick<WorkspaceLayoutProps['review'], 'reviewSchedulerSettings'> &
   Pick<WorkspaceLayoutProps['trash'], 'isTrashViewOpen' | 'trashedNodeIds'>;
@@ -85,6 +85,7 @@ function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
     externalSelection: props.externalLibrary.externalSelection,
     nodeOrder: props.nodeList.nodeOrder,
     nodesById: props.nodeList.nodesById,
+    onOpenMoveToNode: props.nodeList.onOpenMoveToNode,
     nodeViewById: props.document.nodeViewById,
     priorityQuickSetShortcutLabel: props.document.priorityQuickSetShortcutLabel,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,

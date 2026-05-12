@@ -1,4 +1,5 @@
 import { cn } from '../../../shared/lib/utils';
+import { projectNodeListLabel } from '../model/nodeListLabelProjection';
 
 import { NodeRenameInput, type useRenameState } from './NodeTreeRowRename';
 
@@ -14,7 +15,7 @@ export function renderNodeLabel(label: string, rename: ReturnType<typeof useRena
       />
     );
   }
-  return <span className="block min-w-0 flex-1 truncate">{label}</span>;
+  return <span className="block min-w-0 flex-1 truncate">{projectNodeListLabel(label)}</span>;
 }
 
 export function NodeTreeRowExpandToggle(props: {
@@ -24,12 +25,13 @@ export function NodeTreeRowExpandToggle(props: {
   nodeId: string;
   onToggleCollapse: (nodeId: string) => void;
 }) {
+  const projectedLabel = projectNodeListLabel(props.label);
   if (!props.hasChildren) {
     return <span aria-hidden="true" className="mr-2 size-[1.125rem] flex-none" />;
   }
   return (
     <span
-      aria-label={props.isCollapsed ? `Expand ${props.label}` : `Collapse ${props.label}`}
+      aria-label={props.isCollapsed ? `Expand ${projectedLabel}` : `Collapse ${projectedLabel}`}
       className="mr-2 flex size-[1.125rem] flex-none items-center justify-center opacity-70"
       onClick={(event) => (event.stopPropagation(), props.onToggleCollapse(props.nodeId))}
       onKeyDown={(event) =>

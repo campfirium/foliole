@@ -62,7 +62,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
     resultKey: 'articles',
     sql:
       androidReadableArticleSql("WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> ''") +
-      ' ORDER BY COALESCE(no.position, 2147483647) ASC, n.created_at ASC LIMIT 1',
+      ' ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT 1',
     columns: androidReadableArticleColumns()
   },
   readableArticleReferencePdfAttachment: {
@@ -98,8 +98,9 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceOrderedNodeIds: {
     resultKey: 'nodes',
     sql:
-      'SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id ' +
-      'ORDER BY CASE WHEN no.position IS NULL THEN 1 ELSE 0 END, no.position ASC, n.created_at ASC',
+      'SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id AND n.kind = \'folder\' ' +
+      'ORDER BY CASE WHEN n.kind = \'folder\' THEN 0 ELSE 1 END, COALESCE(no.position, 2147483647) ASC, ' +
+      'n.updated_at DESC, n.created_at DESC, n.id ASC',
     columns: [{ key: 'id', source: 'id', type: 'string' }]
   },
   workspaceMetaValue: {
@@ -120,8 +121,9 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'LEFT JOIN node_reading rd ON rd.node_id = n.id ' +
       'LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? ' +
       'LEFT JOIN node_review nr ON nr.node_id = n.id ' +
-      'ORDER BY CASE WHEN EXISTS (SELECT 1 FROM node_order no WHERE no.node_id = n.id) THEN 0 ELSE 1 END, ' +
-      '(SELECT no.position FROM node_order no WHERE no.node_id = n.id), n.created_at ASC',
+      'ORDER BY CASE WHEN n.kind = \'folder\' THEN 0 ELSE 1 END, ' +
+      'COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), ' +
+      'n.updated_at DESC, n.created_at DESC, n.id ASC',
     columns: [
       { key: 'id', source: 'id', type: 'string' },
       { key: 'parent_id', source: 'parent_id', type: 'nullableString' },
