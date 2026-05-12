@@ -24,6 +24,7 @@ interface RunAppCommandActions {
   goParent: () => void;
   toggleImmersiveMode: () => void;
   importSingleFile: () => void | Promise<void>;
+  reimportSelectedTopic: () => void | Promise<void>;
   resetImportData: () => boolean | void;
   startClipboardImport: () => void;
   openNotes: () => void;
@@ -79,6 +80,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,
     [APP_COMMAND_IDS.openImportManagement]: actions.openImportManagement,
     [APP_COMMAND_IDS.resetImportData]: actions.resetImportData,
+    [APP_COMMAND_IDS.reimportSelectedTopic]: actions.reimportSelectedTopic,
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,

@@ -17,13 +17,13 @@ export function useSearchResultSourceDetails(results: WorkspaceSearchResult[]) {
     const nodeIds = [
       ...new Set(
         results
-          .filter((result) => result.kind !== 'external')
+          .filter((result) => result.kind === 'node' || result.kind === 'pdf')
           .map((result) => result.id)
           .filter(Boolean)
       )
     ];
     if (nodeIds.length === 0) {
-      setSourceDetailsByNodeId({});
+      setSourceDetailsByNodeId((current) => (Object.keys(current).length === 0 ? current : {}));
       return;
     }
 

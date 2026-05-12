@@ -1,0 +1,107 @@
+import { expect, it, vi } from 'vitest';
+
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+
+import { runAppCommand } from './appCommands';
+
+function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
+  return {
+    closeSettings: () => undefined,
+    createFolder: () => undefined,
+    createItem: () => undefined,
+    createTopic: () => undefined,
+    createVirtualNode: () => undefined,
+    enterPriorityMode: () => undefined,
+    exportCurrentArticle: () => undefined,
+    findInTopic: () => undefined,
+    mergeHighlightsIntoTopic: () => undefined,
+    goBack: () => undefined,
+    goForward: () => undefined,
+    goToNode: () => undefined,
+    moveToNode: () => undefined,
+    renameNode: () => undefined,
+    goParent: () => undefined,
+    toggleImmersiveMode: () => undefined,
+    importDirectory: () => undefined,
+    importSingleFile: () => undefined,
+    reimportSelectedTopic: () => undefined,
+    openImportManagement: () => undefined,
+    resetImportData: () => undefined,
+    openNotes: () => undefined,
+    openReadwiseReaderSettings: () => undefined,
+    openSettings: () => undefined,
+    openTrash: () => undefined,
+    restartApp: () => undefined,
+    toggleBaseColorMode: () => undefined,
+    revealReviewAnswer: () => undefined,
+    startClipboardImport: () => undefined,
+    toggleReviewMode: () => undefined,
+    toggleEditorDisplayMode: () => undefined,
+    toggleList: () => undefined,
+    gradeReviewAgain: () => undefined,
+    gradeReviewHard: () => undefined,
+    gradeReviewGood: () => undefined,
+    gradeReviewEasy: () => undefined,
+    readingReviewLater: () => undefined,
+    readingReviewRead: () => undefined,
+    readingReviewDismiss: () => undefined,
+    toggleDevTools: () => undefined,
+    ...overrides
+  };
+}
+
+function expectCommandRuns(commandId: string, overrides: Partial<Parameters<typeof runAppCommand>[1]>) {
+  expect(runAppCommand(commandId, createCommandActions(overrides))).toBe(true);
+}
+
+it('runs create topic through the shared command handler', () => {
+  const createTopic = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
+
+  expect(createTopic).toHaveBeenCalledTimes(1);
+});
+
+it('runs create virtual node through the shared command handler', () => {
+  const createVirtualNode = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.createVirtualNode, { createVirtualNode });
+
+  expect(createVirtualNode).toHaveBeenCalledTimes(1);
+});
+
+it('runs restart app through the shared command handler', () => {
+  const restartApp = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.restartApp, { restartApp });
+
+  expect(restartApp).toHaveBeenCalledTimes(1);
+});
+
+it('runs open Readwise Reader settings through the shared command handler', () => {
+  const openReadwiseReaderSettings = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openReadwiseReaderSettings, { openReadwiseReaderSettings });
+
+  expect(openReadwiseReaderSettings).toHaveBeenCalledTimes(1);
+});
+
+it('runs light and dark mode toggle through the shared command handler', () => {
+  const toggleBaseColorMode = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.toggleBaseColorMode, { toggleBaseColorMode });
+
+  expect(toggleBaseColorMode).toHaveBeenCalledTimes(1);
+});
+
+it('lets reset import data cancel without reporting success', () => {
+  const resetImportData = vi.fn(() => false);
+
+  expect(
+    runAppCommand(APP_COMMAND_IDS.resetImportData, createCommandActions({
+      resetImportData
+    }))
+  ).toBe(false);
+
+  expect(resetImportData).toHaveBeenCalledTimes(1);
+});

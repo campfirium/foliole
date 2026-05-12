@@ -1,18 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import {
-  hasWorkspaceSearchRuntimeRepository,
-  searchWorkspaceInRuntime
-} from '../../shared/platform/appRuntimeCommandRepository';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
+import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
-import { buildWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
+import type { WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
   isOpen: boolean;
@@ -21,72 +18,6 @@ interface SearchPaletteProps {
   trashedNodeIds: string[];
   onClose: () => void;
   onOpenResult: (result: WorkspaceSearchResult) => void;
-}
-
-function useSearchResults(
-  props: Pick<SearchPaletteProps, 'isOpen' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>,
-  query: string
-) {
-  const localResults = useMemo(
-    () =>
-      buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, query),
-    [props.nodeOrder, props.nodesById, props.trashedNodeIds, query]
-  );
-  const [runtimeResults, setRuntimeResults] = useState<WorkspaceSearchResult[]>([]);
-  const [runtimeError, setRuntimeError] = useState(false);
-
-  useEffect(() => {
-    if (!props.isOpen || !hasWorkspaceSearchRuntimeRepository() || !query.trim()) {
-      setRuntimeResults([]);
-      setRuntimeError(false);
-      return;
-    }
-
-    let cancelled = false;
-    setRuntimeResults([]);
-    setRuntimeError(false);
-    void searchWorkspaceInRuntime(query)
-      .then((results) => {
-        if (!cancelled) {
-          setRuntimeResults(results);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setRuntimeError(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [props.isOpen, query]);
-
-  const hasRuntime = hasWorkspaceSearchRuntimeRepository();
-  return { error: hasRuntime ? runtimeError : false, results: hasRuntime ? runtimeResults : localResults };
-}
-
-function useOrderedSearchResults(
-  results: WorkspaceSearchResult[],
-  nodesById: WorkspaceListNodesById
-) {
-  return useMemo(() => {
-    const externalResults: WorkspaceSearchResult[] = [];
-    const regularResults: WorkspaceSearchResult[] = [];
-    const anchoredResults: WorkspaceSearchResult[] = [];
-    results.forEach((result) => {
-      if (result.kind === 'external') {
-        externalResults.push(result);
-        return;
-      }
-      if (nodesById[result.id]?.anchorLink?.kind) {
-        anchoredResults.push(result);
-        return;
-      }
-      regularResults.push(result);
-    });
-    return [...regularResults, ...anchoredResults, ...externalResults];
-  }, [nodesById, results]);
 }
 
 export function SearchPalette(props: SearchPaletteProps) {

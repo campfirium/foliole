@@ -24,6 +24,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     toggleImmersiveMode: () => undefined,
     importDirectory: () => undefined,
     importSingleFile: () => undefined,
+    reimportSelectedTopic: () => undefined,
     openImportManagement: () => undefined,
     resetImportData: () => undefined,
     openNotes: () => undefined,
@@ -60,6 +61,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canExportCurrentArticle: true,
     canMergeHighlightsIntoTopic: true,
     canRenameNode: true,
+    canReimportSelectedTopic: true,
     canResetImportData: true,
     canGoBack: true,
     canGoForward: true,
@@ -76,7 +78,6 @@ function createPaletteOptions(isReviewMode: boolean) {
     canCompleteReadingReview: true,
     canDismissReadingReview: true,
     isImmersiveMode: false,
-    resolvedBaseColorMode: 'light' as const,
     isReviewMode
   };
 }
@@ -121,14 +122,9 @@ describe('buildAppPaletteItems', () => {
     expect(reviewModeItem?.title).toBe('Exit Review Mode');
   });
 
-  it('shows the next light or dark mode action from the resolved mode', () => {
-    const darkItems = buildAppPaletteItems({
-      ...createPaletteOptions(false),
-      resolvedBaseColorMode: 'dark'
-    });
+  it('shows the light or dark mode toggle action', () => {
     const lightItems = buildAppPaletteItems(createPaletteOptions(false));
 
-    expect(darkItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Toggle Light/Dark Mode');
     expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Toggle Light/Dark Mode');
   });
 });
@@ -218,60 +214,6 @@ describe('runAppCommand basics', () => {
     expectCommandRuns(APP_COMMAND_IDS.toggleImmersiveMode, { toggleImmersiveMode });
 
     expect(toggleImmersiveMode).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('runAppCommand more actions', () => {
-  it('runs create topic through the shared command handler', () => {
-    const createTopic = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
-
-    expect(createTopic).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs create virtual node through the shared command handler', () => {
-    const createVirtualNode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.createVirtualNode, { createVirtualNode });
-
-    expect(createVirtualNode).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs restart app through the shared command handler', () => {
-    const restartApp = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.restartApp, { restartApp });
-
-    expect(restartApp).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs open Readwise Reader settings through the shared command handler', () => {
-    const openReadwiseReaderSettings = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.openReadwiseReaderSettings, { openReadwiseReaderSettings });
-
-    expect(openReadwiseReaderSettings).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs light and dark mode toggle through the shared command handler', () => {
-    const toggleBaseColorMode = vi.fn();
-
-    expectCommandRuns(APP_COMMAND_IDS.toggleBaseColorMode, { toggleBaseColorMode });
-
-    expect(toggleBaseColorMode).toHaveBeenCalledTimes(1);
-  });
-
-  it('lets reset import data cancel without reporting success', () => {
-    const resetImportData = vi.fn(() => false);
-
-    expect(
-      runAppCommand(APP_COMMAND_IDS.resetImportData, createCommandActions({
-        resetImportData
-      }))
-    ).toBe(false);
-
-    expect(resetImportData).toHaveBeenCalledTimes(1);
   });
 });
 

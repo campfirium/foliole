@@ -10,12 +10,12 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 export interface RuntimeRemovedSourceEntry {
   content: string | null;
   contentPreview: string | null;
+  deletedAt: string;
   firstSeenAt: string;
   hasSourceUpdate: boolean;
   id: string;
   lastImportedAt: string | null;
   lastNodeId: string | null;
-  lastSeenAt: string;
   ruleId: string;
   sourcePath: string;
   title: string;
@@ -24,6 +24,23 @@ export interface RuntimeRemovedSourceEntry {
 export interface RuntimeRemovedSourcesResult {
   entries: RuntimeRemovedSourceEntry[];
   loadedAt: string;
+}
+
+let cachedRemovedSources: RuntimeRemovedSourcesResult = { entries: [], loadedAt: '' };
+let loadPromise: Promise<RuntimeRemovedSourcesResult> | null = null;
+const listeners = new Set<() => void>();
+
+function emitRemovedSourcesChange() {
+  listeners.forEach((listener) => listener());
+}
+
+export function getCachedRuntimeRemovedSources() {
+  return cachedRemovedSources;
+}
+
+export function subscribeRuntimeRemovedSources(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 function titleFromSourcePath(sourcePath: string) {
@@ -35,12 +52,12 @@ function toRuntimeEntry(entry: NativeRemovedSourceEntry): RuntimeRemovedSourceEn
   return {
     content: entry.content,
     contentPreview: entry.content_preview,
+    deletedAt: entry.deleted_at,
     firstSeenAt: entry.first_seen_at,
     hasSourceUpdate: entry.has_source_update,
     id: `${entry.rule_id}:${entry.source_path}`,
     lastImportedAt: entry.last_imported_at,
     lastNodeId: entry.last_node_id,
-    lastSeenAt: entry.last_seen_at,
     ruleId: entry.rule_id,
     sourcePath: entry.source_path,
     title: entry.title.trim() || titleFromSourcePath(entry.source_path)
@@ -48,15 +65,29 @@ function toRuntimeEntry(entry: NativeRemovedSourceEntry): RuntimeRemovedSourceEn
 }
 
 export async function loadRuntimeRemovedSources(): Promise<RuntimeRemovedSourcesResult> {
+  if (loadPromise) {
+    return loadPromise;
+  }
+  loadPromise = refreshRuntimeRemovedSources().finally(() => {
+    loadPromise = null;
+  });
+  return loadPromise;
+}
+
+export async function refreshRuntimeRemovedSources(): Promise<RuntimeRemovedSourcesResult> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
-    return { entries: [], loadedAt: new Date().toISOString() };
+    cachedRemovedSources = { entries: [], loadedAt: new Date().toISOString() };
+    emitRemovedSourcesChange();
+    return cachedRemovedSources;
   }
   const result = await runtimeInvoke(NATIVE_COMMANDS.loadRemovedSources) as NativeRemovedSourcesResult | null;
-  return {
+  cachedRemovedSources = {
     entries: Array.isArray(result?.entries) ? result.entries.map(toRuntimeEntry) : [],
     loadedAt: result?.loaded_at ?? new Date().toISOString()
   };
+  emitRemovedSourcesChange();
+  return cachedRemovedSources;
 }
 
 export async function restoreRuntimeRemovedSource(entry: Pick<RuntimeRemovedSourceEntry, 'ruleId' | 'sourcePath'>) {

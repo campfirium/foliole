@@ -2,12 +2,25 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  cachedRemovedSources: {
+    entries: [],
+    loadedAt: ''
+  },
+  getCachedRuntimeRemovedSources: vi.fn(),
   loadRuntimeRemovedSources: vi.fn(),
+  refreshRuntimeRemovedSources: vi.fn(),
+  removedSourcesListeners: new Set<() => void>(),
   restoreRuntimeRemovedSource: vi.fn()
 }));
 
 vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
+  getCachedRuntimeRemovedSources: mocks.getCachedRuntimeRemovedSources,
   loadRuntimeRemovedSources: mocks.loadRuntimeRemovedSources,
+  refreshRuntimeRemovedSources: mocks.refreshRuntimeRemovedSources,
+  subscribeRuntimeRemovedSources: (listener: () => void) => {
+    mocks.removedSourcesListeners.add(listener);
+    return () => mocks.removedSourcesListeners.delete(listener);
+  },
   restoreRuntimeRemovedSource: mocks.restoreRuntimeRemovedSource
 }));
 
@@ -16,12 +29,12 @@ import { RemovedSourcesPanel } from './RemovedSourcesPanel';
 function createRemovedSource(overrides: Partial<{
   content: string | null;
   contentPreview: string | null;
+  deletedAt: string;
   firstSeenAt: string;
   hasSourceUpdate: boolean;
   id: string;
   lastImportedAt: string | null;
   lastNodeId: string | null;
-  lastSeenAt: string;
   ruleId: string;
   sourcePath: string;
   title: string;
@@ -29,12 +42,12 @@ function createRemovedSource(overrides: Partial<{
   return {
     content: 'Full source text',
     contentPreview: 'Preview text',
+    deletedAt: '2026-05-12T00:00:00.000Z',
     firstSeenAt: '2026-05-12T00:00:00.000Z',
     hasSourceUpdate: false,
     id: 'rule-1:/Readwise/Alpha.md',
     lastImportedAt: '2026-05-12T00:00:00.000Z',
     lastNodeId: 'topic-old',
-    lastSeenAt: '2026-05-12T00:00:00.000Z',
     ruleId: 'rule-1',
     sourcePath: '/Readwise/Alpha.md',
     title: 'Alpha Removed',
@@ -43,21 +56,46 @@ function createRemovedSource(overrides: Partial<{
 }
 
 beforeEach(() => {
+  mocks.cachedRemovedSources = {
+    entries: [],
+    loadedAt: ''
+  };
+  mocks.removedSourcesListeners.clear();
+  mocks.getCachedRuntimeRemovedSources.mockReset();
+  mocks.getCachedRuntimeRemovedSources.mockImplementation(() => mocks.cachedRemovedSources);
   mocks.loadRuntimeRemovedSources.mockReset();
+  mocks.refreshRuntimeRemovedSources.mockReset();
   mocks.restoreRuntimeRemovedSource.mockReset();
 });
 
-it('uses the standard topic list surface for Removed sources', async () => {
-  mocks.loadRuntimeRemovedSources.mockResolvedValue({
-    entries: [createRemovedSource()],
-    loadedAt: '2026-05-12T00:00:00.000Z'
+function mockRemovedSourcesLoad(result: ReturnType<typeof createRemovedSourcesResult>) {
+  mocks.loadRuntimeRemovedSources.mockImplementation(async () => {
+    mocks.cachedRemovedSources = result;
+    mocks.removedSourcesListeners.forEach((listener) => listener());
+    return result;
   });
+  mocks.refreshRuntimeRemovedSources.mockImplementation(async () => {
+    mocks.cachedRemovedSources = result;
+    mocks.removedSourcesListeners.forEach((listener) => listener());
+    return result;
+  });
+}
+
+function createRemovedSourcesResult(entries: ReturnType<typeof createRemovedSource>[]) {
+  return {
+    entries,
+    loadedAt: '2026-05-12T00:00:00.000Z'
+  };
+}
+
+it('uses the standard topic list surface for Removed sources', async () => {
+  mockRemovedSourcesLoad(createRemovedSourcesResult([createRemovedSource()]));
 
   render(<RemovedSourcesPanel />);
 
   expect(await screen.findByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Date removed' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Collapse all topics' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Readwise' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Alpha Removed' })).toBeInTheDocument();
@@ -65,14 +103,24 @@ it('uses the standard topic list surface for Removed sources', async () => {
   expect(screen.queryByText('No import selected')).toBeNull();
 });
 
+it('keeps the standard list surface blank while Removed sources load', () => {
+  mocks.loadRuntimeRemovedSources.mockReturnValue(new Promise(() => undefined));
+
+  render(<RemovedSourcesPanel />);
+
+  expect(screen.getByRole('complementary', { name: 'Current folder contents' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open title search' })).toBeInTheDocument();
+  expect(screen.queryByText('Loading Removed')).toBeNull();
+  expect(screen.queryByText('No removed topics')).toBeNull();
+});
+
 it('filters Removed rows with the standard title search overlay', async () => {
-  mocks.loadRuntimeRemovedSources.mockResolvedValue({
-    entries: [
+  mockRemovedSourcesLoad(
+    createRemovedSourcesResult([
       createRemovedSource(),
       createRemovedSource({ id: 'rule-1:/Readwise/Beta.md', sourcePath: '/Readwise/Beta.md', title: 'Beta Removed' })
-    ],
-    loadedAt: '2026-05-12T00:00:00.000Z'
-  });
+    ])
+  );
 
   render(<RemovedSourcesPanel />);
 
@@ -85,13 +133,12 @@ it('filters Removed rows with the standard title search overlay', async () => {
 });
 
 it('collapses and expands Removed source folders with the standard list control', async () => {
-  mocks.loadRuntimeRemovedSources.mockResolvedValue({
-    entries: [
+  mockRemovedSourcesLoad(
+    createRemovedSourcesResult([
       createRemovedSource(),
       createRemovedSource({ id: 'rule-1:/Readwise/Beta.md', sourcePath: '/Readwise/Beta.md', title: 'Beta Removed' })
-    ],
-    loadedAt: '2026-05-12T00:00:00.000Z'
-  });
+    ])
+  );
 
   render(<RemovedSourcesPanel />);
 
@@ -109,10 +156,7 @@ it('collapses and expands Removed source folders with the standard list control'
 it('imports a Removed source from the row context menu', async () => {
   const onSelectNode = vi.fn();
   const entry = createRemovedSource();
-  mocks.loadRuntimeRemovedSources.mockResolvedValue({
-    entries: [entry],
-    loadedAt: '2026-05-12T00:00:00.000Z'
-  });
+  mockRemovedSourcesLoad(createRemovedSourcesResult([entry]));
   mocks.restoreRuntimeRemovedSource.mockResolvedValue({
     node_id: 'topic-new',
     restored_at: '2026-05-12T00:00:01.000Z',

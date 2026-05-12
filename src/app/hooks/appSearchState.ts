@@ -1,6 +1,8 @@
+import { VIRTUAL_REMOVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { requestPdfSearch } from '../../features/pdf/model/pdfSystemRegistry';
 import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
+import { setSelectedRemovedSource } from '../components/removedSourceSelectionStore';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
@@ -22,6 +24,7 @@ interface SearchStateArgs {
   };
   virtualView?: {
     closeVirtualView: () => void;
+    openVirtualView?: (nodeId?: string) => void;
   };
   ws: {
     nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
@@ -52,6 +55,12 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     (result) => {
       args.trash.closeTrashView();
       args.virtualView?.closeVirtualView();
+      if (result.kind === 'removed' && result.removedMatch) {
+        setSelectedRemovedSource(result.removedMatch.entry);
+        args.virtualView?.openVirtualView?.(VIRTUAL_REMOVED_NODE_ID);
+        args.runtime.setIsSearchPaletteOpen(false);
+        return;
+      }
       if (result.kind === 'external' && result.externalMatch) {
         args.externalPreview?.openExternalPreview({
           absolutePath: result.externalMatch.absolutePath,

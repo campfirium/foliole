@@ -57,7 +57,7 @@ export function SearchPaletteList(props: {
                 'flex items-center justify-between gap-3'
               )}
             >
-              <span>{item.kind === 'external' ? 'External folders' : 'Foliole content'}</span>
+              <span>{item.kind === 'external' ? 'External folders' : item.kind === 'removed' ? 'Removed' : 'Foliole content'}</span>
               {item.kind === 'external' && props.externalSectionStatus ? (
                 <span className={appFloatingMetaBadgeClassName('normal-case tracking-normal')}>
                   {props.externalSectionStatus}

@@ -56,6 +56,19 @@ function canMergeHighlightsIntoTopic(args: {
   return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
 }
 
+function canReimportSelectedTopic(args: {
+  activeNodeId: string | null;
+  formalImportAvailable: boolean;
+  isViewingTrashNode: boolean;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (!import.meta.env.DEV || !args.formalImportAvailable || args.isViewingTrashNode || !args.activeNodeId) {
+    return false;
+  }
+  const activeNode = args.ws.nodesById[args.activeNodeId];
+  return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink && !args.ws.trashedNodeIds.includes(args.activeNodeId));
+}
+
 function canToggleImmersiveMode(args: {
   activeNodeId: string | null;
   isStudyMode: boolean;
@@ -80,6 +93,7 @@ function buildPaletteOptions(
     canImportFolder: args.formalImportAvailable,
     canMergeHighlightsIntoTopic: canUseCurrentTopic,
     canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
+    canReimportSelectedTopic: canReimportSelectedTopic(args),
     canResetImportData: args.formalImportAvailable,
     canGoBack: args.nav.canGoBack,
     canGoForward: args.nav.canGoForward,
@@ -88,7 +102,6 @@ function buildPaletteOptions(
     canGoParent: args.nav.canGoParent,
     canFindInCurrentTopic: canUseCurrentTopic,
     canToggleImmersiveMode: canToggleImmersiveMode(args),
-    resolvedBaseColorMode: args.resolvedBaseColorMode,
     canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
     canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,

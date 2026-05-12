@@ -2,8 +2,10 @@ import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRe
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
+import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+import { collectNodeSubtreeIds } from '../../store/workspaceHelpers';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -62,6 +64,33 @@ function createMergeHighlightsIntoTopicCommand(args: {
     }
     if (result.status === 'merged') {
       await useWorkspaceStore.persist.rehydrate();
+    }
+    return true;
+  };
+}
+
+function createReimportSelectedTopicCommand(args: {
+  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return async () => {
+    const nodeId = args.ws.activeNodeId;
+    if (!nodeId || args.runtime.isViewingTrashNode) {
+      return false;
+    }
+    await args.runtime.flushPendingEditorDraftImmediately();
+    const result = await devReimportSelectedTopic({
+      nodeId,
+      nodeIdsToDelete: collectNodeSubtreeIds(nodeId, args.ws.nodesById),
+      nodeOrder: args.ws.nodeOrder
+    });
+    if (result.status !== 'reimported') {
+      window.alert(result.detail);
+      return false;
+    }
+    await useWorkspaceStore.persist.rehydrate();
+    if (result.nodeId) {
+      useWorkspaceStore.getState().openNode(result.nodeId);
     }
     return true;
   };
@@ -146,6 +175,7 @@ function createPaletteRunnerArgs(args: {
     openTrashView: args.trash.openTrashView,
     paletteItems: args.paletteItems,
     recordRecentCommand: args.runtime.recordRecentCommand,
+    reimportSelectedTopic: createReimportSelectedTopicCommand(args),
     resetImportData: args.formalImport.resetImportData,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,

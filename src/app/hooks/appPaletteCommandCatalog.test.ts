@@ -20,14 +20,14 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   canMergeHighlightsIntoTopic: true,
   canMoveToNode: true,
   canRenameNode: true,
+  canReimportSelectedTopic: true,
   canResetImportData: true,
   canRevealAnswer: true,
   canSetNodePriority: true,
   canToggleImmersiveMode: true,
   canToggleReviewMode: true,
   isImmersiveMode: false,
-  isReviewMode: false,
-  resolvedBaseColorMode: 'light'
+  isReviewMode: false
 };
 
 function sectionFor(commandId: string) {
@@ -43,6 +43,7 @@ describe('getAppPaletteCommands', () => {
 
   it('keeps command palette sections aligned with the information architecture', () => {
     expect(sectionFor(APP_COMMAND_IDS.toggleDevTools)).toBe('Developer');
+    expect(sectionFor(APP_COMMAND_IDS.reimportSelectedTopic)).toBe('Developer');
     expect(sectionFor(APP_COMMAND_IDS.enterPriorityMode)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');

@@ -8,6 +8,7 @@ export interface BuildAppPaletteItemsOptions {
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
   canRenameNode: boolean;
+  canReimportSelectedTopic: boolean;
   canResetImportData: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -16,7 +17,6 @@ export interface BuildAppPaletteItemsOptions {
   canGoParent: boolean;
   canFindInCurrentTopic: boolean;
   canToggleImmersiveMode: boolean;
-  resolvedBaseColorMode: 'dark' | 'light';
   canSetNodePriority: boolean;
   canRevealAnswer: boolean;
   canToggleReviewMode: boolean;
@@ -51,7 +51,9 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
+  { id: APP_COMMAND_IDS.openImportManagement, title: 'Open Import Management', section: 'Import', keywords: ['import', 'manage', 'removed'] },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
+  { id: APP_COMMAND_IDS.reimportSelectedTopic, title: 'Dev: Re-import Selected Topic', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reimport', 'topic', 'removed'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
@@ -109,9 +111,6 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
   if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
     return options.isImmersiveMode ? 'Exit Immersive Reading' : 'Enter Immersive Reading';
   }
-  if (id === APP_COMMAND_IDS.toggleBaseColorMode) {
-    return title;
-  }
   return resolveCommandTitle(id, options.isReviewMode, title);
 }
 
@@ -143,6 +142,9 @@ function isImportCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.resetImportData) {
     return options.canResetImportData;
+  }
+  if (id === APP_COMMAND_IDS.reimportSelectedTopic) {
+    return options.canReimportSelectedTopic;
   }
   return null;
 }

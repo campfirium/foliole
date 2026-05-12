@@ -116,6 +116,40 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
          END`
       );
     }
+  },
+  {
+    version: 37,
+    migrate: (sqlite) => {
+      if (!tableExists(sqlite, 'keep_import_items')) {
+        return;
+      }
+      addColumnIfMissing(sqlite, 'keep_import_items', 'deleted_at', 'TEXT');
+      sqlite.exec(
+        `UPDATE keep_import_items
+         SET deleted_at = last_seen_at
+         WHERE deleted_at IS NULL
+           AND source_state = 'present'
+           AND local_node_state = 'locally_deleted'
+          AND last_status = 'blocked_deleted'`
+      );
+    }
+  },
+  {
+    version: 38,
+    migrate: (sqlite) => {
+      sqlite.exec(`CREATE TABLE IF NOT EXISTS keep_import_item_cache (
+        rule_id TEXT NOT NULL,
+        source_path TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT,
+        content_preview TEXT,
+        source_mtime_ms INTEGER NOT NULL,
+        source_size_bytes INTEGER NOT NULL,
+        refreshed_at TEXT NOT NULL,
+        refresh_error TEXT,
+        PRIMARY KEY (rule_id, source_path)
+      )`);
+    }
   }
 ];
 

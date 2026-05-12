@@ -16,6 +16,10 @@ function normalizeSourcePath(sourcePath: string) {
   return sourcePath.replace(/\\/g, '/').split('/').filter(Boolean);
 }
 
+function resolveRemovedAt(entry: RuntimeRemovedSourceEntry) {
+  return entry.deletedAt || entry.firstSeenAt;
+}
+
 function createRemovedTreeNode(input: {
   createdAt: string;
   id: string;
@@ -68,7 +72,7 @@ function upsertFolderNode(args: {
 function addRemovedEntryNode(model: Pick<RemovedSourcesTreeModel, 'entryByNodeId' | 'nodeOrder' | 'nodesById'>, entry: RuntimeRemovedSourceEntry) {
   const pathParts = normalizeSourcePath(entry.sourcePath);
   const folderParts = pathParts.slice(0, -1);
-  const timestamp = entry.lastImportedAt ?? entry.lastSeenAt ?? entry.firstSeenAt;
+  const timestamp = resolveRemovedAt(entry);
   let parentNodeId: string | null = null;
   folderParts.forEach((part, index) => {
     const folderId = `removed-folder:${entry.ruleId}:${folderParts.slice(0, index + 1).join('/')}`;
@@ -97,7 +101,7 @@ export function buildRemovedSourcesTree(entries: RuntimeRemovedSourceEntry[], so
     rows: []
   };
   entries.forEach((entry) => addRemovedEntryNode(model, entry));
-  const normalizedSort = normalizeWorkspaceContentSort(sort, ['modifiedAt', 'importedAt', 'name']);
+  const normalizedSort = normalizeWorkspaceContentSort(sort, ['deletedAt', 'name']);
   const sortedNodeOrder = sortWorkspaceContentNodeIds(model.nodeOrder, model.nodesById, normalizedSort);
   const tree = buildNodeTree(sortedNodeOrder, model.nodesById);
   return {

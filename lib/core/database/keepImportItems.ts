@@ -6,6 +6,7 @@ export type KeepImportLocalNodeState = 'active' | 'locally_deleted' | 'not_impor
 
 export interface KeepImportItemRow {
   [column: string]: unknown;
+  deleted_at: string | null;
   first_seen_at: string;
   has_source_update: number;
   highlight_source_mtime_ms: number | null;
@@ -23,6 +24,7 @@ export interface KeepImportItemRow {
 }
 
 export interface UpsertKeepImportItemInput {
+  deletedAt?: string | null;
   firstSeenAt?: string;
   hasSourceUpdate: boolean;
   highlightSourceMtimeMs?: number | null;
@@ -51,7 +53,7 @@ export function readKeepImportItem(driver: DatabaseDriver, ruleId: string, sourc
       `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
               highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
               has_source_update, last_node_id,
-              last_status, first_seen_at, last_seen_at, last_imported_at
+              last_status, first_seen_at, last_seen_at, deleted_at, last_imported_at
        FROM keep_import_items
        WHERE rule_id = ? AND source_path = ?`,
       [ruleId, sourcePath]
@@ -75,7 +77,7 @@ export function listPresentKeepImportItems(driver: DatabaseDriver) {
     `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
             highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
             has_source_update, last_node_id,
-            last_status, first_seen_at, last_seen_at, last_imported_at
+            last_status, first_seen_at, last_seen_at, deleted_at, last_imported_at
      FROM keep_import_items
      WHERE source_state = 'present'
      ORDER BY last_seen_at DESC, source_path ASC`
@@ -87,33 +89,33 @@ export function listRemovedKeepImportItems(driver: DatabaseDriver) {
     `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
             highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
             has_source_update, last_node_id,
-            last_status, first_seen_at, last_seen_at, last_imported_at
+            last_status, first_seen_at, last_seen_at, deleted_at, last_imported_at
      FROM keep_import_items
      WHERE source_state = 'present'
        AND local_node_state = 'locally_deleted'
        AND last_status = 'blocked_deleted'
-     ORDER BY last_seen_at DESC, source_path ASC`
+     ORDER BY deleted_at DESC, source_path ASC`
   );
 }
 
-export function markKeepImportItemsLocallyDeletedByNodeIds(
+export function markKeepImportItemsLocallyDeletedByNodeDeletedAt(
   driver: DatabaseDriver,
-  nodeIds: string[],
-  deletedAt: string
+  nodeDeletedAt: Array<{ deletedAt: string; nodeId: string }>
 ) {
-  if (nodeIds.length === 0) {
+  if (nodeDeletedAt.length === 0) {
     return;
   }
-  const placeholders = nodeIds.map(() => '?').join(', ');
-  driver.execute(
+  const statement = driver.prepare(
     `UPDATE keep_import_items
      SET local_node_state = 'locally_deleted',
          last_status = 'blocked_deleted',
-         last_seen_at = ?
+         deleted_at = ?
      WHERE source_state = 'present'
-       AND last_node_id IN (${placeholders})`,
-    [deletedAt, ...nodeIds]
+       AND last_node_id = ?`
   );
+  for (const row of nodeDeletedAt) {
+    statement.run([row.deletedAt, row.nodeId]);
+  }
 }
 
 export function markMissingKeepImportItems(driver: DatabaseDriver, ruleId: string, presentSourcePaths: string[]) {
@@ -141,8 +143,8 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
        rule_id, source_path, source_mtime_ms, source_size_bytes,
        highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
        has_source_update, last_node_id,
-       last_status, first_seen_at, last_seen_at, last_imported_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       last_status, first_seen_at, last_seen_at, deleted_at, last_imported_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(rule_id, source_path) DO UPDATE SET
        source_mtime_ms = excluded.source_mtime_ms,
        source_size_bytes = excluded.source_size_bytes,
@@ -155,6 +157,11 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
        last_status = excluded.last_status,
        first_seen_at = COALESCE(keep_import_items.first_seen_at, excluded.first_seen_at),
        last_seen_at = excluded.last_seen_at,
+       deleted_at = CASE
+         WHEN excluded.local_node_state = 'locally_deleted'
+         THEN COALESCE(keep_import_items.deleted_at, excluded.deleted_at, keep_import_items.last_seen_at)
+         ELSE NULL
+       END,
        last_imported_at = excluded.last_imported_at`,
     [
       input.ruleId,
@@ -170,6 +177,7 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
       input.lastStatus,
       input.firstSeenAt ?? input.lastSeenAt,
       input.lastSeenAt,
+      input.deletedAt ?? null,
       input.lastImportedAt
     ]
   );

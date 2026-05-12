@@ -64,6 +64,34 @@ function saveGenericKeepSettings(sourceDir: string) {
   });
 }
 
+async function expectRemovedSourceUsesCachedContent(sourceDir: string) {
+  expect(loadRemovedSources().entries).toEqual([
+    expect.objectContaining({
+      content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      content_preview: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      source_path: 'entry.md',
+      title: 'Entry'
+    })
+  ]);
+  await fs.rm(path.join(sourceDir, 'entry.md'));
+  expect(loadRemovedSources().entries).toEqual([
+    expect.objectContaining({
+      content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      source_path: 'entry.md',
+      title: 'Entry'
+    })
+  ]);
+  expect(
+    openDatabaseConnection().sqlite
+      .prepare(`SELECT title, content FROM keep_import_item_cache WHERE rule_id = ? AND source_path = ?`)
+      .get('draft-import-source-301', 'entry.md')
+  ).toMatchObject({
+    content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+    title: 'Entry'
+  });
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\n![Cover](images/cover.png)\n\nFresh body\n', 'utf8');
+}
+
 it('restores a removed import by importing a fresh initial topic', async () => {
   const sourceDir = path.join(tempRoot, 'watch');
   const imageDir = path.join(sourceDir, 'images');
@@ -88,14 +116,7 @@ it('restores a removed import by importing a fresh initial topic', async () => {
     nodeOrder: nodeOrder.map((row) => row.node_id)
   });
 
-  expect(loadRemovedSources().entries).toEqual([
-    expect.objectContaining({
-      content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
-      content_preview: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
-      source_path: 'entry.md',
-      title: 'Entry'
-    })
-  ]);
+  await expectRemovedSourceUsesCachedContent(sourceDir);
 
   const result = await restoreRemovedSource('draft-import-source-301', 'entry.md');
 

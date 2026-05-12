@@ -195,8 +195,23 @@ export const keepImportItems = sqliteTable('keep_import_items', {
   lastStatus: text('last_status').notNull(),
   firstSeenAt: text('first_seen_at').notNull(),
   lastSeenAt: text('last_seen_at').notNull(),
+  deletedAt: text('deleted_at'),
   lastImportedAt: text('last_imported_at')
 });
+
+export const keepImportItemCache = sqliteTable('keep_import_item_cache', {
+  ruleId: text('rule_id').notNull(),
+  sourcePath: text('source_path').notNull(),
+  title: text('title').notNull(),
+  content: text('content'),
+  contentPreview: text('content_preview'),
+  sourceMtimeMs: integer('source_mtime_ms').notNull(),
+  sourceSizeBytes: integer('source_size_bytes').notNull(),
+  refreshedAt: text('refreshed_at').notNull(),
+  refreshError: text('refresh_error')
+}, (table) => ({
+  pk: primaryKey({ columns: [table.ruleId, table.sourcePath] })
+}));
 
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),

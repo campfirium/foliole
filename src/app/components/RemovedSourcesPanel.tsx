@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
 
 import {
+  getCachedRuntimeRemovedSources,
   loadRuntimeRemovedSources,
+  refreshRuntimeRemovedSources,
   restoreRuntimeRemovedSource,
+  subscribeRuntimeRemovedSources,
   type RuntimeRemovedSourceEntry
 } from '../../shared/platform/removedSourcesRuntimeRepository';
 import { AppEmptyState } from '../../shared/ui';
-import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { setSelectedRemovedSource } from './removedSourceSelectionStore';
 import { RemovedSourceContextMenu, RemovedSourceRows, RemovedSourcesToolbar } from './RemovedSourcesPanelParts';
 import { buildRemovedSourcesTree, getVisibleRemovedSourceRows } from './removedSourcesTree';
-import { normalizeWorkspaceContentSort } from './workspaceContentSort';
+import {
+  normalizeWorkspaceContentSort,
+  resolveDefaultWorkspaceContentSortDirection,
+  type WorkspaceContentSortKey,
+  type WorkspaceContentSortState
+} from './workspaceContentSort';
 
 function matchesQuery(entry: RuntimeRemovedSourceEntry, query: string) {
   const normalized = query.trim().toLocaleLowerCase();
@@ -22,27 +29,29 @@ function matchesQuery(entry: RuntimeRemovedSourceEntry, query: string) {
 }
 
 function useRemovedSources() {
-  const [entries, setEntries] = useState<RuntimeRemovedSourceEntry[]>([]);
+  const snapshot = useSyncExternalStore(
+    subscribeRuntimeRemovedSources,
+    getCachedRuntimeRemovedSources,
+    getCachedRuntimeRemovedSources
+  );
   const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   async function loadEntries() {
     setErrorMessage('');
-    setIsLoading(true);
     try {
-      setEntries((await loadRuntimeRemovedSources()).entries);
+      await refreshRuntimeRemovedSources();
     } catch {
       setErrorMessage('Removed imports could not be loaded.');
-    } finally {
-      setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadEntries();
+    if (!snapshot.loadedAt) {
+      void loadRuntimeRemovedSources().catch(() => setErrorMessage('Removed imports could not be loaded.'));
+    }
   }, []);
 
-  return { entries, errorMessage, isLoading, loadEntries };
+  return { entries: snapshot.entries, errorMessage, hasLoaded: Boolean(snapshot.loadedAt), loadEntries };
 }
 
 function useSelectedRemovedEntry(entries: RuntimeRemovedSourceEntry[], query: string) {
@@ -64,6 +73,21 @@ function useSelectedRemovedEntry(entries: RuntimeRemovedSourceEntry[], query: st
     filteredEntries,
     selectedEntry,
     setSelectedId
+  };
+}
+
+function useRemovedSort() {
+  const [sortState, setSortState] = useState<WorkspaceContentSortState>({ direction: 'desc', key: 'deletedAt' });
+  const sort = useMemo(() => normalizeWorkspaceContentSort(sortState, ['deletedAt', 'name']), [sortState]);
+  return {
+    setSortDirection: (direction: WorkspaceContentSortState['direction']) =>
+      setSortState((current) => ({ ...current, direction })),
+    setSortKey: (key: WorkspaceContentSortKey) =>
+      setSortState((current) => ({
+        direction: current.key === key ? current.direction : resolveDefaultWorkspaceContentSortDirection(key),
+        key
+      })),
+    sort
   };
 }
 
@@ -111,7 +135,7 @@ function useRemovedSourceContextMenu(args: {
 function renderRemovedSourcesBody(args: {
   collapsedNodeIds: ReadonlySet<string>;
   errorMessage: string;
-  isLoading: boolean;
+  hasLoaded: boolean;
   onOpenContextMenu: (entry: RuntimeRemovedSourceEntry, event: ReactMouseEvent<HTMLElement>) => void;
   onSelect: (entry: RuntimeRemovedSourceEntry) => void;
   onToggleCollapse: (nodeId: string) => void;
@@ -126,8 +150,8 @@ function renderRemovedSourcesBody(args: {
       </div>
     );
   }
-  if (args.isLoading) {
-    return <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-6 text-sm text-foreground/65">Loading Removed</div>;
+  if (!args.hasLoaded) {
+    return <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2" />;
   }
   return (
     <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2">
@@ -145,15 +169,14 @@ function renderRemovedSourcesBody(args: {
 }
 
 export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => void }) {
-  const { entries, errorMessage, isLoading, loadEntries } = useRemovedSources();
-  const contentSort = useWorkspaceContentSort();
-  const sort = useMemo(() => normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'importedAt', 'name']), [contentSort.sort]);
+  const { entries, errorMessage, hasLoaded, loadEntries } = useRemovedSources();
+  const removedSort = useRemovedSort();
   const [query, setQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
   const contextMenu = useRemovedSourceContextMenu({ loadEntries, onSelectNode: props.onSelectNode });
   const selection = useSelectedRemovedEntry(entries, query);
-  const tree = useMemo(() => buildRemovedSourcesTree(selection.filteredEntries, sort), [selection.filteredEntries, sort]);
+  const tree = useMemo(() => buildRemovedSourcesTree(selection.filteredEntries, removedSort.sort), [selection.filteredEntries, removedSort.sort]);
   const visibleRows = useMemo(() => getVisibleRemovedSourceRows(tree.rows, collapsedNodeIds), [collapsedNodeIds, tree.rows]);
   const hasCollapsedNodes = tree.collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
 
@@ -164,8 +187,8 @@ export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => 
         hasCollapsedNodes={hasCollapsedNodes}
         isSearchOpen={isSearchOpen}
         loadEntries={loadEntries}
-        onChangeSortDirection={contentSort.setSortDirection}
-        onChangeSortKey={contentSort.setSortKey}
+        onChangeSortDirection={removedSort.setSortDirection}
+        onChangeSortKey={removedSort.setSortKey}
         onCloseSearch={() => {
           setQuery('');
           setIsSearchOpen(false);
@@ -174,13 +197,13 @@ export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => 
         onSearchQueryChange={setQuery}
         onToggleCollapseAll={() => setCollapsedNodeIds(hasCollapsedNodes ? new Set() : new Set(tree.collapsibleNodeIds))}
         searchQuery={query}
-        sortDirection={sort.direction}
-        sortKey={sort.key}
+        sortDirection={removedSort.sort.direction}
+        sortKey={removedSort.sort.key}
       />
       {renderRemovedSourcesBody({
         collapsedNodeIds,
         errorMessage,
-        isLoading,
+        hasLoaded,
         onOpenContextMenu: (entry, event) => {
           event.preventDefault();
           contextMenu.setContextMenu({ entry, ...getMenuPosition(event) });

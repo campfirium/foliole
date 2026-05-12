@@ -46,8 +46,7 @@ export function RemovedSourcesToolbar(props: {
           onChangeSortDirection={props.onChangeSortDirection}
           onChangeSortKey={props.onChangeSortKey}
           options={[
-            { key: 'modifiedAt', label: 'Date modified' },
-            { key: 'importedAt', label: 'Date imported' },
+            { key: 'deletedAt', label: 'Date removed' },
             { key: 'name', label: 'Name' }
           ]}
           sortDirection={props.sortDirection}

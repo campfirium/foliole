@@ -26,12 +26,12 @@ function createRemovedSource() {
   return {
     content: '# Alpha Removed\n\nFull source text',
     contentPreview: 'Preview text',
+    deletedAt: '2026-05-12T00:00:00.000Z',
     firstSeenAt: '2026-05-12T00:00:00.000Z',
     hasSourceUpdate: false,
     id: 'rule-1:/Readwise/Alpha.md',
     lastImportedAt: '2026-05-12T00:00:00.000Z',
     lastNodeId: 'topic-old',
-    lastSeenAt: '2026-05-12T00:00:00.000Z',
     ruleId: 'rule-1',
     sourcePath: '/Readwise/Alpha.md',
     title: 'Alpha Removed'

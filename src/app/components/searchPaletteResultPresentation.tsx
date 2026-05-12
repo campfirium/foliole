@@ -71,6 +71,9 @@ export function resolveSearchResultPathLabel(
   result: WorkspaceSearchResult,
   nodesById: Record<string, WorkspaceListNode | undefined>
 ) {
+  if (result.kind === 'removed' && result.removedMatch) {
+    return result.removedMatch.entry.sourcePath;
+  }
   if (result.kind === 'external' && result.externalMatch) {
     return result.externalMatch.relativePath;
   }
@@ -88,6 +91,9 @@ export function resolveSearchResultNodeBadge(
 ) {
   if (result.kind === 'external') {
     return 'External';
+  }
+  if (result.kind === 'removed') {
+    return 'Removed';
   }
   const anchorKind = nodesById[result.id]?.anchorLink?.kind;
   if (anchorKind === 'highlight') {

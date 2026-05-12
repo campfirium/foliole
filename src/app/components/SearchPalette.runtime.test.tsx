@@ -4,6 +4,9 @@ import { expect, it, vi } from 'vitest';
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({ loadRuntimeNodeSourceDetails: vi.fn().mockResolvedValue(null) }));
 vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({ loadRuntimeExternalSearchFolders: vi.fn().mockResolvedValue([]) }));
+vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
+  loadRuntimeRemovedSources: vi.fn().mockResolvedValue({ entries: [], loadedAt: '2026-05-13T00:00:00.000Z' })
+}));
 
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 

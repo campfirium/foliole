@@ -81,6 +81,14 @@ it('keeps a source snapshot catalog row for readwise files that are not imported
     local_node_state: 'not_imported',
     source_state: 'present'
   });
+  expect(
+    connection.sqlite
+      .prepare(`SELECT title, content FROM keep_import_item_cache WHERE rule_id = ? AND source_path = ?`)
+      .get('draft-import-source-1', 'Plain Article.md')
+  ).toMatchObject({
+    content: '# Plain\nNo highlights yet.\n',
+    title: 'Plain'
+  });
   expect(importSourceCount.count).toBe(0);
 
   await fs.rm(path.join(fullDocumentDir, 'Plain Article.md'));

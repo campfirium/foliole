@@ -32,6 +32,7 @@ export const APP_COMMAND_IDS = {
   clipboardImport: 'import.clipboard',
   openImportManagement: 'import.openManagement',
   resetImportData: 'dev.resetImportData',
+  reimportSelectedTopic: 'dev.reimportSelectedTopic',
   openNotes: 'workspace.openNotes',
   openTrash: 'workspace.openTrash',
   createFolder: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder,

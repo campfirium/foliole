@@ -1,50 +1,34 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { NativeRemovedSourcesResult } from '../../lib/platform/nativeRemovedSourcesContract.js';
-import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
-import { rewriteExternalPreviewContent } from '../database/externalSearchPreviewContent.js';
+import { readKeepImportItemCache } from '../database/keepImportItemCache.js';
 import { listRemovedKeepImportItems } from '../database/keepImportItems.js';
-import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 
-function resolveRuleDirectory(ruleId: string) {
-  const settings = loadImportManagerSettings();
-  const source = [...settings.readwiseSources, ...settings.sources].find((entry) => entry.id === ruleId);
-  return source?.primaryPath.trim() ?? '';
+interface SourceDocument {
+  content: string | null;
+  contentPreview: string | null;
+  title: string;
+}
+
+function fallbackTitleFromSourcePath(sourcePath: string) {
+  const fallbackTitle = path.basename(sourcePath).replace(/\.(md|markdown|html|txt)$/i, '').trim() || path.basename(sourcePath);
+  return fallbackTitle;
+}
+
+function cacheToSourceDocument(cache: NonNullable<ReturnType<typeof readKeepImportItemCache>>): SourceDocument {
+  return {
+    content: cache.content,
+    contentPreview: cache.content_preview,
+    title: cache.title
+  };
 }
 
 function loadSourceDocument(ruleId: string, sourcePath: string) {
-  const directoryPath = resolveRuleDirectory(ruleId);
-  const filePath = path.isAbsolute(sourcePath) ? sourcePath : path.join(directoryPath, sourcePath);
-  const fallbackTitle = path.basename(sourcePath).replace(/\.(md|markdown|html|txt)$/i, '').trim() || path.basename(sourcePath);
-  if (!directoryPath && !path.isAbsolute(sourcePath)) {
-    return { content: null, contentPreview: null, title: fallbackTitle };
+  const cache = readKeepImportItemCache(ruleId, sourcePath);
+  if (cache) {
+    return cacheToSourceDocument(cache);
   }
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const title = resolveImportedNodeTitle({ content, sourceName: sourcePath, titleStrategy: 'heading' });
-    const previewContent = rewriteExternalPreviewContent(content, filePath, createRemovedPreviewFolder(directoryPath));
-    return { content: previewContent, contentPreview: previewContent, title };
-  } catch {
-    return { content: null, contentPreview: null, title: fallbackTitle };
-  }
-}
-
-function createRemovedPreviewFolder(directoryPath: string): NativeExternalSearchFolder {
-  return {
-    attachment_mode: 'document_relative_first_then_fixed_root',
-    attachment_root_path: null,
-    created_at: '',
-    document_count: 0,
-    excluded_dirs: [],
-    folder_path: directoryPath,
-    id: 'removed-preview',
-    indexed_at: null,
-    last_error: null,
-    status: 'ready',
-    updated_at: ''
-  };
+  return { content: null, contentPreview: null, title: fallbackTitleFromSourcePath(sourcePath) };
 }
 
 export function loadRemovedSources(): NativeRemovedSourcesResult {
@@ -54,6 +38,7 @@ export function loadRemovedSources(): NativeRemovedSourcesResult {
       return {
         content: source.content,
         content_preview: source.contentPreview,
+        deleted_at: String(entry.deleted_at ?? entry.first_seen_at),
         first_seen_at: entry.first_seen_at,
         has_source_update: entry.has_source_update === 1,
         last_imported_at: entry.last_imported_at,

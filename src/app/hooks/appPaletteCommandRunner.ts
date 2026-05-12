@@ -24,6 +24,7 @@ interface PaletteCommandRunnerArgs {
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
   importSingleFile: () => Promise<boolean>;
+  reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
   completeReviewItem: () => boolean;
   deferReviewItem: () => boolean;
@@ -92,6 +93,9 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     },
     importSingleFile: () => {
       void args.importSingleFile();
+    },
+    reimportSelectedTopic: () => {
+      void args.reimportSelectedTopic();
     },
     openImportManagement: args.openImportManagement,
     resetImportData: () => {

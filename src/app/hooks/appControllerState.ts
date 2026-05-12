@@ -13,6 +13,7 @@ import { useEditorContextCommands } from './useEditorContextCommands';
 import { useExternalLibraryView } from './useExternalLibraryView';
 import { useListResizer } from './useListResizer';
 import { useReadingProgressSync } from './useReadingProgressSync';
+import { useRemovedSourcesWarmup } from './useRemovedSourcesWarmup';
 import { useRightSidebarResizer } from './useRightSidebarResizer';
 import { useStudyMode } from './useStudyMode';
 import { useTrashView } from './useTrashView';
@@ -175,6 +176,7 @@ export function useWorkspaceControllerState(
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const virtualView = useVirtualNodeView();
   const externalView = useExternalLibraryView();
+  useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const study = useStudyMode({

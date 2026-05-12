@@ -1,7 +1,7 @@
 import {
   listPresentKeepImportItems as listPresentKeepImportItemsViaDriver,
   listRemovedKeepImportItems as listRemovedKeepImportItemsViaDriver,
-  markKeepImportItemsLocallyDeletedByNodeIds as markKeepImportItemsLocallyDeletedByNodeIdsViaDriver,
+  markKeepImportItemsLocallyDeletedByNodeDeletedAt as markKeepImportItemsLocallyDeletedByNodeDeletedAtViaDriver,
   markMissingKeepImportItems as markMissingKeepImportItemsViaDriver,
   readKeepImportItem as readKeepImportItemViaDriver,
   readKeepImportNodeState as readKeepImportNodeStateViaDriver,
@@ -30,8 +30,8 @@ export function listRemovedKeepImportItems() {
   return listRemovedKeepImportItemsViaDriver(openDatabaseConnection().driver);
 }
 
-export function markKeepImportItemsLocallyDeletedByNodeIds(nodeIds: string[], deletedAt: string) {
-  return markKeepImportItemsLocallyDeletedByNodeIdsViaDriver(openDatabaseConnection().driver, nodeIds, deletedAt);
+export function markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt: Array<{ deletedAt: string; nodeId: string }>) {
+  return markKeepImportItemsLocallyDeletedByNodeDeletedAtViaDriver(openDatabaseConnection().driver, nodeDeletedAt);
 }
 
 export function markMissingKeepImportItems(ruleId: string, presentSourcePaths: string[]) {

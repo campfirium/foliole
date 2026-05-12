@@ -10,6 +10,9 @@ vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
 vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
+vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
+  loadRuntimeRemovedSources: vi.fn().mockResolvedValue({ entries: [], loadedAt: '2026-05-13T00:00:00.000Z' })
+}));
 
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';

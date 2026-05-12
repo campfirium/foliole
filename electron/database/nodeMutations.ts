@@ -17,7 +17,7 @@ import type {
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
-import { markKeepImportItemsLocallyDeletedByNodeIds } from './keepImportItems.js';
+import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
@@ -120,12 +120,30 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
   const connection = openDatabaseConnection();
   const deletedAt = new Date().toISOString();
   const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
-  markKeepImportItemsLocallyDeletedByNodeIds(input.nodeIds, deletedAt);
+  const nodeDeletedAt = readNodeDeletedAtForPermanentDelete(input.nodeIds, deletedAt);
+  markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt);
   const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, input);
   withTransaction(connection.driver, () => {
     cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
   });
   return affectedParentNodeIds;
+}
+
+function readNodeDeletedAtForPermanentDelete(nodeIds: string[], fallbackDeletedAt: string) {
+  if (nodeIds.length === 0) {
+    return [];
+  }
+  const placeholders = nodeIds.map(() => '?').join(', ');
+  const rows = openDatabaseConnection().driver.queryAll<{ deleted_at: string | null; id: string }>(
+    `SELECT id, deleted_at
+     FROM nodes
+     WHERE id IN (${placeholders})`,
+    nodeIds
+  );
+  return rows.map((row) => ({
+    deletedAt: row.deleted_at ?? fallbackDeletedAt,
+    nodeId: row.id
+  }));
 }
 
 export function flushAllDirtyNodeSyncVersions() {
