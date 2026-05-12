@@ -149,7 +149,7 @@ it('keeps virtual folders out of the main tree and shows a separate lower Virtua
   expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).not.toBeInTheDocument();
 });
 
-it('opens import management from the left toolbar instead of replacing Inbox', async () => {
+it('opens Watch Manager from the left toolbar instead of replacing Inbox', async () => {
   window.electronAPI = {
     invoke: createImportedNodeRuntimeInvoke(),
     onManagedInboxUpdated: () => () => undefined,
@@ -162,24 +162,24 @@ it('opens import management from the left toolbar instead of replacing Inbox', a
   const inboxItem = within(await getNodeListPanel()).getByRole('treeitem', { name: 'Inbox' });
   fireEvent.click(inboxItem);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Import Management' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Watch Manager' }));
 
-  expect(screen.getByRole('heading', { name: 'Import management' })).toBeInTheDocument();
-  expect(screen.getByRole('navigation', { name: 'Import management navigation' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Watch Manager' })).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: 'Watch Manager navigation' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inbox History' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Books' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
 
-  expect(screen.queryByRole('button', { name: 'Close import management' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close Watch Manager' })).not.toBeInTheDocument();
 });
 
-it('shows import, clipboard import, and import management actions in the left toolbar', () => {
+it('shows import, clipboard import, and Watch Manager actions in the left toolbar', () => {
   render(<App />);
 
   expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Import Clipboard' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Import Management' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Watch Manager' })).toBeInTheDocument();
 });
 
 it('routes import from the left toolbar through the runtime bridge', async () => {

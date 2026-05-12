@@ -15,10 +15,10 @@ export function ImportManagementSearchBar({
 }) {
   return (
     <AppToolbar
-      ariaLabel="Import management search"
+      ariaLabel="Watch Manager search"
       className="min-h-10 justify-between gap-3 rounded-lg border border-border bg-bg-panel px-3 py-2"
     >
-      <ToolbarActionGroup ariaLabel="Import management search field" className="min-w-0 flex-1 gap-2 border-0">
+      <ToolbarActionGroup ariaLabel="Watch Manager search field" className="min-w-0 flex-1 gap-2 border-0">
         <Search aria-hidden="true" className="shrink-0 text-foreground/45" size={14} strokeWidth={1.8} />
         <AppInput
           aria-label={placeholder}

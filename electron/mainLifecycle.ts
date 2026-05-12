@@ -1,29 +1,24 @@
 import { app, BrowserWindow } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
-import { reconcileAutomaticDatabaseBackups } from './database/backupRestore.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
-import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { startDevScreenshotServer, stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
-import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, startExternalSearchBackgroundRefresh, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
-import { startKeepImportMonitor, stopKeepImportMonitor } from './import/keepImportMonitor.js';
-import { startManagedInboxMonitor, stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
-import { loadReadwiseBooksInventory } from './import/readwiseBooksInventory.js';
+import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
+import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
+import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { appendBootEvent } from './ipc/boot.js';
-import { migrateLegacyWebviewStorage } from './ipc/legacyWebviewStorage.js';
 import { installAppMenu } from './ipc/menu.js';
 import { resolveAppPaths } from './ipc/paths.js';
+import { startFollowupTasks } from './mainFollowupTasks.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
-import { backfillMissingMirrorOutput } from './mirror/rebuildMirrorOutput.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, focusWindow, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
-import { runStartupTask } from './startupTasks.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler, stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
@@ -152,18 +147,6 @@ function installPairingFocusHandler() {
     focusWindow(window);
     window.webContents.send(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL);
   });
-}
-
-function startFollowupTasks() {
-  void runStartupTask('[backup] automatic backup reconcile failed', reconcileAutomaticDatabaseBackups);
-  void runStartupTask('[mirror] startup backfill failed', backfillMissingMirrorOutput);
-  void runStartupTask('[storage] legacy webview migration failed', migrateLegacyWebviewStorage);
-  resumePendingPdfAttachmentIndexing();
-  void appendBootEvent('startup_followup_tasks_started');
-  void runStartupTask('[managed-inbox] startup monitor failed', startManagedInboxMonitor);
-  void runStartupTask('[keep-import] startup monitor failed', startKeepImportMonitor);
-  void runStartupTask('[readwise-books] startup node sync failed', loadReadwiseBooksInventory);
-  startExternalSearchBackgroundRefresh();
 }
 
 function installAppProcessDiagnostics() {

@@ -50,7 +50,7 @@ afterEach(async () => {
   notifyManagedInboxUpdated.mockReset();
 });
 
-it('recreates a new keep-import node after the previous one was deleted', async () => {
+it('blocks automatic keep-import recreation after the previous node was deleted', async () => {
   const sourceDir = path.join(tempRoot, 'sources');
   await fs.mkdir(sourceDir, { recursive: true });
   const filePath = path.join(sourceDir, 'entry.md');
@@ -73,9 +73,9 @@ it('recreates a new keep-import node after the previous one was deleted', async 
   const preview = await previewKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-101'));
   expect(preview.entries).toEqual([
     expect.objectContaining({
-      detail: 'Deleted item will be imported again as a new node.',
+      detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
       source_path: 'entry.md',
-      status: 'new'
+      status: 'blocked_deleted'
     })
   ]);
 
@@ -86,20 +86,21 @@ it('recreates a new keep-import node after the previous one was deleted', async 
     .all() as Array<{ deleted_at: string | null; id: string }>;
   const keepItem = connection.sqlite
     .prepare(
-      `SELECT last_status, last_node_id
+      `SELECT has_source_update, last_status, last_node_id, local_node_state, source_state
        FROM keep_import_items
        WHERE rule_id = 'draft-import-source-101' AND source_path = 'entry.md'`
     )
-    .get() as { last_node_id: string; last_status: string };
+    .get() as { has_source_update: number; last_node_id: string; last_status: string; local_node_state: string; source_state: string };
 
-  expect(nodeRows).toHaveLength(2);
+  expect(nodeRows).toHaveLength(1);
   expect(nodeRows[0]?.id).toBe(importedNode.latest_node_id);
   expect(nodeRows[0]?.deleted_at).toBe('2026-03-25T00:10:00.000Z');
-  expect(nodeRows[1]?.id).not.toBe(importedNode.latest_node_id);
-  expect(nodeRows[1]?.deleted_at).toBeNull();
   expect(keepItem).toEqual({
-    last_node_id: nodeRows[1]?.id,
-    last_status: 'imported'
+    has_source_update: 1,
+    last_node_id: importedNode.latest_node_id,
+    last_status: 'blocked_deleted',
+    local_node_state: 'locally_deleted',
+    source_state: 'present'
   });
 });
 

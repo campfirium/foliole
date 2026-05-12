@@ -22,6 +22,7 @@ export interface RuntimeKeepImportItemDetails {
   lastImportedAt: string | null;
   lastSeenAt: string;
   lastStatus: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported';
+  localNodeState: 'active' | 'locally_deleted' | 'not_imported';
   primaryPath: string | null;
   ruleId: string;
   ruleLabel: string | null;
@@ -29,6 +30,7 @@ export interface RuntimeKeepImportItemDetails {
   sourceMtimeMs: number;
   sourcePath: string;
   sourceSizeBytes: number;
+  sourceState: 'missing' | 'present';
   sourceType: 'generic' | 'readwise' | null;
 }
 
@@ -56,6 +58,14 @@ export interface RuntimeNodeSourceUpdatePreview {
 
 function isKeepImportItemStatus(value: unknown): value is RuntimeKeepImportItemDetails['lastStatus'] {
   return value === 'blocked_deleted' || value === 'degraded' || value === 'duplicate' || value === 'failed' || value === 'imported';
+}
+
+function isKeepImportLocalNodeState(value: unknown): value is RuntimeKeepImportItemDetails['localNodeState'] {
+  return value === 'active' || value === 'locally_deleted' || value === 'not_imported';
+}
+
+function isKeepImportSourceState(value: unknown): value is RuntimeKeepImportItemDetails['sourceState'] {
+  return value === 'missing' || value === 'present';
 }
 
 function toRuntimeNodeImportSource(value: unknown): RuntimeNodeImportSource | null {
@@ -115,6 +125,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
     (payload.last_imported_at !== null && typeof payload.last_imported_at !== 'string') ||
     typeof payload.last_seen_at !== 'string' ||
     !isKeepImportItemStatus(payload.last_status) ||
+    (payload.local_node_state !== undefined && !isKeepImportLocalNodeState(payload.local_node_state)) ||
     (payload.primary_path !== null && typeof payload.primary_path !== 'string') ||
     typeof payload.rule_id !== 'string' ||
     (payload.rule_label !== null && typeof payload.rule_label !== 'string') ||
@@ -122,6 +133,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
     typeof payload.source_mtime_ms !== 'number' ||
     typeof payload.source_path !== 'string' ||
     typeof payload.source_size_bytes !== 'number' ||
+    (payload.source_state !== undefined && !isKeepImportSourceState(payload.source_state)) ||
     (payload.source_type !== null && payload.source_type !== 'generic' && payload.source_type !== 'readwise')
   ) {
     return null;
@@ -134,6 +146,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
     lastImportedAt: payload.last_imported_at,
     lastSeenAt: payload.last_seen_at,
     lastStatus: payload.last_status,
+    localNodeState: isKeepImportLocalNodeState(payload.local_node_state) ? payload.local_node_state : 'not_imported',
     primaryPath: payload.primary_path,
     ruleId: payload.rule_id,
     ruleLabel: payload.rule_label,
@@ -141,6 +154,7 @@ function toRuntimeKeepImportItemDetails(value: unknown): RuntimeKeepImportItemDe
     sourceMtimeMs: payload.source_mtime_ms,
     sourcePath: payload.source_path,
     sourceSizeBytes: payload.source_size_bytes,
+    sourceState: isKeepImportSourceState(payload.source_state) ? payload.source_state : 'present',
     sourceType: payload.source_type
   };
 }

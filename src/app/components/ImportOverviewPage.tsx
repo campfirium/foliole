@@ -11,7 +11,7 @@ function ImportOverviewBody(props: {
   if (props.state.isLoading) {
     return (
       <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-        <AppLoadingState description="Checking import sources and recent import runs." title="Loading imports" />
+        <AppLoadingState description="Checking watched sources and recent import runs." title="Loading recent imports" />
       </div>
     );
   }
@@ -33,7 +33,7 @@ function ImportOverviewBody(props: {
   if (props.state.totalVisibleCount === 0) {
     return (
       <div className="flex min-h-[240px] items-center justify-center px-6 py-10">
-        <AppEmptyState description="No imported Inbox topics or recent runs yet." title="Imports are empty" />
+        <AppEmptyState description="No recent import runs yet." title="Recent imports are empty" />
       </div>
     );
   }
@@ -66,7 +66,7 @@ export function ImportOverviewPage({
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <section aria-label="Imports catalog" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
+      <section aria-label="Recent Imports catalog" className="mx-auto flex w-full max-w-[var(--document-max-width)] flex-col">
         <ImportCatalogHeader
           countLabel={String(state.totalVisibleCount)}
           onChangeQuery={state.setQuery}
@@ -74,12 +74,12 @@ export function ImportOverviewPage({
           onChangeSortKey={(value) => state.setSortKey(value as typeof state.sortKey)}
           query={state.query}
           searchResultLabel={state.query.trim() ? String(state.totalVisibleCount) : null}
-          searchLabel="Search all imports"
-          searchPlaceholder="Search in this folder"
+          searchLabel="Search recent imports"
+          searchPlaceholder="Search recent imports"
           sortDirection={state.sortDirection}
           sortKey={state.sortKey}
           sortOptions={overviewSortOptions}
-          title="Imports"
+          title="Recent Imports"
         />
         <ImportOverviewBody onOpenNode={onSelectNode ?? (() => undefined)} state={state} />
         <p aria-live="polite" className="px-1 pt-3 text-xs text-foreground/65">

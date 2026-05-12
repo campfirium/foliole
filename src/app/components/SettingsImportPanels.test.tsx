@@ -6,7 +6,7 @@ import { createDefaultImportManagerSettings } from '../../../lib/core/import/imp
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
-it('shows the restored import management table directly in settings', () => {
+it('shows the restored Watch Manager table directly in settings', () => {
   const settings = createDefaultImportManagerSettings();
 
   render(
@@ -25,8 +25,8 @@ it('shows the restored import management table directly in settings', () => {
     />
   );
 
-  expect(screen.getByText('Source folders')).toBeInTheDocument();
-  expect(screen.getByRole('table', { name: 'Import source folders' })).toBeInTheDocument();
+  expect(screen.getByText('Watch folders')).toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'Watch folders' })).toBeInTheDocument();
   expect(screen.getByText('Original')).toBeInTheDocument();
   expect(screen.getByText('Highlight')).toBeInTheDocument();
   expect(screen.getByText('Handling')).toBeInTheDocument();

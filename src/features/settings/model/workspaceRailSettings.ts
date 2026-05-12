@@ -76,7 +76,7 @@ const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed
 export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
   [APP_COMMAND_IDS.importSingleFile]: 'Import',
   [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
-  [APP_COMMAND_IDS.openImportManagement]: 'Import Management',
+  [APP_COMMAND_IDS.openImportManagement]: 'Watch Manager',
   [APP_COMMAND_IDS.startStudyMode]: 'Study',
   [APP_COMMAND_IDS.openSettings]: 'Settings'
 };

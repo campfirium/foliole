@@ -131,6 +131,7 @@ function createWatchedSourceDetails(nodeId: string) {
       lastImportedAt: '2026-03-30T00:00:00.000Z',
       lastSeenAt: '2026-03-30T00:00:00.000Z',
       lastStatus: 'imported' as const,
+      localNodeState: 'active' as const,
       primaryPath: '/tmp/Watched Articles',
       ruleId: 'rule-1',
       ruleLabel: 'Articles Watch',
@@ -138,6 +139,7 @@ function createWatchedSourceDetails(nodeId: string) {
       sourceMtimeMs: 1,
       sourcePath: '/tmp/Watched Articles/item.md',
       sourceSizeBytes: 10,
+      sourceState: 'present' as const,
       sourceType: 'generic' as const
     },
     pdfPageDimensions: [],

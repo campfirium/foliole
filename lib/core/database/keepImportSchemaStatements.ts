@@ -6,6 +6,8 @@ export const KEEP_IMPORT_SCHEMA_STATEMENTS = [
     source_size_bytes INTEGER NOT NULL,
     highlight_source_mtime_ms INTEGER,
     highlight_source_size_bytes INTEGER,
+    source_state TEXT NOT NULL DEFAULT 'present',
+    local_node_state TEXT NOT NULL DEFAULT 'not_imported',
     has_source_update INTEGER NOT NULL DEFAULT 0,
     last_node_id TEXT,
     last_status TEXT NOT NULL,

@@ -42,7 +42,6 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
 }));
 vi.mock('./import/keepImportMonitor.js', () => ({ startKeepImportMonitor: vi.fn(), stopKeepImportMonitor: vi.fn() }));
 vi.mock('./import/managedInboxMonitor.js', () => ({ startManagedInboxMonitor: vi.fn(), stopManagedInboxMonitor: vi.fn() }));
-vi.mock('./import/readwiseBooksInventory.js', () => ({ loadReadwiseBooksInventory: vi.fn() }));
 vi.mock('./ipc/boot.js', () => ({ appendBootEvent: mocks.appendBootEvent }));
 vi.mock('./ipc/legacyWebviewStorage.js', () => ({ migrateLegacyWebviewStorage: vi.fn() }));
 vi.mock('./ipc/menu.js', () => ({ installAppMenu: mocks.installAppMenu }));

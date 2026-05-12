@@ -35,11 +35,13 @@ vi.mock('../sync/primaryDeviceState.js', () => ({
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { createTestZip } from '../ipc/testZipBuilder.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
 import { resetReadwiseBookImport } from './readwiseBookImportReset.js';
 import { loadReadwiseBookEpub } from './readwiseBookManualActions.js';
+import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { scanReadwiseBooksInventory } from './readwiseBooksInventory.js';
 
 let tempRoot = '';
@@ -65,8 +67,50 @@ async function createBooksFixture() {
   await fs.mkdir(fullDocumentDir, { recursive: true });
   await fs.writeFile(path.join(highlightDir, 'Manual Book.md'), '# Manual Book\n\n## Highlights\nSaved quote.\n', 'utf8');
   await fs.writeFile(path.join(fullDocumentDir, 'Manual Book.md'), '# Manual Book\n\n## Full Document\nWaiting for EPUB.\n', 'utf8');
-  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+  saveImportManagerSettings({
+    readwiseRootPath: readwiseRoot,
+    readwiseReaderConfig: { enabled: true },
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: highlightDir,
+        id: 'draft-import-source-2',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'books',
+        primaryPath: fullDocumentDir
+      }
+    ]
+  });
   return { fullDocumentDir, highlightDir };
+}
+
+function seedManualBookPlaceholder() {
+  const nodeId = buildReadwiseBookPlaceholderNodeId('manual book');
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: '# Manual Book\n\nWaiting for EPUB.',
+    createdAt: '2026-04-04T10:00:00.000Z',
+    hideTitleHeading: false,
+    isTitleManual: true,
+    kind: 'topic',
+    nodeId,
+    openingText: null,
+    parentNodeId: 'special-inbox',
+    position: null,
+    reveal: null,
+    title: 'Manual Book',
+    updatedAt: '2026-04-04T10:00:00.000Z'
+  });
+  return nodeId;
+}
+
+async function scanBooksFixture(paths: { fullDocumentDir: string; highlightDir: string }) {
+  await scanReadwiseBooksInventory({
+    fullDocumentDirectoryPath: paths.fullDocumentDir,
+    highlightDirectoryPath: paths.highlightDir,
+    readwiseConfig: createDefaultReadwiseReaderConfig()
+  });
 }
 
 async function createBookEpub(fileName: string) {
@@ -102,17 +146,12 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
   const selectedEpubPath = await createBookEpub('selected-book.epub');
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
 
-  const inventory = await scanReadwiseBooksInventory({
-    fullDocumentDirectoryPath: fullDocumentDir,
-    highlightDirectoryPath: highlightDir,
-    readwiseConfig: createDefaultReadwiseReaderConfig()
-  });
-  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
+  await scanBooksFixture({ fullDocumentDir, highlightDir });
+  const nodeId = seedManualBookPlaceholder();
 
-  expect(nodeId).toBeTruthy();
-  await expect(loadReadwiseBookEpub(nodeId!)).resolves.toMatchObject({ status: 'selected' });
+  await expect(loadReadwiseBookEpub(nodeId)).resolves.toMatchObject({ status: 'selected' });
 
-  const resetResult = await resetReadwiseBookImport(nodeId!);
+  const resetResult = await resetReadwiseBookImport(nodeId);
 
   expect(resetResult).toMatchObject({
     book_key: 'manual book',
@@ -154,17 +193,12 @@ it('blocks readwise book import reset when this desktop is secondary', async () 
   const selectedEpubPath = await createBookEpub('selected-book.epub');
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [selectedEpubPath] });
 
-  const inventory = await scanReadwiseBooksInventory({
-    fullDocumentDirectoryPath: fullDocumentDir,
-    highlightDirectoryPath: highlightDir,
-    readwiseConfig: createDefaultReadwiseReaderConfig()
-  });
-  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
-  expect(nodeId).toBeTruthy();
-  await expect(loadReadwiseBookEpub(nodeId!)).resolves.toMatchObject({ status: 'selected' });
+  await scanBooksFixture({ fullDocumentDir, highlightDir });
+  const nodeId = seedManualBookPlaceholder();
+  await expect(loadReadwiseBookEpub(nodeId)).resolves.toMatchObject({ status: 'selected' });
 
   primaryDeviceMock.canRunExternalSources = false;
-  await expect(resetReadwiseBookImport(nodeId!)).resolves.toMatchObject({
+  await expect(resetReadwiseBookImport(nodeId)).resolves.toMatchObject({
     book_key: 'manual book',
     node_id: nodeId,
     status: 'blocked_secondary',
@@ -179,17 +213,12 @@ it('blocks readwise book import reset when this desktop is secondary', async () 
 
 it('recreates a deleted readwise book node when re-import is triggered', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
-  const inventory = await scanReadwiseBooksInventory({
-    fullDocumentDirectoryPath: fullDocumentDir,
-    highlightDirectoryPath: highlightDir,
-    readwiseConfig: createDefaultReadwiseReaderConfig()
-  });
-  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
-  expect(nodeId).toBeTruthy();
+  await scanBooksFixture({ fullDocumentDir, highlightDir });
+  const nodeId = seedManualBookPlaceholder();
 
   openDatabaseConnection().sqlite.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run('2026-04-04T11:00:00.000Z', nodeId);
 
-  const resetResult = await resetReadwiseBookImport(nodeId!);
+  const resetResult = await resetReadwiseBookImport(nodeId);
   expect(resetResult).toMatchObject({
     book_key: 'manual book',
     node_id: nodeId,
@@ -206,13 +235,8 @@ it('recreates a deleted readwise book node when re-import is triggered', async (
 
 it('re-imports book placeholders without writing inbox topic order', async () => {
   const { fullDocumentDir, highlightDir } = await createBooksFixture();
-  const inventory = await scanReadwiseBooksInventory({
-    fullDocumentDirectoryPath: fullDocumentDir,
-    highlightDirectoryPath: highlightDir,
-    readwiseConfig: createDefaultReadwiseReaderConfig()
-  });
-  const nodeId = inventory.books.find((book) => book.bookKey === 'manual book')?.generatedNodeId;
-  expect(nodeId).toBeTruthy();
+  await scanBooksFixture({ fullDocumentDir, highlightDir });
+  const nodeId = seedManualBookPlaceholder();
 
   const connection = openDatabaseConnection().sqlite;
   connection
@@ -225,7 +249,7 @@ it('re-imports book placeholders without writing inbox topic order', async () =>
     .run('node-existing-inbox-top', 'special-inbox', 'Older inbox node', '2026-04-04T11:00:00.000Z', '2026-04-04T11:00:00.000Z');
   connection.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)').run('node-existing-inbox-top', 5);
 
-  await resetReadwiseBookImport(nodeId!);
+  await resetReadwiseBookImport(nodeId);
 
   expect(connection.prepare('SELECT node_id FROM node_order WHERE node_id = ?').get(nodeId)).toBeUndefined();
 });

@@ -3,6 +3,7 @@ import type { NativeReadwiseBookImportResetResult } from '../../lib/platform/nat
 import { openDatabaseConnection } from '../database/connection.js';
 import { deleteNodesPermanently, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
+import { loadImportManagerSettings } from './importManagerSettings.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { loadReadwiseBooksInventory, type ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 import {
@@ -169,7 +170,7 @@ export async function resetReadwiseBookImport(nodeId: string): Promise<NativeRea
   if (!book) {
     return createBookNotFoundResult();
   }
-  if (!canRunReadwiseExternalSource()) {
+  if (!canRunReadwiseExternalSource({ readwiseReaderEnabled: loadImportManagerSettings().readwiseReaderConfig.enabled })) {
     return {
       book_key: book.bookKey,
       content: null,

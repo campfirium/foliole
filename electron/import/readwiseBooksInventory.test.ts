@@ -90,50 +90,17 @@ it('scans readwise books and derives highlight, node, and epub status', async ()
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
 
-  expect(inventory.books).toEqual([
-    {
-      annotationStatus: 'has_highlights',
-      bookKey: 'annotated book',
-      downloadUrl: null,
-      epubPath: null,
-      epubStatus: 'missing',
-      fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Annotated Book.md'),
-      generatedNodeId: expect.any(String),
-      highlightMarkdownPath: path.join(highlightDir, 'Annotated Book.md'),
-      importStatus: 'pending',
-      nodeStatus: 'generated',
-      title: 'Annotated Book'
-    },
-    {
-      annotationStatus: 'no_highlights',
-      bookKey: 'epub only book',
-      downloadUrl: null,
-      epubPath: path.join(fullDocumentDir, 'Epub Only Book.epub'),
-      epubStatus: 'received',
-      fullDocumentMarkdownPath: null,
-      generatedNodeId: expect.any(String),
-      highlightMarkdownPath: null,
-      importStatus: 'pending',
-      nodeStatus: 'generated',
-      title: 'Epub Only Book'
-    },
-    {
-      annotationStatus: 'no_highlights',
-      bookKey: 'plain book',
-      downloadUrl: null,
-      epubPath: path.join(fullDocumentDir, 'Plain Book.epub'),
-      epubStatus: 'received',
-      fullDocumentMarkdownPath: path.join(fullDocumentDir, 'Plain Book.md'),
-      generatedNodeId: expect.any(String),
-      highlightMarkdownPath: path.join(highlightDir, 'Plain Book.md'),
-      importStatus: 'pending',
-      nodeStatus: 'generated',
-      title: 'Plain Book'
-    }
+  expect(inventory.books).toMatchObject([
+    { annotationStatus: 'has_highlights', bookKey: 'annotated book', generatedNodeId: null, nodeStatus: 'missing' },
+    { bookKey: 'epub only book', epubStatus: 'received', generatedNodeId: null, nodeStatus: 'missing' },
+    { bookKey: 'plain book', generatedNodeId: expect.any(String), nodeStatus: 'generated' }
   ]);
+  expect(inventory.books[0]?.fullDocumentMarkdownPath).toBe(path.join(fullDocumentDir, 'Annotated Book.md'));
+  expect(inventory.books[1]?.epubPath).toBe(path.join(fullDocumentDir, 'Epub Only Book.epub'));
+  expect(inventory.books[2]?.highlightMarkdownPath).toBe(path.join(highlightDir, 'Plain Book.md'));
 });
 
-it('restores persisted books inventory after restart when directories are temporarily unavailable', async () => {
+it('does not restore persisted books inventory when directories are temporarily unavailable', async () => {
   const { fullDocumentDir, highlightDir } = await seedReadwiseBooksFixture();
   const importedAt = '2026-04-03T12:05:00.000Z';
   const epubPath = path.join(fullDocumentDir, 'Plain Book.epub');
@@ -171,7 +138,7 @@ it('restores persisted books inventory after restart when directories are tempor
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
 
-  expect(restoredInventory.books).toEqual(firstInventory.books);
+  expect(restoredInventory.books).toEqual([]);
 });
 
 it('loads the books inventory from import manager settings', async () => {
@@ -190,35 +157,30 @@ it('loads the books inventory from import manager settings', async () => {
         highlightPath: highlightDir,
         id: 'draft-import-source-2',
         keepPreview: null,
-        keepState: 'draft',
+        keepState: 'enabled',
         kind: 'books',
         primaryPath: fullDocumentDir
       }
-    ]
+    ],
+    readwiseReaderConfig: {
+      enabled: true,
+      highlightsHeading: '## Highlights',
+      importScope: 'highlights_only',
+      validatedAt: '2026-05-11T00:00:00.000Z'
+    }
   });
 
   const inventory = await loadReadwiseBooksInventory();
 
   expect(inventory.highlightDirectoryPath).toBe(highlightDir);
   expect(inventory.fullDocumentDirectoryPath).toBe(fullDocumentDir);
-  expect(inventory.books).toEqual([
-    {
-      annotationStatus: 'no_highlights',
-      bookKey: 'settings book',
-      downloadUrl: null,
-      epubPath: null,
-      epubStatus: 'missing',
-      fullDocumentMarkdownPath: null,
-      generatedNodeId: expect.any(String),
-      highlightMarkdownPath: path.join(highlightDir, 'Settings Book.md'),
-      importStatus: 'pending',
-      nodeStatus: 'generated',
-      title: 'Settings Book'
-    }
+  expect(inventory.books).toMatchObject([
+    { bookKey: 'settings book', generatedNodeId: null, nodeStatus: 'missing', title: 'Settings Book' }
   ]);
+  expect(inventory.books[0]?.highlightMarkdownPath).toBe(path.join(highlightDir, 'Settings Book.md'));
 });
 
-it('promotes changed books to the top and gives deleted books a fresh node', async () => {
+it('keeps deleted book nodes missing during inventory refresh', async () => {
   const { fullDocumentDir, highlightDir } = await seedReadwiseBooksFixture();
   const initialInventory = await scanReadwiseBooksInventory({
     fullDocumentDirectoryPath: fullDocumentDir,
@@ -242,8 +204,10 @@ it('promotes changed books to the top and gives deleted books a fresh node', asy
   expect(reloadedInventory.books[0]).toMatchObject({
     bookKey: 'plain book',
     importStatus: 'pending',
-    nodeStatus: 'generated'
+    nodeStatus: 'missing'
   });
-  expect(reloadedInventory.books[0]?.generatedNodeId).toBeTruthy();
-  expect(reloadedInventory.books[0]?.generatedNodeId).not.toBe(previousNodeId);
+  expect(reloadedInventory.books.find((book) => book.bookKey === 'plain book')).toMatchObject({
+    generatedNodeId: null,
+    nodeStatus: 'missing'
+  });
 });

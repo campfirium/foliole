@@ -48,7 +48,26 @@ it('returns persisted readwise books without scanning or writing when this deskt
   const highlightDir = path.join(readwiseRoot, 'Books');
   await fs.mkdir(highlightDir, { recursive: true });
   await fs.writeFile(path.join(highlightDir, 'Primary Book.md'), '# Primary Book\n\n## Highlights\n', 'utf8');
-  saveImportManagerSettings({ readwiseRootPath: readwiseRoot });
+  saveImportManagerSettings({
+    readwiseRootPath: readwiseRoot,
+    readwiseReaderConfig: {
+      enabled: true,
+      highlightsHeading: '## Highlights',
+      importScope: 'highlights_only',
+      validatedAt: '2026-05-11T00:00:00.000Z'
+    },
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: highlightDir,
+        id: 'draft-import-source-2',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'books',
+        primaryPath: path.join(readwiseRoot, 'Full Document Contents', 'Books')
+      }
+    ]
+  });
 
   const primaryInventory = await loadReadwiseBooksInventory();
   primaryDeviceMock.canRunExternalSources = false;

@@ -1,6 +1,8 @@
 import type { DatabaseDriver } from './driver.js';
 
 export type KeepImportItemStatus = 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported';
+export type KeepImportSourceState = 'missing' | 'present';
+export type KeepImportLocalNodeState = 'active' | 'locally_deleted' | 'not_imported';
 
 export interface KeepImportItemRow {
   [column: string]: unknown;
@@ -8,6 +10,7 @@ export interface KeepImportItemRow {
   has_source_update: number;
   highlight_source_mtime_ms: number | null;
   highlight_source_size_bytes: number | null;
+  local_node_state: KeepImportLocalNodeState;
   last_imported_at: string | null;
   last_node_id: string | null;
   last_seen_at: string;
@@ -16,6 +19,7 @@ export interface KeepImportItemRow {
   source_mtime_ms: number;
   source_path: string;
   source_size_bytes: number;
+  source_state: KeepImportSourceState;
 }
 
 export interface UpsertKeepImportItemInput {
@@ -23,6 +27,7 @@ export interface UpsertKeepImportItemInput {
   hasSourceUpdate: boolean;
   highlightSourceMtimeMs?: number | null;
   highlightSourceSizeBytes?: number | null;
+  localNodeState?: KeepImportLocalNodeState;
   lastImportedAt: string | null;
   lastNodeId: string | null;
   lastSeenAt: string;
@@ -31,6 +36,7 @@ export interface UpsertKeepImportItemInput {
   sourceMtimeMs: number;
   sourcePath: string;
   sourceSizeBytes: number;
+  sourceState?: KeepImportSourceState;
 }
 
 interface KeepImportNodeStateRow {
@@ -43,7 +49,8 @@ export function readKeepImportItem(driver: DatabaseDriver, ruleId: string, sourc
   return (
     driver.queryOne<KeepImportItemRow>(
       `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
-              highlight_source_mtime_ms, highlight_source_size_bytes, has_source_update, last_node_id,
+              highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
+              has_source_update, last_node_id,
               last_status, first_seen_at, last_seen_at, last_imported_at
        FROM keep_import_items
        WHERE rule_id = ? AND source_path = ?`,
@@ -67,14 +74,17 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
   driver.execute(
     `INSERT INTO keep_import_items (
        rule_id, source_path, source_mtime_ms, source_size_bytes,
-       highlight_source_mtime_ms, highlight_source_size_bytes, has_source_update, last_node_id,
+       highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
+       has_source_update, last_node_id,
        last_status, first_seen_at, last_seen_at, last_imported_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(rule_id, source_path) DO UPDATE SET
        source_mtime_ms = excluded.source_mtime_ms,
        source_size_bytes = excluded.source_size_bytes,
        highlight_source_mtime_ms = excluded.highlight_source_mtime_ms,
        highlight_source_size_bytes = excluded.highlight_source_size_bytes,
+       source_state = excluded.source_state,
+       local_node_state = excluded.local_node_state,
        has_source_update = excluded.has_source_update,
        last_node_id = excluded.last_node_id,
        last_status = excluded.last_status,
@@ -88,6 +98,8 @@ export function upsertKeepImportItem(driver: DatabaseDriver, input: UpsertKeepIm
       input.sourceSizeBytes,
       input.highlightSourceMtimeMs ?? null,
       input.highlightSourceSizeBytes ?? null,
+      input.sourceState ?? 'present',
+      input.localNodeState ?? (input.lastNodeId ? 'active' : 'not_imported'),
       input.hasSourceUpdate ? 1 : 0,
       input.lastNodeId,
       input.lastStatus,

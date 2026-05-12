@@ -54,7 +54,7 @@ function resolveTrackingStatus(
     ? readKeepImportNodeState(existingItem.last_node_id)
     : null;
   if (existingItem.last_node_id && (!nodeState || nodeState.deleted_at !== null)) {
-    return 'new' as const;
+    return 'blocked_deleted' as const;
   }
   return primaryChanged || highlightChanged ? 'updated' : 'unchanged';
 }
@@ -83,7 +83,12 @@ async function buildSourceEntry(
         );
   return {
     destination: decision.destination,
-    detail: decision.destination === 'off' ? 'Skipped by current import behavior.' : null,
+    detail:
+      decision.destination === 'off'
+        ? 'Skipped by current import behavior.'
+        : status === 'blocked_deleted'
+          ? 'This source was deleted in Foliole and will stay blocked until you import it again manually.'
+          : null,
     detected_highlight_count: decision.detectedHighlightCount,
     highlight_type: decision.hasHighlights ? 'with_highlights' : 'without_highlights',
     source_kind: readwiseSource.kind,
@@ -125,6 +130,21 @@ export async function previewReadwiseReaderImport(
   const settings = settingsInput
     ? normalizeImportManagerSettings(settingsInput)
     : loadImportManagerSettings();
+  if (!settings.readwiseReaderConfig.enabled) {
+    return {
+      entries: [],
+      external_count: 0,
+      failed_count: 0,
+      inbox_count: 0,
+      off_count: 0,
+      previewed_at: new Date().toISOString(),
+      readwise_root_path: settings.readwiseRootPath,
+      total_count: 0,
+      with_highlights_count: 0,
+      without_highlights_count: 0,
+      write_count: 0
+    };
+  }
   const entries = (
     await Promise.all(
       settings.readwiseSources
@@ -146,7 +166,7 @@ export async function previewReadwiseReaderImport(
     without_highlights_count: entries.filter(
       (entry) => entry.highlight_type === 'without_highlights'
     ).length,
-    write_count: entries.filter((entry) => entry.destination !== 'off' && entry.status !== 'failed')
+    write_count: entries.filter((entry) => entry.destination !== 'off' && entry.status !== 'failed' && entry.status !== 'blocked_deleted')
       .length
   };
 }

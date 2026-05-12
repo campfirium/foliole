@@ -53,9 +53,9 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
   {
     id: APP_COMMAND_IDS.openImportManagement,
-    title: 'Import Management',
+    title: 'Watch Manager',
     section: 'Import',
-    keywords: ['import', 'management', 'sources', 'readwise', 'inbox']
+    keywords: ['watch', 'manager', 'import', 'readwise', 'inbox']
   },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },

@@ -6,8 +6,8 @@ import { canDesktopRunExternalSources } from '../sync/primaryDeviceState.js';
 
 import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 
-export function canRunReadwiseExternalSource() {
-  return canDesktopRunExternalSources();
+export function canRunReadwiseExternalSource(input: { readwiseReaderEnabled?: boolean } = {}) {
+  return canDesktopRunExternalSources() && input.readwiseReaderEnabled !== false;
 }
 
 export function createReadwiseSecondaryDeviceMessage() {

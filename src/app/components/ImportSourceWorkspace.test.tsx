@@ -69,20 +69,20 @@ beforeEach(() => {
   });
 });
 
-it('shows the import management navigation shell without readwise settings controls', async () => {
+it('shows the Watch Manager navigation shell without readwise settings controls', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
-  expect(screen.getByRole('navigation', { name: 'Import management navigation' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Imports' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: 'Watch Manager navigation' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Recent Imports' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inbox History' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Books' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'PDF' })).toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader settings')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Open Readwise Reader settings' })).not.toBeInTheDocument();
-  const importsPage = screen.getByRole('region', { name: 'Imports page' });
+  const importsPage = screen.getByRole('region', { name: 'Recent Imports page' });
   await waitFor(() => {
-    expect(within(importsPage).getByRole('heading', { level: 2, name: 'Imports' })).toBeInTheDocument();
+    expect(within(importsPage).getByRole('heading', { level: 2, name: 'Recent Imports' })).toBeInTheDocument();
   });
   const sortButton = screen.getByRole('button', { name: 'Sort imports by Date imported' });
   expect(sortButton).toBeInTheDocument();
@@ -104,9 +104,11 @@ it('switches the content container when a navigation item is selected', async ()
   expect(screen.queryByText('Book A')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
-  expect(screen.getByRole('searchbox', { name: 'Search imported articles' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search Readwise articles' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sort imports by Date imported' })).toBeInTheDocument();
-  expect(screen.getByText('Readwise Articles is empty')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('Readwise Articles is empty')).toBeInTheDocument();
+  });
 
   fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
   await waitFor(() => {
@@ -124,10 +126,10 @@ it('filters inbox items from the shared import search field', async () => {
     expect(loadRuntimePdfImportsInventory).toHaveBeenCalled();
   });
 
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search all imports' }), { target: { value: 'missing' } });
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search recent imports' }), { target: { value: 'missing' } });
 
   expect(screen.queryByText('Book A')).not.toBeInTheDocument();
-  expect(screen.getByText('No imported Inbox topics or recent runs yet.')).toBeInTheDocument();
+  expect(screen.getByText('No recent import runs yet.')).toBeInTheDocument();
 });
 
 it('shows pdf status badges before filtering them away', async () => {
@@ -179,7 +181,7 @@ it('shows deleted and pending-index states in pdf inventory', async () => {
   expect(screen.getByText('Pending index')).toBeInTheDocument();
 });
 
-it('restores the last active import management page from persistent settings', async () => {
+it('restores the last active Watch Manager page from persistent settings', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.importManagementActivePage, 'readwise-books');
 
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
@@ -188,12 +190,12 @@ it('restores the last active import management page from persistent settings', a
   await act(() => Promise.resolve());
 });
 
-it('does not show a header close button inside import management', async () => {
+it('does not show a header close button inside Watch Manager', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
   await waitFor(() => {
     expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalled();
     expect(loadRuntimePdfImportsInventory).toHaveBeenCalled();
   });
 
-  expect(screen.queryByRole('button', { name: 'Close import management' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close Watch Manager' })).not.toBeInTheDocument();
 });

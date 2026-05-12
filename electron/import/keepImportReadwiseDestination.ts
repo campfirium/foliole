@@ -109,6 +109,7 @@ function persistReadwiseExternalTracking(
     lastNodeId: null,
     lastSeenAt: importedAt,
     lastStatus: status,
+    localNodeState: 'not_imported',
     ruleId: config.ruleId,
     sourceMtimeMs: sourceSignature.primary.mtimeMs,
     sourcePath: source.sourceName,

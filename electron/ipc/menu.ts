@@ -80,7 +80,7 @@ export function installAppMenu() {
         commandItem('Import Files…', 'import.singleFileToInbox'),
         commandItem('Import Folder…', 'import.folderToInbox'),
         commandItem('Import Clipboard', 'import.clipboard'),
-        commandItem('Import Management', 'import.openManagement'),
+        commandItem('Watch Manager', 'import.openManagement'),
         { type: 'separator' },
         commandItem('Open Notes', 'workspace.openNotes'),
         commandItem('Open Trash', 'workspace.openTrash'),

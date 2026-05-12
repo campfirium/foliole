@@ -53,7 +53,7 @@ export interface NativeKeepImportPreviewResult {
 export type NativeReadwiseSyncPreviewDestination = 'external' | 'inbox' | 'off';
 export type NativeReadwiseSyncPreviewHighlightType = 'with_highlights' | 'without_highlights';
 export type NativeReadwiseSyncPreviewSourceKind = 'articles' | 'books' | 'podcasts' | 'tweets';
-export type NativeReadwiseSyncPreviewStatus = 'failed' | 'new' | 'off' | 'unchanged' | 'updated';
+export type NativeReadwiseSyncPreviewStatus = 'blocked_deleted' | 'failed' | 'new' | 'off' | 'unchanged' | 'updated';
 
 export interface NativeReadwiseSyncPreviewEntry {
   destination: NativeReadwiseSyncPreviewDestination;
@@ -201,12 +201,14 @@ export interface NativeKeepImportItemDetails {
   last_imported_at: string | null;
   last_seen_at: string;
   last_status: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported';
+  local_node_state: 'active' | 'locally_deleted' | 'not_imported';
   primary_path: string | null;
   rule_id: string;
   rule_label: string | null;
   source_mtime_ms: number;
   source_path: string;
   source_size_bytes: number;
+  source_state: 'missing' | 'present';
   source_type: 'generic' | 'readwise' | null;
 }
 

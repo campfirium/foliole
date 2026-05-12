@@ -5,10 +5,9 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppEmptyState } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { ImportCatalogLayout } from './ImportCatalogLayout';
-import { IMPORT_CATALOG_SORT_OPTIONS, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { ImportOverviewPage } from './ImportOverviewPage';
 import { ImportSourceWorkspacePdfPage } from './ImportSourceWorkspacePdfPage';
+import { ImportSourceWorkspaceReadwiseArticlesPage } from './ImportSourceWorkspaceReadwiseArticlesPage';
 import { ImportSourceWorkspaceReadwiseBooksPage } from './ImportSourceWorkspaceReadwiseBooksPage';
 import { InboxImportLanding } from './InboxImportLanding';
 
@@ -24,14 +23,14 @@ type ImportSourceWorkspaceDetailsProps = {
 
 const importManagementPages = [
   {
-    emptyDescription: 'Combined import content will appear here once the sources are available.',
+    emptyDescription: 'Recent import activity will appear here once import history is available.',
     id: 'imports',
-    title: 'Imports'
+    title: 'Recent Imports'
   },
   {
-    emptyDescription: 'Imported inbox content will appear here once the content view is wired in.',
+    emptyDescription: 'Inbox import history will appear here once recent runs are available.',
     id: 'inbox',
-    title: 'Inbox'
+    title: 'Inbox History'
   },
   {
     emptyDescription: 'Readwise book content will appear here once the list view is ready.',
@@ -60,7 +59,7 @@ function ImportSourceWorkspaceNavigation(props: {
 }) {
   return (
     <aside className="flex min-h-0 flex-col border-r border-settings-divider bg-settings-sidebar px-4 pb-5 pt-6">
-      <nav aria-label="Import management navigation" className="flex flex-col gap-1">
+      <nav aria-label="Watch Manager navigation" className="flex flex-col gap-1">
         {importManagementPages.map((page) => (
           <AppButton
             key={page.id}
@@ -145,7 +144,7 @@ function ImportSourceWorkspacePageContent({
   if (pageId === 'readwise-articles') {
     return (
       <ImportSourceWorkspacePage pageId={pageId}>
-        <ReadwiseArticlesCatalogPage />
+        <ImportSourceWorkspaceReadwiseArticlesPage />
       </ImportSourceWorkspacePage>
     );
   }
@@ -159,34 +158,6 @@ function ImportSourceWorkspacePageContent({
   }
 
   return <ImportSourceWorkspacePage pageId={pageId} />;
-}
-
-function ReadwiseArticlesCatalogPage() {
-  const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<ImportCatalogSortKey>('dateImported');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  return (
-    <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
-      <ImportCatalogLayout
-        countLabel="0"
-        emptyState={{ description: 'No Readwise articles discovered yet.', title: 'Readwise Articles is empty' }}
-        hasItems={false}
-        onChangeQuery={setQuery}
-        onChangeSortDirection={setSortDirection}
-        onChangeSortKey={(value) => setSortKey(value as ImportCatalogSortKey)}
-        query={query}
-        searchLabel="Search imported articles"
-        searchPlaceholder="Search in this folder"
-        sortDirection={sortDirection}
-        sortKey={sortKey}
-        sortOptions={[...IMPORT_CATALOG_SORT_OPTIONS]}
-        title="Readwise Articles"
-      >
-        {null}
-      </ImportCatalogLayout>
-    </div>
-  );
 }
 
 export function ImportSourceWorkspaceDetails({ open, onOpenChange, onSelectNode }: ImportSourceWorkspaceDetailsProps) {
@@ -210,8 +181,8 @@ export function ImportSourceWorkspaceDetails({ open, onOpenChange, onSelectNode 
           aria-describedby={undefined}
           className="h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none overflow-hidden rounded-lg border-settings-outline bg-settings-shell p-0 shadow-settings"
         >
-          <section aria-label="Import management" className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)]">
-            <AppDialogTitle className="sr-only">Import management</AppDialogTitle>
+          <section aria-label="Watch Manager" className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)]">
+            <AppDialogTitle className="sr-only">Watch Manager</AppDialogTitle>
             <ImportSourceWorkspaceNavigation activePageId={activePageId} onSelect={setActivePageId} />
             <ImportSourceWorkspacePageContent
               onOpenChange={onOpenChange}

@@ -23,11 +23,28 @@ export function persistKeepImportState(
     lastNodeId: record.nodeId,
     lastSeenAt: record.importedAt,
     lastStatus: status,
+    localNodeState: status === 'blocked_deleted' ? 'locally_deleted' : record.nodeId ? 'active' : 'not_imported',
     ruleId: config.ruleId,
     sourceMtimeMs: sourceSignature.primary.mtimeMs,
     sourcePath: source.sourceName,
     sourceSizeBytes: sourceSignature.primary.sizeBytes
   });
+}
+
+export function persistBlockedKeepImportState(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  sourceSignature: {
+    highlight: { mtimeMs: number; sizeBytes: number } | null;
+    primary: { mtimeMs: number; sizeBytes: number };
+  },
+  importedAt: string,
+  lastNodeId: string | null,
+  hasSourceUpdate: boolean
+) {
+  const record = createBlockedRecord(source, importedAt, lastNodeId);
+  persistKeepImportState(config, source, sourceSignature, record, 'blocked_deleted', hasSourceUpdate);
+  return record;
 }
 
 export function createBlockedRecord(

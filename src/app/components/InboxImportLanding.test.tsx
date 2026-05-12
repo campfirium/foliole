@@ -95,11 +95,11 @@ beforeEach(() => {
   });
 });
 
-it('keeps Inbox focused on a single continuous imports list', () => {
+it('keeps Inbox history focused on a single continuous imports list', () => {
   render(<InboxImportLanding nodesById={{}} onSelectNode={() => undefined} />);
 
-  expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
-  expect(screen.getByRole('searchbox', { name: 'Search inbox imports' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Inbox History' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Search Inbox history' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sort imports by Date imported' })).toBeInTheDocument();
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort imports by Date imported' }), { key: 'ArrowDown' });
   expect(screen.getByRole('menuitem', { name: 'Last opened' })).toBeInTheDocument();
@@ -171,7 +171,7 @@ it('filters inbox imports through the shared search field', () => {
 
   render(<InboxImportLanding nodesById={LINKED_NODES} onSelectNode={() => undefined} />);
 
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search inbox imports' }), { target: { value: 'failure' } });
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search Inbox history' }), { target: { value: 'failure' } });
 
   expect(screen.getByText(/linked topics/)).toHaveTextContent('0 linked topics · 1 recent runs');
   expect(screen.queryByText('Essay node')).not.toBeInTheDocument();

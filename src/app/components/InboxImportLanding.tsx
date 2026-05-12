@@ -121,12 +121,12 @@ export function InboxImportLanding({
         onChangeSortDirection={state.setSortDirection}
         onChangeSortKey={(value) => state.setSortKey(value as InboxSortKey)}
         query={state.query}
-        searchLabel="Search inbox imports"
-        searchPlaceholder="Search in this folder"
+        searchLabel="Search Inbox history"
+        searchPlaceholder="Search Inbox history"
         sortDirection={state.sortDirection}
         sortKey={state.sortKey}
         sortOptions={[...inboxSortOptions]}
-        title="Inbox"
+        title="Inbox History"
       >
         {state.visibleItems.map((item) =>
           item.kind === 'linked' ? (

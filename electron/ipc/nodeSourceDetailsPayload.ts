@@ -93,6 +93,7 @@ function toNativeKeepImportItem(record: NonNullable<ReturnType<typeof loadNodeSo
     last_imported_at: record.last_imported_at,
     last_seen_at: record.last_seen_at,
     last_status: record.last_status,
+    local_node_state: record.local_node_state,
     primary_path: rule?.primaryPath ?? null,
     rule_id: record.rule_id,
     rule_label: readwiseRule?.kind ? `Readwise ${formatReadwiseSourceLabel(readwiseRule.kind).toLowerCase()}` : sourceType === 'generic' ? 'Keep import source' : null,
@@ -100,6 +101,7 @@ function toNativeKeepImportItem(record: NonNullable<ReturnType<typeof loadNodeSo
     source_mtime_ms: record.source_mtime_ms,
     source_path: record.source_path,
     source_size_bytes: record.source_size_bytes,
+    source_state: record.source_state,
     source_type: sourceType
   };
 }

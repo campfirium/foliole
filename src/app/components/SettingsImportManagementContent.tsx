@@ -13,7 +13,7 @@ function TitleStrategySection(props: {
     <SettingsSection
       ariaLabel="Import title settings"
       className="mb-6"
-      description="Imported notes keep the original body unchanged. This only decides which value becomes the note title."
+      description="Imported topics keep the original body unchanged. This only decides which value becomes the topic title."
       title="Imported title"
     >
       <SettingsRow
@@ -55,9 +55,9 @@ export function SettingsImportManagementContent(props: {
     <div className="space-y-6">
       <TitleStrategySection onChange={props.onChangeTitleStrategy} titleStrategy={props.titleStrategy} />
       <SettingsSection
-        ariaLabel="Import management sources"
+        ariaLabel="Watch Manager folders"
         description="Restore and adjust the long-running import folders directly here."
-        title="Source folders"
+        title="Watch folders"
       >
         <div className="min-w-0 overflow-hidden">
           <ImportSourceTable

@@ -6,7 +6,6 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
-import { ensureReadwiseBookNodes } from './readwiseBookNodes.js';
 import { resolveGeneratedNodeId, resolveImportStatus } from './readwiseBooksInventoryDatabase.js';
 import {
   loadPersistedReadwiseBooksInventory,
@@ -51,6 +50,17 @@ interface ReadwiseBookSourceBucket {
   title: string;
 }
 
+function createEmptyInventory(paths: {
+  fullDocumentDirectoryPath: string;
+  highlightDirectoryPath: string;
+}): ReadwiseBooksInventory {
+  return {
+    books: [],
+    ...paths,
+    scannedAt: new Date().toISOString()
+  };
+}
+
 function stripExtension(sourceName: string) {
   return sourceName.replace(/\.[^.]+$/u, '');
 }
@@ -79,17 +89,6 @@ async function discoverSources(rootDir: string, supportedKinds: Array<'epub' | '
     return await discoverDirectoryImportSources(rootDir, { supportedKinds });
   } catch {
     return [];
-  }
-}
-
-async function isDirectoryAvailable(rootDir: string) {
-  if (!rootDir.trim()) {
-    return false;
-  }
-  try {
-    return (await fs.stat(rootDir)).isDirectory();
-  } catch {
-    return false;
   }
 }
 
@@ -171,9 +170,7 @@ export async function scanReadwiseBooksInventory(input: {
   readwiseConfig: ReadwiseReaderConfig;
 }): Promise<ReadwiseBooksInventory> {
   const scannedAt = new Date().toISOString();
-  const [highlightDirectoryAvailable, fullDocumentDirectoryAvailable, highlightSources, fullDocumentSources] = await Promise.all([
-    isDirectoryAvailable(input.highlightDirectoryPath),
-    isDirectoryAvailable(input.fullDocumentDirectoryPath),
+  const [highlightSources, fullDocumentSources] = await Promise.all([
     discoverSources(input.highlightDirectoryPath, ['markdown']),
     discoverSources(input.fullDocumentDirectoryPath, ['epub', 'markdown'])
   ]);
@@ -202,10 +199,7 @@ export async function scanReadwiseBooksInventory(input: {
     highlightDirectoryPath: input.highlightDirectoryPath,
     scannedAt
   } satisfies ReadwiseBooksInventory;
-  const inventory = ensureReadwiseBookNodes(mergePersistedReadwiseBooksInventory({
-    currentInventory: scannedInventory,
-    restoreMissingBooks: !highlightDirectoryAvailable || !fullDocumentDirectoryAvailable
-  }));
+  const inventory = mergePersistedReadwiseBooksInventory({ currentInventory: scannedInventory });
   savePersistedReadwiseBooksInventory(inventory);
   return inventory;
 }
@@ -217,12 +211,12 @@ export async function loadReadwiseBooksInventory() {
     fullDocumentDirectoryPath: booksSource?.primaryPath.trim() ?? '',
     highlightDirectoryPath: booksSource?.highlightPath.trim() ?? ''
   };
-  if (!canRunReadwiseExternalSource()) {
-    return loadPersistedReadwiseBooksInventory(paths) ?? {
-      books: [],
-      ...paths,
-      scannedAt: new Date().toISOString()
-    };
+  const canScanBooks =
+    settings.readwiseReaderConfig.enabled &&
+    booksSource?.keepState === 'enabled' &&
+    canRunReadwiseExternalSource();
+  if (!canScanBooks) {
+    return loadPersistedReadwiseBooksInventory(paths) ?? createEmptyInventory(paths);
   }
   return scanReadwiseBooksInventory({
     ...paths,

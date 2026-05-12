@@ -15,7 +15,7 @@ import {
 } from './keepImportReadwiseDestination.js';
 import type { KeepImportRunEntry } from './keepImportReadwiseLogging.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
-import { persistKeepImportState } from './keepImportServiceState.js';
+import { persistBlockedKeepImportState, persistKeepImportState } from './keepImportServiceState.js';
 import { classifySource, isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
 import { hasPrimarySourceChanged } from './keepImportSourceSignature.js';
 import { resolveKeepImportResultDetail, resolveKeepImportResultStatus, resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
@@ -60,6 +60,54 @@ async function runKeepImportSource(config: KeepImportRuleConfig, source: Directo
   }
 }
 
+function createSkippedKeepImportEntry(input: {
+  detail: string | null;
+  failureReason: string | null;
+  previewStatus: KeepImportRunEntry['previewStatus'];
+  sourcePath: string;
+}): KeepImportRunEntry {
+  return {
+    action: 'skipped',
+    detail: input.detail,
+    failureReason: input.failureReason,
+    importStatus: null,
+    previewStatus: input.previewStatus,
+    sourcePath: input.sourcePath
+  };
+}
+
+async function persistBlockedDeletedKeepImport(
+  config: KeepImportRuleConfig,
+  source: DirectoryImportSourceDescriptor,
+  detail: string | null,
+  previewStatus: KeepImportRunEntry['previewStatus']
+): Promise<KeepImportRunEntry> {
+  const importedAt = new Date().toISOString();
+  const sourceSignature = await resolveKeepImportSourceSignature(config, source);
+  const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+  const hasSourceUpdate = resolvePersistedSourceUpdateFlag(
+    blockedState.existingItem,
+    hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
+  );
+  const record = persistBlockedKeepImportState(
+    config,
+    source,
+    sourceSignature,
+    importedAt,
+    blockedState.existingItem?.last_node_id ?? null,
+    hasSourceUpdate
+  );
+  notifyManagedInboxUpdated(record.importId);
+  return {
+    action: 'skipped',
+    detail,
+    failureReason: record.failureReason,
+    importStatus: 'blocked_deleted',
+    previewStatus,
+    sourcePath: source.sourceName
+  };
+}
+
 export async function runSingleKeepImportSource(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor
@@ -69,24 +117,23 @@ export async function runSingleKeepImportSource(
     preview.status === 'unchanged' &&
     !(await shouldRunUnchangedReadwiseDestination(config, source))
   ) {
-    return {
-      action: 'skipped',
+    return createSkippedKeepImportEntry({
       detail: preview.detail,
       failureReason: null,
-      importStatus: null,
       previewStatus: preview.status,
       sourcePath: source.sourceName
-    };
+    });
   }
   if (preview.status === 'failed') {
-    return {
-      action: 'skipped',
+    return createSkippedKeepImportEntry({
       detail: preview.detail,
       failureReason: preview.detail,
-      importStatus: null,
       previewStatus: preview.status,
       sourcePath: source.sourceName
-    };
+    });
+  }
+  if (preview.status === 'blocked_deleted') {
+    return persistBlockedDeletedKeepImport(config, source, preview.detail, preview.status);
   }
   if (config.sourceType === 'readwise') {
     const readwiseResult = await runReadwiseDestination(config, source, preview.status);

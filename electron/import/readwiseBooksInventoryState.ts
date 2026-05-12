@@ -146,7 +146,6 @@ export function findPersistedReadwiseBookByNodeId(nodeId: string) {
 
 export function mergePersistedReadwiseBooksInventory(input: {
   currentInventory: ReadwiseBooksInventory;
-  restoreMissingBooks: boolean;
 }) {
   const persistedInventory = loadPersistedReadwiseBooksInventory(input.currentInventory);
   if (!persistedInventory) {
@@ -181,14 +180,6 @@ export function mergePersistedReadwiseBooksInventory(input: {
       ] as const;
     })
   );
-
-  if (input.restoreMissingBooks) {
-    for (const book of persistedInventory.books) {
-      if (!mergedBooks.has(book.bookKey)) {
-        mergedBooks.set(book.bookKey, book);
-      }
-    }
-  }
 
   const changedBookKeySet = new Set(changedBookKeys);
   const orderedKeys = [

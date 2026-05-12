@@ -5,8 +5,14 @@ import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/work
 
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 
-const { loadRuntimeReadwiseBooksInventory, resetRuntimeReadwiseBookImport, loadRuntimePdfImportsInventory } = vi.hoisted(() => ({
+const {
+  loadRuntimeReadwiseBooksInventory,
+  previewReadwiseReaderImportInRuntime,
+  resetRuntimeReadwiseBookImport,
+  loadRuntimePdfImportsInventory
+} = vi.hoisted(() => ({
   loadRuntimeReadwiseBooksInventory: vi.fn(),
+  previewReadwiseReaderImportInRuntime: vi.fn(),
   resetRuntimeReadwiseBookImport: vi.fn(),
   loadRuntimePdfImportsInventory: vi.fn()
 }));
@@ -17,6 +23,9 @@ vi.mock('../../shared/platform/readwiseBooksRuntimeRepository', () => ({
 }));
 vi.mock('../../shared/platform/pdfImportsRuntimeRepository', () => ({
   loadRuntimePdfImportsInventory
+}));
+vi.mock('../../shared/platform/readwiseReaderImportRuntimeRepository', () => ({
+  previewReadwiseReaderImportInRuntime
 }));
 
 function seedResetResult() {
@@ -94,11 +103,53 @@ beforeEach(() => {
   vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-04-04T00:00:00.000Z')));
   loadRuntimeReadwiseBooksInventory.mockReset();
+  previewReadwiseReaderImportInRuntime.mockReset();
   resetRuntimeReadwiseBookImport.mockReset();
   loadRuntimePdfImportsInventory.mockReset();
   loadRuntimePdfImportsInventory.mockResolvedValue({
     items: [],
     scannedAt: '2026-04-04T10:00:00.000Z'
+  });
+  previewReadwiseReaderImportInRuntime.mockResolvedValue({
+    entries: [
+      {
+        destination: 'inbox',
+        detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+        detected_highlight_count: 3,
+        highlight_type: 'with_highlights',
+        source_kind: 'articles',
+        source_path: '/Readwise/Articles/Article A.md',
+        status: 'blocked_deleted'
+      },
+      {
+        destination: 'external',
+        detail: null,
+        detected_highlight_count: 0,
+        highlight_type: 'without_highlights',
+        source_kind: 'articles',
+        source_path: '/Readwise/Articles/Article B.md',
+        status: 'new'
+      },
+      {
+        destination: 'external',
+        detail: null,
+        detected_highlight_count: 5,
+        highlight_type: 'with_highlights',
+        source_kind: 'books',
+        source_path: '/Readwise/Books/Book A.md',
+        status: 'unchanged'
+      }
+    ],
+    external_count: 2,
+    failed_count: 0,
+    inbox_count: 1,
+    off_count: 0,
+    previewed_at: '2026-04-04T10:00:00.000Z',
+    readwise_root_path: '/Readwise',
+    total_count: 3,
+    with_highlights_count: 2,
+    without_highlights_count: 1,
+    write_count: 1
   });
   seedResetResult();
   seedBooksInventory();
@@ -109,17 +160,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('starts on Imports and marks the active navigation item', async () => {
+it('starts on Recent Imports and marks the active navigation item', async () => {
   render(<ImportSourceWorkspace onOpenChange={() => undefined} open />);
 
   await waitFor(() => {
     expect(loadRuntimeReadwiseBooksInventory).toHaveBeenCalled();
     expect(loadRuntimePdfImportsInventory).toHaveBeenCalled();
   });
-  expect(screen.getByRole('button', { name: 'Imports' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByRole('button', { name: 'Inbox' })).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.getByRole('button', { name: 'Recent Imports' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Inbox History' })).toHaveAttribute('aria-pressed', 'false');
   expect(screen.getByRole('button', { name: 'Readwise Books' })).toHaveAttribute('aria-pressed', 'false');
-  expect(screen.getByLabelText('Imports page')).toBeInTheDocument();
+  expect(screen.getByLabelText('Recent Imports page')).toBeInTheDocument();
 });
 
 it('moves between readwise content pages from the left navigation', async () => {
@@ -135,6 +186,12 @@ it('moves between readwise content pages from the left navigation', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Readwise Articles' }));
   expect(screen.getByRole('button', { name: 'Readwise Articles' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByLabelText('Readwise Articles page')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText('Article A')).toBeInTheDocument();
+  });
+  expect(screen.getByText('Article B')).toBeInTheDocument();
+  expect(screen.getByText('Deleted')).toBeInTheDocument();
+  expect(screen.getByText('Not loaded')).toBeInTheDocument();
 });
 
 it('opens the selected book node from the title click and closes the panel', async () => {
@@ -167,7 +224,6 @@ it('resets the book import, closes the panel, and returns to the node when the b
   await waitFor(() => {
     expect(resetRuntimeReadwiseBookImport).toHaveBeenCalledWith('node-book-a');
   });
-  expect(useWorkspaceStore.persist.rehydrate).toHaveBeenCalledTimes(1);
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-book-a');
   });

@@ -49,6 +49,17 @@ export async function runReadwiseReaderImport(input?: {
   settings?: unknown;
 }): Promise<NativeReadwiseImportRunResult> {
   const settings = resolveRunSettings(input);
+  if (!settings.readwiseReaderConfig.enabled) {
+    return {
+      completed_at: new Date().toISOString(),
+      entry_count: 0,
+      failed_count: 0,
+      imported_count: 0,
+      source_count: 0,
+      skipped_count: 0,
+      status: 'completed'
+    };
+  }
   const sources = settings.readwiseSources.filter(isEnabledReadwiseSource);
   let failedCount = 0;
   let entryCount = 0;

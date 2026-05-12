@@ -98,6 +98,21 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       addColumnIfMissing(sqlite, 'sync_peers', 'primary_committed_at', 'TEXT');
       addColumnIfMissing(sqlite, 'sync_peers', 'primary_updated_by_device_id', 'TEXT');
     }
+  },
+  {
+    version: 36,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'keep_import_items', 'source_state', "TEXT NOT NULL DEFAULT 'present'");
+      addColumnIfMissing(sqlite, 'keep_import_items', 'local_node_state', "TEXT NOT NULL DEFAULT 'not_imported'");
+      sqlite.exec(
+        `UPDATE keep_import_items
+         SET local_node_state = CASE
+           WHEN last_node_id IS NULL THEN 'not_imported'
+           WHEN EXISTS (SELECT 1 FROM nodes WHERE nodes.id = keep_import_items.last_node_id AND nodes.deleted_at IS NULL) THEN 'active'
+           ELSE 'locally_deleted'
+         END`
+      );
+    }
   }
 ];
 

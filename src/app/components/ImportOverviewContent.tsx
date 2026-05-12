@@ -55,7 +55,7 @@ function InboxOverviewSection(props: {
   sortedInboxRuns: SortedInboxRunItem[];
 }) {
   return (
-    <SectionBlock count={props.sortedInboxNodes.length + props.sortedInboxRuns.length} title="Inbox">
+    <SectionBlock count={props.sortedInboxNodes.length + props.sortedInboxRuns.length} title="Inbox History">
       {props.sortedInboxNodes.map(({ entry }) => (
         <InboxImportedNodeRow entry={entry} key={`linked-${entry.importId}`} nodesById={props.nodesById} onOpenNode={props.onOpenNode} />
       ))}

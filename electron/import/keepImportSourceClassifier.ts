@@ -68,7 +68,7 @@ export async function classifySource(
       detectedHighlightCount: highlightPreview.detectedHighlightCount,
       detail:
         deleted
-          ? 'Deleted item will be imported again as a new node.'
+          ? 'This source was deleted in Foliole and will stay blocked until you import it again manually.'
           : !existingItem
             ? 'New file will be imported when enabled.'
             : highlightChanged && !primaryChanged
@@ -76,7 +76,7 @@ export async function classifySource(
               : 'Content file changed and will be refreshed when enabled.',
       highlightSamples: highlightPreview.samples,
       sourcePath,
-      status: deleted || !existingItem ? 'new' : 'updated'
+      status: deleted ? 'blocked_deleted' : !existingItem ? 'new' : 'updated'
     };
   } catch (error) {
     return {

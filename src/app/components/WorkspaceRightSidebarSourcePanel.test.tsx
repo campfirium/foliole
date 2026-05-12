@@ -88,6 +88,7 @@ const NODE_SOURCE_DETAILS = createNodeSourceDetails({
     lastImportedAt: '2026-03-25T12:30:00.000Z',
     lastSeenAt: '2026-03-25T12:40:00.000Z',
     lastStatus: 'imported',
+    localNodeState: 'active',
     primaryPath: '/Users/me/Readwise/Full Document Contents/Articles',
     ruleId: 'draft-import-source-1',
     ruleLabel: 'Readwise articles',
@@ -95,6 +96,7 @@ const NODE_SOURCE_DETAILS = createNodeSourceDetails({
     sourceMtimeMs: 123,
     sourcePath: '/Users/me/Readwise/Full Document Contents/Articles/imported-note.md',
     sourceSizeBytes: 456,
+    sourceState: 'present',
     sourceType: 'readwise'
   }
 });

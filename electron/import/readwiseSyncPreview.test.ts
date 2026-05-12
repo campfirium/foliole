@@ -17,11 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { upsertKeepImportItem } from '../database/keepImportItems.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { softDeleteNodes } from '../database/nodeMutations.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
+import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from './readwiseSyncPreview.js';
 
 let tempRoot = '';
@@ -107,6 +109,37 @@ it('previews Readwise sources with highlight type and destination', async () => 
   ]);
 });
 
+it('does not scan Readwise sources when Reader is disabled', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, { withHighlightsDestination: 'external', withoutHighlightsDestination: 'off' });
+  saveImportManagerSettings({
+    readwiseReaderConfig: {
+      enabled: false,
+      highlightsHeading: '## Highlights',
+      importScope: 'highlights_only',
+      validatedAt: '2026-05-11T00:00:00.000Z'
+    },
+    readwiseRootPath: fixture.readwiseRoot,
+    readwiseSources: [
+      {
+        highlightMode: 'split',
+        highlightPath: fixture.highlightPath,
+        id: 'draft-import-source-1',
+        keepPreview: null,
+        keepState: 'enabled',
+        kind: 'articles',
+        primaryPath: fixture.primaryPath
+      }
+    ]
+  });
+
+  await expect(previewReadwiseReaderImport()).resolves.toMatchObject({
+    entries: [],
+    total_count: 0,
+    write_count: 0
+  });
+});
+
 it('counts external no-highlight sources as writes when configured', async () => {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'external' });
@@ -141,6 +174,30 @@ it('marks tracked unchanged sources without writing during preview', async () =>
   const preview = await previewReadwiseReaderImport();
 
   expect(preview.entries).toContainEqual(expect.objectContaining({ source_path: 'Highlighted.md', status: 'unchanged' }));
+});
+
+it('marks locally deleted Readwise sources as blocked instead of new', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
+  await runReadwiseReaderImport();
+  const importedNode = openDatabaseConnection().sqlite
+    .prepare(`SELECT last_node_id FROM keep_import_items WHERE source_path = 'Highlighted.md'`)
+    .get() as { last_node_id: string };
+  softDeleteNodes({
+    deletedAt: '2026-05-12T00:00:00.000Z',
+    nodeIds: [importedNode.last_node_id]
+  });
+
+  const preview = await previewReadwiseReaderImport();
+
+  expect(preview).toMatchObject({ write_count: 0 });
+  expect(preview.entries).toContainEqual(
+    expect.objectContaining({
+      detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+      source_path: 'Highlighted.md',
+      status: 'blocked_deleted'
+    })
+  );
 });
 
 it('returns a failed entry when a configured Readwise folder cannot be scanned', async () => {

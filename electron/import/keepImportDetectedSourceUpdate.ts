@@ -29,6 +29,7 @@ function persistSourceUpdateState(
     hasSourceUpdate: true,
     highlightSourceMtimeMs: sourceSignature.highlight?.mtimeMs ?? null,
     highlightSourceSizeBytes: sourceSignature.highlight?.sizeBytes ?? null,
+    localNodeState: existingItem.local_node_state,
     lastImportedAt: existingItem.last_imported_at,
     lastNodeId: existingItem.last_node_id,
     lastSeenAt: importedAt,
@@ -36,7 +37,8 @@ function persistSourceUpdateState(
     ruleId: config.ruleId,
     sourceMtimeMs: sourceSignature.primary.mtimeMs,
     sourcePath,
-    sourceSizeBytes: sourceSignature.primary.sizeBytes
+    sourceSizeBytes: sourceSignature.primary.sizeBytes,
+    sourceState: existingItem.source_state
   });
 }
 

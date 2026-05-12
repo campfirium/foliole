@@ -212,7 +212,7 @@ export function ImportSourceTable({
   onPreviewKeepImport: (sourceId: string) => void;
 }) {
   return (
-    <div className={settingsActionTableClassName()} role="table" aria-label="Import source folders">
+    <div className={settingsActionTableClassName()} role="table" aria-label="Watch folders">
       <TableHeader />
       {sources.map((source) => (
         <SourceRow

@@ -33,6 +33,7 @@ interface ImportRunRow extends DatabaseRow {
 interface KeepImportItemRow extends DatabaseRow {
   first_seen_at: string;
   has_source_update: number;
+  local_node_state: 'active' | 'locally_deleted' | 'not_imported';
   last_imported_at: string | null;
   last_seen_at: string;
   last_status: 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported';
@@ -40,6 +41,7 @@ interface KeepImportItemRow extends DatabaseRow {
   source_mtime_ms: number;
   source_path: string;
   source_size_bytes: number;
+  source_state: 'missing' | 'present';
 }
 
 interface PdfPageDimensionRow extends DatabaseRow {
@@ -146,6 +148,8 @@ function readKeepImportItem(driver: DatabaseDriver, nodeId: string) {
          source_path,
          source_mtime_ms,
          source_size_bytes,
+         source_state,
+         local_node_state,
          has_source_update,
          last_status,
          first_seen_at,

@@ -41,6 +41,7 @@ const NODE_SOURCE_DETAILS_PAYLOAD = {
     last_imported_at: '2026-03-22T10:00:00.000Z',
     last_seen_at: '2026-03-22T10:01:00.000Z',
     last_status: 'imported',
+    local_node_state: 'active',
     primary_path: '/tmp/readwise/Full Document Contents/Articles',
     rule_id: 'draft-import-source-1',
     rule_label: 'Readwise articles',
@@ -48,6 +49,7 @@ const NODE_SOURCE_DETAILS_PAYLOAD = {
     source_mtime_ms: 123,
     source_path: '/tmp/readwise/Full Document Contents/Articles/note.md',
     source_size_bytes: 456,
+    source_state: 'present',
     source_type: 'readwise'
   },
   pdf_page_dimensions: [
@@ -113,6 +115,7 @@ it('normalizes node source details from the runtime bridge', async () => {
       lastImportedAt: '2026-03-22T10:00:00.000Z',
       lastSeenAt: '2026-03-22T10:01:00.000Z',
       lastStatus: 'imported',
+      localNodeState: 'active',
       primaryPath: '/tmp/readwise/Full Document Contents/Articles',
       ruleId: 'draft-import-source-1',
       ruleLabel: 'Readwise articles',
@@ -120,6 +123,7 @@ it('normalizes node source details from the runtime bridge', async () => {
       sourceMtimeMs: 123,
       sourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
       sourceSizeBytes: 456,
+      sourceState: 'present',
       sourceType: 'readwise'
     },
     pdfPageDimensions: [
