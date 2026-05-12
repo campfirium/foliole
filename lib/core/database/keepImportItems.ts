@@ -1,6 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 
-export type KeepImportItemStatus = 'blocked_deleted' | 'degraded' | 'duplicate' | 'failed' | 'imported';
+export type KeepImportItemStatus = 'blocked_deleted' | 'degraded' | 'discovered' | 'duplicate' | 'failed' | 'imported';
 export type KeepImportSourceState = 'missing' | 'present';
 export type KeepImportLocalNodeState = 'active' | 'locally_deleted' | 'not_imported';
 
@@ -67,6 +67,71 @@ export function readKeepImportNodeState(driver: DatabaseDriver, nodeId: string) 
        WHERE id = ?`,
       [nodeId]
     ) ?? null
+  );
+}
+
+export function listPresentKeepImportItems(driver: DatabaseDriver) {
+  return driver.queryAll<KeepImportItemRow>(
+    `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
+            highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
+            has_source_update, last_node_id,
+            last_status, first_seen_at, last_seen_at, last_imported_at
+     FROM keep_import_items
+     WHERE source_state = 'present'
+     ORDER BY last_seen_at DESC, source_path ASC`
+  );
+}
+
+export function listRemovedKeepImportItems(driver: DatabaseDriver) {
+  return driver.queryAll<KeepImportItemRow>(
+    `SELECT rule_id, source_path, source_mtime_ms, source_size_bytes,
+            highlight_source_mtime_ms, highlight_source_size_bytes, source_state, local_node_state,
+            has_source_update, last_node_id,
+            last_status, first_seen_at, last_seen_at, last_imported_at
+     FROM keep_import_items
+     WHERE source_state = 'present'
+       AND local_node_state = 'locally_deleted'
+       AND last_status = 'blocked_deleted'
+     ORDER BY last_seen_at DESC, source_path ASC`
+  );
+}
+
+export function markKeepImportItemsLocallyDeletedByNodeIds(
+  driver: DatabaseDriver,
+  nodeIds: string[],
+  deletedAt: string
+) {
+  if (nodeIds.length === 0) {
+    return;
+  }
+  const placeholders = nodeIds.map(() => '?').join(', ');
+  driver.execute(
+    `UPDATE keep_import_items
+     SET local_node_state = 'locally_deleted',
+         last_status = 'blocked_deleted',
+         last_seen_at = ?
+     WHERE source_state = 'present'
+       AND last_node_id IN (${placeholders})`,
+    [deletedAt, ...nodeIds]
+  );
+}
+
+export function markMissingKeepImportItems(driver: DatabaseDriver, ruleId: string, presentSourcePaths: string[]) {
+  if (presentSourcePaths.length === 0) {
+    driver.execute(
+      `UPDATE keep_import_items
+       SET source_state = 'missing'
+       WHERE rule_id = ?`,
+      [ruleId]
+    );
+    return;
+  }
+  const placeholders = presentSourcePaths.map(() => '?').join(', ');
+  driver.execute(
+    `UPDATE keep_import_items
+     SET source_state = 'missing'
+     WHERE rule_id = ? AND source_path NOT IN (${placeholders})`,
+    [ruleId, ...presentSourcePaths]
   );
 }
 

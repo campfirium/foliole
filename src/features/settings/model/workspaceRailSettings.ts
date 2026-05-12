@@ -41,15 +41,6 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'ClipboardPlus'
   },
   {
-    id: 'system.import-management',
-    commandId: APP_COMMAND_IDS.openImportManagement,
-    section: 'top',
-    order: 2,
-    visible: true,
-    source: 'system',
-    iconId: 'Folders'
-  },
-  {
     id: 'fixed.review',
     commandId: APP_COMMAND_IDS.startStudyMode,
     section: 'fixed',
@@ -76,7 +67,6 @@ const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed
 export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
   [APP_COMMAND_IDS.importSingleFile]: 'Import',
   [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
-  [APP_COMMAND_IDS.openImportManagement]: 'Watch Manager',
   [APP_COMMAND_IDS.startStudyMode]: 'Study',
   [APP_COMMAND_IDS.openSettings]: 'Settings'
 };
@@ -97,8 +87,12 @@ function isWorkspaceRailSection(value: string): value is WorkspaceRailSection {
   return WORKSPACE_RAIL_SECTIONS.includes(value as WorkspaceRailSection);
 }
 
+function isRetiredRailCommand(commandId: string) {
+  return commandId === APP_COMMAND_IDS.openImportManagement;
+}
+
 function isValidPersistedItem(item: WorkspaceRailItemConfig) {
-  return Boolean(item.id && item.commandId && isWorkspaceRailSection(item.section));
+  return Boolean(item.id && item.commandId && !isRetiredRailCommand(item.commandId) && isWorkspaceRailSection(item.section));
 }
 
 function normalizeDefaultItem(item: WorkspaceRailItemConfig) {

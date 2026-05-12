@@ -96,12 +96,13 @@ function findAvailableOccurrence(
 
 function collectAnchorExcerptCandidates(highlight: PreparedImportHighlightRecord) {
   const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
-  const candidates = highlight.locatorText
+  const candidates = [highlightText, highlight.content.trim()];
+  const locatorCandidates = highlight.locatorText
     ? collectBoundaryFragments(highlightText)
         .map((fragment) => trimMatchedExcerpt(highlight.locatorText ?? '', highlightText, fragment))
         .filter((candidate) => !isUntrimmedLocatorCandidate(candidate, highlight.locatorText ?? '', highlightText))
     : [];
-  candidates.push(highlightText, highlight.content.trim());
+  candidates.push(...locatorCandidates);
   return Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
 }
 

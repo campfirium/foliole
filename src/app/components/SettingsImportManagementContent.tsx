@@ -55,7 +55,7 @@ export function SettingsImportManagementContent(props: {
     <div className="space-y-6">
       <TitleStrategySection onChange={props.onChangeTitleStrategy} titleStrategy={props.titleStrategy} />
       <SettingsSection
-        ariaLabel="Watch Manager folders"
+        ariaLabel="Watch folders"
         description="Restore and adjust the long-running import folders directly here."
         title="Watch folders"
       >

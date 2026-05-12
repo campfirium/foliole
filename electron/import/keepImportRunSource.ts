@@ -110,7 +110,8 @@ async function persistBlockedDeletedKeepImport(
 
 export async function runSingleKeepImportSource(
   config: KeepImportRuleConfig,
-  source: DirectoryImportSourceDescriptor
+  source: DirectoryImportSourceDescriptor,
+  options: { forceTopicImport?: boolean } = {}
 ): Promise<KeepImportRunEntry> {
   const preview = await classifySource(config, source);
   if (
@@ -135,7 +136,7 @@ export async function runSingleKeepImportSource(
   if (preview.status === 'blocked_deleted') {
     return persistBlockedDeletedKeepImport(config, source, preview.detail, preview.status);
   }
-  if (config.sourceType === 'readwise') {
+  if (config.sourceType === 'readwise' && !options.forceTopicImport) {
     const readwiseResult = await runReadwiseDestination(config, source, preview.status);
     if (readwiseResult) {
       return readwiseResult;

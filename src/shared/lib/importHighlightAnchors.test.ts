@@ -44,6 +44,67 @@ it('uses locator text as context while anchoring only the highlight text', () =>
   ]);
 });
 
+it('prefers the full highlight text before fragment-bounded locator candidates', () => {
+  vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('44444444-4444-4444-4444-444444444444');
+  const anchorId = 'imported-highlight-44444444-4444-4444-4444-444444444444';
+  const content = [
+    '1. First step.',
+    '',
+    '2. Second step.',
+    '',
+    '3. Third step.',
+    '',
+    '4. Fourth step.',
+    '',
+    '5. Fifth step.',
+    '',
+    'Closing sentence with tail.'
+  ].join('\n');
+  const highlightText = [
+    '1. First step.',
+    '2. Second step.',
+    '3. Third step.',
+    '4. Fourth step.',
+    '5. Fifth step.',
+    'Closing sentence'
+  ].join('\n');
+
+  const anchored = applyImportedHighlightAnchors({
+    content,
+    highlights: [
+      {
+        content: highlightText,
+        label: null,
+        locatorText: '4. Fourth step.'
+      }
+    ]
+  });
+
+  expect(anchored.highlights).toEqual([
+    {
+      anchorId,
+      content: highlightText,
+      from: 0,
+      kind: 'highlight',
+      label: null,
+      locatorText: [
+        '1. First step.',
+        '',
+        '2. Second step.',
+        '',
+        '3. Third step.',
+        '',
+        '4. Fourth step.',
+        '',
+        '5. Fifth step.',
+        '',
+        'Closing sentence'
+      ].join('\n'),
+      to: 98
+    }
+  ]);
+});
+
 it('anchors a fragment-bounded parent range when the highlight text differs in the middle', () => {
   vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('33333333-3333-3333-3333-333333333333');
   const anchored = applyImportedHighlightAnchors({

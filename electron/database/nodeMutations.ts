@@ -17,6 +17,7 @@ import type {
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { markKeepImportItemsLocallyDeletedByNodeIds } from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { withTransaction } from './transaction.js';
@@ -117,7 +118,9 @@ export function restoreNodes(input: RestoreNodesInput): void {
 
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
   const connection = openDatabaseConnection();
+  const deletedAt = new Date().toISOString();
   const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
+  markKeepImportItemsLocallyDeletedByNodeIds(input.nodeIds, deletedAt);
   const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, input);
   withTransaction(connection.driver, () => {
     cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);

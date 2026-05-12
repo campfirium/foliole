@@ -26,12 +26,18 @@ function countEntries(
   destination: NativeReadwiseSyncPreviewDestination
 ) {
   return entries.filter(
-    (entry) => entry.highlight_type === type && entry.destination === destination
+    (entry) =>
+      entry.highlight_type === type &&
+      entry.destination === destination &&
+      (entry.status === 'new' || entry.status === 'updated')
   ).length;
 }
 
 function ReadwisePreviewSummary({ preview }: { preview: NativeReadwiseSyncPreviewResult }) {
   const rows = [
+    { count: preview.active_count, label: 'already in Foliole' },
+    { count: preview.trash_count, label: 'in Trash' },
+    { count: preview.removed_import_count, label: 'in Removed Imports' },
     {
       count: countEntries(preview.entries, 'with_highlights', 'inbox'),
       label: 'with highlights to Inbox'
@@ -84,7 +90,13 @@ function ReadwisePreviewList({ entries }: { entries: NativeReadwiseSyncPreviewEn
             {entry.highlight_type === 'with_highlights' ? 'With highlights' : 'Without highlights'}
           </div>
           <div className="text-right font-medium text-foreground/72">
-            {DESTINATION_LABELS[entry.destination]}
+            {entry.status === 'blocked_deleted'
+              ? entry.blocked_location === 'trash'
+                ? 'Trash'
+                : 'Removed Imports'
+              : entry.status === 'unchanged'
+                ? 'Synced'
+                : DESTINATION_LABELS[entry.destination]}
           </div>
         </div>
       ))}

@@ -190,10 +190,35 @@ it('marks locally deleted Readwise sources as blocked instead of new', async () 
 
   const preview = await previewReadwiseReaderImport();
 
-  expect(preview).toMatchObject({ write_count: 0 });
+  expect(preview).toMatchObject({ blocked_count: 1, removed_import_count: 0, trash_count: 1, write_count: 0 });
   expect(preview.entries).toContainEqual(
     expect.objectContaining({
+      blocked_location: 'trash',
       detail: 'This source was deleted in Foliole and will stay blocked until you import it again manually.',
+      source_path: 'Highlighted.md',
+      status: 'blocked_deleted'
+    })
+  );
+});
+
+it('counts hard-deleted Readwise sources as removed imports during preview', async () => {
+  const fixture = await seedReadwiseFixture();
+  saveReadwiseSettings(fixture, { withHighlightsDestination: 'inbox', withoutHighlightsDestination: 'off' });
+  await runReadwiseReaderImport();
+  openDatabaseConnection().sqlite
+    .prepare(
+      `UPDATE keep_import_items
+       SET last_node_id = 'missing-node', local_node_state = 'locally_deleted', last_status = 'blocked_deleted'
+       WHERE source_path = 'Highlighted.md'`
+    )
+    .run();
+
+  const preview = await previewReadwiseReaderImport();
+
+  expect(preview).toMatchObject({ blocked_count: 1, removed_import_count: 1, trash_count: 0, write_count: 0 });
+  expect(preview.entries).toContainEqual(
+    expect.objectContaining({
+      blocked_location: 'removed_import',
       source_path: 'Highlighted.md',
       status: 'blocked_deleted'
     })

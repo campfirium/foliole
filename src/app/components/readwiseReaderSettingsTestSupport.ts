@@ -2,6 +2,8 @@ import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/read
 
 export function createReadwiseImportPreview() {
   return {
+    active_count: 0,
+    blocked_count: 0,
     entries: [
       {
         destination: 'inbox',
@@ -19,7 +21,9 @@ export function createReadwiseImportPreview() {
     off_count: 0,
     previewed_at: '2026-05-11T00:00:00.000Z',
     readwise_root_path: '/Readwise',
+    trash_count: 0,
     total_count: 1,
+    removed_import_count: 0,
     with_highlights_count: 1,
     without_highlights_count: 0,
     write_count: 1

@@ -14,6 +14,7 @@ import type {
   NativeTextImportResult
 } from './nativeImportContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
+import type { NativeRestoreUnsyncedSourceArgs, NativeRestoreUnsyncedSourceResult, NativeUnsyncedSourcesResult } from './nativeUnsyncedSourcesContract.js';
 
 export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.runTextFileImport]: {
@@ -49,6 +50,14 @@ export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.loadImportOverview]: {
     args: undefined;
     result: NativeImportOverview;
+  };
+  [NATIVE_COMMANDS.loadUnsyncedSources]: {
+    args: undefined;
+    result: NativeUnsyncedSourcesResult;
+  };
+  [NATIVE_COMMANDS.restoreUnsyncedSource]: {
+    args: NativeRestoreUnsyncedSourceArgs;
+    result: NativeRestoreUnsyncedSourceResult;
   };
   [NATIVE_COMMANDS.loadPdfImportsInventory]: {
     args: undefined;

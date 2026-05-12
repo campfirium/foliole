@@ -50,6 +50,9 @@ function resolveTrackingStatus(
   if (!existingItem) {
     return 'new' as const;
   }
+  if (existingItem.last_status === 'discovered' && !existingItem.last_node_id) {
+    return 'new' as const;
+  }
   const nodeState = existingItem.last_node_id
     ? readKeepImportNodeState(existingItem.last_node_id)
     : null;
@@ -57,6 +60,25 @@ function resolveTrackingStatus(
     return 'blocked_deleted' as const;
   }
   return primaryChanged || highlightChanged ? 'updated' : 'unchanged';
+}
+
+function resolveBlockedLocation(ruleId: string, source: DirectoryImportSourceDescriptor) {
+  const existingItem = readKeepImportItem(ruleId, source.sourceName);
+  const nodeState = existingItem?.last_node_id
+    ? readKeepImportNodeState(existingItem.last_node_id)
+    : null;
+  return nodeState?.deleted_at ? 'trash' : 'removed_import';
+}
+
+function resolveLocationCounts(entries: ReadwiseSyncPreviewEntry[]) {
+  const activeCount = entries.filter((entry) => entry.status === 'unchanged').length;
+  const blockedEntries = entries.filter((entry) => entry.status === 'blocked_deleted');
+  return {
+    activeCount,
+    blockedCount: blockedEntries.length,
+    removedImportCount: blockedEntries.filter((entry) => entry.blocked_location !== 'trash').length,
+    trashCount: blockedEntries.filter((entry) => entry.blocked_location === 'trash').length,
+  };
 }
 
 async function buildSourceEntry(
@@ -82,6 +104,7 @@ async function buildSourceEntry(
           hasPrimarySourceChanged(existingItem, sourceSignature)
         );
   return {
+    blocked_location: status === 'blocked_deleted' ? resolveBlockedLocation(readwiseSource.id, source) : undefined,
     destination: decision.destination,
     detail:
       decision.destination === 'off'
@@ -132,6 +155,8 @@ export async function previewReadwiseReaderImport(
     : loadImportManagerSettings();
   if (!settings.readwiseReaderConfig.enabled) {
     return {
+      active_count: 0,
+      blocked_count: 0,
       entries: [],
       external_count: 0,
       failed_count: 0,
@@ -139,6 +164,8 @@ export async function previewReadwiseReaderImport(
       off_count: 0,
       previewed_at: new Date().toISOString(),
       readwise_root_path: settings.readwiseRootPath,
+      removed_import_count: 0,
+      trash_count: 0,
       total_count: 0,
       with_highlights_count: 0,
       without_highlights_count: 0,
@@ -152,7 +179,10 @@ export async function previewReadwiseReaderImport(
         .map((source) => previewReadwiseSource(source, settings))
     )
   ).flat();
+  const locationCounts = resolveLocationCounts(entries);
   return {
+    active_count: locationCounts.activeCount,
+    blocked_count: locationCounts.blockedCount,
     entries,
     external_count: entries.filter((entry) => entry.destination === 'external').length,
     failed_count: entries.filter((entry) => entry.status === 'failed').length,
@@ -160,13 +190,15 @@ export async function previewReadwiseReaderImport(
     off_count: entries.filter((entry) => entry.destination === 'off').length,
     previewed_at: new Date().toISOString(),
     readwise_root_path: settings.readwiseRootPath,
+    removed_import_count: locationCounts.removedImportCount,
+    trash_count: locationCounts.trashCount,
     total_count: entries.length,
     with_highlights_count: entries.filter((entry) => entry.highlight_type === 'with_highlights')
       .length,
     without_highlights_count: entries.filter(
       (entry) => entry.highlight_type === 'without_highlights'
     ).length,
-    write_count: entries.filter((entry) => entry.destination !== 'off' && entry.status !== 'failed' && entry.status !== 'blocked_deleted')
+    write_count: entries.filter((entry) => entry.destination !== 'off' && (entry.status === 'new' || entry.status === 'updated'))
       .length
   };
 }

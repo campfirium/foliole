@@ -3,22 +3,26 @@ import { Search } from 'lucide-react';
 import { AppInput, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 export function ImportManagementSearchBar({
+  ariaLabel = 'Import search',
   countLabel,
+  fieldLabel = 'Import search field',
   onChange,
   placeholder,
   value
 }: {
+  ariaLabel?: string;
   countLabel: string;
+  fieldLabel?: string;
   onChange: (value: string) => void;
   placeholder: string;
   value: string;
 }) {
   return (
     <AppToolbar
-      ariaLabel="Watch Manager search"
+      ariaLabel={ariaLabel}
       className="min-h-10 justify-between gap-3 rounded-lg border border-border bg-bg-panel px-3 py-2"
     >
-      <ToolbarActionGroup ariaLabel="Watch Manager search field" className="min-w-0 flex-1 gap-2 border-0">
+      <ToolbarActionGroup ariaLabel={fieldLabel} className="min-w-0 flex-1 gap-2 border-0">
         <Search aria-hidden="true" className="shrink-0 text-foreground/45" size={14} strokeWidth={1.8} />
         <AppInput
           aria-label={placeholder}

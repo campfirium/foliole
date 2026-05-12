@@ -12,6 +12,7 @@ import {
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
+import { restoreUnsyncedSource } from '../import/unsyncedSourceRestore.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import {
@@ -38,6 +39,7 @@ import {
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
+import { loadUnsyncedSources } from './unsyncedSourcesPayload.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function completeWorkspaceMutation(result: unknown = null) {
@@ -157,6 +159,9 @@ async function handleStorageReadCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();
   }
+  if (command === NATIVE_COMMANDS.loadUnsyncedSources) {
+    return loadUnsyncedSources();
+  }
   if (command === NATIVE_COMMANDS.loadPdfImportsInventory) {
     return toNativePdfImportsInventory();
   }
@@ -187,6 +192,13 @@ async function handleImportMutationCommand(
   if (command === NATIVE_COMMANDS.resetImportData) {
     const result = resetImportData();
     if (result.deletedNodeCount > 0) {
+      notifyWorkspaceContentChanged();
+    }
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.restoreUnsyncedSource) {
+    const result = await restoreUnsyncedSource(asString(args.rule_id, 'rule_id'), asString(args.source_path, 'source_path'));
+    if (result.status === 'restored' && result.node_id) {
       notifyWorkspaceContentChanged();
     }
     return result;

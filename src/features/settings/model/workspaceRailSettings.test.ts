@@ -40,8 +40,7 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
 
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'top'))).toEqual([
     'system.import-file',
-    'system.import-clipboard',
-    'system.import-management'
+    'system.import-clipboard'
   ]);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
@@ -74,14 +73,20 @@ it('keeps locked fixed items visible and in the fixed section', () => {
   expect(moved.find((item) => item.id === 'fixed.settings')?.section).toBe('fixed');
 });
 
-it('hides system items instead of removing them', () => {
-  const nextItems = removeWorkspaceRailItem(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-management');
-  const importManagement = nextItems.find((item) => item.id === 'system.import-management');
+it('drops retired import management items from persisted rail settings', () => {
+  const nextItems = normalizeWorkspaceRailItems([
+    ...DEFAULT_WORKSPACE_RAIL_ITEMS,
+    {
+      id: 'system.import-management',
+      commandId: APP_COMMAND_IDS.openImportManagement,
+      section: 'top',
+      order: 2,
+      visible: true,
+      source: 'system'
+    }
+  ]);
 
-  expect(importManagement).toMatchObject({
-    source: 'system',
-    visible: false
-  });
+  expect(nextItems.some((item) => item.id === 'system.import-management')).toBe(false);
 });
 
 it('removes user items without affecting the bound command', () => {
@@ -106,7 +111,7 @@ it('removes user items without affecting the bound command', () => {
 it('moves ordinary items across top and bottom sections', () => {
   const moved = moveWorkspaceRailItem(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-file', 'bottom', 0);
 
-  expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual(['system.import-clipboard', 'system.import-management']);
+  expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual(['system.import-clipboard']);
   expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file']);
 });
 
@@ -128,16 +133,15 @@ it('adds a new action to the top rail by default', () => {
   expect(itemIds(getWorkspaceRailSectionItems(nextItems, 'top'))).toEqual([
     'system.import-file',
     'system.import-clipboard',
-    'system.import-management',
     'user.document-findInTopic'
   ]);
 });
 
 it('resets the rail model back to the default layout', () => {
-  const changed = toggleWorkspaceRailItemVisibility(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-management', false);
+  const changed = toggleWorkspaceRailItemVisibility(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-clipboard', false);
   const reset = resetWorkspaceRailItems();
 
-  expect(changed.find((item) => item.id === 'system.import-management')?.visible).toBe(false);
+  expect(changed.find((item) => item.id === 'system.import-clipboard')?.visible).toBe(false);
   expect(reset).toEqual(normalizeWorkspaceRailItems(DEFAULT_WORKSPACE_RAIL_ITEMS));
 });
 

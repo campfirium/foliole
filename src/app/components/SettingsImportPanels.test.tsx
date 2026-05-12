@@ -6,7 +6,7 @@ import { createDefaultImportManagerSettings } from '../../../lib/core/import/imp
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
-it('shows the restored Watch Manager table directly in settings', () => {
+it('shows watch folders directly in settings', () => {
   const settings = createDefaultImportManagerSettings();
 
   render(

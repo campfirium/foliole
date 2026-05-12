@@ -102,6 +102,9 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 36,
     migrate: (sqlite) => {
+      if (!tableExists(sqlite, 'keep_import_items')) {
+        return;
+      }
       addColumnIfMissing(sqlite, 'keep_import_items', 'source_state', "TEXT NOT NULL DEFAULT 'present'");
       addColumnIfMissing(sqlite, 'keep_import_items', 'local_node_state', "TEXT NOT NULL DEFAULT 'not_imported'");
       sqlite.exec(

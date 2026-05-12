@@ -43,9 +43,10 @@ export async function classifySource(
   const sourcePath = source.sourceName;
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   const { deleted, existingItem } = isBlockedByDeletedNode(config.ruleId, sourcePath);
+  const notImported = existingItem?.last_status === 'discovered' && !existingItem.last_node_id;
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
   const highlightChanged = config.sourceType === 'readwise' ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
-  if (existingItem && !deleted && !primaryChanged && !highlightChanged) {
+  if (existingItem && !notImported && !deleted && !primaryChanged && !highlightChanged) {
     return {
       contentPreview: null,
       detail: 'No file changes detected since the last keep scan.',
@@ -69,14 +70,14 @@ export async function classifySource(
       detail:
         deleted
           ? 'This source was deleted in Foliole and will stay blocked until you import it again manually.'
-          : !existingItem
+          : !existingItem || notImported
             ? 'New file will be imported when enabled.'
             : highlightChanged && !primaryChanged
               ? 'Highlight file changed and will refresh highlight updates.'
               : 'Content file changed and will be refreshed when enabled.',
       highlightSamples: highlightPreview.samples,
       sourcePath,
-      status: deleted ? 'blocked_deleted' : !existingItem ? 'new' : 'updated'
+      status: deleted ? 'blocked_deleted' : !existingItem || notImported ? 'new' : 'updated'
     };
   } catch (error) {
     return {

@@ -3,6 +3,7 @@ import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeImp
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { logReadwiseScanFailed, logReadwiseScanStarted } from './importRunLogger.js';
+import { reconcileKeepImportCatalog } from './keepImportCatalogReconcile.js';
 import { shouldKeepImportReadwiseSource } from './keepImportPreparedRecord.js';
 import { buildKeepImportPreviewResult } from './keepImportPreviewResult.js';
 import { logReadwiseRunCompleted, shouldLogReadwiseScan, type KeepImportRunEntry } from './keepImportReadwiseLogging.js';
@@ -34,6 +35,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
   }
   try {
     const discoveredSources = await discoverDirectoryImportSources(config.directoryPath);
+    await reconcileKeepImportCatalog(config, discoveredSources);
     const importableSources = (
       await Promise.all(
         discoveredSources.map(async (source) => ((await shouldKeepImportReadwiseSource(config, source)) ? source : null))

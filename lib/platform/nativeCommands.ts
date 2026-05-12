@@ -26,6 +26,8 @@ export const NATIVE_COMMANDS = {
   mergeReadwiseTopicHighlights: 'merge_readwise_topic_highlights',
   previewKeepImportRule: 'preview_keep_import_rule',
   loadImportOverview: 'load_import_overview',
+  loadUnsyncedSources: 'load_unsynced_sources',
+  restoreUnsyncedSource: 'restore_unsynced_source',
   loadPdfImportsInventory: 'load_pdf_imports_inventory',
   loadImportManagerSettings: 'load_import_manager_settings',
   runClipboardImport: 'run_clipboard_import',

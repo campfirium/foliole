@@ -51,12 +51,6 @@ const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
-  {
-    id: APP_COMMAND_IDS.openImportManagement,
-    title: 'Watch Manager',
-    section: 'Import',
-    keywords: ['watch', 'manager', 'import', 'readwise', 'inbox']
-  },
   { id: APP_COMMAND_IDS.resetImportData, title: 'DEV Reset Import Data', section: 'Developer', keywords: ['dev', 'debug', 'import', 'reset', 'clear', 'records'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
