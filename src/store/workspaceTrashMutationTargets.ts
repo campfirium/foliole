@@ -1,5 +1,6 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
+import { resolveTrashRootId } from '../features/nodes/model/trashRootModel';
 
 import { collectNodeSubtreeIds, findFallbackActiveNodeId } from './workspaceHelpers';
 import type { WorkspaceState } from './workspaceStore';
@@ -34,6 +35,26 @@ export function collectDeletedNodeIds(
     }
   }
   return deletedNodeIds;
+}
+
+export function collectTrashRootActionTargets(state: WorkspaceState, nodeIds: string[]) {
+  return [
+    ...new Set(
+      nodeIds
+        .map((nodeId) => resolveTrashRootId(nodeId, state.nodesById, state.trashedNodeIds))
+        .filter((nodeId): nodeId is string => Boolean(nodeId))
+    )
+  ];
+}
+
+export function collectDeleteActionTargets(state: WorkspaceState, nodeIds: string[]) {
+  return [
+    ...new Set(
+      nodeIds
+        .map((nodeId) => resolveTrashRootId(nodeId, state.nodesById, state.trashedNodeIds) ?? nodeId)
+        .filter((nodeId) => Boolean(state.nodesById[nodeId]))
+    )
+  ];
 }
 
 export function resolveFallbackFromTargets(

@@ -7,7 +7,8 @@ import { useNodeListContextMenu } from '../../features/nodes/components/NodeList
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
 import { TrashListRows } from '../../features/nodes/components/TrashListRows';
-import { buildFlatNodeRows, filterNodeTreeRowsByTitle } from '../../features/nodes/model/nodeTree';
+import { buildFlatNodeRows } from '../../features/nodes/model/nodeTree';
+import { filterTrashRootIdsByTitle, selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { AppEmptyState, AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -29,12 +30,11 @@ function useTrashRows(props: TrashResultListPanelProps, searchQuery: string) {
   const deletedAtById = useWorkspaceStore((state) => state.trashedNodeDeletedAtById);
   const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['deletedAt', 'name']);
   const rows = useMemo(() => {
-    const trashRows = buildFlatNodeRows(
-      props.nodeOrder.filter((nodeId) => props.trashedNodeIds.includes(nodeId)),
-      props.nodesById
-    );
+    const rootIds = selectTrashRootIds(props.nodeOrder, props.nodesById, props.trashedNodeIds);
+    const filteredRootIds = filterTrashRootIdsByTitle(rootIds, props.nodeOrder, props.nodesById, props.trashedNodeIds, searchQuery);
+    const trashRows = buildFlatNodeRows(filteredRootIds, props.nodesById);
     const sortedRows = sortTrashContentRows(trashRows, normalizedSort, deletedAtById);
-    return searchQuery.trim() ? filterNodeTreeRowsByTitle(sortedRows, searchQuery) : sortedRows;
+    return sortedRows;
   }, [deletedAtById, normalizedSort, props.nodeOrder, props.nodesById, props.trashedNodeIds, searchQuery]);
 
   return { contentSort, normalizedSort, rows };

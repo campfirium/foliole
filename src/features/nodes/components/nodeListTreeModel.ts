@@ -5,6 +5,7 @@ import { onWindowKeydown } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
 import { buildNodeTree } from '../model/nodeTree';
 import { VIRTUAL_ROOT_NODE_ID, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
+import { selectTrashRootIds } from '../model/trashRootModel';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useCollapsedNodeState } from './NodeListCollapseState';
@@ -86,7 +87,10 @@ function useNodeListTreeData(
       ),
     [nodeOrder, nodesById, trashedNodeIds]
   );
-  const trashedNodeOrder = useMemo(() => nodeOrder.filter((id) => trashedNodeIds.includes(id)), [nodeOrder, trashedNodeIds]);
+  const trashedNodeOrder = useMemo(
+    () => selectTrashRootIds(nodeOrder, nodesById, trashedNodeIds),
+    [nodeOrder, nodesById, trashedNodeIds]
+  );
   const noteTree = useMemo(() => measureBuiltTree(visibleNodeOrder, nodesById), [visibleNodeOrder, nodesById]);
   const trashTree = useMemo(() => measureBuiltTree(trashedNodeOrder, nodesById), [trashedNodeOrder, nodesById]);
   const virtualTree = useMemo(() => measureBuiltTree(virtualNodeOrder, nodesById), [virtualNodeOrder, nodesById]);
@@ -208,6 +212,7 @@ function buildNodeListTreeModelResult(
     returnNode: workspace.relearnNode,
     reviewSession: workspace.reviewSession,
     state,
+    trashedNodeIds: workspace.trashedNodeIds,
     trashTreeBuildDurationMs: treeData.trashTreeBuildDurationMs,
     updateNodeTitle: workspace.updateNodeTitle,
     virtualTreeBuildDurationMs: treeData.virtualTreeBuildDurationMs

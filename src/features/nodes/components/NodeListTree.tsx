@@ -36,6 +36,7 @@ function buildNodeListTreeContentProps(args: {
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   model: ReturnType<typeof useNodeListTreeModel>;
+  nodeOrder: NodeListTreeProps['nodeOrder'];
   nodesById: NodeListTreeProps['nodesById'];
   onOpenMoveToNode: NodeListTreeProps['onOpenMoveToNode'];
   onOpenNotesView: NodeListTreeProps['onOpenNotesView'];
@@ -62,6 +63,7 @@ function buildNodeListTreeContentProps(args: {
     isTrashViewOpen: args.isTrashViewOpen,
     isVirtualViewOpen: args.isVirtualViewOpen,
     moveNodes: args.model.moveNodes,
+    nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
     onOpenMoveToNode: args.onOpenMoveToNode,
     onOpenNotesView: args.onOpenNotesView,
@@ -75,6 +77,7 @@ function buildNodeListTreeContentProps(args: {
     showVirtualCreateAction: args.showVirtualCreateAction,
     showTitleSearch: args.showTitleSearch,
     state: args.model.state,
+    trashedNodeIds: args.model.trashedNodeIds,
     updateNodeTitle: args.model.updateNodeTitle
   };
 }
@@ -138,6 +141,7 @@ function NodeListTreeImpl({
     isTrashViewOpen,
     isVirtualViewOpen,
     model,
+    nodeOrder,
     nodesById,
     onOpenMoveToNode,
     onOpenNotesView,

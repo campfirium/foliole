@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetState
 
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import {
-  buildFlatNodeRows,
   buildNodeTree,
   buildVisibleNodeTreeRows,
   type NodeTreeRow
 } from '../model/nodeTree';
 import { isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
+import { selectTrashRootIds } from '../model/trashRootModel';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 export interface NodeSelectModifiers {
@@ -60,8 +60,8 @@ function useScopedNodeOrders(nodeOrder: string[], nodesById: WorkspaceListNodesB
     [nodeOrder, nodesById, trashedNodeIds]
   );
   const trashedNodeOrder = useMemo(
-    () => nodeOrder.filter((id) => trashedNodeIds.includes(id)),
-    [nodeOrder, trashedNodeIds]
+    () => selectTrashRootIds(nodeOrder, nodesById, trashedNodeIds),
+    [nodeOrder, nodesById, trashedNodeIds]
   );
 
   return { noteNodeOrder, trashedNodeOrder, virtualNodeOrder };
@@ -75,8 +75,8 @@ function useScopedNodeTrees(
     () => buildNodeTree(scopedNodeOrder.noteNodeOrder, nodesById),
     [scopedNodeOrder.noteNodeOrder, nodesById]
   );
-  const trashRowsAll = useMemo(
-    () => buildFlatNodeRows(scopedNodeOrder.trashedNodeOrder, nodesById),
+  const trashTree = useMemo(
+    () => buildNodeTree(scopedNodeOrder.trashedNodeOrder, nodesById),
     [scopedNodeOrder.trashedNodeOrder, nodesById]
   );
   const virtualTree = useMemo(
@@ -84,7 +84,7 @@ function useScopedNodeTrees(
     [scopedNodeOrder.virtualNodeOrder, nodesById]
   );
 
-  return { noteTree, trashRowsAll, virtualTree };
+  return { noteTree, trashTree, virtualTree };
 }
 
 export function useNodeListState(
@@ -97,14 +97,14 @@ export function useNodeListState(
 ): NodeListState {
   const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
   const scopedNodeOrder = useScopedNodeOrders(nodeOrder, nodesById, trashedNodeIds);
-  const { noteTree, trashRowsAll, virtualTree } = useScopedNodeTrees(scopedNodeOrder, nodesById);
+  const { noteTree, trashTree, virtualTree } = useScopedNodeTrees(scopedNodeOrder, nodesById);
   const noteRows = useMemo(
     () => buildVisibleNodeTreeRows(noteTree.rows, collapsedNoteNodeIds),
     [noteTree.rows, collapsedNoteNodeIds]
   );
   const trashRows = useMemo(
-    () => trashRowsAll,
-    [trashRowsAll]
+    () => trashTree.rows,
+    [trashTree.rows]
   );
   const virtualRows = useMemo(
     () => buildVisibleNodeTreeRows(virtualTree.rows, collapsedNoteNodeIds),
@@ -123,7 +123,7 @@ export function useNodeListState(
     noteRowsAll: noteTree.rows,
     noteParentById: noteTree.parentById,
     trashRows,
-    trashRowsAll,
+    trashRowsAll: trashTree.rows,
     virtualRows,
     virtualRowsAll: virtualTree.rows,
     noteRowIds: noteRows.map((row) => row.node.id),

@@ -125,6 +125,29 @@ describe('createWorkspaceNodeActions soft delete sync', () => {
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
     expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [nodeId] });
   });
+
+});
+
+describe('createWorkspaceNodeActions trash root normalization sync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('restores the highest trashed ancestor when a covered child is requested', () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const parentNodeId = actions.createRootNode('Folder', 'folder');
+    const childNodeId = actions.createChildNode(parentNodeId, 'Topic');
+
+    actions.deleteNode(parentNodeId);
+    vi.clearAllMocks();
+    actions.restoreNode(childNodeId);
+
+    expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [parentNodeId, childNodeId] });
+    expect(harness.getState().trashedNodeIds).not.toContain(parentNodeId);
+    expect(harness.getState().trashedNodeIds).not.toContain(childNodeId);
+  });
 });
 
 describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
@@ -189,6 +212,25 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
       nodeIds: [nodeId],
       nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
     });
+  });
+
+  it('permanently deletes the highest trashed ancestor when a covered child is requested', () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const parentNodeId = actions.createRootNode('Folder', 'folder');
+    const childNodeId = actions.createChildNode(parentNodeId, 'Topic');
+
+    actions.deleteNode(parentNodeId);
+    vi.clearAllMocks();
+    actions.deleteNodePermanently(childNodeId);
+
+    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
+      nodeIds: expect.arrayContaining([parentNodeId, childNodeId]),
+      nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+    });
+    expect(harness.getState().nodesById[parentNodeId]).toBeUndefined();
+    expect(harness.getState().nodesById[childNodeId]).toBeUndefined();
   });
 
   it('syncs multi-select permanent delete through one runtime bridge command', () => {

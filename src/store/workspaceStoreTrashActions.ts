@@ -4,6 +4,7 @@ import { collectNodeSubtreeIds } from './workspaceHelpers';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { computeDeleteNodesMutation, computeDeleteNodesPermanentlyMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
+import { collectDeleteActionTargets, collectTrashRootActionTargets } from './workspaceTrashMutationTargets';
 
 type WorkspaceSet = (
   partial:
@@ -214,17 +215,18 @@ function createRestoreNodeAction(set: WorkspaceSet, runtimeHandlers: TrashRuntim
     let idsToRestoreForSync: string[] = [];
 
     set((state) => {
-      if (!state.nodesById[nodeId] || !state.trashedNodeIds.includes(nodeId)) {
+      const rootNodeId = collectTrashRootActionTargets(state, [nodeId])[0];
+      if (!rootNodeId) {
         return state;
       }
-      idsToRestoreForSync = collectNodeSubtreeIds(nodeId, state.nodesById);
+      idsToRestoreForSync = collectNodeSubtreeIds(rootNodeId, state.nodesById);
       const idsToRestoreSet = new Set(idsToRestoreForSync);
       const nextTrashedNodeIds = state.trashedNodeIds.filter((id) => !idsToRestoreSet.has(id));
       const nextTrashedNodeDeletedAtById = { ...state.trashedNodeDeletedAtById };
       idsToRestoreForSync.forEach((id) => {
         delete nextTrashedNodeDeletedAtById[id];
       });
-      const nextActiveNodeId = state.activeNodeId ?? nodeId;
+      const nextActiveNodeId = state.activeNodeId ?? rootNodeId;
       const nextState = {
         ...state,
         activeNodeId: nextActiveNodeId,
@@ -253,7 +255,7 @@ function createDeleteNodesPermanentlyAction(
   return (nodeIds) => {
     let mutation: DeleteNodeMutationResult | null = null;
     set((state) => {
-      mutation = computeDeleteNodesPermanentlyMutation(state, nodeIds);
+      mutation = computeDeleteNodesPermanentlyMutation(state, collectDeleteActionTargets(state, nodeIds));
       return mutation ? mutation.patch : state;
     });
     syncPermanentDeleteMutation(runtimeHandlers, mutation);

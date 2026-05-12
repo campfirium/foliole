@@ -34,6 +34,7 @@ interface NodeListTreeContentProps {
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
   ) => boolean;
+  nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
@@ -47,6 +48,7 @@ interface NodeListTreeContentProps {
   showTitleSearch: boolean;
   showVirtualCreateAction?: boolean;
   state: NodeListState;
+  trashedNodeIds: string[];
   updateNodeTitle: (nodeId: string, title: string) => void;
 }
 
@@ -55,8 +57,11 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
     activeRows: props.activeRows,
     isTrashViewOpen: props.isTrashViewOpen,
     isVirtualViewOpen: props.isVirtualViewOpen,
+    nodeOrder: props.nodeOrder,
+    nodesById: props.nodesById,
     noteRowsAll: props.state.noteRowsAll,
-    trashRowsAll: props.state.trashRowsAll
+    trashRowsAll: props.state.trashRowsAll,
+    trashedNodeIds: props.trashedNodeIds
   });
 
   return (

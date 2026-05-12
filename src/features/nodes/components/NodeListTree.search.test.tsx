@@ -131,6 +131,70 @@ it('shows original path for trashed rows', () => {
   expect(screen.getByText('Folder A')).toBeInTheDocument();
 });
 
+it('shows only trash roots when a deleted folder covers its subtree', () => {
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    trashedNodeIds: ['folder-a', 'article-a', 'highlight-a']
+  }));
+
+  render(
+    <NodeListTree
+      activeNodeId={null}
+      isTrashViewOpen
+      isVirtualViewOpen={false}
+      nodeOrder={['folder-a', 'article-a', 'highlight-a']}
+      nodesById={{
+        'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+        'article-a': createNode({ id: 'article-a', kind: 'topic', parentNodeId: 'folder-a', title: 'React Notes' }),
+        'highlight-a': createNode({ id: 'highlight-a', kind: 'item', parentNodeId: 'article-a', title: 'Hook Summary' })
+      }}
+      onOpenMoveToNode={() => undefined}
+      onOpenNotesView={() => undefined}
+      onSelectNode={() => undefined}
+      onSelectTrashNode={() => undefined}
+      selectedTrashNodeId="folder-a"
+    />
+  );
+
+  expect(screen.getByRole('treeitem', { name: /Folder A/ })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /React Notes/ })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: /Hook Summary/ })).toBeNull();
+});
+
+it('searches covered trash descendants while showing the trash root', () => {
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    trashedNodeIds: ['folder-a', 'article-a', 'highlight-a']
+  }));
+
+  render(
+    <NodeListTree
+      activeNodeId={null}
+      isTrashViewOpen
+      isVirtualViewOpen={false}
+      nodeOrder={['folder-a', 'article-a', 'highlight-a']}
+      nodesById={{
+        'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
+        'article-a': createNode({ id: 'article-a', kind: 'topic', parentNodeId: 'folder-a', title: 'React Notes' }),
+        'highlight-a': createNode({ id: 'highlight-a', kind: 'item', parentNodeId: 'article-a', title: 'Hook Summary' })
+      }}
+      onOpenMoveToNode={() => undefined}
+      onOpenNotesView={() => undefined}
+      onSelectNode={() => undefined}
+      onSelectTrashNode={() => undefined}
+      selectedTrashNodeId="folder-a"
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search topic titles' }), {
+    target: { value: 'hook' }
+  });
+
+  expect(screen.getByRole('treeitem', { name: /Folder A/ })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /Hook Summary/ })).toBeNull();
+});
+
 it('searches trashed rows from the trash header', () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
