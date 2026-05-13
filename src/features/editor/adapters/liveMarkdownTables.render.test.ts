@@ -143,6 +143,31 @@ describe('live markdown table rendering', () => {
   });
 });
 
+describe('live markdown imported table scaffolds', () => {
+  it('hides orphan pipe scaffolds around imported nested table fragments', () => {
+    const { adapter, host } = createAdapterHost([
+      '|  |  |  |',
+      '| --- | --- | --- |',
+      '|  | ',
+      '',
+      '|  |',
+      '| --- |',
+      '| Reply text |',
+      '',
+      ' |',
+      '|  |',
+      '|',
+      '|  |  |',
+      '|  |  |'
+    ].join('\n'));
+
+    expect(host.querySelector('td.cm-md-table-cell')?.textContent).toBe('Reply text');
+    expect(host.querySelector('.cm-content')?.textContent).not.toContain('|  |');
+
+    adapter.destroy();
+  });
+});
+
 describe('live markdown table inline rendering', () => {
   it('renders OB-like source highlights inside inactive table cells', () => {
     const { adapter, host } = createAdapterHost('| A |\n| --- |\n| ==Marked== |');

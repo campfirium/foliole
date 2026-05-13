@@ -43,6 +43,7 @@ import {
 } from './liveMarkdownPrimitives';
 import { getTextAnchorDecorations } from './liveMarkdownState';
 import { addTableDecorations } from './liveMarkdownTables';
+import { addOrphanTableScaffoldDecorations } from './liveMarkdownTableScaffolds';
 import { resolveVisibleLineWindow } from './liveMarkdownViewport';
 
 interface DecorationBuildContext {
@@ -180,6 +181,7 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
   });
 
   addTableDecorations(ranges, viewportTablePlans, view.state.doc);
+  addOrphanTableScaffoldDecorations(ranges, viewportPlans, viewportTablePlans);
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
     if (isPositionInsideInactiveTable(lineFrom, viewportTablePlans)) {
