@@ -101,11 +101,14 @@ export function liftReadwiseFullDocumentBodyHeadings(body: string) {
 }
 
 export function parseReadwiseFullDocumentImport(markdown: string) {
+  const nodeTitle = extractReadwiseShellTitle(markdown);
+  const titleHeading = nodeTitle ? `# ${nodeTitle}` : '';
   const frontmatter = renderReadwiseFrontmatter(parseReadwiseMetadataSection(markdown));
   const body = liftReadwiseFullDocumentBodyHeadings(extractReadwiseFullDocument(markdown));
-  const content = frontmatter && body ? `${frontmatter}\n\n${body}` : frontmatter || body;
+  const header = [frontmatter, titleHeading].filter(Boolean).join('\n');
+  const content = [header, body].filter(Boolean).join('\n\n');
   return {
     content,
-    nodeTitle: extractReadwiseShellTitle(markdown)
+    nodeTitle
   };
 }

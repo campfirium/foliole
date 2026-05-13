@@ -1,4 +1,7 @@
 export const liveMarkdownFrontmatterTheme = {
+  '.cm-line.cm-line-h1.cm-line-frontmatter-title': {
+    paddingTop: 0
+  },
   '.cm-md-frontmatter-compact': {
     alignItems: 'center',
     display: 'flex',

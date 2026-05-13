@@ -28,7 +28,7 @@ function refreshReadwiseFrontmatter(existingContent: string, preparedContent: st
   }
   const existingFrontmatter = extractTopFrontmatter(existingContent);
   const body = existingFrontmatter ? existingFrontmatter.body : existingContent.replace(/\r\n?/g, '\n');
-  return `${preparedFrontmatter.frontmatter}\n\n${body.replace(/^\n+/, '')}`;
+  return `${preparedFrontmatter.frontmatter}\n${body.replace(/^\n+/, '')}`;
 }
 
 export function needsReadwiseFrontmatterRefresh(existingContent: string, preparedContent: string) {

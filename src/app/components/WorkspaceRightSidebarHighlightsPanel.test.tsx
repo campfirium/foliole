@@ -90,8 +90,8 @@ it('renders locator-backed highlight child nodes and emits selected node id', ()
   const rows = within(screen.getByRole('list', { name: 'Document highlights' }))
     .getAllByRole('button')
     .map((item) => item.textContent);
-  expect(rows).toEqual(['Highlightfirst marked text', 'HighlightSecond marked text']);
-  expect(screen.getByText('Total highlights: 2')).toBeInTheDocument();
+  expect(rows).toEqual(['first marked text', 'Second marked text']);
+  expect(screen.getByText('HIGHLIGHTS(2)')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /Second marked text/i }));
   expect(onRevealHighlight).toHaveBeenCalledWith('node-3');
@@ -151,7 +151,7 @@ it('includes locator-backed highlights from nested descendants in tree order', (
   const rows = within(screen.getByRole('list', { name: 'Document highlights' }))
     .getAllByRole('button')
     .map((item) => item.textContent);
-  expect(rows).toEqual(['HighlightB sibling highlight', 'HighlightA from chapter']);
+  expect(rows).toEqual(['B sibling highlight', 'A from chapter']);
 });
 
 it('keeps repeated locator-backed highlight text as separate items', () => {
@@ -196,7 +196,7 @@ it('keeps repeated locator-backed highlight text as separate items', () => {
   );
 
   expect(within(screen.getByRole('list', { name: 'Document highlights' })).getAllByRole('button')).toHaveLength(2);
-  expect(screen.getByText('Total highlights: 2')).toBeInTheDocument();
+  expect(screen.getByText('HIGHLIGHTS(2)')).toBeInTheDocument();
 });
 
 it('excludes cloze child nodes from the sidebar list', () => {

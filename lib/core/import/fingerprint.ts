@@ -33,6 +33,7 @@ interface CreatePreparedDesktopTextImportInput {
   filePath: string;
   highlightSidecar?: ImportSidecarHighlight[];
   highlightPolicy?: ImportHighlightPolicy;
+  hideTitleHeadingOverride?: boolean;
   importedAt: string;
   kind: ImportSourceKind;
   managedEpubImageDestinations?: string[];
@@ -181,7 +182,7 @@ export function createPreparedDesktopTextImport(
     importedAt: input.importedAt,
     matchedHighlights: collectPreparedMatchedHighlights(preparedContent),
     unmatchedHighlights: collectPreparedUnmatchedHighlights(preparedContent),
-    hideTitleHeading: shouldHideImportedTitleHeading(preparedContent.highlightedContent),
+    hideTitleHeading: input.hideTitleHeadingOverride ?? shouldHideImportedTitleHeading(preparedContent.highlightedContent),
     nodeTitle:
       input.nodeTitleOverride?.trim() ||
       resolveImportedNodeTitle({

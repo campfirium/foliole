@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
+import { projectNodeListLabel } from '../../features/nodes/model/nodeListLabelProjection';
 import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import { getTextAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import {
@@ -56,12 +57,36 @@ function collectOrderedSubtreeNodeIds(
   return subtreeIds;
 }
 
+function normalizeHighlightTextFromLocator(node: Node) {
+  if (node.anchorLink?.kind !== 'highlight') {
+    return '';
+  }
+  const text = getTextAnchorLocators(node.anchorLink.locator)
+    .map((locator) => projectHighlightSummaryText(locator.originalText))
+    .filter(Boolean)
+    .join(' ');
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function projectHighlightSummaryText(value: string) {
+  return value
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => projectNodeListLabel(line))
+    .filter(Boolean)
+    .join(' ');
+}
+
 function normalizeNodeHighlightText(node: Node) {
-  const trimmed = node.content.replace(/\s+/g, ' ').trim();
+  const locatorText = normalizeHighlightTextFromLocator(node);
+  if (locatorText) {
+    return locatorText;
+  }
+  const trimmed = projectHighlightSummaryText(node.content).replace(/\s+/g, ' ').trim();
   if (trimmed.length > 0) {
     return trimmed;
   }
-  return node.title.trim();
+  return projectNodeListLabel(node.title);
 }
 
 function isSidebarAnchorKind(node: Node) {
@@ -175,22 +200,21 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
   }
 
   return (
-    <div className="px-1">
+    <div className="min-w-0 px-1">
       <p className="px-1 pb-2 text-xs font-medium uppercase tracking-[0.08em] text-foreground/55">
-        Total highlights: {highlights.length}
+        HIGHLIGHTS({highlights.length})
       </p>
-      <ol aria-label="Document highlights" className="flex flex-col">
+      <ol aria-label="Document highlights" className="flex min-w-0 flex-col">
         {highlights.map((highlight) => (
-          <li className="border-b border-border/35 last:border-b-0" key={highlight.nodeId}>
+          <li className="min-w-0 border-b border-border/35 last:border-b-0" key={highlight.nodeId}>
             <button
-              className="flex w-full flex-col items-start px-1 py-4 text-left transition-colors hover:bg-black/[0.015] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+              className="flex min-w-0 w-full flex-col items-start px-1 py-4 text-left transition-colors hover:bg-black/[0.015] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
               onClick={() => props.onRevealHighlight(highlight.nodeId)}
               type="button"
             >
-              <span className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground/45">
-                {highlight.kind === 'cloze' ? 'Cloze' : 'Highlight'}
+              <span className="min-w-0 max-w-full whitespace-normal break-words text-sm leading-7 text-foreground">
+                {highlight.text}
               </span>
-              <span className="text-sm leading-7 text-foreground">{highlight.text}</span>
             </button>
           </li>
         ))}

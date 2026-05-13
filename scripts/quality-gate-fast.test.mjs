@@ -395,7 +395,7 @@ describe('quality-gate-fast.sh', () => {
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
       expect(result.stdout).toContain(
-        'related test:run --reporter=dot --silent=passed-only --pool=threads --maxWorkers=2 src/app/components/FancyCard.test.tsx'
+        'related test:run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/components/FancyCard.test.tsx'
       );
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');
@@ -433,7 +433,7 @@ describe('quality-gate-fast.sh', () => {
     }
   }, 15000);
 
-  it('routes mixed android and full-scope changes to the full gate', async () => {
+  it('routes mixed android and shared runtime changes to the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
     try {
       await writePackageJson(tempRoot, {
@@ -448,9 +448,9 @@ describe('quality-gate-fast.sh', () => {
       }, ['--route']);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('[quality-gate-route] selected level: full');
-      expect(result.stdout).toContain('shared runtime, desktop runtime, store, or dependency root changed');
-      expect(result.stdout).toContain('[quality-gate-route] target: quality:full');
+      expect(result.stdout).toContain('[quality-gate-route] selected level: shared');
+      expect(result.stdout).toContain('shared runtime or store changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: quality:shared');
       expect(result.stdout).not.toContain('repo lint should stay unused');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

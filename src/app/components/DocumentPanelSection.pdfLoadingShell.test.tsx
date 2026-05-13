@@ -63,3 +63,17 @@ it('hides the imported pdf placeholder while source details are still loading', 
   expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
   expect(screen.queryByText('Linked PDF source ready for the reader surface.')).not.toBeInTheDocument();
 });
+
+it('keeps markdown visible while source details load when frontmatter only mentions a pdf url', () => {
+  useNodeSourceDetails.mockReturnValue({ isLoading: true, value: null } as never);
+
+  render(
+    <DocumentPanelSection
+      {...defaultProps}
+      editorContent={'---\nsource_url: https://example.com/sample.pdf\n---\n\n# Article title\n\nBody.'}
+    />
+  );
+
+  expect(screen.queryByTestId('pdf-document-loading-shell')).not.toBeInTheDocument();
+  expect(screen.getByTestId('document-panel-body')).toBeInTheDocument();
+});

@@ -9,7 +9,18 @@ function stripMarkdownLinePrefix(value: string) {
     .replace(/^>\s*/, '')
     .replace(/^[-*+]\s+/, '')
     .replace(/^\d+\.\s+/, '')
-    .replace(/^#{1,6}\s+/, '');
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/\s*#{1,6}$/, '');
+}
+
+function stripMarkdownUrlNoise(value: string) {
+  const stripped = value
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\((?:https?|asset):\/\/[^)]*\)/g, '$1')
+    .replace(/\((?:https?|asset):\/\/[^)]*\)/g, '')
+    .replace(/(?:https?|asset):\/\/\S+/g, '')
+    .trim();
+  return stripped || value;
 }
 
 function projectInlineTokenText(token: MarkdownInlineToken, depth: number): string {
@@ -28,5 +39,6 @@ function projectMarkdownInlinePlainText(value: string, depth = 0): string {
 }
 
 export function projectNodeListLabel(label: string) {
-  return projectMarkdownInlinePlainText(stripMarkdownLinePrefix(label)).trim().replace(/\s+/g, ' ');
+  const cleaned = stripMarkdownLinePrefix(stripMarkdownUrlNoise(stripMarkdownLinePrefix(label)));
+  return projectMarkdownInlinePlainText(cleaned).trim().replace(/\s+/g, ' ');
 }

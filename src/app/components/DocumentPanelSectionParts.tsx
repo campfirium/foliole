@@ -49,14 +49,10 @@ function isLikelyPdfSourceReference(content: string) {
   if (normalized.includes(PDF_READER_PLACEHOLDER_TEXT)) {
     return true;
   }
-  if (!normalized || !/[.][Pp][Dd][Ff](?:$|[?#\s)\]])/.test(normalized)) {
-    return false;
-  }
-  const lineCount = normalized.split('\n').length;
-  if (lineCount <= 6 && normalized.length <= 480) {
-    return true;
-  }
-  return /(?:file:\/\/|[A-Za-z]:[\\/]|\/)/.test(normalized);
+  const withoutOptionalTitle = normalized.replace(/^# .+\n+/, '').trim();
+  return /^(?:https?:\/\/|file:\/\/|[A-Za-z]:[\\/]|\/|\.{1,2}\/|[^:\n]+)[^\n]*[.][Pp][Dd][Ff](?:[?#][^\n\s)]*)?$/.test(
+    withoutOptionalTitle
+  );
 }
 
 function getDocumentPanelFlags(args: {

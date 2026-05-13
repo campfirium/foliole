@@ -86,6 +86,6 @@ it('keeps rendering stable when the active node appears after the empty state re
     />
   );
 
-  expect(screen.getByText('Total highlights: 1')).toBeInTheDocument();
+  expect(screen.getByText('HIGHLIGHTS(1)')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /first marked text/i })).toBeInTheDocument();
 });

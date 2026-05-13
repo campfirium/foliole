@@ -14,4 +14,14 @@ describe('nodeListLabelProjection', () => {
       '标日高级班这一段'
     );
   });
+
+  it('strips heading markers even when imported titles have no marker spacing', () => {
+    expect(projectNodeListLabel('#煮饺子时中途要不要加凉水#')).toBe('煮饺子时中途要不要加凉水');
+    expect(projectNodeListLabel('### 功能介绍')).toBe('功能介绍');
+  });
+
+  it('drops markdown image and url noise from projected labels', () => {
+    expect(projectNodeListLabel('![Title](asset://hash.png) [下载](https://example.com/file)')).toBe('Title 下载');
+    expect(projectNodeListLabel('(https://example.com/source) ### 功能介绍')).toBe('功能介绍');
+  });
 });

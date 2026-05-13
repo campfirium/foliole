@@ -126,7 +126,7 @@ describe('companionReadableArticle title slot', () => {
     const snapshot = createExplicitArticleSnapshot();
     snapshot.nodesById['node-1'] = {
       ...snapshot.nodesById['node-1']!,
-      content: '**# First**\n\nBody'
+      content: '---\nauthor: Jane\n---\n**# First**\n\nBody'
     };
     snapshot.nodesById['node-2'] = {
       ...snapshot.nodesById['node-2']!,

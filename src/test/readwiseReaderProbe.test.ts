@@ -14,7 +14,9 @@ Another matching excerpt. Tags: [[tag-a]] [[tag-b]]
 [[Full Document Contents/Articles/Sample Article.md|See full document content ->]]
 `;
 
-const FULL_DOCUMENT_MARKDOWN = `## Metadata
+const FULL_DOCUMENT_MARKDOWN = `# Sample Article
+
+## Metadata
 - Author: Someone
 - Full Title: Sample Article
 - Category: #articles
@@ -228,7 +230,7 @@ it('falls back to blank-line split when separator is list-style but highlights a
   ]);
 });
 
-it('moves metadata into Obsidian frontmatter without adding a visible title heading', () => {
+it('keeps the readwise full document title as the visible top heading', () => {
   expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN)).toBe(`---
 author: Someone
 full_title: Sample Article
@@ -236,6 +238,7 @@ category: #articles
 summary: A useful summary.
 url: https://example.com/source
 ---
+# Sample Article
 
 Before the quote. This is the highlighted sentence. After the quote.
 

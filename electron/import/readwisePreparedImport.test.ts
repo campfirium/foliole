@@ -19,7 +19,7 @@ afterEach(async () => {
   }
 });
 
-it('uses the readwise full document title as the node title without writing it into content', async () => {
+it('uses the readwise full document title as the visible top heading and node title', async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-prepared-import-'));
   const highlightDirectoryPath = path.join(tempRoot, 'Articles');
   const fullDocumentPath = path.join(tempRoot, 'Full Document Contents', 'Articles', 'Sample Article.md');
@@ -56,7 +56,7 @@ it('uses the readwise full document title as the node title without writing it i
 
   expect(prepared.nodeTitle).toBe('Full Document Title');
   expect(prepared.hideTitleHeading).toBe(false);
-  expect(prepared.content).not.toContain('# Full Document Title');
+  expect(prepared.content).toMatch(/^---\nauthor: Someone\n---\n# Full Document Title\n\nBefore the quote/);
   expect(prepared.content).not.toContain('# Highlight File Title');
   expect(prepared.content).toContain('author: Someone');
   expect(prepared.content).toContain('Before the quote.');
@@ -93,7 +93,8 @@ it('falls back to the readwise full document title when the highlight file is ab
   );
 
   expect(prepared.nodeTitle).toBe('Full Document Title');
-  expect(prepared.content).not.toContain('# Full Document Title');
+  expect(prepared.hideTitleHeading).toBe(false);
+  expect(prepared.content).toMatch(/^---\nauthor: Someone\n---\n# Full Document Title\n\nBody only/);
   expect(prepared.content).toContain('Body only.');
 });
 

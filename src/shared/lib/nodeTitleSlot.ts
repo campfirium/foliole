@@ -12,7 +12,20 @@ export function hasVisibleTitleHeading(content: string, hideTitleHeading: boolea
   if (hideTitleHeading) {
     return false;
   }
-  return content.startsWith('# ') || content.startsWith('**# ');
+  const visibleStart = resolveVisibleContentStart(content);
+  return visibleStart.startsWith('# ') || visibleStart.startsWith('**# ');
+}
+
+function resolveVisibleContentStart(content: string) {
+  if (!content.startsWith('---\n') && !content.startsWith('---\r\n')) {
+    return content;
+  }
+  const normalized = content.replace(/\r\n?/g, '\n');
+  const closingMatch = /^---$/m.exec(normalized.slice(4));
+  if (!closingMatch?.index && closingMatch?.index !== 0) {
+    return content;
+  }
+  return normalized.slice(4 + closingMatch.index + closingMatch[0].length).trimStart();
 }
 
 function isInboxLikeNode(node: NodeTitleSlotNode | undefined) {

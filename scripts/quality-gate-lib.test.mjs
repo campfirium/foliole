@@ -176,7 +176,7 @@ describe('quality-gate-lib.sh', () => {
       expect(result.stdout).toContain('exit=1');
       expect(result.stdout).toContain(`failed summary: ${failedSummary}`);
       expect(result.stdout).toContain(
-        'rerun: npx vitest run --reporter=dot --silent=passed-only --pool=threads --maxWorkers=2 src/app/Foo.test.tsx'
+        'rerun: npx vitest run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism src/app/Foo.test.tsx'
       );
       await expect(readFile(failedSummary, 'utf8')).resolves.toContain('failed-test=src/app/Foo.test.tsx');
     } finally {

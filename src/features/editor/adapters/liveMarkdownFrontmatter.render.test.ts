@@ -47,6 +47,7 @@ describe('live markdown frontmatter rendering', () => {
     });
 
     expect(host.querySelector('.cm-md-frontmatter-compact')).not.toBeNull();
+    expect(host.querySelector('.cm-line.cm-line-h1.cm-line-frontmatter-title')).not.toBeNull();
     expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Jane Doe');
     expect((host.textContent ?? '').indexOf('Title')).toBeLessThan((host.textContent ?? '').indexOf('Jane Doe'));
     expect(host.textContent).not.toContain('---');

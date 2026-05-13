@@ -51,14 +51,14 @@ async function writeFixtureFile(rootDir, relativePath, content) {
 }
 
 describe('quality-gate-fast lib routing', () => {
-  it('delegates lib changes to the full gate', async () => {
+  it('delegates lib changes to the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:full': 'node -e "console.log(\'full lint ok\')"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-        'test:full': 'node -e "console.log(\'full test ok\')"',
+        'lint:shared:full': 'node -e "console.log(\'shared lint ok\')"',
+        'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
+        'test:shared': 'node -e "console.log(\'shared test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         build: 'node -e "console.log(\'build ok\')"',
         'electron:compile': 'node -e "console.log(\'electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'android web build ok\')"'
@@ -70,18 +70,18 @@ describe('quality-gate-fast lib routing', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('[quality-gate-fast] selected level: full');
-      expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
+      expect(result.stdout).toContain('[quality-gate-fast] selected level: shared');
+      expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
       expect(result.stdout).toContain('boundary ok');
       expect(result.stdout).toContain('android boundary ok');
-      expect(result.stdout).toContain('full test ok');
+      expect(result.stdout).toContain('shared test ok');
       expect(result.stdout).toContain('android web build ok');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 15000);
 
-  it('explains lib changes as a full gate route without running checks', async () => {
+  it('explains lib changes as a shared gate route without running checks', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
     try {
       await writePackageJson(tempRoot, {
@@ -96,9 +96,9 @@ describe('quality-gate-fast lib routing', () => {
       );
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('[quality-gate-route] selected level: full');
-      expect(result.stdout).toContain('shared runtime, desktop runtime, store, or dependency root changed');
-      expect(result.stdout).toContain('[quality-gate-route] target: quality:full');
+      expect(result.stdout).toContain('[quality-gate-route] selected level: shared');
+      expect(result.stdout).toContain('shared runtime or store changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: quality:shared');
       expect(result.stdout).not.toContain('full lint should stay unused');
       expect(result.stdout).not.toContain('full test should stay unused');
     } finally {

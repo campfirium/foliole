@@ -88,3 +88,36 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
   expect(row).toHaveStyle({ '--node-muted-opacity': '0.42' });
   expect(row.querySelector('[data-node-icon-state="dismissed"]')).not.toBeNull();
 });
+
+it('renders markdown-looking topic titles as plain list text', () => {
+  const node: WorkspaceListNode = {
+    anchorLink: null,
+    createdAt: '2026-05-02T00:00:00.000Z',
+    hasContent: true,
+    hasReveal: false,
+    id: 'node-1',
+    kind: 'topic',
+    parentNodeId: null,
+    reading: null,
+    review: null,
+    title: '#煮饺子时中途要不要加凉水#',
+    updatedAt: '2026-05-02T00:00:00.000Z'
+  };
+  render(
+    <WorkspaceTopicTreeRows
+      activeNodeId={null}
+      collapsedNodeIds={new Set()}
+      drag={createDragMock()}
+      nodesById={{ 'node-1': node }}
+      onContextMenu={vi.fn()}
+      onRenameNode={vi.fn()}
+      onSelectNode={vi.fn()}
+      onToggleCollapse={vi.fn()}
+      rows={[createRow(node)]}
+      selectedNodeIds={[]}
+    />
+  );
+
+  expect(screen.getByRole('treeitem', { name: '煮饺子时中途要不要加凉水' })).toBeInTheDocument();
+  expect(screen.queryByText('#煮饺子时中途要不要加凉水#')).not.toBeInTheDocument();
+});

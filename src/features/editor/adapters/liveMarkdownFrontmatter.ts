@@ -75,6 +75,10 @@ function shouldRebuildFrontmatter(transaction: Transaction, inspectedUntilLine: 
 }
 
 function resolveFrontmatterWidgetAnchor(state: EditorState, bounds: FrontmatterBounds) {
+  return resolveFrontmatterTitleLine(state, bounds)?.to ?? state.doc.line(bounds.endLine).to;
+}
+
+function resolveFrontmatterTitleLine(state: EditorState, bounds: FrontmatterBounds) {
   const h1LineFroms = new Set(
     collectMarkdownLineClassRanges(state.doc.toString())
       .filter((range) => range.className === 'cm-line-h1')
@@ -82,10 +86,10 @@ function resolveFrontmatterWidgetAnchor(state: EditorState, bounds: FrontmatterB
   );
   for (let lineNumber = bounds.endLine + 1; lineNumber <= state.doc.lines; lineNumber += 1) {
     const line = state.doc.line(lineNumber);
-    if (h1LineFroms.has(line.from)) return line.to;
-    if (line.text.trim().length > 0) return state.doc.line(bounds.endLine).to;
+    if (h1LineFroms.has(line.from)) return line;
+    if (line.text.trim().length > 0) return null;
   }
-  return state.doc.line(bounds.endLine).to;
+  return null;
 }
 
 export function buildFrontmatterDecorationState(
@@ -113,6 +117,7 @@ export function buildFrontmatterDecorationState(
   }
 
   const anchor = resolveFrontmatterWidgetAnchor(state, bounds);
+  const titleLine = resolveFrontmatterTitleLine(state, bounds);
   const from = doc.line(bounds.startLine).from;
   const to = doc.line(bounds.endLine).to;
   const metaFields = getFrontmatterMetaFields();
@@ -133,6 +138,9 @@ export function buildFrontmatterDecorationState(
   }
 
   addCompactFrontmatterDecorations(ranges, state, bounds);
+  if (titleLine) {
+    addLine(ranges, titleLine.from, 'cm-line-frontmatter-title');
+  }
 
   ranges.push(
     Decoration.widget({

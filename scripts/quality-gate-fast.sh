@@ -83,13 +83,23 @@ resolve_quality_gate_route() {
     return 0
   fi
 
-  if printf '%s\n' "${changed}" | grep -E -q '^(electron/|lib/|src/store/|src/shared/platform/|package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
-    printf 'full\tshared runtime, desktop runtime, store, or dependency root changed'
+  if printf '%s\n' "${changed}" | grep -E -q '^(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
+    printf 'full\tdependency root changed'
+    return 0
+  fi
+
+  if printf '%s\n' "${changed}" | grep -E -q '^electron/'; then
+    printf 'desktop\tdesktop runtime changed'
+    return 0
+  fi
+
+  if printf '%s\n' "${changed}" | grep -E -q '^(lib/|src/store/|src/shared/platform/)'; then
+    printf 'shared\tshared runtime or store changed'
     return 0
   fi
 
   if printf '%s\n' "${changed}" | grep -E '^scripts/' | grep -E -v -q '^scripts/android/'; then
-    printf 'full\tnon-Android script changed'
+    printf 'mid\tnon-Android script changed'
     return 0
   fi
 
@@ -137,7 +147,7 @@ collect_related_test_files() {
   local changed="$1"
   local source_changed direct_tests source_files inferred_tests
 
-  source_changed="$(printf '%s\n' "${changed}" | grep -E '^(src/|electron/|scripts/).*\.(ts|tsx|mjs)$' || true)"
+  source_changed="$(printf '%s\n' "${changed}" | grep -E '^(src/|electron/|scripts/|lib/).*\.(ts|tsx|js|jsx|mjs|cjs|sh)$' || true)"
   if [[ -z "${source_changed}" ]]; then
     return 0
   fi
@@ -153,7 +163,7 @@ collect_related_test_files() {
       dir="$(dirname "${src_file}")"
       base="$(basename "${src_file}")"
       stem="${base%.*}"
-      for ext in test.ts test.tsx; do
+      for ext in test.ts test.tsx test.js test.jsx test.mjs test.cjs spec.ts spec.tsx spec.js spec.jsx spec.mjs spec.cjs; do
         candidate="${dir}/${stem}.${ext}"
         if [[ -f "${candidate}" ]]; then
           inferred_tests="${inferred_tests}${candidate}"$'\n'
@@ -179,6 +189,12 @@ print_quality_gate_route_plan() {
   case "${level}" in
     full)
       echo "[quality-gate-route] target: quality:full"
+      ;;
+    desktop)
+      echo "[quality-gate-route] target: quality:desktop"
+      ;;
+    shared)
+      echo "[quality-gate-route] target: quality:shared"
       ;;
     android)
       echo "[quality-gate-route] target: quality:android"
@@ -319,7 +335,7 @@ run_related_tests_if_needed() {
     "quality-gate-fast" \
     "test" \
     "test (related)" \
-    npx vitest run --reporter=dot --silent=passed-only --pool=threads --maxWorkers=2 "${test_array[@]}"
+    npx vitest run --reporter=dot --silent=passed-only --pool=threads --no-file-parallelism "${test_array[@]}"
 }
 
 if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@"; then
@@ -354,6 +370,14 @@ fi
 
 if [[ "${level}" == "full" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
+fi
+
+if [[ "${level}" == "desktop" ]]; then
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" desktop
+fi
+
+if [[ "${level}" == "shared" ]]; then
+  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" shared
 fi
 
 if [[ "${level}" == "android" ]]; then
