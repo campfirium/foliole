@@ -11,7 +11,12 @@ export interface FrontmatterBounds {
 
 export interface FrontmatterEntry {
   key: string;
-  values: string[];
+  values: FrontmatterValue[];
+}
+
+export interface FrontmatterValue {
+  href?: string;
+  text: string;
 }
 
 export interface MarkdownFrontmatterProjection {
@@ -25,14 +30,25 @@ function isDelimiterLine(text: string) {
   return text.trim() === '---';
 }
 
-function normalizeValue(value: string) {
-  return projectMarkdownInlineText(value)
+function isExternalUrl(value: string) {
+  return /^https?:\/\/\S+$/i.test(value);
+}
+
+function projectValue(value: string): FrontmatterValue | null {
+  const tokens = projectMarkdownInlineText(value);
+  const text = tokens
     .map((token) => {
       if (token.kind === 'footnote') return token.label;
       return 'text' in token ? token.text : '';
     })
     .join('')
     .trim();
+  if (!text) return null;
+  const linkToken = tokens.length === 1 && (tokens[0]?.kind === 'autolink' || tokens[0]?.kind === 'link')
+    ? tokens[0]
+    : null;
+  const href = linkToken?.href ?? (isExternalUrl(text) ? text : undefined);
+  return href ? { href, text } : { text };
 }
 
 function isWhitespace(value: string) {
@@ -106,7 +122,7 @@ function extractFrontmatterEntriesFromLines(lines: readonly string[], bounds: Fr
 
     const listItem = parseFrontmatterListItemLine(line);
     if (listItem !== null && currentEntry) {
-      const value = normalizeValue(listItem);
+      const value = projectValue(listItem);
       if (value) currentEntry.values.push(value);
     }
   }
@@ -115,12 +131,12 @@ function extractFrontmatterEntriesFromLines(lines: readonly string[], bounds: Fr
 }
 
 function resolveEntryValues(rawValue: string) {
-  const value = normalizeValue(rawValue);
+  const value = projectValue(rawValue);
   return value ? [value] : [];
 }
 
 export function buildFrontmatterSummary(entries: readonly FrontmatterEntry[]) {
-  return entries.flatMap((entry) => entry.values).join('  ·  ');
+  return entries.map((entry) => entry.key).join('  ·  ');
 }
 
 export function resolveFrontmatterBounds(content: string): FrontmatterBounds | null {

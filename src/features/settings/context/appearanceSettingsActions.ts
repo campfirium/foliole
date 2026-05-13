@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 
-import { type EditorDisplayMode, setEditorDisplayMode } from '../../editor/model/editorDisplayMode';
-import { type MarkdownSyntaxVisibility, setMarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
-import { setAutoLocalizeRemoteImages } from '../../editor/model/remoteImageLocalizationSetting';
+import type { EditorDisplayMode } from '../../editor/model/editorDisplayMode';
+import type { FrontmatterDisplayMode } from '../../editor/model/frontmatterDisplayModeSetting';
+import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import {
   type AccentColorPreset,
   type ClozeColorPreset,
@@ -21,39 +21,27 @@ import {
   DEFAULT_WORKSPACE_SURFACE_PALETTE,
   type HighlightColorPreset,
   type FontColorPreset,
-  INTERFACE_FONT_SIZE_DEFAULT,
   type InterfaceFontPreset,
   type MonospaceFontPreset,
   type PdfReadingMode,
   type ReadingLineHeight,
   type SelectionColorPreset,
-  setDimImagesInDarkMode,
   setAccentColorPreset,
-  setBaseColorMode,
   setClozeColorPreset,
   setFontColorPreset,
-  setCustomInterfaceFont,
-  setCustomMonospaceFont,
-  setCustomUiFont,
   setHighlightColorPreset,
-  setInterfaceFontPreset,
-  setInterfaceFontSize,
-  setMonospaceFontPreset,
-  setPdfReadingMode,
-  setReadingContentWidth,
-  setReadingLineHeight,
   setSelectionColorPreset,
-  setUiFontPreset,
   setWorkspaceSurfaceAssignments,
   setWorkspaceSurfacePalette
 } from '../model/appearanceSettings';
 import type { BaseColorMode, ResolvedBaseColorMode } from '../model/baseColorMode';
 
+import { createGeneralAppearanceActions } from './appearanceGeneralActions';
 import type { AppearanceSettingsContextValue } from './appearanceSettingsContext';
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
-type AppearanceState = {
+export type AppearanceState = {
   accentColorPresetState: AccentColorPreset;
   baseColorModeState: BaseColorMode;
   resolvedBaseColorModeState: ResolvedBaseColorMode;
@@ -64,6 +52,8 @@ type AppearanceState = {
   dimImagesInDarkModeState: boolean;
   editorDisplayModeState: EditorDisplayMode;
   fontColorPresetState: FontColorPreset;
+  frontmatterDisplayModeState: FrontmatterDisplayMode;
+  frontmatterMetaFieldsState: string;
   highlightColorPresetState: HighlightColorPreset;
   interfaceFontPresetState: InterfaceFontPreset;
   interfaceFontSizeState: number;
@@ -86,6 +76,8 @@ type AppearanceState = {
   setDimImagesInDarkModeState: Setter<boolean>;
   setEditorDisplayModeState: Setter<EditorDisplayMode>;
   setFontColorPresetState: Setter<FontColorPreset>;
+  setFrontmatterDisplayModeState: Setter<FrontmatterDisplayMode>;
+  setFrontmatterMetaFieldsState: Setter<string>;
   setHighlightColorPresetState: Setter<HighlightColorPreset>;
   setInterfaceFontPresetState: Setter<InterfaceFontPreset>;
   setInterfaceFontSizeState: Setter<number>;
@@ -165,6 +157,7 @@ type AppearanceActions = Pick<
   | 'resetFontColorPreset'
   | 'resetHighlightColorPreset'
   | 'resetInterfaceFontSize'
+  | 'resetFrontmatterMetaFields'
   | 'resetSelectionColorPreset'
   | 'resetWorkspaceSurfaceSettings'
   | 'setAccentColorPreset'
@@ -176,6 +169,8 @@ type AppearanceActions = Pick<
   | 'setCustomUiFont'
   | 'setDimImagesInDarkMode'
   | 'setFontColorPreset'
+  | 'setFrontmatterDisplayMode'
+  | 'setFrontmatterMetaFields'
   | 'setHighlightColorPreset'
   | 'setInterfaceFontPreset'
   | 'setInterfaceFontSize'
@@ -224,36 +219,6 @@ function createColorPresetActions(state: AppearanceState) {
     setFontColorPreset: (value: FontColorPreset) => (setFontColorPreset(value, state.resolvedBaseColorModeState), state.setFontColorPresetState(value)),
     setHighlightColorPreset: (value: HighlightColorPreset) => (setHighlightColorPreset(value, state.resolvedBaseColorModeState), state.setHighlightColorPresetState(value)),
     setSelectionColorPreset: (value: SelectionColorPreset) => (setSelectionColorPreset(value, state.resolvedBaseColorModeState), state.setSelectionColorPresetState(value))
-  };
-}
-
-function createGeneralAppearanceActions(state: AppearanceState) {
-  return {
-    resetInterfaceFontSize: () => (setInterfaceFontSize(INTERFACE_FONT_SIZE_DEFAULT), state.setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT)),
-    setAutoLocalizeRemoteImages: (value: boolean) => (setAutoLocalizeRemoteImages(value), state.setAutoLocalizeRemoteImagesState(value)),
-    setBaseColorMode: (value: BaseColorMode) => (setBaseColorMode(value), state.setBaseColorModeState(value)),
-    setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
-    setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
-    setCustomUiFont: (value: string) => (setCustomUiFont(value), state.setCustomUiFontState(value)),
-    setDimImagesInDarkMode: (value: boolean) => (setDimImagesInDarkMode(value), state.setDimImagesInDarkModeState(value)),
-    setInterfaceFontPreset: (value: InterfaceFontPreset) => (setInterfaceFontPreset(value), state.setInterfaceFontPresetState(value)),
-    setInterfaceFontSize: (value: number) => (setInterfaceFontSize(value), state.setInterfaceFontSizeState(value)),
-    setMarkdownSyntaxVisibility: (value: MarkdownSyntaxVisibility) => (setMarkdownSyntaxVisibility(value), state.setMarkdownSyntaxVisibilityState(value)),
-    setMonospaceFontPreset: (value: MonospaceFontPreset) => (setMonospaceFontPreset(value), state.setMonospaceFontPresetState(value)),
-    setPdfReadingMode: (value: PdfReadingMode) => (setPdfReadingMode(value), state.setPdfReadingModeState(value)),
-    setReadingContentWidth: (value: number) => (setReadingContentWidth(value), state.setReadingContentWidthState(value)),
-    setReadingLineHeight: (value: ReadingLineHeight) => (setReadingLineHeight(value), state.setReadingLineHeightState(value)),
-    setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
-    toggleBaseColorMode: () => {
-      const next = state.resolvedBaseColorModeState === 'dark' ? 'light' : 'dark';
-      setBaseColorMode(next);
-      state.setBaseColorModeState(next);
-    },
-    toggleEditorDisplayMode: () => {
-      const next = state.editorDisplayModeState === 'preview' ? 'source' : 'preview';
-      state.setEditorDisplayModeState(next);
-      return setEditorDisplayMode(next);
-    }
   };
 }
 

@@ -2,6 +2,8 @@ import { MANAGED_INBOX_APP_SETTING_KEY } from '../../../lib/platform/managedInbo
 
 export const APP_SETTINGS_STORAGE_KEYS = {
   markdownSyntaxVisibility: 'foliole-markdown-syntax-visibility',
+  frontmatterDisplayMode: 'foliole-frontmatter-display-mode',
+  frontmatterMetaFields: 'foliole-frontmatter-meta-fields',
   highlightAnnotationPrefix: 'foliole-highlight-annotation-prefix',
   longClozeFrontGuardMode: 'foliole-long-cloze-front-guard-mode',
   longClozeFrontGuardSelectionMin: 'foliole-long-cloze-front-guard-selection-min',
@@ -117,24 +119,30 @@ export const APP_SETTINGS_STORAGE_KEYS = {
 
 export const APP_SETTINGS_OPTIONS = {
   markdownSyntaxVisibility: ['hidden', 'visible'] as const,
+  frontmatterDisplayMode: ['compact', 'full'] as const,
   editorDisplayMode: ['preview', 'source'] as const,
   pdfReadingMode: ['original', 'inverted', 'warm'] as const,
   readingLineHeight: ['compact', 'standard', 'relaxed'] as const
 } as const;
 
 export type MarkdownSyntaxVisibility = (typeof APP_SETTINGS_OPTIONS.markdownSyntaxVisibility)[number];
+export type FrontmatterDisplayMode = (typeof APP_SETTINGS_OPTIONS.frontmatterDisplayMode)[number];
 export type EditorDisplayMode = (typeof APP_SETTINGS_OPTIONS.editorDisplayMode)[number];
 export type PdfReadingMode = (typeof APP_SETTINGS_OPTIONS.pdfReadingMode)[number];
 export type ReadingLineHeight = (typeof APP_SETTINGS_OPTIONS.readingLineHeight)[number];
 
 export interface PersistedAppSettings {
   autoLocalizeRemoteImages: boolean;
+  frontmatterDisplayMode: FrontmatterDisplayMode;
+  frontmatterMetaFields: string;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   editorDisplayMode: EditorDisplayMode;
 }
 
 export const DEFAULT_PERSISTED_APP_SETTINGS: PersistedAppSettings = {
   autoLocalizeRemoteImages: true,
+  frontmatterDisplayMode: 'compact',
+  frontmatterMetaFields: 'author|byline, url|link|source|source_url',
   markdownSyntaxVisibility: 'hidden',
   editorDisplayMode: 'preview'
 };

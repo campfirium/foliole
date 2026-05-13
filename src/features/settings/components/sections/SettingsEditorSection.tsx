@@ -13,6 +13,7 @@ import {
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
+import { FRONTMATTER_META_FIELDS_DEFAULT } from '../../../editor/model/frontmatterMetaFieldsSetting';
 import {
   DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX,
   getHighlightAnnotationPrefix,
@@ -130,6 +131,41 @@ function ClozeFrontLengthLimitRow() {
   );
 }
 
+function FrontmatterMetaFieldsRow() {
+  const {
+    frontmatterMetaFields,
+    resetFrontmatterMetaFields,
+    setFrontmatterMetaFields
+  } = useAppearanceSettings();
+
+  return (
+    <SettingsRow
+      description="Fields shown under the title. Use commas for groups and | for aliases, such as author|byline, url|link|source."
+      title="Frontmatter meta"
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <div className="flex items-center gap-2">
+          <button
+            aria-label="Reset frontmatter meta fields"
+            className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')}
+            disabled={frontmatterMetaFields === FRONTMATTER_META_FIELDS_DEFAULT}
+            onClick={resetFrontmatterMetaFields}
+            type="button"
+          >
+            <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
+          </button>
+          <AppInput
+            aria-label="Frontmatter meta fields"
+            className="h-9 w-[22rem]"
+            onChange={(event) => setFrontmatterMetaFields(event.target.value)}
+            value={frontmatterMetaFields}
+          />
+        </div>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
 export function SettingsEditorSection() {
   const {
     autoLocalizeRemoteImages,
@@ -177,6 +213,7 @@ export function SettingsEditorSection() {
             />
           </SettingsControlSlot>
         </SettingsRow>
+        <FrontmatterMetaFieldsRow />
       </SettingsSection>
       <SettingsSection ariaLabel="Cloze guard settings section" title="Cloze guard">
         <LongClozeFrontGuardRow />

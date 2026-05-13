@@ -1,8 +1,5 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
-import { getEditorDisplayMode } from '../../editor/model/editorDisplayMode';
-import { getMarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
-import { shouldAutoLocalizeRemoteImages as getAutoLocalizeRemoteImages } from '../../editor/model/remoteImageLocalizationSetting';
 import {
   applyAppearanceSettings,
   getAccentColorPreset,
@@ -27,6 +24,7 @@ import {
 } from '../model/appearanceSettings';
 import { resolveBaseColorMode } from '../model/baseColorMode';
 
+import { useEditorSettingsStateValues } from './appearanceEditorState';
 import { AppearanceSettingsContext, useAppearanceSettings } from './appearanceSettingsContext';
 import { useAppearanceSettingsValue } from './appearanceSettingsValue';
 
@@ -66,10 +64,8 @@ function useModeScopedAppearanceState(resolvedBaseColorMode: 'dark' | 'light') {
 
 export function useAppearanceStateValues() {
   const initialModeState = getInitialAppearanceModeState();
+  const editorSettings = useEditorSettingsStateValues();
   const modeScoped = useModeScopedAppearanceState(initialModeState.resolvedBaseColorMode);
-  const [autoLocalizeRemoteImagesState, setAutoLocalizeRemoteImagesState] = useState(() => getAutoLocalizeRemoteImages());
-  const [markdownSyntaxVisibilityState, setMarkdownSyntaxVisibilityState] = useState(() => getMarkdownSyntaxVisibility());
-  const [editorDisplayModeState, setEditorDisplayModeState] = useState(() => getEditorDisplayMode());
   const [baseColorModeState, setBaseColorModeState] = useState(() => initialModeState.baseColorMode);
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
@@ -86,31 +82,26 @@ export function useAppearanceStateValues() {
 
   return {
     ...modeScoped,
-    autoLocalizeRemoteImagesState,
+    ...editorSettings,
     baseColorModeState,
     dimImagesInDarkModeState,
     customInterfaceFontState,
     customMonospaceFontState,
     customUiFontState,
-    editorDisplayModeState,
     interfaceFontPresetState,
     interfaceFontSizeState,
-    markdownSyntaxVisibilityState,
     monospaceFontPresetState,
     pdfReadingModeState,
     readingContentWidthState,
     readingLineHeightState,
     resolvedBaseColorModeState,
-    setAutoLocalizeRemoteImagesState,
     setBaseColorModeState,
     setDimImagesInDarkModeState,
     setCustomInterfaceFontState,
     setCustomMonospaceFontState,
     setCustomUiFontState,
-    setEditorDisplayModeState,
     setInterfaceFontPresetState,
     setInterfaceFontSizeState,
-    setMarkdownSyntaxVisibilityState,
     setMonospaceFontPresetState,
     setPdfReadingModeState,
     setReadingContentWidthState,

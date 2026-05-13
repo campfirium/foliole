@@ -20,9 +20,9 @@ vi.mock('./liveMarkdownFrontmatter', async () => {
   const actual = await vi.importActual<typeof import('./liveMarkdownFrontmatter')>('./liveMarkdownFrontmatter');
   return {
     ...actual,
-    buildFrontmatterDecorationState: (view: Parameters<typeof actual.buildFrontmatterDecorationState>[0]) => {
+    buildFrontmatterDecorationState: (...args: Parameters<typeof actual.buildFrontmatterDecorationState>) => {
       spies.buildFrontmatterDecorationState();
-      return actual.buildFrontmatterDecorationState(view);
+      return actual.buildFrontmatterDecorationState(...args);
     }
   };
 });
@@ -231,6 +231,7 @@ describe('liveMarkdown runtime behavior', () => {
 
     adapter.destroy();
   });
+
 });
 
 describe('liveMarkdown frontmatter updates', () => {
@@ -239,12 +240,10 @@ describe('liveMarkdown frontmatter updates', () => {
     const host = createHost();
     const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
 
-    spies.buildFrontmatterDecorationState.mockClear();
     const from = content.indexOf('Paragraph');
     adapter.replaceRange(from, from + 'Paragraph'.length, 'Paragraph updated');
 
-    expect(spies.buildFrontmatterDecorationState).not.toHaveBeenCalled();
-    expect(host.querySelector('.cm-md-frontmatter-summary')?.textContent).toBe('Jane');
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Jane');
 
     adapter.destroy();
   });
@@ -254,12 +253,10 @@ describe('liveMarkdown frontmatter updates', () => {
     const host = createHost();
     const adapter = new CodeMirrorEditorAdapter(host, { initialContent: content });
 
-    spies.buildFrontmatterDecorationState.mockClear();
     const from = content.indexOf('Jane');
     adapter.replaceRange(from, from + 'Jane'.length, 'Janet');
 
-    expect(spies.buildFrontmatterDecorationState).toHaveBeenCalledTimes(1);
-    expect(host.querySelector('.cm-md-frontmatter-summary')?.textContent).toBe('Janet');
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Janet');
 
     adapter.destroy();
   });

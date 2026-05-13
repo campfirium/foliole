@@ -40,12 +40,22 @@ describe('markdownFrontmatterProjection', () => {
     expect(
       extractFrontmatterEntries('---\nauthor: [[Jane Doe|Jane]]\ntags:\n  - [[design]]\n  - ![[assets/card|Card]]\n---\n# Title')
     ).toEqual([
-      { key: 'author', values: ['Jane'] },
-      { key: 'tags', values: ['design', 'Card'] }
+      { key: 'author', values: [{ text: 'Jane' }] },
+      { key: 'tags', values: [{ text: 'design' }, { text: 'Card' }] }
+    ]);
+  });
+
+  it('keeps clickable URL values without treating wiki links as URLs', () => {
+    expect(
+      extractFrontmatterEntries('---\nsource: https://example.com\nvia: [Example](https://example.org)\nrelated: [[Topic]]\n---\n# Title')
+    ).toEqual([
+      { key: 'source', values: [{ href: 'https://example.com', text: 'https://example.com' }] },
+      { key: 'via', values: [{ href: 'https://example.org', text: 'Example' }] },
+      { key: 'related', values: [{ text: 'Topic' }] }
     ]);
   });
 
   it('summarizes entries for frontmatter rendering', () => {
-    expect(projectMarkdownFrontmatter('---\nauthor: Jane\ntags:\n  - notes\n---\n# Title').summary).toBe('Jane  ·  notes');
+    expect(projectMarkdownFrontmatter('---\nauthor: Jane\ntags:\n  - notes\n---\n# Title').summary).toBe('author  ·  tags');
   });
 });

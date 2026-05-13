@@ -8,14 +8,18 @@ vi.mock('../../../shared/platform/bridge', () => ({
   openExternalUrl: vi.fn()
 }));
 
+import { setEditorDisplayMode } from '../model/editorDisplayMode';
+import { setFrontmatterDisplayMode } from '../model/frontmatterDisplayModeSetting';
+import { FRONTMATTER_META_FIELDS_DEFAULT, setFrontmatterMetaFields } from '../model/frontmatterMetaFieldsSetting';
 import { setMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
+import type { CodeMirrorEditorAdapterOptions } from './codeMirrorEditorAdapterSupport';
 
-function createAdapterHost(initialContent: string) {
+function createAdapterHost(initialContent: string, options: Partial<CodeMirrorEditorAdapterOptions> = {}) {
   const host = document.createElement('div');
   document.body.append(host);
-  const adapter = new CodeMirrorEditorAdapter(host, { initialContent });
+  const adapter = new CodeMirrorEditorAdapter(host, { initialContent, ...options });
   return { adapter, host };
 }
 
@@ -25,13 +29,16 @@ function getLineTexts(host: HTMLElement, selector = '.cm-line') {
   );
 }
 
-describe('live markdown frontmatter rendering', () => {
-  afterEach(() => {
-    document.body.innerHTML = '';
-    setMarkdownSyntaxVisibility('hidden');
-  });
+afterEach(() => {
+  document.body.innerHTML = '';
+  setFrontmatterDisplayMode('compact');
+  setFrontmatterMetaFields(FRONTMATTER_META_FIELDS_DEFAULT);
+  setEditorDisplayMode('preview');
+  setMarkdownSyntaxVisibility('hidden');
+});
 
-  it('renders top frontmatter as a dedicated metadata block without visible delimiters', () => {
+describe('live markdown frontmatter rendering', () => {
+  it('renders top frontmatter as a compact block without visible delimiters', () => {
     const host = document.createElement('div');
     document.body.append(host);
 
@@ -39,16 +46,126 @@ describe('live markdown frontmatter rendering', () => {
       initialContent: '---\nauthor: [[Jane Doe]]\ntags:\n  - notes\n---\n# Title'
     });
 
-    expect(host.querySelector('.cm-md-frontmatter-summary')).not.toBeNull();
-    expect(host.querySelector('.cm-md-frontmatter-summary')?.textContent).toBe('Jane Doe  ·  notes');
+    expect(host.querySelector('.cm-md-frontmatter-compact')).not.toBeNull();
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Jane Doe');
+    expect((host.textContent ?? '').indexOf('Title')).toBeLessThan((host.textContent ?? '').indexOf('Jane Doe'));
     expect(host.textContent).not.toContain('---');
     expect(host.textContent).not.toContain('[[');
-    expect(host.textContent).not.toContain('author:');
+    expect(host.textContent).not.toContain('notes');
     expect(host.textContent).toContain('Title');
+    expect(host.textContent).toContain('Meta');
 
     adapter.destroy();
   });
 
+  it('shows source domains with tooltips and clickable URL values', () => {
+    const { adapter, host } = createAdapterHost('---\nsource: https://www.example.com/path\n---\n# Title');
+
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('example.com');
+    const link = host.querySelector<HTMLElement>('.cm-md-frontmatter-meta-link');
+    expect(link?.title).toBe('https://www.example.com/path');
+    expect(link?.dataset.mdLinkUrl).toBe('https://www.example.com/path');
+    expect(link?.getAttribute('href')).toBeNull();
+    expect(host.textContent).not.toContain('https://www.example.com/path');
+
+    adapter.destroy();
+  });
+
+  it('keeps subdomains, displays non-URL source text, and supports configured aliases', () => {
+    setFrontmatterMetaFields(' aliases , source_url|source ');
+    const { adapter, host } = createAdapterHost(
+      '---\naliases:\n  - Alpha\n  - Beta\nsource: Hacker News\nsource_url: https://news.ycombinator.com/item?id=1\n---\n# Title'
+    );
+
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Alpha, Beta news.ycombinator.com');
+
+    adapter.destroy();
+  });
+
+  it('uses an existing non-URL source value without continuing to later fallback fields', () => {
+    const { adapter, host } = createAdapterHost(
+      '---\nsource: Hacker News\nsource_url: https://news.ycombinator.com/item?id=1\n---\n# Title'
+    );
+
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Hacker News');
+
+    adapter.destroy();
+  });
+
+  it('shows only Meta when configured fields parse empty or are absent', () => {
+    setFrontmatterMetaFields(' ,,, ');
+    const { adapter, host } = createAdapterHost('---\nauthor: Jane\n---\n# Title');
+
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('');
+    expect(host.textContent).toContain('Meta');
+    expect(host.textContent).not.toContain('Jane');
+
+    adapter.destroy();
+  });
+});
+
+describe('live markdown frontmatter interactions', () => {
+  it('routes frontmatter URL keys through the in-app link panel handler', () => {
+    const onOpenExternalLink = vi.fn();
+    const { adapter, host } = createAdapterHost(
+      '---\nurl: https://example.com/frontmatter\n---\n# Title',
+      { onOpenExternalLink }
+    );
+
+    const link = host.querySelector('[data-md-link-url="https://example.com/frontmatter"]');
+    expect(link?.textContent).toBe('example.com');
+    expect((link as HTMLElement | null)?.getAttribute('href')).toBeNull();
+
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 180, clientY: 96 }));
+
+    expect(onOpenExternalLink).toHaveBeenCalledWith({
+      anchorPoint: { x: 180, y: 96 },
+      href: 'https://example.com/frontmatter'
+    });
+
+    adapter.destroy();
+  });
+
+  it('can expand compact frontmatter into editable full source lines', () => {
+    const { adapter, host } = createAdapterHost('---\nauthor: Jane\n---\n# Title');
+
+    host.querySelector<HTMLButtonElement>('.cm-md-frontmatter-toggle')?.click();
+
+    expect(host.querySelector('.cm-md-frontmatter-compact')).toBeNull();
+    expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('Jane');
+    expect(host.textContent).toContain('Close');
+    expect(host.querySelector<HTMLTextAreaElement>('.cm-md-frontmatter-yaml-input')?.value).toBe('---\nauthor: Jane\n---');
+    expect(host.querySelector('.cm-md-frontmatter-yaml')).not.toBeNull();
+    expect(host.textContent).not.toContain('YAML');
+
+    adapter.destroy();
+  });
+
+  it('ignores the legacy full frontmatter display setting for the default meta view', () => {
+    setFrontmatterDisplayMode('full');
+    const { adapter, host } = createAdapterHost('---\nauthor: Jane\n---\n# Title');
+
+    expect(host.querySelector('.cm-md-frontmatter-compact')).not.toBeNull();
+    expect(host.querySelector<HTMLTextAreaElement>('.cm-md-frontmatter-yaml-input')).toBeNull();
+
+    adapter.destroy();
+  });
+
+  it('shows raw frontmatter in source mode', () => {
+    setEditorDisplayMode('source');
+    const { adapter, host } = createAdapterHost('---\nauthor: Jane\n---\n# Title');
+
+    expect(host.querySelector('.cm-md-frontmatter-compact')).toBeNull();
+    expect(host.querySelector('.cm-md-frontmatter-yaml-input')).toBeNull();
+    expect(host.querySelector('.cm-content')?.textContent).toContain('---');
+    expect(host.querySelector('.cm-content')?.textContent).toContain('author: Jane');
+
+    adapter.destroy();
+  });
+
+});
+
+describe('live markdown block rendering', () => {
   it('hides the lone level-one heading in live preview to avoid a duplicated page title', () => {
     const host = document.createElement('div');
     document.body.append(host);

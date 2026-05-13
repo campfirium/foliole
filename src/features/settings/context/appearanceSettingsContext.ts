@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 
 import type { EditorDisplayMode } from '../../editor/model/editorDisplayMode';
+import type { FrontmatterDisplayMode } from '../../editor/model/frontmatterDisplayModeSetting';
 import type { MarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import type {
   AccentColorPreset,
@@ -33,6 +34,8 @@ export interface AppearanceSettingsContextValue {
   readingContentWidth: number;
   readingLineHeight: ReadingLineHeight;
   fontColorPreset: FontColorPreset;
+  frontmatterDisplayMode: FrontmatterDisplayMode;
+  frontmatterMetaFields: string;
   selectionColorPreset: SelectionColorPreset;
   highlightColorPreset: HighlightColorPreset;
   interfaceFontPreset: InterfaceFontPreset;
@@ -55,6 +58,9 @@ export interface AppearanceSettingsContextValue {
   setClozeColorPreset: (value: ClozeColorPreset) => void;
   setDimImagesInDarkMode: (value: boolean) => void;
   setFontColorPreset: (value: FontColorPreset) => void;
+  setFrontmatterDisplayMode: (value: FrontmatterDisplayMode) => void;
+  setFrontmatterMetaFields: (value: string) => void;
+  resetFrontmatterMetaFields: () => void;
   setHighlightColorPreset: (value: HighlightColorPreset) => void;
   setSelectionColorPreset: (value: SelectionColorPreset) => void;
   setCustomInterfaceFont: (value: string) => void;

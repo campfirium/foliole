@@ -20,6 +20,8 @@ export interface AppSettingsClassification {
 
 export const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'markdownSyntaxVisibility',
+  'frontmatterDisplayMode',
+  'frontmatterMetaFields',
   'highlightAnnotationPrefix',
   'longClozeFrontGuardMode',
   'longClozeFrontGuardSelectionMin',

@@ -1,5 +1,6 @@
 import { EditorView } from '@codemirror/view';
 
+import { liveMarkdownFrontmatterTheme } from './liveMarkdownFrontmatterTheme';
 import { liveMarkdownTableTheme } from './liveMarkdownTableTheme';
 
 const TEXT_SELECTION_BACKGROUND_COLOR = 'var(--app-text-selection-bg-color)';
@@ -51,15 +52,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-diff-spacer-removed': { backgroundColor: DIFF_REMOVED_SPACER_COLOR, borderRadius: 'var(--editor-radius-lg)' },
   '.cm-diff-spacer-line': { color: 'transparent', userSelect: 'none' },
   '.cm-md-syntax-visible': { color: 'var(--app-accent-color)', opacity: '0.74' },
-  '.cm-md-frontmatter-summary': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 82%, transparent)',
-    fontSize: '0.82rem',
-    fontWeight: '500',
-    letterSpacing: '0.02em',
-    lineHeight: '1.5',
-    margin: '0.48rem 0 0.32rem',
-    textAlign: 'center'
-  },
+  ...liveMarkdownFrontmatterTheme,
   '.cm-md-heading-syntax-hidden': {
     display: 'none'
   },

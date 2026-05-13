@@ -11,6 +11,8 @@ function AppearanceHarness() {
   return (
     <>
       <div>{appearance.editorDisplayMode}</div>
+      <div>{appearance.frontmatterDisplayMode}</div>
+      <div>{appearance.frontmatterMetaFields}</div>
       <div>{appearance.markdownSyntaxVisibility}</div>
       <div>{appearance.baseColorMode}</div>
       <div>{appearance.dimImagesInDarkMode ? 'dim-on' : 'dim-off'}</div>
@@ -22,6 +24,15 @@ function AppearanceHarness() {
       </button>
       <button onClick={() => appearance.setMarkdownSyntaxVisibility('visible')} type="button">
         Show syntax
+      </button>
+      <button onClick={() => appearance.setFrontmatterDisplayMode('full')} type="button">
+        Full frontmatter
+      </button>
+      <button onClick={() => appearance.setFrontmatterMetaFields('aliases, source')} type="button">
+        Set frontmatter meta
+      </button>
+      <button onClick={appearance.resetFrontmatterMetaFields} type="button">
+        Reset frontmatter meta
       </button>
       <button onClick={() => appearance.setPdfReadingMode('warm')} type="button">
         Warm PDF
@@ -57,6 +68,8 @@ it('hydrates saved appearance settings and persists updates through the shared p
   );
 
   expect(screen.getByText('source')).toBeInTheDocument();
+  expect(screen.getByText('compact')).toBeInTheDocument();
+  expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();
   expect(screen.getByText('hidden')).toBeInTheDocument();
   expect(screen.getByText('light')).toBeInTheDocument();
   expect(screen.getByText('dim-off')).toBeInTheDocument();
@@ -73,6 +86,8 @@ it('hydrates saved appearance settings and persists updates through the shared p
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle mode' }));
   fireEvent.click(screen.getByRole('button', { name: 'Show syntax' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Full frontmatter' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Set frontmatter meta' }));
   fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
   fireEvent.click(screen.getByRole('button', { name: 'Relax line height' }));
   fireEvent.click(screen.getByRole('button', { name: 'Set reading width' }));
@@ -80,6 +95,8 @@ it('hydrates saved appearance settings and persists updates through the shared p
   fireEvent.click(screen.getByRole('button', { name: 'Dim images' }));
 
   expect(screen.getByText('preview')).toBeInTheDocument();
+  expect(screen.getByText('full')).toBeInTheDocument();
+  expect(screen.getByText('aliases, source')).toBeInTheDocument();
   expect(screen.getByText('visible')).toBeInTheDocument();
   expect(screen.getByText('dark')).toBeInTheDocument();
   expect(screen.getByText('dim-on')).toBeInTheDocument();
@@ -87,6 +104,8 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(screen.getByText('relaxed')).toBeInTheDocument();
   expect(screen.getByText('920')).toBeInTheDocument();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorDisplayMode)).toBe('preview');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterDisplayMode)).toBe('full');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterMetaFields)).toBe('aliases, source');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility)).toBe('visible');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('true');
@@ -97,6 +116,9 @@ it('hydrates saved appearance settings and persists updates through the shared p
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
   expect(document.documentElement.style.getPropertyValue('--content-panel-line-height')).toBe('1.9');
   expect(document.documentElement.style.getPropertyValue('--document-max-width')).toBe('920px');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reset frontmatter meta' }));
+  expect(screen.getByText('author|byline, url|link|source|source_url')).toBeInTheDocument();
 });
 
 it('keeps the selected reading line height when the color mode changes', () => {

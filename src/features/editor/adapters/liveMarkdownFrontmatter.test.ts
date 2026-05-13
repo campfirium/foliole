@@ -22,8 +22,8 @@ describe('liveMarkdownFrontmatter', () => {
     expect(
       extractFrontmatterEntries('---\nauthor: [[Jane Doe|Jane]]\ntags:\n  - [[design]]\n  - ![[assets/card|Card]]\n---\n# Title')
     ).toEqual([
-      { key: 'author', values: ['Jane'] },
-      { key: 'tags', values: ['design', 'Card'] }
+      { key: 'author', values: [{ text: 'Jane' }] },
+      { key: 'tags', values: [{ text: 'design' }, { text: 'Card' }] }
     ]);
   });
 });

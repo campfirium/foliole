@@ -27,6 +27,22 @@ it('edits the highlight annotation prefix from editor settings', () => {
   expect(input).toHaveValue('※ ');
 });
 
+it('edits frontmatter meta fields from editor settings', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
+
+  const input = screen.getByLabelText('Frontmatter meta fields');
+  expect(input).toHaveValue('author|byline, url|link|source|source_url');
+
+  fireEvent.change(input, { target: { value: 'aliases, source' } });
+
+  expect(input).toHaveValue('aliases, source');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.frontmatterMetaFields)).toBe('aliases, source');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reset frontmatter meta fields' }));
+
+  expect(input).toHaveValue('author|byline, url|link|source|source_url');
+});
+
 it('edits the long cloze front guard mode from editor settings', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="editor" />);
 

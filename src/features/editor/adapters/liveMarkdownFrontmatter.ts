@@ -1,13 +1,22 @@
-import { type Range } from '@codemirror/state';
-import { Decoration, WidgetType, type DecorationSet, type EditorView } from '@codemirror/view';
+import { StateField, type EditorState, type Extension, type Range, type Transaction } from '@codemirror/state';
+import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 
+import { getEditorDisplayMode } from '../model/editorDisplayMode';
+import type { FrontmatterDisplayMode } from '../model/frontmatterDisplayModeSetting';
+import { getFrontmatterMetaFields } from '../model/frontmatterMetaFieldsSetting';
 import { collectMarkdownLineClassRanges } from '../model/markdownBlockProjection';
 import {
   projectMarkdownFrontmatter,
   type FrontmatterBounds
 } from '../model/markdownFrontmatterProjection';
 
+import {
+  FrontmatterCompactWidget,
+  FrontmatterYamlWidget,
+  setFrontmatterModeEffect
+} from './liveMarkdownFrontmatterWidget';
 import { addLine, addReplace } from './liveMarkdownPrimitives';
+import { activeNodeIdFacet } from './liveMarkdownState';
 
 export { extractFrontmatterEntries, resolveFrontmatterBounds } from '../model/markdownFrontmatterProjection';
 
@@ -16,78 +25,13 @@ export interface FrontmatterDecorationState {
   inspectedUntilLine: number;
 }
 
-class FrontmatterSummaryWidget extends WidgetType {
-  readonly text: string;
-
-  constructor(text: string) {
-    super();
-    this.text = text;
-  }
-
-  eq(other: FrontmatterSummaryWidget) {
-    return this.text === other.text;
-  }
-
-  toDOM() {
-    const element = document.createElement('div');
-    element.className = 'cm-md-frontmatter-summary';
-    element.style.color = 'color-mix(in srgb, var(--color-text-secondary) 72%, transparent)';
-    element.style.display = 'block';
-    element.style.fontSize = '1.2rem';
-    element.style.fontWeight = '500';
-    element.style.letterSpacing = '0.03em';
-    element.style.lineHeight = '1.35';
-    element.style.margin = '1.5rem 0 0.12rem';
-    element.style.textAlign = 'center';
-    element.style.width = '100%';
-    element.textContent = this.text;
-    return element;
-  }
+interface FrontmatterModeOverride {
+  mode: FrontmatterDisplayMode;
+  nodeId: string | null;
 }
 
 export function isLineWithinFrontmatter(bounds: FrontmatterBounds | null, lineNumber: number) {
   return Boolean(bounds && lineNumber >= bounds.startLine && lineNumber <= bounds.endLine);
-}
-
-function resolveSummaryHeadingLineNumber(view: EditorView, bounds: FrontmatterBounds) {
-  const h1LineFroms = new Set(
-    collectMarkdownLineClassRanges(view.state.doc.toString())
-      .filter((range) => range.className === 'cm-line-h1')
-      .map((range) => range.from)
-  );
-  for (let lineNumber = bounds.endLine + 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
-    const line = view.state.doc.line(lineNumber);
-    if (h1LineFroms.has(line.from)) {
-      return lineNumber;
-    }
-    if (line.text.trim().length > 0) {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-function resolveSummaryInspectionLineNumber(view: EditorView, bounds: FrontmatterBounds) {
-  for (let lineNumber = bounds.endLine + 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
-    const line = view.state.doc.line(lineNumber);
-    if (line.text.trim().length > 0) {
-      return lineNumber;
-    }
-  }
-
-  return view.state.doc.lines;
-}
-
-function hideBlankLinesAfterHeading(ranges: Range<Decoration>[], view: EditorView, headingLineNumber: number) {
-  for (let lineNumber = headingLineNumber + 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
-    const line = view.state.doc.line(lineNumber);
-    if (line.text.trim().length > 0) {
-      return;
-    }
-    addLine(ranges, line.from, 'cm-line-frontmatter-hidden');
-    addReplace(ranges, line.from, line.to);
-  }
 }
 
 export function addFrontmatterDecorations(ranges: Range<Decoration>[], view: EditorView) {
@@ -101,11 +45,65 @@ export function buildFrontmatterDecorationSet(view: EditorView): DecorationSet {
   return buildFrontmatterDecorationState(view).decorations;
 }
 
-export function buildFrontmatterDecorationState(view: EditorView): FrontmatterDecorationState {
-  const { doc } = view.state;
+function resolveEffectiveMode(override: FrontmatterModeOverride | null) {
+  return override?.mode ?? 'compact';
+}
+
+function addFullFrontmatterDecorations(ranges: Range<Decoration>[], state: EditorState, bounds: FrontmatterBounds) {
+  for (let lineNumber = bounds.startLine; lineNumber <= bounds.endLine; lineNumber += 1) {
+    const line = state.doc.line(lineNumber);
+    addLine(ranges, line.from, 'cm-line-frontmatter-hidden');
+    addReplace(ranges, line.from, line.to);
+  }
+}
+
+function addCompactFrontmatterDecorations(ranges: Range<Decoration>[], state: EditorState, bounds: FrontmatterBounds) {
+  for (let lineNumber = bounds.startLine; lineNumber <= bounds.endLine; lineNumber += 1) {
+    const line = state.doc.line(lineNumber);
+    addLine(ranges, line.from, 'cm-line-frontmatter-hidden');
+    addReplace(ranges, line.from, line.to);
+  }
+}
+
+function shouldRebuildFrontmatter(transaction: Transaction, inspectedUntilLine: number) {
+  let shouldRebuild = false;
+  transaction.changes.iterChangedRanges((fromA) => {
+    if (shouldRebuild) return;
+    shouldRebuild = transaction.startState.doc.lineAt(fromA).number <= inspectedUntilLine;
+  });
+  return shouldRebuild;
+}
+
+function resolveFrontmatterWidgetAnchor(state: EditorState, bounds: FrontmatterBounds) {
+  const h1LineFroms = new Set(
+    collectMarkdownLineClassRanges(state.doc.toString())
+      .filter((range) => range.className === 'cm-line-h1')
+      .map((range) => range.from)
+  );
+  for (let lineNumber = bounds.endLine + 1; lineNumber <= state.doc.lines; lineNumber += 1) {
+    const line = state.doc.line(lineNumber);
+    if (h1LineFroms.has(line.from)) return line.to;
+    if (line.text.trim().length > 0) return state.doc.line(bounds.endLine).to;
+  }
+  return state.doc.line(bounds.endLine).to;
+}
+
+export function buildFrontmatterDecorationState(
+  viewOrState: EditorView | EditorState,
+  override: FrontmatterModeOverride | null = null
+): FrontmatterDecorationState {
+  const state = viewOrState instanceof EditorView ? viewOrState.state : viewOrState;
+  const { doc } = state;
   const ranges: Range<Decoration>[] = [];
   const projection = projectMarkdownFrontmatter(doc.toString());
   const { bounds } = projection;
+
+  if (getEditorDisplayMode() === 'source') {
+    return {
+      decorations: Decoration.set(ranges, true),
+      inspectedUntilLine: projection.inspectedUntilLine
+    };
+  }
 
   if (!bounds) {
     return {
@@ -114,37 +112,80 @@ export function buildFrontmatterDecorationState(view: EditorView): FrontmatterDe
     };
   }
 
-  for (let lineNumber = bounds.startLine; lineNumber <= bounds.endLine; lineNumber += 1) {
-    const line = doc.line(lineNumber);
-    addLine(ranges, line.from, 'cm-line-frontmatter-hidden');
-    addReplace(ranges, line.from, line.to);
-  }
+  const anchor = resolveFrontmatterWidgetAnchor(state, bounds);
+  const from = doc.line(bounds.startLine).from;
+  const to = doc.line(bounds.endLine).to;
+  const metaFields = getFrontmatterMetaFields();
 
-  const summary = projection.summary;
-  const headingLineNumber = resolveSummaryHeadingLineNumber(view, bounds);
-  const inspectedUntilLine = headingLineNumber ?? resolveSummaryInspectionLineNumber(view, bounds);
-
-  if (!summary) {
+  if (resolveEffectiveMode(override) === 'full') {
+    addFullFrontmatterDecorations(ranges, state, bounds);
+    ranges.push(
+      Decoration.widget({
+        block: true,
+        side: 1,
+        widget: new FrontmatterYamlWidget(projection.entries, metaFields, from, doc.sliceString(from, to), to)
+      }).range(anchor)
+    );
     return {
       decorations: Decoration.set(ranges, true),
-      inspectedUntilLine
+      inspectedUntilLine: bounds.endLine
     };
   }
 
-  if (headingLineNumber) {
-    hideBlankLinesAfterHeading(ranges, view, headingLineNumber);
-  }
+  addCompactFrontmatterDecorations(ranges, state, bounds);
 
-  const anchor = headingLineNumber ? doc.line(headingLineNumber).to : doc.line(bounds.endLine).to;
   ranges.push(
     Decoration.widget({
+      block: true,
       side: 1,
-      widget: new FrontmatterSummaryWidget(summary)
+      widget: new FrontmatterCompactWidget(projection.entries, metaFields)
     }).range(anchor)
   );
 
   return {
     decorations: Decoration.set(ranges, true),
-    inspectedUntilLine
+    inspectedUntilLine: bounds.endLine
   };
 }
+
+const frontmatterModeOverrideField = StateField.define<FrontmatterModeOverride | null>({
+  create: () => null,
+  update(value, transaction) {
+    const startNodeId = transaction.startState.facet(activeNodeIdFacet);
+    const nextNodeId = transaction.state.facet(activeNodeIdFacet);
+    let nextValue = startNodeId === nextNodeId ? value : null;
+    for (const effect of transaction.effects) {
+      if (effect.is(setFrontmatterModeEffect)) {
+        nextValue = { mode: effect.value, nodeId: nextNodeId };
+      }
+    }
+    return nextValue?.nodeId === nextNodeId ? nextValue : null;
+  }
+});
+
+const frontmatterDecorationsField = StateField.define<FrontmatterDecorationState>({
+  create(state) {
+    return buildFrontmatterDecorationState(state, null);
+  },
+  update(value, transaction) {
+    const override = transaction.state.field(frontmatterModeOverrideField, false) ?? null;
+    const nodeChanged = transaction.startState.facet(activeNodeIdFacet) !== transaction.state.facet(activeNodeIdFacet);
+    if (
+      nodeChanged ||
+      transaction.effects.some((effect) => effect.is(setFrontmatterModeEffect)) ||
+      (transaction.docChanged && shouldRebuildFrontmatter(transaction, value.inspectedUntilLine))
+    ) {
+      return buildFrontmatterDecorationState(transaction.state, override);
+    }
+    return {
+      ...value,
+      decorations: value.decorations.map(transaction.changes)
+    };
+  },
+  provide: (field) => EditorView.decorations.from(field, (value) => value.decorations)
+});
+
+export const markdownFrontmatterDecorations: Extension = [
+  frontmatterModeOverrideField,
+  frontmatterDecorationsField
+];
