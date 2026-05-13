@@ -47,7 +47,7 @@ it('matches readwise heading highlights that include empty github anchor links',
   const match = findLocatorText(source, quote);
 
   expect(match).not.toBeNull();
-  expect(match).toContain('#### 添加 Anki 卡片');
+  expect(match?.startsWith('加 Anki 卡片')).toBe(true);
   expect(match).toContain('"AnkiConnectUrl"');
   expect(match).toContain('使用 Anki 的准备工作如下：');
 });

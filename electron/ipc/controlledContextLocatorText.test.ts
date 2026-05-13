@@ -230,3 +230,13 @@ it('keeps autolink closing markers when a highlight ends at an autolink', () => 
   expect(match).toBe(source);
   expect(normalizeQuoteText(match ?? '')).toBe(normalizeQuoteText(quote));
 });
+
+it('does not expand a heading match that starts inside heading text', () => {
+  const source = ['##### 添加 Anki 卡片', '', 'Anki setup details.'].join('\n');
+  const quote = ['加 Anki 卡片', 'Anki setup details.'].join('\n');
+
+  const match = findLocatorText(source, quote);
+
+  expect(match).toBe(['加 Anki 卡片', '', 'Anki setup details.'].join('\n'));
+  expect(normalizeQuoteText(match ?? '')).toBe(normalizeQuoteText(quote));
+});

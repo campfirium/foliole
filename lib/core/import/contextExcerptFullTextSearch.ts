@@ -28,7 +28,7 @@ function toRawRange(locator: FullTextLocator, start: number, endExclusive: numbe
 function expandRawStartToHeadingStart(content: string, rawStart: number) {
   const lineStart = content.lastIndexOf('\n', rawStart - 1) + 1;
   const prefix = content.slice(lineStart, rawStart);
-  return /^#{1,6}\s+/u.test(prefix) ? lineStart : rawStart;
+  return /^#{1,6}\s+$/u.test(prefix) ? lineStart : rawStart;
 }
 
 function expandRawEndToAutolinkEnd(content: string, rawEnd: number) {
