@@ -42,7 +42,7 @@ function buildAdapter() {
     getContent: vi.fn(() => 'Alpha'),
     getDocumentPositionAtViewportY: vi.fn(() => 0),
     getPrimaryVisiblePosition: vi.fn(() => 0),
-    getViewportRect: vi.fn(() => ({ bottom: 260, height: 200, left: 0, right: 400, top: 60, width: 400, x: 0, y: 60 })),
+    getViewportRect: vi.fn(() => ({ bottom: 260, height: 200, left: 0, right: 400, top: 60, width: 400, x: 0, y: 60, toJSON: () => ({}) })),
     getLineBlockHeight: vi.fn(() => 24),
     getScrollMetrics: vi.fn(() => ({ clientHeight: 100, scrollHeight: 100, scrollTop: 0 })),
     getScrollTop: vi.fn(() => 0),
@@ -94,7 +94,7 @@ it('skips readable node scanning while immersive mode is closed', () => {
       onSelectNode: vi.fn(),
       onToggleImmersiveMode: vi.fn(),
       trashedNodeIds: []
-    } as unknown as ImmersiveProps)
+    } as ImmersiveProps)
   );
 
   expect(immersiveReadingNodesMocks.getReadableNodeIds).not.toHaveBeenCalled();

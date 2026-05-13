@@ -1,13 +1,14 @@
 import { expect, it } from 'vitest';
 
+import { createTestWorkspaceState } from '../test/workspaceStateTestSupport';
+
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
+import { useWorkspaceStore } from './workspaceStore';
 
 it('falls back to full reconciliation when node ids change but counts match', () => {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
-  const currentState = {
-    ...createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')),
+  const currentState = createTestWorkspaceState({
     activeNodeId: 'node-1',
     nodesById: {
       'node-1': {
@@ -26,7 +27,7 @@ it('falls back to full reconciliation when node ids change but counts match', ()
         ...useWorkspaceStore.getState().nodesById['special-virtual-root']
       }
     }
-  } as unknown as WorkspaceState;
+  });
 
   const nextState = enforceWorkspaceRendererBoundary(
     {

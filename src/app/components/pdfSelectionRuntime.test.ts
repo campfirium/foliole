@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createTestSelection } from '../../test/domGeometryTestSupport';
+
 import { stabilizePdfTextSelectionToClosestRow } from './pdfSelectionRuntime';
 
 function mockRect(left: number, top: number, width: number, height: number): DOMRect {
@@ -80,7 +82,7 @@ function createTwoSpanSelectionFixture() {
     defineRect(leftSpan, mockRect(20, 40, 44, 16));
     defineRect(rightSpan, mockRect(68, 40, 36, 16));
 
-    const selection = {
+    const selection = createTestSelection({
       anchorNode: leftText,
       anchorOffset: 0,
       focusNode: rightText,
@@ -88,7 +90,7 @@ function createTwoSpanSelectionFixture() {
       isCollapsed: false,
       rangeCount: 1,
       setBaseAndExtent: vi.fn()
-    } as unknown as Selection;
+    });
 
     return { leftText, rightText, selection, surface, textLayer };
 }
@@ -106,7 +108,7 @@ function createSingleSpanSelectionFixture() {
 
     defineRect(span, mockRect(20, 40, 84, 16));
 
-    const selection = {
+    const selection = createTestSelection({
       anchorNode: text,
       anchorOffset: 0,
       focusNode: text,
@@ -114,7 +116,7 @@ function createSingleSpanSelectionFixture() {
       isCollapsed: false,
       rangeCount: 1,
       setBaseAndExtent: vi.fn()
-    } as unknown as Selection;
+    });
 
     return { selection, surface, textLayer };
 }

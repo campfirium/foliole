@@ -1,9 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import { navigationTestNodes, resetWorkspaceNavigationTestState } from './useWorkspaceNavigation.testSupport';
@@ -45,9 +46,9 @@ function renderTextLocatorNavigationHook(args: {
         closeContextMenu: vi.fn(),
         completeAnchorNavigationRestore: vi.fn(),
         editorRef: {
-          current: {
+          current: createMockEditorAdapter({
             isPositionNearViewportRatio: () => true
-          } as unknown as EditorAdapter
+          })
         },
         flushPendingEditorDraft,
         flushPendingEditorDraftImmediately: vi.fn().mockResolvedValue(true),

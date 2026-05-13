@@ -1,11 +1,12 @@
-import type { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
+
+import { createMockEditorView } from '../../../test/codeMirrorEditorViewTestSupport';
 
 import { createClipboardExportFromView, createClipboardExportPayload, FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 import { textAnchorDecorationsFacet } from './liveMarkdownState';
 
 function createClipboardView() {
-  return {
+  return createMockEditorView({
     state: {
       doc: {
         lineAt: () => ({ number: 1 }),
@@ -17,7 +18,7 @@ function createClipboardView() {
         ranges: [{ empty: false, from: 0, to: 22 }]
       }
     }
-  } as unknown as EditorView;
+  });
 }
 
 describe('clipboardInterop', () => {

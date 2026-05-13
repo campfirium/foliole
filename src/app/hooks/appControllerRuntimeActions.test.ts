@@ -8,12 +8,17 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump
 }));
 
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
+
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import {
   createPersistPdfViewState,
   createRevealDocumentPosition,
   createRevealDocumentSelection
 } from './appControllerRuntimeActions';
+
+type ControllerRuntime = BuildControllerLayoutPropsArgs['runtime'];
+type ControllerWorkspace = BuildControllerLayoutPropsArgs['ws'];
 
 function createRuntimeState() {
   return {
@@ -31,20 +36,40 @@ function createRuntimeState() {
   };
 }
 
-function createRevealDocumentPositionArgs(args: {
-  getScrollTop?: () => number;
-  revealPosition?: (position: number) => void;
-  revealSelectionNearest?: ReturnType<typeof vi.fn>;
-  revealSelectionAtViewportRatio?: ReturnType<typeof vi.fn>;
-  revealSelection?: ReturnType<typeof vi.fn>;
-  restoreSelection?: ReturnType<typeof vi.fn>;
-  setSelection?: ReturnType<typeof vi.fn>;
-  setNodeViewState: ReturnType<typeof vi.fn>;
+function createControllerLayoutArgs(args: {
+  runtime?: Partial<ControllerRuntime>;
+  ws?: Partial<ControllerWorkspace>;
 }): BuildControllerLayoutPropsArgs {
   return {
     runtime: {
+      ...createRuntimeState(),
+      editorRef: { current: null },
+      isViewingTrashNode: false,
+      ...args.runtime
+    } as ControllerRuntime,
+    ws: {
+      activeNodeId: 'node-1',
+      nodeViewById: {},
+      setNodeViewState: vi.fn(),
+      ...args.ws
+    } as ControllerWorkspace
+  } as BuildControllerLayoutPropsArgs;
+}
+
+function createRevealDocumentPositionArgs(args: {
+  getScrollTop?: () => number;
+  revealPosition?: (position: number) => void;
+  revealSelectionNearest?: NonNullable<ControllerRuntime['editorRef']['current']>['revealSelectionNearest'];
+  revealSelectionAtViewportRatio?: NonNullable<ControllerRuntime['editorRef']['current']>['revealSelectionAtViewportRatio'];
+  revealSelection?: NonNullable<ControllerRuntime['editorRef']['current']>['revealSelection'];
+  restoreSelection?: NonNullable<ControllerRuntime['editorRef']['current']>['restoreSelection'];
+  setSelection?: NonNullable<ControllerRuntime['editorRef']['current']>['setSelection'];
+  setNodeViewState: ControllerWorkspace['setNodeViewState'];
+}): BuildControllerLayoutPropsArgs {
+  return createControllerLayoutArgs({
+    runtime: {
       editorRef: {
-        current: {
+        current: createMockEditorAdapter({
           getScrollTop: args.getScrollTop ?? (() => 0),
           revealPosition: args.revealPosition ?? (() => undefined),
           revealSelectionNearest: args.revealSelectionNearest,
@@ -52,7 +77,7 @@ function createRevealDocumentPositionArgs(args: {
           revealSelection: args.revealSelection ?? vi.fn(),
           restoreSelection: args.restoreSelection ?? vi.fn(),
           setSelection: args.setSelection ?? vi.fn()
-        }
+        })
       },
       ...createRuntimeState(),
       isViewingTrashNode: false
@@ -67,7 +92,7 @@ function createRevealDocumentPositionArgs(args: {
       },
       setNodeViewState: args.setNodeViewState
     }
-  } as unknown as BuildControllerLayoutPropsArgs;
+  });
 }
 
 function expectNearestReadingRequest(args: {
@@ -120,7 +145,7 @@ it('still stores selection when editor adapter is unavailable', () => {
   const setNodeViewState = vi.fn();
   const runtimeState = createRuntimeState();
 
-  const revealDocumentSelection = createRevealDocumentSelection({
+  const revealDocumentSelection = createRevealDocumentSelection(createControllerLayoutArgs({
     runtime: {
       editorRef: {
         current: null
@@ -138,7 +163,7 @@ it('still stores selection when editor adapter is unavailable', () => {
       },
       setNodeViewState
     }
-  } as unknown as BuildControllerLayoutPropsArgs);
+  }));
 
   revealDocumentSelection({ from: 3, to: 125 });
 
@@ -170,7 +195,7 @@ describe('createPersistPdfViewState', () => {
   it('writes pdf view state for the provided node', () => {
     const setNodeViewState = vi.fn();
     const runtimeState = createRuntimeState();
-    const persistPdfViewState = createPersistPdfViewState({
+    const persistPdfViewState = createPersistPdfViewState(createControllerLayoutArgs({
       runtime: {
         ...runtimeState,
         isViewingTrashNode: false
@@ -178,7 +203,7 @@ describe('createPersistPdfViewState', () => {
       ws: {
         setNodeViewState
       }
-    } as unknown as BuildControllerLayoutPropsArgs);
+    }));
 
     persistPdfViewState('node-7', {
       scrollTop: 7,
@@ -194,7 +219,7 @@ describe('createPersistPdfViewState', () => {
   it('skips persistence when viewing trash node', () => {
     const setNodeViewState = vi.fn();
     const runtimeState = createRuntimeState();
-    const persistPdfViewState = createPersistPdfViewState({
+    const persistPdfViewState = createPersistPdfViewState(createControllerLayoutArgs({
       runtime: {
         ...runtimeState,
         isViewingTrashNode: true
@@ -202,7 +227,7 @@ describe('createPersistPdfViewState', () => {
       ws: {
         setNodeViewState
       }
-    } as unknown as BuildControllerLayoutPropsArgs);
+    }));
 
     persistPdfViewState('node-1', {
       scrollTop: 2,

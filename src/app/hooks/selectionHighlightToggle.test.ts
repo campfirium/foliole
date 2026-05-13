@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 import { createToggleSelectionHighlightFromPayloadHandler } from './selectionHighlightToggle';
@@ -12,13 +13,13 @@ function createEditorRef(content: string, selection: { from: number; to: number 
   const replaceRange = vi.fn();
   const setSelection = vi.fn();
   const setSelectionRanges = vi.fn();
-  editorRef.current = {
+  editorRef.current = createMockEditorAdapter({
     getContent: () => content,
     getSelectionRanges: () => [selection],
     replaceRange,
     setSelection,
     setSelectionRanges
-  } as unknown as EditorAdapter;
+  });
   return { editorRef, replaceRange, setSelection, setSelectionRanges };
 }
 

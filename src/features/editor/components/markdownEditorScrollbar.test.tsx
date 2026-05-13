@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { useRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
+import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
 import { useEditorScrollbarMetrics } from './markdownEditorScrollbar';
 
@@ -19,9 +19,10 @@ describe('useEditorScrollbarMetrics', () => {
 
     function Harness() {
       lifecycle.renders += 1;
-      const adapterRef = useRef<CodeMirrorEditorAdapter | null>({
+      const adapter = Object.assign(Object.create(CodeMirrorEditorAdapter.prototype) as CodeMirrorEditorAdapter, {
         getScrollMetrics
-      } as unknown as CodeMirrorEditorAdapter);
+      });
+      const adapterRef = useRef<CodeMirrorEditorAdapter | null>(adapter);
       syncScrollMetricsRef.current = useEditorScrollbarMetrics(adapterRef).syncScrollMetrics;
       return null;
     }

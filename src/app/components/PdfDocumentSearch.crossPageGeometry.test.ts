@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest';
 
+import { createTestDomRectList } from '../../test/domGeometryTestSupport';
+
 import { collectMatches } from './PdfDocumentSearch';
 
 function createRect({ height, left, top, width }: { height: number; left: number; top: number; width: number }) {
@@ -42,9 +44,13 @@ function withMockedCrossPageRanges(spanA: HTMLElement, run: () => void) {
       value: () => {
         const node = (range.startContainer.parentElement ?? range.commonAncestorContainer.parentElement) as HTMLElement | null;
         if (node === spanA) {
-          return [{ bottom: 52, height: 16, left: 28, right: 38, top: 36, width: 10, x: 28, y: 36, toJSON: () => ({}) }] as unknown as DOMRectList;
+          return createTestDomRectList([
+            { bottom: 52, height: 16, left: 28, right: 38, top: 36, width: 10, x: 28, y: 36, toJSON: () => ({}) } as DOMRect
+          ]);
         }
-        return [{ bottom: 56, height: 16, left: 10, right: 24, top: 40, width: 14, x: 10, y: 40, toJSON: () => ({}) }] as unknown as DOMRectList;
+        return createTestDomRectList([
+          { bottom: 56, height: 16, left: 10, right: 24, top: 40, width: 14, x: 10, y: 40, toJSON: () => ({}) } as DOMRect
+        ]);
       }
     });
     Object.defineProperty(range, 'getBoundingClientRect', {

@@ -118,7 +118,7 @@ it('imports a guide-marked cover page into the root node body', async () => {
       name: 'OPS/cover.xhtml'
     },
     {
-      content: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) as unknown as string,
+      content: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
       name: 'OPS/images/cover.png'
     },
     {
@@ -154,7 +154,7 @@ it('imports a manifest-declared cover image into the root node when no cover pag
       name: 'OPS/book.opf'
     },
     {
-      content: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) as unknown as string,
+      content: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
       name: 'OPS/images/cover.png'
     },
     {

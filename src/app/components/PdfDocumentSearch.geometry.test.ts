@@ -1,6 +1,8 @@
 import type { MutableRefObject } from 'react';
 import { expect, it } from 'vitest';
 
+import { createTestDomRectList } from '../../test/domGeometryTestSupport';
+
 import { collectMatches } from './PdfDocumentSearch';
 
 function createRect({ height, left, top, width }: { height: number; left: number; top: number; width: number }) {
@@ -86,7 +88,7 @@ it('keeps indexed geometry when current-page structure data is available', () =>
     const range = originalCreateRange();
     Object.defineProperty(range, 'getClientRects', {
       configurable: true,
-      value: () => [] as unknown as DOMRectList
+      value: () => createTestDomRectList([])
     });
     Object.defineProperty(range, 'getBoundingClientRect', {
       configurable: true,

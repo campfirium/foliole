@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 
@@ -32,13 +33,13 @@ function createEditorRef(
   }
 ) {
   return {
-    current: {
+    current: createMockEditorAdapter({
       getPrimaryVisiblePosition: () => options?.primaryVisiblePosition ?? null,
       getScrollTop: () => scrollTop,
       getSelection: () => selection,
       isPositionNearViewportRatio: options?.isPositionNearViewportRatio
-    }
-  } as unknown as MutableRefObject<EditorAdapter | null>;
+    })
+  } satisfies MutableRefObject<EditorAdapter | null>;
 }
 
 beforeEach(() => {

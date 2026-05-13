@@ -66,7 +66,7 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
       name: 'OPS/text/chapter.xhtml'
     },
     {
-      content: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]) as unknown as string,
+      content: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
       name: 'OPS/images/00006.jpeg'
     }
   ]);

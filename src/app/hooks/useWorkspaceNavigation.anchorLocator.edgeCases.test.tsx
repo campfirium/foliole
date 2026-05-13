@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import { navigationTestNodes, resetWorkspaceNavigationTestState } from './useWorkspaceNavigation.testSupport';
@@ -114,9 +115,9 @@ async function runEditorIndependenceCase() {
 
     expect(beginAnchorNavigationRestore).toHaveBeenCalledWith('node-1', { from: 6, to: 6 });
 
-    editorRef.current = {
+    editorRef.current = createMockEditorAdapter({
       isPositionNearViewportRatio: () => true
-    } as unknown as EditorAdapter;
+    });
 
     await act(async () => {
       vi.advanceTimersByTime(20);

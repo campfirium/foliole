@@ -1,11 +1,12 @@
 import { expect, it } from 'vitest';
 
+import { createTestWorkspaceState } from '../test/workspaceStateTestSupport';
+
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
-import { createInitialWorkspaceState } from './workspaceStore';
 
 it('treats empty content with unknown metadata as not yet loaded', () => {
-  const currentState = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')) as unknown as WorkspaceState;
+  const currentState = createTestWorkspaceState();
   const seedNode = currentState.nodesById['node-1'];
 
   const nextState = enforceWorkspaceRendererBoundary(

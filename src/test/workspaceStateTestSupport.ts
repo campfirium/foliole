@@ -1,0 +1,52 @@
+import { vi } from 'vitest';
+
+import { createInitialWorkspaceState, type WorkspaceState } from '../store/workspaceStore';
+
+export function createTestWorkspaceState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
+  return {
+    ...createInitialWorkspaceState(),
+    completeReviewItem: vi.fn(() => false),
+    createChildNode: vi.fn(() => 'node-child'),
+    createHighlightNodeFromSelection: vi.fn(() => 'node-highlight'),
+    createImageClozeNodes: vi.fn(() => []),
+    createQANodeFromSelection: vi.fn(() => null),
+    createRootNode: vi.fn(() => 'node-root'),
+    createVirtualNode: vi.fn(() => 'node-virtual'),
+    deferReviewItem: vi.fn(() => false),
+    deleteImageClozeRegion: vi.fn(),
+    deleteNode: vi.fn(),
+    deleteNodePermanently: vi.fn(),
+    deleteNodes: vi.fn(),
+    deleteNodesPermanently: vi.fn(),
+    dismissNode: vi.fn(() => false),
+    dismissReviewItem: vi.fn(() => false),
+    exitReviewSession: vi.fn(),
+    goBack: vi.fn(() => null),
+    goForward: vi.fn(() => null),
+    goToParent: vi.fn(() => null),
+    gradeReviewCard: vi.fn(async () => false),
+    jumpToAncestorNode: vi.fn(() => null),
+    moveNode: vi.fn(() => false),
+    moveNodes: vi.fn(() => false),
+    openNode: vi.fn(() => null),
+    relearnNode: vi.fn(() => false),
+    resetLayout: vi.fn(),
+    restoreNode: vi.fn(),
+    revealReviewAnswer: vi.fn(),
+    setActiveNode: vi.fn(),
+    setDocumentMaxWidth: vi.fn(),
+    setListCollapsed: vi.fn(),
+    setListWidth: vi.fn(),
+    setNodeViewState: vi.fn(),
+    setRightSidebarCollapsed: vi.fn(),
+    setRightSidebarWidth: vi.fn(),
+    startReviewSession: vi.fn(() => false),
+    updateNodeContent: vi.fn(),
+    updateNodeDesiredRetention: vi.fn(),
+    updateNodePriority: vi.fn(),
+    updateNodeReveal: vi.fn(),
+    updateNodeTitle: vi.fn(),
+    updateVirtualNodeFilter: vi.fn(),
+    ...overrides
+  };
+}

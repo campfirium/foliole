@@ -1,6 +1,8 @@
 import type { MutableRefObject } from 'react';
 import { expect, it } from 'vitest';
 
+import { createTestDomRectList } from '../../test/domGeometryTestSupport';
+
 import { collectMatches } from './PdfDocumentSearch';
 
 function createRect({ height, left, top, width }: { height: number; left: number; top: number; width: number }) {
@@ -86,7 +88,10 @@ it('maps a match range to normalized page rect position', () => {
     const range = originalCreateRange();
     Object.defineProperty(range, 'getClientRects', {
       configurable: true,
-      value: () => [{ bottom: 60, height: 20, left: 10, right: 35, top: 40, width: 25, x: 10, y: 40, toJSON: () => ({}) }] as unknown as DOMRectList
+      value: () =>
+        createTestDomRectList([
+          { bottom: 60, height: 20, left: 10, right: 35, top: 40, width: 25, x: 10, y: 40, toJSON: () => ({}) } as DOMRect
+        ])
     });
     Object.defineProperty(range, 'getBoundingClientRect', {
       configurable: true,

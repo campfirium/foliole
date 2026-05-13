@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { createTestDomRectList } from '../../test/domGeometryTestSupport';
+
 import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
 
 function createSelectionForNode(node: Text) {
@@ -65,10 +67,10 @@ function runResolveLocatorInPageShellTest() {
   Object.defineProperty(range as Range, 'getClientRects', {
     configurable: true,
     value: () =>
-      [
-        { bottom: 130, height: 20, left: 60, right: 140, top: 110, width: 80, x: 60, y: 110, toJSON: () => ({}) },
-        { bottom: 130, height: 20, left: 60, right: 140, top: 110, width: 80, x: 60, y: 110, toJSON: () => ({}) }
-      ] as unknown as DOMRectList
+      createTestDomRectList([
+        { bottom: 130, height: 20, left: 60, right: 140, top: 110, width: 80, x: 60, y: 110, toJSON: () => ({}) } as DOMRect,
+        { bottom: 130, height: 20, left: 60, right: 140, top: 110, width: 80, x: 60, y: 110, toJSON: () => ({}) } as DOMRect
+      ])
   });
 
   const locator = resolvePdfSelectionLocator(container, selection);
@@ -114,7 +116,10 @@ function runResolveLocatorWithPageFrameTest() {
   });
   Object.defineProperty(range as Range, 'getClientRects', {
     configurable: true,
-    value: () => [{ bottom: 140, height: 20, left: 100, right: 180, top: 120, width: 80, x: 100, y: 120, toJSON: () => ({}) }] as unknown as DOMRectList
+    value: () =>
+      createTestDomRectList([
+        { bottom: 140, height: 20, left: 100, right: 180, top: 120, width: 80, x: 100, y: 120, toJSON: () => ({}) } as DOMRect
+      ])
   });
 
   const locator = resolvePdfSelectionLocator(container, selection);
@@ -159,12 +164,12 @@ describe('resolvePdfSelectionLocator', () => {
       value: () => ({ bottom: 130, height: 20, left: 60, right: 144, top: 110, width: 84, x: 60, y: 110, toJSON: () => ({}) })
     });
     Object.defineProperty(range as Range, 'getClientRects', {
-      configurable: true,
-      value: () =>
-        [
-          { bottom: 130, height: 20, left: 60, right: 96, top: 110, width: 36, x: 60, y: 110, toJSON: () => ({}) },
-          { bottom: 130, height: 20, left: 100, right: 144, top: 110, width: 44, x: 100, y: 110, toJSON: () => ({}) }
-        ] as unknown as DOMRectList
+    configurable: true,
+    value: () =>
+        createTestDomRectList([
+          { bottom: 130, height: 20, left: 60, right: 96, top: 110, width: 36, x: 60, y: 110, toJSON: () => ({}) } as DOMRect,
+          { bottom: 130, height: 20, left: 100, right: 144, top: 110, width: 44, x: 100, y: 110, toJSON: () => ({}) } as DOMRect
+        ])
     });
 
     const locator = resolvePdfSelectionLocator(container, selection);

@@ -5,6 +5,7 @@ import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/ada
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { useReadingProgressSync } from './useReadingProgressSync';
 
@@ -28,15 +29,15 @@ function RuntimeRestoreHarness(props: {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {
   const editorRef = {
-    current: {
+    current: createMockEditorAdapter({
       getScrollTop: () => 0,
       getSelection: () => ({ from: 0, to: 0 }),
       onScroll: (listener: (event: EditorScrollEvent) => void) => {
         props.listeners.add(listener);
         return () => props.listeners.delete(listener);
       }
-    }
-  } as unknown as { current: EditorAdapter | null };
+    })
+  } satisfies { current: EditorAdapter | null };
   useReadingProgressSync({
     activeNodeId: 'node-2',
     editorRef,

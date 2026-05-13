@@ -2,6 +2,7 @@ import { useRef, type MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import type { NodeViewState } from '../../store/workspaceStore';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { useReadingProgressSync } from './useReadingProgressSync';
 
@@ -52,9 +53,9 @@ export function HookHarness({
   setNodeViewState = () => undefined
 }: HarnessProps) {
   const editorRef = useRef<EditorAdapter | null>(
-    createEditorRef(scrollTop, selection).current as unknown as EditorAdapter
+    createMockEditorAdapter(createEditorRef(scrollTop, selection).current ?? {})
   );
-  editorRef.current = createEditorRef(scrollTop, selection).current as unknown as EditorAdapter;
+  editorRef.current = createMockEditorAdapter(createEditorRef(scrollTop, selection).current ?? {});
   useReadingProgressSync({
     activeNodeId,
     editorRef,

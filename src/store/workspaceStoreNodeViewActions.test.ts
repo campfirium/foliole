@@ -1,6 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
-import { createInitialWorkspaceState, type WorkspaceState } from './workspaceStore';
+import { createTestWorkspaceState } from '../test/workspaceStateTestSupport';
+
+import type { WorkspaceState } from './workspaceStore';
 import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
 
 type WorkspaceSetInput =
@@ -9,9 +11,8 @@ type WorkspaceSetInput =
   | ((snapshot: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>);
 
 function createWorkspaceState(): WorkspaceState {
-  const initial = createInitialWorkspaceState(new Date('2026-04-05T00:00:00.000Z'));
-  return {
-    ...initial,
+  const initial = createTestWorkspaceState();
+  return createTestWorkspaceState({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1'],
     nodeViewById: {},
@@ -30,7 +31,7 @@ function createWorkspaceState(): WorkspaceState {
         updatedAt: '2026-04-05T00:00:00.000Z'
       }
     }
-  } as unknown as WorkspaceState;
+  });
 }
 
 function createSetHarness(initialState: WorkspaceState) {

@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
+import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import {
@@ -104,7 +104,7 @@ async function runPdfBreadcrumbJumpTestWhenEditorRefExists() {
     nodeId: 'pdf-parent'
   }));
   const revealSelection = vi.fn();
-  const editorAdapter = { revealSelection } as unknown as EditorAdapter;
+  const editorAdapter = createMockEditorAdapter({ revealSelection });
 
   const { result, rerender } = renderHook(
     ({ activeNodeId }) =>

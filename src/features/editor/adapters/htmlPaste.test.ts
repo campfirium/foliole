@@ -1,5 +1,11 @@
-import type { EditorView } from '@codemirror/view';
 import { describe, expect, it, vi } from 'vitest';
+
+import { createMockEditorView, type MockEditorView } from '../../../test/codeMirrorEditorViewTestSupport';
+import { serializeStructuredClipboardPayload } from '../model/anchorClipboardPayload';
+
+import { FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
+import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
+import { activeNodeIdFacet, pastedAnchorsFacet } from './liveMarkdownState';
 
 const { importClipboardImageAttachment } = vi.hoisted(() => ({
   importClipboardImageAttachment: vi.fn()
@@ -9,26 +15,19 @@ vi.mock('../../../shared/platform/attachmentImports', () => ({
   importClipboardImageAttachment
 }));
 
-import { serializeStructuredClipboardPayload } from '../model/anchorClipboardPayload';
-
-import { FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
-import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
-import { activeNodeIdFacet, pastedAnchorsFacet } from './liveMarkdownState';
-
 function createPasteView(overrides?: {
   facet?: (facet: unknown) => unknown;
   from?: number;
   to?: number;
   text?: string;
 }) {
-  return {
-    dispatch: vi.fn(),
+  return createMockEditorView({
     state: {
       doc: { toString: () => overrides?.text ?? 'Before important after' },
       facet: overrides?.facet ?? (() => null),
       selection: { main: { from: overrides?.from ?? 0, to: overrides?.to ?? 0 } }
     }
-  } as unknown as EditorView;
+  });
 }
 
 function createAnchorFacet(onPastedAnchors: ReturnType<typeof vi.fn>) {
@@ -39,11 +38,11 @@ function createAnchorFacet(onPastedAnchors: ReturnType<typeof vi.fn>) {
   };
 }
 
-function getDispatch(view: EditorView) {
-  return (view as unknown as { dispatch: ReturnType<typeof vi.fn> }).dispatch;
+function getDispatch(view: MockEditorView) {
+  return view.dispatch;
 }
 
-function expectInsert(view: EditorView, changes: { from: number; insert: string; to: number }, anchor: number) {
+function expectInsert(view: MockEditorView, changes: { from: number; insert: string; to: number }, anchor: number) {
   expect(getDispatch(view)).toHaveBeenCalledWith({
     changes,
     selection: { anchor }
@@ -167,10 +166,10 @@ function runExternalMarkedTextCase() {
 async function runClipboardImageCase() {
   const placeholder = '<!-- foliole-image-paste:00000000-0000-0000-0000-000000000000 -->';
   const dispatch = vi.fn();
-  const view = {
+  const view = createMockEditorView({
     dispatch,
     state: { doc: { toString: () => placeholder }, selection: { main: { from: 0, to: 0 } } }
-  } as unknown as EditorView;
+  });
   const file = new File(['png-bytes'], 'clip.png', { type: 'image/png' });
   const randomUUIDSpy = vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-0000-0000-000000000000');
 
