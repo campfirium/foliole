@@ -28,11 +28,12 @@ function findMarkdownLinkEnd(raw: string, labelEnd: number) {
   return raw.indexOf(')', labelEnd + 2);
 }
 
-function tryConsumeMarkdownLink(
-  raw: string,
-  index: number,
-  state: { normalized: string; rawIndexes: number[] }
-) {
+function shouldAppendLinkBoundarySpace(raw: string, linkEnd: number) {
+  const next = raw[linkEnd + 1] ?? '';
+  return next.length === 0 || !/[\s\p{P}\p{S}]/u.test(next);
+}
+
+function tryConsumeMarkdownLink(raw: string, index: number, state: { normalized: string; rawIndexes: number[] }) {
   const labelStart = raw[index] === '!' && raw[index + 1] === '[' ? index + 2 : raw[index] === '[' ? index + 1 : -1;
   if (labelStart < 0) {
     return 0;
@@ -50,7 +51,9 @@ function tryConsumeMarkdownLink(
       appendNormalizedCharacter(state, raw[cursor] ?? '', cursor);
     }
   }
-  appendCompactWhitespace(state, index);
+  if (shouldAppendLinkBoundarySpace(raw, linkEnd)) {
+    appendCompactWhitespace(state, index);
+  }
   return linkEnd - index + 1;
 }
 
