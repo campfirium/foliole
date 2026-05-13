@@ -1,6 +1,9 @@
 import type { Session } from 'electron';
 
+import { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../lib/platform/remoteImageProtocolUrl.js';
+
 const CSP_HEADER = 'Content-Security-Policy';
+const REMOTE_IMAGE_PROTOCOL_SOURCE = `${REMOTE_IMAGE_PROTOCOL_SCHEME}:`;
 const MAIN_WINDOW_CSP = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -8,7 +11,7 @@ const MAIN_WINDOW_CSP = [
   "frame-ancestors 'none'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: file: foliole-asset:",
+  `img-src 'self' data: blob: file: foliole-asset: ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
   "font-src 'self' data:",
   "connect-src 'self' foliole-asset:",
   "worker-src 'self' blob:",

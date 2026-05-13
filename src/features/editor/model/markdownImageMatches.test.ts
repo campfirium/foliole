@@ -58,6 +58,29 @@ describe('markdownImageMatches', () => {
   it('normalizes inline markdown syntax from alt text', () => {
     expect(collectImageMatches(0, '![A **cover**](https://example.com/a.png)')[0]?.alt).toBe('A cover');
   });
+});
+
+describe('markdownImageMatches replacement ranges', () => {
+  it('keeps long remote image URLs in the replaced image range', () => {
+    const markdown =
+      '![](https://blogger.googleusercontent.com/img/a/AVvXsEirin5hAeSxqCjJv3rlWgT_Smo1F9zNEpgaSGCFvriRr04MP9CAtwSjNN_l0yn3JtqoIyKvRgFQiZMKUIFRxRDbf2lLdkdofabTTQsYMdr5J48aL-jE5X62pop2uChw-Ccl3Ws-rAP3bX8f8ytnMI2reMPJZIlfsjbB1hYWmVx)';
+
+    expect(collectImageMatches(0, markdown)[0]).toMatchObject({
+      from: 0,
+      source: 'https://blogger.googleusercontent.com/img/a/AVvXsEirin5hAeSxqCjJv3rlWgT_Smo1F9zNEpgaSGCFvriRr04MP9CAtwSjNN_l0yn3JtqoIyKvRgFQiZMKUIFRxRDbf2lLdkdofabTTQsYMdr5J48aL-jE5X62pop2uChw-Ccl3Ws-rAP3bX8f8ytnMI2reMPJZIlfsjbB1hYWmVx',
+      to: markdown.length
+    });
+  });
+
+  it('replaces the full wrapping link when the link label is only an image', () => {
+    const markdown = '[![](https://example.com/cover.png)](https://example.com/cover.png)';
+
+    expect(collectImageMatches(0, markdown)[0]).toMatchObject({
+      from: 0,
+      source: 'https://example.com/cover.png',
+      to: markdown.length
+    });
+  });
 
   it('does not collect image syntax inside inline code', () => {
     expect(collectImageMatches(0, '`![No](https://example.com/a.png)`')).toEqual([]);

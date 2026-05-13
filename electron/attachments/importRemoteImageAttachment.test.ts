@@ -15,10 +15,12 @@ vi.mock('./importImageAttachmentBytes.js', () => ({
 }));
 
 import { importRemoteImageAttachment } from './importRemoteImageAttachment.js';
+import { resetRemoteImagePipelineForTests } from './remoteImagePipeline.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  resetRemoteImagePipelineForTests();
 });
 
 it('downloads a remote image and forwards it into CAS storage', async () => {
@@ -70,6 +72,25 @@ it('falls back to url extension when the response omits image content-type', asy
       mimeType: 'image/webp'
     })
   );
+});
+
+it('shares concurrent imports for the same node and remote source', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(new Uint8Array([1, 2, 3]), {
+      headers: { 'content-type': 'image/png' },
+      status: 200
+    })
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  importImageAttachmentBytes.mockResolvedValue({ status: 'imported', attachment_id: 'hash-1' });
+
+  await Promise.all([
+    importRemoteImageAttachment({ nodeId: 'node-1', sourceUrl: 'https://example.com/images/cover.png#preview' }),
+    importRemoteImageAttachment({ nodeId: 'node-1', sourceUrl: 'https://EXAMPLE.com/images/cover.png' })
+  ]);
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(importImageAttachmentBytes).toHaveBeenCalledTimes(1);
 });
 
 it('returns a non-blocking error when the download fails', async () => {

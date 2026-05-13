@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
+import { registerRemoteImageProtocol } from './attachments/remoteImageProtocol.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
@@ -184,6 +185,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     startDevScreenshotServer({ getWindow: () => mainWindow });
     try {
       registerAttachmentProtocol();
+      registerRemoteImageProtocol();
       await args.loadMainWindow(mainWindow);
       await appendBootEvent('main_window_shell_ready');
       await presentInitialRendererWindow(mainWindow);

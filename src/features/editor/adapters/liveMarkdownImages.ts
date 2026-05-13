@@ -1,3 +1,4 @@
+import { buildRemoteImageRenderUrl } from '../../../../lib/platform/remoteImageProtocolUrl';
 import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
@@ -6,6 +7,7 @@ import { isNativeAndroidCompanionRuntime } from '../../../shared/platform/compan
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
+import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
@@ -17,12 +19,13 @@ function parseImageRange(value: number) {
 function createImageElement(args: {
   alt: string;
   display: MarkdownImageMatch['display'];
+  deferSource?: boolean;
   onError?: (() => void) | null;
+  onLoad?: (() => void) | null;
   source: string;
 }) {
   const image = document.createElement('img');
   image.alt = args.alt || 'Markdown image';
-  image.src = args.source;
   image.loading = 'lazy';
   image.referrerPolicy = 'no-referrer';
   image.decoding = 'async';
@@ -31,6 +34,16 @@ function createImageElement(args: {
   if (args.onError) {
     image.addEventListener('error', args.onError, { once: true });
   }
+  if (args.onLoad) {
+    image.addEventListener('load', args.onLoad, { once: true });
+  }
+  if (args.deferSource) {
+    queueMicrotask(() => {
+      image.src = args.source;
+    });
+  } else {
+    image.src = args.source;
+  }
   return image;
 }
 
@@ -38,7 +51,7 @@ function createImageSurface(
   imageMatch: MarkdownImageMatch,
   source: string,
   editorNodeId: string | null = null,
-  imageOptions: { onError?: (() => void) | null } = {}
+  imageOptions: { deferSource?: boolean; onError?: (() => void) | null; onLoad?: (() => void) | null } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
   const imagePresentation =
@@ -56,14 +69,55 @@ function createImageSurface(
     renderImage: () =>
       createImageElement({
         alt: imageMatch.alt,
+        deferSource: imageOptions.deferSource ?? false,
         display: imageMatch.display,
         onError: imageOptions.onError ?? null,
+        onLoad: imageOptions.onLoad ?? null,
         source
       }),
     previewAlt: imageMatch.alt,
     previewPresentation: imagePresentation,
     previewSource: source,
     to: imageMatch.to
+  });
+}
+
+function appendLoadingImageSurface(
+  wrapper: HTMLElement,
+  imageMatch: MarkdownImageMatch,
+  source: string,
+  editorNodeId: string | null
+) {
+  wrapper.append(createImageStatusElement('loading', imageMatch.display));
+  const surface = createImageSurface(imageMatch, source, editorNodeId, {
+    deferSource: true,
+    onError: () => {
+      wrapper.replaceChildren(createImageStatusElement('unavailable', imageMatch.display));
+    },
+    onLoad: () => {
+      surface.classList.remove('cm-md-image-surface-loading');
+      surface.removeAttribute('aria-hidden');
+      surface.removeAttribute('style');
+      wrapper.replaceChildren(surface);
+    }
+  });
+  surface.classList.add('cm-md-image-surface-loading');
+  surface.setAttribute('aria-hidden', 'true');
+  surface.style.height = '1px';
+  surface.style.opacity = '0';
+  surface.style.overflow = 'hidden';
+  surface.style.pointerEvents = 'none';
+  surface.style.position = 'absolute';
+  surface.style.width = '1px';
+  wrapper.append(surface);
+}
+
+function buildRemoteRenderSource(sourceUrl: string, editorNodeId: string | null) {
+  const shouldPersist = shouldAutoLocalizeRemoteImages() && Boolean(editorNodeId);
+  return buildRemoteImageRenderUrl({
+    nodeId: shouldPersist ? editorNodeId : null,
+    persist: shouldPersist,
+    sourceUrl
   });
 }
 
@@ -129,7 +183,12 @@ export function createMarkdownImageWidgetDom(
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
   if (renderPlan.isRemote && renderPlan.imageSrc) {
-    wrapper.append(createImageSurface(imageMatch, renderPlan.imageSrc, editorNodeId));
+    appendLoadingImageSurface(wrapper, imageMatch, buildRemoteRenderSource(renderPlan.imageSrc, editorNodeId), editorNodeId);
+    return wrapper;
+  }
+
+  if (renderPlan.browserImageSrc) {
+    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc, editorNodeId));
     return wrapper;
   }
 

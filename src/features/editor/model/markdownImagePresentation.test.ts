@@ -14,16 +14,33 @@ function expectBrowserImagePlan(source: string) {
     })
   ).toEqual({
     attachmentProtocolSrc: null,
+    browserImageSrc: source,
     display: 'inline',
     fallbackStatus: null,
     imageSrc: source,
-    isRemote: true
+    isRemote: false
   });
 }
 
 describe('markdownImagePresentation', () => {
   it('builds remote image render state', () => {
-    expectBrowserImagePlan('https://example.com/a.png');
+    expect(
+      buildMarkdownImageRenderPlan({
+        attachmentId: null,
+        alt: 'Preview',
+        display: 'inline',
+        from: 0,
+        source: 'https://example.com/a.png',
+        to: 10
+      })
+    ).toEqual({
+      attachmentProtocolSrc: null,
+      browserImageSrc: null,
+      display: 'inline',
+      fallbackStatus: null,
+      imageSrc: 'https://example.com/a.png',
+      isRemote: true
+    });
   });
 
   it('builds file image render state for resolved local preview resources', () => {
@@ -33,7 +50,9 @@ describe('markdownImagePresentation', () => {
   it('builds data image render state for inline preview resources', () => {
     expectBrowserImagePlan('data:image/png;base64,abc123');
   });
+});
 
+describe('markdownImagePresentation attachments', () => {
   it('builds internal attachment image render state', () => {
     expect(
       buildMarkdownImageRenderPlan({
@@ -46,6 +65,7 @@ describe('markdownImagePresentation', () => {
       })
     ).toEqual({
       attachmentProtocolSrc: 'foliole-asset://attachment/hash-1',
+      browserImageSrc: null,
       display: 'block',
       fallbackStatus: null,
       imageSrc: 'foliole-asset://attachment/hash-1',
@@ -65,6 +85,7 @@ describe('markdownImagePresentation', () => {
       })
     ).toEqual({
       attachmentProtocolSrc: null,
+      browserImageSrc: null,
       display: 'inline',
       fallbackStatus: 'unavailable',
       imageSrc: null,

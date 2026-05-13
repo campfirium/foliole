@@ -12,6 +12,7 @@ import {
 } from 'electron';
 
 import { registerAttachmentProtocolScheme } from './attachments/attachmentProtocol.js';
+import { registerRemoteImageProtocolScheme } from './attachments/remoteImageProtocol.js';
 import { installMainWindowContentSecurityPolicy } from './contentSecurityPolicy.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
@@ -63,6 +64,7 @@ const runtimeDiagnostics = collectRuntimeDiagnosticsSnapshot({
 console.info('[electron-main] app identity configured', configuredIdentity);
 console.info('[electron-main] runtime diagnostics', formatRuntimeDiagnosticsSnapshot(runtimeDiagnostics));
 registerAttachmentProtocolScheme();
+registerRemoteImageProtocolScheme();
 startLocalCrashReporter(crashReporter, configuredIdentity.appName);
 void appendBootEvent('main_process_start', {
   appName: configuredIdentity.appName,

@@ -35,13 +35,6 @@ function createAdapterHost(initialContent: string) {
   return { adapter, host };
 }
 
-function expectRemoteImageRendered(host: HTMLElement, source: string) {
-  const image = host.querySelector('.cm-md-image-element');
-
-  expect(image).not.toBeNull();
-  expect(image?.getAttribute('src')).toBe(source);
-}
-
 async function expectUnavailableInternalImage(host: HTMLElement) {
   await waitFor(() => {
     const placeholder = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
@@ -59,12 +52,6 @@ function expectBlockAndInlineImageLayout(host: HTMLElement) {
   expect(images[0]).toHaveClass('cm-md-image-element-block');
   expect(images[1]).toHaveClass('cm-md-image-element-inline');
   expect(getComputedStyle(widgets[1] as HTMLElement).height).toBe('1lh');
-}
-
-async function expectImageStillRenderedOnSelection(host: HTMLElement, source: string) {
-  await waitFor(() => {
-    expect(host.querySelector('.cm-md-image-element')?.getAttribute('src')).toBe(source);
-  });
 }
 
 function createOutlinedPresentation() {
@@ -146,27 +133,11 @@ describe('live markdown image rendering basics', () => {
     adapter.destroy();
   });
 
-  it('keeps remote markdown image rendering unchanged', () => {
-    const { adapter, host } = createAdapterHost('![Remote](https://example.com/cover.png)');
-
-    expectRemoteImageRendered(host, 'https://example.com/cover.png');
-
-    adapter.destroy();
-  });
-
   it('renders reference-style remote markdown images and hides definitions', () => {
     const { adapter, host } = createAdapterHost('![Remote][img]\n\n[img]: https://example.com/cover.png');
 
-    expectRemoteImageRendered(host, 'https://example.com/cover.png');
+    expect(host.querySelector('.cm-md-image-status[data-md-image-status="loading"]')).not.toBeNull();
     expect(host.querySelector('.cm-content')?.textContent).not.toContain('[img]:');
-
-    adapter.destroy();
-  });
-
-  it('keeps remote image urls with parentheses intact', () => {
-    const { adapter, host } = createAdapterHost('![Remote](https://example.com/gallery/(cover).png)');
-
-    expectRemoteImageRendered(host, 'https://example.com/gallery/(cover).png');
 
     adapter.destroy();
   });
@@ -210,18 +181,6 @@ describe('live markdown image rendering interactions', () => {
     adapter.destroy();
   });
 
-  it('keeps image rendering stable when the cursor is on the image line', async () => {
-    const source = 'https://example.com/focus.png';
-    const { adapter, host } = createAdapterHost(`![Focus](${source})`);
-
-    adapter.focus();
-    adapter.setSelection({ from: 1, to: 1 });
-
-    await expectImageStillRenderedOnSelection(host, source);
-    expect(host.querySelector('.cm-content')?.textContent ?? '').not.toContain(`![Focus](${source})`);
-
-    adapter.destroy();
-  });
 });
 
 describe('live markdown image rendering image cloze presentation', () => {

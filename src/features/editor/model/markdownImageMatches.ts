@@ -95,12 +95,27 @@ function createParserImageMatch(
   if (altFrom === undefined || altTo === undefined) return null;
   const rawTarget = url ? text.slice(url.from, url.to) : resolveReferenceImageTarget(text, altFrom, altTo, label, references);
   if (!rawTarget) return null;
+  const outerLink = resolveImageOnlyWrappingLink(node);
+  const from = outerLink?.from ?? node.from;
+  const to = outerLink?.to ?? node.to;
   return {
     altText: normalizeAltText(text, altFrom, altTo),
-    fullMatch: text.slice(node.from, node.to),
+    fullMatch: text.slice(from, to),
     rawTarget: normalizeImageUrl(rawTarget),
-    start: node.from
+    start: from
   };
+}
+
+function resolveImageOnlyWrappingLink(node: MarkdownSyntaxNode) {
+  const parent = node.parent;
+  if (parent?.name !== 'Link') return null;
+  const marks = collectChildNodes(parent, 'LinkMark');
+  const labelStart = marks[0]?.to;
+  const labelEnd = marks[1]?.from;
+  if (labelStart === node.from && labelEnd === node.to) {
+    return parent;
+  }
+  return null;
 }
 
 function visitImageNodes(

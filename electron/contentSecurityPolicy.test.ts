@@ -16,6 +16,8 @@ it('injects a packaged main window content security policy', () => {
   expect(headers['Content-Security-Policy']?.[0]).toContain('img-src');
   expect(headers['Content-Security-Policy']?.[0]).toContain('connect-src');
   expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-asset:');
+  expect(headers['Content-Security-Policy']?.[0]).toContain('foliole-remote-image:');
+  expect(headers['Content-Security-Policy']?.[0]).not.toContain('connect-src \'self\' foliole-asset: foliole-remote-image:');
   expect(headers['Content-Security-Policy']?.[0]).not.toContain('foliole-runtime:');
   expect(headers['Content-Security-Policy']?.[0]).not.toContain('attachment:');
   expect(headers['Content-Security-Policy']?.[0]).not.toContain("'unsafe-eval'");
@@ -31,6 +33,7 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain('ws://localhost:*');
   expect(policy).toContain('connect-src');
   expect(policy).toContain('foliole-asset:');
+  expect(policy).toContain('foliole-remote-image:');
 });
 
 it('allows the local runtime index to activate the Vite module entry in dev mode', () => {
