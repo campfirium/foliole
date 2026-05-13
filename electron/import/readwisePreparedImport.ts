@@ -11,8 +11,6 @@ import {
 } from '../../lib/core/import/readwiseReaderSettings.js';
 import { buildPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
-import { ImageLocalizationContext } from './imageLocalizationContext.js';
-
 export interface ReadwiseSourceSignature {
   highlight: { mtimeMs: number; sizeBytes: number } | null;
   primary: { mtimeMs: number; sizeBytes: number };
@@ -27,29 +25,6 @@ export interface ReadwiseSourceImportDecision {
 function buildReadwiseSourceIdentity(kind: ReadwiseSourceKind, sourceName: string) {
   const normalizedSourceName = sourceName.replace(/\\/g, '/');
   return `readwise/${kind}/${normalizedSourceName}`;
-}
-
-function appendDegradedReason(...reasons: Array<string | null | undefined>) {
-  const collected = reasons.map((reason) => reason?.trim()).filter((reason): reason is string => Boolean(reason));
-  return collected.length > 0 ? Array.from(new Set(collected)).join('; ') : null;
-}
-
-async function localizeReadwiseMarkdownPair(input: {
-  articleMarkdown?: string;
-  fullDocumentMarkdown: string;
-}) {
-  const context = new ImageLocalizationContext();
-  const fullDocument = await context.localizeMarkdown(input.fullDocumentMarkdown);
-  const article = input.articleMarkdown ? await context.localizeMarkdown(input.articleMarkdown) : null;
-  return {
-    articleMarkdown: article?.text,
-    attachmentIds: [...new Set([...fullDocument.attachmentIds, ...(article?.attachmentIds ?? [])])],
-    degradedReason: appendDegradedReason(
-      ...fullDocument.degradedMessages.map((message) => `Readwise image localization degraded: ${message}`),
-      ...(article?.degradedMessages.map((message) => `Readwise image localization degraded: ${message}`) ?? [])
-    ),
-    fullDocumentMarkdown: fullDocument.text
-  };
 }
 
 export async function resolveReadwiseSourceSignature(
@@ -131,39 +106,29 @@ export async function loadPreparedReadwiseImportRecord(
       fs.readFile(articlePath, 'utf8'),
       fs.readFile(source.filePath, 'utf8')
     ]);
-    const localized = await localizeReadwiseMarkdownPair({ articleMarkdown, fullDocumentMarkdown });
-    const parsedFullDocument = parseReadwiseFullDocumentImport(localized.fullDocumentMarkdown);
-    return {
-      ...buildPreparedImportRecord(source, {
-        content: parsedFullDocument.content,
-        degradedReason: localized.degradedReason,
-        highlightPolicy: options.highlightPolicy,
-        highlightSidecar: extractReadwiseSidecarHighlights(localized.articleMarkdown ?? articleMarkdown, options.readwiseConfig),
-        hideTitleHeadingOverride: false,
-        importedAt: options.importedAt,
-        nodeTitleOverride: parsedFullDocument.nodeTitle,
-        sourceIdentity,
-        sourceLocator: source.filePath,
-        sourceProfile: 'body_with_highlight_sidecar'
-      }),
-      localizedImageAttachmentIds: localized.attachmentIds
-    };
+    const parsedFullDocument = parseReadwiseFullDocumentImport(fullDocumentMarkdown);
+    return buildPreparedImportRecord(source, {
+      content: parsedFullDocument.content,
+      highlightPolicy: options.highlightPolicy,
+      highlightSidecar: extractReadwiseSidecarHighlights(articleMarkdown, options.readwiseConfig),
+      hideTitleHeadingOverride: false,
+      importedAt: options.importedAt,
+      nodeTitleOverride: parsedFullDocument.nodeTitle,
+      sourceIdentity,
+      sourceLocator: source.filePath,
+      sourceProfile: 'body_with_highlight_sidecar'
+    });
   } catch {
     const fullDocumentMarkdown = await fs.readFile(source.filePath, 'utf8');
-    const localized = await localizeReadwiseMarkdownPair({ fullDocumentMarkdown });
-    const parsedFullDocument = parseReadwiseFullDocumentImport(localized.fullDocumentMarkdown);
-    return {
-      ...buildPreparedImportRecord(source, {
-        content: parsedFullDocument.content,
-        degradedReason: localized.degradedReason,
-        highlightPolicy: options.highlightPolicy,
-        hideTitleHeadingOverride: false,
-        importedAt: options.importedAt,
-        nodeTitleOverride: parsedFullDocument.nodeTitle,
-        sourceIdentity,
-        sourceLocator: source.filePath
-      }),
-      localizedImageAttachmentIds: localized.attachmentIds
-    };
+    const parsedFullDocument = parseReadwiseFullDocumentImport(fullDocumentMarkdown);
+    return buildPreparedImportRecord(source, {
+      content: parsedFullDocument.content,
+      highlightPolicy: options.highlightPolicy,
+      hideTitleHeadingOverride: false,
+      importedAt: options.importedAt,
+      nodeTitleOverride: parsedFullDocument.nodeTitle,
+      sourceIdentity,
+      sourceLocator: source.filePath
+    });
   }
 }

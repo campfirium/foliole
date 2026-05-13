@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { resetRemoteImagePipelineForTests } from '../attachments/remoteImagePipeline.js';
@@ -82,11 +83,7 @@ it('keeps imported sidecar highlight locators aligned after local image rewrite'
   expect(locator ? nodeRow.content.slice(locator.from, locator.to) : null).toBe('大罗SEO target sentence.');
 });
 
-it('localizes readwise parent and sidecar images before first import matching', async () => {
-  vi.mocked(fetch).mockResolvedValue(new Response(new Uint8Array([7, 8, 9]), {
-    headers: { 'content-type': 'image/png' },
-    status: 200
-  }));
+it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
   const readwiseRoot = await fs.mkdtemp(path.join(tempRoot, 'readwise-images-'));
   const fullDir = path.join(readwiseRoot, 'Full Document Contents', 'Articles');
   const highlightDir = path.join(readwiseRoot, 'Articles');
@@ -124,9 +121,29 @@ it('localizes readwise parent and sidecar images before first import matching', 
     .get(imported.nodeId as string) as { anchor_link: string | null; content: string };
   const locator = parseAnchorLink(childRow.anchor_link).locator;
 
-  expect(fetch).toHaveBeenCalledTimes(1);
-  expect(nodeRow.content).toContain('![Avatar](asset://');
-  expect(childRow.content).toContain('![Avatar](asset://');
-  expect(locator?.originalText).toContain('![Avatar](asset://');
+  expect(fetch).not.toHaveBeenCalled();
+  expect(nodeRow.content).toContain('![Avatar](https://cdn.example.com/avatar.png)');
+  expect(childRow.content).toContain('![Avatar](https://cdn.example.com/avatar.png)');
+  expect(locator?.originalText).toContain('![Avatar](https://cdn.example.com/avatar.png)');
   expect(locator ? nodeRow.content.slice(locator.from, locator.to) : null).toBe(locator?.originalText);
+
+  const rewrittenContent = nodeRow.content.replace(
+    '![Avatar](https://cdn.example.com/avatar.png)',
+    '![Avatar](asset://attachment-avatar.png)'
+  );
+  applyParentContentChange({
+    driver: openDatabaseConnection().driver,
+    nextContent: rewrittenContent,
+    nodeId: imported.nodeId as string,
+    previousContent: nodeRow.content,
+    updatedAt: '2026-05-13T00:00:01.000Z'
+  });
+  const remappedChildRow = openDatabaseConnection().sqlite
+    .prepare('SELECT anchor_link FROM nodes WHERE parent_id = ?')
+    .get(imported.nodeId as string) as { anchor_link: string | null };
+  const remappedLocator = parseAnchorLink(remappedChildRow.anchor_link).locator;
+  expect(remappedLocator ? rewrittenContent.slice(remappedLocator.from, remappedLocator.to) : null).toBe(
+    remappedLocator?.originalText
+  );
+  expect(remappedLocator?.originalText).toContain('![Avatar](asset://attachment-avatar.png)');
 });

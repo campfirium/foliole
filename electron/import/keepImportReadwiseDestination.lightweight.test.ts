@@ -86,7 +86,7 @@ function readRows<T>(sql: string) {
   return openDatabaseConnection().sqlite.prepare(sql).all() as T[];
 }
 
-it('keeps unchanged Readwise inbox checks on the lightweight metadata path', async () => {
+it('keeps Readwise inbox checks on the lightweight path without remote image downloads', async () => {
   const fixture = await seedFixture();
   saveImportManagerSettings({
     readwiseReaderConfig: {
@@ -111,7 +111,7 @@ it('keeps unchanged Readwise inbox checks on the lightweight metadata path', asy
   });
 
   await runReadwiseArticles(fixture.fullDocumentDir);
-  expect(mockFetchRemoteImageResource).toHaveBeenCalled();
+  expect(mockFetchRemoteImageResource).not.toHaveBeenCalled();
 
   mockFetchRemoteImageResource.mockClear();
   await runReadwiseArticles(fixture.fullDocumentDir);
