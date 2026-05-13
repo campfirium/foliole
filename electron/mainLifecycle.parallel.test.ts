@@ -3,7 +3,6 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn().mockResolvedValue(undefined),
-  appendMainProcessDiagnosticLog: vi.fn(),
   app: {
     getVersion: vi.fn(() => '0.1.0-test'),
     on: vi.fn(),
@@ -11,9 +10,9 @@ const mocks = vi.hoisted(() => ({
     requestSingleInstanceLock: vi.fn(() => true),
     whenReady: vi.fn()
   },
+  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
   initializeDatabase: vi.fn(),
   installAppMenu: vi.fn(),
-  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
   isDesktopCompanionSyncEnabled: vi.fn(() => false),
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
@@ -37,15 +36,8 @@ vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing
 vi.mock('./devRendererReloadIntent.js', () => ({ installDevRendererReloadIntentWatcher: vi.fn(() => null) }));
 vi.mock('./devRestartIntent.js', () => ({ installDevRestartIntentWatcher: vi.fn(() => null) }));
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({
-  appendMainProcessDiagnosticLog: mocks.appendMainProcessDiagnosticLog
+  appendMainProcessDiagnosticLog: vi.fn()
 }));
-
-function firstInvocationOrder(mock: { mock: { invocationCallOrder: number[] } }) {
-  const [order] = mock.mock.invocationCallOrder;
-  expect(order).toBeDefined();
-  return order!;
-}
-
 vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   notifyExternalSearchSecondInstance: vi.fn(),
   notifyExternalSearchUserActivity: vi.fn(),
@@ -79,6 +71,20 @@ vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
   stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
 }));
 
+function firstInvocationOrder(mock: { mock: { invocationCallOrder: number[] } }) {
+  const [order] = mock.mock.invocationCallOrder;
+  expect(order).toBeDefined();
+  return order!;
+}
+
+function createDeferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 afterEach(() => {
   vi.clearAllMocks();
   mocks.initializeDatabase.mockReset();
@@ -86,132 +92,78 @@ afterEach(() => {
   mocks.ensureLanWorkspaceSyncServer.mockResolvedValue(undefined);
   mocks.isDesktopCompanionSyncEnabled.mockReset();
   mocks.isDesktopCompanionSyncEnabled.mockReturnValue(false);
-  mocks.presentInitialRendererWindow.mockClear();
   vi.resetModules();
 });
 
-it('loads the static workspace shell before runtime services and activates React after services are ready', async () => {
-  const window = {
-    isDestroyed: vi.fn(() => false)
-  };
+it('starts runtime services before renderer shell loading completes', async () => {
+  const window = { isDestroyed: vi.fn(() => false) };
+  const rendererLoad = createDeferred();
   const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   const createMainWindow = vi.fn().mockResolvedValue(window);
-  const installInvokeHandler = vi.fn();
-  const loadMainWindow = vi.fn().mockResolvedValue(undefined);
+  const loadMainWindow = vi.fn(() => rendererLoad.promise);
   mocks.app.whenReady.mockResolvedValue(undefined);
 
   const { installMainLifecycle } = await import('./mainLifecycle.js');
   installMainLifecycle({
     activateMainWindow,
     createMainWindow,
-    installInvokeHandler,
+    installInvokeHandler: vi.fn(),
     loadMainWindow,
     runtimeMode: { allowParallelInstance: true } as never
   });
-  await vi.waitFor(() => {
-    expect(mocks.appendBootEvent).toHaveBeenCalledWith('main_window_ready');
-  });
+  await vi.waitFor(() => expect(mocks.initializeDatabase).toHaveBeenCalledTimes(1));
 
-  expect(installInvokeHandler).toHaveBeenCalledTimes(1);
-  expect(mocks.initializeDatabase).toHaveBeenCalledTimes(1);
-  expect(createMainWindow).toHaveBeenCalledWith();
-  expect(createMainWindow).toHaveBeenCalledTimes(1);
-  expect(loadMainWindow).toHaveBeenCalledWith(window);
-  expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
-  expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
-  expect(firstInvocationOrder(loadMainWindow)).toBeLessThan(firstInvocationOrder(activateMainWindow));
-  expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window);
-  expect(activateMainWindow).toHaveBeenCalledWith(window);
-});
-
-it('keeps the startup window alive and loads the startup error surface when database startup fails', async () => {
-  let visible = false;
-  const window = {
-    isDestroyed: vi.fn(() => false),
-    isVisible: vi.fn(() => visible),
-    show: vi.fn(() => {
-      visible = true;
-    })
-  };
-  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
-  const createMainWindow = vi.fn().mockResolvedValue(window);
-  const installInvokeHandler = vi.fn();
-  const loadMainWindow = vi.fn().mockResolvedValue(undefined);
-  mocks.initializeDatabase.mockImplementation(() => {
-    throw new Error('migration exploded');
-  });
-  mocks.app.whenReady.mockResolvedValue(undefined);
-
-  const { installMainLifecycle } = await import('./mainLifecycle.js');
-  installMainLifecycle({
-    activateMainWindow,
-    createMainWindow,
-    installInvokeHandler,
-    loadMainWindow,
-    runtimeMode: { allowParallelInstance: true } as never
-  });
-  await vi.waitFor(() => {
-    expect(createMainWindow).toHaveBeenCalled();
-  });
-
-  expect(installInvokeHandler).toHaveBeenCalledTimes(1);
-  expect(createMainWindow).toHaveBeenCalledWith();
-  expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
-  expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
-  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window);
-  expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
-    errorSummary: 'migration exploded',
-    kind: 'startup-error',
-    logPath: '/logs',
-    moduleLabel: 'Database migration'
-  });
-  expect(window.show).toHaveBeenCalledTimes(1);
   expect(activateMainWindow).not.toHaveBeenCalled();
-  expect(mocks.appendMainProcessDiagnosticLog).toHaveBeenCalledWith(
-    'startup_runtime_services_failed',
-    expect.objectContaining({ error: expect.any(Error) })
-  );
+  rendererLoad.resolve();
+  await vi.waitFor(() => expect(activateMainWindow).toHaveBeenCalledWith(window));
 });
 
-it('shows a startup error surface when the workspace renderer cannot load', async () => {
-  let visible = false;
-  const window = {
-    isDestroyed: vi.fn(() => false),
-    isVisible: vi.fn(() => visible),
-    show: vi.fn(() => {
-      visible = true;
-    })
-  };
-  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
-  const createMainWindow = vi.fn().mockResolvedValue(window);
-  const installInvokeHandler = vi.fn();
-  const loadMainWindow = vi
-    .fn()
-    .mockRejectedValueOnce(new Error('ERR_CONNECTION_REFUSED'))
+it('prioritizes the workspace shell error when renderer and database startup both fail', async () => {
+  const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
+  const loadMainWindow = vi.fn()
+    .mockRejectedValueOnce(new Error('renderer exploded'))
     .mockResolvedValueOnce(undefined);
+  mocks.initializeDatabase.mockImplementation(() => {
+    throw new Error('database exploded');
+  });
   mocks.app.whenReady.mockResolvedValue(undefined);
 
   const { installMainLifecycle } = await import('./mainLifecycle.js');
   installMainLifecycle({
-    activateMainWindow,
-    createMainWindow,
-    installInvokeHandler,
+    activateMainWindow: vi.fn().mockResolvedValue(undefined),
+    createMainWindow: vi.fn().mockResolvedValue(window),
+    installInvokeHandler: vi.fn(),
     loadMainWindow,
     runtimeMode: { allowParallelInstance: true } as never
   });
-  await vi.waitFor(() => {
-    expect(loadMainWindow).toHaveBeenCalledTimes(2);
-  });
+  await vi.waitFor(() => expect(loadMainWindow).toHaveBeenCalledTimes(2));
 
-  expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
-  expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
-  expect(loadMainWindow).toHaveBeenNthCalledWith(1, window);
   expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
-    errorSummary: 'ERR_CONNECTION_REFUSED',
+    errorSummary: 'renderer exploded',
     kind: 'startup-error',
     logPath: '/logs',
     moduleLabel: 'Workspace shell'
   });
-  expect(window.show).toHaveBeenCalledTimes(1);
-  expect(activateMainWindow).not.toHaveBeenCalled();
+});
+
+it('starts companion sync after database startup before activating the renderer', async () => {
+  const window = { isDestroyed: vi.fn(() => false) };
+  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
+  mocks.isDesktopCompanionSyncEnabled.mockReturnValue(true);
+  mocks.app.whenReady.mockResolvedValue(undefined);
+
+  const { installMainLifecycle } = await import('./mainLifecycle.js');
+  installMainLifecycle({
+    activateMainWindow,
+    createMainWindow: vi.fn().mockResolvedValue(window),
+    installInvokeHandler: vi.fn(),
+    loadMainWindow: vi.fn().mockResolvedValue(undefined),
+    runtimeMode: { allowParallelInstance: true } as never
+  });
+  await vi.waitFor(() => expect(activateMainWindow).toHaveBeenCalledWith(window));
+
+  expect(firstInvocationOrder(mocks.initializeDatabase)).toBeLessThan(
+    firstInvocationOrder(mocks.ensureLanWorkspaceSyncServer)
+  );
+  expect(firstInvocationOrder(mocks.ensureLanWorkspaceSyncServer)).toBeLessThan(firstInvocationOrder(activateMainWindow));
 });

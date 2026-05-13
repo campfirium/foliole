@@ -1,12 +1,16 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogDir } from '../diagnostics/windowsDiagnosticPaths.js';
 
 const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson');
 const READY_MARKER_FILE = '.windows-native-boot-ready.json';
 const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
 type BootEventSource = 'main' | 'renderer';
+const WAITED_BOOT_EVENT_STAGES = new Set(['app_ready', 'bridge_ready']);
+
+let bootEventQueue: Promise<void> = Promise.resolve();
 
 function resolveRepoRoot() {
   const envRoot = process.env.FOLIOLE_WORKDIR;
@@ -68,10 +72,29 @@ async function persistBootEvent(event: ReturnType<typeof createBootEvent>) {
   }
 }
 
+function shouldWaitForBootEvent(stage: string) {
+  return WAITED_BOOT_EVENT_STAGES.has(stage);
+}
+
+function appendQueuedBootEvent(event: ReturnType<typeof createBootEvent>, waitForWrite: boolean) {
+  const write = bootEventQueue.then(() => persistBootEvent(event));
+  bootEventQueue = write.catch((error) => {
+    appendMainProcessDiagnosticLog('boot_log_failed', {
+      error,
+      stage: event.stage
+    });
+  });
+  return waitForWrite ? write : Promise.resolve();
+}
+
 export async function appendBootEvent(stage: string, payload: unknown = null, source: BootEventSource = 'main') {
-  await persistBootEvent(createBootEvent(stage, payload, source));
+  await appendQueuedBootEvent(createBootEvent(stage, payload, source), shouldWaitForBootEvent(stage));
 }
 
 export async function bootReport(stage: string, payload: unknown = null) {
-  await persistBootEvent(createBootEvent(stage, payload, 'renderer'));
+  await appendQueuedBootEvent(createBootEvent(stage, payload, 'renderer'), shouldWaitForBootEvent(stage));
+}
+
+export async function flushBootEvents() {
+  await bootEventQueue;
 }

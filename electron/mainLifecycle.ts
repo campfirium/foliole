@@ -1,13 +1,11 @@
 import { app, BrowserWindow } from 'electron';
 
-import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
-import { registerRemoteImageProtocol } from './attachments/remoteImageProtocol.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
-import { startDevScreenshotServer, stopDevScreenshotServer } from './devScreenshotServer.js';
+import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
@@ -15,7 +13,7 @@ import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
 import { resolveAppPaths } from './ipc/paths.js';
-import { startFollowupTasks } from './mainFollowupTasks.js';
+import { startInitialMainWindow } from './mainStartup.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, focusWindow, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
@@ -26,7 +24,7 @@ import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 
-interface MainLifecycleArgs {
+export interface MainLifecycleArgs {
   activateMainWindow: (window: BrowserWindow) => Promise<void>;
   createMainWindow: (startupAppearance?: { backgroundColor: string } | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
@@ -182,47 +180,13 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
     const mainWindow = await args.createMainWindow();
-    startDevScreenshotServer({ getWindow: () => mainWindow });
-    try {
-      registerAttachmentProtocol();
-      registerRemoteImageProtocol();
-      await args.loadMainWindow(mainWindow);
-      await appendBootEvent('main_window_shell_ready');
-      await presentInitialRendererWindow(mainWindow);
-    } catch (error) {
-      await loadStartupErrorSurface({
-        error,
-        loadMainWindow: args.loadMainWindow,
-        moduleLabel: 'Workspace shell',
-        window: mainWindow
-      });
-      return;
-    }
-    try {
-      await initializeRuntimeServices();
-    } catch (error) {
-      await loadStartupErrorSurface({
-        error,
-        loadMainWindow: args.loadMainWindow,
-        moduleLabel: 'Database migration',
-        window: mainWindow
-      });
-      return;
-    }
-    try {
-      installPairingFocusHandler();
-      await startCompanionSyncIfEnabled();
-      await args.activateMainWindow(mainWindow);
-      await appendBootEvent('main_window_ready');
-      startFollowupTasks();
-    } catch (error) {
-      await loadStartupErrorSurface({
-        error,
-        loadMainWindow: args.loadMainWindow,
-        moduleLabel: 'Startup services',
-        window: mainWindow
-      });
-    }
+    await startInitialMainWindow(args, {
+      initializeRuntimeServices,
+      installPairingFocusHandler,
+      loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
+      mainWindow,
+      startCompanionSyncIfEnabled
+    });
     installActivateLifecycle(args);
   });
   app.on('window-all-closed', () => {

@@ -4,18 +4,24 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { appendBootEvent, bootReport, resolveBootArtifactPaths } from './boot.js';
-
-const env = vi.hoisted(() => ({
+const state = vi.hoisted(() => ({
+  appendMainProcessDiagnosticLog: vi.fn(),
   originalWorkdir: process.env.FOLIOLE_WORKDIR,
   originalHead: process.env.FOLIOLE_RUNTIME_HEAD,
   originalSession: process.env.FOLIOLE_BOOT_SESSION
 }));
 
+vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
+  appendMainProcessDiagnosticLog: state.appendMainProcessDiagnosticLog
+}));
+
+import { appendBootEvent, bootReport, flushBootEvents, resolveBootArtifactPaths } from './boot.js';
+
 afterEach(() => {
-  process.env.FOLIOLE_WORKDIR = env.originalWorkdir;
-  process.env.FOLIOLE_RUNTIME_HEAD = env.originalHead;
-  process.env.FOLIOLE_BOOT_SESSION = env.originalSession;
+  process.env.FOLIOLE_WORKDIR = state.originalWorkdir;
+  process.env.FOLIOLE_RUNTIME_HEAD = state.originalHead;
+  process.env.FOLIOLE_BOOT_SESSION = state.originalSession;
+  state.appendMainProcessDiagnosticLog.mockReset();
 });
 
 it('writes main startup events and marks the source', async () => {
@@ -25,6 +31,7 @@ it('writes main startup events and marks the source', async () => {
   process.env.FOLIOLE_BOOT_SESSION = 'session-1';
 
   await appendBootEvent('main_window_create_start', { step: 'create-window' });
+  await flushBootEvents();
 
   const paths = resolveBootArtifactPaths(repoRoot);
   const rawLog = fs.readFileSync(paths.eventLogPath, 'utf8').trim().split('\n');
@@ -36,6 +43,24 @@ it('writes main startup events and marks the source', async () => {
     source: 'main',
     stage: 'main_window_create_start'
   });
+});
+
+it('preserves non-marker boot event order through the async queue', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-order-'));
+  process.env.FOLIOLE_WORKDIR = repoRoot;
+
+  await appendBootEvent('stage_a');
+  await appendBootEvent('stage_b');
+  await appendBootEvent('stage_c');
+  await flushBootEvents();
+
+  const paths = resolveBootArtifactPaths(repoRoot);
+  const stages = fs.readFileSync(paths.eventLogPath, 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line) as { stage: string })
+    .map((event) => event.stage);
+  expect(stages).toEqual(['stage_a', 'stage_b', 'stage_c']);
 });
 
 it('writes renderer boot events and app ready marker', async () => {
