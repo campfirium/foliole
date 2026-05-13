@@ -1,5 +1,8 @@
 import { BrowserWindow, type WebContents } from 'electron';
 
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { waitForDatabaseReady } from '../database/databaseReadiness.js';
+
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
 import type { InvokeRequest } from './contracts.js';
 import { handleImportCommand } from './importCommands.js';
@@ -28,12 +31,19 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
   if (!route) {
     throwUnsupportedCommand(command);
   }
+  if (shouldWaitForDatabaseReady(command, route)) {
+    await waitForDatabaseReady();
+  }
 
   const result = await dispatchRoutedCommand(route, request, args, context);
   if (result !== undefined) {
     return result;
   }
   throwUnsupportedCommand(command);
+}
+
+function shouldWaitForDatabaseReady(command: string, route: CommandRouteFamily) {
+  return command !== NATIVE_COMMANDS.bootReport && route !== 'windowAndUtility';
 }
 
 function throwUnsupportedCommand(command: string): never {

@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 
+import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
@@ -67,20 +68,26 @@ function installBeforeQuitLifecycle() {
 }
 
 async function initializeRuntimeServices() {
-  await appendBootEvent('database_init_start');
-  await appendBootEvent('database_initialize_call_start');
-  initializeDatabase((stage, payload = null) => {
-    void appendBootEvent(stage, payload).catch((error) => appendMainProcessDiagnosticLog('boot_log_failed', {
-      error,
-      stage
-    }));
-  });
-  await appendBootEvent('database_initialize_call_complete');
-  await appendBootEvent('node_sync_flush_start');
-  flushAllDirtyNodeSyncVersions();
-  await appendBootEvent('node_sync_flush_complete');
-  await appendBootEvent('database_init_complete');
-  installAppMenu();
+  try {
+    await appendBootEvent('database_init_start');
+    await appendBootEvent('database_initialize_call_start');
+    initializeDatabase((stage, payload = null) => {
+      void appendBootEvent(stage, payload).catch((error) => appendMainProcessDiagnosticLog('boot_log_failed', {
+        error,
+        stage
+      }));
+    });
+    await appendBootEvent('database_initialize_call_complete');
+    await appendBootEvent('node_sync_flush_start');
+    flushAllDirtyNodeSyncVersions();
+    await appendBootEvent('node_sync_flush_complete');
+    await appendBootEvent('database_init_complete');
+    installAppMenu();
+    markDatabaseReady();
+  } catch (error) {
+    markDatabaseStartupFailed(error);
+    throw error;
+  }
 }
 
 function toStartupErrorSummary(error: unknown) {
@@ -179,8 +186,10 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     installAppProcessDiagnostics();
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');
+    beginDatabaseStartup();
     const mainWindow = await args.createMainWindow();
     await startInitialMainWindow(args, {
+      failDatabaseStartup: markDatabaseStartupFailed,
       initializeRuntimeServices,
       installPairingFocusHandler,
       loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),

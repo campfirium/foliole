@@ -85,13 +85,15 @@ function createDeferred<T = void>() {
   return { promise, resolve };
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.clearAllMocks();
   mocks.initializeDatabase.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockResolvedValue(undefined);
   mocks.isDesktopCompanionSyncEnabled.mockReset();
   mocks.isDesktopCompanionSyncEnabled.mockReturnValue(false);
+  const { resetDatabaseReadinessForTests } = await import('./database/databaseReadiness.js');
+  resetDatabaseReadinessForTests();
   vi.resetModules();
 });
 
@@ -145,6 +147,29 @@ it('prioritizes the workspace shell error when renderer and database startup bot
     moduleLabel: 'Workspace shell'
   });
 });
+
+it('fails database readiness when startup stops before database initialization starts', async () => {
+  const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
+  const loadMainWindow = vi.fn().mockResolvedValue(undefined);
+  mocks.registerAttachmentProtocol.mockImplementationOnce(() => {
+    throw new Error('protocol exploded');
+  });
+  mocks.app.whenReady.mockResolvedValue(undefined);
+
+  const { installMainLifecycle } = await import('./mainLifecycle.js');
+  installMainLifecycle({
+    activateMainWindow: vi.fn().mockResolvedValue(undefined),
+    createMainWindow: vi.fn().mockResolvedValue(window),
+    installInvokeHandler: vi.fn(),
+    loadMainWindow,
+    runtimeMode: { allowParallelInstance: true } as never
+  });
+  await vi.waitFor(() => expect(loadMainWindow).toHaveBeenCalledTimes(1));
+
+  const { waitForDatabaseReady } = await import('./database/databaseReadiness.js');
+  await expect(waitForDatabaseReady()).rejects.toThrow('protocol exploded');
+});
+
 
 it('starts companion sync after database startup before activating the renderer', async () => {
   const window = { isDestroyed: vi.fn(() => false) };

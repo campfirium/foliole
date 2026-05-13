@@ -20,6 +20,7 @@ interface StartupErrorSurfaceArgs {
 }
 
 interface InitialMainWindowStartupArgs {
+  failDatabaseStartup: (error: unknown) => void;
   initializeRuntimeServices: () => Promise<void>;
   installPairingFocusHandler: () => void;
   loadStartupErrorSurface: (args: StartupErrorSurfaceArgs) => Promise<void>;
@@ -46,6 +47,7 @@ export async function startInitialMainWindow(
     registerAttachmentProtocol();
     registerRemoteImageProtocol();
   } catch (error) {
+    startup.failDatabaseStartup(error);
     await startup.loadStartupErrorSurface({ error, moduleLabel: 'Workspace shell', window: startup.mainWindow });
     return;
   }
