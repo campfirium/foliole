@@ -28,11 +28,13 @@ export function ReadwiseReaderSyncRow(props: {
       Automatically scan while Foliole is open, or start a scan with the current settings.
       {props.status?.message ? (
         <span
+          aria-live="polite"
           className={
             props.status.tone === 'error'
               ? 'mt-1 block text-red-700'
               : 'mt-1 block text-foreground/70'
           }
+          role="status"
         >
           {props.status.message}
         </span>

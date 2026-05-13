@@ -71,7 +71,7 @@ export function useReadwiseManualSync(input: {
       enableReadwiseImportSource(input.draft.draftSources)
     );
     setIsSyncing(true);
-    setStatus({ message: null, tone: 'normal' });
+    setStatus({ message: 'Syncing Readwise sources...', tone: 'normal' });
     try {
       input.onSave(payload);
       setStatus(formatSyncResult(await input.onRunSync(payload)));

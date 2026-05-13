@@ -51,7 +51,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
     for (const source of importableSources) {
       const startedAt = Date.now();
       if (logReadwiseProgress) {
-        await logReadwiseSourceStarted({ directoryPath: config.directoryPath, ruleId: config.ruleId, sourcePath: source.sourceName });
+        void logReadwiseSourceStarted({ directoryPath: config.directoryPath, ruleId: config.ruleId, sourcePath: source.sourceName });
       }
       runEntries.push(
         await runSingleKeepImportSource(config, source, {
@@ -59,7 +59,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
         })
       );
       if (logReadwiseProgress) {
-        await logReadwiseSourceCompleted({
+        void logReadwiseSourceCompleted({
           directoryPath: config.directoryPath,
           durationMs: Date.now() - startedAt,
           ruleId: config.ruleId,

@@ -233,6 +233,7 @@ it('shows visible feedback while manual Readwise sync is running', async () => {
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Syncing...' })).toBeDisabled();
   });
+  expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
 
   runResult.resolve(createReadwiseImportRunResult());
   await waitFor(() => {
