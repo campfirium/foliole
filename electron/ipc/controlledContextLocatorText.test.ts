@@ -220,3 +220,13 @@ it('matches Twitter list highlights despite empty status links and Readwise back
   expect(match).toContain('整个网站只有一个页面');
   expect(match).toContain('SEO层面');
 });
+
+it('keeps autolink closing markers when a highlight ends at an autolink', () => {
+  const source = ['中文教科书', '', '* <https://textbook.synaiv.com/>'].join('\n');
+  const quote = ['中文教科书', '• [https://textbook.synaiv.com/](https://textbook.synaiv.com/)'].join('\n');
+
+  const match = findLocatorText(source, quote);
+
+  expect(match).toBe(source);
+  expect(normalizeQuoteText(match ?? '')).toBe(normalizeQuoteText(quote));
+});
