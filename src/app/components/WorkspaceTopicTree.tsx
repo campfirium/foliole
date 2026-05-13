@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
 import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
+import { useNodeTreeActiveItemScroll } from '../../features/nodes/components/useNodeTreeActiveItemScroll';
 import { buildNodeTree } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -157,6 +158,7 @@ function renderWorkspaceTopicTreeMenu(
 }
 
 export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const { sortedItemIds, tree } = useWorkspaceTopicTreeState(props.itemIds, props.nodesById, contentSort.sort, nodeViewById);
@@ -175,6 +177,13 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
     onOpenMoveToNode: props.onOpenMoveToNode,
     onSelectNode: props.onSelectNode
   });
+
+  useNodeTreeActiveItemScroll({
+    activeNodeId: props.activeNodeId,
+    scopeKey: `${props.activeFolderId}:${visibleRows.length}`,
+    scrollContainerRef
+  });
+
   return (
     <aside aria-label="Current folder contents" className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <WorkspaceTopicTreeHeaderBridge
@@ -198,6 +207,7 @@ export function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
         onRenameNode: interaction.updateNodeTitle,
         onSelectNode: interaction.handleSelectNode,
         onToggleCollapse: (nodeId) => toggleCollapsedNode(nodeId, setCollapsedNodeIds),
+        scrollContainerRef,
         selectedNodeIds: interaction.topicTreeState.selectedNodeIds,
         visibleRows
       })}

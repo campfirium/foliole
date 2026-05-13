@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
+import { useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
 import { findFolderTopicItemCommandByAppCommandId } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import { VIRTUAL_NODE_APP_COMMAND_ID } from '../../../../lib/core/nodes/virtualNodeCommands';
@@ -7,7 +7,6 @@ import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
-import { scrollActiveTreeItemIntoView } from './nodeListAutoScroll';
 import { renderDeleteStatusOverlay } from './NodeListFeedbackSurface';
 import { NodeListHeader } from './NodeListHeader';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
@@ -21,6 +20,7 @@ import { NodeListRows } from './NodeListTreeRows';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { resolveNodeTreeClassName } from './NodeTreeRowStyle';
 import { useNodeListVisibleDocumentPrefetch } from './useNodeListVisibleDocumentPrefetch';
+import { useNodeTreeActiveItemScroll } from './useNodeTreeActiveItemScroll';
 
 interface NodeListPanelProps {
   activeCollapsedNodeIds: ReadonlySet<string>;
@@ -131,15 +131,12 @@ function useNodeListPanelEffects(
   props: Pick<NodeListPanelProps, 'activeNodeId' | 'activeRows' | 'isTrashViewOpen' | 'isVirtualViewOpen'>,
   scrollContainerRef: RefObject<HTMLDivElement | null>
 ) {
-  useEffect(() => {
-    if (!props.activeNodeId || props.isTrashViewOpen) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      scrollActiveTreeItemIntoView(scrollContainerRef.current, props.activeNodeId);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [props.activeNodeId, props.isTrashViewOpen, props.isVirtualViewOpen, scrollContainerRef]);
+  useNodeTreeActiveItemScroll({
+    activeNodeId: props.activeNodeId,
+    disabled: props.isTrashViewOpen,
+    scopeKey: props.isVirtualViewOpen,
+    scrollContainerRef
+  });
 
   useNodeListVisibleDocumentPrefetch({
     activeNodeId: props.activeNodeId,

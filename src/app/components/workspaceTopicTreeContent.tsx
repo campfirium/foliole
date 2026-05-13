@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
+import { useCallback, useMemo, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type RefObject, type SetStateAction } from 'react';
 
 import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
 import { type NodeListContextMenuController } from '../../features/nodes/components/NodeListTreeHooks';
@@ -20,12 +20,14 @@ export function renderWorkspaceTopicTreeBody(args: {
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
   onToggleCollapse: (nodeId: string) => void;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
   selectedNodeIds: string[];
   visibleRows: ReturnType<typeof buildVisibleNodeTreeRows>;
 }) {
   return (
     <div
       className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 pt-2"
+      ref={args.scrollContainerRef}
       onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => {
         const target = event.target as HTMLElement | null;
         if (target?.closest('[role="treeitem"]')) {
