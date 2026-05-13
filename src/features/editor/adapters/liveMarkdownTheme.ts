@@ -63,7 +63,7 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-heading-syntax-hidden': {
     display: 'none'
   },
-  '.cm-md-emphasis': { fontStyle: 'italic' },
+  '.cm-md-emphasis': { fontStyle: 'italic', fontSynthesisStyle: 'none' },
   '.cm-md-strong': { fontWeight: '600' },
   '.cm-md-strikethrough': { textDecoration: 'line-through' },
   '.cm-md-thematic-break': {

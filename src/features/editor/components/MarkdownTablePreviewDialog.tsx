@@ -168,7 +168,9 @@ function renderCellInlineContent(
   references: MarkdownTablePreviewRequest['table']['linkReferences'] = new Map()
 ) {
   return tokenizeMarkdownTableInlineText(text, references).map((token, index) => {
-    if (token.kind === 'emphasis') return <em className="cm-md-emphasis" key={index}>{token.text}</em>;
+    if (token.kind === 'emphasis') {
+      return <em className="cm-md-emphasis" key={index} style={{ fontSynthesisStyle: 'none' }}>{token.text}</em>;
+    }
     if (token.kind === 'strong') return <strong className="cm-md-strong" key={index}>{token.text}</strong>;
     if (token.kind === 'strikethrough') return <s className="cm-md-strikethrough" key={index}>{token.text}</s>;
     if (token.kind === 'sourceHighlight') return <mark className="cm-md-source-highlight" key={index}>{token.text}</mark>;
