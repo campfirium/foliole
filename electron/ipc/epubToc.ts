@@ -1,9 +1,8 @@
 import path from 'node:path';
 
-import { parse, type DefaultTreeAdapterTypes } from 'parse5';
+import { parse } from 'parse5';
 
-type HtmlNode = DefaultTreeAdapterTypes.Node;
-type HtmlElement = DefaultTreeAdapterTypes.Element;
+import { isHtmlElement, type HtmlElement, type HtmlNode } from './epubParse5.js';
 
 export interface EpubManifestItem {
   href: string;
@@ -45,8 +44,8 @@ function hasTocType(element: HtmlElement) {
 }
 
 function findTocNav(node: HtmlNode): HtmlElement | null {
-  if ('tagName' in node && (node as HtmlElement).tagName === 'nav' && hasTocType(node as HtmlElement)) {
-    return node as HtmlElement;
+  if (isHtmlElement(node) && node.tagName === 'nav' && hasTocType(node)) {
+    return node;
   }
   if (!('childNodes' in node)) {
     return null;
@@ -61,8 +60,8 @@ function findTocNav(node: HtmlNode): HtmlElement | null {
 }
 
 function findFirstList(node: HtmlNode): HtmlElement | null {
-  if ('tagName' in node && ['ol', 'ul'].includes((node as HtmlElement).tagName)) {
-    return node as HtmlElement;
+  if (isHtmlElement(node) && ['ol', 'ul'].includes(node.tagName)) {
+    return node;
   }
   if (!('childNodes' in node)) {
     return null;
@@ -77,8 +76,8 @@ function findFirstList(node: HtmlNode): HtmlElement | null {
 }
 
 function findAnchor(node: HtmlNode): HtmlElement | null {
-  if ('tagName' in node && (node as HtmlElement).tagName === 'a') {
-    return node as HtmlElement;
+  if (isHtmlElement(node) && node.tagName === 'a') {
+    return node;
   }
   if (!('childNodes' in node)) {
     return null;
@@ -94,15 +93,14 @@ function findAnchor(node: HtmlNode): HtmlElement | null {
 
 function parseNavList(list: HtmlElement, navPath: string): EpubTocEntry[] {
   return list.childNodes.flatMap((child) => {
-    if (!('tagName' in child) || (child as HtmlElement).tagName !== 'li') {
+    if (!isHtmlElement(child) || child.tagName !== 'li') {
       return [];
     }
-    const item = child as HtmlElement;
-    const link = findAnchor(item);
-    const nestedList = item.childNodes.find(
-      (node): node is HtmlElement => 'tagName' in node && ['ol', 'ul'].includes((node as HtmlElement).tagName)
+    const link = findAnchor(child);
+    const nestedList = child.childNodes.find(
+      (node): node is HtmlElement => isHtmlElement(node) && ['ol', 'ul'].includes(node.tagName)
     );
-    const title = (link ? collectText(link) : collectText(item)).trim();
+    const title = (link ? collectText(link) : collectText(child)).trim();
     if (!title) {
       return nestedList ? parseNavList(nestedList, navPath) : [];
     }

@@ -1,4 +1,4 @@
-import { parse, type DefaultTreeAdapterTypes } from 'parse5';
+import { parse } from 'parse5';
 
 import {
   convertHtmlToMarkdownCompatible,
@@ -12,9 +12,7 @@ import {
   increaseMarkdownHeadingLevels,
   normalizePageTitle
 } from './epubImportChapterHeuristics.js';
-
-type HtmlNode = DefaultTreeAdapterTypes.Node;
-type HtmlElement = DefaultTreeAdapterTypes.Element;
+import { isHtmlElement, type HtmlNode } from './epubParse5.js';
 
 function collectText(node: HtmlNode): string {
   if (node.nodeName === '#text') {
@@ -27,7 +25,7 @@ function collectText(node: HtmlNode): string {
 }
 
 function findFirstText(node: HtmlNode, tagName: string): string | null {
-  if ('tagName' in node && (node as HtmlElement).tagName === tagName) {
+  if (isHtmlElement(node) && node.tagName === tagName) {
     return collectText(node) || null;
   }
   if (!('childNodes' in node)) {
@@ -43,9 +41,8 @@ function findFirstText(node: HtmlNode, tagName: string): string | null {
 }
 
 function findFirstHeadingText(node: HtmlNode): string | null {
-  if ('tagName' in node && /^h[1-6]$/.test((node as HtmlElement).tagName)) {
-    const element = node as HtmlElement;
-    if (element.attrs.some((attribute) => attribute.name === 'hidden' && attribute.value !== 'false')) {
+  if (isHtmlElement(node) && /^h[1-6]$/.test(node.tagName)) {
+    if (node.attrs.some((attribute) => attribute.name === 'hidden' && attribute.value !== 'false')) {
       return null;
     }
     return collectText(node) || null;
