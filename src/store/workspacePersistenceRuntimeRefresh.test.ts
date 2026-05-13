@@ -72,6 +72,28 @@ function createRuntimeInvokeWithChangingSnapshots() {
   });
 }
 
+function createRuntimeInvokeWithStaleReadingActive() {
+  const snapshot = createWorkspaceSnapshot(['special-inbox', 'node-2', 'node-1']);
+  return vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
+    if (command === 'load_workspace_list_snapshot') {
+      return Promise.resolve(snapshot);
+    }
+    if (command === 'load_reading_progress') {
+      return Promise.resolve({ activeNodeId: 'node-1', nodeViewStateById: {} });
+    }
+    if (command === 'load_node_document' && payload?.nodeId) {
+      return Promise.resolve({
+        nodeId: payload.nodeId,
+        kind: 'topic',
+        content: `${payload.nodeId} body`,
+        hideTitleHeading: false,
+        reveal: null
+      });
+    }
+    return Promise.resolve(null);
+  });
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((nextResolve) => {
@@ -80,13 +102,15 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
+function resetRuntimeRefreshTest() {
+  window.localStorage.clear();
+  resetWorkspaceState();
+  vi.clearAllMocks();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+}
+
 describe('workspace persistence runtime refresh', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-    resetWorkspaceState();
-    vi.clearAllMocks();
-    vi.mocked(getRuntimeInvoke).mockReturnValue(null);
-  });
+  beforeEach(resetRuntimeRefreshTest);
 
   it('updates the current workspace state when a later runtime rehydrate returns new inbox children', async () => {
     const invoke = createRuntimeInvokeWithChangingSnapshots();
@@ -105,7 +129,7 @@ describe('workspace persistence runtime refresh', () => {
   });
 
   it('keeps the user-selected active node during a later runtime rehydrate', async () => {
-    const invoke = createRuntimeInvokeWithChangingSnapshots();
+    const invoke = createRuntimeInvokeWithStaleReadingActive();
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     await useWorkspaceStore.persist.rehydrate();
@@ -115,6 +139,10 @@ describe('workspace persistence runtime refresh', () => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
     expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
   });
+});
+
+describe('workspace persistence overlapping runtime refresh', () => {
+  beforeEach(resetRuntimeRefreshTest);
 
   it('applies a second runtime rehydrate that starts while the first hydrate is still in flight', async () => {
     const firstSnapshot = createDeferred<ReturnType<typeof createWorkspaceSnapshot>>();

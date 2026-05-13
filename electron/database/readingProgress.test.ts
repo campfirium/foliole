@@ -123,6 +123,24 @@ it('persists close flush source and keeps newer user scroll rows', () => {
     .get('node-1')).toEqual({ scroll_top: 200, source: 'user-scroll' });
 });
 
+it('does not let an older reading progress save restore an earlier active node', () => {
+  saveReadingProgress({
+    activeNodeId: 'node-2',
+    nodeViewStates: [],
+    updatedAt: '2026-03-06T10:01:00.000Z'
+  });
+  saveReadingProgress({
+    activeNodeId: 'node-1',
+    nodeViewStates: [],
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  });
+
+  expect(loadReadingProgress()).toEqual({
+    activeNodeId: 'node-2',
+    nodeViewStateById: {}
+  });
+});
+
 it('does not let restore overwrite saved user reading positions', () => {
   saveReadingProgress({
     activeNodeId: 'node-1',

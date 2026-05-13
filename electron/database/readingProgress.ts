@@ -85,13 +85,31 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
   );
 
   withTransaction(connection.driver, () => {
-    upsertMetaStatement.run([ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt]);
-    writeActiveNodeViewStateSync(connection, {
-      activeNodeId: input.activeNodeId,
-      updatedAt: input.updatedAt
-    });
+    if (shouldWriteActiveNodeMeta(connection, input.updatedAt)) {
+      upsertMetaStatement.run([ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt]);
+      writeActiveNodeViewStateSync(connection, {
+        activeNodeId: input.activeNodeId,
+        updatedAt: input.updatedAt
+      });
+    }
     saveNodeViewStates(connection, upsertNodeViewStateStatement, input, deviceId, source);
   });
+}
+
+function shouldWriteActiveNodeMeta(connection: DatabaseConnection, incomingUpdatedAt: string) {
+  const incomingTime = Date.parse(incomingUpdatedAt);
+  if (!Number.isFinite(incomingTime)) {
+    return false;
+  }
+  const existing = connection.driver.queryOne<MetaRow>(
+    'SELECT updated_at AS value FROM workspace_meta WHERE key = ?',
+    [ACTIVE_NODE_META_KEY]
+  );
+  if (!existing) {
+    return true;
+  }
+  const existingTime = Date.parse(existing.value);
+  return !Number.isFinite(existingTime) || incomingTime >= existingTime;
 }
 
 function traceReadingProgressSave(input: SaveReadingProgressInput) {
