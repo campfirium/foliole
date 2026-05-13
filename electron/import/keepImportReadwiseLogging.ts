@@ -1,4 +1,4 @@
-import { logReadwiseScanCompleted } from './importRunLogger.js';
+import { logReadwiseScanCompleted } from './readwiseImportRunLogger.js';
 
 export interface KeepImportRunEntry {
   action: 'import_attempted' | 'skipped';

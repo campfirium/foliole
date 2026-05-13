@@ -10,6 +10,8 @@ import { runKeepImportRule } from './keepImportService.js';
 
 type EnabledReadwiseSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
 
+let activeReadwiseReaderImport: Promise<NativeReadwiseImportRunResult> | null = null;
+
 function isEnabledReadwiseSource(
   source: ImportManagerSourceDraft
 ): source is EnabledReadwiseSource {
@@ -46,6 +48,18 @@ function countImportedEntries(entries: Awaited<ReturnType<typeof runReadwiseSour
 }
 
 export async function runReadwiseReaderImport(input?: {
+  settings?: unknown;
+}): Promise<NativeReadwiseImportRunResult> {
+  if (activeReadwiseReaderImport) {
+    return activeReadwiseReaderImport;
+  }
+  activeReadwiseReaderImport = runReadwiseReaderImportNow(input).finally(() => {
+    activeReadwiseReaderImport = null;
+  });
+  return activeReadwiseReaderImport;
+}
+
+async function runReadwiseReaderImportNow(input?: {
   settings?: unknown;
 }): Promise<NativeReadwiseImportRunResult> {
   const settings = resolveRunSettings(input);

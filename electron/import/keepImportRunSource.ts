@@ -1,4 +1,5 @@
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
+import { readKeepImportItem } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
 
@@ -76,11 +77,25 @@ function createSkippedKeepImportEntry(input: {
   };
 }
 
+function notifyKeepImportUpdated(importId: string, enabled: boolean) {
+  if (enabled) {
+    notifyManagedInboxUpdated(importId);
+  }
+}
+
+function notifyPendingSourceUpdate(config: KeepImportRuleConfig, sourcePath: string) {
+  const existingItem = readKeepImportItem(config.ruleId, sourcePath);
+  if (existingItem?.has_source_update) {
+    notifyManagedInboxUpdated(`keep-update-${config.ruleId}-${sourcePath}`);
+  }
+}
+
 async function persistBlockedDeletedKeepImport(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
   detail: string | null,
-  previewStatus: KeepImportRunEntry['previewStatus']
+  previewStatus: KeepImportRunEntry['previewStatus'],
+  notifyUpdate: boolean
 ): Promise<KeepImportRunEntry> {
   const importedAt = new Date().toISOString();
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
@@ -97,7 +112,7 @@ async function persistBlockedDeletedKeepImport(
     blockedState.existingItem?.last_node_id ?? null,
     hasSourceUpdate
   );
-  notifyManagedInboxUpdated(record.importId);
+  notifyKeepImportUpdated(record.importId, notifyUpdate);
   return {
     action: 'skipped',
     detail,
@@ -111,13 +126,15 @@ async function persistBlockedDeletedKeepImport(
 export async function runSingleKeepImportSource(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
-  options: { forceTopicImport?: boolean } = {}
+  options: { forceTopicImport?: boolean; notifyUpdate?: boolean } = {}
 ): Promise<KeepImportRunEntry> {
+  const notifyUpdate = options.notifyUpdate ?? true;
   const preview = await classifySource(config, source);
   if (
     preview.status === 'unchanged' &&
     !(await shouldRunUnchangedReadwiseDestination(config, source))
   ) {
+    notifyPendingSourceUpdate(config, source.sourceName);
     return createSkippedKeepImportEntry({
       detail: preview.detail,
       failureReason: null,
@@ -134,7 +151,7 @@ export async function runSingleKeepImportSource(
     });
   }
   if (preview.status === 'blocked_deleted') {
-    return persistBlockedDeletedKeepImport(config, source, preview.detail, preview.status);
+    return persistBlockedDeletedKeepImport(config, source, preview.detail, preview.status, notifyUpdate);
   }
   if (config.sourceType === 'readwise' && !options.forceTopicImport) {
     const readwiseResult = await runReadwiseDestination(config, source, preview.status);
@@ -155,7 +172,7 @@ export async function runSingleKeepImportSource(
     };
   }
   const result = await runKeepImportSource(config, source);
-  notifyManagedInboxUpdated(result.importId);
+  notifyKeepImportUpdated(result.importId, notifyUpdate);
   return {
     action: 'import_attempted',
     detail: result.detail,

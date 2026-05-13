@@ -3,19 +3,65 @@ import type { BrowserWindow, BrowserWindowConstructorOptions } from 'electron';
 import { saveWindowState, type PersistedWindowState } from './ipc/windowState.js';
 import { logWindowStateLifecycleEvent } from './windowStateDiagnostics.js';
 
+interface WorkAreaBounds {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface ResolvedWindowBounds {
+  height: number;
+  width: number;
+  x?: number;
+  y?: number;
+}
+
+function hasVisibleIntersection(bounds: WorkAreaBounds, workArea: WorkAreaBounds) {
+  const horizontal = Math.min(bounds.x + bounds.width, workArea.x + workArea.width) - Math.max(bounds.x, workArea.x);
+  const vertical = Math.min(bounds.y + bounds.height, workArea.y + workArea.height) - Math.max(bounds.y, workArea.y);
+  return horizontal > 80 && vertical > 80;
+}
+
+function resolveVisibleBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[]): ResolvedWindowBounds {
+  const width = Math.max(960, Math.round(state.width));
+  const height = Math.max(640, Math.round(state.height));
+  const x = typeof state.x === 'number' ? Math.round(state.x) : undefined;
+  const y = typeof state.y === 'number' ? Math.round(state.y) : undefined;
+  const bounds = {
+    height,
+    width,
+    ...(x === undefined ? {} : { x }),
+    ...(y === undefined ? {} : { y })
+  };
+  if (x === undefined || y === undefined || workAreas.length === 0) {
+    return bounds;
+  }
+  const windowBounds = {
+    height: Math.max(640, Math.round(state.height)),
+    width: Math.max(960, Math.round(state.width)),
+    x,
+    y
+  };
+  const visible = workAreas.some((workArea) => hasVisibleIntersection(windowBounds, workArea));
+  return visible ? bounds : { height, width };
+}
+
 export function applyWindowStateToOptions(
   options: BrowserWindowConstructorOptions,
-  state: PersistedWindowState | null
+  state: PersistedWindowState | null,
+  workAreas: WorkAreaBounds[] = []
 ): BrowserWindowConstructorOptions {
   if (!state) {
     return options;
   }
+  const bounds = resolveVisibleBounds(state, workAreas);
   return {
     ...options,
-    width: Math.max(960, Math.round(state.width)),
-    height: Math.max(640, Math.round(state.height)),
-    ...(typeof state.x === 'number' ? { x: Math.round(state.x) } : {}),
-    ...(typeof state.y === 'number' ? { y: Math.round(state.y) } : {})
+    width: bounds.width,
+    height: bounds.height,
+    ...(bounds.x === undefined ? {} : { x: bounds.x }),
+    ...(bounds.y === undefined ? {} : { y: bounds.y })
   };
 }
 

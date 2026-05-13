@@ -56,6 +56,10 @@ function renderReadwiseFrontmatter(metadata: Array<{ key: string; value: string 
   return ['---', ...metadata.map(({ key, value }) => `${key}: ${value}`), '---'].join('\n');
 }
 
+export function extractReadwiseFullDocumentFrontmatter(markdown: string) {
+  return renderReadwiseFrontmatter(parseReadwiseMetadataSection(markdown));
+}
+
 export function extractReadwiseFullDocument(markdown: string) {
   const normalized = normalizeLineEndings(markdown);
   const matches = [...normalized.matchAll(/^## Full Document[^\n]*$/gim)];
@@ -103,7 +107,7 @@ export function liftReadwiseFullDocumentBodyHeadings(body: string) {
 export function parseReadwiseFullDocumentImport(markdown: string) {
   const nodeTitle = extractReadwiseShellTitle(markdown);
   const titleHeading = nodeTitle ? `# ${nodeTitle}` : '';
-  const frontmatter = renderReadwiseFrontmatter(parseReadwiseMetadataSection(markdown));
+  const frontmatter = extractReadwiseFullDocumentFrontmatter(markdown);
   const body = liftReadwiseFullDocumentBodyHeadings(extractReadwiseFullDocument(markdown));
   const header = [frontmatter, titleHeading].filter(Boolean).join('\n');
   const content = [header, body].filter(Boolean).join('\n\n');

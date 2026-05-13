@@ -1,5 +1,8 @@
+import fs from 'node:fs/promises';
+
 import { needsReadwiseFrontmatterRefresh } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
 import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
+import { extractReadwiseFullDocumentFrontmatter } from '../../lib/core/import/readwiseFullDocumentParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { readKeepImportItem, readKeepImportNodeContent, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
 import { hasReadwiseExternalDocument } from '../database/readwiseManagedExternalDocuments.js';
@@ -66,14 +69,9 @@ export async function shouldRunUnchangedReadwiseDestination(
   if (!existingContent) {
     return true;
   }
-  const prepared = await loadPreparedReadwiseImportRecord(source, {
-    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
-    highlightPolicy: config.highlightPolicy,
-    importedAt: new Date().toISOString(),
-    kind: resolved.readwiseSource.kind,
-    readwiseConfig: resolved.readwiseConfig
-  });
-  return needsReadwiseFrontmatterRefresh(existingContent, prepared.content);
+  const fullDocumentMarkdown = await fs.readFile(source.filePath, 'utf8');
+  const frontmatter = extractReadwiseFullDocumentFrontmatter(fullDocumentMarkdown);
+  return needsReadwiseFrontmatterRefresh(existingContent, frontmatter);
 }
 
 export async function runReadwiseExternalDocumentImport(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {

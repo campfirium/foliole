@@ -1,28 +1,70 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
 import { applyWindowStateToOptions } from './windowStateLifecycle.js';
 
-describe('window state startup options', () => {
-  it('does not put fullscreen presentation into constructor options', () => {
-    expect(
-      applyWindowStateToOptions(
-        { show: false },
-        {
-          height: 900,
-          isFullScreen: true,
-          isMaximized: false,
-          width: 1400,
-          x: 20,
-          y: 30
-        }
-      )
-    ).toEqual({
-      height: 900,
-      show: false,
-      width: 1400,
-      x: 20,
-      y: 30
-    });
+it('does not put fullscreen presentation into constructor options', () => {
+  expect(
+    applyWindowStateToOptions(
+      { show: false },
+      {
+        height: 900,
+        isFullScreen: true,
+        isMaximized: false,
+        width: 1400,
+        x: 20,
+        y: 30
+      }
+    )
+  ).toEqual({
+    height: 900,
+    show: false,
+    width: 1400,
+    x: 20,
+    y: 30
+  });
+});
+
+it('drops restored coordinates that are outside every display work area', () => {
+  expect(
+    applyWindowStateToOptions(
+      { show: false },
+      {
+        height: 640,
+        isFullScreen: false,
+        isMaximized: false,
+        width: 960,
+        x: -15992,
+        y: -16000
+      },
+      [{ height: 1040, width: 1920, x: 0, y: 0 }]
+    )
+  ).toEqual({
+    height: 640,
+    show: false,
+    width: 960
+  });
+});
+
+it('keeps restored coordinates that intersect a display work area', () => {
+  expect(
+    applyWindowStateToOptions(
+      { show: false },
+      {
+        height: 640,
+        isFullScreen: false,
+        isMaximized: false,
+        width: 960,
+        x: 120,
+        y: 80
+      },
+      [{ height: 1040, width: 1920, x: 0, y: 0 }]
+    )
+  ).toEqual({
+    height: 640,
+    show: false,
+    width: 960,
+    x: 120,
+    y: 80
   });
 });

@@ -251,7 +251,7 @@ it('does not recreate a locally deleted Readwise Inbox topic during sync', async
 
   const result = await runReadwiseReaderImport();
   const nodeRows = readRows<{ deleted_at: string | null; id: string }>(
-    `SELECT id, deleted_at FROM nodes WHERE title = 'Highlighted' ORDER BY created_at ASC`
+    `SELECT id, deleted_at FROM nodes WHERE title = 'Same Title' ORDER BY created_at ASC`
   );
   const keepRows = readRows<{
     has_source_update: number;
@@ -286,8 +286,8 @@ it('keeps Inbox destination on the existing duplicate title path', async () => {
 
   await runReadwiseArticles();
 
-  expect(readRows("SELECT title FROM nodes WHERE parent_id = 'special-inbox' AND title IN ('Highlighted', 'Second') ORDER BY title ASC")).toEqual([
-    { title: 'Highlighted' },
-    { title: 'Second' }
+  expect(readRows("SELECT title FROM nodes WHERE parent_id = 'special-inbox' AND title LIKE 'Same Title%' ORDER BY title ASC")).toEqual([
+    { title: 'Same Title' },
+    { title: 'Same Title 2' }
   ]);
 });

@@ -27,7 +27,7 @@ function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, ...TEST_PREVIEW_TIMEOUTS, ...env }
+      env: { ...process.env, WINDOWS_NODE_MODULES_CHECK_COMMAND: 'true', ...TEST_PREVIEW_TIMEOUTS, ...env }
     });
     let stdout = '';
     let stderr = '';
@@ -255,6 +255,37 @@ const timer = setInterval(() => {
 }
 
 describe('windows-preview script', { timeout: 15000 }, () => {
+  it('stops before client actions when the Windows mirror dependencies are not installed', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    try {
+      const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
+        tempRoot,
+        ['echo "unexpected client action ${WINDOWS_CLIENT_ACTION}"', 'exit 1'].join('\n')
+      );
+
+      const result = await runScript({
+        ACTION_LOG: actionLog,
+        WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+        WINDOWS_NODE_MODULES_CHECK_COMMAND:
+          'echo "missing: @tanstack/react-virtual"; echo "npm install required" >&2; exit 1',
+        WINDOWS_SYNC_SCRIPT: syncScript,
+        WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/shared/ui/VirtualListSurface.tsx'
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('step 3/4: verify windows node_modules');
+      expect(result.stdout).toContain('windows node_modules check failed');
+      expect(result.stdout).toContain('hint: run npm install in');
+      expect(result.stdout).toContain('missing: @tanstack/react-virtual');
+      expect(result.stdout).toContain('npm install required');
+      expect(result.stdout).not.toContain('step 4/4: apply update action');
+      expect(await readActions(actionLog)).toEqual([]);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('rebuilds stale electron-dist before sync instead of failing early', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
@@ -285,7 +316,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('step 1/3: verify electron-dist freshness');
+      expect(result.stdout).toContain('step 1/4: verify electron-dist freshness');
       expect(result.stdout).toContain('electron-dist stale; compiling runtime bundle');
       expect(result.stdout).toContain('[mock-electron-compile] status: COMPILED');
       expect(result.stdout).toContain('[windows-sync] status: SYNCED');

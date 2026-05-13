@@ -10,6 +10,7 @@ WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT="${WINDOWS_RENDERER_RELOAD_INTENT_SCRIPT:-
 WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT="${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT:-scripts/windows/check-electron-dist-fresh.mjs}"
 WINDOWS_ELECTRON_DIST_SYNC_SCRIPT="${WINDOWS_ELECTRON_DIST_SYNC_SCRIPT:-scripts/windows/electron-dist-incremental-sync.mjs}"
 WINDOWS_ELECTRON_COMPILE_COMMAND="${WINDOWS_ELECTRON_COMPILE_COMMAND:-npm run electron:compile}"
+WINDOWS_NODE_MODULES_CHECK_COMMAND="${WINDOWS_NODE_MODULES_CHECK_COMMAND:-}"
 WINDOWS_RESTART_INTENT_ROOT="${WINDOWS_RESTART_INTENT_ROOT:-}"
 WINDOWS_RENDERER_RELOAD_INTENT_ROOT="${WINDOWS_RENDERER_RELOAD_INTENT_ROOT:-}"
 WINDOWS_WORKDIR="${WINDOWS_WORKDIR:-C:\\dev\\foliole}"
@@ -313,6 +314,33 @@ ensure_fresh_electron_dist() {
   echo "[windows-preview] electron-dist stale; compiling runtime bundle"
   eval "${WINDOWS_ELECTRON_COMPILE_COMMAND}"
   node "${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT}"
+}
+
+verify_windows_node_modules() {
+  local output=""
+  local exit_code=0
+  set +e
+  if [ -n "${WINDOWS_NODE_MODULES_CHECK_COMMAND}" ]; then
+    output="$(eval "${WINDOWS_NODE_MODULES_CHECK_COMMAND}" 2>&1)"
+    exit_code=$?
+  else
+    output="$(
+      powershell.exe -NoProfile -NonInteractive -Command "\$ErrorActionPreference='Stop'; Set-Location -LiteralPath '${WINDOWS_WORKDIR}'; npm ls --depth=0 --json --silent | Out-Null" 2>&1
+    )"
+    exit_code=$?
+  fi
+  set -e
+  if [ "${exit_code}" -eq 0 ]; then
+    echo "[windows-preview] windows node_modules check passed"
+    return 0
+  fi
+
+  echo "[windows-preview] windows node_modules check failed"
+  echo "[windows-preview] hint: run npm install in ${WINDOWS_WORKDIR}"
+  if [ -n "${output}" ]; then
+    printf '%s\n' "${output}" | tail -n 80
+  fi
+  return 1
 }
 
 resolve_changed_files() {
@@ -795,10 +823,10 @@ run_status_probe_failed() {
   return 1
 }
 
-echo "[windows-preview] step 1/3: verify electron-dist freshness"
+echo "[windows-preview] step 1/4: verify electron-dist freshness"
 ensure_fresh_electron_dist
 
-echo "[windows-preview] step 2/3: sync to windows mirror"
+echo "[windows-preview] step 2/4: sync to windows mirror"
 changed_files="$(resolve_changed_files)"
 if has_runtime_code_changes "${changed_files}"; then
   set +e
@@ -814,9 +842,12 @@ else
   bash "${WINDOWS_SYNC_SCRIPT}"
 fi
 
+echo "[windows-preview] step 3/4: verify windows node_modules"
+verify_windows_node_modules
+
 select_update_action "${changed_files}"
 
-echo "[windows-preview] step 3/3: apply update action"
+echo "[windows-preview] step 4/4: apply update action"
 echo "[windows-preview] reason: ${SELECTED_REASON}"
 if [ -n "${SELECTED_STATUS_DETAIL:-}" ]; then
   echo "[windows-preview] client status detail: ${SELECTED_STATUS_DETAIL}"

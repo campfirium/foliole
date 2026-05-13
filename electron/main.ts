@@ -133,7 +133,11 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   const restoredWindowState = await loadWindowState();
   await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
-  const options = applyWindowStateToOptions(createMainWindowOptions(runtimeDiagnostics.preloadPath), restoredWindowState);
+  const options = applyWindowStateToOptions(
+    createMainWindowOptions(runtimeDiagnostics.preloadPath),
+    restoredWindowState,
+    screen.getAllDisplays().map((display) => display.workArea)
+  );
   if (restoredWindowState?.isMaximized === true) {
     const restoredBounds = {
       height: options.height ?? 900,

@@ -1,3 +1,4 @@
+import { LoaderCircle } from 'lucide-react';
 import { forwardRef } from 'react';
 
 import type {
@@ -164,7 +165,10 @@ const ReadwiseImportPreviewDialog = forwardRef<
         onClick={props.onStart}
         variant="primary"
       >
-        {props.isStarting ? 'Starting...' : 'Start'}
+        {props.isStarting ? (
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+        ) : null}
+        Start
       </AppButton>
     </div>
   </AppDialogContent>

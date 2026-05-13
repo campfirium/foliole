@@ -128,6 +128,36 @@ function runCommand(command) {
   });
 }
 
+function runWindowsStatusCommand() {
+  const command = process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND
+    ? ['bash', '-lc', process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND]
+    : ['bash', 'scripts/windows/windows-restart-client.sh'];
+  return spawnSync(command[0], command.slice(1), {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      WINDOWS_CLIENT_ACTION: 'status'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+}
+
+function isWindowsRuntimeRunning() {
+  const result = runWindowsStatusCommand();
+  if (result.status !== 0) {
+    return false;
+  }
+  return /\[windows-restart-client\]\s+status:\s+RUNNING\b/.test(result.stdout);
+}
+
+function canSkipCoveredPreview(target) {
+  if (target !== 'windows') {
+    return true;
+  }
+  return isWindowsRuntimeRunning();
+}
+
 async function main() {
   const { command, target } = parseArgs(process.argv.slice(2));
   if (!VALID_TARGETS.has(target) || command.length === 0) {
@@ -138,9 +168,12 @@ async function main() {
   const currentHash = await workspaceHash(target);
   const storedHash = await readStoredHash(target);
   if (storedHash === currentHash) {
-    console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);
-    console.log(`[${target}-preview] status: SYNCED`);
-    return 0;
+    if (canSkipCoveredPreview(target)) {
+      console.log(`[${target}-preview] dedupe: covered hash=${currentHash}`);
+      console.log(`[${target}-preview] status: SYNCED`);
+      return 0;
+    }
+    console.log(`[${target}-preview] dedupe: stale-covered hash=${currentHash}`);
   }
 
   console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);

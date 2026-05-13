@@ -1,6 +1,12 @@
 import { createDefaultReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import type {
+  NativeReadwiseCleanupPreviewResult,
+  NativeReadwiseCleanupRunResult,
+  NativeReadwiseImportRunResult,
+  NativeReadwiseSyncPreviewResult
+} from '../../../lib/platform/nativeImportContract';
 
-export function createReadwiseImportPreview() {
+export function createReadwiseImportPreview(): NativeReadwiseSyncPreviewResult {
   return {
     active_count: 0,
     blocked_count: 0,
@@ -30,7 +36,7 @@ export function createReadwiseImportPreview() {
   };
 }
 
-export function createReadwiseImportRunResult() {
+export function createReadwiseImportRunResult(): NativeReadwiseImportRunResult {
   return {
     completed_at: '2026-05-11T00:01:00.000Z',
     entry_count: 1,
@@ -42,7 +48,7 @@ export function createReadwiseImportRunResult() {
   };
 }
 
-export function createReadwiseCleanupPreview() {
+export function createReadwiseCleanupPreview(): NativeReadwiseCleanupPreviewResult {
   return {
     delete_count: 1,
     entries: [
@@ -64,7 +70,7 @@ export function createReadwiseCleanupPreview() {
   };
 }
 
-export function createReadwiseCleanupRunResult() {
+export function createReadwiseCleanupRunResult(): NativeReadwiseCleanupRunResult {
   return {
     ...createReadwiseCleanupPreview(),
     cleaned_at: '2026-05-11T00:02:00.000Z',
