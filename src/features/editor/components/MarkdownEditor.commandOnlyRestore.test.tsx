@@ -1,10 +1,9 @@
-import { render, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
 const mockRestoreSelection = vi.fn();
-const mockSetScrollTop = vi.fn();
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
@@ -23,7 +22,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     restoreSelection(selection: { from: number; to: number }) { mockRestoreSelection(selection); }
     revealSelection() {}
     getScrollTop() { return 0; }
-    setScrollTop(scrollTop: number) { mockSetScrollTop(scrollTop); }
+    setScrollTop() {}
     getScrollMetrics() { return { clientHeight: 0, scrollHeight: 0, scrollTop: 0 }; }
     replaceRange() {}
     replaceSelection() {}
@@ -42,23 +41,19 @@ function renderEditor(ui: React.ReactElement) {
 
 beforeEach(() => {
   mockRestoreSelection.mockClear();
-  mockSetScrollTop.mockClear();
 });
 
-it('restores a scroll-only saved position without applying a fake selection', async () => {
-  renderEditor(
+it('does not restore from persisted node view state without an explicit command', () => {
+  const view = renderEditor(<MarkdownEditor nodeId="node-1" onChange={vi.fn()} value="Body" />);
+
+  view.rerender(
     <MarkdownEditor
       nodeId="node-1"
-      nodeViewState={{ scrollTop: 5_400, selection: null }}
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
       onChange={vi.fn()}
-      readingRestoreCommandId="scroll-restore-1"
-      readingRestoreScrollTop={5_400}
-      value={'Paragraph\n\n'.repeat(200)}
+      value={'Long body\n\n'.repeat(8_000)}
     />
   );
 
   expect(mockRestoreSelection).not.toHaveBeenCalled();
-  await waitFor(() => {
-    expect(mockSetScrollTop).toHaveBeenLastCalledWith(5_400);
-  });
 });

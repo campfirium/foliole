@@ -17,6 +17,7 @@ export interface ReadingPositionSyncState {
   commandId?: string;
   reason: string;
   startedAt: number;
+  targetScrollTop?: number;
   targetSelection: EditorSelection | null;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;

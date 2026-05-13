@@ -6,7 +6,10 @@ import { isInboxNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { useNavigationReadingPosition } from './appControllerNavigationReadingPosition';
+import {
+  useActiveNodeReadingPositionRestore,
+  useNavigationReadingPosition
+} from './appControllerNavigationReadingPosition';
 import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
 import { useAppRuntime } from './useAppRuntime';
 import { useEditorContextCommands } from './useEditorContextCommands';
@@ -186,6 +189,7 @@ export function useWorkspaceControllerState(
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
   const navigationReadingPosition = useNavigationReadingPosition(runtime, ws.nodeViewById, ws.setNodeViewState);
+  useActiveNodeReadingPositionRestore(runtime, ws.activeNodeId, ws.nodeViewById, isWorkspaceHydrated);
   const saveActiveNodeView = useSaveActiveNodeView(runtime, ws);
   const { editorCtx, nav } = useWorkspaceEditorController(
     ws,

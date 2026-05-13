@@ -60,6 +60,14 @@ function createLongDocument() {
   return Array.from({ length: 2_500 }, (_, index) => `Paragraph ${index}: ${'Long document body. '.repeat(4)}`).join('\n\n');
 }
 
+function createRestoreProps(id: string, nodeViewState: { scrollTop: number; selection: { from: number; to: number } | null }) {
+  return {
+    readingRestoreCommandId: id,
+    readingRestoreScrollTop: nodeViewState.scrollTop,
+    readingSelection: nodeViewState.selection
+  };
+}
+
 beforeEach(() => {
   resetLongDocumentEditorMocks();
 });
@@ -76,9 +84,7 @@ it('restores mid-document selection and scroll when reopening a long document', 
   expect(mockRevealSelection).not.toHaveBeenCalled();
 
   view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
-  view.rerender(
-    <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />
-  );
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} {...createRestoreProps('long-restore-1', nodeViewState)} />);
 
   await expectRestoredViewState(nodeViewState);
   expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
@@ -99,12 +105,12 @@ it('waits for on-demand content to load before restoring a saved mid-document po
   mockRevealSelection.mockClear();
 
   view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
-  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="" />);
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="" {...createRestoreProps('long-restore-2', nodeViewState)} />);
 
   expect(mockSetSelection).not.toHaveBeenCalled();
   expect(mockRevealSelection).not.toHaveBeenCalled();
 
-  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} {...createRestoreProps('long-restore-2', nodeViewState)} />);
 
   await expectRestoredViewState(nodeViewState);
   expect(mockMarkNodePositionRequested).toHaveBeenLastCalledWith('node-1');
@@ -127,12 +133,12 @@ it('waits for on-demand content to load before restoring a saved scroll-only pos
   mockSetScrollTop.mockClear();
 
   view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
-  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="" />);
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="" {...createRestoreProps('long-scroll-1', nodeViewState)} />);
 
   expect(mockRestoreSelection).not.toHaveBeenCalled();
   expect(mockSetScrollTop).not.toHaveBeenCalled();
 
-  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} {...createRestoreProps('long-scroll-1', nodeViewState)} />);
 
   await expectRestoredViewState(nodeViewState);
 });
@@ -143,9 +149,7 @@ it('does not reapply a saved selection while typing in the same node', async () 
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
   };
-  const view = renderEditor(
-    <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />
-  );
+  const view = renderEditor(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} {...createRestoreProps('long-typing-1', nodeViewState)} />);
 
   expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
   expect(mockRevealSelection).not.toHaveBeenCalled();
@@ -154,14 +158,7 @@ it('does not reapply a saved selection while typing in the same node', async () 
     expect(mockMarkNodePositionReady).toHaveBeenCalledTimes(1);
   });
 
-  view.rerender(
-    <MarkdownEditor
-      nodeId="node-1"
-      nodeViewState={nodeViewState}
-      onChange={vi.fn()}
-      value={`${longDocument}a`}
-    />
-  );
+  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={`${longDocument}a`} {...createRestoreProps('long-typing-1', nodeViewState)} />);
 
   expect(mockRestoreSelection).toHaveBeenCalledTimes(1);
   expect(mockRevealSelection).not.toHaveBeenCalled();
@@ -192,9 +189,7 @@ it('prefers the current reading selection over the stale saved selection', async
     to: readingSelection.from
   });
   expect(mockRestoreSelection).not.toHaveBeenCalledWith(nodeViewState.selection);
-  await waitFor(() => {
-    expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);
-  });
+  expect(mockSetScrollTop).not.toHaveBeenCalledWith(nodeViewState.scrollTop);
 });
 it('does not rewrite reading-position state while applying a saved selection', async () => {
   const onBeginApplyingReadingPosition = vi.fn();
@@ -209,12 +204,23 @@ it('does not rewrite reading-position state while applying a saved selection', a
       onChange={vi.fn()}
       onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
       onSetReadingPositionSelection={onSetReadingPositionSelection}
+      readingRestoreCommandId="saved-selection-1"
+      readingRestoreScrollTop={5_400}
+      readingSelection={{ from: 48_000, to: 48_024 }}
       value={createLongDocument()}
     />
   );
-  expect(onBeginApplyingReadingPosition).not.toHaveBeenCalled();
+  expect(onBeginApplyingReadingPosition).toHaveBeenCalledWith(
+    { from: 48_000, to: 48_000 },
+    'editor-restore-selection',
+    'saved-selection-1'
+  );
   expect(onSetReadingPositionSelection).not.toHaveBeenCalled();
   await waitFor(() => {
-    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-settled', { from: 48_000, to: 48_000 });
+    expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
+      'editor-restore-selection-settled',
+      { from: 48_000, to: 48_000 },
+      'saved-selection-1'
+    );
   });
 });

@@ -32,11 +32,12 @@ export interface DocumentPanelSectionProps {
   isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
   editorReadingRestoreCommandId?: string | null;
+  editorReadingRestoreScrollTop?: number;
   editorReadingSelection?: EditorSelection | null;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
-  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   showAnswerSection: boolean;
   showDocumentOutline?: boolean;

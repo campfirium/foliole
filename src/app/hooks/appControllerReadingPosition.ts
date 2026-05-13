@@ -50,7 +50,8 @@ function completeReadingSyncState(args: {
   if (args.currentState.nodeId !== args.activeNodeId || !args.currentState.state) {
     return;
   }
-  if (args.commandId && args.currentState.state.commandId !== args.commandId) {
+  const currentCommandId = args.currentState.state.commandId;
+  if ((currentCommandId || args.commandId) && currentCommandId !== args.commandId) {
     return;
   }
   const targetSelection = args.currentState.state.targetSelection;

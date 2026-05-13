@@ -1,12 +1,26 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { isPdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+import type { NodeViewState } from '../../store/workspaceStore';
 
 import { buildAnchorViewState } from './anchorViewState';
 import type { useWorkspaceSelectors } from './appControllerState';
 import { requestReadingPositionApply } from './readingPositionRequests';
 import type { useAppRuntime } from './useAppRuntime';
+
+function hasRestorableNodeViewState(viewState: NodeViewState | undefined) {
+  return Boolean(viewState?.selection || (typeof viewState?.scrollTop === 'number' && viewState.scrollTop > 0));
+}
+
+function toCollapsedSelection(viewState: NodeViewState) {
+  return viewState.selection
+    ? {
+        from: viewState.selection.from,
+        to: viewState.selection.from
+      }
+    : null;
+}
 
 export function useNavigationReadingPosition(
   runtime: ReturnType<typeof useAppRuntime>,
@@ -34,6 +48,7 @@ export function useNavigationReadingPosition(
         nodeId: result.nodeId,
         reason: result.focusAnchor ? 'anchor-navigation' : 'node-navigation',
         runtime,
+        scrollTop: nextViewState.scrollTop,
         selection: nextViewState.selection
           ? {
               from: nextViewState.selection.from,
@@ -50,4 +65,39 @@ export function useNavigationReadingPosition(
   return {
     applyNavigationReadingPosition
   };
+}
+
+export function useActiveNodeReadingPositionRestore(
+  runtime: ReturnType<typeof useAppRuntime>,
+  activeNodeId: string | null,
+  nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'],
+  isWorkspaceHydrated: boolean
+) {
+  const restoredActiveNodeIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isWorkspaceHydrated || !activeNodeId) {
+      restoredActiveNodeIdRef.current = null;
+      return;
+    }
+    if (restoredActiveNodeIdRef.current === activeNodeId) {
+      return;
+    }
+    restoredActiveNodeIdRef.current = activeNodeId;
+    const currentCommand = runtime.readingPositionRestoreCommandRef.current;
+    if (currentCommand.nodeId === activeNodeId && currentCommand.command) {
+      return;
+    }
+    const viewState = nodeViewById[activeNodeId];
+    if (!viewState || !hasRestorableNodeViewState(viewState)) {
+      return;
+    }
+    requestReadingPositionApply({
+      nodeId: activeNodeId,
+      reason: 'active-node-restore',
+      runtime,
+      scrollTop: viewState.scrollTop,
+      selection: toCollapsedSelection(viewState)
+    });
+  }, [activeNodeId, isWorkspaceHydrated, nodeViewById, runtime]);
 }

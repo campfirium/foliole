@@ -17,10 +17,7 @@ function useSelectionRestoreRefs() {
     activeRestoreValueLengthRef: useRef(0),
     isRestoreApplyingActiveRef: useRef(false),
     lastRestoredSelectionKeyRef: useRef<string | null>(null),
-    passiveRestoreNodeIdRef: useRef<string | null>(null),
     pendingRestoreSelectionKeyRef: useRef<string | null>(null),
-    previousNodeIdRef: useRef<string | null>(null),
-    previousReadingSelectionRef: useRef<EditorViewState['selection'] | null | undefined>(undefined),
     restoreCompletionFrame2Ref: useRef<number | null>(null),
     restoreCompletionFrameRef: useRef<number | null>(null),
     restoreCompletionTimeoutRef: useRef<number | null>(null)
@@ -37,8 +34,8 @@ export function useEditorSelectionRestorePreparation(args: {
   beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   nodeId: string | null;
-  nodeViewState: EditorViewState | undefined;
   readingRestoreCommandId: string | null | undefined;
+  readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreRefs: SelectionRestoreRefs;
@@ -51,12 +48,9 @@ export function useEditorSelectionRestorePreparation(args: {
     isRestoreApplyingActiveRef: args.restoreRefs.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.restoreRefs.lastRestoredSelectionKeyRef,
     nodeId: args.nodeId,
-    nodeViewState: args.nodeViewState,
-    passiveRestoreNodeIdRef: args.restoreRefs.passiveRestoreNodeIdRef,
     pendingRestoreSelectionKeyRef: args.restoreRefs.pendingRestoreSelectionKeyRef,
-    previousNodeIdRef: args.restoreRefs.previousNodeIdRef,
-    previousReadingSelectionRef: args.restoreRefs.previousReadingSelectionRef,
     readingRestoreCommandId: args.readingRestoreCommandId,
+    readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     restoreCompletionFrame2Ref: args.restoreRefs.restoreCompletionFrame2Ref,
@@ -70,8 +64,8 @@ export function useEditorSelectionRestoreExecution(args: {
   beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
   completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   nodeId: string | null;
-  nodeViewState: EditorViewState | undefined;
   readingRestoreCommandId: string | null | undefined;
+  readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
@@ -89,9 +83,9 @@ export function useEditorSelectionRestoreExecution(args: {
     isRestoreApplyingActiveRef: args.restoreRefs.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.restoreRefs.lastRestoredSelectionKeyRef,
     nodeId: args.nodeId,
-    nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKeyRef: args.restoreRefs.pendingRestoreSelectionKeyRef,
     readingRestoreCommandId: args.readingRestoreCommandId,
+    readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
@@ -111,12 +105,9 @@ function useSelectionRestorePreparation(args: {
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
-  nodeViewState: EditorViewState | undefined;
-  passiveRestoreNodeIdRef: MutableRefObject<string | null>;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  previousNodeIdRef: MutableRefObject<string | null>;
-  previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
   readingRestoreCommandId: string | null | undefined;
+  readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
@@ -133,8 +124,12 @@ function useSelectionRestorePreparation(args: {
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef
   });
   usePendingRestoreKey({
-    ...args,
-    beginApplyingReadingPosition: args.beginApplyingReadingPosition,
+    lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
+    nodeId: args.nodeId,
+    pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
+    readingRestoreCommandId: args.readingRestoreCommandId,
+    readingRestoreScrollTop: args.readingRestoreScrollTop,
+    readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode
   });
 }

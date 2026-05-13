@@ -177,4 +177,24 @@ describe('live markdown remote image loading order', () => {
       expect(surface?.style.width).toBe('');
     });
   });
+
+  it('requests an editor measurement after remote image load changes widget height', async () => {
+    const requestMeasure = vi.fn();
+    const widget = createMarkdownImageWidgetDom({
+      alt: 'Remote',
+      attachmentId: null,
+      display: 'block',
+      from: 0,
+      source: 'https://example.com/cached.png',
+      to: 42
+    }, 'node-1', null, requestMeasure);
+
+    await Promise.resolve();
+    widget.querySelector('.cm-md-image-element')?.dispatchEvent(new Event('load'));
+
+    await waitFor(() => {
+      expect(widget.querySelector('.cm-md-image-status')).toBeNull();
+    });
+    expect(requestMeasure).toHaveBeenCalled();
+  });
 });

@@ -11,47 +11,20 @@ import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalization
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { createImageClozeImageSurface } from './imageClozeWidgetDom';
+import {
+  createMarkdownImageElement,
+  type RequestEditorMeasure
+} from './liveMarkdownImageElement';
 
 function parseImageRange(value: number) {
   return Number.isInteger(value) && value >= 0 ? String(value) : '';
-}
-
-function createImageElement(args: {
-  alt: string;
-  display: MarkdownImageMatch['display'];
-  deferSource?: boolean;
-  onError?: (() => void) | null;
-  onLoad?: (() => void) | null;
-  source: string;
-}) {
-  const image = document.createElement('img');
-  image.alt = args.alt || 'Markdown image';
-  image.loading = 'lazy';
-  image.referrerPolicy = 'no-referrer';
-  image.decoding = 'async';
-  image.className =
-    args.display === 'inline' ? 'cm-md-image-element cm-md-image-element-inline' : 'cm-md-image-element cm-md-image-element-block';
-  if (args.onError) {
-    image.addEventListener('error', args.onError, { once: true });
-  }
-  if (args.onLoad) {
-    image.addEventListener('load', args.onLoad, { once: true });
-  }
-  if (args.deferSource) {
-    queueMicrotask(() => {
-      image.src = args.source;
-    });
-  } else {
-    image.src = args.source;
-  }
-  return image;
 }
 
 function createImageSurface(
   imageMatch: MarkdownImageMatch,
   source: string,
   editorNodeId: string | null = null,
-  imageOptions: { deferSource?: boolean; onError?: (() => void) | null; onLoad?: (() => void) | null } = {}
+  imageOptions: { deferSource?: boolean; onError?: (() => void) | null; onLoad?: (() => void) | null; requestMeasure?: RequestEditorMeasure } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
   const imagePresentation =
@@ -67,12 +40,13 @@ function createImageSurface(
     from: imageMatch.from,
     presentation: imagePresentation,
     renderImage: () =>
-      createImageElement({
+      createMarkdownImageElement({
         alt: imageMatch.alt,
         deferSource: imageOptions.deferSource ?? false,
         display: imageMatch.display,
         onError: imageOptions.onError ?? null,
         onLoad: imageOptions.onLoad ?? null,
+        requestMeasure: imageOptions.requestMeasure ?? null,
         source
       }),
     previewAlt: imageMatch.alt,
@@ -86,7 +60,8 @@ function appendLoadingImageSurface(
   wrapper: HTMLElement,
   imageMatch: MarkdownImageMatch,
   source: string,
-  editorNodeId: string | null
+  editorNodeId: string | null,
+  requestMeasure: RequestEditorMeasure
 ) {
   wrapper.append(createImageStatusElement('loading', imageMatch.display));
   const surface = createImageSurface(imageMatch, source, editorNodeId, {
@@ -99,7 +74,8 @@ function appendLoadingImageSurface(
       surface.removeAttribute('aria-hidden');
       surface.removeAttribute('style');
       wrapper.replaceChildren(surface);
-    }
+    },
+    requestMeasure
   });
   surface.classList.add('cm-md-image-surface-loading');
   surface.setAttribute('aria-hidden', 'true');
@@ -134,7 +110,8 @@ function appendResolvedAndroidAttachmentImage(
   imageMatch: MarkdownImageMatch,
   renderPlan: ReturnType<typeof buildMarkdownImageRenderPlan>,
   editorNodeId: string | null,
-  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null
+  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null,
+  requestMeasure: RequestEditorMeasure
 ) {
   wrapper.append(createImageStatusElement('loading', renderPlan.display));
   let didRetry = false;
@@ -147,6 +124,7 @@ function appendResolvedAndroidAttachmentImage(
           await onMissingAttachmentResource(imageMatch.attachmentId);
         } catch {
           wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+          requestMeasure?.();
           return;
         }
         invalidateAttachmentResourceResolution(imageMatch.attachmentId);
@@ -154,15 +132,18 @@ function appendResolvedAndroidAttachmentImage(
         return;
       }
       wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
+      requestMeasure?.();
       return;
     }
     wrapper.replaceChildren(
       createImageSurface(imageMatch, resolution.resource_url, editorNodeId, {
         onError: () => {
           wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
-        }
+        },
+        requestMeasure
       })
     );
+    requestMeasure?.();
   }
   void resolveImage();
 }
@@ -170,7 +151,8 @@ function appendResolvedAndroidAttachmentImage(
 export function createMarkdownImageWidgetDom(
   imageMatch: MarkdownImageMatch,
   editorNodeId: string | null = null,
-  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null
+  onMissingAttachmentResource: EditorMissingAttachmentResourceHandler | null = null,
+  requestMeasure: RequestEditorMeasure = null
 ) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const wrapper = document.createElement('span');
@@ -183,12 +165,12 @@ export function createMarkdownImageWidgetDom(
   wrapper.dataset.mdImageTo = parseImageRange(imageMatch.to);
 
   if (renderPlan.isRemote && renderPlan.imageSrc) {
-    appendLoadingImageSurface(wrapper, imageMatch, buildRemoteRenderSource(renderPlan.imageSrc, editorNodeId), editorNodeId);
+    appendLoadingImageSurface(wrapper, imageMatch, buildRemoteRenderSource(renderPlan.imageSrc, editorNodeId), editorNodeId, requestMeasure);
     return wrapper;
   }
 
   if (renderPlan.browserImageSrc) {
-    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc, editorNodeId));
+    wrapper.append(createImageSurface(imageMatch, renderPlan.browserImageSrc, editorNodeId, { requestMeasure }));
     return wrapper;
   }
 
@@ -204,7 +186,7 @@ export function createMarkdownImageWidgetDom(
   }
 
   if (isNativeAndroidCompanionRuntime()) {
-    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource);
+    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure);
     return wrapper;
   }
 
@@ -212,7 +194,8 @@ export function createMarkdownImageWidgetDom(
     createImageSurface(imageMatch, attachmentSrc, editorNodeId, {
       onError: () => {
         wrapper.replaceChildren(createImageStatusElement('unavailable', renderPlan.display));
-      }
+      },
+      requestMeasure
     })
   );
   return wrapper;

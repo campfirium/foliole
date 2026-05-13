@@ -21,9 +21,9 @@ interface SelectionRestoreExecutionArgs {
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
-  nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   readingRestoreCommandId: string | null | undefined;
+  readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
@@ -48,9 +48,9 @@ export function useSelectionRestoreExecution(args: SelectionRestoreExecutionArgs
       isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
       lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
       nodeId: args.nodeId,
-      nodeViewState: args.nodeViewState,
       pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
       readingRestoreCommandId: args.readingRestoreCommandId,
+      readingRestoreScrollTop: args.readingRestoreScrollTop,
       readingSelection: args.readingSelection,
       readingTargetViewportMode: args.readingTargetViewportMode,
       readingTargetViewportRatio: args.readingTargetViewportRatio,
@@ -141,9 +141,9 @@ function runSelectionRestore(args: Omit<SelectionRestoreExecutionArgs, 'adapterR
     activeRestoreValueLength: args.activeRestoreValueLengthRef.current,
     lastRestoredSelectionKey: args.lastRestoredSelectionKeyRef.current,
     nodeId: args.nodeId,
-    nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
     readingRestoreCommandId: args.readingRestoreCommandId,
+    readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
@@ -158,9 +158,9 @@ function runSelectionRestore(args: Omit<SelectionRestoreExecutionArgs, 'adapterR
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
     lastRestoredSelectionKeyRef: args.lastRestoredSelectionKeyRef,
     nodeId: args.nodeId,
-    nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
     readingRestoreCommandId: args.readingRestoreCommandId,
+    readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,

@@ -1,5 +1,5 @@
 import type { Range } from '@codemirror/state';
-import { Decoration, WidgetType } from '@codemirror/view';
+import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
 
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
@@ -37,8 +37,13 @@ class MarkdownImageWidget extends WidgetType {
     );
   }
 
-  toDOM() {
-    return createMarkdownImageWidgetDom(this.imageMatch, this.editorNodeId, this.onMissingAttachmentResource);
+  toDOM(view: EditorView) {
+    return createMarkdownImageWidgetDom(
+      this.imageMatch,
+      this.editorNodeId,
+      this.onMissingAttachmentResource,
+      () => view.requestMeasure()
+    );
   }
 }
 

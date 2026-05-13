@@ -6,6 +6,7 @@ export interface ReadingPositionRestoreCommand {
   reason: string;
   selection: EditorSelection | null;
   startedAt: number;
+  scrollTop?: number;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
 }

@@ -69,6 +69,14 @@ function createMidDocumentViewState() {
   };
 }
 
+function createRestoreCommandProps(id: string, nodeViewState: ReturnType<typeof createMidDocumentViewState>) {
+  return {
+    readingRestoreCommandId: id,
+    readingRestoreScrollTop: nodeViewState.scrollTop,
+    readingSelection: nodeViewState.selection
+  };
+}
+
 beforeEach(() => {
   mockRestoreSelection.mockClear();
   mockSetScrollTop.mockClear();
@@ -83,13 +91,27 @@ it('waits for a short placeholder body to expand before restoring a saved mid-do
 
   view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
   view.rerender(
-    <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="Preview body" />
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={nodeViewState}
+      onChange={vi.fn()}
+      value="Preview body"
+      {...createRestoreCommandProps('partial-selection-1', nodeViewState)}
+    />
   );
 
   expect(mockRestoreSelection).not.toHaveBeenCalled();
   expect(mockSetScrollTop).not.toHaveBeenCalled();
 
-  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={nodeViewState}
+      onChange={vi.fn()}
+      value={longDocument}
+      {...createRestoreCommandProps('partial-selection-1', nodeViewState)}
+    />
+  );
 
   expect(mockRestoreSelection).toHaveBeenLastCalledWith({ from: 48_000, to: 48_000 });
   await waitFor(() => {
@@ -104,7 +126,14 @@ it('retries a saved scroll-only restore after a short placeholder body fails to 
 
   view.rerender(<MarkdownEditor nodeId="node-2" onChange={vi.fn()} value="Other node" />);
   view.rerender(
-    <MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value="Short preview body." />
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={nodeViewState}
+      onChange={vi.fn()}
+      readingRestoreCommandId="partial-scroll-1"
+      readingRestoreScrollTop={nodeViewState.scrollTop}
+      value="Short preview body."
+    />
   );
 
   expect(mockRestoreSelection).not.toHaveBeenCalled();
@@ -116,7 +145,16 @@ it('retries a saved scroll-only restore after a short placeholder body fails to 
   mockRestoreSelection.mockClear();
   mockSetScrollTop.mockClear();
 
-  view.rerender(<MarkdownEditor nodeId="node-1" nodeViewState={nodeViewState} onChange={vi.fn()} value={longDocument} />);
+  view.rerender(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={nodeViewState}
+      onChange={vi.fn()}
+      readingRestoreCommandId="partial-scroll-1"
+      readingRestoreScrollTop={nodeViewState.scrollTop}
+      value={longDocument}
+    />
+  );
 
   await waitFor(() => {
     expect(mockSetScrollTop).toHaveBeenLastCalledWith(nodeViewState.scrollTop);

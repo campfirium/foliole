@@ -34,6 +34,7 @@ export function requestReadingPositionApply(args: {
   nodeId: string | null;
   reason: string;
   runtime: ReadingPositionRuntimeLike;
+  scrollTop?: number;
   selection: EditorSelection | null;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
@@ -43,6 +44,7 @@ export function requestReadingPositionApply(args: {
     commandId: command.commandId,
     nodeId: args.nodeId,
     reason: args.reason,
+    scrollTop: args.scrollTop ?? null,
     selection: args.selection,
     targetViewportMode: args.targetViewportMode ?? null,
     targetViewportRatio: args.targetViewportRatio ?? null
@@ -61,6 +63,7 @@ export function requestReadingPositionApply(args: {
       commandId: command.commandId,
       reason: args.reason,
       startedAt: command.startedAt,
+      targetScrollTop: args.scrollTop,
       targetSelection: args.selection,
       targetViewportMode: args.targetViewportMode,
       targetViewportRatio: args.targetViewportRatio
@@ -73,6 +76,7 @@ function createReadingPositionRestoreCommand(args: {
   nodeId: string | null;
   reason: string;
   runtime: ReadingPositionRuntimeLike;
+  scrollTop?: number;
   selection: EditorSelection | null;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
@@ -82,6 +86,7 @@ function createReadingPositionRestoreCommand(args: {
     commandId: `reading-position-${args.runtime.readingPositionRestoreCommandSeqRef.current}`,
     nodeId: args.nodeId,
     reason: args.reason,
+    scrollTop: args.scrollTop,
     selection: args.selection,
     startedAt: Date.now(),
     targetViewportMode: args.targetViewportMode,

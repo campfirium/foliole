@@ -38,6 +38,7 @@ export interface MarkdownEditorProps {
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
   readingRestoreCommandId?: string | null;
+  readingRestoreScrollTop?: number;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
   readingTargetViewportRatio?: number | null;

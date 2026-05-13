@@ -36,11 +36,12 @@ export interface DocumentPanelBodyLayoutProps {
   immersiveEditing?: boolean;
   editorNodeId: string | null;
   editorReadingRestoreCommandId?: string | null;
+  editorReadingRestoreScrollTop?: number;
   editorReadingSelection?: EditorSelection | null;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
-  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   emptyContent?: ReactNode;
   emptyState?: {
@@ -141,6 +142,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
         lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
         readingRestoreCommandId={props.editorReadingRestoreCommandId}
+        readingRestoreScrollTop={props.editorReadingRestoreScrollTop}
         readingSelection={props.editorReadingSelection}
         readingTargetViewportMode={props.editorReadingTargetViewportMode}
         readingTargetViewportRatio={props.editorReadingTargetViewportRatio}

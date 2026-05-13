@@ -14,6 +14,7 @@ vi.mock('../../../shared/platform/bridge', () => ({
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
+import { createMarkdownImageWidgetDom } from './liveMarkdownImages';
 
 async function expectInternalImageRendered(host: HTMLElement) {
   await waitFor(() => {
@@ -150,6 +151,22 @@ describe('live markdown image rendering basics', () => {
     expectBlockAndInlineImageLayout(host);
 
     adapter.destroy();
+  });
+
+  it('requests an editor measurement after browser image load changes widget height', () => {
+    const requestMeasure = vi.fn();
+    const widget = createMarkdownImageWidgetDom({
+      alt: 'Inline data',
+      attachmentId: null,
+      display: 'block',
+      from: 0,
+      source: 'data:image/png;base64,abc123',
+      to: 32
+    }, null, null, requestMeasure);
+
+    widget.querySelector('.cm-md-image-element')?.dispatchEvent(new Event('load'));
+
+    expect(requestMeasure).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -80,6 +80,9 @@ it('does not pull the editor back when a user scroll interrupts a pending restor
       nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
       onChange={vi.fn()}
       onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
+      readingRestoreCommandId="interrupt-restore-1"
+      readingRestoreScrollTop={5_400}
+      readingSelection={{ from: 48_000, to: 48_024 }}
       value={createLongDocument()}
     />
   );
@@ -99,5 +102,5 @@ it('does not pull the editor back when a user scroll interrupts a pending restor
 
   expect(mockSetScrollTop).not.toHaveBeenCalled();
   expect(currentScrollTop).toBe(5_920);
-  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-user-interrupted');
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith('editor-restore-selection-user-interrupted', undefined, 'interrupt-restore-1');
 });

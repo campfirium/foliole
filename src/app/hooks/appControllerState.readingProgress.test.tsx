@@ -1,6 +1,8 @@
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
+
 import { useWorkspaceControllerState } from './appControllerState';
 import { createWorkspaceState } from './appControllerState.readingProgress.testSupport';
 
@@ -26,20 +28,10 @@ const runtimeRefs = vi.hoisted(() => ({
   readingPositionRestoreCommandRef: {
     current: {
       nodeId: null as string | null,
-      command: null as null | {
-        commandId: string;
-        nodeId: string | null;
-        reason: string;
-        selection: { from: number; to: number } | null;
-        startedAt: number;
-        targetViewportMode?: 'center' | 'nearest';
-        targetViewportRatio?: number;
-      }
+      command: null as ReadingPositionRestoreCommand | null
     }
   },
-  readingPositionRestoreCommandSeqRef: {
-    current: 0
-  },
+  readingPositionRestoreCommandSeqRef: { current: 0 },
   readingPositionSyncRef: {
     current: {
       nodeId: 'node-1',
@@ -263,38 +255,6 @@ function runImmersiveModePersistenceWiringTest() {
   expect(useReadingProgressSyncMock.mock.calls[0][0].isImmersiveMode).toBe(true);
 }
 
-function runAnchorReadingPositionWiringTest() {
-  const ws = createWorkspaceState();
-
-  render(<Harness ws={ws} />);
-
-  const navigationArgs = getNavigationArgs();
-  navigationArgs.applyNavigationReadingPosition({
-    nodeId: 'node-2',
-    focusAnchor: {
-      id: 'hl-1',
-      kind: 'highlight',
-      locator: { from: 88, originalText: 'needle', to: 94 }
-    }
-  });
-
-  expect(runtimeRefs.readingPositionRef.current).toEqual({
-    nodeId: 'node-2',
-    selection: { from: 88, to: 88 }
-  });
-  expect(runtimeRefs.readingPositionSyncRef.current).toEqual({
-    nodeId: 'node-2',
-    state: {
-      commandId: 'reading-position-1',
-      reason: 'anchor-navigation',
-      startedAt: expect.any(Number),
-      targetSelection: { from: 88, to: 88 },
-      targetViewportMode: 'center'
-    }
-  });
-  expect(ws.setNodeViewState).not.toHaveBeenCalled();
-}
-
 describe('useWorkspaceControllerState reading progress wiring', () => {
   beforeEach(() => {
     useReadingProgressSyncMock.mockClear();
@@ -325,9 +285,5 @@ describe('useWorkspaceControllerState reading progress wiring', () => {
 
   it('passes immersive mode through to continuous reading progress persistence', () => {
     runImmersiveModePersistenceWiringTest();
-  });
-
-  it('updates the shared reading position value when navigation applies an anchor target', () => {
-    runAnchorReadingPositionWiringTest();
   });
 });

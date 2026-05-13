@@ -5,6 +5,7 @@ function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
   const restoreCommand = props.getReadingPositionRestoreCommand();
   return {
     editorReadingRestoreCommandId: restoreCommand?.commandId ?? null,
+    editorReadingRestoreScrollTop: restoreCommand?.scrollTop,
     editorReadingSelection: restoreCommand?.selection ?? null,
     editorReadingTargetViewportMode: restoreCommand?.targetViewportMode ?? null,
     editorReadingTargetViewportRatio: restoreCommand?.targetViewportRatio ?? null,

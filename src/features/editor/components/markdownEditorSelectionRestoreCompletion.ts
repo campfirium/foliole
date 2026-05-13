@@ -6,12 +6,15 @@ import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
 
 import { applyRestoreScrollTop } from './markdownEditorSelectionRestoreScroll';
+import {
+  isRestoreScrollSettled,
+  isRestoreViewportRatioSettled
+} from './markdownEditorSelectionRestoreSettled';
 import { shouldCollapseSelectionAfterRestore } from './markdownEditorSelectionRestoreTarget';
 import type { EditorViewState } from './markdownEditorTypes';
 
 const RESTORE_SELECTION_TIMEOUT_MS = 180;
 const RESTORE_UNLOCK_COOLDOWN_MS = 150;
-const RESTORE_SCROLL_SETTLE_TOLERANCE_PX = 8;
 const RATIO_COMPLETION_MAX_ATTEMPTS = 12;
 const RATIO_COMPLETION_TIMEOUT_MS = 300;
 type RestoreSelection = NonNullable<EditorViewState['selection']> | null;
@@ -170,27 +173,6 @@ function scheduleRatioCompletion(args: Parameters<typeof scheduleRestoreSelectio
   args.restoreCompletionTimeoutRef.current = window.setTimeout(() => {
     tryCompleteRestoreSelection(args, 'editor-restore-selection-timeout');
   }, RATIO_COMPLETION_TIMEOUT_MS);
-}
-
-function isRestoreScrollSettled(adapter: CodeMirrorEditorAdapter, restoreScrollTop: number | undefined) {
-  if (typeof restoreScrollTop !== 'number' || !Number.isFinite(restoreScrollTop) || restoreScrollTop <= 0) {
-    return true;
-  }
-  return Math.abs(adapter.getScrollTop() - restoreScrollTop) <= RESTORE_SCROLL_SETTLE_TOLERANCE_PX;
-}
-
-function isRestoreViewportRatioSettled(
-  adapter: CodeMirrorEditorAdapter,
-  selection: RestoreSelection,
-  targetViewportRatio: number | null | undefined
-) {
-  if (typeof targetViewportRatio !== 'number') {
-    return true;
-  }
-  if (!selection || typeof adapter.isPositionNearViewportRatio !== 'function') {
-    return false;
-  }
-  return adapter.isPositionNearViewportRatio(selection.from, targetViewportRatio, 0.05);
 }
 
 function tryCompleteRestoreSelection(

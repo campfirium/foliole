@@ -54,6 +54,25 @@ function createHarness() {
   return { handlers, readingPositionRef, readingPositionRestoreCommandRef };
 }
 
+function runUncommandedCompletionGuardTest() {
+  const { handlers } = createHarness();
+
+  handlers.beginAnchorNavigationRestore('node-1', { from: 88, to: 88 });
+  handlers.getReadingPositionSyncState()!.targetViewportMode = 'center';
+
+  handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 88, to: 88 });
+
+  expect(handlers.getReadingPositionSyncState()).toMatchObject({
+    commandId: 'reading-position-1',
+    reason: 'anchor-navigation',
+    targetSelection: { from: 88, to: 88 }
+  });
+  expect(handlers.getReadingPositionRestoreCommand()).toMatchObject({
+    commandId: 'reading-position-1',
+    selection: { from: 88, to: 88 }
+  });
+}
+
 describe('createReadingPositionHandlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,7 +85,7 @@ describe('createReadingPositionHandlers', () => {
     readingPositionRef.current.selection = { from: 42, to: 42 };
     handlers.getReadingPositionSyncState()!.targetViewportMode = 'center';
 
-    handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 42, to: 42 });
+    handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 42, to: 42 }, 'reading-position-1');
 
     expect(handlers.getReadingPositionSyncState()).toBeNull();
     expect(handlers.getReadingPositionSelection()).toEqual({ from: 42, to: 42 });
@@ -87,6 +106,8 @@ describe('createReadingPositionHandlers', () => {
       targetViewportMode: 'center'
     });
   });
+
+  it('does not let an uncommanded completion clear an active restore command', runUncommandedCompletionGuardTest);
 
   it('clears a reveal-anchor request after the matching restore completes', () => {
     const { handlers, readingPositionRef } = createHarness();
