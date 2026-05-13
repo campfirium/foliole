@@ -1,3 +1,4 @@
+import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import {
   migrateDeviceIdSettingKey,
@@ -150,6 +151,14 @@ export const NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         PRIMARY KEY (rule_id, source_path)
       )`);
     }
+  },
+  {
+    version: 39,
+    migrate: (sqlite) => {
+      for (const statement of CORE_INDEX_SCHEMA_STATEMENTS) {
+        execOptionalIndex(sqlite, statement);
+      }
+    }
   }
 ];
 
@@ -216,4 +225,15 @@ function addColumnIfMissing(sqlite: DatabaseMigrationTarget, tableName: string, 
   const columns = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
   if (columns.some((column) => column.name === columnName)) return;
   sqlite.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnSql}`);
+}
+
+function execOptionalIndex(sqlite: DatabaseMigrationTarget, statement: string) {
+  try {
+    sqlite.exec(statement);
+  } catch (error) {
+    if (error instanceof Error && /no such (table|column)/i.test(error.message)) {
+      return;
+    }
+    throw error;
+  }
 }

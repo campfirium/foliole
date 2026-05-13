@@ -110,6 +110,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to upgrade companion push ack schema.', type: 'installSchema' }],
     beforeVersion: 14
+  },
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion core indexes.', type: 'installSchema' }],
+    beforeVersion: 15
   }
 ] as const;
 

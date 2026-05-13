@@ -125,6 +125,15 @@
         }
       ],
       "beforeVersion": 14
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to upgrade companion core indexes.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 15
     }
   ],
   "planKeys": {

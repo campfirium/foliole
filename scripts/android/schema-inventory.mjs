@@ -23,6 +23,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 const DESKTOP_SCHEMA_FILES = {
+  CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
   DESKTOP_CORE_SCHEMA_STATEMENTS: 'lib/core/database/desktopCoreSchemaStatements.ts',
   DESKTOP_FRESH_SCHEMA_STATEMENTS: 'lib/core/database/desktopFreshSchemaStatements.ts',
   DESKTOP_RESOURCE_SCHEMA_STATEMENTS: 'lib/core/database/desktopResourceSchemaStatements.ts',
@@ -55,12 +56,10 @@ export function buildSchemaDriftReport(repoRoot = REPO_ROOT) {
 }
 
 export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
-  const arrays = Object.fromEntries(
-    Object.entries(DESKTOP_SCHEMA_FILES).map(([name, relativePath]) => [
-      name,
-      extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name)
-    ])
-  );
+  const arrays = {};
+  for (const [name, relativePath] of Object.entries(DESKTOP_SCHEMA_FILES)) {
+    arrays[name] = extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name, arrays);
+  }
   const source = readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_FRESH_SCHEMA_STATEMENTS);
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');
   return extractStatementsFromBody(body, arrays);
@@ -211,8 +210,8 @@ function summarizeJavaSharedDdl(inventory) {
     .map((table) => classifyTable(table, ANDROID_ONLY_TABLES));
 }
 
-function extractStatementsFromArray(source, name) {
-  return extractStatementsFromBody(extractArrayBody(source, name), {});
+function extractStatementsFromArray(source, name, arrays = {}) {
+  return extractStatementsFromBody(extractArrayBody(source, name), arrays);
 }
 
 function normalizeSql(sql) {

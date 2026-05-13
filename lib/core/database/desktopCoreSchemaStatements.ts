@@ -1,3 +1,5 @@
+import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
+
 export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
@@ -117,5 +119,6 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     source TEXT NOT NULL DEFAULT 'user-scroll',
     updated_at TEXT NOT NULL,
     PRIMARY KEY (node_id, device_id)
-  )`
+  )`,
+  ...CORE_INDEX_SCHEMA_STATEMENTS
 ];

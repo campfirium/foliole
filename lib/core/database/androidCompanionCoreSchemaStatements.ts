@@ -1,3 +1,5 @@
+import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.ts';
+
 export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
@@ -119,5 +121,6 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     role TEXT NOT NULL,
     PRIMARY KEY (node_id, attachment_id, role)
   )`,
-  'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)'
+  'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)',
+  ...CORE_INDEX_SCHEMA_STATEMENTS
 ];
