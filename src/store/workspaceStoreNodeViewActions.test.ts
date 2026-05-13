@@ -18,7 +18,7 @@ function createWorkspaceState(): WorkspaceState {
     nodeViewById: {},
     nodesById: {
       'node-1': {
-        ...initial.nodesById['node-1'],
+        ...initial.nodesById['node-1']!,
         id: 'node-1',
         parentNodeId: null,
         kind: 'topic',

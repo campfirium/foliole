@@ -85,7 +85,7 @@ export function createImageClozeImageSurface(args: {
       draftRectElement,
       from: args.from,
       overlay,
-      presentation: args.presentation,
+      ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
       regionLayer,
       to: args.to,
       wrapper

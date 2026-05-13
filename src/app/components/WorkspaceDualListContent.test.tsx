@@ -248,7 +248,7 @@ it('restores persisted external collapse state without affecting sibling roots',
         })
       ]
     },
-    externalFolders: [...externalFolders, { ...externalFolders[0], documentCount: 1, folderPath: '/library/to sync', id: 'folder-ext-2' }],
+    externalFolders: [...externalFolders, { ...externalFolders[0]!, documentCount: 1, folderPath: '/library/to sync', id: 'folder-ext-2' }],
     externalSelection: { folderId: 'folder-ext', kind: 'folder' },
     isExternalViewOpen: true
   });

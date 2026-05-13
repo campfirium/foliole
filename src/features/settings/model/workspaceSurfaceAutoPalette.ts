@@ -95,11 +95,11 @@ export function buildWorkspaceSurfaceAutoColumnPalette(
       a: seedColor.a,
       h: seedHsl.h,
       l: lightness,
-      s: resolveColumnSaturation(seedHsl.s, recipe.saturationFactors[index])
+      s: resolveColumnSaturation(seedHsl.s, recipe.saturationFactors[index] ?? 0)
     }))
   ));
   if (options.folderTopicSharedTone) {
-    palette[2] = palette[1];
+    palette[2] = palette[1] ?? palette[0] ?? '#ffffff';
   }
   if (options.documentPureWhite) {
     palette[3] = mode === 'dark'

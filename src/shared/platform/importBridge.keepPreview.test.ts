@@ -14,7 +14,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('forwards keep preview mode details to the runtime import bridge', async () => {

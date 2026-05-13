@@ -14,8 +14,8 @@ export function applyWindowStateToOptions(
     ...options,
     width: Math.max(960, Math.round(state.width)),
     height: Math.max(640, Math.round(state.height)),
-    x: typeof state.x === 'number' ? Math.round(state.x) : undefined,
-    y: typeof state.y === 'number' ? Math.round(state.y) : undefined
+    ...(typeof state.x === 'number' ? { x: Math.round(state.x) } : {}),
+    ...(typeof state.y === 'number' ? { y: Math.round(state.y) } : {})
   };
 }
 

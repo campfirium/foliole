@@ -59,7 +59,7 @@ export function buildNodeBreadcrumbs(
     return path.map((node) => ({
       id: node.id,
       isEllipsis: false,
-      kind: node.kind,
+      ...(node.kind ? { kind: node.kind } : {}),
       title: node.title
     }));
   }
@@ -72,7 +72,7 @@ export function buildNodeBreadcrumbs(
     ...tail.map((node) => ({
       id: node.id,
       isEllipsis: false,
-      kind: node.kind,
+      ...(node.kind ? { kind: node.kind } : {}),
       title: node.title
     }))
   ];

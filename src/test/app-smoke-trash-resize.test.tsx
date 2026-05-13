@@ -51,7 +51,7 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2');
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Topics' })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Topics' })[0]!);
   fireEvent.contextMenu(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Child' }), {
     clientX: 56,
     clientY: 64
@@ -60,7 +60,7 @@ it('restores and permanently deletes nodes from trash context menu actions', () 
   openTrashView();
   fireEvent.contextMenu(getTrashTreeItem('Child'), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toBeUndefined();
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toBeUndefined();
 });
 
 it('supports multi-select permanent delete inside trash', () => {
@@ -101,8 +101,8 @@ it('supports multi-select permanent delete inside trash', () => {
     });
 
     const workspace = useWorkspaceStore.getState();
-    expect(workspace.nodesById['node-2']).toBeUndefined();
-    expect(workspace.nodesById['node-3']).toBeUndefined();
+    expect(workspace.nodesById['node-3']!).toBeUndefined();
+    expect(workspace.nodesById['node-2']!).toBeUndefined();
   } finally {
     vi.useRealTimers();
   }
@@ -142,7 +142,7 @@ it('relearns reading nodes from the node context menu', () => {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']?.reading).toBeNull();
+  expect(workspace.nodesById['node-2']!?.reading).toBeNull();
   expect(
     buildReviewQueuePlan({
       nodeOrder: workspace.nodeOrder,
@@ -189,7 +189,7 @@ it('relearns review cards from the node context menu after confirmation', () => 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']?.review).toBeNull();
+  expect(workspace.nodesById['node-2']!?.review).toBeNull();
   expect(
     buildReviewQueuePlan({
       nodeOrder: workspace.nodeOrder,
@@ -220,7 +220,7 @@ it('empties all trash items from trash header action', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Empty trash' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']).toBeUndefined();
+  expect(workspace.nodesById['node-1']!).toBeUndefined();
   expect(workspace.trashedNodeIds).toEqual([]);
 });
 

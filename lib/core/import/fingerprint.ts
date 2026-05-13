@@ -36,6 +36,7 @@ interface CreatePreparedDesktopTextImportInput {
   importedAt: string;
   kind: ImportSourceKind;
   managedEpubImageDestinations?: string[];
+  nodeTitleOverride?: string;
   sourceIdentity?: string;
   sourceLocator?: string;
   sourceProfile?: ImportSourceProfile;
@@ -111,11 +112,11 @@ function resolvePreparedImportContent(input: CreatePreparedDesktopTextImportInpu
   const contextResult = applyControlledImportContext({
     content: highlightedContent,
     degradedReason: appendDegradedReason(input.degradedReason, epubDegradedContent.degradedReason),
-    highlightSidecar: input.highlightSidecar,
-    policy: input.contextPolicy,
+    ...(input.highlightSidecar === undefined ? {} : { highlightSidecar: input.highlightSidecar }),
+    ...(input.contextPolicy === undefined ? {} : { policy: input.contextPolicy }),
     sourceKind: input.kind,
     sourceName: input.fileName,
-    sourceProfile: input.sourceProfile
+    ...(input.sourceProfile === undefined ? {} : { sourceProfile: input.sourceProfile })
   });
   return {
     contextResult,
@@ -139,7 +140,7 @@ function collectPreparedMatchedHighlights(input: {
     ...input.highlightPolicyResult.highlights,
     ...input.contextResult.matchedHighlights.map(({ excerpt, highlight }) => ({
       content: formatHighlightCardContent({
-        note: highlight.note,
+        ...(highlight.note === undefined ? {} : { note: highlight.note }),
         text: normalizeImportedContent(highlight.text).trim()
       }),
       label: highlight.label?.trim() || null,
@@ -154,7 +155,7 @@ function collectPreparedUnmatchedHighlights(input: {
   return input.contextResult.unmatchedHighlights
     .map((highlight) => ({
       content: formatHighlightCardContent({
-        note: highlight.note,
+        ...(highlight.note === undefined ? {} : { note: highlight.note }),
         text: normalizeImportedContent(highlight.text).trim()
       }),
       label: highlight.label?.trim() || null,
@@ -181,11 +182,13 @@ export function createPreparedDesktopTextImport(
     matchedHighlights: collectPreparedMatchedHighlights(preparedContent),
     unmatchedHighlights: collectPreparedUnmatchedHighlights(preparedContent),
     hideTitleHeading: shouldHideImportedTitleHeading(preparedContent.highlightedContent),
-    nodeTitle: resolveImportedNodeTitle({
-      content: preparedContent.highlightedContent,
-      sourceName: input.fileName,
-      titleStrategy: input.titleStrategy ?? 'file_name'
-    }),
+    nodeTitle:
+      input.nodeTitleOverride?.trim() ||
+      resolveImportedNodeTitle({
+        content: preparedContent.highlightedContent,
+        sourceName: input.fileName,
+        titleStrategy: input.titleStrategy ?? 'file_name'
+      }),
     provider: IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
     sourceProfile: (input.sourceProfile ?? 'default') as PreparedImportSourceProfile,
     sourceFingerprint: resolveSourceFingerprint(input),

@@ -113,6 +113,6 @@ it('supports quick priority changes from the two-step shortcut', () => {
 
   fireEvent.keyDown(window, { key: '0' });
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.priority).toBe(0);
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.priority).toBe(0);
   expect(screen.getByRole('button', { name: /Priority P0 set on this node/i })).toBeInTheDocument();
 });

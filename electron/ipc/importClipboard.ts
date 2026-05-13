@@ -202,7 +202,7 @@ function runClipboardTextImport(args?: NativeTextImportArgs) {
   const result = toNativeTextImportResult(
     runPreparedImport(
       createClipboardTextPreparedRecord({
-        args,
+        ...(args === undefined ? {} : { args }),
         importedAt,
         ...textContent
       })

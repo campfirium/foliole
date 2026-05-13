@@ -83,7 +83,6 @@ function buildProps(trashedNodeIds: string[]): ComponentProps<typeof DocumentPan
     editorContent: '![Cover](asset://hash-1.png)',
     isEditorReadOnly: false,
     editorNodeId: 'node-1',
-    editorNodeViewState: undefined,
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
       'node-1': baseNode,

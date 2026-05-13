@@ -52,16 +52,16 @@ export function toRendererBoundaryNode(node: Node, keepDocument: boolean): Node 
   if (keepDocument) {
     return {
       ...node,
-      hasContent: nextHasContent,
-      hasReveal: nextHasReveal
+      ...(nextHasContent !== undefined ? { hasContent: nextHasContent } : {}),
+      ...(nextHasReveal !== undefined ? { hasReveal: nextHasReveal } : {})
     };
   }
   return {
     ...node,
     content: '',
-    hasContent: nextHasContent,
+    ...(nextHasContent !== undefined ? { hasContent: nextHasContent } : {}),
     reveal: null,
-    hasReveal: nextHasReveal
+    ...(nextHasReveal !== undefined ? { hasReveal: nextHasReveal } : {})
   };
 }
 
@@ -122,7 +122,7 @@ function reconcileWorkspaceRendererBoundaryNodes(
   for (const [nodeId, node] of Object.entries(nextNodesById)) {
     const keepDocument = shouldKeepNodeDocument(nodeId, activeNodeId, nextKeepNodeIds);
     const currentNode = currentNodesById[nodeId];
-    if (isBoundaryProjectionReusable(currentNode, node, keepDocument)) {
+    if (currentNode && isBoundaryProjectionReusable(currentNode, node, keepDocument)) {
       nextBoundaryNodesById[nodeId] = currentNode;
       continue;
     }

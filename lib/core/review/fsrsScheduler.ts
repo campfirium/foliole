@@ -49,7 +49,7 @@ function toRating(value: SchedulerRating): Grade {
 function toFsrsCard(card: SchedulerCard): FsrsCardSnapshot {
   return {
     due: new Date(card.due),
-    last_review: card.last_review ? new Date(card.last_review) : undefined,
+    ...(card.last_review ? { last_review: new Date(card.last_review) } : {}),
     state: card.state,
     stability: card.stability,
     difficulty: card.difficulty,

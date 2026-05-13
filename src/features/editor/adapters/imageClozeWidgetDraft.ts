@@ -165,7 +165,7 @@ export function attachOverlayDragHandlers(args: {
     'pointerdown',
     startDraftDrag({
       actions: args.actions,
-      canStartDrag: args.canStartDrag,
+      ...(args.canStartDrag ? { canStartDrag: args.canStartDrag } : {}),
       draftRectElement: args.draftRectElement,
       overlay: args.overlay,
       setDragStart: (point) => {

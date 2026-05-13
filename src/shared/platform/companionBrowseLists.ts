@@ -59,17 +59,18 @@ function hasReadableContent(node: CompanionReadableNode | undefined) {
   ));
 }
 
-function isActiveFolderNode(node: CompanionReadableNode | undefined) {
+function isActiveFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
   return Boolean(node && node.kind === 'folder');
 }
 
-function isRootFolderNode(node: CompanionReadableNode | undefined) {
+function isRootFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
   return Boolean(node && node.kind === 'folder' && !node.parentNodeId);
 }
 
 function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFolderListEntry {
+  const bodyStatus = normalizeBodyStatus(node.bodyStatus);
   return {
-    bodyStatus: normalizeBodyStatus(node.bodyStatus),
+    ...(bodyStatus ? { bodyStatus } : {}),
     bodyBlobHash: node.bodyBlobHash ?? null,
     kind: node.kind,
     nodeId: node.id,
@@ -157,14 +158,17 @@ export function resolveCompanionRecentArticles(
   const articles = snapshot.nodeOrder
     .filter((nodeId) => !snapshot.trashedNodeIds.includes(nodeId))
     .map((nodeId) => snapshot.nodesById[nodeId])
-    .filter((node) => isCompanionArticleNode(snapshot, node))
+    .filter((node): node is CompanionReadableNode => Boolean(node && isCompanionArticleNode(snapshot, node)))
     .filter(hasReadableContent);
-  return sortCompanionBrowseNodes(snapshot, articles, sortKey, sortDirection).map((node) => ({
-    nodeId: node.id,
-    bodyBlobHash: node.bodyBlobHash ?? null,
-    preview: resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
-    bodyStatus: normalizeBodyStatus(node.bodyStatus),
-    title: resolveCompanionArticleTitle(node),
-    updatedAt: node.updatedAt
-  }));
+  return sortCompanionBrowseNodes(snapshot, articles, sortKey, sortDirection).map((node) => {
+    const bodyStatus = normalizeBodyStatus(node.bodyStatus);
+    return {
+      nodeId: node.id,
+      bodyBlobHash: node.bodyBlobHash ?? null,
+      preview: resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
+      ...(bodyStatus ? { bodyStatus } : {}),
+      title: resolveCompanionArticleTitle(node),
+      updatedAt: node.updatedAt
+    };
+  });
 }

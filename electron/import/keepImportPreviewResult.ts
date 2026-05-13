@@ -21,7 +21,7 @@ export function buildKeepImportPreviewResult(
       content_preview: entry.contentPreview,
       detail: entry.detail,
       detected_highlight_count: entry.detectedHighlightCount,
-      highlight_samples: entry.highlightSamples,
+      ...(entry.highlightSamples === undefined ? {} : { highlight_samples: entry.highlightSamples }),
       source_path: entry.sourcePath,
       status: entry.status
     })),

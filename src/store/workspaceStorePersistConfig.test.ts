@@ -101,7 +101,7 @@ it('drops invalid node entries and does not activate missing nodes', () => {
 
   expect(merged.activeNodeId).toBeNull();
   expect(merged.nodeOrder).toContain('node-2');
-  expect(merged.nodesById['node-2']).toBeUndefined();
+  expect(merged.nodesById['node-2']!).toBeUndefined();
 });
 
 it('ignores an active node id that is absent from the persisted nodes', () => {

@@ -8,6 +8,7 @@
     "strict": true,
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
     "allowJs": false,
     "allowImportingTsExtensions": true,
     "noEmit": true,

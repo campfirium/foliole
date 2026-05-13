@@ -109,7 +109,7 @@ export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
       <ImportCatalogLayout
         countLabel={formatCountLabel(filteredItems.length, totalItems)}
         emptyState={{ description: 'No PDF imports discovered yet.', title: 'PDF is empty' }}
-        errorState={errorMessage ? { description: 'Try again to load imported PDFs.', onRetry: refreshPdfInventory, title: errorMessage } : undefined}
+        {...(errorMessage ? { errorState: { description: 'Try again to load imported PDFs.', onRetry: refreshPdfInventory, title: errorMessage } } : {})}
         hasItems={filteredItems.length > 0}
         isLoading={isLoading}
         loadingState={{ description: 'Checking imported PDFs.', title: 'Loading PDFs' }}

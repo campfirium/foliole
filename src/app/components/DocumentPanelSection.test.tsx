@@ -123,7 +123,7 @@ describe('DocumentPanelSection primary views', () => {
 
     expect(screen.queryByRole('button', { name: 'Open link references (1)' })).not.toBeInTheDocument();
 
-    nodesById['node-2'].content = 'See [[Node 1]] for the follow-up.';
+    nodesById['node-2']!.content = 'See [[Node 1]] for the follow-up.';
     view.rerender(
       createSectionElement({
         nodeOrder: props.nodeOrder,

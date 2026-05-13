@@ -30,7 +30,7 @@ function setLoadedNode(
   reveal: string,
   updatedAt: string
 ) {
-  const templateNode = persisted.nodesById[nodeId] ?? persisted.nodesById['node-1'];
+  const templateNode = persisted.nodesById[nodeId] ?? persisted.nodesById['node-1']!;
   persisted.nodesById[nodeId] = {
     ...templateNode,
     id: nodeId,
@@ -86,7 +86,7 @@ function seedPendingInactiveNodeRendererState() {
     nodesById: {
       ...state.nodesById,
       'node-1': {
-        ...state.nodesById['node-1'],
+        ...state.nodesById['node-1']!,
         title: 'Node 1',
         content: 'Unsynced node 1 body',
         hasContent: true,
@@ -95,7 +95,7 @@ function seedPendingInactiveNodeRendererState() {
         updatedAt: '2026-02-25T00:00:01.000Z'
       },
       'node-2': {
-        ...state.nodesById['node-1'],
+        ...state.nodesById['node-1']!,
         id: 'node-2',
         title: 'Node 2',
         content: 'Active node 2 body',
@@ -179,7 +179,7 @@ it('rehydrates workspace state from localStorage', async () => {
   persisted.activeNodeId = restoredNodeId;
   persisted.nodeOrder = [...persisted.nodeOrder, restoredNodeId];
   persisted.nodesById[restoredNodeId] = {
-    ...persisted.nodesById[INBOX_NODE_ID],
+    ...persisted.nodesById[INBOX_NODE_ID]!,
     id: restoredNodeId,
     title: 'Recovered node',
     content: 'Recovered markdown',
@@ -208,13 +208,13 @@ describe('workspace persistence renderer boundary hydrate', () => {
     await rehydrateWorkspaceFromLocalStorage(persisted);
 
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-    expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({
+    expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
       content: '',
       hasContent: true,
       reveal: null,
       hasReveal: true
     });
-    expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
       content: 'Recovered node 2 body',
       hasContent: true,
       reveal: 'Recovered node 2 answer',
@@ -237,14 +237,14 @@ describe('workspace persistence renderer boundary hydrate', () => {
       scrollTop: 128,
       selection: { from: 4, to: 9 }
     });
-    expectTrimmedNodeDocument(payload?.state.nodesById['node-1']);
-    expect(payload?.state.nodesById['node-2']).toMatchObject({
+    expectTrimmedNodeDocument(payload?.state.nodesById['node-1']!);
+    expect(payload?.state.nodesById['node-2']!).toMatchObject({
       content: 'Recovered node 2 body',
       hasContent: true,
       reveal: 'Recovered node 2 answer',
       hasReveal: true
     });
-    expectTrimmedNodeDocument(payload?.state.nodesById['node-3']);
+    expectTrimmedNodeDocument(payload?.state.nodesById['node-3']!);
   });
 
 });
@@ -265,13 +265,13 @@ describe('workspace persistence renderer boundary pending edits', () => {
 
     const payload = readPersistedWorkspacePayload();
 
-    expect(payload?.state.nodesById['node-1']).toMatchObject({
+    expect(payload?.state.nodesById['node-1']!).toMatchObject({
       content: 'Unsynced node 1 body',
       hasContent: true,
       reveal: 'Unsynced node 1 answer',
       hasReveal: true
     });
-    expect(payload?.state.nodesById['node-2']).toMatchObject({
+    expect(payload?.state.nodesById['node-2']!).toMatchObject({
       content: 'Active node 2 body',
       hasContent: true,
       reveal: null,

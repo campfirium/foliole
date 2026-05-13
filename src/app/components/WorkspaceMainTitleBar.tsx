@@ -39,15 +39,15 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
     return cursor.title.trim() || 'Untitled';
   }
 
-  while (cursor.parentNodeId) {
-    const parent = nodesById[cursor.parentNodeId];
+  while (cursor?.parentNodeId) {
+    const parent: Node | undefined = nodesById[cursor.parentNodeId];
     if (!parent || parent.kind === 'folder') {
       break;
     }
     cursor = parent;
   }
 
-  return cursor.title.trim() || 'Untitled';
+  return cursor?.title.trim() || 'Untitled';
 }
 
 export function WorkspaceMainTitleBar({

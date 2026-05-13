@@ -16,7 +16,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke'], runtimeHead: strin
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
   resetDesktopDebugProbeState();
 });
 

@@ -42,7 +42,7 @@ export function DocumentPanelFolderContent({
         nodesById={nodesById}
         onChangeSortDirection={onChangeFolderListSortDirection}
         onChangeSortKey={onChangeFolderListSortKey}
-        onOpenMoveToNode={onOpenMoveToNode}
+        {...(onOpenMoveToNode ? { onOpenMoveToNode } : {})}
         onSelectNode={onSelectNode}
         sortDirection={folderListSortDirection}
         sortKey={folderListSortKey}

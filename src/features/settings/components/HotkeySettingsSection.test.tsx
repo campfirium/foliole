@@ -8,7 +8,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 afterEach(() => {
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 function createHotkeyItems(): HotkeySettingItem[] {

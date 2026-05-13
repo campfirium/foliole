@@ -16,7 +16,10 @@ export function createNativeSyncRuntimePort(invoke: NativeInvoke): SyncRuntimePo
     applySyncObjects: (objects) => invokeApplySyncObjects(invoke, { objects }),
     loadSyncIndex: () => invokeLoadSyncIndex(invoke),
     loadSyncNodes: (objectIds) => invokeLoadSyncNodes(invoke, { objectIds }),
-    loadSyncObjects: (objectIds, objectTypes) => invokeLoadSyncObjects(invoke, { objectIds, objectTypes }),
+    loadSyncObjects: (objectIds, objectTypes) => invokeLoadSyncObjects(invoke, {
+      objectIds,
+      ...(objectTypes === undefined ? {} : { objectTypes })
+    }),
     recordSyncNodeConflicts: (conflicts) => invokeRecordSyncNodeConflicts(invoke, { conflicts })
   };
 }

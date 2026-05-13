@@ -92,7 +92,7 @@ it('returns dismissed reading nodes to pending from the node menu', () => {
   expect(screen.queryByRole('menuitem', { name: 'Dismiss' })).toBeNull();
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
 
-  expect(useWorkspaceStore.getState().nodesById['node-dismissed']?.reading).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById['node-dismissed']!?.reading).toBeNull();
   expect(within(panel).getByRole('treeitem', { name: 'Dismissed note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
     'pending'
@@ -118,7 +118,7 @@ it('creates an inbox topic from the blank current-folder area menu', () => {
     (node) => node && node.parentNodeId === INBOX_NODE_ID
   ).length;
 
-  const tree = within(getNodeListPanel()).getAllByRole('tree')[0];
+  const tree = within(getNodeListPanel()).getAllByRole('tree')[0]!;
   fireEvent.contextMenu(tree, { clientX: 80, clientY: 160 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Create Topic' }));
 

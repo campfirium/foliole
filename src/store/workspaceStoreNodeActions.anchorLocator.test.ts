@@ -25,7 +25,7 @@ beforeEach(() => {
 function createParentEditedFixture(content: string) {
   const fixture = createWorkspaceNodeActionsFixture();
   fixture.nodesById['node-1'] = {
-    ...fixture.nodesById['node-1'],
+    ...fixture.nodesById['node-1']!,
     content
   };
   return fixture;
@@ -152,11 +152,11 @@ function runCreateHighlightLocatorCase() {
 function runParentShiftLocatorCase() {
   const { actions, fixture, harness } = createHarnessWithActions('Alpha Beta Gamma');
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-2'];
-  fixture.nodesById['node-2'] = createHighlightChildNode('node-2');
+  fixture.nodesById['node-2']! = createHighlightChildNode('node-2');
 
   actions.updateNodeContent('node-1', 'Start Alpha Beta Gamma');
 
-  expect(harness.getState().nodesById['node-2']).toEqual(
+  expect(harness.getState().nodesById['node-2']!).toEqual(
     expect.objectContaining({
       content: 'Beta',
       title: 'Beta',
@@ -211,7 +211,7 @@ function runRefreshedChildPayloadsCase() {
 function runDeletedAnchorTextNoSyncCase() {
   const { actions, fixture } = createHarnessWithActions('Alpha Beta Gamma');
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight'];
-  fixture.nodesById['node-highlight'] = createHighlightChildNode('node-highlight');
+  fixture.nodesById['node-highlight']! = createHighlightChildNode('node-highlight');
 
   actions.updateNodeContent('node-1', 'Alpha  Gamma');
 

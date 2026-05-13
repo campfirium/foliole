@@ -101,9 +101,10 @@ function useDisplayedPdfZoom(args: {
   zoomMode: 'custom' | 'fit-width';
 }) {
   const [baseWidthByPage, setBaseWidthByPage] = useState<Record<number, number>>({});
+  const visibleBaseWidth = baseWidthByPage[args.visiblePage];
   const displayedZoom =
-    args.zoomMode === 'fit-width' && args.fitWidthTargetWidth && baseWidthByPage[args.visiblePage]
-      ? Math.max(1, Math.round((args.fitWidthTargetWidth / baseWidthByPage[args.visiblePage]) * 100))
+    args.zoomMode === 'fit-width' && args.fitWidthTargetWidth && visibleBaseWidth
+      ? Math.max(1, Math.round((args.fitWidthTargetWidth / visibleBaseWidth) * 100))
       : args.zoom;
 
   const handlePageLoadSuccess = (pageNumber: number, dimensions: PdfPageDimensions) => {

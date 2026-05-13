@@ -192,7 +192,7 @@ export function SimplePdfDocument(props: {
   return (
     <section aria-label={`${props.title} PDF reader`} className="pdf-document-surface flex min-h-[calc(100dvh-9rem)] flex-col" ref={ref}>
       <SimplePdfToolbar
-        onBackToText={props.onBackToText}
+        {...(props.onBackToText ? { onBackToText: props.onBackToText } : {})}
         onZoomIn={() => setZoom((current) => clampPdfZoom(current + PDF_ZOOM_STEP))}
         onZoomOut={() => setZoom((current) => clampPdfZoom(current - PDF_ZOOM_STEP))}
         totalPages={totalPages}
@@ -250,7 +250,7 @@ function SimplePdfPage(props: {
           pageNumber={props.pageNumber}
           renderAnnotationLayer
           renderTextLayer
-          width={props.width}
+          {...(props.width !== undefined ? { width: props.width } : {})}
         />
       </div>
     </div>

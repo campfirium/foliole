@@ -51,12 +51,13 @@ export async function applyNodeVersionPushAsync(item: CompanionSyncPushPayload):
     return rejectNodeVersionPush(item, 'invalid_node_push');
   }
   const appliedNodeIds = await applySyncNodesAsync([record], { includeAlreadyApplied: true });
+  const accepted = appliedNodeIds.includes(record.object_id);
   return {
     acks: [{
       clientOpId: item.clientOpId,
-      conflictReason: appliedNodeIds.includes(record.object_id) ? undefined : 'node_version_conflict',
+      ...(accepted ? {} : { conflictReason: 'node_version_conflict' }),
       identity: item.identity,
-      status: appliedNodeIds.includes(record.object_id) ? 'accepted' : 'conflict',
+      status: accepted ? 'accepted' : 'conflict',
       versionId: record.version_id
     }],
     appliedNodeIds,

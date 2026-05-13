@@ -203,6 +203,9 @@ export function resolveParagraphSelection(args: {
   const currentIndex = findContainingParagraphIndex(paragraphs, args.currentSelection);
   if (currentIndex >= 0) {
     const currentParagraph = paragraphs[currentIndex];
+    if (!currentParagraph) {
+      return null;
+    }
     if (!isSameSelection(currentParagraph, args.currentSelection)) {
       return currentParagraph;
     }
@@ -217,8 +220,9 @@ export function resolveParagraphSelection(args: {
 
   const anchor = Math.min(args.currentSelection.from, args.currentSelection.to);
   for (let index = paragraphs.length - 1; index >= 0; index -= 1) {
-    if (paragraphs[index].to <= anchor) {
-      return paragraphs[index];
+    const paragraph = paragraphs[index];
+    if (paragraph && paragraph.to <= anchor) {
+      return paragraph;
     }
   }
   return null;

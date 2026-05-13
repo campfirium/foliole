@@ -14,7 +14,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('forwards title strategy configuration to the text import bridge', async () => {

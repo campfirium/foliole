@@ -26,14 +26,12 @@ interface MockMenuItem {
 
 function toMenuItem(item: Record<string, unknown>): MockMenuItem {
   return {
-    accelerator: item.accelerator as string | null | undefined,
-    enabled: item.enabled as boolean | undefined,
-    id: item.id as string | undefined,
-    submenu: Array.isArray(item.submenu)
-      ? {
-          items: item.submenu.map((child) => toMenuItem(child as Record<string, unknown>))
-        }
-      : undefined
+    ...(item.accelerator === undefined ? {} : { accelerator: item.accelerator as string | null }),
+    ...(item.enabled === undefined ? {} : { enabled: item.enabled as boolean }),
+    ...(item.id === undefined ? {} : { id: item.id as string }),
+    ...(Array.isArray(item.submenu)
+      ? { submenu: { items: item.submenu.map((child) => toMenuItem(child as Record<string, unknown>)) } }
+      : {})
   };
 }
 

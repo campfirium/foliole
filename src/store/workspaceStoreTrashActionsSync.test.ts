@@ -29,12 +29,12 @@ vi.mock('./workspaceRuntimeSync', () => ({
 function createUnresolvedLocatorHighlightHarness() {
   const fixture = createWorkspaceNodeActionsFixture();
   fixture.nodesById['node-1'] = {
-    ...fixture.nodesById['node-1'],
+    ...fixture.nodesById['node-1']!,
     content: 'before answer after',
     title: 'Parent'
   };
   fixture.nodeOrder = [...fixture.nodeOrder, 'node-highlight'];
-  fixture.nodesById['node-highlight'] = {
+  fixture.nodesById['node-highlight']! = {
     id: 'node-highlight',
     parentNodeId: 'node-1',
     kind: 'topic',
@@ -60,7 +60,7 @@ function createUnresolvedLocatorHighlightHarness() {
 }
 
 function expectParentDocumentUntouched(harness: ReturnType<typeof createUnresolvedLocatorHighlightHarness>['harness']) {
-  expect(harness.getState().nodesById['node-1']?.content).toBe('before answer after');
+  expect(harness.getState().nodesById['node-1']!?.content).toBe('before answer after');
 }
 
 describe('createWorkspaceNodeActions soft delete sync', () => {
@@ -190,7 +190,7 @@ describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
       nodeOrder: [INBOX_NODE_ID, 'special-virtual-root', 'node-1']
     });
     expectParentDocumentUntouched(harness);
-    expect(harness.getState().nodesById['node-highlight']).toBeUndefined();
+    expect(harness.getState().nodesById['node-highlight']!).toBeUndefined();
   });
 });
 

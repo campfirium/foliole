@@ -35,7 +35,7 @@ function renderImageClozeCommands(
 
   renderHook(() =>
     useEditorContextCommands({
-      activeNode: nodesById['node-1'],
+      activeNode: nodesById['node-1']!,
       activeNodeId: 'node-1',
       createChildNode: vi.fn(() => 'note-1'),
       createHighlightNodeFromSelection: vi.fn(),

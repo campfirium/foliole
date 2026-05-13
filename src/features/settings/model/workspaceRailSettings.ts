@@ -107,9 +107,9 @@ function normalizeDefaultItem(item: WorkspaceRailItemConfig) {
     section: defaultItem.locked ? defaultItem.section : item.section,
     order: item.order,
     visible: defaultItem.locked ? true : item.visible,
-    iconId: item.iconId ?? defaultItem.iconId,
-    labelOverride: item.labelOverride,
-    locked: defaultItem.locked
+    ...((item.iconId ?? defaultItem.iconId) ? { iconId: item.iconId ?? defaultItem.iconId } : {}),
+    ...(item.labelOverride ? { labelOverride: item.labelOverride } : {}),
+    ...(defaultItem.locked !== undefined ? { locked: defaultItem.locked } : {})
   };
 }
 
@@ -185,7 +185,13 @@ export function addWorkspaceRailItem(
     return normalizeWorkspaceRailItems(
       normalized.map((item) =>
         item.id === existing.id
-          ? { ...item, iconId: command.iconId ?? item.iconId, labelOverride: command.label, section, visible: true }
+          ? {
+              ...item,
+              ...((command.iconId ?? item.iconId) ? { iconId: command.iconId ?? item.iconId } : {}),
+              labelOverride: command.label,
+              section,
+              visible: true
+            }
           : item
       )
     );
@@ -197,7 +203,7 @@ export function addWorkspaceRailItem(
     {
       id: createUserRailItemId(command.commandId),
       commandId: command.commandId,
-      iconId: command.iconId,
+      ...(command.iconId ? { iconId: command.iconId } : {}),
       labelOverride: command.label,
       order: sectionOrder,
       section,

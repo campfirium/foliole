@@ -213,7 +213,7 @@ it('records sync node conflict payloads through storage commands', async () => {
     device_id: 'phone',
     object_id: 'node-2',
     parent_version_id: 'desktop#7',
-    snapshot: createSyncNodePayload()[0].snapshot,
+    snapshot: createSyncNodePayload()[0]?.snapshot,
     updated_at: '2026-04-21T16:11:00.000Z'
   }];
   recordSyncNodeConflicts.mockReturnValue(['phone#9']);
@@ -233,7 +233,7 @@ it('loads sync node conflicts through storage commands', async () => {
       device_id: 'phone',
       object_id: 'node-2',
       parent_version_id: 'desktop#7',
-      snapshot: createSyncNodePayload()[0].snapshot,
+      snapshot: createSyncNodePayload()[0]?.snapshot,
       updated_at: '2026-04-21T16:11:00.000Z'
     }
   ]);

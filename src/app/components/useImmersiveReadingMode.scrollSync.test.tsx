@@ -84,7 +84,7 @@ it('does not resubscribe immersive scroll sync when props rerender around the sa
       ...props,
       nodesById: {
         ...props.nodesById,
-        'node-1': { ...props.nodesById['node-1'], content: 'Updated body' }
+        'node-1': { ...props.nodesById['node-1']!, content: 'Updated body' }
       }
     }
   });

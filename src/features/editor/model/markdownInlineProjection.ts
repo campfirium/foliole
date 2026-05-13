@@ -204,7 +204,7 @@ export function collectMarkdownInlineRanges(text: string, offset = 0): MarkdownI
     contentFrom: offset + candidate.contentFrom,
     contentTo: offset + candidate.contentTo,
     from: offset + candidate.from,
-    href: candidate.href,
+    ...(candidate.href !== undefined ? { href: candidate.href } : {}),
     kind: candidate.kind,
     syntaxRanges: candidate.syntaxRanges.map((range) => ({
       from: offset + range.from,

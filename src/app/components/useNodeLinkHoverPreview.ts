@@ -95,6 +95,9 @@ export function useNodeLinkHoverPreview(args: {
       if (!alive) {
         return;
       }
+      if (!targetNode) {
+        return;
+      }
       setPreview(buildLoadedPreview(request, targetNodeId, { ...targetNode, content: document?.content ?? '' }));
     });
 

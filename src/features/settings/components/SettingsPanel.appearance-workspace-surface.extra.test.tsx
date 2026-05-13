@@ -36,7 +36,7 @@ afterAll(() => {
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 }, 15_000);
 
 it('opens the collection panel, applies a saved theme, closes on outside click, and removes favorites', async () => {

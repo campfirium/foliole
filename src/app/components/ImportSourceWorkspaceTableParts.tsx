@@ -2,6 +2,7 @@ import { FolderOpen, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { importActionOptions } from '../../../lib/core/import/importSourceActions';
+import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import { AppButton } from '../../shared/ui';
 
@@ -167,7 +168,7 @@ export function ImportSourceControlGrid({
           label={`Original folder ${source.id}`}
           onClick={() => onChoosePrimaryFolder(source.id)}
           path={resolveFolderPathLabel(source.primaryPath, 'Choose folder')}
-          tooltip={resolveFolderPathHint(source.primaryPath)}
+          {...definedProps({ tooltip: resolveFolderPathHint(source.primaryPath) })}
         />
       </SourceField>
       <SourceField label="Highlight folder">
@@ -176,7 +177,7 @@ export function ImportSourceControlGrid({
           disabled={source.highlightMode !== 'split'}
           onClick={() => onChooseHighlightFolder(source.id)}
           path={resolveFolderPathLabel(source.highlightPath, source.highlightMode === 'split' ? 'Choose folder' : 'Not used')}
-          tooltip={resolveFolderPathHint(source.highlightPath)}
+          {...definedProps({ tooltip: resolveFolderPathHint(source.highlightPath) })}
         />
       </SourceField>
       <HighlightModeSelect onChange={onChangeMode} source={source} />

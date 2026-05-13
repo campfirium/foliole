@@ -86,7 +86,7 @@ export function NodeTreeRowIconGraphic(props: NodeTreeRowIconGraphicProps) {
   const innerScale = props.scale * props.innerScale;
   if (props.customMarkup) {
     if (props.effect === 'double-line') {
-      return <DoubleLineCustomMarkup innerLineWidth={props.innerLineWidth} innerScale={innerScale} markup={props.customMarkup} outerLineWidth={props.outerLineWidth} outerScale={outerScale} preview={props.preview} transformMode={props.transformMode} />;
+      return <DoubleLineCustomMarkup innerLineWidth={props.innerLineWidth} innerScale={innerScale} markup={props.customMarkup} outerLineWidth={props.outerLineWidth} outerScale={outerScale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
     }
     return (
       <span className={resolveCustomIconClassName(props.preview)} style={iconTransformStyle(props.transformMode, props.scale)}>
@@ -96,7 +96,7 @@ export function NodeTreeRowIconGraphic(props: NodeTreeRowIconGraphicProps) {
   }
   if (props.iconId) {
     if (props.effect === 'double-line') {
-      return <DoubleLineLucideIcon iconId={props.iconId} innerLineWidth={props.innerLineWidth} innerScale={innerScale} outerLineWidth={props.outerLineWidth} outerScale={outerScale} preview={props.preview} transformMode={props.transformMode} />;
+      return <DoubleLineLucideIcon iconId={props.iconId} innerLineWidth={props.innerLineWidth} innerScale={innerScale} outerLineWidth={props.outerLineWidth} outerScale={outerScale} {...(props.preview !== undefined ? { preview: props.preview } : {})} transformMode={props.transformMode} />;
     }
     return (
       <span className={resolveDefaultIconClassName(props.preview)} style={iconTransformStyle(props.transformMode, props.scale)}>
@@ -113,7 +113,7 @@ export function NodeTreeRowIconGraphic(props: NodeTreeRowIconGraphicProps) {
         innerScale={props.innerScale}
         outerLineWidth={props.outerLineWidth}
         outerScale={props.outerScale}
-        preview={props.preview}
+        {...(props.preview !== undefined ? { preview: props.preview } : {})}
         scale={props.scale}
         shape={props.fallbackShape}
       />

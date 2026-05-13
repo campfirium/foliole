@@ -18,15 +18,20 @@ export {
 } from './companionDesktopSyncContentBlobs';
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
+type AttachmentBreakdown = NonNullable<CompanionDesktopSyncProgress['attachmentBreakdown']>;
 
 function knownNumber(value: number | null | undefined) {
   return typeof value === 'number' ? value : undefined;
 }
 
+function compactAttachmentBreakdown(values: Record<keyof AttachmentBreakdown, number | undefined>): AttachmentBreakdown {
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as AttachmentBreakdown;
+}
+
 async function loadMissingAttachmentResourceSummary() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
-    attachmentBreakdown: diagnostics ? {
+    attachmentBreakdown: diagnostics ? compactAttachmentBreakdown({
       activeTopicAttachments: diagnostics.content.missing_active_topic_attachment_resource_count,
       dueReviewAttachments: diagnostics.content.missing_due_review_attachment_resource_count,
       imageAttachments: diagnostics.content.missing_image_attachment_resource_count,
@@ -35,7 +40,7 @@ async function loadMissingAttachmentResourceSummary() {
       otherBytes: diagnostics.content.missing_other_attachment_resource_bytes,
       pdfAttachments: diagnostics.content.missing_pdf_attachment_resource_count,
       pdfBytes: diagnostics.content.missing_pdf_attachment_resource_bytes
-    } : undefined,
+    }) : undefined,
     failed: diagnostics?.content.failed_attachment_resource_count ?? null,
     failedBytes: diagnostics?.content.failed_attachment_resource_bytes ?? null,
     total: diagnostics?.content.missing_attachment_resource_count ?? null,
@@ -48,7 +53,17 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
   const { attachmentBreakdown, failed, failedBytes, total, totalBytes } = await loadMissingAttachmentResourceSummary();
   const syncedAttachmentIds: string[] = [];
   let syncedBytes = 0;
-  onProgress?.({ attachmentBreakdown, completed: 0, completedBytes: 0, elapsedMs: 0, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'attachment', total, totalBytes });
+  const failedAttachmentBytes = knownNumber(failedBytes);
+  const failedAttachmentCount = knownNumber(failed);
+  const progressBase = {
+    ...(attachmentBreakdown ? { attachmentBreakdown } : {}),
+    ...(failedAttachmentBytes !== undefined ? { failedBytes: failedAttachmentBytes } : {}),
+    ...(failedAttachmentCount !== undefined ? { failedCount: failedAttachmentCount } : {}),
+    phase: 'attachment' as const,
+    total,
+    totalBytes
+  };
+  onProgress?.({ ...progressBase, completed: 0, completedBytes: 0, elapsedMs: 0 });
   for (let batchIndex = 0; batchIndex < ATTACHMENT_RESOURCE_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     if (batchIndex > 0 && Date.now() - startedAt >= 45_000) {
       break;
@@ -73,7 +88,7 @@ export async function pullMissingAttachmentResources(endpointUrl: string, onProg
             invalidateAttachmentResourceResolution(attachmentId);
           }
           syncedBytes += syncedChunkIds.reduce((sum, attachmentId) => sum + (sizeByAttachmentId.get(attachmentId) ?? 0), 0);
-          onProgress?.({ attachmentBreakdown, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'attachment', total, totalBytes });
+          onProgress?.({ ...progressBase, completed: syncedAttachmentIds.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt });
         }
       );
     } catch (error) {

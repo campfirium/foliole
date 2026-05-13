@@ -187,7 +187,7 @@ class MarkdownTableWidget extends WidgetType {
     this.tablePlan = tablePlan;
   }
 
-  eq(other: MarkdownTableWidget) {
+  override eq(other: MarkdownTableWidget) {
     return (
       this.tablePlan.from === other.tablePlan.from &&
       this.tablePlan.to === other.tablePlan.to &&
@@ -196,7 +196,7 @@ class MarkdownTableWidget extends WidgetType {
     );
   }
 
-  toDOM() {
+  override toDOM() {
     return createTableElement(this.tablePlan);
   }
 }

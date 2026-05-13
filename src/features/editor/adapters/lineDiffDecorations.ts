@@ -38,11 +38,11 @@ class DiffSpacerWidget extends WidgetType {
     super();
   }
 
-  eq(other: DiffSpacerWidget) {
+  override eq(other: DiffSpacerWidget) {
     return this.kind === other.kind && this.measuredHeightPx === other.measuredHeightPx && JSON.stringify(this.lines) === JSON.stringify(other.lines);
   }
 
-  toDOM() {
+  override toDOM() {
     const wrapper = document.createElement('div');
     wrapper.className = `cm-diff-spacer cm-diff-spacer-${this.kind}`;
 

@@ -122,7 +122,7 @@ describe('workspacePersistStorage unresolved text anchors pending replay', () =>
 
     const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
-    expect(state?.nodesById['node-highlight']).toMatchObject({
+    expect(state?.nodesById['node-highlight']!).toMatchObject({
       title: 'Beta',
       content: 'Beta',
       reveal: null,
@@ -160,7 +160,7 @@ describe('workspacePersistStorage hydrated text anchors edited-word recovery', (
 
     const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
-    expect(state?.nodesById['node-highlight']).toMatchObject({
+    expect(state?.nodesById['node-highlight']!).toMatchObject({
       title: 'Beta',
       content: '',
       reveal: null,

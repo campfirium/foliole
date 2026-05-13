@@ -65,7 +65,7 @@ export function createUpdatedStoredSnapshot() {
       nodesById: {
         ...baseSnapshot.nodesById,
         'node-1': {
-          ...baseSnapshot.nodesById['node-1'],
+          ...baseSnapshot.nodesById['node-1']!,
           review: {
             difficulty: 4.1,
             due: '2026-04-25T12:00:00.000Z',

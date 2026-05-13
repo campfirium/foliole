@@ -56,10 +56,10 @@ function normalizeColumnPercents(scores: number[]) {
 
     const remaining = 100 - widths.reduce((sum, width, index) => sum + (locked.has(index) ? width : 0), 0);
     const unlocked = widths.map((_, index) => index).filter((index) => !locked.has(index));
-    const unlockedScore = unlocked.reduce((sum, index) => sum + preferred[index], 0);
+    const unlockedScore = unlocked.reduce((sum, index) => sum + (preferred[index] ?? 0), 0);
     if (!unlocked.length || unlockedScore <= 0) break;
     unlocked.forEach((index) => {
-      widths[index] = (preferred[index] / unlockedScore) * remaining;
+      widths[index] = ((preferred[index] ?? 0) / unlockedScore) * remaining;
     });
   }
 

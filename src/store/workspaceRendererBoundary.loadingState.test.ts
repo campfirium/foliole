@@ -7,7 +7,7 @@ import type { WorkspaceState } from './workspaceStore';
 
 it('treats empty content with unknown metadata as not yet loaded', () => {
   const currentState = createTestWorkspaceState();
-  const seedNode = currentState.nodesById['node-1'];
+  const seedNode = currentState.nodesById['node-1']!;
 
   const nextState = enforceWorkspaceRendererBoundary(
     {
@@ -39,7 +39,7 @@ it('treats empty content with unknown metadata as not yet loaded', () => {
     currentState as WorkspaceState & { rendererBoundaryKeepNodeIds?: string[] }
   ) as { nodesById: Record<string, { content: string; hasContent?: boolean }> };
 
-  expect(nextState.nodesById['node-2']).toMatchObject({
+  expect(nextState.nodesById['node-2']!).toMatchObject({
     content: '',
     hasContent: undefined
   });

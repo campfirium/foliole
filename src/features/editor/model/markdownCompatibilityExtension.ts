@@ -67,8 +67,8 @@ function addLenientStrongATXHeading(cx: BlockContext, line: Line, text: string, 
   const from = cx.lineStart + line.pos;
   const to = cx.lineStart + line.text.length;
   const headingMarkFrom = from + 2;
-  const headingMarkTo = headingMarkFrom + match[1].length;
-  const contentFrom = headingMarkTo + match[2].length;
+  const headingMarkTo = headingMarkFrom + (match[1]?.length ?? 0);
+  const contentFrom = headingMarkTo + (match[2]?.length ?? 0);
   const closingStrongFrom = from + text.length - 2;
   const inlineText = line.text.slice(contentFrom - cx.lineStart, closingStrongFrom - cx.lineStart);
   const children = [

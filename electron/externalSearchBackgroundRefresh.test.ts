@@ -15,11 +15,11 @@ function createController(args?: {
 }) {
   return createExternalSearchBackgroundRefreshController({
     initialDelayMs: 1000,
-    now: args?.now,
+    ...(args?.now ? { now: args.now } : {}),
     readFolders: args?.readFolders as unknown as typeof import('./database/externalSearchFolders.js').loadExternalSearchFolders,
-    rebuild: args?.rebuild,
-    refreshIntervalMs: args?.refreshIntervalMs,
-    userTriggerMinIntervalMs: args?.userTriggerMinIntervalMs
+    ...(args?.rebuild ? { rebuild: args.rebuild } : {}),
+    ...(args?.refreshIntervalMs === undefined ? {} : { refreshIntervalMs: args.refreshIntervalMs }),
+    ...(args?.userTriggerMinIntervalMs === undefined ? {} : { userTriggerMinIntervalMs: args.userTriggerMinIntervalMs })
   });
 }
 

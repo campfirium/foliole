@@ -209,7 +209,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     importedAt,
     kind: 'epub',
     managedEpubImageDestinations: book.rootEmbeddedImages.map((image) => image.destination),
-    sourceIdentity: options?.sourceIdentity,
+    ...(options?.sourceIdentity === undefined ? {} : { sourceIdentity: options.sourceIdentity }),
     sourceTrackingMode: options?.sourceTrackingMode ?? 'untracked',
     sourceProfile: 'epub',
     titleStrategy: 'heading'

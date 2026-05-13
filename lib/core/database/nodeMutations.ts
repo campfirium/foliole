@@ -188,7 +188,10 @@ export function replaceNodeOrder(driver: DatabaseDriver, nodeIds: string[]): voi
     deleteNonFolderOrderRows(driver);
     deleteOrderStatement.run();
     for (let index = 0; index < folderNodeIds.length; index += 1) {
-      insertOrderStatement.run([folderNodeIds[index], index]);
+      const nodeId = folderNodeIds[index];
+      if (nodeId !== undefined) {
+        insertOrderStatement.run([nodeId, index]);
+      }
     }
   });
 }
@@ -255,7 +258,10 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     deleteNonFolderOrderRows(driver);
     clearOrderStatement.run();
     for (let index = 0; index < folderNodeOrder.length; index += 1) {
-      insertOrderStatement.run([folderNodeOrder[index], index]);
+      const nodeId = folderNodeOrder[index];
+      if (nodeId !== undefined) {
+        insertOrderStatement.run([nodeId, index]);
+      }
     }
     syncWorkspaceSearchIndexForNodeIds(driver, input.nodeIds);
   });

@@ -126,10 +126,10 @@ export function recordDesktopDebugInvoke(entry: {
     return;
   }
   const nextEntry: DesktopDebugInvokeRecord = {
-    args: cloneArgs(entry.args),
+    ...(cloneArgs(entry.args) !== undefined ? { args: cloneArgs(entry.args) } : {}),
     command: entry.command,
     durationMs: entry.durationMs,
-    error: entry.error === undefined ? undefined : toErrorDetails(entry.error),
+    ...(entry.error !== undefined ? { error: toErrorDetails(entry.error) } : {}),
     status: entry.status,
     timestamp: new Date().toISOString()
   };
@@ -153,6 +153,6 @@ export function resetDesktopDebugProbeState() {
   recentInvokeFailures = [];
   recentInvokes = [];
   if (typeof window !== 'undefined') {
-    window.__FOLIOLE_DESKTOP_DEBUG_PROBE__ = undefined;
+    delete window.__FOLIOLE_DESKTOP_DEBUG_PROBE__;
   }
 }

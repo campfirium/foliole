@@ -146,7 +146,7 @@ function buildCreatedChildState(
     id: nodeId,
     parentNodeId,
     kind,
-    specialKind,
+    ...(specialKind ? { specialKind } : {}),
     title: untitledState.title,
     hasContent: content.trim().length > 0,
     hideTitleHeading: false,

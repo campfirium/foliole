@@ -24,9 +24,9 @@ export function createCommandRegistry(commands: CommandRegistration[], getContex
       .map((command) => ({
         id: command.id,
         title: command.title,
-        section: command.section,
-        keywords: command.keywords,
-        shortcuts: command.shortcuts,
+        ...(command.section ? { section: command.section } : {}),
+        ...(command.keywords ? { keywords: command.keywords } : {}),
+        ...(command.shortcuts ? { shortcuts: command.shortcuts } : {}),
         enabled: statesById.get(command.id) ?? true
       }))
       .filter((item) => {

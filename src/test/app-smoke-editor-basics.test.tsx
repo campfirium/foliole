@@ -122,8 +122,8 @@ it('preserves a manual title after content edits', () => {
 
   useWorkspaceStore.getState().updateNodeTitle('node-1', 'Manual Article Title');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.title).toBe('Manual Article Title');
 
   fireEvent.change(screen.getByTestId('editor-value'), { target: { value: '# New Heading\nBody content' } });
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.title).toBe('Manual Article Title');
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.title).toBe('Manual Article Title');
 });

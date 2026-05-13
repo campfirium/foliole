@@ -228,16 +228,14 @@ it('falls back to blank-line split when separator is list-style but highlights a
   ]);
 });
 
-it('moves metadata into Obsidian frontmatter and removes the full document heading', () => {
-  expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN, ARTICLE_MARKDOWN)).toBe(`---
+it('moves metadata into Obsidian frontmatter without adding a visible title heading', () => {
+  expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN)).toBe(`---
 author: Someone
 full_title: Sample Article
 category: #articles
 summary: A useful summary.
 url: https://example.com/source
 ---
-
-# Sample Article
 
 Before the quote. This is the highlighted sentence. After the quote.
 

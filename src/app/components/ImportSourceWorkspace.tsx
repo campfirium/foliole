@@ -10,5 +10,5 @@ export function ImportSourceWorkspace({ open, onOpenChange, onSelectNode }: Impo
   if (!open) {
     return null;
   }
-  return <ImportSourceWorkspaceDetails onOpenChange={onOpenChange} onSelectNode={onSelectNode} open={open} />;
+  return <ImportSourceWorkspaceDetails onOpenChange={onOpenChange} {...(onSelectNode ? { onSelectNode } : {})} open={open} />;
 }

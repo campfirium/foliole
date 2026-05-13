@@ -76,7 +76,7 @@ it('runs a node sync pull session and reads sync conflict state through the debu
       device_id: 'remote-device',
       object_id: 'remote-node-1',
       parent_version_id: 'remote-device#2',
-      snapshot: remoteNodes[0].snapshot,
+      snapshot: remoteNodes[0]!.snapshot,
       updated_at: '2026-04-21T10:00:00.000Z'
     }
   ];

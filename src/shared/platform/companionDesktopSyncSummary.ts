@@ -3,7 +3,15 @@ import {
   loadDesktopSyncDiagnostics,
   loadLocalSyncDiagnostics
 } from './companionSyncDiagnostics';
+import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
+
+type AttachmentBreakdown = NonNullable<CompanionDesktopSyncProgress['attachmentBreakdown']>;
+type ContentBreakdown = NonNullable<CompanionDesktopSyncProgress['contentBreakdown']>;
+
+function compactBreakdown<T extends Record<string, number | undefined>>(values: T) {
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+}
 
 async function syncLocalPrimaryDeviceId(primaryDeviceId: string | null | undefined) {
   if (!primaryDeviceId) return;
@@ -22,7 +30,7 @@ export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
     localDirtyCount: diagnostics?.sync_state?.local_dirty_count ?? null,
     pendingAckCount: diagnostics?.sync_state?.pending_ack_count ?? null,
     pushIssueCount: diagnostics?.sync_state?.push_issue_count ?? null,
-    remainingAttachmentBreakdown: diagnostics ? {
+    ...(diagnostics ? { remainingAttachmentBreakdown: compactBreakdown({
       activeTopicAttachments: diagnostics.content?.missing_active_topic_attachment_resource_count,
       dueReviewAttachments: diagnostics.content?.missing_due_review_attachment_resource_count,
       imageAttachments: diagnostics.content?.missing_image_attachment_resource_count,
@@ -31,19 +39,19 @@ export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
       otherBytes: diagnostics.content?.missing_other_attachment_resource_bytes,
       pdfAttachments: diagnostics.content?.missing_pdf_attachment_resource_count,
       pdfBytes: diagnostics.content?.missing_pdf_attachment_resource_bytes
-    } : undefined,
+    }) as AttachmentBreakdown } : {}),
     remainingAttachmentResourceBytes: diagnostics?.content?.missing_attachment_resource_bytes ?? null,
     remainingAttachmentResourceCount: diagnostics?.content?.missing_attachment_resource_count ?? null,
     remainingFailedAttachmentResourceBytes: diagnostics?.content?.failed_attachment_resource_bytes ?? null,
     remainingFailedAttachmentResourceCount: diagnostics?.content?.failed_attachment_resource_count ?? null,
-    remainingContentBreakdown: diagnostics ? {
+    ...(diagnostics ? { remainingContentBreakdown: compactBreakdown({
       activeTopicBodies: diagnostics.content?.missing_active_topic_body_count,
       dueReviewBodies: diagnostics.content?.missing_due_review_body_count,
       externalDocumentBodies: diagnostics.content?.missing_external_document_body_count,
       nestedTopicBodies: diagnostics.content?.missing_nested_topic_body_count,
       topLevelTopicBodies: diagnostics.content?.missing_top_level_topic_body_count,
       topicBodies: diagnostics.content?.missing_topic_body_count
-    } : undefined,
+    }) as ContentBreakdown } : {}),
     remainingContentBlobBytes: diagnostics?.content?.missing_content_blob_bytes ?? null,
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingFailedContentBlobBytes: diagnostics?.content?.failed_content_blob_bytes ?? null,

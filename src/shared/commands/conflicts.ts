@@ -56,7 +56,11 @@ export function buildCommandShortcutConflictMap(entries: ShortcutConflictEntry[]
     }
 
     const severity = resolveSeverity(grouped);
-    const label = formatShortcutLabel(grouped[0].shortcut as CommandShortcut);
+    const firstConflict = grouped[0];
+    if (!firstConflict) {
+      continue;
+    }
+    const label = formatShortcutLabel(firstConflict.shortcut as CommandShortcut);
 
     for (const current of grouped) {
       const conflictsWith = grouped

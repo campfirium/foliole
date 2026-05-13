@@ -58,7 +58,7 @@ function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Work
     const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
     const nextReading = advanceReadingScheduleCoreFields({
       lastHandledAt: now,
-      previousIntervalDurationMs: currentReading?.intervalDurationMs,
+      ...(currentReading?.intervalDurationMs !== undefined ? { previousIntervalDurationMs: currentReading.intervalDurationMs } : {}),
       previousRepetitionCount: currentReading?.repetitionCount ?? 0,
       priorityChain: resolveReadingPriorityChain({
         currentNodeId,
@@ -66,8 +66,8 @@ function createDeferReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Work
         defaultPriority: pushQueueSettings.defaultPriority,
         nodesById: snapshot.nodesById
       }),
-      initialIntervalMs: pushQueueSettings.readingInitialIntervalMs,
-      range: pushQueueSettings.readingIntervalGrowthFactorRange
+      ...(pushQueueSettings.readingInitialIntervalMs !== undefined ? { initialIntervalMs: pushQueueSettings.readingInitialIntervalMs } : {}),
+      ...(pushQueueSettings.readingIntervalGrowthFactorRange ? { range: pushQueueSettings.readingIntervalGrowthFactorRange } : {})
     });
     const nextNodeId = remainingQueue[0] ?? null;
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
@@ -116,7 +116,7 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
     const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
     const nextReading = advanceReadingScheduleCoreFields({
       lastHandledAt: now,
-      previousIntervalDurationMs: currentReading?.intervalDurationMs,
+      ...(currentReading?.intervalDurationMs !== undefined ? { previousIntervalDurationMs: currentReading.intervalDurationMs } : {}),
       previousRepetitionCount: currentReading?.repetitionCount ?? 0,
       priorityChain: resolveReadingPriorityChain({
         currentNodeId,
@@ -124,8 +124,8 @@ function createCompleteReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): W
         defaultPriority: pushQueueSettings.defaultPriority,
         nodesById: snapshot.nodesById
       }),
-      initialIntervalMs: pushQueueSettings.readingInitialIntervalMs,
-      range: pushQueueSettings.readingIntervalGrowthFactorRange
+      ...(pushQueueSettings.readingInitialIntervalMs !== undefined ? { initialIntervalMs: pushQueueSettings.readingInitialIntervalMs } : {}),
+      ...(pushQueueSettings.readingIntervalGrowthFactorRange ? { range: pushQueueSettings.readingIntervalGrowthFactorRange } : {})
     });
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
@@ -175,12 +175,12 @@ function createDismissReviewItemAction(set: WorkspaceSet, get: WorkspaceGet): Wo
       if (!node) return state;
       const nextNode: Node = {
         ...node,
-        reading: node.reading
-          ? {
+        ...(node.reading
+          ? { reading: {
               ...node.reading,
               state: 'dismissed'
-            }
-          : node.reading,
+            } }
+          : {}),
         updatedAt: now
       };
       nextNodeForSync = nextNode;

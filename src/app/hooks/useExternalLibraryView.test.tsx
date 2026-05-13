@@ -43,7 +43,7 @@ function createNativeEntry() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('updates workspace external folders immediately after settings save removes them', async () => {

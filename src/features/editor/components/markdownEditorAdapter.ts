@@ -26,6 +26,8 @@ function areTextAnchorDecorationsEqual(
     const leftDecoration = left[index];
     const rightDecoration = right[index];
     if (
+      !leftDecoration ||
+      !rightDecoration ||
       leftDecoration.from !== rightDecoration.from ||
       leftDecoration.to !== rightDecoration.to ||
       leftDecoration.kind !== rightDecoration.kind
@@ -106,14 +108,14 @@ function createEditorAdapter(args: {
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
     onChange: args.onChange,
-    onMissingAttachmentResource: args.onMissingAttachmentResource,
-    onOpenExternalLink: args.onOpenExternalLink,
-    onOpenNodeLink: args.onOpenNodeLink,
-    onPreviewNodeLink: args.onPreviewNodeLink,
-    onPastedAnchors: args.onPastedAnchors,
-    readOnly: args.readOnly,
+    ...(args.onMissingAttachmentResource ? { onMissingAttachmentResource: args.onMissingAttachmentResource } : {}),
+    ...(args.onOpenExternalLink ? { onOpenExternalLink: args.onOpenExternalLink } : {}),
+    ...(args.onOpenNodeLink ? { onOpenNodeLink: args.onOpenNodeLink } : {}),
+    ...(args.onPreviewNodeLink ? { onPreviewNodeLink: args.onPreviewNodeLink } : {}),
+    ...(args.onPastedAnchors ? { onPastedAnchors: args.onPastedAnchors } : {}),
+    ...(args.readOnly !== undefined ? { readOnly: args.readOnly } : {}),
     textAnchorDecorations: args.textAnchorDecorations,
-    trailingDivider: args.trailingDivider
+    ...(args.trailingDivider !== undefined ? { trailingDivider: args.trailingDivider } : {})
   });
   if (args.debugId) {
     registerDebugEditorAdapter(args.debugId, adapter);

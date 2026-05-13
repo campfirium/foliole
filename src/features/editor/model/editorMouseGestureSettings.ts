@@ -53,7 +53,7 @@ function normalizeActionSetting(value: string | null, fallback: EditorMouseGestu
 
 function normalizeColor(value: string | null, fallback: string) {
   const match = /^#([0-9a-fA-F]{6})$/.exec(value?.trim() ?? '');
-  return match ? `#${match[1].toLowerCase()}` : fallback;
+  return match?.[1] ? `#${match[1].toLowerCase()}` : fallback;
 }
 
 function normalizeNumber(value: string | null, fallback: number, min: number, max: number) {

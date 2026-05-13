@@ -91,7 +91,7 @@ function seedLegacyMismatchedImageClozeChild() {
     nodesById: {
       ...state.nodesById,
       'node-1': {
-        ...state.nodesById['node-1'],
+        ...state.nodesById['node-1']!,
         imageRegions: [
           {
             attachmentId: 'hash-1',
@@ -100,7 +100,7 @@ function seedLegacyMismatchedImageClozeChild() {
         ]
       },
       'node-legacy': {
-        ...state.nodesById['node-1'],
+        ...state.nodesById['node-1']!,
         id: 'node-legacy',
         kind: 'item',
         parentNodeId: 'node-1',
@@ -186,7 +186,7 @@ it('removes the topic image region when the linked image cloze item is deleted a
 
   useWorkspaceStore.getState().deleteNode(createdId as string);
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.imageRegions).toBeNull();
 
   useWorkspaceStore.getState().restoreNode(createdId as string);
 
@@ -200,12 +200,12 @@ it('soft deletes the linked image cloze item when deleting the region from the i
   useWorkspaceStore.getState().deleteImageClozeRegion('node-1', 'hash-1', 'region-1');
 
   expect(useWorkspaceStore.getState().trashedNodeIds).toContain(createdId as string);
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.imageRegions).toBeNull();
 });
 
 it('does not resurrect a deleted image region when a new one is created later', () => {
-  const [firstId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[0]);
-  const [secondId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[1]);
+  const [firstId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[0]!);
+  const [secondId] = createSingleImageClozeNode(IMAGE_CLOZE_REGIONS[1]!);
   expect(firstId).toBeTruthy();
   expect(secondId).toBeTruthy();
 
@@ -222,7 +222,7 @@ it('does not resurrect a deleted image region when a new one is created later', 
   });
 
   expect(thirdId).toBeTruthy();
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toEqual([
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.imageRegions).toEqual([
     {
       attachmentId: 'hash-1',
       regions: [
@@ -251,7 +251,7 @@ it('deletes a legacy child with matching region shape even when the child id dif
   createSingleImageClozeNode(createThirdImageClozeRegion());
 
   expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-legacy');
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toEqual([
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.imageRegions).toEqual([
     {
       attachmentId: 'hash-1',
       regions: [

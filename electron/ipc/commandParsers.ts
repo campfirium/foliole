@@ -5,6 +5,9 @@ import { asNullableInteger, asString } from './commandParserPrimitives.js';
 
 export {
   asBoolean,
+  asFiniteNumber,
+  asIntegerInRange,
+  asLiteralUnion,
   asNullableString,
   asString,
   asStringArray,

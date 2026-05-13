@@ -129,8 +129,8 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
     hideTitleHeading: args.hideTitleHeading,
     inCodeBlock: args.inCodeBlock,
     isCodeFenceLine,
-    lineClassByFrom: args.lineClassByFrom,
-    linkReferenceLineFroms: args.linkReferenceLineFroms,
+    ...(args.lineClassByFrom ? { lineClassByFrom: args.lineClassByFrom } : {}),
+    ...(args.linkReferenceLineFroms ? { linkReferenceLineFroms: args.linkReferenceLineFroms } : {}),
     lineFrom: args.lineFrom,
     lineNumber: args.lineNumber,
     showSyntaxOnLine

@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
-import { extractReadwiseSidecarHighlights, transformReadwiseFullDocument } from '../../lib/core/import/readwiseReaderParsing.js';
+import { parseReadwiseFullDocumentImport } from '../../lib/core/import/readwiseFullDocumentParsing.js';
+import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import {
   resolveReadwiseImportDestination,
   type ReadwiseReaderConfig,
@@ -131,30 +132,34 @@ export async function loadPreparedReadwiseImportRecord(
       fs.readFile(source.filePath, 'utf8')
     ]);
     const localized = await localizeReadwiseMarkdownPair({ articleMarkdown, fullDocumentMarkdown });
+    const parsedFullDocument = parseReadwiseFullDocumentImport(localized.fullDocumentMarkdown);
     return {
       ...buildPreparedImportRecord(source, {
-      content: transformReadwiseFullDocument(localized.fullDocumentMarkdown, localized.articleMarkdown),
-      degradedReason: localized.degradedReason,
-      highlightPolicy: options.highlightPolicy,
-      highlightSidecar: extractReadwiseSidecarHighlights(localized.articleMarkdown ?? articleMarkdown, options.readwiseConfig),
-      importedAt: options.importedAt,
-      sourceIdentity,
-      sourceLocator: source.filePath,
-      sourceProfile: 'body_with_highlight_sidecar'
+        content: parsedFullDocument.content,
+        degradedReason: localized.degradedReason,
+        highlightPolicy: options.highlightPolicy,
+        highlightSidecar: extractReadwiseSidecarHighlights(localized.articleMarkdown ?? articleMarkdown, options.readwiseConfig),
+        importedAt: options.importedAt,
+        nodeTitleOverride: parsedFullDocument.nodeTitle,
+        sourceIdentity,
+        sourceLocator: source.filePath,
+        sourceProfile: 'body_with_highlight_sidecar'
       }),
       localizedImageAttachmentIds: localized.attachmentIds
     };
   } catch {
     const fullDocumentMarkdown = await fs.readFile(source.filePath, 'utf8');
     const localized = await localizeReadwiseMarkdownPair({ fullDocumentMarkdown });
+    const parsedFullDocument = parseReadwiseFullDocumentImport(localized.fullDocumentMarkdown);
     return {
       ...buildPreparedImportRecord(source, {
-      content: transformReadwiseFullDocument(localized.fullDocumentMarkdown),
-      degradedReason: localized.degradedReason,
-      highlightPolicy: options.highlightPolicy,
-      importedAt: options.importedAt,
-      sourceIdentity,
-      sourceLocator: source.filePath
+        content: parsedFullDocument.content,
+        degradedReason: localized.degradedReason,
+        highlightPolicy: options.highlightPolicy,
+        importedAt: options.importedAt,
+        nodeTitleOverride: parsedFullDocument.nodeTitle,
+        sourceIdentity,
+        sourceLocator: source.filePath
       }),
       localizedImageAttachmentIds: localized.attachmentIds
     };

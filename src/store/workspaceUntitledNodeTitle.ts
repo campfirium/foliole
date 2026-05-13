@@ -22,7 +22,7 @@ function listActiveSiblingTitles(parentNodeId: string | null, state: WorkspaceSt
   return state.nodeOrder
     .filter((nodeId) => !trashedNodeIds.has(nodeId))
     .map((nodeId) => state.nodesById[nodeId])
-    .filter((node) => node && node.parentNodeId === parentNodeId)
+    .filter((node): node is NonNullable<typeof node> => Boolean(node && node.parentNodeId === parentNodeId))
     .map((node) => node.title);
 }
 

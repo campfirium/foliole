@@ -50,8 +50,8 @@ async function requestDesktop(
     return await fetch(url, init);
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({
-    body: init.body,
-    headers: init.headers,
+    ...(init.body !== undefined ? { body: init.body } : {}),
+    ...(init.headers !== undefined ? { headers: init.headers } : {}),
     method: init.method,
     url
   });

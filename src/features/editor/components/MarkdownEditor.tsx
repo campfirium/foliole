@@ -89,8 +89,8 @@ function useMarkdownEditorSurfaceModel(args: {
     hostRef: args.hostRef,
     hasMarkdownImages,
     nodeId: args.nodeId,
-    onFitBlockImageMetricsChange: args.onFitBlockImageMetricsChange,
-    onImageLoadStateChange: args.onImageLoadStateChange,
+    ...(args.onFitBlockImageMetricsChange ? { onFitBlockImageMetricsChange: args.onFitBlockImageMetricsChange } : {}),
+    ...(args.onImageLoadStateChange ? { onImageLoadStateChange: args.onImageLoadStateChange } : {}),
     rootRef: args.rootRef,
     value: args.value
   });

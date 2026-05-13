@@ -192,10 +192,12 @@ export function buildPreviewDecorationSet(view: EditorView, context: DecorationB
     addPreviewImageDecorations(ranges, plan, context);
 
     if (plan.prefixVisible) {
+      const calloutPrefixRange = calloutPrefixRangeByLineFrom.get(lineFrom);
+      const prefixRanges = prefixRangesByLineFrom.get(lineFrom);
       addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, {
-        calloutPrefixRange: calloutPrefixRangeByLineFrom.get(lineFrom),
+        ...(calloutPrefixRange ? { calloutPrefixRange } : {}),
         forceHideHeadingSyntax: true,
-        prefixRanges: prefixRangesByLineFrom.get(lineFrom)
+        ...(prefixRanges ? { prefixRanges } : {})
       });
     }
     addThematicBreakDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, plan.isThematicBreak);
@@ -224,9 +226,11 @@ export function buildSourceDecorationSet(view: EditorView): DecorationSet {
   });
 
   for (const { lineFrom, lineText, plan } of viewportPlans) {
+    const calloutPrefixRange = calloutPrefixRangeByLineFrom.get(lineFrom);
+    const prefixRanges = prefixRangesByLineFrom.get(lineFrom);
     addPrefixDecoration(ranges, lineFrom, lineText, true, {
-      calloutPrefixRange: calloutPrefixRangeByLineFrom.get(lineFrom),
-      prefixRanges: prefixRangesByLineFrom.get(lineFrom)
+      ...(calloutPrefixRange ? { calloutPrefixRange } : {}),
+      ...(prefixRanges ? { prefixRanges } : {})
     });
     addCodeFenceDecoration(ranges, lineFrom, lineText, true, plan.isCodeFenceLine);
     addFootnoteDecorations(ranges, plan.footnoteMatches);

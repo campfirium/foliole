@@ -208,6 +208,9 @@ export function collectTopicColumnNodeIds(
   while (queueIndex < queue.length) {
     const currentNodeId = queue[queueIndex];
     queueIndex += 1;
+    if (!currentNodeId) {
+      continue;
+    }
 
     if (topicNodeIdSet.has(currentNodeId)) {
       continue;

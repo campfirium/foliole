@@ -250,7 +250,7 @@ describe('CompanionShell secondary surfaces', () => {
     expect(screen.queryByRole('heading', { name: 'Directory' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open folder Trash' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Browse' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Browse' })[0]!);
     expect(screen.getByRole('button', { name: 'Browse' })).toHaveAttribute('aria-current', 'page');
 
     fireEvent.click(screen.getByRole('button', { name: 'Capture' }));

@@ -79,7 +79,7 @@ export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash
       snapshot.reveal,
       snapshot.anchor_link,
       snapshot.image_regions,
-      null,
+      snapshot.position ?? null,
       record.version_id,
       record.device_id,
       snapshot.created_at,
@@ -109,7 +109,7 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
 }
 
 export function buildNodeOrderReplace(record: NativeSyncNodeRecord): SyncNodeStatement {
-  if (record.snapshot.kind !== 'folder' || typeof record.snapshot.position !== 'number') {
+  if (typeof record.snapshot.position !== 'number') {
     return {
       params: [record.object_id],
       sql: DELETE_NODE_ORDER_SQL

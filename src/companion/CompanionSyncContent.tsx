@@ -20,7 +20,7 @@ function buildSyncPanelProps(args: {
   return {
     bootstrapState: workspaceSync.bootstrapState,
     desktopDiscoveries: workspaceSync.desktopDiscoveries ?? [],
-    desktopDiscovery: workspaceSync.desktopDiscovery,
+    desktopDiscovery: workspaceSync.desktopDiscovery ?? null,
     endpointUrl: workspaceSync.state.endpoint_url,
     error: workspaceSync.error,
     handoffReminderSettings: handoffReminders.settings,

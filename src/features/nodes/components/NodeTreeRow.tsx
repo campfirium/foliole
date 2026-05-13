@@ -103,15 +103,15 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
   return (
     <NodeTreeRowFrame
       dropIntent={props.dropIntent ?? null}
-      dragDisabledLabel={props.dragDisabledLabel}
+      {...(props.dragDisabledLabel !== undefined ? { dragDisabledLabel: props.dragDisabledLabel } : {})}
       isDragDisabled={props.isDragDisabled ?? false}
       isDropTarget={props.isDropTarget ?? false}
       nodeId={props.nodeId}
-      onDragEnd={props.onDragEnd}
-      onDragEnter={props.onDragEnter}
-      onDragOver={props.onDragOver}
-      onDragStart={props.onDragStart}
-      onDrop={props.onDrop}
+      {...(props.onDragEnd ? { onDragEnd: props.onDragEnd } : {})}
+      {...(props.onDragEnter ? { onDragEnter: props.onDragEnter } : {})}
+      {...(props.onDragOver ? { onDragOver: props.onDragOver } : {})}
+      {...(props.onDragStart ? { onDragStart: props.onDragStart } : {})}
+      {...(props.onDrop ? { onDrop: props.onDrop } : {})}
     >
       {renderNodeTreeRowButton({
         descendantCount: props.descendantCount ?? 0,
@@ -130,11 +130,11 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         label: props.label,
         nodeId: props.nodeId,
         rowSpacing: props.rowSpacing,
-        secondaryLabel: props.secondaryLabel,
-        trailingLabelContent: props.trailingLabelContent,
-        onContextMenu: props.onContextMenu,
-        onKeyDown: props.onKeyDown,
-        onRename: props.onRename,
+        ...(props.secondaryLabel !== undefined ? { secondaryLabel: props.secondaryLabel } : {}),
+        ...(props.trailingLabelContent !== undefined ? { trailingLabelContent: props.trailingLabelContent } : {}),
+        ...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {}),
+        ...(props.onKeyDown ? { onKeyDown: props.onKeyDown } : {}),
+        ...(props.onRename ? { onRename: props.onRename } : {}),
         onSelect: props.onSelect,
         onToggleCollapse: props.onToggleCollapse,
         style

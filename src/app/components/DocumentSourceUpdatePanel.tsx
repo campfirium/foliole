@@ -81,7 +81,9 @@ function withMeasuredSpacerHeights(
     lineDecorations: decorations.lineDecorations,
     spacerDecorations: decorations.spacerDecorations.map((spacer) => ({
       ...spacer,
-      measuredHeightPx: sourceEditor ? spacer.lines.reduce((total, line) => total + sourceEditor.getLineBlockHeight(line.lineNumber), 0) : undefined
+      ...(sourceEditor
+        ? { measuredHeightPx: spacer.lines.reduce((total, line) => total + sourceEditor.getLineBlockHeight(line.lineNumber), 0) }
+        : {})
     }))
   };
 }

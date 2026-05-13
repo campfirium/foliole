@@ -85,10 +85,14 @@ export function loadNodeBacklinks(driver: DatabaseDriver, targetNodeId: string):
     if (matchOffsets.length === 0) {
       return [];
     }
+    const firstMatchOffset = matchOffsets[0];
+    if (firstMatchOffset === undefined) {
+      return [];
+    }
     return [{
       source_node_id: node.id,
       source_title: node.title.trim() || 'Untitled',
-      context: buildBacklinkContext(node.content, matchOffsets[0]) || node.title.trim() || 'Untitled',
+      context: buildBacklinkContext(node.content, firstMatchOffset) || node.title.trim() || 'Untitled',
       match_count: matchOffsets.length
     }];
   });

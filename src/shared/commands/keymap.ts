@@ -51,7 +51,10 @@ function sanitizeOverrides(value: unknown): CommandShortcutOverrides {
     if (!primary && !secondary) {
       continue;
     }
-    sanitized[commandId] = { primary, secondary };
+    sanitized[commandId] = {
+      ...(primary ? { primary } : {}),
+      ...(secondary ? { secondary } : {})
+    };
   }
 
   return sanitized;
@@ -87,7 +90,10 @@ export function resolveCommandShortcutMap({ commandIds, defaults, overrides }: R
     const primary = resolveOverrideShortcut(overrideEntry?.primary) ?? defaultEntry?.primary;
     const secondary = resolveOverrideShortcut(overrideEntry?.secondary) ?? defaultEntry?.secondary;
     if (primary || secondary) {
-      resolved[commandId] = { primary, secondary };
+      resolved[commandId] = {
+        ...(primary ? { primary } : {}),
+        ...(secondary ? { secondary } : {})
+      };
       continue;
     }
     resolved[commandId] = undefined;

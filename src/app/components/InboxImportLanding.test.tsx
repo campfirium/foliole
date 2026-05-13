@@ -143,8 +143,8 @@ it('shows recent inbox items and lets the user open linked topics from both list
   expect(screen.getByText('Could not parse metadata')).toBeInTheDocument();
   expect(screen.getByText('Failed failure.pdf')).toBeInTheDocument();
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Open topic' })[0]);
-  fireEvent.click(screen.getAllByRole('button', { name: 'Open topic' })[1]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Open topic' })[0]!);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Open topic' })[1]!);
 
   expect(onSelectNode).toHaveBeenCalledTimes(2);
   expect(onSelectNode).toHaveBeenCalledWith('node-1');

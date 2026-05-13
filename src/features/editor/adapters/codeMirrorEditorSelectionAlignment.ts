@@ -127,7 +127,7 @@ function readSelectionAlignmentMeasure(args: {
       currentScrollTop,
       cursorViewportTop: resolvedTop.viewportTop,
       scrollHeight,
-      targetRatio: args.targetRatio,
+      ...(args.targetRatio !== undefined ? { targetRatio: args.targetRatio } : {}),
       viewportHeight,
       viewportTop: viewportRect.top
     }),

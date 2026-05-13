@@ -28,7 +28,7 @@ const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
   mockedListAvailableSystemFonts.mockReset();
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });

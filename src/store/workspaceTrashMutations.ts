@@ -34,9 +34,10 @@ function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, delete
     if (nextImageRegions === parentNode.imageRegions) {
       return parentNode;
     }
+    const { imageRegions: _imageRegions, ...parentWithoutImageRegions } = parentNode;
     return {
-      ...parentNode,
-      imageRegions: nextImageRegions,
+      ...(nextImageRegions !== undefined ? parentNode : parentWithoutImageRegions),
+      ...(nextImageRegions !== undefined ? { imageRegions: nextImageRegions } : {}),
       updatedAt: deletedAt
     };
   }
@@ -48,9 +49,10 @@ function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, delete
   if (nextImageRegions === parentNode.imageRegions) {
     return parentNode;
   }
+  const { imageRegions: _imageRegions, ...parentWithoutImageRegions } = parentNode;
   return {
-    ...parentNode,
-    imageRegions: nextImageRegions,
+    ...(nextImageRegions !== undefined ? parentNode : parentWithoutImageRegions),
+    ...(nextImageRegions !== undefined ? { imageRegions: nextImageRegions } : {}),
     updatedAt: deletedAt
   };
 }

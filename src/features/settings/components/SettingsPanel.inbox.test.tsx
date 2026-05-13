@@ -57,7 +57,7 @@ const defaultLibraryPaths = {
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
   mockedListAvailableSystemFonts.mockReset();
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
   mockedLoadRuntimeLibraryPathSettings.mockReset();

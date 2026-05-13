@@ -14,7 +14,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('accepts pdf import payloads from the runtime bridge', async () => {

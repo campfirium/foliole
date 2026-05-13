@@ -42,6 +42,31 @@ export function asNullableFiniteNumber(value: unknown, field: string): number | 
   return value;
 }
 
+export function asFiniteNumber(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value;
+}
+
+export function asIntegerInRange(value: unknown, field: string, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value;
+}
+
+export function asLiteralUnion<const T extends readonly (number | string)[]>(
+  value: unknown,
+  allowedValues: T,
+  field: string
+): T[number] {
+  if (!(allowedValues as readonly unknown[]).includes(value)) {
+    throw new Error(`invalid argument: ${field}`);
+  }
+  return value as T[number];
+}
+
 export function asStringArray(value: unknown, field: string): string[] {
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
     throw new Error(`invalid argument: ${field}`);

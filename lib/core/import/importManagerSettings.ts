@@ -113,7 +113,7 @@ function normalizeSource(
     highlightMode,
     highlightPath: highlightMode === 'split' ? normalizeString(payload.highlightPath, fallback.highlightPath) : '',
     id: normalizeString(payload.id, fallback.id).trim() || fallback.id,
-    kind,
+    ...(kind === undefined ? {} : { kind }),
     keepPreview: normalizeKeepImportPreview(payload.keepPreview),
     keepState: normalizeKeepImportRuleState(payload.keepState, fallback.keepState),
     primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath)

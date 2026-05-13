@@ -88,6 +88,7 @@ function collectTopicColumnNodeIdsFromIndex(
   );
   for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
     const nodeId = queue[queueIndex];
+    if (!nodeId) continue;
     if (topicNodeIds.has(nodeId)) continue;
     topicNodeIds.add(nodeId);
     queue.push(

@@ -53,7 +53,7 @@ const KIND_STORAGE_KEYS = {
 
 function normalizeColor(value: string | null, fallback: string): string {
   const match = /^#([0-9a-fA-F]{6})$/.exec(value?.trim() ?? '');
-  return match ? `#${match[1].toLowerCase()}` : fallback;
+  return match?.[1] ? `#${match[1].toLowerCase()}` : fallback;
 }
 
 function normalizeEffect(value: string | null, fallback: NodeIconEffect): NodeIconEffect {

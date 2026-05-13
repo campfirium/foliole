@@ -189,7 +189,7 @@ function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHa
   });
   expect(harness.error).not.toHaveBeenCalled();
   expect(harness.writeDeliveryFile).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(harness.writeDeliveryFile.mock.calls[0][1])).toMatchObject({
+  expect(JSON.parse(harness.writeDeliveryFile.mock.calls[0]?.[1] ?? '{}')).toMatchObject({
     head: 'abc123',
     kind: 'foliole.electron.dev.restart-delivered.v1',
     nonce: 7,

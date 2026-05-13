@@ -122,7 +122,7 @@ describe('workspacePersistStorage unresolved cloze anchors pending replay', () =
 
     const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
-    expect(state?.nodesById['node-cloze']).toMatchObject({
+    expect(state?.nodesById['node-cloze']!).toMatchObject({
       title: 'Alpha [...] Gamma',
       content: 'Alpha [...] Gamma',
       reveal: 'Beta',
@@ -152,7 +152,7 @@ describe('workspacePersistStorage hydrated cloze anchors edited-word recovery', 
 
     const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
-    expect(state?.nodesById['node-cloze']).toMatchObject({
+    expect(state?.nodesById['node-cloze']!).toMatchObject({
       title: 'Alpha [...] Gamma',
       content: '',
       reveal: null,

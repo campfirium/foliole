@@ -56,7 +56,7 @@ describe('computeDeleteNodesMutation', () => {
       ['child']
     );
 
-    expect(mutation?.patch.nodesById.parent.content).toBe('before answer after');
+    expect(mutation?.patch.nodesById.parent!.content).toBe('before answer after');
     expect(mutation?.parentNodesToSync).toEqual([]);
   });
 
@@ -84,7 +84,7 @@ describe('computeDeleteNodesMutation', () => {
       ['child']
     );
 
-    expect(mutation?.patch.nodesById.parent.content).toBe('before answer after');
+    expect(mutation?.patch.nodesById.parent!.content).toBe('before answer after');
     expect(mutation?.parentNodesToSync).toEqual([]);
     expect(mutation?.patch.trashedNodeIds).toEqual(['child']);
   });
@@ -117,7 +117,7 @@ function expectPermanentDeleteResult(args: {
     ['child']
   );
 
-  expect(mutation?.patch.nodesById.parent.content).toBe(args.expectedContent);
+  expect(mutation?.patch.nodesById.parent!.content).toBe(args.expectedContent);
   expect(mutation?.parentNodesToSync).toHaveLength(args.expectedSyncedParentCount);
   return mutation;
 }
@@ -131,7 +131,7 @@ describe('computeDeleteNodesPermanentlyMutation', () => {
       parentContent: 'before answer after'
     });
 
-    expect(mutation?.patch.nodesById.parent.title).toBe('parent');
+    expect(mutation?.patch.nodesById.parent!.title).toBe('parent');
   });
 
   it('keeps pure markdown parent content unchanged for locator-era highlights', () => {
@@ -142,7 +142,7 @@ describe('computeDeleteNodesPermanentlyMutation', () => {
       parentContent: 'before answer after'
     });
 
-    expect(mutation?.patch.nodesById.parent.title).toBe('parent');
+    expect(mutation?.patch.nodesById.parent!.title).toBe('parent');
   });
 
   it('keeps locator-backed highlights from rewriting parent content during permanent delete', () => {
@@ -157,7 +157,7 @@ describe('computeDeleteNodesPermanentlyMutation', () => {
       parentContent: 'before answer after'
     });
 
-    expect(mutation?.patch.nodesById.parent.title).toBe('parent');
+    expect(mutation?.patch.nodesById.parent!.title).toBe('parent');
   });
 
   it('keeps unresolved zero-width locator highlights from rewriting parent content during permanent delete', () => {
@@ -172,6 +172,6 @@ describe('computeDeleteNodesPermanentlyMutation', () => {
       parentContent: 'before answer after'
     });
 
-    expect(mutation?.patch.nodesById.parent.title).toBe('parent');
+    expect(mutation?.patch.nodesById.parent!.title).toBe('parent');
   });
 });

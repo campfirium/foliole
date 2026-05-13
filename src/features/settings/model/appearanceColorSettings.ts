@@ -49,7 +49,7 @@ function colorStorageKey(lightKey: string, darkKey: string, mode: AppearanceReso
 function normalizeHexColor(value: string, fallback: string): string {
   const trimmed = value.trim();
   const match = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
-  return match ? `#${match[1].toLowerCase()}` : fallback;
+  return match?.[1] ? `#${match[1].toLowerCase()}` : fallback;
 }
 
 function normalizeAccentColor(value: string): string {

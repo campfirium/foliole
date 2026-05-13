@@ -55,7 +55,7 @@ async function applyStateObjectPushWithDbPort(
       return emptyResult({
         clientOpId: item.clientOpId,
         conflictReason: 'base_content_hash_mismatch',
-        desktopBase: desktopBase(current),
+        ...(current ? { desktopBase: desktopBase(current) } : {}),
         identity: item.identity,
         stateSeq: current?.state_seq ?? null,
         status: 'conflict'
@@ -122,14 +122,14 @@ function readString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value : null;
 }
 
-function desktopBase(row: SyncObjectStateRow | undefined) {
-  return row ? { baseContentHash: row.content_hash, kind: 'content_hash' as const } : undefined;
+function desktopBase(row: SyncObjectStateRow) {
+  return { baseContentHash: row.content_hash, kind: 'content_hash' as const };
 }
 
 function stateAck(item: CompanionSyncPushPayload, row: SyncObjectStateRow | undefined, status: 'accepted' | 'already_applied') {
   return {
     clientOpId: item.clientOpId,
-    desktopBase: desktopBase(row),
+    ...(row ? { desktopBase: desktopBase(row) } : {}),
     identity: item.identity,
     stateSeq: row?.state_seq ?? null,
     status

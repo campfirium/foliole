@@ -178,10 +178,10 @@ export function createHighlightFromSelectionAction(
         state
       );
       createdNode = createHighlightNodeRecord({
-        anchorId,
-        anchorLink,
+        ...(anchorId !== undefined ? { anchorId } : {}),
+        ...(anchorLink !== undefined ? { anchorLink } : {}),
         content: normalizedContent,
-        imageRegions,
+        ...(imageRegions !== undefined ? { imageRegions } : {}),
         nodeId: childNodeId,
         parentNodeId,
         timestamp,
@@ -235,8 +235,8 @@ export function createQAFromSelectionAction(
         state
       );
       const nextNode = createQANodeRecord({
-        anchorId,
-        anchorLink,
+        ...(anchorId !== undefined ? { anchorId } : {}),
+        ...(anchorLink !== undefined ? { anchorLink } : {}),
         answerContent: normalizedAnswer,
         nodeId: childNodeId,
         parentNodeId,

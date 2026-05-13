@@ -38,17 +38,22 @@ function normalizeSyncEvent(value: unknown): NativeCompanionSyncEvent | null {
   if (!occurredAt) {
     return null;
   }
+  const kind = normalizeSyncEventKind(raw.kind);
+  const result = normalizeSyncEventResult(raw.result);
+  const runId = typeof raw.run_id === 'string' && raw.run_id.trim() ? raw.run_id.trim() : null;
+  const startedAt = typeof raw.started_at === 'string' && raw.started_at.trim() ? raw.started_at.trim() : null;
+  const summary = normalizeSyncEventSummary(raw.summary);
   return {
     endpoint_url: typeof raw.endpoint_url === 'string' && raw.endpoint_url.trim() ? raw.endpoint_url.trim() : null,
     id: typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `${status}:${occurredAt}`,
-    kind: normalizeSyncEventKind(raw.kind),
+    ...(kind ? { kind } : {}),
     message: typeof raw.message === 'string' && raw.message.trim() ? raw.message.trim() : status,
     occurred_at: occurredAt,
-    result: normalizeSyncEventResult(raw.result),
-    run_id: typeof raw.run_id === 'string' && raw.run_id.trim() ? raw.run_id.trim() : undefined,
-    started_at: typeof raw.started_at === 'string' && raw.started_at.trim() ? raw.started_at.trim() : undefined,
+    ...(result ? { result } : {}),
+    ...(runId ? { run_id: runId } : {}),
+    ...(startedAt ? { started_at: startedAt } : {}),
     status,
-    summary: normalizeSyncEventSummary(raw.summary)
+    ...(summary ? { summary } : {})
   };
 }
 
@@ -57,12 +62,16 @@ function normalizeSyncEventSummary(value: unknown): NativeCompanionSyncEvent['su
   const raw = value as Record<string, unknown>;
   const changeCount = normalizeNonNegativeNumber(raw.change_count);
   if (changeCount === undefined) return undefined;
+  const desktopReviewCount = normalizeNonNegativeNumber(raw.desktop_review_count);
+  const durationMs = normalizeNonNegativeNumber(raw.duration_ms);
+  const waitingConfirmationCount = normalizeNonNegativeNumber(raw.waiting_confirmation_count);
+  const waitingSendCount = normalizeNonNegativeNumber(raw.waiting_send_count);
   return {
     change_count: changeCount,
-    desktop_review_count: normalizeNonNegativeNumber(raw.desktop_review_count),
-    duration_ms: normalizeNonNegativeNumber(raw.duration_ms),
-    waiting_confirmation_count: normalizeNonNegativeNumber(raw.waiting_confirmation_count),
-    waiting_send_count: normalizeNonNegativeNumber(raw.waiting_send_count)
+    ...(desktopReviewCount !== undefined ? { desktop_review_count: desktopReviewCount } : {}),
+    ...(durationMs !== undefined ? { duration_ms: durationMs } : {}),
+    ...(waitingConfirmationCount !== undefined ? { waiting_confirmation_count: waitingConfirmationCount } : {}),
+    ...(waitingSendCount !== undefined ? { waiting_send_count: waitingSendCount } : {})
   };
 }
 

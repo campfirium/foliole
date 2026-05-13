@@ -110,7 +110,12 @@ async function loadRendererIntoWindow(
   await appendBootEvent('renderer_load_start', {
     startupView: startupView?.kind ?? 'workspace'
   });
-  await loadMainWindowRenderer({ runtimeDiagnostics, runtimeDir: __dirname, startupView, window });
+  await loadMainWindowRenderer({
+    runtimeDiagnostics,
+    runtimeDir: __dirname,
+    ...(startupView === undefined ? {} : { startupView }),
+    window
+  });
   await appendBootEvent('renderer_load_complete', {
     startupView: startupView?.kind ?? 'workspace',
     url: window.webContents.getURL()

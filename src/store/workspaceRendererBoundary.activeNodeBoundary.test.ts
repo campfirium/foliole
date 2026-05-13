@@ -5,7 +5,7 @@ import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore
 
 function createGuardedNode(nodeId: string) {
   const node = {
-    ...useWorkspaceStore.getState().nodesById['node-1'],
+    ...useWorkspaceStore.getState().nodesById['node-1']!,
     id: nodeId,
     title: `Guarded ${nodeId}`,
     content: '',
@@ -34,7 +34,7 @@ function createGuardedNode(nodeId: string) {
 }
 
 it('avoids full reconciliation for active-node-only patches during node switching', () => {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   const guardedNode = createGuardedNode('node-999');
   const currentState = {
     ...createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')),
@@ -69,5 +69,5 @@ it('avoids full reconciliation for active-node-only patches during node switchin
     nodesById: Record<string, unknown>;
   };
 
-  expect(nextState.nodesById['node-999']).toBe(guardedNode);
+  expect(nextState.nodesById['node-999']!).toBe(guardedNode);
 });

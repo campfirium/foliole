@@ -25,7 +25,7 @@ class MarkdownImageWidget extends WidgetType {
     this.presentationVersion = presentationVersion;
   }
 
-  eq(other: MarkdownImageWidget) {
+  override eq(other: MarkdownImageWidget) {
     return (
       this.editorNodeId === other.editorNodeId &&
       this.presentationVersion === other.presentationVersion &&
@@ -37,7 +37,7 @@ class MarkdownImageWidget extends WidgetType {
     );
   }
 
-  toDOM(view: EditorView) {
+  override toDOM(view: EditorView) {
     return createMarkdownImageWidgetDom(
       this.imageMatch,
       this.editorNodeId,

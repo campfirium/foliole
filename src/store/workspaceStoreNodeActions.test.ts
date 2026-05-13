@@ -149,7 +149,7 @@ describe('createWorkspaceNodeActions reveal sync', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const state = harness.getState();
-    const node = state.nodesById['node-1'];
+    const node = state.nodesById['node-1']!;
     if (!node) {
       throw new Error('missing seed node');
     }
@@ -210,7 +210,7 @@ describe('createWorkspaceNodeActions dismiss', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const state = harness.getState();
-    const node = state.nodesById['node-1'];
+    const node = state.nodesById['node-1']!;
     if (!node) {
       throw new Error('missing seed node');
     }
@@ -228,7 +228,7 @@ describe('createWorkspaceNodeActions dismiss', () => {
     const dismissed = actions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
 
     expect(dismissed).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.reading).toMatchObject({
+    expect(harness.getState().nodesById['node-1']!?.reading).toMatchObject({
       state: 'dismissed',
       repetitionCount: 0
     });

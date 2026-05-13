@@ -167,7 +167,6 @@ export function createKeyboardRow(row: ExternalTreeRowRecord): NodeTreeRowModel 
       parentNodeId: null,
       reading: null,
       review: null,
-      specialKind: undefined,
       title: row.label,
       updatedAt: ''
     }

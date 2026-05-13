@@ -150,7 +150,7 @@ export function buildVisibleNodeTreeRows(
   for (const row of rows) {
     while (
       collapsedDepthStack.length > 0 &&
-      row.depth <= collapsedDepthStack[collapsedDepthStack.length - 1]
+      row.depth <= (collapsedDepthStack[collapsedDepthStack.length - 1] ?? -1)
     ) {
       collapsedDepthStack.pop();
     }

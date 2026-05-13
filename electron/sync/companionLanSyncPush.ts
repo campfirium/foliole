@@ -50,11 +50,11 @@ export async function handleCompanionSyncPush(bodyText: string) {
   return {
     acks: result.acks.map((ack) => ({
       client_op_id: ack.clientOpId,
-      conflict_reason: ack.conflictReason,
+      ...(ack.conflictReason === undefined ? {} : { conflict_reason: ack.conflictReason }),
       identity: ack.identity,
-      state_seq: ack.stateSeq,
+      ...(ack.stateSeq === undefined ? {} : { state_seq: ack.stateSeq }),
       status: ack.status,
-      version_id: ack.versionId
+      ...(ack.versionId === undefined ? {} : { version_id: ack.versionId })
     }))
   } satisfies CompanionSyncPushResponse;
 }

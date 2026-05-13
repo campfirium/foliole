@@ -60,11 +60,16 @@ function buildLcsOps(currentLines: string[], updatedLines: string[]) {
 
   for (let currentIndex = currentLines.length - 1; currentIndex >= 0; currentIndex -= 1) {
     for (let updatedIndex = updatedLines.length - 1; updatedIndex >= 0; updatedIndex -= 1) {
-      if (currentLines[currentIndex] === updatedLines[updatedIndex]) {
-        dp[currentIndex][updatedIndex] = dp[currentIndex + 1][updatedIndex + 1] + 1;
+      const currentRow = dp[currentIndex];
+      const nextRow = dp[currentIndex + 1];
+      if (!currentRow || !nextRow) {
         continue;
       }
-      dp[currentIndex][updatedIndex] = Math.max(dp[currentIndex + 1][updatedIndex], dp[currentIndex][updatedIndex + 1]);
+      if (currentLines[currentIndex] === updatedLines[updatedIndex]) {
+        currentRow[updatedIndex] = (nextRow[updatedIndex + 1] ?? 0) + 1;
+        continue;
+      }
+      currentRow[updatedIndex] = Math.max(nextRow[updatedIndex] ?? 0, currentRow[updatedIndex + 1] ?? 0);
     }
   }
 
@@ -72,27 +77,29 @@ function buildLcsOps(currentLines: string[], updatedLines: string[]) {
   let currentIndex = 0;
   let updatedIndex = 0;
   while (currentIndex < currentLines.length && updatedIndex < updatedLines.length) {
-    if (currentLines[currentIndex] === updatedLines[updatedIndex]) {
-      ops.push({ kind: 'unchanged', text: currentLines[currentIndex] });
+    const currentLine = currentLines[currentIndex] ?? '';
+    const updatedLine = updatedLines[updatedIndex] ?? '';
+    if (currentLine === updatedLine) {
+      ops.push({ kind: 'unchanged', text: currentLine });
       currentIndex += 1;
       updatedIndex += 1;
       continue;
     }
-    if (dp[currentIndex + 1][updatedIndex] >= dp[currentIndex][updatedIndex + 1]) {
-      ops.push({ kind: 'removed', text: currentLines[currentIndex] });
+    if ((dp[currentIndex + 1]?.[updatedIndex] ?? 0) >= (dp[currentIndex]?.[updatedIndex + 1] ?? 0)) {
+      ops.push({ kind: 'removed', text: currentLine });
       currentIndex += 1;
       continue;
     }
-    ops.push({ kind: 'added', text: updatedLines[updatedIndex] });
+    ops.push({ kind: 'added', text: updatedLine });
     updatedIndex += 1;
   }
 
   while (currentIndex < currentLines.length) {
-    ops.push({ kind: 'removed', text: currentLines[currentIndex] });
+    ops.push({ kind: 'removed', text: currentLines[currentIndex] ?? '' });
     currentIndex += 1;
   }
   while (updatedIndex < updatedLines.length) {
-    ops.push({ kind: 'added', text: updatedLines[updatedIndex] });
+    ops.push({ kind: 'added', text: updatedLines[updatedIndex] ?? '' });
     updatedIndex += 1;
   }
 

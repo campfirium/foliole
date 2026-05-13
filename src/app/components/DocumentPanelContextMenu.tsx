@@ -1,5 +1,6 @@
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { EditorContextMenu } from './EditorContextMenu';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
@@ -41,9 +42,11 @@ export function DocumentPanelContextMenu({
     <EditorContextMenu
       kind={contextMenu.kind}
       left={contextMenu.left}
-      mode={contextMenu.mode}
-      notePanelLeft={contextMenu.notePanelLeft}
-      notePanelTop={contextMenu.notePanelTop}
+      {...definedProps({
+        mode: contextMenu.mode,
+        notePanelLeft: contextMenu.notePanelLeft,
+        notePanelTop: contextMenu.notePanelTop
+      })}
       onClose={onCloseContextMenu}
       onCopyImage={onCopyImage}
       onCreateCloze={onCreateCloze}

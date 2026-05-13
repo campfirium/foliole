@@ -10,7 +10,6 @@ import {
 } from '../../lib/platform/libraryPaths.js';
 import { MANAGED_INBOX_APP_SETTING_KEY } from '../../lib/platform/managedInbox.js';
 import type {
-  NativeLibraryPathLocation,
   NativeLibraryPaths,
   NativeUpdateLibraryPathSettingArgs
 } from '../../lib/platform/nativeUtilityContract.js';
@@ -148,7 +147,7 @@ export async function updateLibraryPathSetting(
   args: NativeUpdateLibraryPathSettingArgs
 ): Promise<NativeLibraryPaths> {
   const currentOverrides = await loadStoredLibraryPathOverrides();
-  const location = args.location as NativeLibraryPathLocation;
+  const location = args.location;
   const nextOverrides: LibraryPathOverrides = {
     ...currentOverrides,
     [location]: normalizeUpdatedLibraryPath(args),

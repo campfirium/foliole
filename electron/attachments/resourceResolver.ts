@@ -42,7 +42,11 @@ export function resolveAttachmentStoragePath(
   assetsDir = resolveAttachmentAssetsDir(),
   originalName: string | null = null
 ) {
-  return resolveAttachmentStoragePathCandidates(attachmentId, originalName, assetsDir)[0];
+  const [storagePath] = resolveAttachmentStoragePathCandidates(attachmentId, originalName, assetsDir);
+  if (!storagePath) {
+    throw new Error('attachment storage path could not be resolved');
+  }
+  return storagePath;
 }
 
 function resolveAttachmentAssetsDir() {
@@ -68,7 +72,11 @@ export function resolveAttachmentFile(
     row.original_name,
     assetsDir
   );
-  if (!fs.existsSync(canonicalPath) && !fs.existsSync(legacyPath)) {
+  if (!canonicalPath) {
+    return { status: 'missing_file', mimeType: row.mime_type };
+  }
+  const fallbackPath = legacyPath ?? canonicalPath;
+  if (!fs.existsSync(canonicalPath) && !fs.existsSync(fallbackPath)) {
     console.warn('[native] attachment resource file missing', {
       area: 'native',
       action: 'resolve_attachment_resource',
@@ -81,7 +89,7 @@ export function resolveAttachmentFile(
 
   return {
     status: 'ready',
-    filePath: fs.existsSync(canonicalPath) ? canonicalPath : legacyPath,
+    filePath: fs.existsSync(canonicalPath) ? canonicalPath : fallbackPath,
     mimeType: row.mime_type
   };
 }

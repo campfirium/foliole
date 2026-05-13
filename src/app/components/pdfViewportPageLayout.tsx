@@ -9,13 +9,13 @@ export function renderDocumentPages(totalPages: number, renderedPageNumbers: num
     if (renderedPageNumberSet.has(pageNumber)) {
       return renderPdfPage({
         ...args,
-        pageDimensions: args.pageDimensionsByNumber[pageNumber],
+        pageDimensions: args.pageDimensionsByNumber[pageNumber] ?? null,
         pageNumber
       });
     }
     return renderPdfPagePlaceholder({
       fitWidthTargetWidth: args.fitWidthTargetWidth,
-      pageDimensions: args.pageDimensionsByNumber[pageNumber],
+      pageDimensions: args.pageDimensionsByNumber[pageNumber] ?? null,
       pageElementsRef: args.pageElementsRef,
       pageNumber,
       rotation: args.rotation,

@@ -70,7 +70,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('normalizes node source details from the runtime bridge', async () => {

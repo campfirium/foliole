@@ -1,6 +1,8 @@
 import { memo, useState } from 'react';
 import { Page } from 'react-pdf';
 
+import { definedProps } from '../../shared/lib/definedProps';
+
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { renderPdfOverlayMarker, renderPdfOverlayRects, resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
@@ -48,10 +50,10 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
       key={args.pageNumber}
       markerSize={markerSize}
       onPageLoadSuccess={args.onPageLoadSuccess}
-      onPageRenderReady={args.onPageRenderReady}
+      {...definedProps({ onPageRenderReady: args.onPageRenderReady })}
       onTextContentLoad={args.onTextContentLoad}
       onTextLayerRender={args.onTextLayerRender}
-      pageDimensions={args.pageDimensions}
+      {...definedProps({ pageDimensions: args.pageDimensions })}
       pageElementsRef={args.pageElementsRef}
       pageHighlights={pageHighlights}
       pageNumber={args.pageNumber}
@@ -112,7 +114,7 @@ function PdfPageShell(props: {
           onPageRenderReady={handlePageRenderReady}
           onTextContentLoad={props.onTextContentLoad}
           onTextLayerRender={props.onTextLayerRender}
-          pageDimensions={props.pageDimensions}
+          {...definedProps({ pageDimensions: props.pageDimensions })}
           pageNumber={props.pageNumber}
           rotate={props.rotation}
           zoomMode={props.zoomMode}
@@ -194,8 +196,10 @@ const PdfPageCanvas = memo(
         renderAnnotationLayer
         renderTextLayer
         rotate={props.rotate}
-        scale={props.zoomMode === 'fit-width' ? undefined : (props.zoom ?? 100) / 100}
-        width={props.zoomMode === 'fit-width' ? props.fitWidthTargetWidth ?? undefined : undefined}
+        {...definedProps({
+          scale: props.zoomMode === 'fit-width' ? undefined : (props.zoom ?? 100) / 100,
+          width: props.zoomMode === 'fit-width' ? props.fitWidthTargetWidth ?? undefined : undefined
+        })}
       />
     );
   },

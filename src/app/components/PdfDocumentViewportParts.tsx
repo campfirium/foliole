@@ -54,7 +54,7 @@ export function useVisiblePageSync(
     }
     const visiblePage = resolveVisiblePage(container, pageElementsRef, totalPages);
     onVisiblePageChange?.(visiblePage);
-    setVisibleLocation(visiblePage, resolveVisiblePositionY(container, pageElementsRef.current[visiblePage]));
+    setVisibleLocation(visiblePage, resolveVisiblePositionY(container, pageElementsRef.current[visiblePage] ?? null));
   };
 }
 

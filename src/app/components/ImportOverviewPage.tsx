@@ -62,7 +62,7 @@ export function ImportOverviewPage({
   onOpenChange: (open: boolean) => void;
   onSelectNode?: (nodeId: string) => void;
 }) {
-  const state = useImportOverviewState({ onOpenChange, onSelectNode, open });
+  const state = useImportOverviewState({ onOpenChange, ...(onSelectNode ? { onSelectNode } : {}), open });
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">

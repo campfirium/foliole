@@ -1,4 +1,8 @@
 import type { ImportSidecarHighlight } from './controlledContext.js';
+import {
+  extractReadwiseFullDocument,
+  parseReadwiseFullDocumentImport
+} from './readwiseFullDocumentParsing.js';
 import type { ReadwiseReaderConfig } from './readwiseReaderSettings.js';
 
 function normalizeLineEndings(value: string) {
@@ -33,56 +37,8 @@ function escapeLinePrefixWhitespace(value: string) {
   return value.replace(/[ \t]+/g, '[ \\t]+');
 }
 
-function extractReadwiseDocumentTitle(markdown: string) {
-  const normalized = normalizeLineEndings(markdown);
-  const match = normalized.match(/^# (.+?)\s*$/m);
-  return match?.[1]?.trim() ?? '';
-}
-
-function bodyStartsWithLevelOneHeading(markdown: string) {
-  return /^#\s+\S/m.test(markdown);
-}
-
 export function normalizeReadwiseText(value: string) {
   return compactWhitespace(stripMarkdown(normalizeLineEndings(value)));
-}
-
-function slugifyMetadataKey(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function parseReadwiseMetadataSection(markdown: string) {
-  const normalized = normalizeLineEndings(markdown);
-  const lines = normalized.split('\n');
-  const startIndex = lines.findIndex((line) => /^## Metadata[^\n]*$/i.test(line.trim()));
-  if (startIndex < 0) {
-    return [];
-  }
-  const sectionLines = lines.slice(startIndex + 1);
-  const nextHeadingIndex = sectionLines.findIndex((line) => /^##\s+/.test(line));
-  return (nextHeadingIndex >= 0 ? sectionLines.slice(0, nextHeadingIndex) : sectionLines)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .flatMap((line) => {
-      const entry = /^-?\s*([^:]+):\s*(.+?)\s*$/.exec(line);
-      if (!entry) {
-        return [];
-      }
-      const key = slugifyMetadataKey(entry[1]);
-      const value = entry[2].trim();
-      return key && value ? [{ key, value }] : [];
-    });
-}
-
-function renderReadwiseFrontmatter(metadata: Array<{ key: string; value: string }>) {
-  if (metadata.length === 0) {
-    return '';
-  }
-  return ['---', ...metadata.map(({ key, value }) => `${key}: ${value}`), '---'].join('\n');
 }
 
 function stripReadwiseLinkTail(block: string) {
@@ -213,31 +169,10 @@ export function extractReadwiseHighlightsSection(markdown: string, headings: str
   return (nextHeadingIndex >= 0 ? section.slice(0, nextHeadingIndex) : section).trim();
 }
 
-export function extractReadwiseFullDocument(markdown: string) {
-  const normalized = normalizeLineEndings(markdown);
-  const matches = [...normalized.matchAll(/^## Full Document[^\n]*$/gim)];
-  const lastHeading = matches.at(-1);
-  if (lastHeading?.index === undefined) {
-    return normalized.trim();
-  }
-  const section = normalized.slice(lastHeading.index + lastHeading[0].length).replace(/^\n+/, '');
-  const nextHeadingIndex = section.search(/^## /m);
-  return (nextHeadingIndex >= 0 ? section.slice(0, nextHeadingIndex) : section).trim();
-}
+export { extractReadwiseFullDocument };
 
-export function transformReadwiseFullDocument(markdown: string, articleMarkdown = '') {
-  const metadata = parseReadwiseMetadataSection(markdown);
-  const frontmatter = renderReadwiseFrontmatter(metadata);
-  const body = extractReadwiseFullDocument(markdown);
-  const title = extractReadwiseDocumentTitle(articleMarkdown);
-  const bodyWithTitle = title && !bodyStartsWithLevelOneHeading(body) ? `# ${title}\n\n${body}` : body;
-  if (!frontmatter) {
-    return bodyWithTitle;
-  }
-  if (!bodyWithTitle) {
-    return frontmatter;
-  }
-  return `${frontmatter}\n\n${bodyWithTitle}`;
+export function transformReadwiseFullDocument(markdown: string) {
+  return parseReadwiseFullDocumentImport(markdown).content;
 }
 
 export function extractReadwiseSidecarHighlights(

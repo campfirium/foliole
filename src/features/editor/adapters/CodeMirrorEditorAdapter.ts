@@ -57,7 +57,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownCompartment = new Compartment();
   private liveMarkdownStateCompartment = new Compartment();
   private nodeId: string | null = null;
-  private onChange?: (content: string, meta?: { nodeId: string | null }) => void;
+  private onChange: ((content: string, meta?: { nodeId: string | null }) => void) | undefined;
   private onMissingAttachmentResource: NonNullable<CodeMirrorEditorAdapterOptions['onMissingAttachmentResource']> | null = null;
   private onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | null = null;
   private onOpenNodeLink: ((title: string) => void) | null = null;

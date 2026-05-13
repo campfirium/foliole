@@ -20,7 +20,7 @@ function createMockElectronApi(
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('filters empty workspace sync applied events before reaching the handler', async () => {

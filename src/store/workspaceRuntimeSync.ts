@@ -38,7 +38,7 @@ function createNodeSnapshotArgs(node: Node, position?: number) {
     isDocumentLoaded: isWorkspaceNodeDocumentLoaded,
     mergeDocument: mergeWorkspaceRuntimeNodeDocument,
     node,
-    position
+    ...(position !== undefined ? { position } : {})
   };
 }
 

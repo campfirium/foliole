@@ -25,7 +25,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
 
   it('clears imported title-heading hiding after manual content edits', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
-    const node = harness.getState().nodesById['node-1'];
+    const node = harness.getState().nodesById['node-1']!;
     if (!node) throw new Error('missing seed node');
     harness.setState({
       nodesById: {
@@ -50,7 +50,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
 
   it('ignores content edits until the node document is fully loaded', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
-    const node = harness.getState().nodesById['node-1'];
+    const node = harness.getState().nodesById['node-1']!;
     if (!node) throw new Error('missing seed node');
     harness.setState({
       nodesById: {
@@ -68,7 +68,7 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
 
     actions.updateNodeContent('node-1', 'Typed too early');
 
-    expect(harness.getState().nodesById['node-1']).toMatchObject({
+    expect(harness.getState().nodesById['node-1']!).toMatchObject({
       content: '',
       hasContent: true,
       reveal: null,

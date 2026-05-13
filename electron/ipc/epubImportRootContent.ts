@@ -17,7 +17,11 @@ export interface RootBookContent {
 function parseAttributes(fragment: string) {
   const attributes: Record<string, string> = {};
   for (const match of fragment.matchAll(/([:\w.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-    attributes[match[1].toLowerCase()] = match[2] ?? match[3] ?? '';
+    const name = match[1];
+    if (!name) {
+      continue;
+    }
+    attributes[name.toLowerCase()] = match[2] ?? match[3] ?? '';
   }
   return attributes;
 }
@@ -33,7 +37,9 @@ function parseCoverImageItems(opfXml: string, manifest: ReadonlyMap<string, Mani
       .map(([id]) => id)
   );
   for (const match of opfXml.matchAll(/<meta\b([^>]*)\/?>/gi)) {
-    const attributes = parseAttributes(match[1]);
+    const fragment = match[1];
+    if (!fragment) continue;
+    const attributes = parseAttributes(fragment);
     if (attributes.name?.toLowerCase() === 'cover' && attributes.content) {
       coverIds.add(attributes.content);
     }

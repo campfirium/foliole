@@ -65,7 +65,6 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   editorContent: '# Node 1',
   isEditorReadOnly: false,
   editorNodeId: 'node-1',
-  editorNodeViewState: undefined,
   nodeOrder: ['node-1', 'node-2'],
   trashedNodeIds: [],
   nodesById: { 'node-1': pdfNode, 'node-2': textNode },

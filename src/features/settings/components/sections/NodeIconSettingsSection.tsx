@@ -20,7 +20,7 @@ type EditableIconKind = Extract<NodeTreeRowIconKind, 'reading' | 'review'>;
 function PreviewIcon(props: { baseOnly?: boolean; kind: EditableIconKind; state: NodeTreeRowIconState }) {
   return (
     <span className="inline-flex size-9 items-center justify-center text-foreground">
-      <NodeTreeRowIcon baseOnly={props.baseOnly} kind={props.kind} preview state={props.state} />
+      <NodeTreeRowIcon {...(props.baseOnly !== undefined ? { baseOnly: props.baseOnly } : {})} kind={props.kind} preview state={props.state} />
     </span>
   );
 }

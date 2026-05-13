@@ -34,7 +34,7 @@ export async function reconcileKeepImportCatalog(config: KeepImportRuleConfig, s
       hasPrimarySourceChanged(existingItem, sourceSignature) ||
       (config.sourceType === 'readwise' && hasHighlightSourceChanged(existingItem, sourceSignature));
     upsertKeepImportItem({
-      firstSeenAt: existingItem?.first_seen_at,
+      ...(existingItem?.first_seen_at ? { firstSeenAt: existingItem.first_seen_at } : {}),
       hasSourceUpdate: Boolean(existingItem?.has_source_update) || (Boolean(existingItem) && changed),
       highlightSourceMtimeMs: sourceSignature.highlight?.mtimeMs ?? null,
       highlightSourceSizeBytes: sourceSignature.highlight?.sizeBytes ?? null,

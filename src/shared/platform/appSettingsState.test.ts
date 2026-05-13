@@ -14,7 +14,7 @@ function createMockElectronApi(invoke: NativeInvoke) {
 }
 
 beforeEach(() => {
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('loads runtime app settings through the platform bridge', async () => {

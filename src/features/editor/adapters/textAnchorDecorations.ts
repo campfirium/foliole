@@ -40,6 +40,9 @@ function collectTextAnchorSegments(
   for (let index = 0; index < orderedBoundaries.length - 1; index += 1) {
     const from = orderedBoundaries[index];
     const to = orderedBoundaries[index + 1];
+    if (from === undefined || to === undefined) {
+      continue;
+    }
     if (to <= from) {
       continue;
     }

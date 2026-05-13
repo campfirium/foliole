@@ -53,7 +53,8 @@ export function mayHaveOutline(content: string) {
 
 export function resolveActiveIndex(items: OutlineDisplayItem[], anchorPosition: number) {
   for (let index = items.length - 1; index >= 0; index -= 1) {
-    if (anchorPosition >= items[index].from) {
+    const item = items[index];
+    if (item && anchorPosition >= item.from) {
       return index;
     }
   }

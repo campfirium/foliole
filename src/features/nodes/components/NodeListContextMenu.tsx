@@ -38,20 +38,20 @@ function renderMenuItems(props: NodeListContextMenuProps) {
       createCommands={props.createCommands}
       onCreateCommand={props.onCreateCommand}
       onDeleteNode={props.onDeleteNode}
-      onDismissNode={props.onDismissNode}
-      onMergeHighlightsIntoTopic={props.onMergeHighlightsIntoTopic}
-      onMoveToNode={props.onMoveToNode}
-      onPasteIntoNode={props.onPasteIntoNode}
-      onRenameNode={props.onRenameNode}
-      onReturnNode={props.onReturnNode}
-      showDeleteAction={props.showDeleteAction}
-      showDismissAction={props.showDismissAction}
-      showMergeHighlightsIntoTopicAction={props.showMergeHighlightsIntoTopicAction}
-      showMoveToNodeAction={props.showMoveToNodeAction}
-      showPasteIntoNodeAction={props.showPasteIntoNodeAction}
-      showRenameAction={props.showRenameAction}
-      showRootCreateOnly={props.showRootCreateOnly}
-      showReturnAction={props.showReturnAction}
+      {...(props.onDismissNode ? { onDismissNode: props.onDismissNode } : {})}
+      {...(props.onMergeHighlightsIntoTopic ? { onMergeHighlightsIntoTopic: props.onMergeHighlightsIntoTopic } : {})}
+      {...(props.onMoveToNode ? { onMoveToNode: props.onMoveToNode } : {})}
+      {...(props.onPasteIntoNode ? { onPasteIntoNode: props.onPasteIntoNode } : {})}
+      {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
+      {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
+      {...(props.showDeleteAction !== undefined ? { showDeleteAction: props.showDeleteAction } : {})}
+      {...(props.showDismissAction !== undefined ? { showDismissAction: props.showDismissAction } : {})}
+      {...(props.showMergeHighlightsIntoTopicAction !== undefined ? { showMergeHighlightsIntoTopicAction: props.showMergeHighlightsIntoTopicAction } : {})}
+      {...(props.showMoveToNodeAction !== undefined ? { showMoveToNodeAction: props.showMoveToNodeAction } : {})}
+      {...(props.showPasteIntoNodeAction !== undefined ? { showPasteIntoNodeAction: props.showPasteIntoNodeAction } : {})}
+      {...(props.showRenameAction !== undefined ? { showRenameAction: props.showRenameAction } : {})}
+      {...(props.showRootCreateOnly !== undefined ? { showRootCreateOnly: props.showRootCreateOnly } : {})}
+      {...(props.showReturnAction !== undefined ? { showReturnAction: props.showReturnAction } : {})}
     />
   );
 }
@@ -124,8 +124,8 @@ function NoteMenuItems({
       {showRootCreateOnly ? null : showRenameAction && onRenameNode ? <AppDropdownMenuItem onSelect={onRenameNode}>Rename</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showReturnAction && onReturnNode ? <AppDropdownMenuItem onSelect={onReturnNode}>Relearn</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDismissAction && onDismissNode ? <AppDropdownMenuItem onSelect={onDismissNode}>Dismiss</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
-      {showRootCreateOnly ? null : showPasteIntoNodeAction ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showMergeHighlightsIntoTopicAction && onMergeHighlightsIntoTopic ? <AppDropdownMenuItem onSelect={onMergeHighlightsIntoTopic}>Merge Highlights</AppDropdownMenuItem> : null}
+      {showRootCreateOnly ? null : showPasteIntoNodeAction && onPasteIntoNode ? <AppDropdownMenuItem onSelect={onPasteIntoNode}>Paste here</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showMoveToNodeAction && onMoveToNode ? <AppDropdownMenuItem onSelect={onMoveToNode}>Move to…</AppDropdownMenuItem> : null}
       {showRootCreateOnly ? null : showDeleteAction ? <AppDropdownMenuItem onSelect={onDeleteNode}>Delete</AppDropdownMenuItem> : null}
     </>

@@ -83,14 +83,14 @@ function renderNodeListRow(
       nodeIconState={nodeIconState}
       showIcon={false}
       rowSpacing={props.rowSpacing}
-      onContextMenu={props.onContextMenu}
-      onDragEnd={props.drag.onDragEnd}
-      onDragEnter={props.drag.onDragEnterNode}
-      onDragOver={props.drag.onDragOverNode}
-      onDragStart={props.drag.onDragStartNode}
-      onDrop={props.drag.onDropOnNode}
+      {...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {})}
+      {...(props.drag.onDragEnd ? { onDragEnd: props.drag.onDragEnd } : {})}
+      {...(props.drag.onDragEnterNode ? { onDragEnter: props.drag.onDragEnterNode } : {})}
+      {...(props.drag.onDragOverNode ? { onDragOver: props.drag.onDragOverNode } : {})}
+      {...(props.drag.onDragStartNode ? { onDragStart: props.drag.onDragStartNode } : {})}
+      {...(props.drag.onDropOnNode ? { onDrop: props.drag.onDropOnNode } : {})}
       onKeyDown={onRowKeyDown}
-      onRename={isInbox || isTrashRoot || isVirtualRoot ? undefined : props.onRename}
+      {...(!isInbox && !isTrashRoot && !isVirtualRoot && props.onRename ? { onRename: props.onRename } : {})}
       onSelect={props.onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />

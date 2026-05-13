@@ -1,7 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true
   },
   "include": [
     "src/shared/**/*.ts",

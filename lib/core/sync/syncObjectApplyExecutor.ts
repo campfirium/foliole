@@ -69,7 +69,11 @@ async function applySingleSyncObject(
       return options.includeAlreadyApplied ? `${record.object_type}:${record.object_id}` : null;
     }
     if (status === 'stale') return null;
-    const appliedPayload = await applySyncObjectPayloadWithDbPort(tx, record, { deviceId: options.deviceId });
+    const appliedPayload = await applySyncObjectPayloadWithDbPort(
+      tx,
+      record,
+      options.deviceId === undefined ? {} : { deviceId: options.deviceId }
+    );
     if (appliedPayload === false) return null;
     await tx.run(
       `INSERT INTO sync_object_state (` +

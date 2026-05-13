@@ -13,7 +13,7 @@ export interface BetterSqliteDbPortOptions {
 export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: BetterSqliteDbPortOptions = {}): DbPort {
   let transactionDepth = 0;
   const port: DbPort & { readonly __dbPortName?: string } = {
-    __dbPortName: options.name,
+    ...(options.name ? { __dbPortName: options.name } : {}),
     async run(sql, params = []) {
       return normalizeRunResult(() => sqlite.prepare(sql).run(...params));
     },

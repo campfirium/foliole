@@ -30,10 +30,10 @@ function seedTrimmedWorkspaceState() {
     nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
     nodesById: {
       ...initial.nodesById,
-      'node-1': { ...initial.nodesById['node-1'], id: 'node-1', title: 'Node 1', content: '', hasContent: true, reveal: null, hasReveal: true },
-      'node-2': { ...initial.nodesById['node-1'], id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: true },
-      'node-3': { ...initial.nodesById['node-1'], id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: true },
-      'node-4': { ...initial.nodesById['node-1'], id: 'node-4', title: 'Node 4', content: '', hasContent: true, reveal: null, hasReveal: true }
+      'node-1': { ...initial.nodesById['node-1']!, id: 'node-1', title: 'Node 1', content: '', hasContent: true, reveal: null, hasReveal: true },
+      'node-2': { ...initial.nodesById['node-1']!, id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: true },
+      'node-3': { ...initial.nodesById['node-1']!, id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: true },
+      'node-4': { ...initial.nodesById['node-1']!, id: 'node-4', title: 'Node 4', content: '', hasContent: true, reveal: null, hasReveal: true }
     },
     trashedNodeIds: []
   });
@@ -73,10 +73,10 @@ async function reopenLongDocument(view: ReturnType<typeof render>, longDocument:
   view.rerender(<HookHarness activeNodeId="node-2" />);
   await expectNodeDocument('node-2', 'Loaded node 2 body', null);
   await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({ content: longDocument, reveal: null });
+    expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({ content: longDocument, reveal: null });
   });
   await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({ content: '', reveal: null });
+    expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({ content: '', reveal: null });
   });
   await expectNodeDocument('node-2', 'Loaded node 2 body', null);
 
@@ -104,13 +104,13 @@ it('keeps the last inactive document warm after switching once', async () => {
 
   const view = render(<HookHarness activeNodeId="node-1" />);
   await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({ content: '', reveal: null });
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({ content: '', reveal: null });
 
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
 
   await expectNodeDocument('node-2', 'Loaded node 2 body', 'Loaded node 2 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
     content: 'Loaded node 1 body',
     reveal: 'Loaded node 1 answer'
   });
@@ -134,7 +134,7 @@ it('reopens a recently visited document without loading it again', async () => {
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
   await expectNodeDocument('node-2', 'Loaded node 2 body', 'Loaded node 2 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
     content: 'Loaded node 1 body',
     reveal: 'Loaded node 1 answer'
   });
@@ -146,11 +146,11 @@ it('reopens a recently visited document without loading it again', async () => {
   useWorkspaceStore.getState().setActiveNode('node-1');
   view.rerender(<HookHarness activeNodeId="node-1" />);
   await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',
     reveal: 'Loaded node 2 answer'
   });
-  expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({
     content: 'Loaded node 3 body',
     reveal: 'Loaded node 3 answer'
   });
@@ -185,11 +185,11 @@ it('trims the oldest inactive document once the recent cache limit is exceeded',
   view.rerender(<HookHarness activeNodeId="node-4" />);
   await expectNodeDocument('node-4', 'Loaded node 4 body', 'Loaded node 4 answer');
   await expectTrimmedNode('node-1', true);
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',
     reveal: 'Loaded node 2 answer'
   });
-  expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({
     content: 'Loaded node 3 body',
     reveal: 'Loaded node 3 answer'
   });
@@ -214,7 +214,7 @@ it('reopens the same long document without reloading while it is still warm', as
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
   });
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',
     reveal: null
   });

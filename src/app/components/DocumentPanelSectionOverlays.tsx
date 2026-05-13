@@ -42,9 +42,9 @@ export function DocumentPanelSectionOverlays({
         onCloseContextMenu={props.onCloseContextMenu}
         onCopyImage={props.onCopyImage}
         onCreateCloze={props.onCreateCloze}
-        onCreateClozeFromPayload={props.onCreateClozeFromPayload}
+        {...(props.onCreateClozeFromPayload ? { onCreateClozeFromPayload: props.onCreateClozeFromPayload } : {})}
         onCreateHighlight={props.onCreateHighlight}
-        onCreateHighlightFromPayload={props.onCreateHighlightFromPayload}
+        {...(props.onCreateHighlightFromPayload ? { onCreateHighlightFromPayload: props.onCreateHighlightFromPayload } : {})}
         onCreateNote={props.onCreateNote ?? (() => undefined)}
         onDeleteExistingHighlight={props.onDeleteExistingHighlight ?? (() => undefined)}
         onCutImage={props.onCutImage}

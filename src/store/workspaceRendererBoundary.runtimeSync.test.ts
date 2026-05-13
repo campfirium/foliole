@@ -13,7 +13,7 @@ function resetWorkspaceStore() {
 }
 
 function createLoadedNode(nodeId: string, title: string, content: string, reveal: string | null) {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   return {
     ...seedNode,
     id: nodeId,
@@ -48,7 +48,7 @@ describe('workspace renderer boundary runtime confirmation', () => {
 
     useWorkspaceStore.getState().updateNodeContent('node-1', 'Locally edited body');
 
-    expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({
+    expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
       content: 'Locally edited body',
       hasContent: true,
       reveal: null,
@@ -58,13 +58,13 @@ describe('workspace renderer boundary runtime confirmation', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({
+    expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
       content: '',
       hasContent: true,
       reveal: null,
       hasReveal: false
     });
-    expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
       content: 'Active node body',
       hasContent: true,
       reveal: 'Active node answer',

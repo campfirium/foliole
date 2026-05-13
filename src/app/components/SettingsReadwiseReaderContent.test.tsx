@@ -106,7 +106,7 @@ it('checks Readwise setup inline and turns on the integration from the settings 
     expect(onRunSync).toHaveBeenCalledTimes(1);
   });
   expect(onSave).toHaveBeenCalledTimes(2);
-  const saved = onSave.mock.calls[1][0] as {
+  const saved = onSave.mock.calls[1]![0] as {
     config: ReadwiseReaderConfig;
     readwiseSources: DraftImportSource[];
   };

@@ -67,7 +67,6 @@ function buildImageProps() {
     props: {
       activeNodeId: 'node-1',
       editorAdapterRef: { current: adapter },
-      editorNodeViewState: undefined,
       isImmersiveMode: true,
       isStudyMode: false,
       nodeOrder: ['node-1'],

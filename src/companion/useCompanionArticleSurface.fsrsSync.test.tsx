@@ -163,7 +163,7 @@ describe('useCompanionArticleSurface fsrs sync', () => {
       nodeId: 'item-1',
       reviewLog: expect.objectContaining({ grade: 3, reviewedAt: '2026-04-22T08:10:00.000Z' })
     }));
-    expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0])
-      .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]);
+    expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
+      .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
   });
 });

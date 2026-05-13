@@ -128,7 +128,7 @@ function renderDocumentPanelContent(args: {
       onCreatePdfHighlight={args.props.onCreatePdfHighlight}
       onNodeContentChange={args.props.onNodeContentChange}
       onOpenExternalLink={args.onOpenExternalLink}
-      onOpenMoveToNode={args.props.onOpenMoveToNode}
+      {...(args.props.onOpenMoveToNode ? { onOpenMoveToNode: args.props.onOpenMoveToNode } : {})}
       onPersistPdfViewState={args.props.onPersistPdfViewState}
       onSelectNode={args.props.onSelectNode}
       onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView ?? args.props.onSelectNode}

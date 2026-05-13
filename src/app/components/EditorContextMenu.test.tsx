@@ -107,11 +107,11 @@ it('shows an app panel before creating a long cloze front', () => {
   expect(screen.queryByText(/foliole/i)).toBeNull();
 
   const highlightButtons = screen.getAllByRole('button', { name: 'Highlight' });
-  fireEvent.click(highlightButtons[highlightButtons.length - 1]);
+  fireEvent.click(highlightButtons[highlightButtons.length - 1]!);
   expect(onCreateHighlightFromPayload).toHaveBeenCalledWith(createLongClozePayload());
 
   const clozeButtons = screen.getAllByRole('button', { name: 'Cloze' });
-  fireEvent.click(clozeButtons[clozeButtons.length - 1]);
+  fireEvent.click(clozeButtons[clozeButtons.length - 1]!);
   expect(onCreateClozeFromPayload).toHaveBeenCalledWith(createLongClozePayload(), { skipGuard: true });
   expect(onCreateCloze).not.toHaveBeenCalled();
   expect(onCreateHighlight).not.toHaveBeenCalled();

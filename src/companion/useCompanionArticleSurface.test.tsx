@@ -25,7 +25,7 @@ vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock)
 async function expectReadingReviewActionPersists() {
   const snapshot = createCompanionArticleSnapshot();
   snapshot.nodesById['article-1'] = {
-    ...snapshot.nodesById['article-1'],
+    ...snapshot.nodesById['article-1']!,
     reading: {
       intervalDurationMs: 60000,
       intervalGrowthFactor: 1.5,
@@ -48,8 +48,8 @@ async function expectReadingReviewActionPersists() {
   expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
     nodeId: 'article-1'
   }));
-  expect(syncObjectMock.saveCompanionSyncNodeReadingRecord.mock.invocationCallOrder[0])
-    .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]);
+  expect(syncObjectMock.saveCompanionSyncNodeReadingRecord.mock.invocationCallOrder[0]!)
+    .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
 }
 
 describe('useCompanionArticleSurface', () => {
@@ -111,7 +111,7 @@ describe('useCompanionArticleSurface browsing', () => {
     desktopSyncMock.syncCompanionContentBlobFromDesktop.mockReturnValue(new Promise(() => undefined));
     const snapshot = createCompanionArticleSnapshot();
     snapshot.nodesById['article-2'] = {
-      ...snapshot.nodesById['article-2'],
+      ...snapshot.nodesById['article-2']!,
       bodyBlobHash: 'b'.repeat(64),
       bodyStatus: 'missing',
       content: ''

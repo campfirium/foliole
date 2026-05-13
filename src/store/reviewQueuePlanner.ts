@@ -225,7 +225,7 @@ export function buildReviewQueuePlan(args: {
   });
   const queueNodeIds = mixUnifiedPushQueues({
     fsrsQueueNodeIds,
-    limit: args.limit,
+    ...(args.limit !== undefined ? { limit: args.limit } : {}),
     pushQueueRules,
     readingQueueNodeIds
   });

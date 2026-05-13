@@ -203,7 +203,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
     expect(screen.getByText('V')).toBeInTheDocument();
     expect(screen.getByText('Studio')).toBeInTheDocument();
     const pairButtons = screen.getAllByRole('button', { name: 'Connect' });
-    fireEvent.click(pairButtons[1]);
+    fireEvent.click(pairButtons[1]!);
 
     await waitFor(() => {
       expect(props.onRequestPairing).toHaveBeenCalledWith('http://192.168.1.12:38641');

@@ -1,4 +1,5 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
+import { definedProps } from '../../shared/lib/definedProps';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME,
@@ -34,7 +35,7 @@ function ReadwiseFolderMatrix(props: {
           label={`Readwise original folder ${source.id}`}
           onClick={() => props.onChooseFolder(source.id, 'primaryPath')}
           path={resolveFolderPathLabel(source.primaryPath, source.label)}
-          tooltip={resolveFolderPathHint(source.primaryPath)}
+          {...definedProps({ tooltip: resolveFolderPathHint(source.primaryPath) })}
         />
       ))}
       <div className="flex h-10 items-center px-1 text-sm font-medium text-foreground/62">Highlights</div>
@@ -44,7 +45,7 @@ function ReadwiseFolderMatrix(props: {
           label={`Readwise highlight folder ${source.id}`}
           onClick={() => props.onChooseFolder(source.id, 'highlightPath')}
           path={resolveFolderPathLabel(source.highlightPath, source.label)}
-          tooltip={resolveFolderPathHint(source.highlightPath)}
+          {...definedProps({ tooltip: resolveFolderPathHint(source.highlightPath) })}
         />
       ))}
     </div>
@@ -67,7 +68,7 @@ function ReadwiseFolderStack(props: {
                 label={`Readwise original folder ${source.id}`}
                 onClick={() => props.onChooseFolder(source.id, 'primaryPath')}
                 path={resolveFolderPathLabel(source.primaryPath, source.label)}
-                tooltip={resolveFolderPathHint(source.primaryPath)}
+                {...definedProps({ tooltip: resolveFolderPathHint(source.primaryPath) })}
               />
             </div>
             <div className="space-y-1">
@@ -76,7 +77,7 @@ function ReadwiseFolderStack(props: {
                 label={`Readwise highlight folder ${source.id}`}
                 onClick={() => props.onChooseFolder(source.id, 'highlightPath')}
                 path={resolveFolderPathLabel(source.highlightPath, source.label)}
-                tooltip={resolveFolderPathHint(source.highlightPath)}
+                {...definedProps({ tooltip: resolveFolderPathHint(source.highlightPath) })}
               />
             </div>
           </div>
@@ -111,7 +112,7 @@ export function ReadwiseDirectorySection(props: {
             label="Readwise root folder"
             onClick={props.onChooseRootFolder}
             path={resolveFolderPathLabel(props.readwiseRootPath, 'Choose')}
-            tooltip={resolveFolderPathHint(props.readwiseRootPath)}
+            {...definedProps({ tooltip: resolveFolderPathHint(props.readwiseRootPath) })}
           />
         </SettingsControlSlot>
       </SettingsRow>

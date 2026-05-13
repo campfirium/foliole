@@ -19,7 +19,7 @@ function createNativePreview() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('loads external document previews through the native external search command', async () => {

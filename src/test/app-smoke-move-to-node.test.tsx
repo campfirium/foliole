@@ -67,7 +67,7 @@ it('moves the active node under an empty target node from the command palette', 
   fireEvent.keyDown(moveInput, { key: 'Enter' });
 
   await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId).toBe('node-4');
+    expect(useWorkspaceStore.getState().nodesById['node-2']!?.parentNodeId).toBe('node-4');
   });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   expect(screen.queryByRole('dialog', { name: 'Move to' })).not.toBeInTheDocument();

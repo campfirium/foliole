@@ -13,11 +13,11 @@ class MarkdownFootnoteWidget extends WidgetType {
     this.footnote = footnote;
   }
 
-  eq(other: MarkdownFootnoteWidget) {
+  override eq(other: MarkdownFootnoteWidget) {
     return this.footnote.from === other.footnote.from && this.footnote.label === other.footnote.label && this.footnote.note === other.footnote.note;
   }
 
-  toDOM() {
+  override toDOM() {
     const presentation = buildFootnotePresentation(this.footnote);
     const wrapper = document.createElement('span');
     wrapper.className = 'cm-md-footnote-widget';

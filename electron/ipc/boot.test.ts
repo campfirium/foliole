@@ -29,7 +29,7 @@ it('writes main startup events and marks the source', async () => {
   const paths = resolveBootArtifactPaths(repoRoot);
   const rawLog = fs.readFileSync(paths.eventLogPath, 'utf8').trim().split('\n');
   expect(rawLog).toHaveLength(1);
-  expect(JSON.parse(rawLog[0])).toMatchObject({
+  expect(JSON.parse(rawLog[0] ?? '{}')).toMatchObject({
     head: 'head-1',
     payload: { step: 'create-window' },
     session: 'session-1',

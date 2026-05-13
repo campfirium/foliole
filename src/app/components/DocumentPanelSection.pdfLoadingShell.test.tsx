@@ -25,7 +25,6 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   editorAppearanceKey: 'appearance-1',
   editorContent: '# sample\n\nLinked PDF source ready for the reader surface.',
   editorNodeId: 'node-1',
-  editorNodeViewState: undefined,
   isEditorReadOnly: false,
   nodeOrder: ['node-1'],
   nodesById: { 'node-1': { anchorLink: null, content: '', createdAt: '', id: 'node-1', kind: 'topic', parentNodeId: null, reveal: '', review: null, title: 'Node 1', updatedAt: '' } },

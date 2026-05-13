@@ -208,18 +208,30 @@ export function alignSourceUpdateLines(currentContent: string, updatedContent: s
   const dp = Array.from({ length: rowCount }, () => new Int32Array(columnCount));
 
   for (let currentIndex = currentProfiles.length - 1; currentIndex >= 0; currentIndex -= 1) {
-    dp[currentIndex][updatedProfiles.length] = dp[currentIndex + 1][updatedProfiles.length] + getGapPenalty(currentProfiles[currentIndex]!);
+    const currentRow = dp[currentIndex];
+    const nextRow = dp[currentIndex + 1];
+    const currentProfile = currentProfiles[currentIndex];
+    if (!currentRow || !nextRow || !currentProfile) continue;
+    currentRow[updatedProfiles.length] = (nextRow[updatedProfiles.length] ?? 0) + getGapPenalty(currentProfile);
   }
   for (let updatedIndex = updatedProfiles.length - 1; updatedIndex >= 0; updatedIndex -= 1) {
-    dp[currentProfiles.length][updatedIndex] = dp[currentProfiles.length][updatedIndex + 1] + getGapPenalty(updatedProfiles[updatedIndex]!);
+    const lastRow = dp[currentProfiles.length];
+    const updatedProfile = updatedProfiles[updatedIndex];
+    if (!lastRow || !updatedProfile) continue;
+    lastRow[updatedIndex] = (lastRow[updatedIndex + 1] ?? 0) + getGapPenalty(updatedProfile);
   }
 
   for (let currentIndex = currentProfiles.length - 1; currentIndex >= 0; currentIndex -= 1) {
     for (let updatedIndex = updatedProfiles.length - 1; updatedIndex >= 0; updatedIndex -= 1) {
-      const pairScore = dp[currentIndex + 1][updatedIndex + 1] + getPairScore(currentProfiles[currentIndex]!, updatedProfiles[updatedIndex]!);
-      const removeScore = dp[currentIndex + 1][updatedIndex] + getGapPenalty(currentProfiles[currentIndex]!);
-      const addScore = dp[currentIndex][updatedIndex + 1] + getGapPenalty(updatedProfiles[updatedIndex]!);
-      dp[currentIndex][updatedIndex] = Math.max(pairScore, removeScore, addScore);
+      const currentRow = dp[currentIndex];
+      const nextRow = dp[currentIndex + 1];
+      const currentProfile = currentProfiles[currentIndex];
+      const updatedProfile = updatedProfiles[updatedIndex];
+      if (!currentRow || !nextRow || !currentProfile || !updatedProfile) continue;
+      const pairScore = (nextRow[updatedIndex + 1] ?? 0) + getPairScore(currentProfile, updatedProfile);
+      const removeScore = (nextRow[updatedIndex] ?? 0) + getGapPenalty(currentProfile);
+      const addScore = (currentRow[updatedIndex + 1] ?? 0) + getGapPenalty(updatedProfile);
+      currentRow[updatedIndex] = Math.max(pairScore, removeScore, addScore);
     }
   }
 
@@ -228,10 +240,13 @@ export function alignSourceUpdateLines(currentContent: string, updatedContent: s
   let updatedIndex = 0;
 
   while (currentIndex < currentProfiles.length && updatedIndex < updatedProfiles.length) {
-    const pairScore = dp[currentIndex + 1][updatedIndex + 1] + getPairScore(currentProfiles[currentIndex]!, updatedProfiles[updatedIndex]!);
-    const removeScore = dp[currentIndex + 1][updatedIndex] + getGapPenalty(currentProfiles[currentIndex]!);
-    const addScore = dp[currentIndex][updatedIndex + 1] + getGapPenalty(updatedProfiles[updatedIndex]!);
-    const bestScore = dp[currentIndex][updatedIndex];
+    const currentProfile = currentProfiles[currentIndex];
+    const updatedProfile = updatedProfiles[updatedIndex];
+    if (!currentProfile || !updatedProfile) break;
+    const pairScore = (dp[currentIndex + 1]?.[updatedIndex + 1] ?? 0) + getPairScore(currentProfile, updatedProfile);
+    const removeScore = (dp[currentIndex + 1]?.[updatedIndex] ?? 0) + getGapPenalty(currentProfile);
+    const addScore = (dp[currentIndex]?.[updatedIndex + 1] ?? 0) + getGapPenalty(updatedProfile);
+    const bestScore = dp[currentIndex]?.[updatedIndex] ?? 0;
 
     if (bestScore === pairScore && pairScore >= removeScore && pairScore >= addScore) {
       rows.push({ currentLine: currentLines[currentIndex] ?? '', updatedLine: updatedLines[updatedIndex] ?? '' });

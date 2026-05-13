@@ -69,7 +69,7 @@ export function ReviewGradeActions({
     <div className="flex items-center gap-2">
       <ToolbarActionGroup ariaLabel="Review grade actions" className={groupClassName ?? 'gap-2'}>
         <ReviewGradeButton
-          buttonClassName={buttonClassName}
+          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={1}
@@ -77,7 +77,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
         <ReviewGradeButton
-          buttonClassName={buttonClassName}
+          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={2}
@@ -85,7 +85,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
         <ReviewGradeButton
-          buttonClassName={buttonClassName}
+          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={3}
@@ -93,7 +93,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
         <ReviewGradeButton
-          buttonClassName={buttonClassName}
+          {...(buttonClassName !== undefined ? { buttonClassName } : {})}
           buttonVariant={buttonVariant}
           disabled={isSubmitting}
           grade={4}
@@ -101,7 +101,7 @@ export function ReviewGradeActions({
           submitGrade={submitGrade}
         />
       </ToolbarActionGroup>
-      <ReviewGradeErrorFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} onRetry={onRetry} />
+      <ReviewGradeErrorFeedback errorMessage={errorMessage} isSubmitting={isSubmitting} {...(onRetry ? { onRetry } : {})} />
     </div>
   );
 }

@@ -28,9 +28,9 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
-  window.__FOLIOLE_APP_READY_REPORTED__ = undefined;
-  window.__FOLIOLE_BRIDGE_READY_REPORTED__ = undefined;
+  delete window.electronAPI;
+  delete window.__FOLIOLE_APP_READY_REPORTED__;
+  delete window.__FOLIOLE_BRIDGE_READY_REPORTED__;
 });
 
 it('returns null runtime invoke outside desktop runtime', () => {

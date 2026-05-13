@@ -41,7 +41,7 @@ it('creates an empty initial state with only special roots', () => {
   expect(isVirtualRootNode(initial.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
   expect(initial.nodesById[INBOX_NODE_ID]?.parentNodeId).toBeNull();
   expect(initial.nodesById[VIRTUAL_ROOT_NODE_ID]?.parentNodeId).toBeNull();
-  expect(initial.nodesById['node-1']).toBeUndefined();
+  expect(initial.nodesById['node-1']!).toBeUndefined();
   expect(initial.layout.listWidth).toBe(LIST_WIDTH_DEFAULT);
   expect(initial.layout.documentMaxWidth).toBe(DOCUMENT_WIDTH_DEFAULT);
   expect(initial.layout.rightSidebarWidth).toBe(RIGHT_SIDEBAR_WIDTH_DEFAULT);

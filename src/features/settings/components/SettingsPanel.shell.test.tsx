@@ -6,7 +6,7 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('uses the unified settings shell surfaces for sidebar and content area', () => {

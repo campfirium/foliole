@@ -110,7 +110,7 @@ function normalizePalette(input: unknown, mode: WorkspaceSurfaceColorMode = 'lig
   }
   const normalized = input
     .filter((value): value is string => typeof value === 'string')
-    .map((value, index) => sanitizeWorkspaceSurfaceColor(value, defaultPalette[index] ?? defaultPalette[0]));
+    .map((value, index) => sanitizeWorkspaceSurfaceColor(value, defaultPalette[index] ?? defaultPalette[0] ?? '#ffffff'));
   return normalized.length > 0 ? normalized : [...defaultPalette];
 }
 
@@ -208,7 +208,7 @@ export function applyWorkspaceSurfaceSettings(
   const assignments = normalizeAssignments(input.assignments, palette.length);
 
   WORKSPACE_SURFACE_REGION_IDS.forEach((regionId) => {
-    const color = palette[assignments[regionId]] ?? palette[0];
+    const color = palette[assignments[regionId]] ?? palette[0] ?? '#ffffff';
     root.style.setProperty(`--workspace-region-${regionId}-bg`, color);
     root.style.setProperty(
       `--workspace-region-${regionId}-divider-mix-target`,
@@ -220,15 +220,15 @@ export function applyWorkspaceSurfaceSettings(
     );
   });
   WORKSPACE_FOLDER_TOPIC_DIVIDER_ROWS.forEach((row) => {
-    const folderColor = palette[assignments[`${row}-folder`]] ?? palette[0];
-    const topicColor = palette[assignments[`${row}-topic`]] ?? palette[0];
+    const folderColor = palette[assignments[`${row}-folder`]] ?? palette[0] ?? '#ffffff';
+    const topicColor = palette[assignments[`${row}-topic`]] ?? palette[0] ?? '#ffffff';
     root.style.setProperty(
       `--workspace-divider-${row}-folder-topic-opacity`,
       folderColor === topicColor ? '0' : '1'
     );
   });
-  const sidebarColor = palette[assignments['main-sidebar']] ?? palette[0];
-  const documentColor = palette[assignments['main-document']] ?? palette[0];
+  const sidebarColor = palette[assignments['main-sidebar']] ?? palette[0] ?? '#ffffff';
+  const documentColor = palette[assignments['main-document']] ?? palette[0] ?? '#ffffff';
   const documentTokenColor = deriveDocumentTokenSurfaceColor(documentColor, sidebarColor);
   root.style.setProperty('--workspace-region-main-document-token-bg', documentTokenColor);
   root.style.setProperty(

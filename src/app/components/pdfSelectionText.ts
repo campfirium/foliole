@@ -110,10 +110,17 @@ function resolveLargestRectCluster(
   }
   const sorted = [...rects].sort((left, right) => (left.y === right.y ? left.x - right.x : left.y - right.y));
   const clusters: Array<Array<{ height: number; width: number; x: number; y: number }>> = [];
-  let currentCluster: Array<{ height: number; width: number; x: number; y: number }> = [sorted[0]];
+  const firstRect = sorted[0];
+  if (!firstRect) {
+    return rects;
+  }
+  let currentCluster: Array<{ height: number; width: number; x: number; y: number }> = [firstRect];
   for (let index = 1; index < sorted.length; index += 1) {
     const currentRect = sorted[index];
     const previousRect = currentCluster[currentCluster.length - 1];
+    if (!currentRect || !previousRect) {
+      continue;
+    }
     const rowGap = currentRect.y - (previousRect.y + previousRect.height);
     const threshold = Math.max(previousRect.height * 0.9, 0.018);
     if (rowGap > threshold) {

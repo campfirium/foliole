@@ -60,8 +60,8 @@ export async function classifySource(
     const prepared = await loadPreparedKeepImportRecord(config, source, new Date().toISOString());
     const highlightPreview = buildImportedHighlightPreviewFromMatches({
       content: prepared.content,
-      matchedHighlights: prepared.matchedHighlights,
-      unmatchedHighlights: prepared.unmatchedHighlights,
+      ...(prepared.matchedHighlights === undefined ? {} : { matchedHighlights: prepared.matchedHighlights }),
+      ...(prepared.unmatchedHighlights === undefined ? {} : { unmatchedHighlights: prepared.unmatchedHighlights }),
       sourceName: sourcePath
     });
     return {

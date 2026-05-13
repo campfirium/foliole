@@ -208,8 +208,8 @@ describe('MarkdownEditor table preview', () => {
 
     const dialog = await screen.findByRole('dialog');
     const widths = Array.from(dialog.querySelectorAll('col')).map((column) => Number.parseFloat((column as HTMLTableColElement).style.width));
-    expect(widths[1]).toBeGreaterThan(widths[0]);
-    expect(widths[1]).toBeGreaterThan(widths[2]);
+    expect(widths[1]!).toBeGreaterThan(widths[0]!);
+    expect(widths[1]!).toBeGreaterThan(widths[2]!);
   });
 
   it('renders inline markdown inside the table preview dialog', async () => {

@@ -38,9 +38,9 @@ describe('companion handoff notification timing', () => {
     });
 
     expect(notifications).toHaveLength(2);
-    expect(notifications[0].schedule.at.toISOString()).toBe('2026-04-25T18:03:00.000Z');
-    expect(notifications[1].schedule.at.getHours()).toBe(18);
-    expect(notifications[1].schedule.at.getMinutes()).toBe(0);
+    expect(notifications[0]!.schedule.at.toISOString()).toBe('2026-04-25T18:03:00.000Z');
+    expect(notifications[1]!.schedule.at.getHours()).toBe(18);
+    expect(notifications[1]!.schedule.at.getMinutes()).toBe(0);
   });
 
   it('moves fixed reminders to tomorrow when the time has passed', async () => {

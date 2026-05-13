@@ -23,7 +23,7 @@ function createMockElectronApi(invoke: NativeInvoke) {
 }
 
 beforeEach(() => {
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('loads desktop companion pairing overview through the native bridge', async () => {

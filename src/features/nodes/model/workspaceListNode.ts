@@ -53,7 +53,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     priority: node.priority ?? null,
     reading: node.reading ?? null,
     review: node.review,
-    specialKind: node.specialKind,
+    ...(node.specialKind ? { specialKind: node.specialKind } : {}),
     title: node.title,
     updatedAt: node.updatedAt
   };

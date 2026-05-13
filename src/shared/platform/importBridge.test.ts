@@ -116,7 +116,7 @@ function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 it('normalizes the native import file payload', async () => {
   const invoke = vi.fn().mockResolvedValue({

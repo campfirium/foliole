@@ -128,6 +128,9 @@ export function applyResolvedOpenings(input: {
   };
 
   for (const nodeId of input.nodeOrder) {
-    input.nodesById[nodeId].openingText = resolveNodeOpening(nodeId);
+    const node = input.nodesById[nodeId];
+    if (node) {
+      node.openingText = resolveNodeOpening(nodeId);
+    }
   }
 }

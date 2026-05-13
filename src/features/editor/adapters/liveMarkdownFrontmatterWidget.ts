@@ -64,7 +64,7 @@ function openFrontmatterHref(view: EditorView, href: string, event: MouseEvent |
   event.preventDefault();
   event.stopPropagation();
   onOpenExternalLink({
-    anchorPoint: 'clientX' in event ? { x: event.clientX, y: event.clientY } : undefined,
+    ...('clientX' in event ? { anchorPoint: { x: event.clientX, y: event.clientY } } : {}),
     href
   });
 }

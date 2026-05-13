@@ -12,7 +12,7 @@ function readWorkspaceLayoutPropsKeys() {
   if (!match) {
     throw new Error('WorkspaceLayoutProps interface not found');
   }
-  return Array.from(match[1].matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*):/gm), ([, key]) => key);
+  return Array.from((match[1] ?? '').matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*):/gm), ([, key]) => key);
 }
 
 describe('WorkspaceLayout props boundary', () => {

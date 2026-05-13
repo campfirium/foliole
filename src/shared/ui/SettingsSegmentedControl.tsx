@@ -81,8 +81,8 @@ export function SettingsSegmentedRow(props: SettingsSegmentedRowProps) {
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <SettingsSegmentedControl
           ariaLabel={props.ariaLabel ?? props.label}
-          className={props.className}
-          disabled={props.disabled}
+          {...(props.className !== undefined ? { className: props.className } : {})}
+          {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
           onChange={props.onChange}
           options={props.options}
           value={props.value}

@@ -12,8 +12,9 @@ function focusTreeItem(nodeId: string) {
 function findParentRowNodeId(rows: NodeTreeRow[], index: number): string | null {
   const currentDepth = rows[index]?.depth ?? 0;
   for (let i = index - 1; i >= 0; i -= 1) {
-    if (rows[i].depth < currentDepth) {
-      return rows[i].node.id;
+    const row = rows[i];
+    if (row && row.depth < currentDepth) {
+      return row.node.id;
     }
   }
   return null;
@@ -38,19 +39,19 @@ function handleLinearNavigationKey(
   onSelect: (nodeId: string) => void
 ): boolean {
   if (key === 'ArrowDown' && rows[index + 1]) {
-    selectAndFocus(rows[index + 1].node.id, onSelect);
+    selectAndFocus(rows[index + 1]?.node.id ?? '', onSelect);
     return true;
   }
   if (key === 'ArrowUp' && rows[index - 1]) {
-    selectAndFocus(rows[index - 1].node.id, onSelect);
+    selectAndFocus(rows[index - 1]?.node.id ?? '', onSelect);
     return true;
   }
   if (key === 'Home' && rows[0]) {
-    selectAndFocus(rows[0].node.id, onSelect);
+    selectAndFocus(rows[0]?.node.id ?? '', onSelect);
     return true;
   }
   if (key === 'End' && rows[rows.length - 1]) {
-    selectAndFocus(rows[rows.length - 1].node.id, onSelect);
+    selectAndFocus(rows[rows.length - 1]?.node.id ?? '', onSelect);
     return true;
   }
   return false;
@@ -101,6 +102,7 @@ export function createNodeListRowKeydownHandler({
     if (index < 0) return;
 
     const row = rows[index];
+    if (!row) return;
     const isCollapsed = collapsedNodeIds.has(nodeId);
     const linearHandled = handleLinearNavigationKey(event.key, index, rows, onSelect);
     const hierarchyHandled = handleHierarchyNavigationKey(

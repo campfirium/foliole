@@ -92,7 +92,7 @@ export function resolvePdfSource(sourceHint: string) {
 }
 
 export function createJumpRequest(nextIdRef: MutableRefObject<number>, page: number, positionY?: number): PdfJumpRequest {
-  const request = { id: nextIdRef.current, page, positionY };
+  const request = { id: nextIdRef.current, page, ...(positionY !== undefined ? { positionY } : {}) };
   nextIdRef.current += 1;
   return request;
 }

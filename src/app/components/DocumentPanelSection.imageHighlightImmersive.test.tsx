@@ -18,7 +18,6 @@ const DOCUMENT_PANEL_PROPS = {
   editorAppearanceKey: 'appearance-1',
   editorContent: BASE_NODE_CONTENT,
   editorNodeId: 'node-2',
-  editorNodeViewState: undefined,
   isEditorReadOnly: false,
   isImmersiveEditing: false,
   isImmersiveMode: true,

@@ -56,7 +56,7 @@ export async function loadCompanionSyncObjects(
   }
   return (await FolioleCompanionSync.loadSyncObjects({
     object_ids: objectIds,
-    object_types: objectTypes
+    ...(objectTypes ? { object_types: objectTypes } : {})
   })).objects;
 }
 
@@ -108,7 +108,7 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as CompanionPdfPageTextSearchResult[];
   }
-  return (await FolioleCompanionSync.searchPdfPageText({ limit, query })).results;
+  return (await FolioleCompanionSync.searchPdfPageText({ ...(limit !== undefined ? { limit } : {}), query })).results;
 }
 
 export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
@@ -120,7 +120,7 @@ export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
       acks: acks.map((ack) => ({
         client_op_id: ack.clientOpId,
         identity: ack.identity,
-        state_seq: ack.stateSeq,
+        ...(ack.stateSeq !== undefined ? { state_seq: ack.stateSeq } : {}),
         status: ack.status
       }))
     })

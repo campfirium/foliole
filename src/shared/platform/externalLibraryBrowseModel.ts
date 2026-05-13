@@ -103,7 +103,7 @@ function compareDirectoryPath(left: string, right: string) {
   const rightSegments = normalizeExternalDirectoryPath(right).split('/').filter(Boolean);
   const length = Math.min(leftSegments.length, rightSegments.length);
   for (let index = 0; index < length; index += 1) {
-    const result = compareNaturalName(leftSegments[index], rightSegments[index]);
+    const result = compareNaturalName(leftSegments[index] ?? '', rightSegments[index] ?? '');
     if (result !== 0) return result;
   }
   return leftSegments.length - rightSegments.length;

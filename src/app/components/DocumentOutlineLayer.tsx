@@ -104,7 +104,7 @@ function OutlineList({
             <li key={`${item.from}-${item.text}`}>
               <OutlineItem
                 isActive={index === activeIndex}
-                itemRef={index === activeIndex ? setActiveItemRef : undefined}
+                {...(index === activeIndex ? { itemRef: setActiveItemRef } : {})}
                 level={item.level}
                 onSelect={() => onRevealPosition(item.from)}
                 text={item.text}

@@ -32,8 +32,8 @@ it('preserves the current alpha across fixed palette families', () => {
   expect(source).not.toBeNull();
   const families = getWorkspaceSurfaceRecommendationFamilies(source!, DEFAULT_OPTIONS);
 
-  expect(formatWorkspaceSurfaceColorCss(families[0].tones[0]).endsWith('80')).toBe(true);
-  expect(formatWorkspaceSurfaceColorCss(families[10].tones[4]).endsWith('80')).toBe(true);
+  expect(formatWorkspaceSurfaceColorCss(families[0]!.tones[0]!).endsWith('80')).toBe(true);
+  expect(formatWorkspaceSurfaceColorCss(families[10]!.tones[4]!).endsWith('80')).toBe(true);
 });
 
 it('uses a visibly different white-document variant for fixed palettes', () => {
@@ -67,7 +67,7 @@ it('keeps the graphite default palette close to a true gray baseline', () => {
     .find((family) => family.id === 'default-graphite-paper');
 
   expect(grayFamily).toBeDefined();
-  const firstTone = grayFamily!.tones[0];
+  const firstTone = grayFamily!.tones[0]!;
   expect(Math.abs(firstTone.r - firstTone.g)).toBeLessThanOrEqual(3);
   expect(Math.abs(firstTone.g - firstTone.b)).toBeLessThanOrEqual(3);
 });

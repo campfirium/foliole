@@ -5,6 +5,7 @@ import type {
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeContract';
+import { definedProps } from '../../shared/lib/definedProps';
 import {
   AppButton,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -154,8 +155,10 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
         )
       );
     },
-    onPreviewCleanup: props.onPreviewCleanup,
-    onRunCleanup: props.onRunCleanup
+    ...definedProps({
+      onPreviewCleanup: props.onPreviewCleanup,
+      onRunCleanup: props.onRunCleanup
+    })
   });
 
   return (

@@ -163,7 +163,8 @@ it('loads generic sync object payloads from object state rows', () => {
       updated_at: '2026-04-21T16:20:00.000Z'
     })
   ]);
-  expect(JSON.parse(loadSyncObjects(['user_space:windows:desktop:*:app_settings'])[0].payload_json ?? '{}')).toMatchObject({
+  const [settingRecord] = loadSyncObjects(['user_space:windows:desktop:*:app_settings']);
+  expect(JSON.parse(settingRecord?.payload_json ?? '{}')).toMatchObject({
     key: 'app_settings',
     value_json: '{"theme":"dark"}'
   });
@@ -179,11 +180,11 @@ it('loads import source and external folder sync object payloads', () => {
     'external_folder:folder-1',
     'import_source:source-1'
   ]);
-  expect(JSON.parse(records[1].payload_json ?? '{}')).toMatchObject({
+  expect(JSON.parse(records[1]?.payload_json ?? '{}')).toMatchObject({
     source_fingerprint: 'source-1',
     source_name: 'alpha.md'
   });
-  expect(JSON.parse(records[0].payload_json ?? '{}')).toMatchObject({
+  expect(JSON.parse(records[0]?.payload_json ?? '{}')).toMatchObject({
     folder_path: '/docs',
     excluded_dirs_json: '[".git"]'
   });
@@ -200,7 +201,7 @@ it('loads attachment metadata and blob manifest sync payloads', () => {
     object_id: 'att-1',
     object_type: 'attachment'
   });
-  expect(JSON.parse(record.payload_json ?? '{}')).toMatchObject({
+  expect(JSON.parse(record?.payload_json ?? '{}')).toMatchObject({
     attachment_id: 'att-1',
     original_name: 'cover.png',
     blob: {
@@ -225,7 +226,7 @@ it('exports view state source but excludes it from canonical content hash', () =
   insertViewStateRecord();
 
   const [record] = loadSyncObjects(['session_resume:windows:desktop:desktop-test:node:node-1'], ['view_state']);
-  const payload = JSON.parse(record.payload_json ?? '{}') as Record<string, unknown>;
+  const payload = JSON.parse(record?.payload_json ?? '{}') as Record<string, unknown>;
 
   expect(payload).toMatchObject({
     node_id: 'node-1',

@@ -42,7 +42,7 @@ it('does not reload runtime backlinks when only surrounding node content changes
 
   await waitFor(() => expect(loadRuntimeNodeBacklinks).toHaveBeenCalledTimes(1));
 
-  nodesById['node-2'].content = 'Updated surrounding content.';
+  nodesById['node-2']!.content = 'Updated surrounding content.';
   view.rerender(
     createSectionElement({
       nodeOrder: props.nodeOrder,

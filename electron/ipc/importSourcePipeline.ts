@@ -3,24 +3,16 @@ import path from 'node:path';
 
 import type {
   ImportHighlightPolicy,
-  ImportSourceKind,
-  ImportSourceTrackingMode,
-  PreparedImportRecord
+  ImportSourceKind
 } from '../../lib/core/import/contract.js';
-import {
-  buildRetainedDegradedImportContent,
-  type ImportContextPolicy,
-  type ImportSidecarHighlight,
-  type ImportSourceProfile
-} from '../../lib/core/import/controlledContext.js';
-import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
-import {
-  convertHtmlToMarkdownCompatible,
-  formatHtmlConversionDegradedReason
-} from '../../lib/core/import/htmlToMarkdownCompatible.js';
+import { buildRetainedDegradedImportContent } from '../../lib/core/import/controlledContext.js';
+import { convertHtmlToMarkdownCompatible, formatHtmlConversionDegradedReason } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
 import { resolveLocalImageInboxImportMode, type LocalImageInboxImportMode } from '../import/localImageInboxSource.js';
+
+import { buildPreparedImportRecord, type LoadPreparedImportOptions } from './importPreparedRecord.js';
+export { buildPreparedImportRecord };
 
 export type DirectoryImportAdapterId = 'html_directory' | 'markdown_directory' | 'obsidian_vault' | 'text_directory';
 
@@ -127,51 +119,9 @@ export function toImportPayload(content: string, kind: ImportSourceKind, sourceN
   };
 }
 
-export function buildPreparedImportRecord(
-  source: Pick<ImportSourceDescriptor, 'filePath' | 'kind' | 'sourceName'>,
-  input: {
-    content: string;
-    contextPolicy?: ImportContextPolicy;
-    degradedReason?: string | null;
-    highlightSidecar?: ImportSidecarHighlight[];
-    highlightPolicy?: ImportHighlightPolicy;
-    importedAt: string;
-    sourceIdentity?: string;
-    sourceLocator?: string;
-    sourceProfile?: ImportSourceProfile;
-    sourceTrackingMode?: ImportSourceTrackingMode;
-    titleStrategy?: ImportNodeTitleStrategy;
-  }
-): PreparedImportRecord {
-  return createPreparedDesktopTextImport({
-    content: input.content,
-    contextPolicy: input.contextPolicy,
-    degradedReason: input.degradedReason,
-    fileName: source.sourceName,
-    filePath: source.filePath,
-    highlightSidecar: input.highlightSidecar,
-    highlightPolicy: input.highlightPolicy,
-    importedAt: input.importedAt,
-    kind: source.kind,
-    sourceIdentity: input.sourceIdentity,
-    sourceLocator: input.sourceLocator,
-    sourceProfile: input.sourceProfile,
-    sourceTrackingMode: input.sourceTrackingMode,
-    titleStrategy: input.titleStrategy
-  });
-}
-
 export async function loadPreparedImportRecord(
   source: Pick<ImportSourceDescriptor, 'filePath' | 'kind' | 'sourceName'>,
-  options: {
-    contextPolicy?: ImportContextPolicy;
-    highlightSidecar?: ImportSidecarHighlight[];
-    highlightPolicy?: ImportHighlightPolicy;
-    importedAt: string;
-    sourceProfile?: ImportSourceProfile;
-    sourceTrackingMode?: ImportSourceTrackingMode;
-    titleStrategy?: ImportNodeTitleStrategy;
-  }
+  options: LoadPreparedImportOptions
 ) {
   const payload =
     source.kind === 'epub' || source.kind === 'pdf'
@@ -180,7 +130,9 @@ export async function loadPreparedImportRecord(
   return buildPreparedImportRecord(source, {
     ...payload,
     ...options,
-    sourceProfile: options.sourceProfile ?? (source.kind === 'epub' ? 'epub' : undefined)
+    ...(options.sourceProfile !== undefined || source.kind === 'epub'
+      ? { sourceProfile: options.sourceProfile ?? 'epub' }
+      : {})
   });
 }
 

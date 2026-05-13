@@ -1,4 +1,5 @@
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';
@@ -28,7 +29,11 @@ export function ReadwiseBooksCatalogPanel(props: {
     <ImportCatalogLayout
       countLabel={props.countLabel}
       emptyState={{ description: 'No books discovered yet.', title: 'Readwise Books is empty' }}
-      errorState={props.errorMessage ? { description: 'Try again to load imported Readwise books.', onRetry: props.onRetry, title: props.errorMessage } : undefined}
+      {...definedProps({
+        errorState: props.errorMessage
+          ? { description: 'Try again to load imported Readwise books.', onRetry: props.onRetry, title: props.errorMessage }
+          : undefined
+      })}
       hasItems={props.books.length > 0}
       isLoading={props.isLoading}
       loadingState={{ description: 'Checking imported Readwise books.', title: 'Loading Readwise Books' }}

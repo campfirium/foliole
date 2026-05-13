@@ -29,7 +29,7 @@ export function RailItemIcon({
   size?: number;
   strokeWidth?: number;
 }) {
-  return <LucideCatalogIcon iconId={iconId} size={size} strokeWidth={strokeWidth} />;
+  return <LucideCatalogIcon {...(iconId ? { iconId } : {})} size={size} strokeWidth={strokeWidth} />;
 }
 
 function RailCommandButton({
@@ -46,7 +46,7 @@ function RailCommandButton({
       <WorkspaceRailTooltipButton
         className={RAIL_BUTTON_CLASS_NAME}
         data-active={isActive}
-        icon={<RailItemIcon iconId={item.iconId} />}
+        icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item)}
         onClick={() => onRun(item.commandId)}
       />
@@ -107,7 +107,7 @@ export function WorkspaceRailContextMenu({
           onClick={() => onToggle(item.id, !item.visible)}
         >
           <span className="inline-flex min-w-0 items-center gap-3">
-            <RailItemIcon iconId={item.iconId} />
+            <RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />
             <span className="truncate">{getWorkspaceRailItemLabel(item)}</span>
           </span>
           {item.visible ? <Check aria-hidden="true" className="shrink-0" size={15} /> : <span className="size-[15px] shrink-0" />}

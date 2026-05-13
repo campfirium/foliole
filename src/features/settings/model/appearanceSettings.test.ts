@@ -26,7 +26,7 @@ import {
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('normalizes legacy Windows registry-like font names when reading custom fonts', () => {

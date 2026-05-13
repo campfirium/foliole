@@ -24,7 +24,7 @@ export function PdfViewportPlaceholderStack(props: PdfViewportPlaceholderStackPr
       {Array.from({ length: totalPages }, (_, index) =>
         renderPdfPagePlaceholder({
           fitWidthTargetWidth: props.fitWidthTargetWidth,
-          pageDimensions: props.pageDimensionsByNumber[index + 1],
+          pageDimensions: props.pageDimensionsByNumber[index + 1] ?? null,
           pageElementsRef: props.pageElementsRef,
           pageNumber: index + 1,
           rotation: props.rotation,

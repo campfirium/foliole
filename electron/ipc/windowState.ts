@@ -38,8 +38,8 @@ function normalizeWindowStatePayload(payload: unknown): PersistedWindowState | n
   const x = toFiniteNumber(data.x);
   const y = toFiniteNumber(data.y);
   return {
-    x: x ?? undefined,
-    y: y ?? undefined,
+    ...(x === null ? {} : { x }),
+    ...(y === null ? {} : { y }),
     width,
     height,
     isMaximized: data.isMaximized === true,

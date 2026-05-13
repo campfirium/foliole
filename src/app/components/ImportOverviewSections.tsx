@@ -179,11 +179,11 @@ export function ReadwiseBooksInventorySection({
           <ReadwiseBookInventoryItem
             book={book}
             key={book.bookKey}
-            nodesById={nodesById}
-            onOpenBookNode={onOpenBookNode}
-            onResetBookImport={onResetBookImport}
+            {...(nodesById ? { nodesById } : {})}
+            {...(onOpenBookNode ? { onOpenBookNode } : {})}
+            {...(onResetBookImport ? { onResetBookImport } : {})}
             scannedAt={formatImportTime(inventory?.scannedAt ?? '')}
-            resettingNodeId={resettingNodeId}
+            {...(resettingNodeId !== undefined ? { resettingNodeId } : {})}
           />
         ))}
       </ul>

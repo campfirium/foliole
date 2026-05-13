@@ -8,7 +8,8 @@ import {
 } from '../features/nodes/model/nodeTypes';
 
 function createLocatorValue(locators: TextAnchorLocator[]) {
-  return locators.length === 1 ? locators[0] : { ranges: locators };
+  const [locator] = locators;
+  return locators.length === 1 && locator ? locator : { ranges: locators };
 }
 
 function areLocatorsEqual(left: TextAnchorLocator[], right: TextAnchorLocator[]) {
@@ -71,7 +72,7 @@ export function syncTextAnchorLocatorsForParentContent(args: {
     const nextNode = buildNextTextAnchorNode({
       nextContent: args.nextContent,
       node,
-      previousContent: args.previousContent,
+      ...(args.previousContent !== undefined ? { previousContent: args.previousContent } : {}),
       timestamp: args.timestamp
     });
     if (!nextNode) {

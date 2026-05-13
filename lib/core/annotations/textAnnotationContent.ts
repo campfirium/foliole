@@ -18,7 +18,7 @@ export function appendHighlightCardNote(input: {
 }) {
   return formatHighlightCardContent({
     note: input.note,
-    notePrefix: input.notePrefix,
+    ...(input.notePrefix === undefined ? {} : { notePrefix: input.notePrefix }),
     text: input.originalText || input.content
   });
 }

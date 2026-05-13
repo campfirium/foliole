@@ -16,7 +16,7 @@ function createMockElectronApi(invoke: NativeInvoke) {
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('hydrates local settings from runtime snapshot without writing during startup', async () => {

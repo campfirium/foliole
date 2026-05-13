@@ -15,7 +15,7 @@ export type DbErrorCode = 'SQLITE_BUSY' | 'SQLITE_LOCKED' | 'SQLITE_CONSTRAINT' 
 
 export class DbPortError extends Error {
   readonly code: DbErrorCode;
-  readonly cause?: unknown;
+  override readonly cause?: unknown;
 
   constructor(message: string, code: DbErrorCode = 'SQLITE_UNKNOWN', cause?: unknown) {
     super(message);

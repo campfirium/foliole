@@ -60,7 +60,7 @@ export function beginNodeSelectionFlow(nodeId: string, nodesById: Record<string,
     positionRequestedAt: shouldCarryPendingPosition ? existingFlow?.positionRequestedAt ?? null : null,
     requestedAt: existingFlow?.requestedAt ?? existingFlow?.selectedAt ?? now,
     selectedAt: existingFlow?.selectedAt ?? existingFlow?.appliedAt ?? now,
-    timeline: existingFlow?.timeline
+    ...(existingFlow?.timeline ? { timeline: existingFlow.timeline } : {})
   });
   state.activeFlow.lastContentSyncCompletedAt = existingFlow?.lastContentSyncCompletedAt ?? null;
   state.activeFlow.lastContentSyncLength = existingFlow?.lastContentSyncLength ?? null;

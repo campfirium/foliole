@@ -4,11 +4,11 @@ import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemir
 import { trailingDividerFacet } from './liveMarkdownState';
 
 class TrailingDividerWidget extends WidgetType {
-  eq(other: TrailingDividerWidget) {
+  override eq(other: TrailingDividerWidget) {
     return other instanceof TrailingDividerWidget;
   }
 
-  toDOM() {
+  override toDOM() {
     const wrapper = document.createElement('div');
     wrapper.className = 'cm-document-section-divider';
     wrapper.setAttribute('aria-hidden', 'true');

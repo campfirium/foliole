@@ -19,7 +19,7 @@ afterEach(async () => {
   }
 });
 
-it('keeps the readwise article title as a level-one heading in imported content', async () => {
+it('uses the readwise full document title as the node title without writing it into content', async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-prepared-import-'));
   const highlightDirectoryPath = path.join(tempRoot, 'Articles');
   const fullDocumentPath = path.join(tempRoot, 'Full Document Contents', 'Articles', 'Sample Article.md');
@@ -27,12 +27,12 @@ it('keeps the readwise article title as a level-one heading in imported content'
   await fs.mkdir(highlightDirectoryPath, { recursive: true });
   await fs.writeFile(
     path.join(highlightDirectoryPath, 'Sample Article.md'),
-    '# Sample Article\n\n## Highlights\nThis is the highlighted sentence. [...] (https://example.com)\n',
+    '# Highlight File Title\n\n## Highlights\nThis is the highlighted sentence. [...] (https://example.com)\n',
     'utf8'
   );
   await fs.writeFile(
     fullDocumentPath,
-    '## Metadata\n- Author: Someone\n\n## Full Document\nBefore the quote. This is the highlighted sentence. After the quote.\n',
+    '# Full Document Title\n\n## Metadata\n- Author: Someone\n\n## Full Document\nBefore the quote. This is the highlighted sentence. After the quote.\n',
     'utf8'
   );
 
@@ -54,9 +54,106 @@ it('keeps the readwise article title as a level-one heading in imported content'
     }
   );
 
-  expect(prepared.content).toContain('# Sample Article');
+  expect(prepared.nodeTitle).toBe('Full Document Title');
+  expect(prepared.hideTitleHeading).toBe(false);
+  expect(prepared.content).not.toContain('# Full Document Title');
+  expect(prepared.content).not.toContain('# Highlight File Title');
   expect(prepared.content).toContain('author: Someone');
   expect(prepared.content).toContain('Before the quote.');
+});
+
+it('falls back to the readwise full document title when the highlight file is absent', async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-prepared-import-no-highlight-'));
+  const highlightDirectoryPath = path.join(tempRoot, 'Articles');
+  const fullDocumentPath = path.join(tempRoot, 'Full Document Contents', 'Articles', 'Sample Article.md');
+  await fs.mkdir(path.dirname(fullDocumentPath), { recursive: true });
+  await fs.mkdir(highlightDirectoryPath, { recursive: true });
+  await fs.writeFile(
+    fullDocumentPath,
+    '# Full Document Title\n\n## Metadata\n- Author: Someone\n\n## Full Document\nBody only.\n',
+    'utf8'
+  );
+
+  const prepared = await loadPreparedReadwiseImportRecord(
+    {
+      adapterId: 'markdown_directory',
+      filePath: fullDocumentPath,
+      kind: 'markdown',
+      mtimeMs: 0,
+      sizeBytes: 0,
+      sourceName: 'Sample Article.md'
+    },
+    {
+      highlightDirectoryPath,
+      highlightPolicy: 'reference_only',
+      importedAt: '2026-03-26T01:00:00.000Z',
+      kind: 'articles',
+      readwiseConfig: createDefaultReadwiseReaderConfig()
+    }
+  );
+
+  expect(prepared.nodeTitle).toBe('Full Document Title');
+  expect(prepared.content).not.toContain('# Full Document Title');
+  expect(prepared.content).toContain('Body only.');
+});
+
+it('lifts readwise full document body headings without creating body title headings', async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-prepared-import-headings-'));
+  const highlightDirectoryPath = path.join(tempRoot, 'Articles');
+  const fullDocumentPath = path.join(tempRoot, 'Full Document Contents', 'Articles', 'Sample Article.md');
+  await fs.mkdir(path.dirname(fullDocumentPath), { recursive: true });
+  await fs.mkdir(highlightDirectoryPath, { recursive: true });
+  await fs.writeFile(path.join(highlightDirectoryPath, 'Sample Article.md'), '# Highlight File Title\n', 'utf8');
+  await fs.writeFile(
+    fullDocumentPath,
+    [
+      '# Full Document Title',
+      '',
+      '## Metadata',
+      '- Author: Someone',
+      '',
+      '## Full Document',
+      'Intro.',
+      '',
+      '## Already body section',
+      '',
+      '#### **什么是 Pixel 认证**',
+      '',
+      '##### **账户关联国家/地区**',
+      '',
+      '```md',
+      '### Code heading',
+      '```',
+      '',
+      '    ### Indented code heading'
+    ].join('\n'),
+    'utf8'
+  );
+
+  const prepared = await loadPreparedReadwiseImportRecord(
+    {
+      adapterId: 'markdown_directory',
+      filePath: fullDocumentPath,
+      kind: 'markdown',
+      mtimeMs: 0,
+      sizeBytes: 0,
+      sourceName: 'Sample Article.md'
+    },
+    {
+      highlightDirectoryPath,
+      highlightPolicy: 'reference_only',
+      importedAt: '2026-03-26T01:00:00.000Z',
+      kind: 'articles',
+      readwiseConfig: createDefaultReadwiseReaderConfig()
+    }
+  );
+
+  expect(prepared.content).toContain('## Already body section');
+  expect(prepared.content).toContain('### **什么是 Pixel 认证**');
+  expect(prepared.content).toContain('#### **账户关联国家/地区**');
+  expect(prepared.content).toContain('```md\n### Code heading\n```');
+  expect(prepared.content).toContain('    ### Indented code heading');
+  expect(prepared.hideTitleHeading).toBe(false);
 });
 
 it('splits default readwise bullet highlights without requiring a custom starter setting', async () => {

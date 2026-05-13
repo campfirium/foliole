@@ -26,6 +26,7 @@ function moveTab(ids: CompanionTabSlotId[], fromId: CompanionTabSlotId, toId: Co
   const toIndex = next.indexOf(toId);
   if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return ids;
   const [moved] = next.splice(fromIndex, 1);
+  if (!moved) return ids;
   next.splice(toIndex, 0, moved);
   return next;
 }
@@ -131,7 +132,7 @@ export function CompanionTabsSettingsContent(props: {
             {tabId === 'shortcut' ? (
               <TabTargetSelect config={props.config} onConfigChange={props.onConfigChange} />
             ) : (
-              <span className="flex-1 text-base font-medium text-foreground">{TAB_LABELS[tabId]}</span>
+              <span className="flex-1 text-base font-medium text-foreground">{TAB_LABELS[tabId] ?? tabId}</span>
             )}
           </div>
         ))}

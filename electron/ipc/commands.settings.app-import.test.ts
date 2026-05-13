@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest, resetCommandsSettingsTestDoubles } from './commands.settings.testSupport.js';
+import { updateLibraryPathSetting } from './libraryPaths.js';
 
 beforeEach(() => {
   resetCommandsSettingsTestDoubles();
@@ -40,6 +41,16 @@ async function expectLibraryPathCommands() {
       args: { location: 'assets_dir', path: '/attachment-vault' }
     })
   ).resolves.toMatchObject({ assets_dir: '/attachment-vault' });
+  await expect(
+    handleInvokeRequest({
+      command: 'update_library_path_setting',
+      args: { location: 'cache_dir', path: '/cache-vault' }
+    })
+  ).rejects.toThrow('invalid argument: location');
+  expect(vi.mocked(updateLibraryPathSetting)).not.toHaveBeenCalledWith({
+    location: 'cache_dir',
+    path: '/cache-vault'
+  });
 }
 
 async function expectSyncAndAppSettingsCommands() {

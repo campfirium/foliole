@@ -96,7 +96,6 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     isImmersiveMode: false,
     onEnterImmersiveEdit: () => undefined,
     editorNodeId: 'node-1',
-    editorNodeViewState: undefined,
     nodeOrder: ['node-1'],
     trashedNodeIds: [],
     nodesById: { 'node-1': baseNode },

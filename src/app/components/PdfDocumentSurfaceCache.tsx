@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { updatePdfSurfaceCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -124,7 +125,7 @@ function renderCachedSurfaceEntry(
         highlightLocators={isActiveNode ? props.highlightLocators : []}
         isVisible={isVisible}
         nodeId={entry.nodeId}
-        nodeViewState={isActiveNode ? props.editorNodeViewState : undefined}
+        {...definedProps({ nodeViewState: isActiveNode ? props.editorNodeViewState : undefined })}
         onCreateHighlightFromSelection={props.onCreatePdfHighlight}
         onPersistViewState={(viewState) => {
           if (isActiveNode) {

@@ -42,7 +42,9 @@ export async function applySyncReviewLogAsync(
   options: ApplySyncReviewLogOptions = {}
 ) {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-review-log-apply' });
-  return applyReviewLogRecordsWithDbPort(port, records, {
-    includeAlreadyApplied: options.includeAlreadyApplied
-  });
+  return applyReviewLogRecordsWithDbPort(
+    port,
+    records,
+    options.includeAlreadyApplied === undefined ? {} : { includeAlreadyApplied: options.includeAlreadyApplied }
+  );
 }

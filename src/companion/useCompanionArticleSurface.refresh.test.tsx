@@ -156,7 +156,7 @@ describe('useCompanionArticleSurface remote refresh', () => {
     rerender({
       workspaceSync: createWorkspaceSync(createSnapshot({
         reading: {
-          ...dueSnapshot.nodesById['article-1'].reading!,
+          ...dueSnapshot.nodesById['article-1']!.reading!,
           nextAt: '2099-01-01T00:00:00.000Z'
         }
       }))

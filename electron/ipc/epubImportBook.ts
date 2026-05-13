@@ -42,7 +42,11 @@ function decodeText(bytes: Uint8Array) {
 function parseAttributes(fragment: string) {
   const attributes: Record<string, string> = {};
   for (const match of fragment.matchAll(/([:\w.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-    attributes[match[1].toLowerCase()] = match[2] ?? match[3] ?? '';
+    const name = match[1];
+    if (!name) {
+      continue;
+    }
+    attributes[name.toLowerCase()] = match[2] ?? match[3] ?? '';
   }
   return attributes;
 }
@@ -57,7 +61,7 @@ function readArchiveText(entries: Map<string, Uint8Array>, entryPath: string, me
 
 function readPackagePath(containerXml: string) {
   const match = containerXml.match(/<rootfile\b([^>]*)\/?>/i);
-  const fullPath = match ? parseAttributes(match[1])['full-path'] : null;
+  const fullPath = match?.[1] ? parseAttributes(match[1])['full-path'] : null;
   if (!fullPath) {
     throw new Error('EPUB import failed: missing package document path in META-INF/container.xml');
   }
@@ -67,7 +71,9 @@ function readPackagePath(containerXml: string) {
 function parseManifest(opfXml: string, opfDirectory: string) {
   const manifest = new Map<string, ManifestItem>();
   for (const match of opfXml.matchAll(/<item\b([^>]*)\/?>/gi)) {
-    const attributes = parseAttributes(match[1]);
+    const fragment = match[1];
+    if (!fragment) continue;
+    const attributes = parseAttributes(fragment);
     if (!attributes.id || !attributes.href) continue;
     manifest.set(attributes.id, {
       href: path.posix.normalize(path.posix.join(opfDirectory, attributes.href.replace(/\\/g, '/'))),
@@ -83,7 +89,7 @@ function parseManifest(opfXml: string, opfDirectory: string) {
 
 function parseSpine(opfXml: string) {
   return Array.from(opfXml.matchAll(/<itemref\b([^>]*)\/?>/gi))
-    .map((match) => parseAttributes(match[1]))
+    .flatMap((match) => match[1] ? [parseAttributes(match[1])] : [])
     .filter((attributes) => attributes.idref && attributes.linear !== 'no')
     .map((attributes) => attributes.idref as string);
 }
@@ -91,15 +97,15 @@ function parseSpine(opfXml: string) {
 function parseGuideCoverPaths(opfXml: string, opfDirectory: string) {
   return new Set(
     Array.from(opfXml.matchAll(/<reference\b([^>]*)\/?>/gi))
-      .map((match) => parseAttributes(match[1]))
+      .flatMap((match) => match[1] ? [parseAttributes(match[1])] : [])
       .filter((attributes) => attributes.type?.toLowerCase() === 'cover' && attributes.href)
-      .map((attributes) => path.posix.normalize(path.posix.join(opfDirectory, attributes.href!.replace(/\\/g, '/'))))
+      .map((attributes) => path.posix.normalize(path.posix.join(opfDirectory, attributes.href?.replace(/\\/g, '/') ?? '')))
   );
 }
 
 function readBookTitle(opfXml: string, sourceName: string) {
   const titleMatch = opfXml.match(/<(?:dc:title|title)\b[^>]*>([\s\S]*?)<\/(?:dc:title|title)>/i);
-  return titleMatch?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(sourceName, '.epub');
+  return titleMatch?.[1]?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || path.basename(sourceName, '.epub');
 }
 
 function buildDegradedChapterNode(input: {

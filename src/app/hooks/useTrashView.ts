@@ -24,7 +24,7 @@ export function useTrashView({ nodeOrder, trashedNodeIds }: UseTrashViewParams) 
       return;
     }
     if (!selectedTrashNodeId || !trashedNodeIds.includes(selectedTrashNodeId)) {
-      setSelectedTrashNodeId(trashedNodeOrder[0]);
+      setSelectedTrashNodeId(trashedNodeOrder[0] ?? null);
     }
   }, [isTrashViewOpen, selectedTrashNodeId, trashedNodeIds, trashedNodeOrder]);
 

@@ -15,7 +15,7 @@ function createNativeImportResult() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('imports external documents through the native external search command', async () => {

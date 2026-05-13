@@ -213,9 +213,9 @@ export function DocumentPanelHeader({
         canGoForward,
         canGoParent,
         editableNodeId,
-        folderItemCountLabel,
+        ...(folderItemCountLabel !== undefined ? { folderItemCountLabel } : {}),
         editorDisplayMode,
-        folderListToolbar,
+        ...(folderListToolbar !== undefined ? { folderListToolbar } : {}),
         isFolderListView,
         isSourceUpdatePanelOpen,
         nodesById,
@@ -228,7 +228,7 @@ export function DocumentPanelHeader({
         onToggleSourceUpdatePanel,
         priorityQuickSetShortcutLabel,
         reviewSchedulerSettings,
-        showDocumentControls,
+        ...(showDocumentControls !== undefined ? { showDocumentControls } : {}),
         showSourceUpdateAction,
         toggleEditorDisplayMode
       })}

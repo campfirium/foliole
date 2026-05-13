@@ -13,7 +13,7 @@ interface StartupErrorBoundaryState {
 }
 
 export class StartupErrorBoundary extends React.Component<StartupErrorBoundaryProps, StartupErrorBoundaryState> {
-  state: StartupErrorBoundaryState = {
+  override state: StartupErrorBoundaryState = {
     message: null
   };
 
@@ -23,11 +23,11 @@ export class StartupErrorBoundary extends React.Component<StartupErrorBoundaryPr
     };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  override componentDidCatch(error: Error, info: React.ErrorInfo) {
     this.props.onError?.(error, info);
   }
 
-  render() {
+  override render() {
     if (!this.state.message) {
       return this.props.children;
     }

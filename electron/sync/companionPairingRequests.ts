@@ -42,7 +42,7 @@ function reserveRateLimitSlot(args: { clientAddress?: string | null; deviceId: s
   if (recentTimestamps.length >= PAIR_REQUEST_RATE_LIMIT_MAX) {
     return {
       allowed: false,
-      retry_after_ms: recentTimestamps[0] + PAIR_REQUEST_RATE_LIMIT_WINDOW_MS - args.nowMs
+      retry_after_ms: (recentTimestamps[0] ?? args.nowMs) + PAIR_REQUEST_RATE_LIMIT_WINDOW_MS - args.nowMs
     } as const;
   }
   recentTimestamps.push(args.nowMs);
@@ -85,7 +85,11 @@ export function createCompanionPairRequest(args: {
       request: toPublicRequest(existingPendingRequest)
     } as const;
   }
-  const rateLimit = reserveRateLimitSlot({ clientAddress: args.clientAddress, deviceId: args.deviceId, nowMs });
+  const rateLimit = reserveRateLimitSlot({
+    ...(args.clientAddress === undefined ? {} : { clientAddress: args.clientAddress }),
+    deviceId: args.deviceId,
+    nowMs
+  });
   if (!rateLimit.allowed) {
     return {
       created: false,

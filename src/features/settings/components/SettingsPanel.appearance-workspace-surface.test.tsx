@@ -36,7 +36,7 @@ afterAll(() => {
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('persists workspace surface palette and region assignments from appearance settings', async () => {

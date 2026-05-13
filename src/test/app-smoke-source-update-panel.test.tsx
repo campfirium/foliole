@@ -28,12 +28,12 @@ it('writes split panel edits back to the active document content', () => {
 
   const dialog = screen.getByRole('dialog');
   const editors = within(dialog).getAllByTestId('editor-value');
-  fireEvent.change(editors[0], {
+  fireEvent.change(editors[0]!, {
     target: { value: '# Welcome to Foliole\n\nChanged from source update panel.' }
   });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Close source update panel' }));
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.content).toBe(
     '# Welcome to Foliole\n\nChanged from source update panel.'
   );
   expect(screen.getAllByTestId('editor-value')[0]).toHaveValue('# Welcome to Foliole\n\nChanged from source update panel.');

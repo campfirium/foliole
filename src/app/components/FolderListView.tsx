@@ -94,7 +94,7 @@ function buildCurrentViewTopicSnapshots(filteredNodes: Node[]): CurrentViewTopic
   return filteredNodes
     .filter((node) => node.kind === 'topic')
     .map((node) => ({
-      anchorLink: node.anchorLink,
+      ...(node.anchorLink !== undefined ? { anchorLink: node.anchorLink } : {}),
       id: node.id,
       kind: 'topic',
       parentNodeId: node.parentNodeId
@@ -164,18 +164,21 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSearchQuery={state.setSearchQuery}
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
-          onRenderItem={(node) => (
-            <FolderListViewItem
-              itemLayout={props.itemLayout ?? 'default'}
-              key={node.id}
-              node={node}
-              nodeViewState={nodeViewById[node.id]}
-              onSelectNode={props.onSelectNode}
-              onSelectNodePath={props.onSelectNodePath}
-              nodesById={props.nodesById}
-              sortKey={state.sortKey}
-            />
-          )}
+          onRenderItem={(node) => {
+            const nodeViewState = nodeViewById[node.id];
+            return (
+              <FolderListViewItem
+                itemLayout={props.itemLayout ?? 'default'}
+                key={node.id}
+                node={node}
+                {...(nodeViewState !== undefined ? { nodeViewState } : {})}
+                onSelectNode={props.onSelectNode}
+                {...(props.onSelectNodePath ? { onSelectNodePath: props.onSelectNodePath } : {})}
+                nodesById={props.nodesById}
+                sortKey={state.sortKey}
+              />
+            );
+          }}
           searchQuery={state.searchQuery}
           searchResultLabel={state.searchResultLabel}
           sortDirection={state.sortDirection}

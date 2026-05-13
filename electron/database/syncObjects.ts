@@ -116,6 +116,7 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
 function readViewStatePayloadJson(objectId: string) {
   const parts = objectId.split(':');
   const deviceId = parts[3];
+  if (!deviceId) return null;
   const key = parts.slice(4).join(':');
   const driver = openDatabaseConnection().driver;
   if (key === 'active_node') {

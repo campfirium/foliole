@@ -9,6 +9,19 @@ import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryK
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 
+function canKeepCurrentActiveNode(current: WorkspaceState, next: WorkspaceState) {
+  return Boolean(
+    current.isHydrated &&
+      current.activeNodeId &&
+      next.nodesById[current.activeNodeId] &&
+      !next.trashedNodeIds.includes(current.activeNodeId)
+  );
+}
+
+function resolveMergedActiveNodeId(current: WorkspaceState, next: WorkspaceState) {
+  return canKeepCurrentActiveNode(current, next) ? current.activeNodeId : next.activeNodeId;
+}
+
 export function createWorkspaceStorePersistConfig(
   onHydrated: (error?: unknown) => void
 ): PersistOptions<WorkspaceState, WorkspacePersistedState> {
@@ -48,7 +61,7 @@ export function createWorkspaceStorePersistConfig(
       const nextWorkspaceState: WorkspaceState = {
         ...nextState,
         ...ensureInboxNodeInSnapshot({
-          activeNodeId: nextState.activeNodeId,
+          activeNodeId: resolveMergedActiveNodeId(current, nextState),
           nodeOrder: nextState.nodeOrder,
           nodesById: nextState.nodesById,
           trashedNodeIds: nextState.trashedNodeIds

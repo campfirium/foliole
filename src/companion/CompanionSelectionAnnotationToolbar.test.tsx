@@ -21,11 +21,11 @@ const payload: CompanionSelectionAnnotationToolbarState['payload'] = {
   parentNodeId: 'node-1',
   selectionText: 'Beta'
 };
-const longerPayload = {
+const longerPayload: CompanionSelectionAnnotationToolbarState['payload'] = {
   ...payload,
   clozeContent: 'Alpha [...]',
   entries: [{
-    ...payload.entries[0],
+    ...payload.entries[0]!,
     clozeContent: 'Alpha [...]',
     locator: { from: 6, originalText: 'Beta Gamma', to: 16 },
     range: { from: 6, to: 16 },

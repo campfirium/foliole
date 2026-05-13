@@ -129,8 +129,8 @@ describe('companion desktop attachment resource manifests', () => {
     });
     expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch.mock.invocationCallOrder[0])
-      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]);
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch.mock.invocationCallOrder[0]!)
+      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]!);
   });
 
   it('downloads already enumerated missing attachment resources', async () => {

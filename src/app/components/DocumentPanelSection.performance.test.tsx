@@ -87,7 +87,6 @@ function createProps(
     editorContent: '# Node 1',
     isEditorReadOnly: false,
     editorNodeId: 'node-1',
-    editorNodeViewState: undefined,
     nodeOrder: ['node-1'],
     trashedNodeIds: [],
     nodesById: { 'node-1': createNode('# Node 1') },

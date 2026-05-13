@@ -79,7 +79,7 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
         stability: args.review.stability,
         state: args.review.state
       }),
-      review_log_json: args.reviewLog ? JSON.stringify(args.reviewLog) : undefined
+      ...(args.reviewLog ? { review_log_json: JSON.stringify(args.reviewLog) } : {})
     })
   ));
 }

@@ -82,10 +82,10 @@ it('keeps search results lightweight until the chosen node is opened', async () 
 
   seedSearchNodes();
 
-  expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('');
-  expect(useWorkspaceStore.getState().nodesById['node-2']?.hasContent).toBe(true);
-  expect(useWorkspaceStore.getState().nodesById['node-3']?.content).toBe('');
-  expect(useWorkspaceStore.getState().nodesById['node-3']?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-3']!?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-4']!?.hasContent).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-5']!?.content).toBe('');
+  expect(useWorkspaceStore.getState().nodesById['node-5']!?.hasContent).toBe(true);
 
   render(<App />);
 
@@ -109,12 +109,12 @@ it('keeps search results lightweight until the chosen node is opened', async () 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
   });
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: '',
     hasContent: true,
     reveal: null
   });
-  expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({
     content: 'Atlas launch checklist and follow-up notes.',
     hasContent: true,
     reveal: null,

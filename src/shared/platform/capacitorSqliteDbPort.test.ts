@@ -34,8 +34,8 @@ it('encodes and decodes blob values at the adapter boundary', async () => {
   expect(connection.run).toHaveBeenCalledWith('INSERT INTO items (body) VALUES (?)', [
     { type: 'Buffer', data: [4, 5, 6] }
   ], false);
-  expect(rows[0].body).toBeInstanceOf(Uint8Array);
-  expect(Array.from(rows[0].body)).toEqual([1, 2, 3]);
+  expect(rows[0]!.body).toBeInstanceOf(Uint8Array);
+  expect(Array.from(rows[0]!.body)).toEqual([1, 2, 3]);
 });
 
 it('commits successful transactions and rolls back failed transactions', async () => {

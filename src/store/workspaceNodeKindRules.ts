@@ -48,6 +48,6 @@ export function canMoveRootsIntoTarget(
   }
   return rootNodeIds.every((rootNodeId) => {
     const movedNode = state.nodesById[rootNodeId];
-    return Boolean(movedNode) && canCreateChildNodeKind(nextParentKind, movedNode.kind);
+    return movedNode ? canCreateChildNodeKind(nextParentKind, movedNode.kind) : false;
   });
 }

@@ -56,7 +56,7 @@ function createSnapshot(): WorkspaceSnapshot {
   it('keeps empty body topics selectable with an empty status', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = {
-      ...snapshot.nodesById['topic-1'],
+      ...snapshot.nodesById['topic-1']!,
       bodyStatus: 'empty',
       openingText: null
     };
@@ -84,7 +84,7 @@ function createSnapshot(): WorkspaceSnapshot {
   it('keeps empty body topics in recent articles without treating them as missing', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = {
-      ...snapshot.nodesById['topic-1'],
+      ...snapshot.nodesById['topic-1']!,
       bodyStatus: 'empty',
       openingText: null
     };
@@ -101,7 +101,7 @@ function createSnapshot(): WorkspaceSnapshot {
   it('keeps fetching body topics selectable for status display', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = {
-      ...snapshot.nodesById['topic-1'],
+      ...snapshot.nodesById['topic-1']!,
       bodyStatus: 'fetching'
     };
 
@@ -114,7 +114,7 @@ function createSnapshot(): WorkspaceSnapshot {
   it('keeps failed body topics in recent articles for status display', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = {
-      ...snapshot.nodesById['topic-1'],
+      ...snapshot.nodesById['topic-1']!,
       bodyStatus: 'failed'
     };
 

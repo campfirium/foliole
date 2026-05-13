@@ -93,7 +93,7 @@ export function PdfInventoryItem({
     fallbackTitle: item.sourceName,
     fallbackType: 'pdf',
     nodeId: item.latestNodeId,
-    nodesById
+    ...(nodesById ? { nodesById } : {})
   });
 
   return (

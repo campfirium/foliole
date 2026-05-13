@@ -71,7 +71,7 @@ function addParserPrefixDecoration(
   const widgetRange = prefixRanges.find(isWidgetPrefixRange);
   if (!widgetRange) return;
   addPrefixMatch(ranges, {
-    checked: widgetRange.checked,
+    ...(widgetRange.checked !== undefined ? { checked: widgetRange.checked } : {}),
     from: widgetRange.from,
     kind: widgetRange.kind,
     markerText: widgetRange.markerText,
@@ -103,11 +103,11 @@ class PrefixWidget extends WidgetType {
     this.markerText = markerText;
   }
 
-  eq(other: PrefixWidget) {
+  override eq(other: PrefixWidget) {
     return this.checked === other.checked && this.kind === other.kind && this.markerText === other.markerText;
   }
 
-  toDOM() {
+  override toDOM() {
     const marker = document.createElement('span');
     marker.className = `cm-md-prefix-widget cm-md-prefix-${this.kind}`;
     if (this.kind === 'task-list') {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import {
   getCachedRuntimeRemovedSources,
   loadRuntimeRemovedSources,
@@ -174,7 +175,7 @@ export function RemovedSourcesPanel(props: { onSelectNode?: (nodeId: string) => 
   const [query, setQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
-  const contextMenu = useRemovedSourceContextMenu({ loadEntries, onSelectNode: props.onSelectNode });
+  const contextMenu = useRemovedSourceContextMenu({ loadEntries, ...definedProps({ onSelectNode: props.onSelectNode }) });
   const selection = useSelectedRemovedEntry(entries, query);
   const tree = useMemo(() => buildRemovedSourcesTree(selection.filteredEntries, removedSort.sort), [selection.filteredEntries, removedSort.sort]);
   const visibleRows = useMemo(() => getVisibleRemovedSourceRows(tree.rows, collapsedNodeIds), [collapsedNodeIds, tree.rows]);

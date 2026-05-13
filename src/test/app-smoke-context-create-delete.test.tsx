@@ -165,7 +165,7 @@ it('deletes a node from node-list context menu', () => {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']).toBeDefined();
+  expect(workspace.nodesById['node-2']!).toBeDefined();
   expect(workspace.trashedNodeIds).toContain('node-2');
   expect(workspace.activeNodeId).toBe('node-1');
 });

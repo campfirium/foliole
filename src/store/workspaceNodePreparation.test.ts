@@ -19,7 +19,7 @@ import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore
 
 function seedTrimmedNodeState() {
   const initial = createInitialWorkspaceState(new Date('2026-04-09T00:00:00.000Z'));
-  const seedNode = initial.nodesById['node-1'];
+  const seedNode = initial.nodesById['node-1']!;
   useWorkspaceStore.setState({
     ...initial,
     activeNodeId: 'node-1',
@@ -89,7 +89,7 @@ it('loads and merges a trimmed document before programmatic open', async () => {
 
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',
     hasContent: true
   });
@@ -103,7 +103,7 @@ it('opens an already loaded node without invoking the runtime again', async () =
 
   expect(invoke).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
-  expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
     content: 'Loaded node 1 body',
     hasContent: true
   });
@@ -125,7 +125,7 @@ it('reuses a preloaded document without invoking the runtime again', async () =>
   });
 
   expect(invoke).not.toHaveBeenCalled();
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Preloaded node 2 body',
     hasContent: true
   });
@@ -150,7 +150,7 @@ it('skips applying a prepared open when a newer navigation request supersedes it
 
   await expect(pendingOpen).resolves.toBeNull();
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: '',
     hasContent: true
   });
@@ -171,7 +171,7 @@ it('reopens a trimmed node from the renderer cache without invoking the runtime 
     nodesById: {
       ...state.nodesById,
       'node-2': {
-        ...state.nodesById['node-2'],
+        ...state.nodesById['node-2']!,
         content: '',
         hasContent: true,
         reveal: null,
@@ -183,7 +183,7 @@ it('reopens a trimmed node from the renderer cache without invoking the runtime 
   await openWorkspaceNodeWithPreparedDocument('node-2');
 
   expect(invoke).toHaveBeenCalledTimes(1);
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',
     hasContent: true
   });
@@ -214,11 +214,11 @@ it('preloads recent history, active neighbors, and visible rows without merging 
     },
     nodesById: {
       ...state.nodesById,
-      'node-1': { ...state.nodesById['node-1'], id: 'node-1', title: 'Node 1', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-2': { ...state.nodesById['node-1'], id: 'node-2', title: 'Node 2', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-3': { ...state.nodesById['node-1'], id: 'node-3', title: 'Node 3', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-4': { ...state.nodesById['node-1'], id: 'node-4', title: 'Node 4', parentNodeId: 'node-2', content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-5': { ...state.nodesById['node-1'], id: 'node-5', title: 'Node 5', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false }
+      'node-1': { ...state.nodesById['node-1']!, id: 'node-1', title: 'Node 1', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-2': { ...state.nodesById['node-1']!, id: 'node-2', title: 'Node 2', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-3': { ...state.nodesById['node-1']!, id: 'node-3', title: 'Node 3', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-4': { ...state.nodesById['node-1']!, id: 'node-4', title: 'Node 4', parentNodeId: 'node-2', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-5': { ...state.nodesById['node-1']!, id: 'node-5', title: 'Node 5', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false }
     }
   }));
   setVisibleWorkspaceNodeDocumentPrefetchIds(['node-5']);
@@ -227,9 +227,9 @@ it('preloads recent history, active neighbors, and visible rows without merging 
   await vi.waitFor(() => {
     expect(invoke.mock.calls.map(([, payload]) => payload?.nodeId)).toEqual(['node-1', 'node-3', 'node-5', 'node-4']);
   });
-  expect(useWorkspaceStore.getState().nodesById['node-3']).toMatchObject({ content: '' });
-  expect(useWorkspaceStore.getState().nodesById['node-4']).toMatchObject({ content: '' });
-  expect(useWorkspaceStore.getState().nodesById['node-5']).toMatchObject({ content: '' });
+  expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({ content: '' });
+  expect(useWorkspaceStore.getState().nodesById['node-4']!).toMatchObject({ content: '' });
+  expect(useWorkspaceStore.getState().nodesById['node-5']!).toMatchObject({ content: '' });
 });
 
 it('skips caching oversized documents and falls back to the runtime on reopen', async () => {
@@ -248,7 +248,7 @@ it('skips caching oversized documents and falls back to the runtime on reopen', 
     nodesById: {
       ...state.nodesById,
       'node-2': {
-        ...state.nodesById['node-2'],
+        ...state.nodesById['node-2']!,
         content: '',
         hasContent: true,
         reveal: null,

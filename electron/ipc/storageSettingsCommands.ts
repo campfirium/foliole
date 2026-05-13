@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 
+import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
 import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
@@ -14,7 +15,7 @@ import {
   saveReviewSchedulerSettings
 } from '../reviewSchedulerSettings.js';
 
-import { asNullableString, asString } from './commandParsers.js';
+import { asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { loadLibraryPathSettings, updateLibraryPathSetting } from './libraryPaths.js';
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
@@ -47,7 +48,7 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
   if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
-    const location = asString(args.location, 'location') as 'library_home' | 'assets_dir' | 'inbox' | 'mirror';
+    const location = asLiteralUnion(args.location, LIBRARY_PATH_LOCATIONS, 'location');
     const result = await updateLibraryPathSetting({
       location,
       path: asNullableString(args.path, 'path')

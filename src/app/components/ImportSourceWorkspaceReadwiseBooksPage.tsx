@@ -189,7 +189,7 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const catalog = useReadwiseBookCatalogState(booksInventory, nodeViewById);
-  const actions = useReadwiseBookActions({ onOpenChange, onSelectNode, refreshBooksInventory });
+  const actions = useReadwiseBookActions({ onOpenChange, ...(onSelectNode ? { onSelectNode } : {}), refreshBooksInventory });
 
   return (
     <div className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">

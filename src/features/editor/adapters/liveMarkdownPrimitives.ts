@@ -14,7 +14,7 @@ export function addMark(
   attributes?: Record<string, string>
 ) {
   if (to <= from) return;
-  ranges.push(Decoration.mark({ class: className, attributes }).range(from, to));
+  ranges.push(Decoration.mark({ class: className, ...(attributes ? { attributes } : {}) }).range(from, to));
 }
 
 export function addLine(ranges: Range<Decoration>[], from: number, className: string) {
@@ -61,11 +61,11 @@ export function addThematicBreakDecoration(
 }
 
 class ThematicBreakWidget extends WidgetType {
-  eq(other: ThematicBreakWidget) {
+  override eq(other: ThematicBreakWidget) {
     return other instanceof ThematicBreakWidget;
   }
 
-  toDOM() {
+  override toDOM() {
     const rule = document.createElement('span');
     rule.className = 'cm-md-thematic-break';
     rule.setAttribute('aria-hidden', 'true');

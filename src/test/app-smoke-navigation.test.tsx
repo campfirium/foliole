@@ -142,12 +142,12 @@ it('moves selected nodes as one drag group and preserves selection order', () =>
   fireEvent.dragEnd(dragRow, { dataTransfer });
   rectSpy.mockRestore();
 
-  if (useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId !== 'node-4') {
+  if (useWorkspaceStore.getState().nodesById['node-2']!?.parentNodeId !== 'node-4') {
     useWorkspaceStore.getState().moveNodes(['node-2', 'node-3'], 'node-4', 'child');
   }
   const state = useWorkspaceStore.getState();
-  expect(state.nodesById['node-2']?.parentNodeId).toBe('node-4');
-  expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');
+  expect(state.nodesById['node-3']!?.parentNodeId).toBe('node-4');
+  expect(state.nodesById['node-2']!?.parentNodeId).toBe('node-4');
   expect(state.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', 'node-4', 'node-2', 'node-3']);
 });
 

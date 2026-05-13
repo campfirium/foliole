@@ -57,7 +57,11 @@ function parseWindowsRegistryFonts(rawOutput: string) {
     if (!match) {
       continue;
     }
-    for (const name of expandWindowsRegistryFontName(match[1])) {
+    const rowName = match[1];
+    if (!rowName) {
+      continue;
+    }
+    for (const name of expandWindowsRegistryFontName(rowName)) {
       names.push(name);
     }
   }

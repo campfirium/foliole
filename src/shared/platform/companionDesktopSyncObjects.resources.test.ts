@@ -160,8 +160,8 @@ async function testPullsBodiesBeforeAttachments() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
-  expect(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0])
-    .toBeLessThan(syncBridgeMock.loadCompanionMissingAttachmentResources.mock.invocationCallOrder[0]);
+  expect(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]!)
+    .toBeLessThan(syncBridgeMock.loadCompanionMissingAttachmentResources.mock.invocationCallOrder[0]!);
 }
 
 async function testRefreshesStructureBeforeContentBatch() {
@@ -175,8 +175,8 @@ async function testRefreshesStructureBeforeContentBatch() {
   const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onStructureSynced });
 
-  expect(onStructureSynced.mock.invocationCallOrder[0])
-    .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]);
+  expect(onStructureSynced.mock.invocationCallOrder[0]!)
+    .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]!);
   expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
 }
 

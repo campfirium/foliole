@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 
 it('re-syncs review session when re-opening the already active queued node', () => {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
 
   useWorkspaceStore.setState({
     activeNodeId: 'fsrs-1',
@@ -63,7 +63,7 @@ it('re-syncs review session when re-opening the already active queued node', () 
 });
 
 it('keeps the previous document warm when opening another node through navigation', () => {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
 
   useWorkspaceStore.setState({
     activeNodeId: 'node-1',
@@ -97,12 +97,12 @@ it('keeps the previous document warm when opening another node through navigatio
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
-  expect(state.nodesById['node-1']).toMatchObject({ content: 'First node body', reveal: null });
+  expect(state.nodesById['node-1']!).toMatchObject({ content: 'First node body', reveal: null });
   expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
 });
 
 it('leaves parent view state unchanged when navigating to a parent whose document is not loaded yet', () => {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
 
   useWorkspaceStore.setState({
     activeNodeId: 'node-3',
@@ -161,7 +161,7 @@ it('leaves parent view state unchanged when navigating to a parent whose documen
 });
 
 function seedParentHighlightReturnState() {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   useWorkspaceStore.setState({
     activeNodeId: 'node-3',
     nodeOrder: ['node-1', 'node-2', 'node-3'],

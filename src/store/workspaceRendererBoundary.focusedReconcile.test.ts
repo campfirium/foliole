@@ -7,7 +7,7 @@ import type { WorkspaceState } from './workspaceStore';
 import { useWorkspaceStore } from './workspaceStore';
 
 it('falls back to full reconciliation when node ids change but counts match', () => {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   const currentState = createTestWorkspaceState({
     activeNodeId: 'node-1',
     nodesById: {
@@ -21,10 +21,10 @@ it('falls back to full reconciliation when node ids change but counts match', ()
         hasReveal: true
       },
       'special-inbox': {
-        ...useWorkspaceStore.getState().nodesById['special-inbox']
+        ...useWorkspaceStore.getState().nodesById['special-inbox']!
       },
       'special-virtual-root': {
-        ...useWorkspaceStore.getState().nodesById['special-virtual-root']
+        ...useWorkspaceStore.getState().nodesById['special-virtual-root']!
       }
     }
   });

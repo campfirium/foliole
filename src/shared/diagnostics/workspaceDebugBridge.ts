@@ -185,7 +185,11 @@ function createSeedNodeDebugApi(): Pick<WorkspaceDebugApi, 'seedNodes'> {
   return {
     seedNodes: async (nodes) => {
       const initial = createInitialWorkspaceState(new Date('2026-04-08T00:00:00.000Z'));
-      const seededNodesById = buildSeededNodes(nodes, '2026-04-08T00:00:00.000Z', initial.nodesById['node-1']);
+      const seededNodesById = buildSeededNodes(
+        nodes,
+        '2026-04-08T00:00:00.000Z',
+        initial.nodesById['node-1'] ?? Object.values(initial.nodesById)[0]!
+      );
       useWorkspaceStore.setState({
         ...initial,
         activeNodeId: nodes[0]?.id ?? null,

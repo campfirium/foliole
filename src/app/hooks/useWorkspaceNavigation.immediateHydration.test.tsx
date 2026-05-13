@@ -103,7 +103,7 @@ async function runImmediateHydrationCase() {
   expect(openNode).toHaveBeenCalledTimes(1);
   expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-  expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',
     hasContent: true
   });

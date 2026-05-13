@@ -109,32 +109,23 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
   summary?: NativeCompanionSyncEvent['summary'];
 }) {
   const occurredAt = args.occurredAt ?? new Date().toISOString();
+  const event = {
+    endpoint_url: args.endpointUrl,
+    ...(args.kind !== undefined ? { kind: args.kind } : {}),
+    message: args.message,
+    occurred_at: occurredAt,
+    ...(args.result !== undefined ? { result: args.result } : {}),
+    ...(args.runId !== undefined ? { run_id: args.runId } : {}),
+    ...(args.startedAt !== undefined ? { started_at: args.startedAt } : {}),
+    status: args.status,
+    ...(args.summary !== undefined ? { summary: args.summary } : {})
+  };
   if (!isNativeAndroidCompanionRuntime()) {
     const current = readWebSyncState();
-    return writeWebSyncState(prependSyncEvent(current, {
-      endpoint_url: args.endpointUrl,
-      kind: args.kind,
-      message: args.message,
-      occurred_at: occurredAt,
-      result: args.result,
-      run_id: args.runId,
-      started_at: args.startedAt,
-      status: args.status,
-      summary: args.summary
-    }));
+    return writeWebSyncState(prependSyncEvent(current, event));
   }
   return runCompanionSyncWriterTask(async () => (
-    normalizeWorkspaceSyncState(await FolioleCompanionSync.recordWorkspaceSyncEvent({
-      endpoint_url: args.endpointUrl,
-      kind: args.kind,
-      message: args.message,
-      occurred_at: occurredAt,
-      result: args.result,
-      run_id: args.runId,
-      started_at: args.startedAt,
-      status: args.status,
-      summary: args.summary
-    }))
+    normalizeWorkspaceSyncState(await FolioleCompanionSync.recordWorkspaceSyncEvent(event))
   ));
 }
 

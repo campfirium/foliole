@@ -98,10 +98,22 @@ describe('workspace persistence runtime refresh', () => {
     await useWorkspaceStore.persist.rehydrate();
 
     expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
-    expect(useWorkspaceStore.getState().nodesById['node-2']).toMatchObject({
+    expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
       id: 'node-2',
       title: 'Node 2'
     });
+  });
+
+  it('keeps the user-selected active node during a later runtime rehydrate', async () => {
+    const invoke = createRuntimeInvokeWithChangingSnapshots();
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+    await useWorkspaceStore.persist.rehydrate();
+    useWorkspaceStore.getState().setActiveNode('node-2');
+    await useWorkspaceStore.persist.rehydrate();
+
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual(['special-inbox', VIRTUAL_ROOT_NODE_ID, 'node-2', 'node-1']);
   });
 
   it('applies a second runtime rehydrate that starts while the first hydrate is still in flight', async () => {

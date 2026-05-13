@@ -44,17 +44,17 @@ export function collectPreviewViewportPlans(args: {
     const lineInCodeBlock = args.codeLineFroms?.has(line.from) ?? inCodeBlock;
     const plan = collectPreviewLineDecorationPlan({
       hideTitleHeading: args.hideTitleHeading,
-      codeFenceLineFroms: args.codeFenceLineFroms,
+      ...(args.codeFenceLineFroms ? { codeFenceLineFroms: args.codeFenceLineFroms } : {}),
       inCodeBlock: lineInCodeBlock,
       isCursorLine: args.cursorLineNumber !== null && line.lineNumber === args.cursorLineNumber,
       lineFrom: line.from,
-      lineClassByFrom: args.lineClassByFrom,
-      linkReferenceLineFroms: args.linkReferenceLineFroms,
+      ...(args.lineClassByFrom ? { lineClassByFrom: args.lineClassByFrom } : {}),
+      ...(args.linkReferenceLineFroms ? { linkReferenceLineFroms: args.linkReferenceLineFroms } : {}),
       lineNumber: line.lineNumber,
       lineText: line.text,
-      linkReferences: args.linkReferences,
+      ...(args.linkReferences ? { linkReferences: args.linkReferences } : {}),
       markdownSyntaxVisible: args.markdownSyntaxVisible,
-      thematicBreakLineFroms: args.thematicBreakLineFroms
+      ...(args.thematicBreakLineFroms ? { thematicBreakLineFroms: args.thematicBreakLineFroms } : {})
     });
     plans.push({ lineFrom: line.from, lineText: line.text, plan });
     inCodeBlock = args.codeLineFroms ? inCodeBlock : plan.nextInCodeBlock;
@@ -77,12 +77,12 @@ export function collectSourceViewportPlans(args: {
   for (const line of args.lines) {
     const lineInCodeBlock = args.codeLineFroms?.has(line.from) ?? inCodeBlock;
     const plan = collectSourceLineDecorationPlan({
-      codeFenceLineFroms: args.codeFenceLineFroms,
+      ...(args.codeFenceLineFroms ? { codeFenceLineFroms: args.codeFenceLineFroms } : {}),
       inCodeBlock: lineInCodeBlock,
       lineFrom: line.from,
       lineText: line.text,
-      linkReferences: args.linkReferences,
-      thematicBreakLineFroms: args.thematicBreakLineFroms
+      ...(args.linkReferences ? { linkReferences: args.linkReferences } : {}),
+      ...(args.thematicBreakLineFroms ? { thematicBreakLineFroms: args.thematicBreakLineFroms } : {})
     });
     plans.push({ lineFrom: line.from, lineText: line.text, plan });
     inCodeBlock = args.codeLineFroms ? inCodeBlock : plan.nextInCodeBlock;

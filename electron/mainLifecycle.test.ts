@@ -34,6 +34,12 @@ vi.mock('./devRestartIntent.js', () => ({ installDevRestartIntentWatcher: vi.fn(
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: mocks.appendMainProcessDiagnosticLog
 }));
+
+function firstInvocationOrder(mock: { mock: { invocationCallOrder: number[] } }) {
+  const [order] = mock.mock.invocationCallOrder;
+  expect(order).toBeDefined();
+  return order!;
+}
 vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   notifyExternalSearchSecondInstance: vi.fn(),
   notifyExternalSearchUserActivity: vi.fn(),
@@ -100,14 +106,12 @@ it('loads the static workspace shell before runtime services and activates React
   expect(createMainWindow).toHaveBeenCalledTimes(1);
   expect(loadMainWindow).toHaveBeenCalledWith(window);
   expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
-  expect(mocks.registerAttachmentProtocol.mock.invocationCallOrder[0]).toBeLessThan(
-    loadMainWindow.mock.invocationCallOrder[0]
-  );
-  expect(loadMainWindow.mock.invocationCallOrder[0]).toBeLessThan(mocks.initializeDatabase.mock.invocationCallOrder[0]);
-  expect(loadMainWindow.mock.invocationCallOrder[0]).toBeLessThan(activateMainWindow.mock.invocationCallOrder[0]);
+  expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
+  expect(firstInvocationOrder(loadMainWindow)).toBeLessThan(firstInvocationOrder(mocks.initializeDatabase));
+  expect(firstInvocationOrder(loadMainWindow)).toBeLessThan(firstInvocationOrder(activateMainWindow));
   expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window);
-  expect(mocks.presentInitialRendererWindow.mock.invocationCallOrder[0]).toBeLessThan(
-    mocks.initializeDatabase.mock.invocationCallOrder[0]
+  expect(firstInvocationOrder(mocks.presentInitialRendererWindow)).toBeLessThan(
+    firstInvocationOrder(mocks.initializeDatabase)
   );
   expect(activateMainWindow).toHaveBeenCalledWith(window);
 });
@@ -145,9 +149,7 @@ it('keeps the startup window alive and loads the startup error surface when data
   expect(installInvokeHandler).toHaveBeenCalledTimes(1);
   expect(createMainWindow).toHaveBeenCalledWith();
   expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
-  expect(mocks.registerAttachmentProtocol.mock.invocationCallOrder[0]).toBeLessThan(
-    loadMainWindow.mock.invocationCallOrder[0]
-  );
+  expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
   expect(loadMainWindow).toHaveBeenNthCalledWith(1, window);
   expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
     errorSummary: 'migration exploded',
@@ -194,9 +196,7 @@ it('shows a startup error surface when the workspace renderer cannot load', asyn
   });
 
   expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
-  expect(mocks.registerAttachmentProtocol.mock.invocationCallOrder[0]).toBeLessThan(
-    loadMainWindow.mock.invocationCallOrder[0]
-  );
+  expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
   expect(loadMainWindow).toHaveBeenNthCalledWith(1, window);
   expect(loadMainWindow).toHaveBeenNthCalledWith(2, window, {
     errorSummary: 'ERR_CONNECTION_REFUSED',

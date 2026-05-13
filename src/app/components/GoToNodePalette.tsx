@@ -68,7 +68,7 @@ export function GoToNodePalette({
     activeIndex,
     dialogLabel,
     emptyLabel,
-    handleSelectNode,
+    ...(handleSelectNode ? { handleSelectNode } : {}),
     inputLabel,
     noResultsLabel,
     onClose,

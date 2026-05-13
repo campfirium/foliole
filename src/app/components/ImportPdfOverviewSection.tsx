@@ -37,7 +37,7 @@ export function PdfImportsInventorySection({
             importedAt={formatImportTime(item.lastImportedAt)}
             item={item}
             key={item.sourceFingerprint}
-            nodesById={nodesById}
+            {...(nodesById ? { nodesById } : {})}
           />
         ))}
       </ul>

@@ -189,7 +189,8 @@ describe('loadSyncNodes', () => {
     insertSyncNodeFixture(connection);
     replaceNodeOrderPosition(connection, 12);
 
-    expect(loadSyncNodes(['node-1'])[0].snapshot.position).toBe(12);
+    const [node] = loadSyncNodes(['node-1']);
+    expect(node?.snapshot.position).toBe(12);
   });
 
   it('returns empty array for empty object ids input', () => {
@@ -211,10 +212,11 @@ describe('loadSyncNodes', () => {
       `UPDATE node_sync_versions
        SET snapshot_json = ?
        WHERE version_id = ?`,
-      [JSON.stringify({ ...expectedSyncNodeRecord()[0].snapshot, title: 'Historical title' }), 'desktop#2']
+      [JSON.stringify({ ...expectedSyncNodeRecord()[0]?.snapshot, title: 'Historical title' }), 'desktop#2']
     );
 
-    expect(loadSyncNodeVersionsSince({ createdAt: '2026-04-21T10:30:00.000Z', versionId: 'desktop#1' }, 10)[0].snapshot.title)
+    const [version] = loadSyncNodeVersionsSince({ createdAt: '2026-04-21T10:30:00.000Z', versionId: 'desktop#1' }, 10);
+    expect(version?.snapshot.title)
       .toBe('Historical title');
   });
 });

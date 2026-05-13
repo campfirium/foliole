@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { importActionOptions } from '../../../lib/core/import/importSourceActions';
+import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import {
   AppButton,
@@ -104,7 +105,7 @@ function SourceFolderCells(props: {
         label={`Original folder ${props.source.id}`}
         onClick={() => props.onChoosePrimaryFolder(props.source.id)}
         path={resolveFolderPathLabel(props.source.primaryPath, 'Choose')}
-        tooltip={resolveFolderPathHint(props.source.primaryPath)}
+        {...definedProps({ tooltip: resolveFolderPathHint(props.source.primaryPath) })}
         className="h-9 px-2.5 text-sm"
       />
       <FolderButton
@@ -115,7 +116,7 @@ function SourceFolderCells(props: {
           props.source.highlightPath,
           props.source.highlightMode === 'split' ? 'Choose' : 'Not used'
         )}
-        tooltip={resolveFolderPathHint(props.source.highlightPath)}
+        {...definedProps({ tooltip: resolveFolderPathHint(props.source.highlightPath) })}
         className="h-9 px-2.5 text-sm"
       />
     </>

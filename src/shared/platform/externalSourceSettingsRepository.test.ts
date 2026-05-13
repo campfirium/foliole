@@ -46,7 +46,7 @@ function createNativeFolder() {
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('creates external source folder drafts with the persisted settings shape', () => {

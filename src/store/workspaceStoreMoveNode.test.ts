@@ -94,7 +94,7 @@ it('blocks moving derived nodes and cycle reparenting', () => {
   expect(moveDerived).toBe(false);
   expect(moveToDescendant).toBe(false);
   expect(useWorkspaceStore.getState().nodesById[derivedId]?.parentNodeId).toBe('node-1');
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.parentNodeId).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.parentNodeId).toBeNull();
 });
 
 it('moves selected root nodes before target and preserves relative order', () => {

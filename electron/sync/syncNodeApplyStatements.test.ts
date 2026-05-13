@@ -125,7 +125,9 @@ it('builds node attachment link statements without deciding existence', () => {
   expect(buildAttachmentExistsQuery('att-1')).toMatchObject({
     params: ['att-1']
   });
-  expect(buildNodeAttachmentInsert(record, record.snapshot.attachments[0])).toMatchObject({
+  const [attachment] = record.snapshot.attachments;
+  expect(attachment).toBeDefined();
+  expect(buildNodeAttachmentInsert(record, attachment!)).toMatchObject({
     params: ['node-1', 'att-1', 'reference']
   });
 });

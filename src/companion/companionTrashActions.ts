@@ -52,8 +52,11 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
   const restoredAt = new Date().toISOString();
   const subtreeIds = collectNodeSubtreeIds(args.nodeId, args.snapshot.nodesById)
     .filter((nodeId) => args.snapshot?.trashedNodeIds.includes(nodeId));
+  const restorableNodes = subtreeIds
+    .map((nodeId) => args.snapshot?.nodesById[nodeId])
+    .filter((node): node is NonNullable<typeof node> => Boolean(node));
   const restored = await Promise.all(
-    subtreeIds.map((nodeId) => buildRestoredNodeVersion(args.snapshot!.nodesById[nodeId], args.deviceId, restoredAt))
+    restorableNodes.map((node) => buildRestoredNodeVersion(node, args.deviceId, restoredAt))
   );
   await applyCompanionSyncNodeVersions(restored.map((entry) => entry.version));
   const restoredIds = new Set(subtreeIds);

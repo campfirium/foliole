@@ -213,7 +213,7 @@ it('reuses the list projection when only document body fields change', () => {
   const nextProjection = projectWorkspaceListNodesById(
     {
       'node-1': {
-        ...initialNodesById['node-1'],
+        ...initialNodesById['node-1']!,
         content: 'Version 2',
         reveal: 'Answer 2'
       }
@@ -255,7 +255,7 @@ it('refreshes only the changed list projection when list-visible fields change',
     {
       ...initialNodesById,
       'node-1': {
-        ...initialNodesById['node-1'],
+        ...initialNodesById['node-1']!,
         title: 'Atlas renamed'
       }
     },

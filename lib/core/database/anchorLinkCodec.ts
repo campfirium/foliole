@@ -153,9 +153,10 @@ function parseVisualLocator(
     };
   }
   if (isFiniteNumber(locator.page) && Number.isInteger(locator.page) && locator.page > 0) {
+    const rects = asRectArray(locator.rects);
     return {
       page: locator.page,
-      rects: asRectArray(locator.rects),
+      ...(rects === undefined ? {} : { rects }),
       x: clampRatio(locator.x),
       y: clampRatio(locator.y)
     };

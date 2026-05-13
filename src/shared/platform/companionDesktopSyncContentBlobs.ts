@@ -23,6 +23,7 @@ export const COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS = 45_000;
 
 type ProgressHandler = (progress: CompanionDesktopSyncProgress) => void;
 type MissingContentBlob = { hash: string; size_bytes?: number };
+type ContentBreakdown = NonNullable<CompanionDesktopSyncProgress['contentBreakdown']>;
 type ContentBlobBatchResult = {
   failedContentBlobCount: number;
   nativeTiming?: CompanionContentBlobNativeTiming;
@@ -31,6 +32,10 @@ type ContentBlobBatchResult = {
 
 function knownNumber(value: number | null | undefined) {
   return typeof value === 'number' ? value : undefined;
+}
+
+function compactContentBreakdown(values: Record<keyof ContentBreakdown, number | undefined>): ContentBreakdown {
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as ContentBreakdown;
 }
 
 async function ackContentBlobs(endpointUrl: string, hashes: string[]) {
@@ -61,14 +66,14 @@ async function loadMissingContentBlobSummary() {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   return {
     batch: batch.blobs,
-    contentBreakdown: diagnostics ? {
+    contentBreakdown: diagnostics ? compactContentBreakdown({
       activeTopicBodies: diagnostics.content.missing_active_topic_body_count,
       dueReviewBodies: diagnostics.content.missing_due_review_body_count,
       externalDocumentBodies: diagnostics.content.missing_external_document_body_count,
       nestedTopicBodies: diagnostics.content.missing_nested_topic_body_count,
       topLevelTopicBodies: diagnostics.content.missing_top_level_topic_body_count,
       topicBodies: diagnostics.content.missing_topic_body_count
-    } : undefined,
+    }) : undefined,
     failed: batch.failedCount ?? diagnostics?.content.failed_content_blob_count ?? null,
     failedBytes: batch.failedBytes ?? diagnostics?.content.failed_content_blob_bytes ?? null,
     total: batch.total ?? diagnostics?.content.missing_content_blob_count ?? null,
@@ -85,7 +90,17 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
   let nativeTiming: CompanionContentBlobNativeTiming | undefined;
   let syncedBytes = 0;
   let nextBlobs: MissingContentBlob[] | null = firstBatch;
-  onProgress?.({ completed: 0, completedBytes: 0, contentBreakdown, elapsedMs: 0, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
+  const failedContentBytes = knownNumber(failedBytes);
+  const failedContentCount = knownNumber(failed);
+  const progressBase = {
+    ...(contentBreakdown ? { contentBreakdown } : {}),
+    ...(failedContentBytes !== undefined ? { failedBytes: failedContentBytes } : {}),
+    ...(failedContentCount !== undefined ? { failedCount: failedContentCount } : {}),
+    phase: 'content' as const,
+    total,
+    totalBytes
+  };
+  onProgress?.({ ...progressBase, completed: 0, completedBytes: 0, elapsedMs: 0 });
   for (let batchIndex = 0; batchIndex < CONTENT_BLOB_MAX_BATCHES_PER_SYNC; batchIndex += 1) {
     if (batchIndex > 0 && Date.now() - startedAt >= COMPANION_DESKTOP_SYNC_RESOURCE_PASS_BUDGET_MS) break;
     const blobs = nextBlobs ?? await loadCompanionMissingContentBlobs(CONTENT_BLOB_BATCH_LIMIT);
@@ -99,7 +114,7 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
     const batchPromise = pullContentBlobBatch(endpoint, hashes, (syncedChunkHashes) => {
       syncedContentBlobHashes.push(...syncedChunkHashes);
       syncedBytes += syncedChunkHashes.reduce((sum, hash) => sum + (sizeByHash.get(hash) ?? 0), 0);
-      onProgress?.({ completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, contentBreakdown, elapsedMs: Date.now() - startedAt, failedBytes: knownNumber(failedBytes), failedCount: knownNumber(failed), phase: 'content', total, totalBytes });
+      onProgress?.({ ...progressBase, completed: syncedContentBlobHashes.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt });
     });
     const batch = await batchPromise;
     nativeTiming = sumNativeTiming(nativeTiming, batch.nativeTiming);
@@ -114,7 +129,12 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       break;
     }
   }
-  return { contentBacklogRemaining, syncedContentBlobBytes: syncedBytes, syncedContentBlobHashes, syncedContentBlobNativeTiming: nativeTiming };
+  return {
+    contentBacklogRemaining,
+    syncedContentBlobBytes: syncedBytes,
+    syncedContentBlobHashes,
+    ...(nativeTiming ? { syncedContentBlobNativeTiming: nativeTiming } : {})
+  };
 }
 
 async function pullContentBlobBatch(
@@ -128,7 +148,7 @@ async function pullContentBlobBatch(
     if (syncedContentBlobHashes.length > 0) onSyncedChunk?.(syncedContentBlobHashes);
     return {
       failedContentBlobCount: hashes.length - syncedContentBlobHashes.length,
-      nativeTiming: batch.nativeTiming,
+      ...(batch.nativeTiming ? { nativeTiming: batch.nativeTiming } : {}),
       syncedContentBlobHashes
     };
   } catch {

@@ -64,7 +64,7 @@ export function handleSelectionRestore(args: {
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: args.restoreCompletionFrameRef,
     restoreCompletionTimeoutRef: args.restoreCompletionTimeoutRef,
-    restoreCommandId: args.restoreTarget.restoreCommandId,
+    restoreCommandId: args.restoreTarget.restoreCommandId ?? null,
     restoreScrollTop: args.restoreTarget.restoreScrollTop,
     selectionKey: args.restoreTarget.selectionKey,
     selection: args.restoreTarget.selection,
@@ -158,13 +158,24 @@ export function resolveRestoreTarget(args: {
   return {
     adapter: args.adapter,
     nodeId: args.nodeId,
-    restoreCommandId: args.readingRestoreCommandId,
-    restoreScrollTop: args.readingTargetViewportMode != null || typeof args.readingTargetViewportRatio === 'number' ? undefined : restoreContext.restoreScrollTop,
+    ...(args.readingRestoreCommandId !== undefined ? { restoreCommandId: args.readingRestoreCommandId } : {}),
+    ...(
+      args.readingTargetViewportMode == null &&
+      typeof args.readingTargetViewportRatio !== 'number' &&
+      restoreContext.restoreScrollTop !== undefined
+        ? { restoreScrollTop: restoreContext.restoreScrollTop }
+        : {}
+    ),
     selection: restoreContext.selection,
-    shouldNotifyApplying: shouldNotifyReadingPositionApply(args),
-    targetViewportMode: args.readingTargetViewportMode,
+    shouldNotifyApplying: shouldNotifyReadingPositionApply({
+      ...(args.readingRestoreCommandId !== undefined ? { readingRestoreCommandId: args.readingRestoreCommandId } : {}),
+      readingSelection: args.readingSelection,
+      readingTargetViewportMode: args.readingTargetViewportMode,
+      readingTargetViewportRatio: args.readingTargetViewportRatio
+    }),
+    ...(args.readingTargetViewportMode !== undefined ? { targetViewportMode: args.readingTargetViewportMode } : {}),
     selectionKey,
-    targetViewportRatio: args.readingTargetViewportRatio
+    ...(args.readingTargetViewportRatio !== undefined ? { targetViewportRatio: args.readingTargetViewportRatio } : {})
   };
 }
 

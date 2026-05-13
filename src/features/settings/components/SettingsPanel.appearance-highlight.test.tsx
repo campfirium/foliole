@@ -8,7 +8,7 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('persists and resets selection, highlight, and cloze colors from appearance settings', async () => {

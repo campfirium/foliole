@@ -204,7 +204,7 @@ export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRo
     return {
       base: this.baseReference(row),
       clientOpId: `node:${row.version_id ?? row.object_id}`,
-      contentHash: row.content_hash ?? undefined,
+      ...(row.content_hash ? { contentHash: row.content_hash } : {}),
       identity: this.identity(row),
       payloadJson: JSON.stringify(row),
       updatedAt: row.updated_at

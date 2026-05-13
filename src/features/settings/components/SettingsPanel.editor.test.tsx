@@ -8,7 +8,7 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.electronAPI = undefined;
+  delete window.electronAPI;
 });
 
 it('edits the highlight annotation prefix from editor settings', () => {

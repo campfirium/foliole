@@ -4,7 +4,7 @@ import { enforceWorkspaceRendererBoundary, mergeWorkspaceNodeDocument } from './
 import { createInitialWorkspaceState } from './workspaceStore';
 
 it('clears image regions when a merged document removes them', () => {
-  const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1'];
+  const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1']!;
   const mergedNode = mergeWorkspaceNodeDocument(
     {
       ...seedNode,
@@ -40,7 +40,7 @@ it('clears image regions when a merged document removes them', () => {
 });
 
 it('refreshes the active-node boundary projection when only image regions change', () => {
-  const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1'];
+  const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1']!;
   const currentState = {
     ...createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')),
     activeNodeId: 'node-1',
@@ -79,7 +79,7 @@ it('refreshes the active-node boundary projection when only image regions change
       nodesById: {
         ...currentState.nodesById,
         'node-1': {
-          ...currentState.nodesById['node-1'],
+          ...currentState.nodesById['node-1']!,
           imageRegions: null,
           updatedAt: '2026-03-20T00:00:01.000Z'
         }
@@ -88,5 +88,5 @@ it('refreshes the active-node boundary projection when only image regions change
     currentState
   ) as typeof currentState;
 
-  expect(nextState.nodesById['node-1']?.imageRegions).toBeNull();
+  expect(nextState.nodesById['node-1']!?.imageRegions).toBeNull();
 });

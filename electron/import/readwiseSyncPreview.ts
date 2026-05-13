@@ -104,7 +104,7 @@ async function buildSourceEntry(
           hasPrimarySourceChanged(existingItem, sourceSignature)
         );
   return {
-    blocked_location: status === 'blocked_deleted' ? resolveBlockedLocation(readwiseSource.id, source) : undefined,
+    ...(status === 'blocked_deleted' ? { blocked_location: resolveBlockedLocation(readwiseSource.id, source) } : {}),
     destination: decision.destination,
     detail:
       decision.destination === 'off'

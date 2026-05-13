@@ -63,17 +63,16 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
       clientOpId: raw.client_op_id,
       conflictReason: 'missing_state_seq',
       identity: raw.identity,
-      stateSeq: raw.state_seq,
       status: 'rejected'
     };
   }
   return {
     clientOpId: raw.client_op_id,
-    conflictReason: raw.conflict_reason,
+    ...(raw.conflict_reason !== undefined ? { conflictReason: raw.conflict_reason } : {}),
     identity: raw.identity,
-    stateSeq: raw.state_seq,
+    ...(raw.state_seq !== undefined ? { stateSeq: raw.state_seq } : {}),
     status: raw.status,
-    versionId: raw.version_id
+    ...(raw.version_id !== undefined ? { versionId: raw.version_id } : {})
   };
 }
 

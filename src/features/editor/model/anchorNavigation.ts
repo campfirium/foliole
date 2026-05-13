@@ -25,6 +25,9 @@ function resolveTextAnchorSelection(
     return null;
   }
   const firstLocator = locators[0];
+  if (!firstLocator) {
+    return null;
+  }
   const selection = resolveTextAnchorLocatorSelection(content, firstLocator);
   if (!selection) {
     return null;

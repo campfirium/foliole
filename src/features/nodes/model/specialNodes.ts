@@ -101,10 +101,8 @@ function resolveNodeSpecialKind(node: Node): Node['specialKind'] | undefined {
 function withResolvedSpecialKind(node: Node): Node {
   const specialKind = resolveNodeSpecialKind(node);
   if (!specialKind) {
-    return {
-      ...node,
-      specialKind: undefined
-    };
+    const { specialKind: _specialKind, ...nodeWithoutSpecialKind } = node;
+    return nodeWithoutSpecialKind;
   }
   return {
     ...node,

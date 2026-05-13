@@ -38,7 +38,7 @@ export function createSelectionAnnotationAnchorLink(
   return {
     id: payload.anchorId,
     kind,
-    locator: locators.length === 1 ? locators[0] : { ranges: locators }
+    locator: locators.length === 1 ? locators[0]! : { ranges: locators }
   };
 }
 
@@ -52,7 +52,7 @@ export function createSelectionAnnotatedHighlightContent(
   notePrefix = DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX
 ) {
   return formatHighlightCardContent({
-    note,
+    ...(note !== undefined ? { note } : {}),
     notePrefix,
     text: payload.selectionText
   });

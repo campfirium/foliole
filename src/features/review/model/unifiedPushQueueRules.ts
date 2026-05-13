@@ -128,15 +128,15 @@ export function advanceReadingScheduleCoreFields(args: { lastHandledAt: string; 
   return buildReadingScheduleCoreFields({
     intervalDurationMs: resolveNextReadingIntervalDurationMs({
       repetitionCount: previousRepetitionCount,
-      previousIntervalDurationMs: args.previousIntervalDurationMs,
-      priorityChain: args.priorityChain,
-      initialIntervalMs: args.initialIntervalMs,
-      range: args.range
+      ...(args.previousIntervalDurationMs !== undefined ? { previousIntervalDurationMs: args.previousIntervalDurationMs } : {}),
+      ...(args.priorityChain ? { priorityChain: args.priorityChain } : {}),
+      ...(args.initialIntervalMs !== undefined ? { initialIntervalMs: args.initialIntervalMs } : {}),
+      ...(args.range ? { range: args.range } : {})
     }),
     lastHandledAt: args.lastHandledAt,
-    priorityChain: args.priorityChain,
+    ...(args.priorityChain ? { priorityChain: args.priorityChain } : {}),
     repetitionCount: previousRepetitionCount + 1,
-    range: args.range
+    ...(args.range ? { range: args.range } : {})
   });
 }
 

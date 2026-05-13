@@ -228,7 +228,8 @@ function WorkspaceSurfacePaletteEditorHost(props: { editor: ReturnType<typeof us
   }
   const activeEditorColor =
     props.editor.appearance.workspaceSurfacePalette[activeEditorState.index] ??
-    props.editor.appearance.workspaceSurfacePalette[0];
+    props.editor.appearance.workspaceSurfacePalette[0] ??
+    '#ffffff';
 
   return (
     <WorkspaceSurfacePaletteEditor

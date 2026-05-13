@@ -63,7 +63,7 @@ export async function devReimportSelectedTopic(args: { nodeId: string; nodeIdsTo
   return runDevReimportSelectedTopic({
     loadSourceDetails: loadRuntimeNodeSourceDetails,
     nodeId: args.nodeId,
-    nodeIdsToDelete: args.nodeIdsToDelete,
+    ...(args.nodeIdsToDelete ? { nodeIdsToDelete: args.nodeIdsToDelete } : {}),
     nodeOrder: args.nodeOrder,
     restoreSource: restoreRuntimeRemovedSource,
     runtimeInvoke: getRuntimeInvoke()

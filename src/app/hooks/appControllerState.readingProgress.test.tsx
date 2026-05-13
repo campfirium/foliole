@@ -238,7 +238,7 @@ function runReadingProgressSyncStateWiringTest() {
   render(<Harness ws={ws} />);
 
   expect(useReadingProgressSyncMock).toHaveBeenCalledTimes(1);
-  const options = useReadingProgressSyncMock.mock.calls[0][0];
+  const options = useReadingProgressSyncMock.mock.calls[0]![0];
   expect(options.getReadingPositionSelection()).toEqual({ from: 12, to: 12 });
   expect(options.getReadingPositionSyncState()).toEqual({
     reason: 'editor-restore-selection',
@@ -252,7 +252,7 @@ function runImmersiveModePersistenceWiringTest() {
   const ws = createWorkspaceState();
   render(<Harness ws={ws} />);
 
-  expect(useReadingProgressSyncMock.mock.calls[0][0].isImmersiveMode).toBe(true);
+  expect(useReadingProgressSyncMock.mock.calls[0]![0].isImmersiveMode).toBe(true);
 }
 
 describe('useWorkspaceControllerState reading progress wiring', () => {

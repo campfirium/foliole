@@ -72,6 +72,8 @@ function areTextAnchorDecorationsEqual(
     const leftDecoration = left[index];
     const rightDecoration = right[index];
     if (
+      !leftDecoration ||
+      !rightDecoration ||
       leftDecoration.from !== rightDecoration.from ||
       leftDecoration.to !== rightDecoration.to ||
       leftDecoration.kind !== rightDecoration.kind

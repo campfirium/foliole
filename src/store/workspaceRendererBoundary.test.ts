@@ -14,7 +14,7 @@ function resetWorkspaceStore() {
 }
 
 function createLoadedNodes() {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   return {
     'node-1': {
       ...seedNode,
@@ -54,13 +54,13 @@ it('trims the previous active node on direct active-node patches', () => {
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
-  expect(state.nodesById['node-1']).toMatchObject({
+  expect(state.nodesById['node-1']!).toMatchObject({
     content: '',
     hasContent: true,
     reveal: null,
     hasReveal: true
   });
-  expect(state.nodesById['node-2']).toMatchObject({
+  expect(state.nodesById['node-2']!).toMatchObject({
     content: 'Second node body',
     hasContent: true,
     reveal: 'Second answer',
@@ -70,7 +70,7 @@ it('trims the previous active node on direct active-node patches', () => {
 });
 
 it('reuses unaffected node references when only the active node changes', () => {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   useWorkspaceStore.setState({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
@@ -115,14 +115,14 @@ it('reuses unaffected node references when only the active node changes', () => 
     trashedNodeIds: []
   });
 
-  const beforeNode3 = useWorkspaceStore.getState().nodesById['node-3'];
-  const beforeNode4 = useWorkspaceStore.getState().nodesById['node-4'];
+  const beforeNode3 = useWorkspaceStore.getState().nodesById['node-3']!;
+  const beforeNode4 = useWorkspaceStore.getState().nodesById['node-4']!;
 
   useWorkspaceStore.setState({ activeNodeId: 'node-2' });
 
   const state = useWorkspaceStore.getState();
-  expect(state.nodesById['node-3']).toBe(beforeNode3);
-  expect(state.nodesById['node-4']).toBe(beforeNode4);
+  expect(state.nodesById['node-3']!).toBe(beforeNode3);
+  expect(state.nodesById['node-4']!).toBe(beforeNode4);
 });
 
 it('keeps the previously active node warm when navigation opens another node', async () => {
@@ -149,11 +149,11 @@ it('keeps the previously active node warm when navigation opens another node', a
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-1');
-  expect(state.nodesById['node-1']).toMatchObject({
+  expect(state.nodesById['node-1']!).toMatchObject({
     content: '',
     hasContent: true
   });
-  expect(state.nodesById['node-2']).toMatchObject({
+  expect(state.nodesById['node-2']!).toMatchObject({
     content: 'Second node body',
     hasContent: true,
     reveal: 'Second answer',
@@ -189,13 +189,13 @@ it('keeps direct nodesById patches trimmed against the active-node boundary', ()
   });
 
   const state = useWorkspaceStore.getState();
-  expect(state.nodesById['node-1']).toMatchObject({
+  expect(state.nodesById['node-1']!).toMatchObject({
     content: '',
     hasContent: true,
     reveal: null,
     hasReveal: true
   });
-  expect(state.nodesById['node-2']).toMatchObject({
+  expect(state.nodesById['node-2']!).toMatchObject({
     content: 'Second node body',
     hasContent: true,
     reveal: 'Second answer',
@@ -221,13 +221,13 @@ it('trims nodesById-only boundary patches against the current active node', () =
     boundaryState
   ) as { nodesById: ReturnType<typeof createLoadedNodes> };
 
-  expect(nextState.nodesById['node-1']).toMatchObject({
+  expect(nextState.nodesById['node-1']!).toMatchObject({
     content: '',
     hasContent: true,
     reveal: null,
     hasReveal: true
   });
-  expect(nextState.nodesById['node-2']).toMatchObject({
+  expect(nextState.nodesById['node-2']!).toMatchObject({
     content: 'Second node body',
     hasContent: true,
     reveal: 'Second answer',
@@ -253,13 +253,13 @@ it('keeps pending nodes loaded for nodesById-only boundary patches', () => {
     new Set(['node-1'])
   ) as { nodesById: ReturnType<typeof createLoadedNodes> };
 
-  expect(nextState.nodesById['node-1']).toMatchObject({
+  expect(nextState.nodesById['node-1']!).toMatchObject({
     content: 'First node body',
     hasContent: true,
     reveal: 'First answer',
     hasReveal: true
   });
-  expect(nextState.nodesById['node-2']).toMatchObject({
+  expect(nextState.nodesById['node-2']!).toMatchObject({
     content: 'Second node body',
     hasContent: true,
     reveal: 'Second answer',

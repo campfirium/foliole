@@ -63,8 +63,8 @@ describe('companion content blob sync split bridge', () => {
       batch_token: 'content-batch-token'
     });
     expect(capacitorMock.plugin.syncContentBlob).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.downloadContentBlobBatch.mock.invocationCallOrder[0])
-      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]);
+    expect(capacitorMock.plugin.downloadContentBlobBatch.mock.invocationCallOrder[0]!)
+      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]!);
   });
 
   it('still commits a downloaded failure token so native can mark failed hashes', async () => {

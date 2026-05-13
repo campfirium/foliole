@@ -78,15 +78,15 @@ async function runKeepsOnlyActiveAndPendingDocumentsCase() {
   const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
   expect(state?.activeNodeId).toBe('node-2');
-  expect(state?.nodesById['node-1']).toMatchObject({
+  expect(state?.nodesById['node-1']!).toMatchObject({
     content: 'Pending node 1 draft',
     reveal: null
   });
-  expect(state?.nodesById['node-2']).toMatchObject({
+  expect(state?.nodesById['node-2']!).toMatchObject({
     content: 'Node 2 content',
     reveal: 'Node 2 answer'
   });
-  expect(state?.nodesById['node-3']).toMatchObject({
+  expect(state?.nodesById['node-3']!).toMatchObject({
     content: '',
     reveal: null
   });
@@ -99,7 +99,7 @@ async function runPendingHighlightRehydrateCase() {
 
   const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
-  expect(state?.nodesById['node-highlight']).toMatchObject({
+  expect(state?.nodesById['node-highlight']!).toMatchObject({
     title: 'Better',
     content: 'Better',
     reveal: null,
@@ -122,7 +122,7 @@ async function runClozeRehydrateCase() {
 
   const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
 
-  expect(state?.nodesById['node-cloze']).toMatchObject({
+  expect(state?.nodesById['node-cloze']!).toMatchObject({
     title: 'Alpha [...] Gamma',
     content: '',
     reveal: null,

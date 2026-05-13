@@ -16,9 +16,11 @@ export async function applySyncNodesAsync(records: NativeSyncNodeRecord[], optio
   }
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-node-apply' });
-  const result = await applySyncNodesWithDbPort(port, records, {
-    includeAlreadyApplied: options.includeAlreadyApplied
-  });
+  const result = await applySyncNodesWithDbPort(
+    port,
+    records,
+    options.includeAlreadyApplied === undefined ? {} : { includeAlreadyApplied: options.includeAlreadyApplied }
+  );
   const conflictCopyIds: string[] = [];
   const timestamp = new Date().toISOString();
 

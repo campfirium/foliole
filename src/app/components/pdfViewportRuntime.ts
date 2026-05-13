@@ -35,7 +35,7 @@ function handleSearchTextLayerRender(args: {
   if (!isPdfSearchRuntimeActive({ searchQuery: args.searchQuery, searchRequest: args.searchRequest, searchTarget: args.searchTarget })) {
     return;
   }
-  const shell = args.pageElementsRef.current[args.pageNumber];
+  const shell = args.pageElementsRef.current[args.pageNumber] ?? null;
   if (!shouldRefreshTextLayer({ pageNumber: args.pageNumber, previousSignatures: args.previousSignatures, shell })) {
     return;
   }
@@ -61,7 +61,7 @@ function refreshExistingSearchTextLayers(args: {
   }
   let refreshed = false;
   for (let pageNumber = 1; pageNumber <= args.totalPages; pageNumber += 1) {
-    const shell = args.pageElementsRef.current[pageNumber];
+    const shell = args.pageElementsRef.current[pageNumber] ?? null;
     if (!shouldRefreshTextLayer({ pageNumber, previousSignatures: args.previousSignatures, shell })) {
       continue;
     }

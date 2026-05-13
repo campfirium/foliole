@@ -26,8 +26,9 @@ export function handleSqliteMaintenanceCommand(command: string, args: Record<str
     return listApplicationDatabaseBackups();
   }
   if (command === NATIVE_COMMANDS.backupSqliteDatabase) {
+    const destinationPath = asNullableString(args.destinationPath, 'destinationPath');
     return createApplicationDatabaseBackup({
-      destinationPath: asNullableString(args.destinationPath, 'destinationPath') ?? undefined
+      ...(destinationPath === null ? {} : { destinationPath })
     });
   }
   if (command === NATIVE_COMMANDS.restoreSqliteDatabase) {

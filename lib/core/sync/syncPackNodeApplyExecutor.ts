@@ -129,7 +129,7 @@ function clearConfirmedSyncPushAcks(
   toStateSeq: number
 ) {
   return clearConfirmedSyncPushAcksWithDbPort(port, {
-    incomingAlias: options.incomingAlias,
+    ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
     toStateSeq
   });
 }

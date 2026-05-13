@@ -17,7 +17,7 @@ export function handleStorageAttachmentCommand(
       bytesBase64: asString(args.bytesBase64, 'bytesBase64'),
       mimeType: asString(args.mimeType, 'mimeType'),
       nodeId: asString(args.nodeId, 'nodeId'),
-      originalName: typeof args.originalName === 'string' ? args.originalName : undefined
+      ...(typeof args.originalName === 'string' ? { originalName: args.originalName } : {})
     });
   }
 

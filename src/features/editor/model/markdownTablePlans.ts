@@ -179,7 +179,7 @@ function collectTablePlanFromNode(args: {
     anchorDecorations,
     columnCount: header.cells.length,
     from: tableFrom,
-    linkReferences: args.linkReferences,
+    ...(args.linkReferences ? { linkReferences: args.linkReferences } : {}),
     rows,
     to: tableTo
   };
@@ -209,7 +209,7 @@ export function collectMarkdownTablePlans(args: {
     const plan = collectTablePlanFromNode({
       activePosition: args.activePosition,
       anchorDecorations: args.anchorDecorations ?? [],
-      linkReferences: args.linkReferences,
+      ...(args.linkReferences ? { linkReferences: args.linkReferences } : {}),
       node,
       offset: args.from,
       source: args.text

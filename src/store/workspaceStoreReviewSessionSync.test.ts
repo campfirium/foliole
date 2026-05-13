@@ -7,7 +7,7 @@ function resetWorkspaceStore() {
 }
 
 function createReadingNode(id: string) {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   return {
     ...seedNode,
     id,
@@ -19,7 +19,7 @@ function createReadingNode(id: string) {
 }
 
 function createFsrsNode(id: string) {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1'];
+  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   return {
     ...seedNode,
     id,

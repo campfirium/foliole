@@ -107,7 +107,7 @@ function createSelectionHandlers(args: {
     attachmentId: args.attachmentId,
     draft: args.draft,
     overlay: args.overlay,
-    presentation: args.presentation,
+    ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
     setHoverRegionId: (value) => {
       hoverRegionId = value;
       args.overlay.dataset.mdImageRegionHover = hoverRegionId ? 'true' : 'false';
@@ -165,7 +165,7 @@ export function attachImageClozeOverlayInteractions(args: {
     draftRectElement: args.draftRectElement,
     from: args.from,
     overlay: args.overlay,
-    presentation: args.presentation,
+    ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
     regionLayer: args.regionLayer,
     to: args.to
   });
@@ -175,7 +175,15 @@ export function attachImageClozeOverlayInteractions(args: {
     event.stopPropagation();
     selection.deleteSelection();
   });
-  const selection = createSelectionHandlers({ attachmentId: args.attachmentId, deleteControl, draft, host, overlay: args.overlay, presentation: args.presentation, regionLayer: args.regionLayer });
+  const selection = createSelectionHandlers({
+    attachmentId: args.attachmentId,
+    deleteControl,
+    draft,
+    host,
+    overlay: args.overlay,
+    ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
+    regionLayer: args.regionLayer
+  });
   for (const regionElement of Array.from(args.regionLayer.querySelectorAll<HTMLElement>('.cm-md-image-cloze-region'))) {
     regionElement.addEventListener('pointerdown', selection.handlePointerDown);
     regionElement.addEventListener('pointermove', selection.handlePointerMove);

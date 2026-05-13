@@ -73,10 +73,10 @@ export function NodeTreeRowPresetIcon({
       {effect === 'double-line' ? (
         <>
           <g data-node-icon-effect="double-line-outer" transform={`translate(8 8) scale(${resolvedOuterScale}) translate(-8 -8)`}>
-            <ShapePath shape={shape} strokeWidth={outerLineWidth} />
+            <ShapePath shape={shape} {...(outerLineWidth !== undefined ? { strokeWidth: outerLineWidth } : {})} />
           </g>
           <g data-node-icon-effect="double-line-inner" transform={`translate(8 8) scale(${resolvedDoubleInnerScale}) translate(-8 -8)`}>
-            <ShapePath shape={shape} strokeWidth={innerLineWidth} />
+            <ShapePath shape={shape} {...(innerLineWidth !== undefined ? { strokeWidth: innerLineWidth } : {})} />
           </g>
         </>
       ) : null}

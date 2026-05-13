@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { RuntimeReadwiseBooksInventory } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { AppButton, AppStatusBadge } from '../../shared/ui';
 
@@ -115,12 +116,12 @@ export function ReadwiseBookInventoryItem({
     fallbackTitle: book.title,
     fallbackType: 'book',
     nodeId: generatedNodeId,
-    nodesById
+    ...definedProps({ nodesById })
   });
   const title = renderReadwiseBookTitle({
     generatedNodeId,
     nodeStatus: book.nodeStatus,
-    onOpenBookNode,
+    ...definedProps({ onOpenBookNode }),
     title: presentation.title
   });
 
@@ -130,7 +131,7 @@ export function ReadwiseBookInventoryItem({
         book,
         generatedNodeId,
         isResetting,
-        onResetBookImport
+        ...definedProps({ onResetBookImport })
       })}
       meta={renderImportMeta(presentation.meta)}
       summary={renderImportOpening(presentation.opening)}

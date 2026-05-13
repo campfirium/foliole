@@ -101,6 +101,9 @@ function locateReadwiseBookHighlight(
 ) {
   for (const index of buildSearchOrder(sections.length, preferredStartIndex)) {
     const section = sections[index];
+    if (!section) {
+      continue;
+    }
     const content = findPreparedHighlightExcerptInLocator(section.locator, highlight);
     if (!content) {
       continue;

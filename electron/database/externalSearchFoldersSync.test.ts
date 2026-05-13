@@ -79,10 +79,11 @@ it('writes an external folder tombstone when a folder is removed', () => {
 
   saveExternalSearchFolders([]);
 
-  expect(readSyncState()[0]).toMatchObject({
+  const [state] = readSyncState();
+  expect(state).toMatchObject({
     object_id: 'folder-1',
     object_type: 'external_folder',
     sync_dirty: 1
   });
-  expect(readSyncState()[0].deleted_at).toBeTruthy();
+  expect(state?.deleted_at).toBeTruthy();
 });

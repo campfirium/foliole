@@ -55,7 +55,7 @@ async function testBlob(factory: DbPortFactory, expect: TestApi['expect']) {
 
     const rows = await db.query<{ id: string; body: Uint8Array }>('SELECT id, body FROM items ORDER BY id');
     expect(rows.map((row) => row.id)).toEqual(['a', 'b']);
-    expect(Array.from(rows[0].body)).toEqual([1, 2, 3, 4, 5]);
+    expect(Array.from(rows[0]?.body ?? [])).toEqual([1, 2, 3, 4, 5]);
   } finally {
     await factory.close(db);
   }
@@ -91,7 +91,7 @@ async function testBusy(factory: DbPortFactory, expect: TestApi['expect']) {
   const second = await factory.open(name);
   try {
     const journalRows = await first.query<{ journal_mode: string }>('PRAGMA journal_mode');
-    expect(typeof journalRows[0].journal_mode).toBe('string');
+    expect(typeof journalRows[0]?.journal_mode).toBe('string');
 
     await first.run('CREATE TABLE locks (id TEXT PRIMARY KEY)');
     await first.run('BEGIN IMMEDIATE');

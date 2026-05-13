@@ -107,6 +107,9 @@ export function collectBacklinks(args: {
       continue;
     }
     const firstMatch = matchedLinks[0];
+    if (!firstMatch) {
+      continue;
+    }
     backlinks.push({
       sourceNodeId: node.id,
       sourceTitle: node.title.trim() || 'Untitled',

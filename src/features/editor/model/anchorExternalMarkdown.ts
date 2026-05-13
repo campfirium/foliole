@@ -62,7 +62,7 @@ export function renderExternalMarkdownWithAnchorRanges(
     }
 
     if (position < visibleText.length) {
-      parts.push(visibleText[position]);
+      parts.push(visibleText[position] ?? '');
     }
   }
 

@@ -34,7 +34,7 @@ function applyRecommendationPreferences(
   const sourceTones = options.documentPureWhite ? family.whiteDocumentTones : family.tones;
   const nextTones = sourceTones.map((tone) => parseRecommendationTone(tone, alpha));
   if (options.folderTopicSharedTone) {
-    nextTones[2] = { ...nextTones[1] };
+    nextTones[2] = { ...(nextTones[1] ?? nextTones[0] ?? parseRecommendationTone('#ffffff', alpha)) };
   }
   return nextTones;
 }

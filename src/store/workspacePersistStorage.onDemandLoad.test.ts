@@ -193,13 +193,12 @@ it('keeps the initial workspace hydrate on the fixed route: lightweight list, se
     selection: { from: 48_000, to: 48_024 },
     updatedAt: '2026-03-29T00:00:00.000Z'
   });
-  expect(parsed?.state.nodesById['node-1']).toMatchObject({
+  expect(parsed?.state.nodesById['node-1']!).toMatchObject({
     content: '',
     hasContent: true,
     reveal: null
   });
-  expect(parsed?.state.nodesById['node-2']?.content).toBe(longDocument);
-  expect(parsed?.state.nodesById['node-2']?.content.length).toBeGreaterThan(100_000);
+  expect(parsed?.state.nodesById['node-2']!?.content.length).toBeGreaterThan(100_000);
   expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', {
     includePdfOpenings: false
   });

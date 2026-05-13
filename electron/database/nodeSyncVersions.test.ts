@@ -235,9 +235,10 @@ it('creates an active head before tombstone when soft deleting an unversioned no
     ['node-1']
   );
   expect(versions).toHaveLength(2);
-  expect(JSON.parse(versions[0].snapshot_json)).toMatchObject({ deleted_at: null, id: 'node-1' });
-  expect(versions[1].parent_version_id).toBe(versions[0].version_id);
-  expect(JSON.parse(versions[1].snapshot_json)).toMatchObject({
+  const [createdVersion, deletedVersion] = versions;
+  expect(JSON.parse(createdVersion?.snapshot_json ?? '{}')).toMatchObject({ deleted_at: null, id: 'node-1' });
+  expect(deletedVersion?.parent_version_id).toBe(createdVersion?.version_id);
+  expect(JSON.parse(deletedVersion?.snapshot_json ?? '{}')).toMatchObject({
     deleted_at: '2026-04-21T10:02:00.000Z',
     id: 'node-1'
   });

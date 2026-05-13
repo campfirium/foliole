@@ -65,9 +65,9 @@ export function createStartupErrorSurfaceModel(input: string | StartupErrorViewM
   const model = typeof input === 'string' ? { message: input } : input;
   return {
     eyebrow: 'Startup problem',
-    logPath: model.logPath,
+    ...(model.logPath !== undefined ? { logPath: model.logPath } : {}),
     message: model.message,
-    moduleLabel: model.moduleLabel,
+    ...(model.moduleLabel !== undefined ? { moduleLabel: model.moduleLabel } : {}),
     title: model.title ?? STARTUP_ERROR_TITLE,
     tone: 'critical'
   };

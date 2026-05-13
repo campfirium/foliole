@@ -76,7 +76,6 @@ it('skips readable node scanning while immersive mode is closed', () => {
     useImmersiveReadingMode({
       activeNodeId: 'node-1',
       editorAdapterRef: { current: adapter },
-      editorNodeViewState: undefined,
       isImmersiveMode: false,
       isStudyMode: false,
       nodeOrder: ['node-1', 'node-2'],

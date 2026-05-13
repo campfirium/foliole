@@ -128,7 +128,7 @@ export async function searchCompanionExternalDocuments(query: string, limit?: nu
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as CompanionExternalDocumentSearchResult[];
   }
-  const results = (await FolioleCompanionSync.searchExternalDocuments({ limit, query })).results as NativeExternalDocumentSearchResult[];
+  const results = (await FolioleCompanionSync.searchExternalDocuments({ ...(limit !== undefined ? { limit } : {}), query })).results as NativeExternalDocumentSearchResult[];
   return results.map(normalizeExternalDocumentSearchResult);
 }
 

@@ -28,7 +28,7 @@ export interface CompanionReadableArticle {
 
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
 
-function hasReadableContent(node: CompanionReadableNode | undefined) {
+function hasReadableContent(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
   return Boolean(node && (
     (typeof node.content === 'string' && node.content.trim()) ||
     node.bodyStatus === 'empty' ||
@@ -91,7 +91,7 @@ export function resolveReadableCompanionArticleByNodeId(
     return null;
   }
   const node = snapshot.nodesById[nodeId];
-  return hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node) : null;
+  return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node) : null;
 }
 
 export function resolveReadableCompanionTrashArticleByNodeId(
@@ -102,7 +102,7 @@ export function resolveReadableCompanionTrashArticleByNodeId(
     return null;
   }
   const node = snapshot.nodesById[nodeId];
-  return hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node, true) : null;
+  return node && hasReadableContent(node) ? buildReadableArticleFromSnapshot(snapshot, node, true) : null;
 }
 
 export function resolveReadableCompanionArticle(snapshot: WorkspaceSnapshot | null): CompanionReadableArticle | null {

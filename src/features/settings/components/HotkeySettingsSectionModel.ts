@@ -98,7 +98,8 @@ function useHotkeyDraftState(items: HotkeySettingItem[], recording: RecordingHot
         }
       }
       if (recording) {
-        nextDrafts[recording.commandId] = current[recording.commandId] ?? nextDrafts[recording.commandId];
+        const draft = current[recording.commandId] ?? nextDrafts[recording.commandId];
+        if (draft) nextDrafts[recording.commandId] = draft;
       }
       return nextDrafts;
     });

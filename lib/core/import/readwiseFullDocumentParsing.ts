@@ -21,11 +21,6 @@ function extractReadwiseShellTitle(markdown: string) {
   return match?.[1]?.trim() ?? '';
 }
 
-export function isReadwiseFullDocumentMarkdown(markdown: string) {
-  const normalized = normalizeLineEndings(markdown);
-  return /^## Metadata[^\n]*$/im.test(normalized) && /^## Full Document[^\n]*$/im.test(normalized);
-}
-
 function parseReadwiseMetadataSection(markdown: string) {
   const normalized = normalizeLineEndings(markdown);
   const lines = normalized.split('\n');

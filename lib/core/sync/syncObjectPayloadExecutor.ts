@@ -127,7 +127,7 @@ async function applyImportSourceObject(port: DbPort, record: SyncPackSyncObjectR
 
 async function applyPdfPageTextObject(port: DbPort, record: SyncPackSyncObjectRecord) {
   const payload = asObject(record);
-  const attachmentId = text(payload.attachment_id) ?? record.object_id.split(':')[0];
+  const attachmentId = text(payload.attachment_id) ?? record.object_id.split(':')[0] ?? record.object_id;
   const page = numberOrNull(payload.page) ?? Number(record.object_id.split(':').at(-1));
   if (record.deleted_at) {
     await port.run('DELETE FROM pdf_page_text WHERE attachment_id = ? AND page = ?', [attachmentId, page]);
@@ -178,7 +178,7 @@ async function applyViewStateObject(
 ) {
   if (!isLocalAndroidViewStateObject(record.object_id, options.deviceId)) return false;
   const parts = record.object_id.split(':');
-  const deviceId = parts.length >= 5 ? parts[3] : '*';
+  const deviceId = parts.length >= 5 ? parts[3] ?? '*' : '*';
   const key = parts.length >= 5 ? parts.slice(4).join(':') : record.object_id;
   if (record.deleted_at) {
     if (key === 'active_node') await port.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");

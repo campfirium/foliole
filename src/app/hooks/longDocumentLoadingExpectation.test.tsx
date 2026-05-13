@@ -128,10 +128,10 @@ function seedTrimmedWorkspaceState() {
     nodeOrder: ['node-1', 'node-2', 'node-3', 'node-4'],
     nodesById: {
       ...initial.nodesById,
-      'node-1': { ...initial.nodesById['node-1'], id: 'node-1', title: 'Node 1', content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-2': { ...initial.nodesById['node-1'], id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-3': { ...initial.nodesById['node-1'], id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: false },
-      'node-4': { ...initial.nodesById['node-1'], id: 'node-4', title: 'Node 4', content: '', hasContent: true, reveal: null, hasReveal: false }
+      'node-1': { ...initial.nodesById['node-1']!, id: 'node-1', title: 'Node 1', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-2': { ...initial.nodesById['node-1']!, id: 'node-2', title: 'Node 2', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-3': { ...initial.nodesById['node-1']!, id: 'node-3', title: 'Node 3', content: '', hasContent: true, reveal: null, hasReveal: false },
+      'node-4': { ...initial.nodesById['node-1']!, id: 'node-4', title: 'Node 4', content: '', hasContent: true, reveal: null, hasReveal: false }
     },
     trashedNodeIds: []
   });
@@ -190,7 +190,7 @@ it('reopens the same long document from the warm cache after switching away once
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
   await expectNodeDocument('node-2', 'Loaded node 2 body');
-  expect(useWorkspaceStore.getState().nodesById['node-1']).toMatchObject({ content: longDocument, reveal: null });
+  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({ content: longDocument, reveal: null });
 
   useWorkspaceStore.getState().setActiveNode('node-1');
   view.rerender(<HookHarness activeNodeId="node-1" />);
@@ -214,7 +214,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
   useWorkspaceStore.getState().setActiveNode('node-2');
   view.rerender(<HookHarness activeNodeId="node-2" />);
   await expectNodeDocument('node-2', 'Loaded node 2 body');
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(longDocument);
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.content).toBe(longDocument);
 
   useWorkspaceStore.getState().setActiveNode('node-3');
   view.rerender(<HookHarness activeNodeId="node-3" />);
@@ -225,7 +225,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
   await expectNodeDocument('node-4', 'Loaded node 4 body');
   await expectTrimmedNode('node-1');
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');
+  expect(useWorkspaceStore.getState().nodesById['node-1']!?.content).toBe('');
   expect(useWorkspaceStore.getState().nodeViewById['node-1']).toMatchObject({
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
@@ -239,7 +239,7 @@ it('restores a mid-document reading position after the recent cache is eventuall
     <MarkdownEditor
       nodeId="node-1"
       onChange={vi.fn()}
-      value={useWorkspaceStore.getState().nodesById['node-1']?.content ?? ''}
+      value={useWorkspaceStore.getState().nodesById['node-1']!?.content ?? ''}
       {...definedProps({ nodeViewState: useWorkspaceStore.getState().nodeViewById['node-1'] })}
     />
   );
