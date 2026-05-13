@@ -26,12 +26,18 @@ function compactWhitespace(value: string) {
 
 function stripLeadingListMarker(value: string) {
   return value
+    .trimStart()
     .replace(/^[-*+•]\s+/, '')
     .replace(/^\d+[.)]\s+/, '');
 }
 
 function normalizeQuoteText(value: string) {
-  return stripLeadingListMarker(compactWhitespace(stripQuoteMarkdown(normalizeLineEndings(value))));
+  return compactWhitespace(
+    normalizeLineEndings(value)
+      .split('\n')
+      .map((line) => stripLeadingListMarker(compactWhitespace(stripQuoteMarkdown(line))))
+      .join(' ')
+  );
 }
 
 function escapeRegex(value: string) {

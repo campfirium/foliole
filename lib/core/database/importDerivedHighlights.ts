@@ -19,7 +19,7 @@ function deriveImportedHighlightTitle(content: string) {
   return firstLine.replace(/\s+/g, ' ').slice(0, 120);
 }
 
-function toImportedAnchorLink(highlight: PreparedImportHighlightRecord | AnchoredImportedHighlightRecord) {
+export function toImportedAnchorLink(highlight: PreparedImportHighlightRecord | AnchoredImportedHighlightRecord) {
   if (!('anchorId' in highlight)) {
     return null;
   }

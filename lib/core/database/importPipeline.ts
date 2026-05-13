@@ -4,7 +4,7 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
-import { readExistingChildHighlights, replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
+import { replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
 import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
 import {
   buildImportRecord,
@@ -12,6 +12,7 @@ import {
   writeImportEvent,
   writeImportSource
 } from './importPipelineRecords.js';
+import { updateExistingReadwiseNode } from './importReadwiseHighlightBackfill.js';
 import { resolveReadwiseHighlightUpdate } from './importReadwiseHighlightUpdates.js';
 
 interface ImportSourceRow {
@@ -49,37 +50,6 @@ function readExistingNode(driver: DatabaseDriver, nodeId: string) {
       [nodeId]
     ) ?? null
   );
-}
-
-function updateExistingReadwiseNode(
-  driver: DatabaseDriver,
-  existingNode: ExistingNodeRow,
-  prepared: PreparedImportRecord,
-  record: PersistedImportRecord
-) {
-  const readwiseUpdate = resolveReadwiseHighlightUpdate({
-    existingChildContents: readExistingChildHighlights(driver, existingNode.id).map((row) => row.content),
-    existingContent: existingNode.content,
-    prepared
-  });
-  const nodeId = updateExistingNode({
-    content: readwiseUpdate.content,
-    driver,
-    existingNode,
-    hideTitleHeading: prepared.hideTitleHeading,
-    importedAt: record.importedAt,
-    title: prepared.nodeTitle
-  });
-  if (readwiseUpdate.highlights.length > 0) {
-    insertImportedHighlightNodes({
-      driver,
-      highlights: readwiseUpdate.highlights,
-      importedAt: record.importedAt,
-      parentNodeId: nodeId,
-      parentContent: readwiseUpdate.content
-    });
-  }
-  return nodeId;
 }
 
 function persistImportedHighlightNodes(input: {
@@ -145,7 +115,13 @@ function resolvePreparedNodeId(input: {
 }) {
   if (input.duplicateSemantic === 'updated' && input.existingNode && !input.existingNode.deleted_at) {
     if (input.prepared.sourceProfile === 'body_with_highlight_sidecar') {
-      return updateExistingReadwiseNode(input.driver, input.existingNode, input.prepared, input.baseRecord);
+      return updateExistingReadwiseNode({
+        driver: input.driver,
+        existingNode: input.existingNode,
+        hideTitleHeading: input.prepared.hideTitleHeading,
+        importedAt: input.baseRecord.importedAt,
+        prepared: input.prepared
+      });
     }
     return updateExistingNode({
       content: input.anchoredContent,
@@ -170,6 +146,15 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
   const existingNode = existingSource?.latest_node_id ? readExistingNode(driver, existingSource.latest_node_id) : null;
   const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, existingNode, prepared);
   if (duplicateSemantic === 'duplicate') {
+    if (prepared.sourceProfile === 'body_with_highlight_sidecar' && existingNode && !existingNode.deleted_at) {
+      updateExistingReadwiseNode({
+        driver,
+        existingNode,
+        hideTitleHeading: prepared.hideTitleHeading,
+        importedAt: baseRecord.importedAt,
+        prepared
+      });
+    }
     return finalizeImportRecord(driver, baseRecord);
   }
   if (prepared.content.trim().length === 0) {

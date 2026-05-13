@@ -40,6 +40,7 @@ export function needsReadwiseFrontmatterRefresh(existingContent: string, prepare
 }
 
 export function resolveReadwiseHighlightUpdate(input: {
+  existingAnchoredChildContents?: string[];
   existingChildContents: string[];
   existingContent: string;
   prepared: PreparedImportRecord;
@@ -47,10 +48,15 @@ export function resolveReadwiseHighlightUpdate(input: {
   const existingHighlightContentSet = new Set(
     input.existingChildContents.map((content) => normalizeImportedHighlightContent(content)).filter(Boolean)
   );
+  const existingAnchoredHighlightContentSet = new Set(
+    (input.existingAnchoredChildContents ?? input.existingChildContents)
+      .map((content) => normalizeImportedHighlightContent(content))
+      .filter(Boolean)
+  );
   const newMatchedHighlights =
     input.prepared.matchedHighlights?.filter((highlight) => {
       const normalized = normalizeImportedHighlightContent(highlight.content);
-      return normalized.length > 0 && !existingHighlightContentSet.has(normalized);
+      return normalized.length > 0 && !existingAnchoredHighlightContentSet.has(normalized);
     }) ?? [];
   const content = refreshReadwiseFrontmatter(input.existingContent, input.prepared.content);
   const anchoredImport = applyImportedHighlightAnchors({
