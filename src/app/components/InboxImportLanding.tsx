@@ -5,7 +5,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useFormalImport } from '../hooks/useFormalImport';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';
-import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { matchesImportSearch } from './importManagementSearch';
 import {
   collectRecentInboxEntries,
@@ -119,7 +119,7 @@ export function InboxImportLanding({
         hasItems={state.visibleItems.length > 0}
         onChangeQuery={state.setQuery}
         onChangeSortDirection={state.setSortDirection}
-        onChangeSortKey={(value) => state.setSortKey(value as InboxSortKey)}
+        onChangeSortKey={(value) => state.setSortKey(parseImportCatalogSortKey(value) ?? state.sortKey)}
         query={state.query}
         searchLabel="Search Inbox history"
         searchPlaceholder="Search Inbox history"

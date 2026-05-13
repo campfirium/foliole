@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../shared/lib/parseLiteralUnion';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
@@ -17,7 +18,7 @@ export const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
 ];
 
 function isWorkspaceRightPanelId(value: string | null): value is WorkspaceRightPanelId {
-  return value !== null && RIGHT_PANEL_IDS.includes(value as WorkspaceRightPanelId);
+  return parseLiteralUnion(value, RIGHT_PANEL_IDS) !== null;
 }
 
 export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelId = 'source-info') {

@@ -1,9 +1,10 @@
 import { GripVertical } from 'lucide-react';
 import { useState, type PointerEvent } from 'react';
 
+import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
+
 import {
   COMPANION_SECONDARY_DESTINATIONS,
-  type CompanionSecondaryDestinationId,
   type CompanionTabConfig,
   type CompanionTabSlotId
 } from './CompanionTabsConfig';
@@ -17,6 +18,7 @@ const TAB_LABELS: Record<CompanionTabSlotId, string> = {
 };
 
 const TAB_SLOT_IDS: CompanionTabSlotId[] = ['browse', 'learn', 'search', 'settings', 'shortcut'];
+const COMPANION_SECONDARY_DESTINATION_IDS = COMPANION_SECONDARY_DESTINATIONS.map((destination) => destination.id);
 
 function moveTab(ids: CompanionTabSlotId[], fromId: CompanionTabSlotId, toId: CompanionTabSlotId) {
   const next = [...ids];
@@ -32,7 +34,7 @@ function findTabSlotIdAtPoint(clientX: number, clientY: number) {
   const element = document.elementFromPoint(clientX, clientY);
   const row = element?.closest('[data-tab-slot-id]');
   const tabId = row?.getAttribute('data-tab-slot-id');
-  return TAB_SLOT_IDS.includes(tabId as CompanionTabSlotId) ? (tabId as CompanionTabSlotId) : null;
+  return parseLiteralUnion(tabId, TAB_SLOT_IDS);
 }
 
 function TabTargetSelect(props: {
@@ -46,10 +48,11 @@ function TabTargetSelect(props: {
         aria-label="Shortcut tab target"
         className="h-10 max-w-[190px] shrink-0 rounded-md border border-border bg-canvas px-3 text-sm text-foreground"
         onChange={(event) => {
+          const destinationId = parseLiteralUnion(event.target.value, COMPANION_SECONDARY_DESTINATION_IDS);
           props.onConfigChange({
             ...props.config,
-            shortcut: event.target.value
-              ? { destinationId: event.target.value as CompanionSecondaryDestinationId, enabled: true }
+            shortcut: destinationId
+              ? { destinationId, enabled: true }
               : { ...props.config.shortcut, enabled: false }
           });
         }}

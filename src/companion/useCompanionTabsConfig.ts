@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
+
 import {
   COMPANION_SECONDARY_DESTINATIONS,
   DEFAULT_COMPANION_TAB_CONFIG,
@@ -10,16 +12,15 @@ import {
 
 const STORAGE_KEY = 'foliole-companion-tabs-config';
 const DEFAULT_ORDER = DEFAULT_COMPANION_TAB_CONFIG.orderedTabIds;
-const SECONDARY_DESTINATION_IDS = new Set(
-  COMPANION_SECONDARY_DESTINATIONS.map((destination) => destination.id)
-);
+const SECONDARY_DESTINATION_ID_VALUES = COMPANION_SECONDARY_DESTINATIONS.map((destination) => destination.id);
+const TAB_SLOT_ID_VALUES = ['browse', 'learn', 'search', 'settings', 'shortcut'] as const;
 
 function isTabSlotId(value: unknown): value is CompanionTabSlotId {
-  return value === 'browse' || value === 'learn' || value === 'search' || value === 'settings' || value === 'shortcut';
+  return parseLiteralUnion(value, TAB_SLOT_ID_VALUES) !== null;
 }
 
 function isSecondaryDestinationId(value: unknown): value is CompanionSecondaryDestinationId {
-  return typeof value === 'string' && SECONDARY_DESTINATION_IDS.has(value as CompanionSecondaryDestinationId);
+  return parseLiteralUnion(value, SECONDARY_DESTINATION_ID_VALUES) !== null;
 }
 
 export function normalizeCompanionTabConfig(value: unknown): CompanionTabConfig {

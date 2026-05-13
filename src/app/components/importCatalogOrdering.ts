@@ -1,3 +1,4 @@
+import { parseLiteralUnion } from '../../shared/lib/parseLiteralUnion';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
@@ -9,6 +10,7 @@ export const IMPORT_CATALOG_SORT_OPTIONS: ImportCatalogSortOption[] = [
 ];
 
 export type ImportCatalogSortKey = 'dateImported' | 'dateLastOpened' | 'title';
+const IMPORT_CATALOG_SORT_KEYS: ImportCatalogSortKey[] = ['dateImported', 'dateLastOpened', 'title'];
 
 type SortableImportItem = {
   sortLastOpened: string | null;
@@ -43,6 +45,10 @@ export function resolveImportLastOpened(nodeId: string | null | undefined, nodeV
     return updatedAt;
   }
   return null;
+}
+
+export function parseImportCatalogSortKey(value: unknown) {
+  return parseLiteralUnion(value, IMPORT_CATALOG_SORT_KEYS);
 }
 
 export function sortImportCatalogItems<T extends SortableImportItem>(

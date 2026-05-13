@@ -7,7 +7,7 @@ import {
 } from '../../shared/platform/readwiseBooksRuntimeRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { matchesImportSearch } from './importManagementSearch';
 import { applyResetReadwiseBookImportToWorkspace, selectReadwiseBookNode } from './importSourceWorkspaceReadwiseBooks';
 import { ReadwiseBooksCatalogPanel } from './ReadwiseBooksCatalogPanel';
@@ -202,7 +202,7 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
           nodesById={nodesById}
           onChangeQuery={catalog.setQuery}
           onChangeSortDirection={catalog.setSortDirection}
-          onChangeSortKey={(value) => catalog.setSortKey(value as ReadwiseSortKey)}
+          onChangeSortKey={(value) => catalog.setSortKey(parseImportCatalogSortKey(value) ?? catalog.sortKey)}
           onOpenBookNode={actions.handleOpenBookNode}
           onRetry={refreshBooksInventory}
           onResetBookImport={actions.handleReimportBook}

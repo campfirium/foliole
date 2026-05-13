@@ -1,9 +1,12 @@
 import type { ImportNodeTitleStrategy } from '../../../lib/core/import/importedNodeTitle';
+import { parseLiteralUnion } from '../../shared/lib/parseLiteralUnion';
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
 
 import type { DraftImportSource, DraftImportSourceField } from './importSourceWorkspaceModel';
 import { importSourceSelectClassName } from './importSourceWorkspaceModel';
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
+
+const IMPORT_NODE_TITLE_STRATEGIES = ['file_name', 'heading'] as const;
 
 function TitleStrategySection(props: {
   onChange: (value: ImportNodeTitleStrategy) => void;
@@ -24,7 +27,7 @@ function TitleStrategySection(props: {
           <select
             aria-label="Imported title source"
             className={importSourceSelectClassName}
-            onChange={(event) => props.onChange(event.target.value as ImportNodeTitleStrategy)}
+            onChange={(event) => props.onChange(parseLiteralUnion(event.target.value, IMPORT_NODE_TITLE_STRATEGIES) ?? props.titleStrategy)}
             value={props.titleStrategy}
           >
             <option value="file_name">File name first</option>

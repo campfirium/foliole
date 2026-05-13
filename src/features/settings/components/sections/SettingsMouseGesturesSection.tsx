@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, RotateCcw } from 'lucide-react';
 
+import { parseLiteralUnion } from '../../../../shared/lib/parseLiteralUnion';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
@@ -112,7 +113,10 @@ function MouseGestureBindingsSection(props: {
             <select
               aria-label={`${gesture.label} mouse gesture action`}
               className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
-              onChange={(event) => props.onActionChange(gesture.gestureId, event.target.value as EditorMouseGestureActionSetting)}
+              onChange={(event) => {
+                const action = parseLiteralUnion(event.target.value, EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS);
+                if (action) props.onActionChange(gesture.gestureId, action);
+              }}
               value={settings.gestureActions[gesture.gestureId]}
             >
               {EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS.map((action) => (

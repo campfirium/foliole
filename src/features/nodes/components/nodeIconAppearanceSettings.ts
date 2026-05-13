@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import {
@@ -56,9 +57,7 @@ function normalizeColor(value: string | null, fallback: string): string {
 }
 
 function normalizeEffect(value: string | null, fallback: NodeIconEffect): NodeIconEffect {
-  return NODE_ICON_EFFECT_OPTIONS.includes(value as NodeIconEffect)
-    ? (value as NodeIconEffect)
-    : fallback;
+  return parseLiteralUnion(value, NODE_ICON_EFFECT_OPTIONS) ?? fallback;
 }
 
 function normalizePositiveNumber(value: string | null, fallback: number) {

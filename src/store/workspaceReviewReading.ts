@@ -1,6 +1,11 @@
 import type { NodeReadingProfile } from '../features/nodes/model/nodeTypes';
-import type { PushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
+import {
+  DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
+  PUSH_QUEUE_PRIORITIES,
+  type PushQueuePriority
+} from '../features/review/model/unifiedPushQueueRules';
 import type { ReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
+import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 
 import type { WorkspaceState } from './workspaceStore';
 
@@ -41,12 +46,16 @@ export function buildNextReadingProfile(
   nextReading: ReadingScheduleCoreFields,
   currentReading: NodeReadingProfile | null | undefined
 ): NodeReadingProfile {
+  const priority =
+    parseLiteralUnion(nextReading.priority, PUSH_QUEUE_PRIORITIES) ??
+    parseLiteralUnion(currentReading?.priority, PUSH_QUEUE_PRIORITIES) ??
+    DEFAULT_UNIFIED_PUSH_QUEUE_RULES.defaultPriority;
   return {
     intervalDurationMs: nextReading.intervalDurationMs,
     intervalGrowthFactor: nextReading.intervalGrowthFactor,
     lastHandledAt: nextReading.lastHandledAt,
     nextAt: nextReading.nextAt,
-    priority: nextReading.priority as PushQueuePriority,
+    priority,
     readingPosition: currentReading?.readingPosition ?? 0,
     repetitionCount: nextReading.repetitionCount,
     state: currentReading?.state ?? 'active'

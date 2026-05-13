@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 export const LONG_CLOZE_FRONT_GUARD_THRESHOLD = 500;
@@ -10,9 +11,7 @@ export type LongClozeFrontGuardMode = (typeof LONG_CLOZE_FRONT_GUARD_MODE_OPTION
 export const DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE: LongClozeFrontGuardMode = 'remind';
 
 function normalizeLongClozeFrontGuardMode(value: string | null | undefined): LongClozeFrontGuardMode {
-  return LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS.includes(value as LongClozeFrontGuardMode)
-    ? (value as LongClozeFrontGuardMode)
-    : DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE;
+  return parseLiteralUnion(value, LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS) ?? DEFAULT_LONG_CLOZE_FRONT_GUARD_MODE;
 }
 
 function normalizeGuardNumber(value: string | number | null | undefined, fallback: number, min: number, max: number) {

@@ -4,7 +4,7 @@ import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from 
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ImportCatalogLayout } from './ImportCatalogLayout';
-import { IMPORT_CATALOG_SORT_OPTIONS, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
+import { IMPORT_CATALOG_SORT_OPTIONS, parseImportCatalogSortKey, resolveImportLastOpened, sortImportCatalogItems, type ImportCatalogSortKey } from './importCatalogOrdering';
 import { PdfInventoryItem } from './ImportInventoryListItems';
 import { matchesImportSearch } from './importManagementSearch';
 
@@ -115,7 +115,7 @@ export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
         loadingState={{ description: 'Checking imported PDFs.', title: 'Loading PDFs' }}
         onChangeQuery={setQuery}
         onChangeSortDirection={setSortDirection}
-        onChangeSortKey={(value) => setSortKey(value as PdfSortKey)}
+        onChangeSortKey={(value) => setSortKey(parseImportCatalogSortKey(value) ?? sortKey)}
         query={query}
         searchLabel="Search imported PDFs"
         searchPlaceholder="Search in this folder"

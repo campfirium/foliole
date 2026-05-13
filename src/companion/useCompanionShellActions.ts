@@ -1,13 +1,16 @@
+import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
-import type { CompanionSecondaryDestinationId } from './CompanionTabsConfig';
+import { COMPANION_SECONDARY_DESTINATIONS, type CompanionSecondaryDestinationId } from './CompanionTabsConfig';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import type { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTopBarProps } from './useCompanionTopBarProps';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
+
+const SECONDARY_DESTINATION_IDS = COMPANION_SECONDARY_DESTINATIONS.map((destination) => destination.id);
 
 function resolveActiveSecondaryDestination(args: {
   activeAction: CompanionTabAction;
@@ -17,7 +20,9 @@ function resolveActiveSecondaryDestination(args: {
 }): CompanionSecondaryDestinationId | null {
   if (args.activeAction === 'recent' && args.isBrowseDirectoryOpen) return 'directory';
   if (args.activeAction === 'review' && args.isOnlyReviewOpen) return 'onlyReview';
-  if (args.activeAction === 'more' && args.settingsPage !== 'list') return args.settingsPage as CompanionSecondaryDestinationId;
+  if (args.activeAction === 'more' && args.settingsPage !== 'list') {
+    return parseLiteralUnion(args.settingsPage, SECONDARY_DESTINATION_IDS);
+  }
   return null;
 }
 

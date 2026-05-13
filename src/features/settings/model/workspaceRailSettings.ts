@@ -1,5 +1,6 @@
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
@@ -84,7 +85,7 @@ function defaultItemById(id: string) {
 }
 
 function isWorkspaceRailSection(value: string): value is WorkspaceRailSection {
-  return WORKSPACE_RAIL_SECTIONS.includes(value as WorkspaceRailSection);
+  return parseLiteralUnion(value, WORKSPACE_RAIL_SECTIONS) !== null;
 }
 
 function isRetiredRailCommand(commandId: string) {

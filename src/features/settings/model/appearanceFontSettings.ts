@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import {
@@ -22,11 +23,11 @@ const FONT_STORAGE_KEYS = {
 } as const;
 
 function isInterfaceFontPreset(value: string): value is InterfaceFontPreset {
-  return INTERFACE_FONT_OPTIONS.includes(value as InterfaceFontPreset);
+  return parseLiteralUnion(value, INTERFACE_FONT_OPTIONS) !== null;
 }
 
 function isMonospaceFontPreset(value: string): value is MonospaceFontPreset {
-  return MONOSPACE_FONT_OPTIONS.includes(value as MonospaceFontPreset);
+  return parseLiteralUnion(value, MONOSPACE_FONT_OPTIONS) !== null;
 }
 
 export function clampFontSize(value: number) {

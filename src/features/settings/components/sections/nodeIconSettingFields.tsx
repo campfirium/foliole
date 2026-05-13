@@ -1,3 +1,4 @@
+import { parseLiteralUnion } from '../../../../shared/lib/parseLiteralUnion';
 import { settingsColorSwatchClassName, settingsFieldClassName } from '../../../../shared/ui';
 import { NODE_ICON_EFFECT_OPTIONS, type NodeIconEffect } from '../../../nodes/components/nodeIconAppearanceSettings';
 
@@ -34,7 +35,7 @@ export function EffectSelect(props: {
       <select
         aria-label={props.label}
         className={settingsFieldClassName('rounded-sm px-2')}
-        onChange={(event) => props.onChange(event.target.value as NodeIconEffect)}
+        onChange={(event) => props.onChange(parseLiteralUnion(event.target.value, NODE_ICON_EFFECT_OPTIONS) ?? props.value)}
         value={props.value}
       >
         {NODE_ICON_EFFECT_OPTIONS.map((effect) => (

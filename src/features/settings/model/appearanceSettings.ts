@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import {
@@ -151,11 +152,11 @@ const STORAGE_KEYS = {
 } as const;
 
 function isPdfReadingMode(value: string): value is PdfReadingMode {
-  return PDF_READING_MODE_OPTIONS.includes(value as PdfReadingMode);
+  return parseLiteralUnion(value, PDF_READING_MODE_OPTIONS) !== null;
 }
 
 function isReadingLineHeight(value: string): value is ReadingLineHeight {
-  return READING_LINE_HEIGHT_OPTIONS.includes(value as ReadingLineHeight);
+  return parseLiteralUnion(value, READING_LINE_HEIGHT_OPTIONS) !== null;
 }
 
 export function getBaseColorMode(): BaseColorMode {

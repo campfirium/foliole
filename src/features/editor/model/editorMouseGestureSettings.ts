@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import {
@@ -47,9 +48,7 @@ const STORAGE_KEYS: Record<EditorMouseGestureId, string> = {
 };
 
 function normalizeActionSetting(value: string | null, fallback: EditorMouseGestureActionSetting) {
-  return EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS.includes(value as EditorMouseGestureActionSetting)
-    ? (value as EditorMouseGestureActionSetting)
-    : fallback;
+  return parseLiteralUnion(value, EDITOR_MOUSE_GESTURE_ACTION_SETTING_OPTIONS) ?? fallback;
 }
 
 function normalizeColor(value: string | null, fallback: string) {
