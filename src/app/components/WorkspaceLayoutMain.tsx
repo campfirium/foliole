@@ -2,12 +2,12 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { getFormalImportFailureMessage } from '../hooks/useFormalImport';
 
-import { ClipboardImportNotice, type ClipboardImportNoticeTone } from './ClipboardImportNotice';
+import { ClipboardImportNotice } from './ClipboardImportNotice';
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
+import { useClipboardImportNotice } from './useClipboardImportNotice';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -51,33 +51,6 @@ function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
   };
 }
 
-function useClipboardImportNotice(onStartClipboardImport: () => boolean | Promise<boolean>) {
-  const [notice, setNotice] = useState<{ id: number; message: string; tone: ClipboardImportNoticeTone } | null>(null);
-
-  useEffect(() => {
-    if (!notice || notice.tone === 'loading') {
-      return;
-    }
-    const timeout = window.setTimeout(() => setNotice((current) => (current?.id === notice.id ? null : current)), 3600);
-    return () => window.clearTimeout(timeout);
-  }, [notice]);
-
-  const startClipboardImport = useCallback(async () => {
-    const id = Date.now();
-    setNotice({ id, message: 'Importing clipboard...', tone: 'loading' });
-    const imported = await onStartClipboardImport();
-    const failureMessage = imported ? null : getFormalImportFailureMessage();
-    setNotice({
-      id,
-      message: imported ? 'Clipboard imported to Inbox' : (failureMessage ?? 'No supported clipboard content found'),
-      tone: imported ? 'success' : 'error'
-    });
-    return imported;
-  }, [onStartClipboardImport]);
-
-  return { notice, startClipboardImport };
-}
-
 function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrome']) {
   return {
     '--workspace-list-width': `${layoutChrome.listWidth}px`,
@@ -92,6 +65,19 @@ function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrom
   } as CSSProperties;
 }
 
+function renderClipboardImportNotice(controller: ReturnType<typeof useClipboardImportNotice>) {
+  if (!controller.notice) {
+    return null;
+  }
+  return (
+    <ClipboardImportNotice
+      message={controller.notice.message}
+      onOpen={controller.notice.nodeId ? controller.openImportedTopic : undefined}
+      tone={controller.notice.tone}
+    />
+  );
+}
+
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const { imports, layoutChrome, navigation, nodeList, settings, trash } = props;
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
@@ -99,7 +85,11 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   );
   const immersiveSource = useMemo(() => selectImmersiveReadingModeSource(props), [props]);
   const immersive = useImmersiveReadingMode(immersiveSource);
-  const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport);
+  const handleOpenClipboardImport = useCallback((nodeId: string) => {
+    imports.onCloseImportManagement();
+    navigation.onSelectNode(nodeId);
+  }, [imports.onCloseImportManagement, navigation.onSelectNode]);
+  const clipboardImportNotice = useClipboardImportNotice(imports.onStartClipboardImport, handleOpenClipboardImport);
   const gridProps = useMemo(() => ({
     ...props,
     imports: {
@@ -140,7 +130,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         gridProps={gridProps}
         titleBarProps={props}
       />
-      {clipboardImportNotice.notice ? <ClipboardImportNotice message={clipboardImportNotice.notice.message} tone={clipboardImportNotice.notice.tone} /> : null}
+      {renderClipboardImportNotice(clipboardImportNotice)}
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? imports.onOpenImportManagement() : imports.onCloseImportManagement())}

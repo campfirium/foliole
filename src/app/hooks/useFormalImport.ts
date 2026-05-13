@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from 'react';
-import { create } from 'zustand';
 
 import { hasAppRuntimeCommandRepository } from '../../shared/platform/appRuntimeCommandRepository';
 import {
@@ -9,82 +8,32 @@ import {
   type RuntimeDirectoryImportResult,
   type RuntimeTextImportResult
 } from '../../shared/platform/importExecutionRuntimeRepository';
-import { loadRuntimeImportOverview, type RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
+import { loadRuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { runResetImportDataFlow } from './formalImportReset';
 import {
+  applyCancelledImportStatus,
+  applyImportFailureStatus,
+  applyImportResultStatus,
+  DEFAULT_IMPORT_OVERVIEW,
+  getFormalImportFailureMessage,
+  getFormalImportLatestResult,
+  useFormalImportState
+} from './formalImportState';
+import {
   buildStatusFromOverview,
-  buildSuccessStatus,
-  DEFAULT_FORMAL_IMPORT_STATUS,
-  formatImportTimestamp
+  DEFAULT_FORMAL_IMPORT_STATUS
 } from './formalImportStatus';
 
-export interface FormalImportStatus {
-  failures: string;
-  inboxLanding: string;
-  lastRun: string;
-}
-
-const DEFAULT_IMPORT_OVERVIEW: RuntimeImportOverview = {
-  latestFailure: null,
-  latestResult: null,
-  recentRuns: []
+export {
+  getFormalImportFailureMessage,
+  getFormalImportLatestResult
 };
-
-interface FormalImportUiState {
-  hasLoadedOverview: boolean;
-  isImporting: boolean;
-  lastSeenResultImportId: string | null;
-  overview: RuntimeImportOverview;
-  status: FormalImportStatus;
-}
-
-const useFormalImportState = create<FormalImportUiState>(() => ({
-  hasLoadedOverview: false,
-  isImporting: false,
-  lastSeenResultImportId: null,
-  overview: DEFAULT_IMPORT_OVERVIEW,
-  status: DEFAULT_FORMAL_IMPORT_STATUS
-}));
 
 let managedInboxRefreshInFlight: Promise<void> | null = null;
 let managedInboxQueuedRefreshImportId: string | null = null;
-
-function applyImportResultStatus(result: RuntimeTextImportResult) {
-  useFormalImportState.setState({
-    isImporting: false,
-    lastSeenResultImportId: result.importId,
-    status: buildSuccessStatus(result, formatImportTimestamp(result.importedAt), useFormalImportState.getState().status)
-  });
-}
-
-function applyCancelledImportStatus() {
-  useFormalImportState.setState((current) => ({
-    isImporting: false,
-    status: {
-      ...current.status,
-      lastRun: 'Import cancelled'
-    }
-  }));
-}
-
-function applyImportFailureStatus(message: string) {
-  useFormalImportState.setState({
-    isImporting: false,
-    status: {
-      ...useFormalImportState.getState().status,
-      failures: message,
-      lastRun: 'Import failed'
-    }
-  });
-}
-
-export function getFormalImportFailureMessage() {
-  const status = useFormalImportState.getState().status;
-  return status.lastRun === 'Import failed' && status.failures ? status.failures : null;
-}
 
 async function refreshFormalImportOverview(triggerImportId?: string) {
   const overview = await loadRuntimeImportOverview();

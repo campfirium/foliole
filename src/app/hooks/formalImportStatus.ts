@@ -1,7 +1,11 @@
 import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import type { RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 
-import type { FormalImportStatus } from './useFormalImport';
+export interface FormalImportStatus {
+  failures: string;
+  inboxLanding: string;
+  lastRun: string;
+}
 
 export const DEFAULT_FORMAL_IMPORT_STATUS: FormalImportStatus = {
   failures: 'Nothing recorded',
