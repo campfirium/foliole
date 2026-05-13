@@ -215,7 +215,8 @@ it('matches Twitter list highlights despite empty status links and Readwise back
   const match = findLocatorText(source, quote);
 
   expect(match).not.toBeNull();
+  expect(match?.startsWith('ey retweeted]')).toBe(true);
+  expect(normalizeQuoteText(match ?? '')).toBe(normalizeQuoteText(quote));
   expect(match).toContain('整个网站只有一个页面');
   expect(match).toContain('SEO层面');
-  expectLengthClose(match ?? '', quote);
 });

@@ -19,30 +19,13 @@ function toRawRange(locator: FullTextLocator, start: number, endExclusive: numbe
   if (rawStart === undefined || rawEnd === undefined) {
     return null;
   }
-  return { end: rawEnd + 1, start: expandRawStart(locator.content, rawStart) };
-}
-
-function expandRawStart(content: string, rawStart: number) {
-  return expandRawStartToHeadingStart(content, expandRawStartToLinkLabelStart(content, rawStart));
+  return { end: rawEnd + 1, start: expandRawStartToHeadingStart(locator.content, rawStart) };
 }
 
 function expandRawStartToHeadingStart(content: string, rawStart: number) {
   const lineStart = content.lastIndexOf('\n', rawStart - 1) + 1;
   const prefix = content.slice(lineStart, rawStart);
   return /^#{1,6}\s+/u.test(prefix) ? lineStart : rawStart;
-}
-
-function expandRawStartToLinkLabelStart(content: string, rawStart: number) {
-  const lineStart = content.lastIndexOf('\n', rawStart - 1) + 1;
-  const linkStart = content.lastIndexOf('[', rawStart);
-  if (linkStart < lineStart || content[linkStart - 1] === '!') {
-    return rawStart;
-  }
-  const labelEnd = content.indexOf(']', linkStart + 1);
-  if (labelEnd < rawStart || content[labelEnd + 1] !== '(') {
-    return rawStart;
-  }
-  return linkStart;
 }
 
 function collectStringRanges(haystack: string, needle: string) {
