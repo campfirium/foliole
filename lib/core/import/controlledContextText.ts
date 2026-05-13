@@ -40,6 +40,7 @@ function stripMarkdown(value: string) {
     .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
     .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, '$2')
     .replace(/\[\[([^\]]+)]]/g, '$1')
+    .replace(/\[]\([^)]+\)/g, ' ')
     .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
     .replace(/(^|\s)•\s+/g, '$1')
     .replace(/[|`*_>#]/g, ' ');

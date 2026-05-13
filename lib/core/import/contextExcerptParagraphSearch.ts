@@ -37,8 +37,9 @@ function findParagraphIndexesContainingRegex(paragraphs: string[], matcher: RegE
 
 function findParagraphIndexesContainingFragment(paragraphs: string[], fragment: string) {
   const indexes: number[] = [];
+  const normalizedFragment = fragment.toLocaleLowerCase();
   paragraphs.forEach((paragraph, index) => {
-    if (paragraph.includes(fragment)) {
+    if (paragraph.toLocaleLowerCase().includes(normalizedFragment)) {
       indexes.push(index);
     }
   });
@@ -127,11 +128,15 @@ function tryAnchoredRangeMatch(
     anchoredCandidate.index,
     'forward'
   );
-  if (startIndex === null || endIndex === null) {
+  if (startIndex === null && !/\[\]\([^#)\n]+#/u.test(quote)) {
     return projectMatch(anchoredParagraph, quote, anchoredCandidate.fragment, quoteLocator.exactMatcher);
   }
-  const start = Math.min(startIndex, anchoredCandidate.index);
-  const end = Math.max(endIndex, anchoredCandidate.index);
+  const hasEmptyHeadingAnchor = /\[\]\([^#)\n]+#/u.test(quote);
+  const resolvedStartIndex =
+    hasEmptyHeadingAnchor ? Math.min(startIndex ?? anchoredCandidate.index, Math.max(0, anchoredCandidate.index - 1)) : startIndex ?? anchoredCandidate.index;
+  const resolvedEndIndex = endIndex ?? anchoredCandidate.index;
+  const start = Math.min(resolvedStartIndex, anchoredCandidate.index);
+  const end = Math.max(resolvedEndIndex, anchoredCandidate.index);
   const narrowed = shrinkRangeToMinimumMatch(locator.paragraphs, { start, end }, quote, quoteLocator.exactMatcher);
   return projectMatch(joinParagraphRange(locator.paragraphs, narrowed.start, narrowed.end), quote, anchoredCandidate.fragment, quoteLocator.exactMatcher);
 }

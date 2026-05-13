@@ -107,7 +107,7 @@ function stripLeadingLineMarkers(value: string) {
 }
 
 function normalizeExcerptLine(value: string) {
-  return normalizeText(stripLeadingLineMarkers(value));
+  return normalizeText(stripLeadingLineMarkers(value)).toLocaleLowerCase();
 }
 
 function collectNormalizedQuoteLines(quote: string) {

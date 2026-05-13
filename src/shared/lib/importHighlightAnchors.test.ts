@@ -125,6 +125,35 @@ it('anchors a fragment-bounded parent range when the highlight text differs in t
   });
 });
 
+it('prefers a matched multi-paragraph locator before trimming it to a fragment', () => {
+  vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('55555555-5555-5555-5555-555555555555');
+  const locatorText = [
+    'KS learning tool v0.4',
+    '',
+    'Download links and intro text.',
+    '',
+    '* Sentence analysis',
+    '* Add Anki cards'
+  ].join('\n');
+  const anchored = applyImportedHighlightAnchors({
+    content: `Lead.\n\n${locatorText}\n\nTail.`,
+    highlights: [
+      {
+        content: [
+          'KS learning tool v0.4[](https://example.com#ks-learning-tool-v04)',
+          'Download links and intro text.',
+          '• Sentence analysis',
+          '• Add Anki cards'
+        ].join('\n'),
+        label: null,
+        locatorText
+      }
+    ]
+  });
+
+  expect(anchored.highlights[0]?.locatorText).toBe(locatorText);
+});
+
 it('does not anchor a full locator context when it cannot be narrowed', () => {
   const longContext = `${'Context sentence. '.repeat(20)}Tail.`;
   const anchored = applyImportedHighlightAnchors({

@@ -97,22 +97,43 @@ function findAvailableOccurrence(
   return null;
 }
 
-function collectAnchorExcerptCandidates(highlight: PreparedImportHighlightRecord) {
-  const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
-  const candidates = [highlightText, highlight.content.trim()];
-  const locatorCandidates = highlight.locatorText
-    ? collectBoundaryFragments(highlightText)
-        .map((fragment) => trimMatchedExcerpt(highlight.locatorText ?? '', highlightText, fragment))
-        .filter((candidate) => !isUntrimmedLocatorCandidate(candidate, highlight.locatorText ?? '', highlightText))
-    : [];
-  candidates.push(...locatorCandidates);
-  return Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
-}
-
 function isUntrimmedLocatorCandidate(candidate: string, locatorText: string, highlightText: string) {
   const normalizedCandidate = candidate.trim();
   const normalizedLocator = locatorText.trim();
   return normalizedCandidate === normalizedLocator && normalizedCandidate.length >= 120 && normalizedCandidate.length > highlightText.length * 3;
+}
+
+function stripEmptyLinks(value: string) {
+  return value.replace(/\[]\([^)]+\)/g, '').trim();
+}
+
+function resolveFullLocatorCandidate(highlightText: string, locatorText: string) {
+  if (!locatorText.includes('\n')) {
+    return [];
+  }
+  const firstHighlightLine = stripEmptyLinks(highlightText.split('\n').find((line) => line.trim().length > 0) ?? '');
+  const firstLocatorLine = locatorText.split('\n')[0] ?? '';
+  if (!firstHighlightLine) {
+    return [locatorText];
+  }
+  const firstLineOffset = firstLocatorLine.indexOf(firstHighlightLine);
+  return [firstLineOffset > 0 ? locatorText.slice(firstLineOffset) : locatorText];
+}
+
+function collectAnchorExcerptCandidates(highlight: PreparedImportHighlightRecord) {
+  const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
+  const candidates = [highlightText, highlight.content.trim()];
+  const fullLocatorCandidates = highlight.locatorText ? resolveFullLocatorCandidate(highlightText, highlight.locatorText) : [];
+  const locatorCandidates = highlight.locatorText
+    ? [
+        ...fullLocatorCandidates,
+        ...collectBoundaryFragments(highlightText)
+          .map((fragment) => trimMatchedExcerpt(highlight.locatorText ?? '', highlightText, fragment))
+          .filter((candidate) => !isUntrimmedLocatorCandidate(candidate, highlight.locatorText ?? '', highlightText))
+      ]
+    : [];
+  candidates.push(...locatorCandidates);
+  return Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
 }
 
 export function applyImportedHighlightAnchors(input: {
