@@ -8,7 +8,7 @@ import {
   filterNodeTreeRowsByTitle
 } from '../../features/nodes/model/nodeTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { AppEmptyState, ToolbarActionGroup } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
@@ -43,7 +43,8 @@ function useVirtualResultRows(
 ) {
   const normalizedSort = normalizeWorkspaceContentSort(sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
   return useMemo(() => {
-    const rows = buildFlatNodeRows(nodes.map((node) => node.id), nodesById as WorkspaceListNodesById);
+    const listNodesById = toWorkspaceListNodesById(nodesById);
+    const rows = buildFlatNodeRows(nodes.map((node) => node.id), listNodesById);
     const sortedRows = sortWorkspaceContentRows(rows, normalizedSort, nodeViewById);
     return searchQuery.trim() ? filterNodeTreeRowsByTitle(sortedRows, searchQuery) : sortedRows;
   }, [nodeViewById, nodes, nodesById, normalizedSort, searchQuery]);
@@ -56,6 +57,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
   const rowSpacing = getNodeListRowSpacing();
+  const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
   const rows = useVirtualResultRows(props.nodes, props.nodesById, searchQuery, contentSort.sort, nodeViewById);
   const selectedNodeIds = props.activeNodeId && rows.some((row) => row.node.id === props.activeNodeId) ? [props.activeNodeId] : [];
 
@@ -92,7 +94,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
           <div aria-label="Virtual results" className="flex flex-col gap-2" role="tree">
             <TrashListRows
               activeNodeId={selectedNodeIds[0] ?? null}
-              nodesById={props.nodesById as WorkspaceListNodesById}
+              nodesById={listNodesById}
               onContextMenu={() => undefined}
               onKeyDown={() => undefined}
               onSelect={(nodeId) => props.onSelectNode(nodeId)}

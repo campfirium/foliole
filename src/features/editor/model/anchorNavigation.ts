@@ -1,4 +1,4 @@
-import { getTextAnchorLocators, isTextAnchorLocator, type NodeAnchorLink, type TextAnchorLocator } from '../../nodes/model/nodeTypes';
+import { getTextAnchorLocators, isTextAnchorLocator, type NodeAnchorLink } from '../../nodes/model/nodeTypes';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 
 import { resolveTextAnchorLocatorSelection } from './textAnchorLocatorResolution';
@@ -24,7 +24,7 @@ function resolveTextAnchorSelection(
   if (locators.length === 0) {
     return null;
   }
-  const firstLocator = locators[0] as TextAnchorLocator;
+  const firstLocator = locators[0];
   const selection = resolveTextAnchorLocatorSelection(content, firstLocator);
   if (!selection) {
     return null;

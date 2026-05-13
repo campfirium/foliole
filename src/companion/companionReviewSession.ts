@@ -1,5 +1,4 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import type { Node } from '../features/nodes/model/nodeTypes';
 import { getReviewItemKind, isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard, type ReviewGrade } from '../features/review/model/reviewTypes';
@@ -38,10 +37,6 @@ export interface CompanionReviewSession {
   totalCount: number;
 }
 
-function asWorkspaceNodes(snapshot: WorkspaceSnapshot) {
-  return snapshot.nodesById as unknown as Record<string, Node>;
-}
-
 function normalizeTitle(title: string) {
   const trimmed = title.trim();
   return trimmed || 'Untitled';
@@ -60,7 +55,7 @@ function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {
     content: node.content,
     due: node.review?.due ?? node.reading?.nextAt ?? node.updatedAt,
     hideTitleHeading: Boolean(node.hideTitleHeading),
-    itemKind: getReviewItemKind(node as unknown as Node) === 'fsrs' ? 'fsrs' : 'reading',
+    itemKind: getReviewItemKind(node) === 'fsrs' ? 'fsrs' : 'reading',
     nodeId: currentNodeId,
     queuePosition: 1,
     remainingCount: queueNodeIds.length,
@@ -84,7 +79,7 @@ function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
     if (!node) {
       continue;
     }
-    if (isFsrsReviewItemNode(node as unknown as Node) && node.review?.due) {
+    if (isFsrsReviewItemNode(node) && node.review?.due) {
       scheduledFsrsCount += 1;
       if (!nextFsrsDueAt || node.review.due.localeCompare(nextFsrsDueAt) < 0) {
         nextFsrsDueAt = node.review.due;
@@ -124,12 +119,12 @@ export function resolveCompanionReviewSession(
 
   const plan = buildReviewQueuePlan({
     nodeOrder: snapshot.nodeOrder,
-    nodesById: asWorkspaceNodes(snapshot),
+    nodesById: snapshot.nodesById,
     now,
     trashedNodeIds: snapshot.trashedNodeIds
   });
   const queueNodeIds = plan.queueNodeIds.filter((nodeId) => {
-    const node = asWorkspaceNodes(snapshot)[nodeId];
+    const node = snapshot.nodesById[nodeId];
     return isFsrsReviewItemNode(node) || isReadingReviewItemNode(node);
   });
   const scheduledSummary = resolveScheduledReviewSummary(snapshot);
@@ -160,7 +155,7 @@ export async function gradeCompanionReviewCard(args: {
 }) {
   const now = args.now ?? new Date().toISOString();
   const node = args.snapshot.nodesById[args.nodeId];
-  if (!node || !isFsrsReviewItemNode(node as unknown as Node)) {
+  if (!node || !isFsrsReviewItemNode(node)) {
     return null;
   }
 

@@ -68,7 +68,7 @@ function collectVirtualContentItemIds(args: WorkspaceDualListContentProps) {
     activeVirtualNodeId,
     args.nodeOrder,
     args.nodesById,
-    (activeVirtualNode as Node).virtualFilter
+    activeVirtualNode.virtualFilter
   ).map((node) => node.id);
 }
 

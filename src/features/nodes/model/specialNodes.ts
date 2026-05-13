@@ -72,7 +72,9 @@ export function isTrashNode(node: Pick<Node, 'specialKind'> | null | undefined):
   return node?.specialKind === 'trash';
 }
 
-export function isVirtualNode(node: Pick<Node, 'specialKind'> | null | undefined): boolean {
+export function isVirtualNode(
+  node: Pick<Node, 'specialKind' | 'virtualFilter'> | null | undefined
+): node is Pick<Node, 'specialKind' | 'virtualFilter'> & { specialKind: 'virtual' } {
   return node?.specialKind === 'virtual';
 }
 

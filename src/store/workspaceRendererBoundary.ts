@@ -1,5 +1,3 @@
-import type { NodeKind } from '../../lib/core/nodes/nodeKind';
-import type { VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import {
@@ -8,33 +6,11 @@ import {
   reconcileFocusedRendererBoundaryNodes
 } from './workspaceRendererBoundaryFocused';
 import { resolveNodeContentState, resolveNodeRevealState } from './workspaceRendererBoundaryState';
+export { isNodeDocumentLoaded, mergeWorkspaceNodeDocument, type WorkspaceNodeDocument } from './workspaceRendererBoundaryDocument';
 
 interface WorkspaceRendererBoundaryStateLike {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
-}
-
-export interface WorkspaceNodeDocument {
-  content: string;
-  hideTitleHeading: boolean;
-  imageRegions?: Node['imageRegions'];
-  kind: NodeKind;
-  reveal: string | null;
-  virtualFilter?: VirtualNodeFilter | null;
-}
-
-export function isNodeDocumentLoaded(node: Node | null | undefined) {
-  if (!node) {
-    return false;
-  }
-  const contentState = resolveNodeContentState(node);
-  const revealState = resolveNodeRevealState(node);
-  const contentLoaded =
-    typeof contentState === 'boolean'
-      ? !contentState || node.content.length > 0
-      : node.content.length > 0;
-  const revealLoaded = typeof revealState === 'boolean' ? !revealState || node.reveal !== null : true;
-  return contentLoaded && revealLoaded;
 }
 
 function listActiveFolderChildNodeIds(activeNodeId: string | null, nodesById: Record<string, Node>) {
@@ -86,20 +62,6 @@ export function toRendererBoundaryNode(node: Node, keepDocument: boolean): Node 
     hasContent: nextHasContent,
     reveal: null,
     hasReveal: nextHasReveal
-  };
-}
-
-export function mergeWorkspaceNodeDocument(node: Node, document: WorkspaceNodeDocument): Node {
-  return {
-    ...node,
-    content: document.content,
-    hasContent: document.content.trim().length > 0,
-    hideTitleHeading: document.hideTitleHeading,
-    imageRegions: document.imageRegions ?? null,
-    kind: document.kind,
-    reveal: document.reveal,
-    virtualFilter: document.virtualFilter ?? null,
-    hasReveal: document.reveal !== null
   };
 }
 

@@ -1,13 +1,8 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import type { Node } from '../features/nodes/model/nodeTypes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { buildNextReadingProfile, resolveReadingPriorityChain } from '../store/workspaceReviewReading';
-
-function asWorkspaceNodes(snapshot: WorkspaceSnapshot) {
-  return snapshot.nodesById as unknown as Record<string, Node>;
-}
 
 function buildNextReadingSnapshot(args: {
   action: 'complete' | 'defer' | 'dismiss';
@@ -16,7 +11,7 @@ function buildNextReadingSnapshot(args: {
   snapshot: WorkspaceSnapshot;
 }) {
   const node = args.snapshot.nodesById[args.nodeId];
-  if (!node || !isReadingReviewItemNode(node as unknown as Node)) {
+  if (!node || !isReadingReviewItemNode(node)) {
     return null;
   }
 
@@ -43,7 +38,7 @@ function buildNextReadingSnapshot(args: {
       currentNodeId: args.nodeId,
       currentReading: node.reading,
       defaultPriority: pushQueueSettings.defaultPriority,
-      nodesById: asWorkspaceNodes(args.snapshot)
+      nodesById: args.snapshot.nodesById
     }),
     initialIntervalMs: pushQueueSettings.readingInitialIntervalMs,
     range: pushQueueSettings.readingIntervalGrowthFactorRange

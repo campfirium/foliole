@@ -219,5 +219,5 @@ export function createSelectionHandlers(args: {
 }
 
 function createTextAnchorLink(payload: SelectionCommandPayload, kind: 'highlight' | 'cloze'): NodeAnchorLink | undefined {
-  return createSelectionAnnotationAnchorLink(payload, kind) as NodeAnchorLink | undefined;
+  return createSelectionAnnotationAnchorLink(payload, kind);
 }

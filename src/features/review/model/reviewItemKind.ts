@@ -2,6 +2,9 @@ import type { Node } from '../../nodes/model/nodeTypes';
 import { hasNodeReveal } from '../../nodes/model/nodeTypes';
 
 export type ReviewItemKind = 'none' | 'reading' | 'fsrs';
+export type ReviewItemNodeLike = Pick<Node, 'kind' | 'review' | 'reveal' | 'hasReveal'> & {
+  anchorLink?: { kind: 'highlight' | 'cloze' } | null;
+};
 
 function resolveFormalReviewItemKind(kind: Node['kind'] | null | undefined): ReviewItemKind | null {
   if (kind === 'folder') {
@@ -16,7 +19,7 @@ function resolveFormalReviewItemKind(kind: Node['kind'] | null | undefined): Rev
   return null;
 }
 
-export function getReviewItemKind(node: Node | null | undefined): ReviewItemKind {
+export function getReviewItemKind(node: ReviewItemNodeLike | null | undefined): ReviewItemKind {
   if (!node) {
     return 'none';
   }
@@ -36,10 +39,10 @@ export function getReviewItemKind(node: Node | null | undefined): ReviewItemKind
   return 'reading';
 }
 
-export function isFsrsReviewItemNode(node: Node | null | undefined) {
+export function isFsrsReviewItemNode(node: ReviewItemNodeLike | null | undefined) {
   return getReviewItemKind(node) === 'fsrs';
 }
 
-export function isReadingReviewItemNode(node: Node | null | undefined) {
+export function isReadingReviewItemNode(node: ReviewItemNodeLike | null | undefined) {
   return getReviewItemKind(node) === 'reading';
 }

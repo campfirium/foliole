@@ -153,10 +153,10 @@ function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boole
 }
 
 function useFormalImportActions() {
-  const startClipboardImport = useCallback(() => runImportFlow(runRuntimeClipboardImport, shouldRehydrateWorkspace, true), []);
-  const startImportFile = useCallback(() => runImportFlow(runRuntimeTextFileImport, shouldRehydrateWorkspace, true), []);
+  const startClipboardImport = useCallback(() => runImportFlow(runRuntimeClipboardImport, shouldRehydrateWorkspace, applyImportResultStatus), []);
+  const startImportFile = useCallback(() => runImportFlow(runRuntimeTextFileImport, shouldRehydrateWorkspace, applyImportResultStatus), []);
   const startImportDirectory = useCallback(
-    () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport, false),
+    () => runImportFlow(runRuntimeDirectoryImport, shouldRehydrateDirectoryImport),
     []
   );
   const resetImportData = useCallback(
@@ -185,7 +185,7 @@ function useFormalImportActions() {
 async function runImportFlow<Result extends RuntimeTextImportResult | RuntimeDirectoryImportResult>(
   runner: () => Promise<Result | null>,
   shouldRehydrate: (result: Result) => boolean,
-  applyResultStatus: boolean
+  applyResultStatus?: (result: Result) => void
 ) {
   if (useFormalImportState.getState().isImporting) {
     return false;
@@ -201,7 +201,7 @@ async function runImportFlow<Result extends RuntimeTextImportResult | RuntimeDir
       await useWorkspaceStore.persist.rehydrate();
     }
     if (applyResultStatus) {
-      applyImportResultStatus(importResult as RuntimeTextImportResult);
+      applyResultStatus(importResult);
     }
     await refreshFormalImportOverview();
     useFormalImportState.setState({ isImporting: false });

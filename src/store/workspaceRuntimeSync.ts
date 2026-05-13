@@ -23,14 +23,14 @@ import type {
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 
 function isWorkspaceNodeDocumentLoaded(node: WorkspaceRuntimeNode) {
-  return isNodeDocumentLoaded(node as Node);
+  return isNodeDocumentLoaded(node);
 }
 
 function mergeWorkspaceRuntimeNodeDocument(
   node: WorkspaceRuntimeNode,
   document: WorkspaceRuntimeNodeDocument
 ): WorkspaceRuntimeNode {
-  return mergeWorkspaceNodeDocument(node as Node, document) as WorkspaceRuntimeNode;
+  return mergeWorkspaceNodeDocument(node, document);
 }
 
 function createNodeSnapshotArgs(node: Node, position?: number) {

@@ -9,17 +9,23 @@ import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 
 import type { WorkspaceState } from './workspaceStore';
 
+interface PriorityChainNode {
+  id: string;
+  parentNodeId: string | null;
+  priority?: number | null;
+}
+
 export function createEmptyReviewSession(): WorkspaceState['reviewSession'] {
   return { currentNodeId: null, isAnswerRevealed: false, queueNodeIds: [], totalNodeCount: 0 };
 }
 
 export function resolveNodePriorityChain(
   currentNodeId: string,
-  nodesById: WorkspaceState['nodesById']
+  nodesById: Record<string, PriorityChainNode | undefined>
 ) {
   const priorityChain: unknown[] = [];
   const visitedNodeIds = new Set<string>();
-  let currentNode: WorkspaceState['nodesById'][string] | undefined = nodesById[currentNodeId];
+  let currentNode: PriorityChainNode | undefined = nodesById[currentNodeId];
 
   while (currentNode && !visitedNodeIds.has(currentNode.id)) {
     visitedNodeIds.add(currentNode.id);
@@ -33,7 +39,7 @@ export function resolveReadingPriorityChain(args: {
   currentNodeId: string;
   currentReading: NodeReadingProfile | null | undefined;
   defaultPriority: PushQueuePriority;
-  nodesById: WorkspaceState['nodesById'];
+  nodesById: Record<string, PriorityChainNode | undefined>;
 }) {
   const priorityChain = resolveNodePriorityChain(args.currentNodeId, args.nodesById);
   if (priorityChain.some((priority) => priority !== null && priority !== undefined)) {

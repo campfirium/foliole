@@ -161,7 +161,7 @@ function renderHighlightsPanel(
           (highlightNode?.anchorLink?.kind === 'highlight' || highlightNode?.anchorLink?.kind === 'cloze') &&
           highlightNode.parentNodeId
         ) {
-          props.onSelectNode(highlightNode.parentNodeId, highlightNode.anchorLink as NodeAnchorLink);
+          props.onSelectNode(highlightNode.parentNodeId, highlightNode.anchorLink);
           return;
         }
         props.onSelectNode(nodeId);
