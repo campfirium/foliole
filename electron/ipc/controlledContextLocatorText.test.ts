@@ -240,3 +240,12 @@ it('does not expand a heading match that starts inside heading text', () => {
   expect(match).toBe(['加 Anki 卡片', '', 'Anki setup details.'].join('\n'));
   expect(normalizeQuoteText(match ?? '')).toBe(normalizeQuoteText(quote));
 });
+
+it('matches highlight body when the reader title is not in the source', () => {
+  const source = ['Intro.', '', 'Body sentence one.', '', 'Body sentence two.'].join('\n');
+  const quote = ['Reader-only title', 'Body sentence one.', 'Body sentence two.'].join('\n');
+
+  const match = findLocatorText(source, quote);
+
+  expect(match).toBe(['Body sentence one.', '', 'Body sentence two.'].join('\n'));
+});
