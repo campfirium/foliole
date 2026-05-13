@@ -1,13 +1,12 @@
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import {
   recordPreparedImportFailure as recordPreparedImportFailureViaDriver,
   runPreparedImport as runPreparedImportViaDriver
 } from '../../lib/core/database/index.js';
-import { syncWorkspaceSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 
+import { createNodeAttachmentLink } from './attachments.js';
 import { openDatabaseConnection } from './connection.js';
 import { importMarkdownImageAttachment, importPdfSourceAttachment } from './importPipelineAttachments.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
@@ -24,6 +23,15 @@ function appendDegradedReason(currentReason: string | null, nextReason: string |
   return `${currentReason}; ${nextReason}`;
 }
 
+function readImportNodeContent(nodeId: string) {
+  return openDatabaseConnection().driver.queryOne<{ content: string; title: string }>(
+    `SELECT content, title
+     FROM nodes
+     WHERE id = ? AND deleted_at IS NULL`,
+    [nodeId]
+  ) ?? null;
+}
+
 function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
   if (
     prepared.sourceKind !== 'markdown' ||
@@ -35,8 +43,10 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   }
 
   const nodeId = record.nodeId;
+  const persistedNode = readImportNodeContent(nodeId);
+  const currentContent = persistedNode?.content ?? prepared.content;
   const degradedMessages: string[] = [];
-  const rewrittenContent = rewriteInlineImageReferences(prepared.content, (reference) => {
+  const rewrittenContent = rewriteInlineImageReferences(currentContent, (reference) => {
     const importResult = importMarkdownImageAttachment({
       destination: reference.destination,
       nodeId,
@@ -55,20 +65,19 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
     return `![${reference.altText}](${buildAssetMarkdownUrl(importResult.attachmentId, importResult.originalName)}${suffix})`;
   });
 
-  if (rewrittenContent === prepared.content && degradedMessages.length === 0) {
+  if (rewrittenContent === currentContent && degradedMessages.length === 0) {
     return record;
   }
 
   const connection = openDatabaseConnection();
-  const bodyBlobHash = upsertTextBodyBlob(connection.driver, rewrittenContent, record.importedAt);
-  connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-    rewrittenContent,
-    bodyBlobHash,
-    resolveNodeOpeningText(rewrittenContent, prepared.nodeTitle),
-    record.importedAt,
-    nodeId
-  ]);
-  syncWorkspaceSearchIndexForNodeIds(connection.driver, [nodeId]);
+  applyParentContentChange({
+    driver: connection.driver,
+    nextContent: rewrittenContent,
+    nodeId,
+    previousContent: currentContent,
+    title: persistedNode?.title ?? prepared.nodeTitle,
+    updatedAt: record.importedAt
+  });
 
   if (degradedMessages.length === 0) {
     return record;
@@ -92,8 +101,18 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
   };
 }
 
+function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
+  if (!record.nodeId || !prepared.localizedImageAttachmentIds?.length) {
+    return;
+  }
+  Array.from(new Set(prepared.localizedImageAttachmentIds)).forEach((attachmentId) => {
+    createNodeAttachmentLink({ attachmentId, nodeId: record.nodeId as string, role: 'image' });
+  });
+}
+
 export function runPreparedImport(input: PreparedImportRecord) {
   const record = rewriteMarkdownLocalImages(runPreparedImportViaDriver(openDatabaseConnection().driver, input), input);
+  linkPreparedLocalizedImages(record, input);
   if (input.sourceKind !== 'pdf' || !record.nodeId || record.resultStatus === 'failed') {
     return record;
   }

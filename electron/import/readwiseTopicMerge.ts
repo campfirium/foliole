@@ -6,6 +6,7 @@ import type { BrowserWindow } from 'electron';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { insertImportedHighlightNodes } from '../../lib/core/database/importDerivedHighlights.js';
 import { resolveReadwiseHighlightUpdate } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import type { ImportSidecarHighlight } from '../../lib/core/import/controlledContext.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
@@ -15,7 +16,12 @@ import { resolveImportKind } from '../ipc/importSourcePipeline.js';
 import { selectImportFilePath } from '../ipc/importTextFile.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
+import { linkLocalizedImagesToNode } from './imageLocalizationContext.js';
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import {
+  filterNewHighlightSidecar,
+  localizeReadwiseTopicMergeTexts
+} from './readwiseTopicMergeLocalization.js';
 
 interface SourceNodeRow extends DatabaseRow {
   content: string;
@@ -104,6 +110,28 @@ async function loadManualHighlightSidecar(highlightFilePath: string) {
   return extractReadwiseSidecarHighlights(highlightMarkdown, loadImportManagerSettings().readwiseReaderConfig);
 }
 
+async function prepareLocalizedManualHighlightMerge(input: {
+  existingHighlightContentSet: Set<string>;
+  highlightFilePath: string;
+  nodeId: string;
+  sourceNode: SourceNodeRow;
+}) {
+  const localized = await localizeReadwiseTopicMergeTexts(input.sourceNode.content, input.highlightFilePath);
+  const localizedHighlightSidecar = filterNewHighlightSidecar(
+    extractReadwiseSidecarHighlights(localized.highlightMarkdown, loadImportManagerSettings().readwiseReaderConfig),
+    input.existingHighlightContentSet
+  );
+  return {
+    localized,
+    prepared: createPreparedManualHighlightMerge(
+      input.nodeId,
+      { ...input.sourceNode, content: localized.sourceContent },
+      input.highlightFilePath,
+      localizedHighlightSidecar
+    )
+  };
+}
+
 async function selectHighlightFilePath(window?: BrowserWindow | null) {
   const selectedPath = await selectImportFilePath(window);
   return selectedPath?.trim() ? path.normalize(selectedPath.trim()) : null;
@@ -112,10 +140,20 @@ async function selectHighlightFilePath(window?: BrowserWindow | null) {
 function persistMergedHighlights(input: {
   importedAt: string;
   nodeId: string;
+  previousContent: string;
   update: ReturnType<typeof resolveReadwiseHighlightUpdate>;
 }) {
   const connection = openDatabaseConnection();
   connection.driver.transaction(() => {
+    if (input.update.content !== input.previousContent) {
+      applyParentContentChange({
+        driver: connection.driver,
+        nextContent: input.update.content,
+        nodeId: input.nodeId,
+        previousContent: input.previousContent,
+        updatedAt: input.importedAt
+      });
+    }
     if (input.update.highlights.length > 0) {
       insertImportedHighlightNodes({
         driver: connection.driver,
@@ -147,20 +185,25 @@ export async function mergeReadwiseTopicHighlightsFromFile(
       .map((content) => normalizeHighlightContent(content))
       .filter(Boolean)
   );
-  const highlightSidecar = (await loadManualHighlightSidecar(normalizedHighlightFilePath)).filter((highlight) => {
-    const normalized = normalizeHighlightContent(highlight.text);
-    return normalized.length > 0 && !existingHighlightContentSet.has(normalized);
-  });
+  const highlightSidecar = filterNewHighlightSidecar(
+    await loadManualHighlightSidecar(normalizedHighlightFilePath),
+    existingHighlightContentSet
+  );
   if (highlightSidecar.length === 0) {
     return { merged_highlight_count: 0, node_id: nodeId, status: 'noop' };
   }
 
   const importedAt = new Date().toISOString();
-  const prepared = createPreparedManualHighlightMerge(nodeId, sourceNode, normalizedHighlightFilePath, highlightSidecar);
+  const mergeInput = await prepareLocalizedManualHighlightMerge({
+    existingHighlightContentSet,
+    highlightFilePath: normalizedHighlightFilePath,
+    nodeId,
+    sourceNode
+  });
   const readwiseUpdate = resolveReadwiseHighlightUpdate({
     existingChildContents: readExistingHighlightContents(nodeId),
-    existingContent: sourceNode.content,
-    prepared
+    existingContent: mergeInput.localized.sourceContent,
+    prepared: mergeInput.prepared
   });
   if (readwiseUpdate.highlights.length === 0 && readwiseUpdate.content === sourceNode.content) {
     return { merged_highlight_count: 0, node_id: nodeId, status: 'noop' };
@@ -169,8 +212,10 @@ export async function mergeReadwiseTopicHighlightsFromFile(
   persistMergedHighlights({
     importedAt,
     nodeId,
+    previousContent: sourceNode.content,
     update: readwiseUpdate
   });
+  linkLocalizedImagesToNode(nodeId, mergeInput.localized.attachmentIds);
 
   scheduleMirrorSync([nodeId]);
   return {

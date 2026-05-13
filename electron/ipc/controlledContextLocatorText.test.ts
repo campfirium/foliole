@@ -177,3 +177,45 @@ it('matches Codex engineering highlight when reader bullets differ from markdown
   expect(match).toContain('* **上下文资源稀缺。**');
   expectLengthClose(match ?? '', quote);
 });
+
+it('matches Twitter list highlights despite empty status links and Readwise backlink suffixes', () => {
+  const source = [
+    '# Lists Twitter List: January 17',
+    '',
+    '[@dotey retweeted](https://twitter.com/dotey)',
+    '',
+    '![](https://pbs.twimg.com/profile_images/1525878195928432640/e-qWbspN.jpg)',
+    '',
+    '[大罗SEO](https://twitter.com/daluoseo)',
+    '[@daluoseo](https://twitter.com/daluoseo)',
+    '',
+    '整个网站只有一个页面，一个丑陋的表格，几乎不需要维护，没有任何的广告，你猜猜一个月能赚多少钱？',
+    '',
+    '答案是$5,000美金',
+    '',
+    '<https://t.co/DX3clGgBtk> 抓取了Amazon所有的硬盘相关的销售链接，在一个简单但是清晰的表格里列出了所有相关参数，让买家能够快速定位需要的产品。',
+    '',
+    '整个概念相当简单，网站的维护成本几乎为零。目前占据了类目词的首位，2015年上线，通过Affiliate链接盈利，每月超过5000美金。',
+    '',
+    'SEO层面，虽然只有一个页面，但是相关度极高，10年的老域名也相当有威力。'
+  ].join('\n');
+  const quote = [
+    '[ey retweeted](https://twitter.com/dotey)',
+    '![](https://pbs.twimg.com/profile_images/1525878195928432640/e-qWbspN.jpg)',
+    '[大罗SEO](https://twitter.com/daluoseo) [@daluoseo](https://twitter.com/daluoseo)',
+    '[](https://twitter.com/daluoseo/status/1880282194431594945)',
+    '整个网站只有一个页面，一个丑陋的表格，几乎不需要维护，没有任何的广告，你猜猜一个月能赚多少钱？',
+    '答案是$5,000美金',
+    '[https://t.co/DX3clGgBtk](https://t.co/DX3clGgBtk) 抓取了Amazon所有的硬盘相关的销售链接，在一个简单但是清晰的表格里列出了所有相关参数，让买家能够快速定位需要的产品。',
+    '整个概念相当简单，网站的维护成本几乎为零。目前占据了类目词的首位，2015年上线，通过Affiliate链接盈利，每月超过5000美金。',
+    'SEO层面，虽然只有一个页面，但是相关度极高，10年的老域名也相当有威力。',
+    '![](https://pbs.twimg.com/media/GhgZmqUXAAABQiK.jpg) ([View Highlight](https://read.readwise.io/read/01jhvxxmyfnzq29x57ztwwdtzp))'
+  ].join('\n');
+
+  const match = findLocatorText(source, quote);
+
+  expect(match).not.toBeNull();
+  expect(match).toContain('整个网站只有一个页面');
+  expect(match).toContain('SEO层面');
+  expectLengthClose(match ?? '', quote);
+});

@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { resetRemoteImagePipelineForTests } from '../attachments/remoteImagePipeline.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -29,10 +30,13 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-topic-highlight-merge-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  resetRemoteImagePipelineForTests();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 404 })));
   initializeDatabase();
 });
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -175,4 +179,56 @@ it('merges the GTD article case with the full set of highlights', async () => {
   expect(result.status).toBe('merged');
   expect(result.merged_highlight_count).toBeGreaterThan(0);
   expect(result.merged_highlight_count).toBe(mergedChildren.length);
+});
+
+it('localizes shared remote images before matching manually merged readwise highlights', async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), {
+    headers: { 'content-type': 'image/png' },
+    status: 200
+  }));
+  const imported = runPreparedImport(
+    createPreparedDesktopTextImport({
+      content: [
+        '# Article',
+        '',
+        '![Avatar](https://cdn.example.com/avatar.png)',
+        '',
+        '大罗SEO target sentence.'
+      ].join('\n'),
+      fileName: 'article.md',
+      filePath: '/tmp/article.md',
+      importedAt: '2026-04-11T10:00:00.000Z',
+      kind: 'markdown'
+    })
+  );
+  const highlightPath = await writeHighlightFile(
+    'highlights-image.md',
+    [
+      '# Article',
+      '',
+      '## Highlights',
+      '',
+      '- ![Avatar](https://cdn.example.com/avatar.png)',
+      '  大罗SEO target sentence.'
+    ].join('\n')
+  );
+
+  await expect(mergeReadwiseTopicHighlightsFromFile(imported.nodeId as string, highlightPath)).resolves.toEqual({
+    merged_highlight_count: 1,
+    node_id: imported.nodeId,
+    status: 'merged'
+  });
+  const state = readMergedState(imported.nodeId as string);
+  const anchorLink = parseAnchorLink(state.children[0]!.anchor_link);
+  const locator = anchorLink.locator;
+  const attachmentRows = openDatabaseConnection().sqlite
+    .prepare('SELECT attachment_id FROM node_attachments WHERE node_id = ?')
+    .all(imported.nodeId as string);
+
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(state.node?.content).toContain('![Avatar](asset://');
+  expect(state.children[0]?.content).toContain('![Avatar](asset://');
+  expect(locator?.originalText).toContain('![Avatar](asset://');
+  expect(locator ? state.node?.content.slice(locator.from, locator.to) : null).toBe(locator?.originalText);
+  expect(attachmentRows).toHaveLength(1);
 });

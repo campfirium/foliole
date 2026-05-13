@@ -4,6 +4,7 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
+import { applyParentContentChange } from './parentContentMutation.js';
 import { syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 
 const INBOX_NODE_ID = 'special-inbox';
@@ -102,23 +103,27 @@ export function updateExistingNode(input: {
   importedAt: string;
   title: string;
 }) {
-  const openingText = resolveNodeOpeningText(input.content, input.title);
-  const bodyBlobHash = upsertTextBodyBlob(input.driver, input.content, input.importedAt);
   input.driver.execute(
     `UPDATE nodes
-     SET kind = 'topic', title = ?, is_title_manual = 1, hide_title_heading = ?,
-       content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ?, deleted_at = NULL
+     SET kind = 'topic', title = ?, is_title_manual = 1, hide_title_heading = ?, updated_at = ?, deleted_at = NULL
      WHERE id = ?`,
     [
       input.title,
       input.hideTitleHeading ? 1 : 0,
-      input.content,
-      bodyBlobHash,
-      openingText,
       input.importedAt,
       input.existingNode.id
     ]
   );
-  syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
+  const contentChange = applyParentContentChange({
+    driver: input.driver,
+    nextContent: input.content,
+    nodeId: input.existingNode.id,
+    previousContent: input.existingNode.content,
+    title: input.title,
+    updatedAt: input.importedAt
+  });
+  if (!contentChange.written) {
+    syncWorkspaceSearchIndexForNodeIds(input.driver, [input.existingNode.id]);
+  }
   return input.existingNode.id;
 }

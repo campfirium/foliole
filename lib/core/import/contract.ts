@@ -41,6 +41,7 @@ export interface PreparedImportRecord {
   unmatchedHighlights?: PreparedImportHighlightRecord[];
   degradedReason: string | null;
   importedAt: string;
+  localizedImageAttachmentIds?: string[];
   sourceProfile?: PreparedImportSourceProfile;
   sourceTrackingMode?: ImportSourceTrackingMode;
 }

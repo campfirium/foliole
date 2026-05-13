@@ -63,6 +63,26 @@ function ensureNodeExists(nodeId: string) {
   return Boolean(row);
 }
 
+function toImportedResult(input: {
+  attachment: ReturnType<typeof createAttachmentRecordIfNeeded>['attachment'];
+  attachmentRecord: 'created' | 'reused';
+  mimeType: string;
+  sizeBytes: number;
+  storedFile: 'created' | 'reused';
+}): NativeImportLocalImageAttachmentResult {
+  return {
+    status: 'imported',
+    attachment_id: input.attachment.id,
+    attachment_record: input.attachmentRecord,
+    created_at: input.attachment.createdAt,
+    hash: input.attachment.id,
+    mime_type: input.mimeType,
+    original_name: input.attachment.originalName ?? normalizeImageFileName('', input.mimeType),
+    size_bytes: input.sizeBytes,
+    stored_file: input.storedFile
+  };
+}
+
 async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
   try {
     await fs.access(storagePath);
@@ -177,15 +197,11 @@ export async function importImageAttachmentBytes(
     role: IMAGE_ATTACHMENT_ROLE
   });
 
-  return {
-    status: 'imported',
-    attachment_id: attachment.id,
-    attachment_record: attachmentRecord,
-    created_at: attachment.createdAt,
-    hash: attachment.id,
-    mime_type: normalizedMimeType,
-    original_name: attachment.originalName ?? normalizedOriginalName,
-    size_bytes: input.bytes.byteLength,
-    stored_file: storedFile
-  };
+  return toImportedResult({
+    attachment,
+    attachmentRecord,
+    mimeType: normalizedMimeType,
+    sizeBytes: input.bytes.byteLength,
+    storedFile
+  });
 }

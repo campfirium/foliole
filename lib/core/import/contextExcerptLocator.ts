@@ -1,6 +1,6 @@
 import { normalizeFullTextWithMap } from './contextExcerptFullTextNormalize.js';
 import { findFullTextLocatorMatch } from './contextExcerptFullTextSearch.js';
-import { toTrimmedMatch } from './contextExcerptMatchSupport.js';
+import { toLocatedMatch, toTrimmedMatch } from './contextExcerptMatchSupport.js';
 import { findParagraphContextExcerptMatch } from './contextExcerptParagraphSearch.js';
 import {
   createContextExcerptQuoteLocator,
@@ -54,7 +54,28 @@ export function findContextExcerptLocatorTextInLocatorByQuoteLocator(
   quote: string,
   quoteLocator: ContextExcerptQuoteLocator
 ) {
+  const paragraphMatch = findParagraphContextExcerptMatch(locator, quote, quoteLocator, toLocatedMatch);
+  if (paragraphMatch && isUsableLocatorTextMatch(paragraphMatch, quote)) {
+    return paragraphMatch;
+  }
   return findFullTextLocatorMatch(locator, quote, quoteLocator);
+}
+
+function isUsableLocatorTextMatch(match: string, quote: string) {
+  const quoteLineCount = normalizeLineEndings(quote)
+    .split('\n')
+    .map((line) => normalizeQuoteText(line))
+    .filter(Boolean).length;
+  if (quoteLineCount <= 1) {
+    return true;
+  }
+  const matchLength = normalizeQuoteText(match).length;
+  const quoteLength = normalizeQuoteText(quote).length;
+  if (matchLength === 0 || quoteLength === 0) {
+    return false;
+  }
+  const ratio = matchLength / quoteLength;
+  return ratio >= 0.7 && ratio <= 1.6;
 }
 
 export function findContextExcerptInLocator(locator: ContextExcerptLocator, quote: string) {
