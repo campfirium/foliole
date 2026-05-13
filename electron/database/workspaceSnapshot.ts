@@ -1,6 +1,7 @@
 import {
   loadWorkspaceSnapshot as loadWorkspaceSnapshotViaDriver,
-  type WorkspaceSnapshot
+  type WorkspaceSnapshot,
+  type WorkspaceSnapshotLoadOptions
 } from '../../lib/core/database/workspaceSnapshot.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -12,8 +13,8 @@ export interface WorkspaceVersionMetadata {
   workspaceVersion: string | null;
 }
 
-export function loadWorkspaceSnapshot(): WorkspaceSnapshot | null {
-  return loadWorkspaceSnapshotViaDriver(openDatabaseConnection().driver);
+export function loadWorkspaceSnapshot(options?: WorkspaceSnapshotLoadOptions): WorkspaceSnapshot | null {
+  return loadWorkspaceSnapshotViaDriver(openDatabaseConnection().driver, options);
 }
 
 export function loadWorkspaceVersionMetadata(): WorkspaceVersionMetadata {

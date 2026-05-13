@@ -214,7 +214,7 @@ async function handleAuthenticatedGet(
     writeJson(request, response, 404, { error: 'not_found' });
     return;
   }
-  const snapshot = loadWorkspaceSnapshot();
+  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.peerId, snapshot));
 }
 

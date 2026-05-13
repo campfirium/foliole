@@ -177,7 +177,7 @@ function createReadwisePreparedImport() {
 }
 
 function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: string) {
-  const snapshot = loadWorkspaceSnapshot();
+  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   expect(snapshot).not.toBeNull();
   if (!snapshot) {
     throw new Error('expected workspace snapshot');

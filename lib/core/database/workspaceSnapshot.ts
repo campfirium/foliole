@@ -21,6 +21,10 @@ export interface WorkspaceSnapshot {
   untitledSequenceByParent: Record<string, number>;
 }
 
+export interface WorkspaceSnapshotLoadOptions {
+  includeBody?: boolean;
+}
+
 interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
   parent_id: string | null;
@@ -73,8 +77,35 @@ interface NodeAttachmentSnapshotRow extends DatabaseRow {
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
-function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
+function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
+  if (options.includeBody) {
+    return {
+      bodyJoin: 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash',
+      bodyStatusExpression: `CASE
+         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
+         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing'
+         WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty'
+         ELSE 'ready'
+       END`,
+      contentExpression: 'COALESCE(CAST(cbd.data AS TEXT), n.content)'
+    };
+  }
+  return {
+    bodyJoin: '',
+    bodyStatusExpression: `CASE
+         WHEN n.body_blob_hash IS NOT NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
+         WHEN n.body_blob_hash IS NOT NULL AND (cb.hash IS NULL OR cb.availability = 'missing') THEN 'missing'
+         WHEN n.body_blob_hash IS NOT NULL THEN 'ready'
+         WHEN TRIM(n.content) = '' THEN 'empty'
+         ELSE 'ready'
+       END`,
+    contentExpression: "''"
+  };
+}
+
+function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceNodeRow[] {
   const deviceId = loadDatabaseDeviceId(driver) ?? '*';
+  const { bodyJoin, bodyStatusExpression, contentExpression } = buildBodySelection(options);
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
        n.id,
@@ -87,14 +118,9 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        n.hide_title_heading,
        n.body_blob_hash,
        n.opening_text,
-       CASE
-         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
-         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing'
-         WHEN TRIM(COALESCE(CAST(cbd.data AS TEXT), n.content)) = '' THEN 'empty'
-         ELSE 'ready'
-       END AS body_status,
+       ${bodyStatusExpression} AS body_status,
        n.virtual_filter,
-       COALESCE(CAST(cbd.data AS TEXT), n.content) AS content,
+       ${contentExpression} AS content,
        n.reveal,
        n.anchor_link,
        n.image_regions,
@@ -120,7 +146,7 @@ function queryWorkspaceRows(driver: DatabaseDriver): WorkspaceNodeRow[] {
        nr.lapses AS review_lapses
      FROM nodes n
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     ${bodyJoin}
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id`
@@ -199,8 +225,8 @@ function buildSnapshotRows(
   };
 }
 
-export function loadWorkspaceSnapshot(driver: DatabaseDriver): WorkspaceSnapshot | null {
-  const rows = queryWorkspaceRows(driver);
+export function loadWorkspaceSnapshot(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceSnapshot | null {
+  const rows = queryWorkspaceRows(driver, options);
   if (rows.length === 0) {
     return null;
   }

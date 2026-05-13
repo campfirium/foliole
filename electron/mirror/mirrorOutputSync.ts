@@ -132,7 +132,7 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
 async function syncMirrorOutput(mode: MirrorSyncMode): Promise<NativeMirrorOutputRebuildResult> {
   const updatedAt = new Date().toISOString();
   const paths = loadLibraryPathSettingsSync();
-  const snapshot = loadWorkspaceSnapshot();
+  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   const targets = snapshot ? collectArticleMirrorTargets(snapshot, paths.mirror) : [];
   const recordsByArticleId = loadMirrorArticleRecords();
   const targetArticleIds = new Set(targets.map((target) => target.articleId));

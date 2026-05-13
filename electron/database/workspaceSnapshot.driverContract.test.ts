@@ -26,6 +26,59 @@ const driver: DatabaseDriver = {
   }
 };
 
+const workspaceSnapshotRow = {
+  id: 'node-1',
+  parent_id: null,
+  title: 'Node 1',
+  is_title_manual: 1,
+  opening_text: null,
+  body_blob_hash: null,
+  body_status: 'empty',
+  content: '',
+  reveal: null,
+  anchor_link: null,
+  created_at: '2026-03-14T00:00:00.000Z',
+  updated_at: '2026-03-14T00:00:00.000Z',
+  deleted_at: null,
+  review_due: null,
+  review_last_review_at: null,
+  review_state: null,
+  review_stability: null,
+  review_difficulty: null,
+  review_elapsed_days: null,
+  review_scheduled_days: null,
+  review_reps: null,
+  review_lapses: null
+};
+
+const expectedWorkspaceSnapshot = {
+  activeNodeId: 'node-1',
+  nodeOrder: ['node-1'],
+  nodesById: {
+    'node-1': {
+      id: 'node-1',
+      parentNodeId: null,
+      kind: 'topic',
+      title: 'Node 1',
+      isTitleManual: true,
+      hideTitleHeading: false,
+      bodyBlobHash: null,
+      openingText: null,
+      content: '',
+      bodyStatus: 'empty',
+      virtualFilter: null,
+      reveal: null,
+      anchorLink: null,
+      reading: null,
+      review: null,
+      createdAt: '2026-03-14T00:00:00.000Z',
+      updatedAt: '2026-03-14T00:00:00.000Z'
+    }
+  },
+  trashedNodeIds: [],
+  untitledSequenceByParent: {}
+};
+
 beforeEach(() => {
   executeSpy.mockReset();
   prepareSpy.mockReset();
@@ -36,62 +89,23 @@ beforeEach(() => {
 
 it('loads workspace snapshot through query helpers only', () => {
   queryAllSpy
-    .mockReturnValueOnce([
-      {
-        id: 'node-1',
-        parent_id: null,
-        title: 'Node 1',
-        is_title_manual: 1,
-        opening_text: null,
-        content: 'content',
-        reveal: null,
-        anchor_link: null,
-        created_at: '2026-03-14T00:00:00.000Z',
-        updated_at: '2026-03-14T00:00:00.000Z',
-        deleted_at: null,
-        review_due: null,
-        review_last_review_at: null,
-        review_state: null,
-        review_stability: null,
-        review_difficulty: null,
-        review_elapsed_days: null,
-        review_scheduled_days: null,
-        review_reps: null,
-        review_lapses: null
-      }
-    ])
+    .mockReturnValueOnce([workspaceSnapshotRow])
     .mockReturnValueOnce([{ node_id: 'node-1' }])
     .mockReturnValueOnce([]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
-  expect(loadWorkspaceSnapshot(driver)).toEqual({
-    activeNodeId: 'node-1',
-    nodeOrder: ['node-1'],
-    nodesById: {
-      'node-1': {
-        id: 'node-1',
-        parentNodeId: null,
-        kind: 'topic',
-        title: 'Node 1',
-        isTitleManual: true,
-        hideTitleHeading: false,
-        bodyBlobHash: null,
-        openingText: null,
-        content: 'content',
-        virtualFilter: null,
-        reveal: null,
-        anchorLink: null,
-        reading: null,
-        review: null,
-        createdAt: '2026-03-14T00:00:00.000Z',
-        updatedAt: '2026-03-14T00:00:00.000Z'
-      }
-    },
-    trashedNodeIds: [],
-    untitledSequenceByParent: {}
-  });
+  expect(loadWorkspaceSnapshot(driver)).toEqual(expectedWorkspaceSnapshot);
 
   expect(queryAllSpy).toHaveBeenCalledTimes(3);
-  expect(queryOneSpy).toHaveBeenCalledTimes(4);
+  expect(queryOneSpy).toHaveBeenCalledTimes(5);
+  expect(queryAllSpy.mock.calls[0]?.[0]).not.toContain('content_blob_data');
+});
+
+it('can opt in to full body content for internal snapshot callers', () => {
+  queryAllSpy.mockReturnValueOnce([]);
+  queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' });
+
+  expect(loadWorkspaceSnapshot(driver, { includeBody: true })).toBeNull();
+
   expect(queryAllSpy.mock.calls[0]?.[0]).toContain('content_blob_data');
 });

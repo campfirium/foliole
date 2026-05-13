@@ -54,7 +54,7 @@ function seedNode(nodeId: string, position: number) {
 }
 
 it('seeds the initial workspace when sqlite starts empty', () => {
-  const snapshot = loadWorkspaceSnapshot();
+  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
 
   expect(snapshot).not.toBeNull();
   expect(snapshot?.activeNodeId).toBe('starter-welcome');
@@ -90,16 +90,16 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot).not.toBeNull();
   expect(snapshot?.nodeOrder).toEqual([
     'special-inbox',
-    'node-1',
     'starter-root-folder',
-    'node-2',
     'special-virtual-root',
     'starter-virtual-example',
-    'starter-welcome'
+    'starter-welcome',
+    'node-1',
+    'node-2'
   ]);
   expect(snapshot?.trashedNodeIds).toEqual(['node-1']);
   expect(snapshot?.activeNodeId).toBe('starter-welcome');
-  expect(snapshot?.nodesById['node-2']?.content).toBe('content:node-2');
+  expect(snapshot?.nodesById['node-2']?.content).toBe('');
   expect(snapshot?.untitledSequenceByParent).toEqual({});
 });
 
@@ -114,7 +114,16 @@ it('loads full workspace node content from body blob data before inline content'
     [bodyBlobHash, '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
 
-  expect(loadWorkspaceSnapshot()?.nodesById['node-blob']?.content).toBe('blob body');
+  expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-blob']?.content).toBe('blob body');
+});
+
+it('loads lightweight workspace snapshots without node content by default', () => {
+  seedNode('node-1', 0);
+
+  const snapshot = loadWorkspaceSnapshot();
+
+  expect(snapshot?.nodesById['node-1']?.content).toBe('');
+  expect(snapshot?.nodesById['node-1']?.bodyStatus).toBeUndefined();
 });
 
 it('includes node attachment references in the workspace snapshot', () => {

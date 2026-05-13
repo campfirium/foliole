@@ -56,7 +56,7 @@ it('restores the application sqlite state from an online backup snapshot', async
 
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
 
-  expect(loadWorkspaceSnapshot()).toEqual({
+  expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1'],
     nodesById: {
@@ -103,7 +103,7 @@ it('restores review history, node lifecycle state, and backup truth after later 
 
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
 
-  expect(loadWorkspaceSnapshot()).toEqual(createRestoredWorkspaceSnapshot());
+  expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual(createRestoredWorkspaceSnapshot());
   expect(selectReviewLogCount('node-qa')).toBe(1);
   expect(selectNodeCount('node-later')).toBe(0);
 

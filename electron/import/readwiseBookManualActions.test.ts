@@ -226,7 +226,7 @@ it('imports the selected EPUB into the current readwise book node and keeps that
   expect(reloadedBook?.generatedNodeId).toBe(nodeId);
   expect(reloadedBook?.generatedNodeId).toBe(buildReadwiseBookPlaceholderNodeId('manual book'));
 
-  const snapshot = loadWorkspaceSnapshot();
+  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   const importedNode = reloadedBook?.generatedNodeId ? snapshot?.nodesById[reloadedBook.generatedNodeId] : null;
   expect(importedNode?.title).toBe('Manual Book');
   expect(importedNode?.content).toContain('# Manual Book');

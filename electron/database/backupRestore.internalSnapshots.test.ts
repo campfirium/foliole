@@ -80,7 +80,7 @@ it('keeps the current database untouched when the pre-restore snapshot cannot be
     /failed to create pre-restore snapshot/
   );
 
-  const snapshot = loadWorkspaceSnapshot();
+  const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   if (snapshot === null) {
     throw new Error('workspace snapshot should remain available');
   }
