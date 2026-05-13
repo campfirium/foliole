@@ -59,6 +59,11 @@ export {
 export { AppToolbar } from './Toolbar';
 export { ToolbarActionGroup } from './ToolbarActionGroup';
 export {
+  shouldVirtualizeList,
+  VirtualListSurface,
+  type VirtualListRenderMeta
+} from './VirtualListSurface';
+export {
   AppTooltip,
   AppTooltipContent,
   AppTooltipPortal,

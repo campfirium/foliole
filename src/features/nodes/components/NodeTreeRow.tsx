@@ -10,14 +10,9 @@ import { memo } from 'react';
 import { recordNodeListRowRender } from '../../../shared/platform/performanceDiagnosticsProbe';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
-import {
-  createNodeTreeRowButtonHandlers,
-  renderNodeTreeRowButtonSurface
-} from './NodeTreeRowButtonParts';
+import { NodeTreeRowButton } from './NodeTreeRowButton';
 import { NodeTreeRowFrame } from './NodeTreeRowFrame';
 import type { NodeTreeRowIconKind, NodeTreeRowIconState } from './NodeTreeRowIconModel';
-import { useRenameState } from './NodeTreeRowRename';
-import { resolveNodeRowButtonClassName } from './NodeTreeRowStyle';
 
 interface NodeTreeRowProps {
   descendantCount?: number;
@@ -37,6 +32,8 @@ interface NodeTreeRowProps {
   isDragDisabled?: boolean;
   isDropTarget?: boolean;
   dropIntent?: 'before' | 'after' | 'child' | null;
+  ariaPosInSet?: number;
+  ariaSetSize?: number;
   label: string;
   nodeId: string;
   rowSpacing: number;
@@ -62,12 +59,6 @@ function resolveNodeRowStyle(depth: number, rowSpacing: number) {
   } as CSSProperties;
 }
 
-function resolveNodeTreeItemState(isSelected: boolean) {
-  return {
-    'aria-selected': isSelected
-  };
-}
-
 function renderNodeTreeRowButton(props: {
   descendantCount: number;
   depth: number;
@@ -84,6 +75,8 @@ function renderNodeTreeRowButton(props: {
   isSelected: boolean;
   label: string;
   nodeId: string;
+  ariaPosInSet?: number;
+  ariaSetSize?: number;
   rowSpacing: number;
   secondaryLabel?: ReactNode;
   trailingLabelContent?: ReactNode;
@@ -129,6 +122,8 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         isSelected: props.isSelected,
         label: props.label,
         nodeId: props.nodeId,
+        ...(props.ariaPosInSet !== undefined ? { ariaPosInSet: props.ariaPosInSet } : {}),
+        ...(props.ariaSetSize !== undefined ? { ariaSetSize: props.ariaSetSize } : {}),
         rowSpacing: props.rowSpacing,
         ...(props.secondaryLabel !== undefined ? { secondaryLabel: props.secondaryLabel } : {}),
         ...(props.trailingLabelContent !== undefined ? { trailingLabelContent: props.trailingLabelContent } : {}),
@@ -156,6 +151,8 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.isDerived === next.isDerived &&
     previous.isDragDisabled === next.isDragDisabled &&
     previous.isDropTarget === next.isDropTarget &&
+    previous.ariaPosInSet === next.ariaPosInSet &&
+    previous.ariaSetSize === next.ariaSetSize &&
     previous.isMuted === next.isMuted &&
     previous.isSelected === next.isSelected &&
     previous.label === next.label &&
@@ -180,73 +177,3 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
 }
 
 export const NodeTreeRow = memo(NodeTreeRowImpl, areNodeTreeRowPropsEqual);
-
-interface NodeTreeRowButtonProps {
-  descendantCount: number;
-  depth: number;
-  hasChildren: boolean;
-  isActive: boolean;
-  isBulkSelectionActive: boolean;
-  isCollapsed: boolean;
-  isDerived: boolean;
-  isMuted: boolean;
-  mutedOpacity: number;
-  nodeIconKind: NodeTreeRowIconKind;
-  nodeIconState: NodeTreeRowIconState;
-  showIcon: boolean;
-  isSelected: boolean;
-  label: string;
-  nodeId: string;
-  rowSpacing: number;
-  secondaryLabel?: ReactNode;
-  trailingLabelContent?: ReactNode;
-  onContextMenu?: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
-  onKeyDown?: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
-  onRename?: (nodeId: string, title: string) => void;
-  onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
-  onToggleCollapse: (nodeId: string) => void;
-  style: CSSProperties;
-}
-
-function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
-  const rename = useRenameState(props.label, props.nodeId, props.onRename);
-  const buttonClassName = resolveNodeRowButtonClassName({
-    depth: props.depth,
-    isBulkSelectionActive: props.isBulkSelectionActive,
-    isDerived: props.isDerived,
-    isSelected: props.isSelected
-  });
-  const treeItemState = resolveNodeTreeItemState(props.isSelected);
-  const handlers = createNodeTreeRowButtonHandlers(
-    props.nodeId,
-    props.onContextMenu,
-    props.onKeyDown,
-    props.onSelect,
-    rename
-  );
-  return renderNodeTreeRowButtonSurface({
-    buttonClassName,
-    depth: props.depth,
-    descendantCount: props.descendantCount,
-    handlers,
-    hasChildren: props.hasChildren,
-    isActive: props.isActive,
-    isBulkSelectionActive: props.isBulkSelectionActive,
-    isCollapsed: props.isCollapsed,
-    isDerived: props.isDerived,
-    isMuted: props.isMuted,
-    label: props.label,
-    mutedOpacity: props.mutedOpacity,
-    nodeIconKind: props.nodeIconKind,
-    nodeIconState: props.nodeIconState,
-    nodeId: props.nodeId,
-    secondaryLabel: props.secondaryLabel,
-    trailingLabelContent: props.trailingLabelContent,
-    showIcon: props.showIcon,
-    onToggleCollapse: props.onToggleCollapse,
-    rename,
-    rowSpacing: props.rowSpacing,
-    style: props.style,
-    treeItemState
-  });
-}

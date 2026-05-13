@@ -1,4 +1,4 @@
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
 
 import {
   getDismissedFadeOpacity,
@@ -17,6 +17,7 @@ import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
+import { VirtualListSurface, type VirtualListRenderMeta } from '../../shared/ui';
 
 interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
@@ -28,6 +29,7 @@ interface WorkspaceTopicTreeRowsProps {
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onToggleCollapse: (nodeId: string) => void;
   rows: NodeTreeRow[];
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
   selectedNodeIds: string[];
 }
 
@@ -45,7 +47,44 @@ function renderWorkspaceTopicTreeRow(
     onToggleCollapse: (nodeId: string) => void;
     rowSpacing: number;
     selectedNodeIds: string[];
+    meta?: VirtualListRenderMeta;
   }
+) {
+  const rowModel = resolveWorkspaceTopicTreeRowModel(row, args);
+
+  return (
+    <NodeTreeRowItem
+      descendantCount={row.descendantCount}
+      depth={row.depth}
+      hasChildren={row.hasChildren}
+      isActive={args.activeNodeId === row.node.id}
+      isBulkSelectionActive={args.selectedNodeIds.length > 1}
+      isCollapsed={args.collapsedNodeIds.has(row.node.id)}
+      isDerived={rowModel.isDerivedNode}
+      isMuted={rowModel.shouldFadeWholeRow}
+      mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeOpacity(rowModel.leafIconKind) : 1}
+      isSelected={rowModel.isSelected}
+      key={row.node.id}
+      label={row.node.title}
+      nodeId={row.node.id}
+      {...(args.meta ? { ariaPosInSet: args.meta.ariaPosInSet, ariaSetSize: args.meta.ariaSetSize } : {})}
+      nodeIconKind={rowModel.nodeIconKind}
+      nodeIconState={rowModel.nodeIconState}
+      showIcon
+      rowSpacing={args.rowSpacing}
+      {...definedProps({ onContextMenu: args.onContextMenu })}
+      {...resolveWorkspaceTopicTreeRowDragProps(row.node.id, rowModel.isDerivedNode, args.drag)}
+      onKeyDown={args.onRowKeyDown}
+      onRename={args.onRenameNode}
+      onSelect={args.onSelectNode}
+      onToggleCollapse={args.onToggleCollapse}
+    />
+  );
+}
+
+function resolveWorkspaceTopicTreeRowModel(
+  row: NodeTreeRow,
+  args: Parameters<typeof renderWorkspaceTopicTreeRow>[1]
 ) {
   const node = args.nodesById[row.node.id];
   const isSelected = args.selectedNodeIds.includes(row.node.id);
@@ -64,33 +103,7 @@ function renderWorkspaceTopicTreeRow(
   const leafIconKind = resolveLeafIconKind(nodeIconKind);
   const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
 
-  return (
-    <NodeTreeRowItem
-      descendantCount={row.descendantCount}
-      depth={row.depth}
-      hasChildren={row.hasChildren}
-      isActive={args.activeNodeId === row.node.id}
-      isBulkSelectionActive={args.selectedNodeIds.length > 1}
-      isCollapsed={args.collapsedNodeIds.has(row.node.id)}
-      isDerived={isDerivedNode}
-      isMuted={shouldFadeWholeRow}
-      mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity(leafIconKind) : 1}
-      isSelected={isSelected}
-      key={row.node.id}
-      label={row.node.title}
-      nodeId={row.node.id}
-      nodeIconKind={nodeIconKind}
-      nodeIconState={nodeIconState}
-      showIcon
-      rowSpacing={args.rowSpacing}
-      {...definedProps({ onContextMenu: args.onContextMenu })}
-      {...resolveWorkspaceTopicTreeRowDragProps(row.node.id, isDerivedNode, args.drag)}
-      onKeyDown={args.onRowKeyDown}
-      onRename={args.onRenameNode}
-      onSelect={args.onSelectNode}
-      onToggleCollapse={args.onToggleCollapse}
-    />
-  );
+  return { isDerivedNode, isSelected, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
 }
 
 function resolveHasEnteredSchedule(
@@ -133,6 +146,7 @@ export function WorkspaceTopicTreeRows({
   onSelectNode,
   onToggleCollapse,
   rows,
+  scrollContainerRef,
   selectedNodeIds
 }: WorkspaceTopicTreeRowsProps) {
   const rowSpacing = getNodeListRowSpacing();
@@ -157,7 +171,11 @@ export function WorkspaceTopicTreeRows({
       role="tree"
       style={{ gap: `${rowGap}px` }}
     >
-      {rows.map((row) =>
+      <VirtualListSurface
+        estimateSize={() => 28 + rowSpacing * 2 + rowGap}
+        getItemKey={(row) => row.node.id}
+        items={rows}
+        renderItem={(row, meta) =>
         renderWorkspaceTopicTreeRow(row, {
           activeNodeId,
           collapsedNodeIds,
@@ -168,10 +186,13 @@ export function WorkspaceTopicTreeRows({
           onRowKeyDown,
           onSelectNode,
           onToggleCollapse,
+          meta,
           rowSpacing,
           selectedNodeIds
-        })
-      )}
+        })}
+        scrollElementRef={scrollContainerRef}
+        scrollToIndex={activeNodeId ? rows.findIndex((row) => row.node.id === activeNodeId) : null}
+      />
     </section>
   );
 }

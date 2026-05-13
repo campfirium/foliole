@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { createRef } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { useNodeListDragController } from '../../features/nodes/components/NodeListTreeDrag';
@@ -79,6 +80,7 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
       onSelectNode={vi.fn()}
       onToggleCollapse={vi.fn()}
       rows={[createRow(node)]}
+      scrollContainerRef={createRef<HTMLDivElement>()}
       selectedNodeIds={[]}
     />
   );
@@ -114,6 +116,7 @@ it('renders markdown-looking topic titles as plain list text', () => {
       onSelectNode={vi.fn()}
       onToggleCollapse={vi.fn()}
       rows={[createRow(node)]}
+      scrollContainerRef={createRef<HTMLDivElement>()}
       selectedNodeIds={[]}
     />
   );

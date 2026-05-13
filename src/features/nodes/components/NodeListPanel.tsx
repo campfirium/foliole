@@ -79,7 +79,11 @@ function resolveNodeListPanelSurfaceClassName(isTrashViewOpen: boolean) {
   return isTrashViewOpen ? 'workspace-region-main-topic' : 'workspace-region-main-folder';
 }
 
-function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeof useNodeListDragController>) {
+function renderNodeTreeSection(
+  props: NodeListPanelProps,
+  drag: ReturnType<typeof useNodeListDragController>,
+  scrollContainerRef: RefObject<HTMLDivElement | null>
+) {
   const handleBlankAreaContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (props.isTrashViewOpen) {
       return;
@@ -120,6 +124,7 @@ function renderNodeTreeSection(props: NodeListPanelProps, drag: ReturnType<typeo
         reviewSession={props.reviewSession}
         rowSpacing={props.rowSpacing}
         rows={props.activeRows}
+        scrollContainerRef={scrollContainerRef}
         selectedNodeIds={props.selectedNodeIds}
         selectedTrashNodeId={props.selectedTrashNodeId}
       />
@@ -193,7 +198,7 @@ export function NodeListPanel(props: NodeListPanelProps) {
       <div className="relative min-h-0 flex-1">
         {renderDeleteStatusOverlay(props.deleteStatusLabel)}
         <div className={getNodeListScrollContainerClassName(props.isVirtualViewOpen)} ref={scrollContainerRef}>
-          {renderNodeTreeSection(props, drag)}
+          {renderNodeTreeSection(props, drag, scrollContainerRef)}
           {props.bodyAppendContent}
         </div>
       </div>

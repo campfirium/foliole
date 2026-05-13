@@ -1,6 +1,6 @@
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
-import { AppEmptyState } from '../../../shared/ui';
+import { AppEmptyState, VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import { isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
@@ -15,7 +15,7 @@ import { createNodeListRowKeydownHandler } from './NodeListTreeKeyboard';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from './NodeTreeRowIconModel';
-import { TrashListRows } from './TrashListRows';
+import { TrashListRows, resolveNodeTreeRowVirtualSize } from './TrashListRows';
 
 interface NodeListRowsProps {
   activeNodeId: string | null;
@@ -31,6 +31,7 @@ interface NodeListRowsProps {
   reviewSession: ReviewSessionState;
   rowSpacing: number;
   rows: NodeTreeRow[];
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
 }
@@ -38,8 +39,49 @@ interface NodeListRowsProps {
 function renderNodeListRow(
   props: NodeListRowsProps,
   row: NodeTreeRow,
-  onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void
+  onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void,
+  meta?: VirtualListRenderMeta
 ) {
+  const rowModel = resolveNodeListRowModel(props, row);
+
+  return (
+    <NodeTreeRowItem
+      descendantCount={props.isTrashViewOpen ? 0 : row.descendantCount}
+      depth={props.isTrashViewOpen ? 0 : row.depth}
+      hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
+      isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
+      isBulkSelectionActive={props.selectedNodeIds.length > 1}
+      isCollapsed={props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id)}
+      isDerived={rowModel.isDerivedNode}
+      isDragDisabled={props.isTrashViewOpen || rowModel.isDerivedNode || rowModel.isInbox || rowModel.isTrashRoot || rowModel.isVirtualRoot}
+      isDropTarget={props.drag.dropTargetNodeId === row.node.id}
+      isMuted={rowModel.shouldFadeWholeRow}
+      mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeOpacity(rowModel.leafIconKind) : 1}
+      dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
+      isSelected={props.selectedNodeIds.includes(row.node.id)}
+      key={row.node.id}
+      label={row.node.title}
+      nodeId={row.node.id}
+      {...(meta ? { ariaPosInSet: meta.ariaPosInSet, ariaSetSize: meta.ariaSetSize } : {})}
+      nodeIconKind={rowModel.nodeIconKind}
+      nodeIconState={rowModel.nodeIconState}
+      showIcon={false}
+      rowSpacing={props.rowSpacing}
+      {...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {})}
+      {...(props.drag.onDragEnd ? { onDragEnd: props.drag.onDragEnd } : {})}
+      {...(props.drag.onDragEnterNode ? { onDragEnter: props.drag.onDragEnterNode } : {})}
+      {...(props.drag.onDragOverNode ? { onDragOver: props.drag.onDragOverNode } : {})}
+      {...(props.drag.onDragStartNode ? { onDragStart: props.drag.onDragStartNode } : {})}
+      {...(props.drag.onDropOnNode ? { onDrop: props.drag.onDropOnNode } : {})}
+      onKeyDown={onRowKeyDown}
+      {...(!rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot && props.onRename ? { onRename: props.onRename } : {})}
+      onSelect={props.onSelect}
+      onToggleCollapse={props.onToggleCollapse}
+    />
+  );
+}
+
+function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
   const node = props.nodesById[row.node.id];
   const isInbox = isInboxNode(node);
   const isTrashRoot = isTrashNode(node);
@@ -61,40 +103,11 @@ function renderNodeListRow(
   const leafIconKind = resolveLeafIconKind(nodeIconKind);
   const shouldFadeWholeRow = nodeIconState === 'dismissed' && shouldFadeDismissedWholeRow(leafIconKind);
 
-  return (
-    <NodeTreeRowItem
-      descendantCount={props.isTrashViewOpen ? 0 : row.descendantCount}
-      depth={props.isTrashViewOpen ? 0 : row.depth}
-      hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
-      isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
-      isBulkSelectionActive={props.selectedNodeIds.length > 1}
-      isCollapsed={props.isTrashViewOpen ? false : props.collapsedNodeIds.has(row.node.id)}
-      isDerived={isDerivedNode}
-      isDragDisabled={props.isTrashViewOpen || isDerivedNode || isInbox || isTrashRoot || isVirtualRoot}
-      isDropTarget={props.drag.dropTargetNodeId === row.node.id}
-      isMuted={shouldFadeWholeRow}
-      mutedOpacity={shouldFadeWholeRow ? getDismissedFadeOpacity(leafIconKind) : 1}
-      dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
-      isSelected={props.selectedNodeIds.includes(row.node.id)}
-      key={row.node.id}
-      label={row.node.title}
-      nodeId={row.node.id}
-      nodeIconKind={nodeIconKind}
-      nodeIconState={nodeIconState}
-      showIcon={false}
-      rowSpacing={props.rowSpacing}
-      {...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {})}
-      {...(props.drag.onDragEnd ? { onDragEnd: props.drag.onDragEnd } : {})}
-      {...(props.drag.onDragEnterNode ? { onDragEnter: props.drag.onDragEnterNode } : {})}
-      {...(props.drag.onDragOverNode ? { onDragOver: props.drag.onDragOverNode } : {})}
-      {...(props.drag.onDragStartNode ? { onDragStart: props.drag.onDragStartNode } : {})}
-      {...(props.drag.onDropOnNode ? { onDrop: props.drag.onDropOnNode } : {})}
-      onKeyDown={onRowKeyDown}
-      {...(!isInbox && !isTrashRoot && !isVirtualRoot && props.onRename ? { onRename: props.onRename } : {})}
-      onSelect={props.onSelect}
-      onToggleCollapse={props.onToggleCollapse}
-    />
-  );
+  return { isDerivedNode, isInbox, isTrashRoot, isVirtualRoot, leafIconKind, nodeIconKind, nodeIconState, shouldFadeWholeRow };
+}
+
+function resolveActiveRowIndex(rows: readonly NodeTreeRow[], activeNodeId: string | null) {
+  return activeNodeId ? rows.findIndex((row) => row.node.id === activeNodeId) : null;
 }
 
 function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
@@ -135,10 +148,20 @@ export function NodeListRows(props: NodeListRowsProps) {
         onSelect={props.onSelect}
         rows={props.rows}
         rowSpacing={props.rowSpacing}
+        scrollContainerRef={props.scrollContainerRef}
         selectedNodeIds={props.selectedNodeIds}
       />
     );
   }
 
-  return props.rows.map((row) => renderNodeListRow(props, row, onRowKeyDown));
+  return (
+    <VirtualListSurface
+      estimateSize={() => resolveNodeTreeRowVirtualSize(props.rowSpacing)}
+      getItemKey={(row) => row.node.id}
+      items={props.rows}
+      renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, meta)}
+      scrollElementRef={props.scrollContainerRef}
+      scrollToIndex={resolveActiveRowIndex(props.rows, props.activeNodeId)}
+    />
+  );
 }

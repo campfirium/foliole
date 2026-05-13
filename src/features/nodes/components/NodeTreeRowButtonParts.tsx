@@ -97,6 +97,8 @@ export function renderNodeTreeRowButtonSurface(props: {
   nodeIconKind: NodeTreeRowIconKind;
   nodeIconState: NodeTreeRowIconState;
   nodeId: string;
+  ariaPosInSet?: number;
+  ariaSetSize?: number;
   rename: ReturnType<typeof useRenameState>;
   rowSpacing: number;
   secondaryLabel?: ReactNode;
@@ -113,6 +115,8 @@ export function renderNodeTreeRowButtonSurface(props: {
       aria-current={props.isActive ? 'page' : undefined}
       aria-expanded={props.hasChildren ? !props.isCollapsed : undefined}
       aria-level={props.depth + 1}
+      aria-posinset={props.ariaPosInSet}
+      aria-setsize={props.ariaSetSize}
       {...props.treeItemState}
       className={props.buttonClassName}
       data-node-derived={props.isDerived ? 'true' : 'false'}

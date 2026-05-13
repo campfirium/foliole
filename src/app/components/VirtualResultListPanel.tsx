@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
@@ -56,6 +56,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name']);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const rowSpacing = getNodeListRowSpacing();
   const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
   const rows = useVirtualResultRows(props.nodes, props.nodesById, searchQuery, contentSort.sort, nodeViewById);
@@ -85,7 +86,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
           />
         ) : null}
       </div>
-      <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2">
+      <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2" ref={scrollContainerRef}>
         {rows.length === 0 ? (
           <div className="flex min-h-full items-center justify-center py-6">
             <AppEmptyState description={props.emptyState.description} title={props.emptyState.title} />
@@ -100,6 +101,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
               onSelect={(nodeId) => props.onSelectNode(nodeId)}
               rows={rows}
               rowSpacing={rowSpacing}
+              scrollContainerRef={scrollContainerRef}
               selectedNodeIds={selectedNodeIds}
             />
           </div>

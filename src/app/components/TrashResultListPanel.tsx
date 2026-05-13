@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type RefObject } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
@@ -45,6 +45,7 @@ function TrashRowsBody(props: {
   nodesById: WorkspaceListNodesById;
   rowSpacing: number;
   rows: ReturnType<typeof useTrashRows>['rows'];
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
   selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
   selectedNodeIds: string[];
 }) {
@@ -66,6 +67,7 @@ function TrashRowsBody(props: {
         onSelect={props.selectTrashNode}
         rows={props.rows}
         rowSpacing={props.rowSpacing}
+        scrollContainerRef={props.scrollContainerRef}
         selectedNodeIds={props.selectedNodeIds}
       />
     </div>
@@ -102,6 +104,7 @@ function TrashContextMenu(props: {
 export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const rowSpacing = getNodeListRowSpacing();
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
   const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, new Set());
@@ -134,12 +137,13 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
         searchQuery={searchQuery}
         trashedNodeIds={props.trashedNodeIds}
       />
-      <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2">
+      <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto px-4 py-2" ref={scrollContainerRef}>
         <TrashRowsBody
           contextMenu={contextMenu}
           nodesById={props.nodesById}
           rowSpacing={rowSpacing}
           rows={rows}
+          scrollContainerRef={scrollContainerRef}
           selectTrashNode={selectTrashNode}
           selectedNodeIds={selectedNodeIds}
         />

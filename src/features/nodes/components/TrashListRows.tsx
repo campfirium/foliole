@@ -1,5 +1,6 @@
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject } from 'react';
 
+import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -14,7 +15,19 @@ interface TrashListRowsProps {
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   rows: NodeTreeRow[];
   rowSpacing: number;
+  scrollContainerRef: RefObject<HTMLElement | null>;
   selectedNodeIds: string[];
+}
+
+const NODE_TREE_ROW_BASE_HEIGHT = 28;
+const TRASH_ROW_SECONDARY_LABEL_HEIGHT = 18;
+
+export function resolveNodeTreeRowVirtualSize(rowSpacing: number) {
+  return NODE_TREE_ROW_BASE_HEIGHT + rowSpacing * 2;
+}
+
+function resolveTrashRowVirtualSize(rowSpacing: number) {
+  return resolveNodeTreeRowVirtualSize(rowSpacing) + TRASH_ROW_SECONDARY_LABEL_HEIGHT;
 }
 
 function buildFolderPath(nodeId: string, nodesById: WorkspaceListNodesById) {
@@ -37,7 +50,8 @@ function buildFolderPath(nodeId: string, nodesById: WorkspaceListNodesById) {
 
 function renderTrashRow(
   row: NodeTreeRow,
-  props: Omit<TrashListRowsProps, 'rows'>
+  props: Omit<TrashListRowsProps, 'rows'>,
+  meta?: VirtualListRenderMeta
 ) {
   const isActive = props.activeNodeId === row.node.id;
   const isSelected = props.selectedNodeIds.includes(row.node.id);
@@ -55,6 +69,7 @@ function renderTrashRow(
       key={row.node.id}
       label={row.node.title}
       nodeId={row.node.id}
+      {...(meta ? { ariaPosInSet: meta.ariaPosInSet, ariaSetSize: meta.ariaSetSize } : {})}
       onContextMenu={props.onContextMenu}
       onKeyDown={props.onKeyDown}
       onSelect={props.onSelect}
@@ -67,5 +82,14 @@ function renderTrashRow(
 }
 
 export function TrashListRows(props: TrashListRowsProps) {
-  return props.rows.map((row) => renderTrashRow(row, props));
+  return (
+    <VirtualListSurface
+      estimateSize={() => resolveTrashRowVirtualSize(props.rowSpacing)}
+      getItemKey={(row) => row.node.id}
+      items={props.rows}
+      renderItem={(row, meta) => renderTrashRow(row, props, meta)}
+      scrollElementRef={props.scrollContainerRef}
+      scrollToIndex={props.activeNodeId ? props.rows.findIndex((row) => row.node.id === props.activeNodeId) : null}
+    />
+  );
 }

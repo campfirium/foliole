@@ -54,6 +54,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           onSelectNode={args.onSelectNode}
           onToggleCollapse={args.onToggleCollapse}
           rows={args.visibleRows}
+          scrollContainerRef={args.scrollContainerRef}
           selectedNodeIds={args.selectedNodeIds}
         />
       )}
