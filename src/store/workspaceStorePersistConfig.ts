@@ -1,7 +1,8 @@
-import { createJSONStorage } from 'zustand/middleware';
+import { createJSONStorage, type PersistOptions } from 'zustand/middleware';
 
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 
+import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
@@ -10,11 +11,11 @@ import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary'
 
 export function createWorkspaceStorePersistConfig(
   onHydrated: (error?: unknown) => void
-) {
+): PersistOptions<WorkspaceState, WorkspacePersistedState> {
   return {
     name: 'foliole-workspace-v1',
     skipHydration: true,
-    storage: createJSONStorage(() => workspacePersistStorage),
+    storage: createJSONStorage<WorkspacePersistedState>(() => workspacePersistStorage),
     partialize: (state: WorkspaceState): WorkspacePersistedState => ({
       activeNodeId: state.activeNodeId,
       layout: state.layout,
@@ -29,9 +30,8 @@ export function createWorkspaceStorePersistConfig(
       trashedNodeIds: state.trashedNodeIds,
       untitledSequenceByParent: state.untitledSequenceByParent
     }),
-    merge: (persistedState: unknown, currentState: unknown) => {
-      const persisted = (persistedState ?? {}) as Partial<WorkspacePersistedState>;
-      const current = currentState as WorkspaceState;
+    merge: (persistedState, current) => {
+      const persisted = parsePersistedWorkspaceState(persistedState);
       const nextState = {
         ...current,
         ...persisted,
@@ -45,18 +45,16 @@ export function createWorkspaceStorePersistConfig(
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent
       };
-      return withWorkspaceRendererBoundary(
-        {
-          ...nextState,
-          ...ensureInboxNodeInSnapshot({
-            activeNodeId: nextState.activeNodeId,
-            nodeOrder: nextState.nodeOrder,
-            nodesById: nextState.nodesById,
-            trashedNodeIds: nextState.trashedNodeIds
-          })
-        },
-        current
-      ) as WorkspaceState;
+      const nextWorkspaceState: WorkspaceState = {
+        ...nextState,
+        ...ensureInboxNodeInSnapshot({
+          activeNodeId: nextState.activeNodeId,
+          nodeOrder: nextState.nodeOrder,
+          nodesById: nextState.nodesById,
+          trashedNodeIds: nextState.trashedNodeIds
+        })
+      };
+      return withWorkspaceRendererBoundary(nextWorkspaceState, current);
     },
     onRehydrateStorage: () => (_state: unknown, error?: unknown) => {
       onHydrated(error);

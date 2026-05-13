@@ -247,7 +247,7 @@ workspaceStore.setState = ((partial, replace) =>
           ? nextState
           : { ...nextState, activeNodeId: currentState.activeNodeId },
         currentState
-      ) as WorkspaceState;
+      );
     };
 
     if (replace) {

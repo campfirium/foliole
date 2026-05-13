@@ -5,10 +5,10 @@ import {
 } from './workspaceRendererBoundaryKeepNodeIds';
 import type { WorkspaceState } from './workspaceStore';
 
-export function withWorkspaceRendererBoundary(
-  state: WorkspaceState | Partial<WorkspaceState>,
+export function withWorkspaceRendererBoundary<T extends WorkspaceState | Partial<WorkspaceState>>(
+  state: T,
   currentState: WorkspaceState
-) {
+): T {
   const nextRendererBoundaryKeepNodeIds = resolveRendererBoundaryKeepNodeIds(state, currentState);
   const nextState =
     'rendererBoundaryKeepNodeIds' in state
@@ -19,5 +19,5 @@ export function withWorkspaceRendererBoundary(
     nextState,
     currentState,
     collectRendererBoundaryKeepNodeIds(nextState, currentState)
-  );
+  ) as T;
 }

@@ -59,15 +59,23 @@ async function loadReadingProgressForHydrate(name: string) {
   });
 }
 
-async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, unknown>) {
+type RuntimeWorkspaceSnapshotLike = {
+  activeNodeId: string | null;
+  nodeOrder: unknown;
+  nodesById: Record<string, Node>;
+};
+
+type RuntimeWorkspaceSnapshotInput = Omit<RuntimeWorkspaceSnapshotLike, 'nodesById'> & {
+  nodesById: Record<string, unknown>;
+};
+
+async function hydrateActiveNodeDocument(name: string, snapshot: RuntimeWorkspaceSnapshotLike) {
   const activeNodeId = snapshot.activeNodeId;
   if (!hasWorkspaceRuntimeRepository() || typeof activeNodeId !== 'string') {
     return snapshot;
   }
 
-  const activeNode = snapshot.nodesById && typeof snapshot.nodesById === 'object'
-    ? (snapshot.nodesById as Record<string, Node | undefined>)[activeNodeId]
-    : undefined;
+  const activeNode = snapshot.nodesById[activeNodeId];
   if (!activeNode || isNodeDocumentLoaded(activeNode)) {
     return snapshot;
   }
@@ -104,9 +112,9 @@ async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, 
     activeNode: mergedActiveNode,
     nodeOrder: snapshot.nodeOrder,
     nodesById: {
-      ...(snapshot.nodesById as Record<string, Node | undefined>),
+      ...snapshot.nodesById,
       [activeNodeId]: mergedActiveNode
-    } as Record<string, Node>,
+    },
     timestamp
   });
 
@@ -116,12 +124,7 @@ async function hydrateActiveNodeDocument(name: string, snapshot: Record<string, 
   };
 }
 
-type RuntimeWorkspaceSnapshotLike = {
-  activeNodeId: string | null;
-  nodesById: Record<string, unknown>;
-};
-
-function trimRuntimeWorkspaceSnapshot(snapshot: RuntimeWorkspaceSnapshotLike | null) {
+function trimRuntimeWorkspaceSnapshot(snapshot: RuntimeWorkspaceSnapshotInput | null) {
   if (!snapshot) {
     return null;
   }
@@ -192,7 +195,7 @@ async function loadRuntimeWorkspaceState(name: string) {
   if (!mergedSnapshot) {
     return null;
   }
-  return hydrateActiveNodeDocument(name, mergedSnapshot as unknown as Record<string, unknown>);
+  return hydrateActiveNodeDocument(name, mergedSnapshot);
 }
 
 export async function getRuntimeWorkspaceState(name: string) {

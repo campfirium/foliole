@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
-import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import { stagePendingNodeSync } from './workspacePendingNodeSync';
 import {
@@ -175,22 +175,27 @@ it('keeps the virtual root and saved virtual nodes after rehydrate', async () =>
 
 it('rehydrates workspace state from localStorage', async () => {
   const persisted = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
-  persisted.activeNodeId = 'node-1';
-  persisted.nodesById['node-1'] = {
-    ...persisted.nodesById['node-1'],
+  const restoredNodeId = 'node-1';
+  persisted.activeNodeId = restoredNodeId;
+  persisted.nodeOrder = [...persisted.nodeOrder, restoredNodeId];
+  persisted.nodesById[restoredNodeId] = {
+    ...persisted.nodesById[INBOX_NODE_ID],
+    id: restoredNodeId,
+    specialKind: undefined,
+    title: 'Recovered node',
     content: 'Recovered markdown',
     hasContent: true,
     updatedAt: '2026-02-25T00:00:01.000Z'
   };
-  persisted.trashedNodeIds = ['node-1'];
+  persisted.trashedNodeIds = [restoredNodeId];
 
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-24T00:00:00.000Z')));
   localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify({ state: persisted, version: 0 }));
 
   await useWorkspaceStore.persist.rehydrate();
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Recovered markdown');
-  expect(useWorkspaceStore.getState().trashedNodeIds).toEqual(['node-1']);
+  expect(useWorkspaceStore.getState().nodesById[restoredNodeId]?.content).toBe('Recovered markdown');
+  expect(useWorkspaceStore.getState().trashedNodeIds).toEqual([restoredNodeId]);
 });
 
 describe('workspace persistence renderer boundary hydrate', () => {
