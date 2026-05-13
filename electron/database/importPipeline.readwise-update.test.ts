@@ -161,3 +161,56 @@ it('preserves the existing readwise parent body while appending only newly ancho
     }
   ]);
 });
+
+it('refreshes readwise frontmatter metadata without replacing the edited parent body', () => {
+  const first = runPreparedImport(
+    createReadwiseImport(
+      ['---', 'author: [[waudero]]', '---', '', '# Article', '', 'Kept local body.'].join('\n'),
+      ['Kept local body.'],
+      '2026-03-26T02:00:00.000Z'
+    )
+  );
+  const updated = runPreparedImport(
+    createReadwiseImport(
+      [
+        '---',
+        'author: [[waudero]]',
+        'full_title: Lists Twitter List: January 17',
+        'category: #articles',
+        'summary: Tweets from 卡尔的AI沃茨, and 宝玉.',
+        'url: https://twitter.com/i/lists/1869949878283186480?ts=1737155739.175127',
+        '---',
+        '',
+        '# Article',
+        '',
+        'Upstream body replacement should not overwrite the parent.'
+      ].join('\n'),
+      ['Kept local body.'],
+      '2026-03-26T02:05:00.000Z'
+    )
+  );
+
+  const { childRows, nodeRow } = readPersistedImportState(updated.sourceFingerprint, updated.nodeId);
+
+  expect(updated.nodeId).toBe(first.nodeId);
+  expect(nodeRow).toMatchObject({
+    content: [
+      '---',
+      'author: [[waudero]]',
+      'full_title: Lists Twitter List: January 17',
+      'category: #articles',
+      'summary: Tweets from 卡尔的AI沃茨, and 宝玉.',
+      'url: https://twitter.com/i/lists/1869949878283186480?ts=1737155739.175127',
+      '---',
+      '',
+      '# Article',
+      '',
+      'Kept local body.'
+    ].join('\n'),
+    title: 'readwise'
+  });
+  const anchorLink = parseAnchorLink(childRows[0]!.anchor_link);
+  const content = (nodeRow as { content: string }).content;
+  expect(anchorLink.locator).toMatchObject({ originalText: 'Kept local body.' });
+  expect(anchorLink.locator ? content.slice(anchorLink.locator.from, anchorLink.locator.to) : null).toBe('Kept local body.');
+});

@@ -1,6 +1,7 @@
+import { needsReadwiseFrontmatterRefresh } from '../../lib/core/database/importReadwiseHighlightUpdates.js';
 import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import { readKeepImportItem, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
+import { readKeepImportItem, readKeepImportNodeContent, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
 import { hasReadwiseExternalDocument } from '../database/readwiseManagedExternalDocuments.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -58,7 +59,21 @@ export async function shouldRunUnchangedReadwiseDestination(
     return !hasReadwiseExternalDocument(resolved.readwiseSource.kind, source.sourceName);
   }
   const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
-  return !existingItem?.last_node_id || !readKeepImportNodeState(existingItem.last_node_id);
+  if (!existingItem?.last_node_id || !readKeepImportNodeState(existingItem.last_node_id)) {
+    return true;
+  }
+  const existingContent = readKeepImportNodeContent(existingItem.last_node_id);
+  if (!existingContent) {
+    return true;
+  }
+  const prepared = await loadPreparedReadwiseImportRecord(source, {
+    highlightDirectoryPath: resolved.readwiseSource.highlightPath.trim(),
+    highlightPolicy: config.highlightPolicy,
+    importedAt: new Date().toISOString(),
+    kind: resolved.readwiseSource.kind,
+    readwiseConfig: resolved.readwiseConfig
+  });
+  return needsReadwiseFrontmatterRefresh(existingContent, prepared.content);
 }
 
 export async function runReadwiseExternalDocumentImport(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {

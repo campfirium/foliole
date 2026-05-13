@@ -22,6 +22,17 @@ export function readKeepImportNodeState(nodeId: string) {
   return readKeepImportNodeStateViaDriver(openDatabaseConnection().driver, nodeId);
 }
 
+export function readKeepImportNodeContent(nodeId: string) {
+  return (
+    openDatabaseConnection().driver.queryOne<{ content: string }>(
+      `SELECT content
+       FROM nodes
+       WHERE id = ? AND deleted_at IS NULL`,
+      [nodeId]
+    )?.content ?? null
+  );
+}
+
 export function listPresentKeepImportItems() {
   return listPresentKeepImportItemsViaDriver(openDatabaseConnection().driver);
 }

@@ -57,12 +57,14 @@ function slugifyMetadataKey(value: string) {
 
 function parseReadwiseMetadataSection(markdown: string) {
   const normalized = normalizeLineEndings(markdown);
-  const match = /^## Metadata[^\n]*\n([\s\S]*?)(?=^## |\s*$)/im.exec(normalized);
-  if (!match) {
+  const lines = normalized.split('\n');
+  const startIndex = lines.findIndex((line) => /^## Metadata[^\n]*$/i.test(line.trim()));
+  if (startIndex < 0) {
     return [];
   }
-  return match[1]
-    .split('\n')
+  const sectionLines = lines.slice(startIndex + 1);
+  const nextHeadingIndex = sectionLines.findIndex((line) => /^##\s+/.test(line));
+  return (nextHeadingIndex >= 0 ? sectionLines.slice(0, nextHeadingIndex) : sectionLines)
     .map((line) => line.trim())
     .filter(Boolean)
     .flatMap((line) => {

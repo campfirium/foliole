@@ -15,6 +15,30 @@ function toUnmatchedHighlightRecords(input: PreparedImportRecord, existingHighli
     .map((highlight) => ({ content: highlight.content, label: highlight.label, locatorText: null }));
 }
 
+function extractTopFrontmatter(content: string) {
+  const normalized = content.replace(/\r\n?/g, '\n');
+  const match = /^---\n[\s\S]*?\n---(?:\n+|$)/.exec(normalized);
+  return match ? { body: normalized.slice(match[0].length), frontmatter: match[0].trimEnd() } : null;
+}
+
+function refreshReadwiseFrontmatter(existingContent: string, preparedContent: string) {
+  const preparedFrontmatter = extractTopFrontmatter(preparedContent);
+  if (!preparedFrontmatter) {
+    return existingContent;
+  }
+  const existingFrontmatter = extractTopFrontmatter(existingContent);
+  const body = existingFrontmatter ? existingFrontmatter.body : existingContent.replace(/\r\n?/g, '\n');
+  return `${preparedFrontmatter.frontmatter}\n\n${body.replace(/^\n+/, '')}`;
+}
+
+export function needsReadwiseFrontmatterRefresh(existingContent: string, preparedContent: string) {
+  const preparedFrontmatter = extractTopFrontmatter(preparedContent);
+  if (!preparedFrontmatter) {
+    return false;
+  }
+  return extractTopFrontmatter(existingContent)?.frontmatter !== preparedFrontmatter.frontmatter;
+}
+
 export function resolveReadwiseHighlightUpdate(input: {
   existingChildContents: string[];
   existingContent: string;
@@ -28,8 +52,9 @@ export function resolveReadwiseHighlightUpdate(input: {
       const normalized = normalizeImportedHighlightContent(highlight.content);
       return normalized.length > 0 && !existingHighlightContentSet.has(normalized);
     }) ?? [];
+  const content = refreshReadwiseFrontmatter(input.existingContent, input.prepared.content);
   const anchoredImport = applyImportedHighlightAnchors({
-    content: input.existingContent,
+    content,
     highlights: newMatchedHighlights
   });
 

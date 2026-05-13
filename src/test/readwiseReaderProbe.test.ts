@@ -16,6 +16,10 @@ Another matching excerpt. Tags: [[tag-a]] [[tag-b]]
 
 const FULL_DOCUMENT_MARKDOWN = `## Metadata
 - Author: Someone
+- Full Title: Sample Article
+- Category: #articles
+- Summary: A useful summary.
+- URL: https://example.com/source
 
 ## Full Document
 Before the quote. This is the highlighted sentence. After the quote.
@@ -227,6 +231,10 @@ it('falls back to blank-line split when separator is list-style but highlights a
 it('moves metadata into Obsidian frontmatter and removes the full document heading', () => {
   expect(transformReadwiseFullDocument(FULL_DOCUMENT_MARKDOWN, ARTICLE_MARKDOWN)).toBe(`---
 author: Someone
+full_title: Sample Article
+category: #articles
+summary: A useful summary.
+url: https://example.com/source
 ---
 
 # Sample Article
