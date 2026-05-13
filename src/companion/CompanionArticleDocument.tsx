@@ -8,6 +8,7 @@ import type {
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { EditorViewState } from '../features/editor/components/markdownEditorTypes';
 
+import { definedProps } from '@/shared/lib/definedProps';
 import { cn } from '@/shared/lib/utils';
 
 export function CompanionArticleDocument(props: {
@@ -30,20 +31,22 @@ export function CompanionArticleDocument(props: {
       <MarkdownEditor
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"
-        contentPaddingTop={props.contentPaddingTop}
-        hideTitleHeading={props.hideTitleHeading}
         hideScrollbar
         nodeId={props.nodeId}
-        nodeViewState={props.nodeViewState}
-        onBlurCapture={props.onBlurCapture}
         onChange={(content) => props.onChange?.(content)}
-        onReady={props.onEditorReady}
-        onMissingAttachmentResource={props.onMissingAttachmentResource}
         readOnly={!props.onChange}
-        readingSelection={props.readingSelection}
-        readingTargetViewportMode={props.readingTargetViewportMode}
-        textAnchorDecorations={props.textAnchorDecorations}
         value={props.content}
+        {...definedProps({
+          contentPaddingTop: props.contentPaddingTop,
+          hideTitleHeading: props.hideTitleHeading,
+          nodeViewState: props.nodeViewState,
+          onBlurCapture: props.onBlurCapture,
+          onMissingAttachmentResource: props.onMissingAttachmentResource,
+          onReady: props.onEditorReady,
+          readingSelection: props.readingSelection,
+          readingTargetViewportMode: props.readingTargetViewportMode,
+          textAnchorDecorations: props.textAnchorDecorations
+        })}
       />
     </section>
   );

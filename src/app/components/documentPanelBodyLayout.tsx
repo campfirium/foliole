@@ -9,6 +9,7 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
+import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppEmptyState } from '../../shared/ui';
@@ -40,7 +41,7 @@ export interface DocumentPanelBodyLayoutProps {
   editorReadingSelection?: EditorSelection | null;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
-  editorNodeViewState?: NodeViewState;
+  editorNodeViewState?: NodeViewState | undefined;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   emptyContent?: ReactNode;
@@ -90,19 +91,21 @@ function AnswerSection(props: DocumentPanelBodyLayoutProps) {
     >
       <MarkdownEditor
         ariaLabel="Answer editor"
-        blockImageMaxHeightOverride={props.sharedBlockImageMaxHeight}
         className="answer-editor-host min-h-0"
-        debugId={props.answerEditorDebugId}
-        fitBlockImagesToViewport={props.fitBlockImagesToViewport}
         hideTitleHeading={false}
         key={answerEditorKey}
         nodeId={answerNodeId}
         onChange={props.onAnswerChange}
-        onFitBlockImageMetricsChange={props.onAnswerImageMetricsChange}
-        onImageLoadStateChange={props.onAnswerImageLoadStateChange}
-        onPastedAnchors={props.onPastedTextAnchors}
-        readOnly={props.readOnly}
         value={props.reveal}
+        {...definedProps({
+          blockImageMaxHeightOverride: props.sharedBlockImageMaxHeight,
+          debugId: props.answerEditorDebugId,
+          fitBlockImagesToViewport: props.fitBlockImagesToViewport,
+          onFitBlockImageMetricsChange: props.onAnswerImageMetricsChange,
+          onImageLoadStateChange: props.onAnswerImageLoadStateChange,
+          onPastedAnchors: props.onPastedTextAnchors,
+          readOnly: props.readOnly
+        })}
       />
     </section>
   );
@@ -129,42 +132,44 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
     <div className="flex min-h-0 w-full flex-1 flex-col">
       <MarkdownEditor
         ariaLabel="Prompt editor"
-        blockImageMaxHeightOverride={props.sharedBlockImageMaxHeight}
         className="prompt-editor-host"
-        contentPaddingBottom={props.editorContentPaddingBottom}
-        contentPaddingTop={props.editorContentPaddingTop}
-        debugId={props.promptEditorDebugId}
-        fitBlockImagesToViewport={props.fitBlockImagesToViewport}
-        hideScrollbar={props.editorHideScrollbar}
-        hideTitleHeading={props.editorHideTitleHeading}
-        immersiveEditing={props.immersiveEditing}
         key={promptEditorKey}
-        lineDiffDecorations={props.editorDiffDecorations}
         nodeId={props.editorNodeId}
-        readingRestoreCommandId={props.editorReadingRestoreCommandId}
-        readingRestoreScrollTop={props.editorReadingRestoreScrollTop}
-        readingSelection={props.editorReadingSelection}
-        readingTargetViewportMode={props.editorReadingTargetViewportMode}
-        readingTargetViewportRatio={props.editorReadingTargetViewportRatio}
-        nodeViewState={props.editorNodeViewState}
-        onBeginApplyingReadingPosition={props.onBeginApplyingReadingPosition}
         onChange={props.onEditorChange}
-        onCompleteApplyingReadingPosition={props.onCompleteApplyingReadingPosition}
-        onContextMenu={props.onEditorContextMenu}
-        onDoubleClick={props.onEditorDoubleClick}
-        onFitBlockImageMetricsChange={props.onPromptImageMetricsChange}
-        onImageLoadStateChange={props.onPromptImageLoadStateChange}
-        onOpenExternalLink={props.onOpenExternalLink}
-        onOpenNodeLink={props.onOpenNodeLink}
-        onPreviewNodeLink={props.onPreviewNodeLink}
-        onPastedAnchors={props.onPastedTextAnchors}
-        onReady={props.onEditorReady}
-        onShouldSuppressSelectionRestore={props.onShouldSuppressSelectionRestore}
-        readOnly={props.readOnly}
-        onSetReadingPositionSelection={props.onSetReadingPositionSelection}
-        textAnchorDecorations={props.textAnchorDecorations}
         trailingDivider={props.hasAnswerSection}
         value={props.editorContent}
+        {...definedProps({
+          blockImageMaxHeightOverride: props.sharedBlockImageMaxHeight,
+          contentPaddingBottom: props.editorContentPaddingBottom,
+          contentPaddingTop: props.editorContentPaddingTop,
+          debugId: props.promptEditorDebugId,
+          fitBlockImagesToViewport: props.fitBlockImagesToViewport,
+          hideScrollbar: props.editorHideScrollbar,
+          hideTitleHeading: props.editorHideTitleHeading,
+          immersiveEditing: props.immersiveEditing,
+          lineDiffDecorations: props.editorDiffDecorations,
+          nodeViewState: props.editorNodeViewState,
+          onBeginApplyingReadingPosition: props.onBeginApplyingReadingPosition,
+          onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
+          onContextMenu: props.onEditorContextMenu,
+          onDoubleClick: props.onEditorDoubleClick,
+          onFitBlockImageMetricsChange: props.onPromptImageMetricsChange,
+          onImageLoadStateChange: props.onPromptImageLoadStateChange,
+          onOpenExternalLink: props.onOpenExternalLink,
+          onOpenNodeLink: props.onOpenNodeLink,
+          onPreviewNodeLink: props.onPreviewNodeLink,
+          onPastedAnchors: props.onPastedTextAnchors,
+          onReady: props.onEditorReady,
+          onSetReadingPositionSelection: props.onSetReadingPositionSelection,
+          onShouldSuppressSelectionRestore: props.onShouldSuppressSelectionRestore,
+          readOnly: props.readOnly,
+          readingRestoreCommandId: props.editorReadingRestoreCommandId,
+          readingRestoreScrollTop: props.editorReadingRestoreScrollTop,
+          readingSelection: props.editorReadingSelection,
+          readingTargetViewportMode: props.editorReadingTargetViewportMode,
+          readingTargetViewportRatio: props.editorReadingTargetViewportRatio,
+          textAnchorDecorations: props.textAnchorDecorations
+        })}
       />
     </div>
   );

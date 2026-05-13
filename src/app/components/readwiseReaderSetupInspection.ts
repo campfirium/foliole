@@ -1,5 +1,6 @@
 import type { ReadwiseReaderConfig } from '../../../lib/core/import/readwiseReaderSettings';
 import type { NativeReadwiseDetectionSource } from '../../../lib/platform/nativeReadwiseContract';
+import { definedProps } from '../../shared/lib/definedProps';
 import {
   hasReadwiseReaderSetupRuntimeRepository,
   inspectReadwiseReaderSetupInRuntime,
@@ -23,8 +24,8 @@ export async function inspectReadwiseReaderSetup(input: {
     highlightSeparator: input.config.highlightSeparator,
     newHighlightsHeading: input.config.newHighlightsHeading,
     noteKeyword: input.config.noteKeyword,
-    sources: input.sources,
-    tagKeyword: input.config.tagKeyword
+    tagKeyword: input.config.tagKeyword,
+    ...definedProps({ sources: input.sources })
   });
   return result ?? createUnavailableResult();
 }

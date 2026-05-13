@@ -1,4 +1,5 @@
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
+import { definedProps } from '../shared/lib/definedProps';
 
 import type { CompanionSyncPassInput } from './companionSyncPassResult';
 
@@ -38,13 +39,15 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
     return {
       completed: 0,
       completedBytes: 0,
-      contentBreakdown: result.remainingContentBreakdown,
-      failedBytes: knownNumber(result.remainingFailedContentBlobBytes),
-      failedCount: knownNumber(result.remainingFailedContentBlobCount),
       mode: 'remaining',
       phase: 'content',
       total: result.remainingContentBlobCount,
-      totalBytes: result.remainingContentBlobBytes ?? null
+      totalBytes: result.remainingContentBlobBytes ?? null,
+      ...definedProps({
+        contentBreakdown: result.remainingContentBreakdown,
+        failedBytes: knownNumber(result.remainingFailedContentBlobBytes),
+        failedCount: knownNumber(result.remainingFailedContentBlobCount)
+      })
     };
   }
   if (isKnownBacklog(result.remainingAttachmentResourceCount)) {
@@ -52,15 +55,17 @@ export function buildRemainingSyncProgress(result: CompanionSyncPassInput): Comp
       return null;
     }
     return {
-      attachmentBreakdown: result.remainingAttachmentBreakdown,
       completed: 0,
       completedBytes: 0,
-      failedBytes: knownNumber(result.remainingFailedAttachmentResourceBytes),
-      failedCount: knownNumber(result.remainingFailedAttachmentResourceCount),
       mode: 'remaining',
       phase: 'attachment',
       total: result.remainingAttachmentResourceCount,
-      totalBytes: result.remainingAttachmentResourceBytes ?? null
+      totalBytes: result.remainingAttachmentResourceBytes ?? null,
+      ...definedProps({
+        attachmentBreakdown: result.remainingAttachmentBreakdown,
+        failedBytes: knownNumber(result.remainingFailedAttachmentResourceBytes),
+        failedCount: knownNumber(result.remainingFailedAttachmentResourceCount)
+      })
     };
   }
   const remaining = result.remainingStructureChangeCount;

@@ -1,6 +1,7 @@
 import { DEFAULT_APP_COMMAND_SHORTCUTS } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { getAppPaletteCommands, type BuildAppPaletteItemsOptions } from './appPaletteCommandCatalog';
 
@@ -57,7 +58,9 @@ type CommandActionResult = boolean | void | Promise<void>;
 export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): CommandPaletteItem[] {
   return getAppPaletteCommands(options).map((command) => ({
     ...command,
-    shortcuts: DEFAULT_APP_COMMAND_SHORTCUTS[command.id as keyof typeof DEFAULT_APP_COMMAND_SHORTCUTS]
+    ...definedProps({
+      shortcuts: DEFAULT_APP_COMMAND_SHORTCUTS[command.id as keyof typeof DEFAULT_APP_COMMAND_SHORTCUTS]
+    })
   }));
 }
 

@@ -1,3 +1,5 @@
+import { definedProps } from '../shared/lib/definedProps';
+
 type ArticleBodyStatus = 'empty' | 'failed' | 'fetching' | 'missing';
 
 export function CompanionArticleBodyStatusFallback(props: {
@@ -5,15 +7,15 @@ export function CompanionArticleBodyStatusFallback(props: {
   title?: string;
 }) {
   if (props.bodyStatus === 'missing') {
-    return <ArticleBodyMessage detail="This device has the topic list, but this body has not reached the device yet." heading={props.title} title="Waiting for topic body." />;
+    return <ArticleBodyMessage detail="This device has the topic list, but this body has not reached the device yet." title="Waiting for topic body." {...definedProps({ heading: props.title })} />;
   }
   if (props.bodyStatus === 'fetching') {
-    return <ArticleBodyMessage detail="Keep this device connected to desktop." heading={props.title} title="Loading topic body." />;
+    return <ArticleBodyMessage detail="Keep this device connected to desktop." title="Loading topic body." {...definedProps({ heading: props.title })} />;
   }
   if (props.bodyStatus === 'failed') {
-    return <ArticleBodyMessage detail="Reconnect this device to desktop to retry." heading={props.title} title="Topic body could not be loaded." />;
+    return <ArticleBodyMessage detail="Reconnect this device to desktop to retry." title="Topic body could not be loaded." {...definedProps({ heading: props.title })} />;
   }
-  return <ArticleBodyMessage heading={props.title} title="This topic is empty." />;
+  return <ArticleBodyMessage title="This topic is empty." {...definedProps({ heading: props.title })} />;
 }
 
 function ArticleBodyMessage(props: { detail?: string; heading?: string; title: string }) {

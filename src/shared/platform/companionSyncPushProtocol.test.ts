@@ -144,7 +144,7 @@ function testBlocksPullApplyForDirtyStateRows() {
 
 function testAppliesPullWhenLocalStateIsClean() {
   const payload = createNodeReviewRow({ state_seq: 20 });
-  const cleanLocal = createNodeReviewRow({ local_status: undefined, state_seq: 12 });
+  const cleanLocal = createNodeReviewRow({ state_seq: 12 });
 
   expect(nodeReviewSyncAdapter.applyPullPayload(payload, cleanLocal)).toEqual({
     identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },

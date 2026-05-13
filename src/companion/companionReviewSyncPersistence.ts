@@ -4,6 +4,7 @@ import {
   saveCompanionSyncNodeReadingRecord,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
+import { definedProps } from '../shared/lib/definedProps';
 
 export interface CompanionReviewLogInput {
   cardAfter: SchedulerCard;
@@ -30,7 +31,7 @@ export async function persistCompanionReviewSyncObject(args: {
     return saveCompanionSyncNodeReviewRecord({
       nodeId: args.nodeId,
       review: node.review,
-      reviewLog: args.reviewLog
+      ...definedProps({ reviewLog: args.reviewLog })
     });
   }
   return null;

@@ -1,5 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
+
 import type { PdfPageTextEntry } from './pdfPageText';
 import { canScrollToMatch, resetSearchCursorState, resolveCursorByRequest, scrollToMatch, toSearchHighlights } from './pdfSearchEffectRuntime';
 import { collectMatches, getLastPdfSearchDebug } from './pdfSearchMatchCollection';
@@ -184,15 +186,17 @@ export function usePdfSearchEffect({
       lastRequestIdRef,
       onSearchDebugChange: onSearchDebugChangeRef.current,
       onSearchHighlightsChange: onSearchHighlightsChangeRef.current,
-      onSearchRequestHandled: onSearchRequestHandledRef.current,
       onSearchStatusChange: onSearchStatusChangeRef.current,
-      onSearchTargetHandled: onSearchTargetHandledRef.current,
       pageElementsRef,
       pageTextByNumberRef,
       query,
       searchRequest,
       searchTarget,
-      totalPages
+      totalPages,
+      ...definedProps({
+        onSearchRequestHandled: onSearchRequestHandledRef.current,
+        onSearchTargetHandled: onSearchTargetHandledRef.current
+      })
     });
   }, [pageElementsRef, pageTextByNumberRef, searchQuery, searchRequest, searchRevision, searchTarget, scrollContainerRef, totalPages]);
 }

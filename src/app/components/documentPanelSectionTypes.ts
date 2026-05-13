@@ -36,7 +36,7 @@ export interface DocumentPanelSectionProps {
   editorReadingSelection?: EditorSelection | null;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
-  editorNodeViewState?: NodeViewState;
+  editorNodeViewState?: NodeViewState | undefined;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   showAnswerSection: boolean;

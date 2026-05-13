@@ -1,18 +1,21 @@
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
+import { definedProps } from '../../shared/lib/definedProps';
 
 function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
   const restoreCommand = props.getReadingPositionRestoreCommand();
   return {
     editorReadingRestoreCommandId: restoreCommand?.commandId ?? null,
-    editorReadingRestoreScrollTop: restoreCommand?.scrollTop,
     editorReadingSelection: restoreCommand?.selection ?? null,
     editorReadingTargetViewportMode: restoreCommand?.targetViewportMode ?? null,
     editorReadingTargetViewportRatio: restoreCommand?.targetViewportRatio ?? null,
-    editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.beginApplyingReadingPosition,
     onCompleteApplyingReadingPosition: props.completeApplyingReadingPosition,
-    onSetReadingPositionSelection: props.setReadingPositionSelection
+    onSetReadingPositionSelection: props.setReadingPositionSelection,
+    ...definedProps({
+      editorNodeViewState: props.editorNodeViewState,
+      editorReadingRestoreScrollTop: restoreCommand?.scrollTop
+    })
   };
 }
 
@@ -55,7 +58,6 @@ export function buildDocumentSectionProps(
 ): DocumentPanelSectionProps {
   return {
     activeNodeId: documentNodeId,
-    isWorkspaceHydrated: props.isWorkspaceHydrated,
     isTrashViewOpen: props.isTrashViewOpen,
     canGoBack: props.canGoBack,
     canGoForward: props.canGoForward,
@@ -64,19 +66,15 @@ export function buildDocumentSectionProps(
     editableNodeId: props.editorNodeId,
     editorAppearanceKey,
     editorContent: props.editorContent,
-    showDocumentOutline: props.showDocumentOutline,
     ...buildDocumentEditorProps(isImmersiveEditing, onShouldSuppressSelectionRestore, props),
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
     onCloseContextMenu: props.onCloseContextMenu,
     onCopyImage: props.onCopyImage,
     onCreateCloze: props.onCreateCloze,
-    onCreateClozeFromPayload: props.onCreateClozeFromPayload,
     onCreateHighlight: props.onCreateHighlight,
-    onCreateHighlightFromPayload: props.onCreateHighlightFromPayload,
     onCreateNote: props.onCreateNote,
     onDeleteExistingHighlight: props.onDeleteExistingHighlight,
-    onPastedTextAnchors: props.onPastedTextAnchors,
     onCreatePdfHighlight: props.onCreatePdfHighlight,
     onCutImage: props.onCutImage,
     onDeleteImage: props.onDeleteImage,
@@ -87,7 +85,14 @@ export function buildDocumentSectionProps(
     onOpenMoveToNode: props.onOpenMoveToNode,
     onSelectBreadcrumbNode: props.onSelectBreadcrumbNode,
     onSelectNode: props.onSelectNode,
-    onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
-    trashedNodeIds: props.trashedNodeIds
+    trashedNodeIds: props.trashedNodeIds,
+    ...definedProps({
+      isWorkspaceHydrated: props.isWorkspaceHydrated,
+      onCreateClozeFromPayload: props.onCreateClozeFromPayload,
+      onCreateHighlightFromPayload: props.onCreateHighlightFromPayload,
+      onPastedTextAnchors: props.onPastedTextAnchors,
+      onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
+      showDocumentOutline: props.showDocumentOutline
+    })
   };
 }

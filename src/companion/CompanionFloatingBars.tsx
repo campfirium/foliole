@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 import {
   resolveCompanionTabs,
@@ -13,7 +13,7 @@ export type BottomBarGrade = 1 | 2 | 3 | 4;
 
 function TabButton(props: {
   active?: boolean;
-  icon: ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   label: string;
   onClick?: () => void;
 }) {

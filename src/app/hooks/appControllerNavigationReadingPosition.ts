@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { isPdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -55,7 +56,7 @@ export function useNavigationReadingPosition(
               to: nextViewState.selection.from
             }
           : null,
-        targetViewportMode: result.focusAnchor ? 'center' : undefined
+        ...definedProps({ targetViewportMode: result.focusAnchor ? ('center' as const) : undefined })
       });
       return true;
     },

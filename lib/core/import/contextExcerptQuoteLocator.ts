@@ -45,6 +45,9 @@ function createLooseMatcher(fragment: string) {
   }
   const parts = normalized.split(' ').map((part) => escapeRegex(part));
   const source = parts.length <= 1 ? parts[0] : parts.join('[\\s\\p{P}\\p{S}]+');
+  if (!source) {
+    return null;
+  }
   return new RegExp(source, 'u');
 }
 

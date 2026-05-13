@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
+import { definedProps } from '../../shared/lib/definedProps';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { workspacePersistStorage } from '../../store/workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from '../../store/workspacePersistStorage.test-support';
@@ -237,9 +238,9 @@ it('restores a mid-document reading position after the recent cache is eventuall
   renderEditor(
     <MarkdownEditor
       nodeId="node-1"
-      nodeViewState={useWorkspaceStore.getState().nodeViewById['node-1']}
       onChange={vi.fn()}
       value={useWorkspaceStore.getState().nodesById['node-1']?.content ?? ''}
+      {...definedProps({ nodeViewState: useWorkspaceStore.getState().nodeViewById['node-1'] })}
     />
   );
 

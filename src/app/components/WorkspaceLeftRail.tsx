@@ -1,5 +1,7 @@
 import { memo } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
+
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
@@ -39,12 +41,14 @@ export function selectWorkspaceLeftRailProps({
     isStudyMode: review.isStudyMode,
     onOpenImportManagement: imports.onOpenImportManagement,
     onOpenSettings: settings.onOpenSettings,
-    onRunRailAction: settings.onRunRailAction,
     onStartClipboardImport: onStartClipboardImport ?? imports.onStartClipboardImport,
     onStartImport: onStartImport ?? (() => void imports.onRunImportFile()),
     onToggleReviewSession: review.onToggleReviewSession,
     reviewDueCount: review.reviewDueCount,
-    showStudyDock
+    ...definedProps({
+      onRunRailAction: settings.onRunRailAction,
+      showStudyDock
+    })
   };
 }
 
@@ -70,13 +74,12 @@ export const WorkspaceLeftRail = memo(function WorkspaceLeftRail({
         isSettingsOpen={isSettingsOpen}
         isStudyMode={isStudyMode}
         reviewDueCount={reviewDueCount}
-        showStudyDock={showStudyDock}
         onOpenImportManagement={onOpenImportManagement}
         onOpenSettings={onOpenSettings}
-        onRunRailAction={onRunRailAction}
         onStartClipboardImport={onStartClipboardImport}
         onStartImport={onStartImport}
         onToggleReviewSession={onToggleReviewSession}
+        {...definedProps({ onRunRailAction, showStudyDock })}
       />
     </div>
   );

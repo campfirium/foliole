@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { definedProps } from '../shared/lib/definedProps';
 
 import {
   findCompanionExistingHighlightAtPosition,
@@ -57,8 +58,8 @@ export function resolveSelectionToolbarState(args: {
   const existingHighlight = findCompanionExistingHighlightFromPayload(args.snapshot, args.payload);
   return {
     ...resolveToolbarPosition(args.fallback),
-    existingHighlight: existingHighlight ?? undefined,
-    payload: existingHighlight ? null : args.payload
+    payload: existingHighlight ? null : args.payload,
+    ...definedProps({ existingHighlight: existingHighlight ?? undefined })
   };
 }
 

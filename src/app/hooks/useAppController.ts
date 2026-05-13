@@ -4,6 +4,7 @@ import { useReviewSchedulerSettings } from '../../features/settings/context/Revi
 import { getReviewSchedulerSettingsSignature } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalDocumentPreviewRequest } from '../components/externalDocumentPreviewState';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
@@ -57,7 +58,7 @@ function useControllerPriorityQuickSet(args: {
       args.runtime.isMoveToNodePaletteOpen ||
       args.runtime.isViewingTrashNode,
     onPriorityChange: args.ws.updateNodePriority,
-    shortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.enterPriorityMode]
+    ...definedProps({ shortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.enterPriorityMode] })
   });
 }
 

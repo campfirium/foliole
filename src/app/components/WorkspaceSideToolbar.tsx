@@ -7,6 +7,7 @@ import {
 } from '../../features/settings/model/workspaceRailSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { definedProps } from '../../shared/lib/definedProps';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
@@ -185,7 +186,7 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           items={state.bottomItems}
           onRun={state.runRailCommand}
         />
-        <WorkspaceThemeModeAction onRunRailAction={props.onRunRailAction} />
+        <WorkspaceThemeModeAction {...definedProps({ onRunRailAction: props.onRunRailAction })} />
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>
       {renderStudyDock({

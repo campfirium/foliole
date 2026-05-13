@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isInboxNode } from '../../features/nodes/model/specialNodes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -133,7 +134,6 @@ function useWorkspaceEditorController(
     saveActiveNodeView
   });
   const editorCtx = useEditorContextCommands({
-    activeNode,
     activeNodeId: ws.activeNodeId,
     createChildNode: ws.createChildNode,
     createHighlightNodeFromSelection: ws.createHighlightNodeFromSelection,
@@ -147,7 +147,8 @@ function useWorkspaceEditorController(
     nodesById: ws.nodesById,
     onExitImmersiveMode: () => runtime.setIsImmersiveMode(false),
     onSelectNode: (nodeId) => nav.handleSelectNode(nodeId),
-    updateNodeContent: ws.updateNodeContent
+    updateNodeContent: ws.updateNodeContent,
+    ...definedProps({ activeNode })
   });
   return { editorCtx, nav };
 }

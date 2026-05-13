@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -91,9 +92,11 @@ export function useWorkspaceNavigation({
   saveActiveNodeView
 }: WorkspaceNavigationDependencies): WorkspaceNavigationHandlers {
   const applyNavigationReadingPositionCompat = createNavigationReadingPositionCompat({
-    applyNavigationReadingPosition,
-    beginAnchorNavigationRestore,
-    completeAnchorNavigationRestore
+    ...definedProps({
+      applyNavigationReadingPosition,
+      beginAnchorNavigationRestore,
+      completeAnchorNavigationRestore
+    })
   });
   const pendingAnchorNavigation = usePendingAnchorNavigation({
     activeNodeContent,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
+import { definedProps } from '../lib/definedProps';
 
 import {
   normalizeWorkspaceSyncState,
@@ -17,10 +18,10 @@ function runEvent(index: number, kind: 'run_finished' | 'run_started') {
       ? 'Auto sync started.'
       : 'Sync checked; 1 device change needs review before sending.',
     occurred_at: kind === 'run_started' ? startedAt : `2026-04-29T02:${minute}:30.000Z`,
-    result: kind === 'run_finished' ? 'blocked' as const : undefined,
     run_id: `run-${index}`,
     started_at: startedAt,
-    status: kind === 'run_started' ? 'started' as const : 'skipped' as const
+    status: kind === 'run_started' ? 'started' as const : 'skipped' as const,
+    ...definedProps({ result: kind === 'run_finished' ? 'blocked' as const : undefined })
   };
 }
 

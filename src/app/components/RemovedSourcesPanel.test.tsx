@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
+
 const mocks = vi.hoisted(() => ({
   cachedRemovedSources: {
-    entries: [],
+    entries: [] as RuntimeRemovedSourceEntry[],
     loadedAt: ''
   },
   getCachedRuntimeRemovedSources: vi.fn(),
@@ -57,7 +59,7 @@ function createRemovedSource(overrides: Partial<{
 
 beforeEach(() => {
   mocks.cachedRemovedSources = {
-    entries: [],
+    entries: [] as RuntimeRemovedSourceEntry[],
     loadedAt: ''
   };
   mocks.removedSourcesListeners.clear();
@@ -81,7 +83,7 @@ function mockRemovedSourcesLoad(result: ReturnType<typeof createRemovedSourcesRe
   });
 }
 
-function createRemovedSourcesResult(entries: ReturnType<typeof createRemovedSource>[]) {
+function createRemovedSourcesResult(entries: RuntimeRemovedSourceEntry[]) {
   return {
     entries,
     loadedAt: '2026-05-12T00:00:00.000Z'

@@ -1,5 +1,6 @@
 import type { PdfSearchRequest, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfSearchMatch } from './pdfSearchMatchCollection';
+import { definedProps } from '../../shared/lib/definedProps';
 
 export function scrollToMatch(container: HTMLDivElement, match: PdfSearchMatch) {
   const shell = container.querySelector<HTMLElement>(`[data-pdf-page-number="${match.page}"]`);
@@ -36,18 +37,20 @@ export function canScrollToMatch(match: PdfSearchMatch, shell: HTMLElement | nul
 
 export function toSearchHighlights(matches: PdfSearchMatch[], activeMatchId: string): PdfSearchVisualHighlight[] {
   return matches.map((match) => ({
-    fragments: match.fragments?.map((fragment) => ({
-      page: fragment.page,
-      rects: fragment.rects,
-      x: fragment.x,
-      y: fragment.y
-    })),
     id: match.id,
     isActive: match.id === activeMatchId,
     page: match.page,
     rects: match.rects,
     x: match.x,
-    y: match.y
+    y: match.y,
+    ...definedProps({
+      fragments: match.fragments?.map((fragment) => ({
+        page: fragment.page,
+        rects: fragment.rects,
+        x: fragment.x,
+        y: fragment.y
+      }))
+    })
   }));
 }
 

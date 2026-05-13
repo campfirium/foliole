@@ -16,6 +16,7 @@ import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeR
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { isFsrsWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 
 interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
@@ -81,8 +82,8 @@ function renderWorkspaceTopicTreeRow(
       nodeIconKind={nodeIconKind}
       nodeIconState={nodeIconState}
       showIcon
-      onContextMenu={args.onContextMenu}
       rowSpacing={args.rowSpacing}
+      {...definedProps({ onContextMenu: args.onContextMenu })}
       {...resolveWorkspaceTopicTreeRowDragProps(row.node.id, isDerivedNode, args.drag)}
       onKeyDown={args.onRowKeyDown}
       onRename={args.onRenameNode}

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { ClipboardImportNotice } from './ClipboardImportNotice';
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
@@ -72,8 +73,8 @@ function renderClipboardImportNotice(controller: ReturnType<typeof useClipboardI
   return (
     <ClipboardImportNotice
       message={controller.notice.message}
-      onOpen={controller.notice.nodeId ? controller.openImportedTopic : undefined}
       tone={controller.notice.tone}
+      {...definedProps({ onOpen: controller.notice.nodeId ? controller.openImportedTopic : undefined })}
     />
   );
 }

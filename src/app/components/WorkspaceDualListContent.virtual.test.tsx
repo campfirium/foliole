@@ -2,6 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
+import type { Node } from '../../features/nodes/model/nodeTypes';
+import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
@@ -18,23 +21,26 @@ function createNode(args: {
     match: 'all';
     version: 1;
   } | null;
-}) {
+}): Node & WorkspaceListNode {
+  const kind = args.kind ?? (args.parentNodeId ? 'topic' : 'folder');
   return {
     anchorLink: null,
     createdAt: '2026-04-20T00:00:00.000Z',
     content: args.content ?? '',
-    hasContent: args.kind !== 'folder',
-    hasReveal: args.kind === 'item',
+    hasContent: kind !== 'folder',
+    hasReveal: kind === 'item',
     id: args.id,
-    kind: args.kind,
+    kind,
     parentNodeId: args.parentNodeId ?? null,
     reading: null,
     reveal: null,
     review: null,
-    specialKind: args.specialKind,
     title: args.title,
     updatedAt: '2026-04-20T00:00:00.000Z',
-    virtualFilter: args.virtualFilter ?? null
+    ...definedProps({
+      specialKind: args.specialKind,
+      virtualFilter: args.virtualFilter
+    })
   };
 }
 

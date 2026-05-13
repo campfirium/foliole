@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { definedProps } from '../shared/lib/definedProps';
+
 import {
   CompanionSelectionAnnotationToolbar,
   type CompanionSelectionAnnotationToolbarState
@@ -42,7 +44,6 @@ function renderToolbar(onApply = vi.fn(), resolveSelectionPayload?: () => typeof
       onApply={onApply}
       onClose={onClose}
       onDeleteExistingHighlight={onDeleteExistingHighlight}
-      resolveSelectionPayload={resolveSelectionPayload}
       state={{
         left: 12,
         noteLeft: 12,
@@ -50,6 +51,7 @@ function renderToolbar(onApply = vi.fn(), resolveSelectionPayload?: () => typeof
         payload,
         top: 12
       }}
+      {...definedProps({ resolveSelectionPayload })}
     />
   );
   return { onAddExistingHighlightNote, onApply, onClose, onDeleteExistingHighlight };

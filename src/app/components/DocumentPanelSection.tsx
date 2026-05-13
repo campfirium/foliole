@@ -8,6 +8,7 @@ import {
   markNodeBodyReady,
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import { definedProps } from '../../shared/lib/definedProps';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
@@ -146,7 +147,7 @@ function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     committedContent: props.editorContent,
     nodeId: props.editorNodeId,
     onCommit: commitEditorContent,
-    onRegisterFlush: props.onRegisterEditorDraftFlush
+    ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
   return useMemo(
     () => ({
@@ -175,13 +176,15 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
     <section aria-label="Document area" className="flex min-h-0 flex-1 flex-col" style={model.documentLayoutStyle}>
       <DocumentPanelSectionShell
         bodyProps={{
-          ...model.bodyProps,
-          onEditorReady: interactions.handleEditorReady,
           onOpenExternalLink: handleOpenExternalLink,
           textAnchorDecorations: model.textAnchorState,
-          emptyContent: model.emptyContent,
           onOpenNodeLink: interactions.handleOpenNodeLink,
-          onPreviewNodeLink: nodeLinkPreview.handlePreviewNodeLink
+          onPreviewNodeLink: nodeLinkPreview.handlePreviewNodeLink,
+          ...definedProps({
+            ...model.bodyProps,
+            emptyContent: model.emptyContent,
+            onEditorReady: interactions.handleEditorReady
+          })
         }}
         backlinks={topicBacklinks}
         isFolderListView={model.isFolderListView}

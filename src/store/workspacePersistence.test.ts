@@ -181,7 +181,6 @@ it('rehydrates workspace state from localStorage', async () => {
   persisted.nodesById[restoredNodeId] = {
     ...persisted.nodesById[INBOX_NODE_ID],
     id: restoredNodeId,
-    specialKind: undefined,
     title: 'Recovered node',
     content: 'Recovered markdown',
     hasContent: true,

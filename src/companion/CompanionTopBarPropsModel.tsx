@@ -4,6 +4,7 @@ import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import { definedProps } from '../shared/lib/definedProps';
 
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
@@ -90,11 +91,13 @@ function resolveBrowseTopBar(args: {
       onChangeSortDirection={args.onChangeBrowseSortDirection}
       onChangeSortKey={args.onChangeBrowseSortKey}
       onOpenCapture={args.onOpenAddSheet}
-      onSync={args.onSyncBrowse}
       sortDirection={args.browseSortDirection}
       sortKey={args.browseSortKey}
-      syncDisabled={args.syncDisabled}
-      syncStatus={args.syncStatus}
+      {...definedProps({
+        onSync: args.onSyncBrowse,
+        syncDisabled: args.syncDisabled,
+        syncStatus: args.syncStatus
+      })}
     />
   );
   if (args.isBrowseDirectoryOpen) {

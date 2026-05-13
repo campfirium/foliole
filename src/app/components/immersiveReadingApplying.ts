@@ -23,7 +23,7 @@ interface ApplyingViewportSource extends ApplyingSelectionStateSource {
 }
 
 interface ApplyingEntrySource extends ApplyingViewportSource {
-  editorNodeViewState?: NodeViewState;
+  editorNodeViewState?: NodeViewState | undefined;
   getReadingPositionSelection: () => EditorSelection | null;
   isImmersiveMode: boolean;
 }

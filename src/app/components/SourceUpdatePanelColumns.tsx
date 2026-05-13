@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 
 import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
@@ -71,19 +72,21 @@ function PreviewDocumentPane({
       documentMaxWidth={documentMaxWidth}
       editorAppearanceKey={editorAppearanceKey}
       editorContent={content}
-      editorDiffDecorations={editorDiffDecorations}
-      editorHideScrollbar={hideScrollbar}
       editorNodeId={currentNodeId}
       hasAnswerSection={false}
       onAnswerChange={() => undefined}
       onEditorChange={onChange}
-      onEditorReady={onReady}
       onRevealDocumentPosition={() => undefined}
       onRevealDocumentSelection={() => undefined}
       onResolveDocumentPositionAtViewportY={() => null}
-      readOnly={readOnly}
       reveal=""
       showDocumentOutline={false}
+      {...definedProps({
+        editorDiffDecorations,
+        editorHideScrollbar: hideScrollbar,
+        onEditorReady: onReady,
+        readOnly
+      })}
     />
   );
 }

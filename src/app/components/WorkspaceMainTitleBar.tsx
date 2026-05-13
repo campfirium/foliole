@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalLibraryBrowseEntry } from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
@@ -74,7 +75,6 @@ export function WorkspaceMainTitleBar({
         trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
         nodeList.nodesById
       )}
-      centerTitleIcon={externalTitle ? 'external' : undefined}
       isListCollapsed={layoutChrome.isListCollapsed}
       isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}
       isTrashViewOpen={trash.isTrashViewOpen}
@@ -85,6 +85,7 @@ export function WorkspaceMainTitleBar({
       onToggleListVisibility={layoutChrome.onToggleListVisibility}
       onToggleRightSidebarVisibility={layoutChrome.onToggleRightSidebarVisibility}
       rightSidebarWidth={layoutChrome.rightSidebarWidth}
+      {...definedProps({ centerTitleIcon: externalTitle ? ('external' as const) : undefined })}
     />
   );
 }

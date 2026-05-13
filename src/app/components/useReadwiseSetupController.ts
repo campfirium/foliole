@@ -6,6 +6,7 @@ import type {
   NativeReadwiseImportRunResult,
   NativeReadwiseSyncPreviewResult
 } from '../../../lib/platform/nativeContract';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetupInspection';
@@ -140,14 +141,16 @@ export function useReadwiseSetupController(props: SettingsReadwiseReaderContentP
   const { canPreview, draft } = useReadwiseDraftController(props);
   const sync = useReadwiseSyncPreviewFlow({
     draft,
-    onPreviewSync: props.onPreviewSync,
-    onRunSync: props.onRunSync,
-    onSave: props.onSave
+    onSave: props.onSave,
+    ...definedProps({
+      onPreviewSync: props.onPreviewSync,
+      onRunSync: props.onRunSync
+    })
   });
   const manualSync = useReadwiseManualSync({
     draft,
-    onRunSync: props.onRunSync,
-    onSave: props.onSave
+    onSave: props.onSave,
+    ...definedProps({ onRunSync: props.onRunSync })
   });
   const integration = resolveReadwiseIntegrationState({
     config: props.config,

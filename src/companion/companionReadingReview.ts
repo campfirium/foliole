@@ -2,6 +2,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { definedProps } from '../shared/lib/definedProps';
 import { buildNextReadingProfile, resolveReadingPriorityChain } from '../store/workspaceReviewReading';
 
 function buildNextReadingSnapshot(args: {
@@ -32,7 +33,6 @@ function buildNextReadingSnapshot(args: {
   const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
   const nextReading = advanceReadingScheduleCoreFields({
     lastHandledAt: args.now,
-    previousIntervalDurationMs: node.reading?.intervalDurationMs,
     previousRepetitionCount: node.reading?.repetitionCount ?? 0,
     priorityChain: resolveReadingPriorityChain({
       currentNodeId: args.nodeId,
@@ -41,7 +41,8 @@ function buildNextReadingSnapshot(args: {
       nodesById: args.snapshot.nodesById
     }),
     initialIntervalMs: pushQueueSettings.readingInitialIntervalMs,
-    range: pushQueueSettings.readingIntervalGrowthFactorRange
+    range: pushQueueSettings.readingIntervalGrowthFactorRange,
+    ...definedProps({ previousIntervalDurationMs: node.reading?.intervalDurationMs })
   });
 
   return {

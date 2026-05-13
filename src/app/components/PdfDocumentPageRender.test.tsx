@@ -206,7 +206,6 @@ it('renders a placeholder shell for pages outside the active render window', () 
   const { container } = render(
     renderPdfPagePlaceholder({
       fitWidthTargetWidth: null,
-      pageDimensions: undefined,
       pageElementsRef,
       pageNumber: 3,
       rotation: 0,

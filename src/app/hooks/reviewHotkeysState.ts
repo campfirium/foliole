@@ -13,6 +13,7 @@ import {
 import { formatShortcutSetLabel, parseShortcutLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { definedProps } from '../../shared/lib/definedProps';
 
 export const REVIEW_SHORTCUT_COMMAND_IDS = [
   APP_COMMAND_IDS.revealReviewAnswer,
@@ -37,11 +38,11 @@ export function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[], overri
   return items.map((item) => ({
     commandId: item.id,
     title: item.title,
-    section: item.section,
     primaryShortcutLabel: item.shortcuts?.primary ? buildShortcutOverrideLabel(item.shortcuts.primary) : '',
     secondaryShortcutLabel: item.shortcuts?.secondary ? buildShortcutOverrideLabel(item.shortcuts.secondary) : '',
     shortcutSummaryLabel: formatShortcutSetLabel(item.shortcuts),
-    isCustomized: Boolean(overrides[item.id]?.primary || overrides[item.id]?.secondary)
+    isCustomized: Boolean(overrides[item.id]?.primary || overrides[item.id]?.secondary),
+    ...definedProps({ section: item.section })
   }));
 }
 
@@ -70,7 +71,10 @@ export function useCommandShortcutState(commandIds: readonly string[]) {
     }
     setOverrides((current) => {
       const next = { ...current };
-      const entry = { primary: current[commandId]?.primary, secondary: current[commandId]?.secondary, [slot]: normalized || undefined };
+      const entry = definedProps({
+        primary: slot === 'primary' ? normalized || undefined : current[commandId]?.primary,
+        secondary: slot === 'secondary' ? normalized || undefined : current[commandId]?.secondary
+      });
       if (!entry.primary && !entry.secondary) {
         delete next[commandId];
       } else {

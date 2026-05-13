@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { formatShortcutSetLabel, matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
+import { definedProps } from '../../shared/lib/definedProps';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
 const QUICK_SET_TIMEOUT_MS = 4000;
@@ -125,7 +126,7 @@ export function usePriorityQuickSet({
           event,
           isActive,
           onPriorityChange,
-          shortcuts
+          ...definedProps({ shortcuts })
         })
       ),
     [activeNodeId, armTimeout, cancel, canEnter, enter, isActive, onPriorityChange, shortcuts]

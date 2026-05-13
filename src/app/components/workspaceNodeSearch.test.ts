@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { buildNodeSearchResults } from './workspaceNodeSearch';
 
@@ -14,12 +15,12 @@ function createNode(
     title: input.title,
     hasContent: input.hasContent ?? true,
     hasReveal: input.hasReveal ?? false,
-    specialKind: input.specialKind,
     anchorLink: input.anchorLink ?? null,
     reading: input.reading ?? null,
     review: null,
     createdAt: '2026-03-28T00:00:00.000Z',
-    updatedAt: '2026-03-28T00:00:00.000Z'
+    updatedAt: '2026-03-28T00:00:00.000Z',
+    ...definedProps({ specialKind: input.specialKind })
   };
 }
 

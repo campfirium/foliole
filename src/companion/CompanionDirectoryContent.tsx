@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { definedProps } from '../shared/lib/definedProps';
 import type {
   FolderListSortDirection,
   FolderListSortKey
@@ -97,7 +98,7 @@ function useCompanionDirectorySections(args: {
       rootView,
       selection: args.selection,
       snapshot: args.snapshot,
-      trashView: trashView ?? undefined
+      ...definedProps({ trashView: trashView ?? undefined })
     }),
     [args.directory, args.selection, args.snapshot, folderView, rootView, trashView, virtualView]
   );

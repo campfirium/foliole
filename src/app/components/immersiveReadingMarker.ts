@@ -10,7 +10,7 @@ import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
 type ImmersiveEditorRef = MutableRefObject<EditorAdapter | null>;
 
 interface ReadingPositionSelectionSource {
-  editorNodeViewState?: NodeViewState;
+  editorNodeViewState?: NodeViewState | undefined;
   getReadingPositionSelection: () => EditorSelection | null;
 }
 

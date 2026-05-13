@@ -23,7 +23,7 @@ function resolveRemovedAt(entry: RuntimeRemovedSourceEntry) {
 function createRemovedTreeNode(input: {
   createdAt: string;
   id: string;
-  kind: WorkspaceListNode['kind'];
+  kind: NonNullable<WorkspaceListNode['kind']>;
   parentNodeId: string | null;
   title: string;
   updatedAt: string;

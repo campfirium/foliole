@@ -1,4 +1,5 @@
 import type { NativeCompanionSyncEventSummary } from '../../lib/platform/nativeCompanionSyncContract';
+import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
 function knownCount(value: number | null | undefined) {
@@ -39,9 +40,11 @@ export function buildCompanionSyncRunSummary(args: {
     waitingSendCount;
   return {
     change_count: changeCount,
-    desktop_review_count: desktopReviewCount || undefined,
-    duration_ms: durationMs(args.startedAt, args.occurredAt),
-    waiting_confirmation_count: waitingConfirmationCount || undefined,
-    waiting_send_count: waitingSendCount || undefined
+    ...definedProps({
+      desktop_review_count: desktopReviewCount || undefined,
+      duration_ms: durationMs(args.startedAt, args.occurredAt),
+      waiting_confirmation_count: waitingConfirmationCount || undefined,
+      waiting_send_count: waitingSendCount || undefined
+    })
   };
 }

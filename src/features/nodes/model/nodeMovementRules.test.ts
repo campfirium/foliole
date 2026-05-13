@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 
+import { definedProps } from '../../../shared/lib/definedProps';
 import { canNodeAcceptMovedNode, canNodeBeMoved } from './nodeMovementRules';
 import type { Node } from './nodeTypes';
 
@@ -13,9 +14,9 @@ function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 'conten
     reveal: partial.reveal ?? null,
     review: partial.review ?? null,
     anchorLink: partial.anchorLink ?? null,
-    specialKind: partial.specialKind,
     createdAt: partial.createdAt ?? '2026-03-31T00:00:00.000Z',
-    updatedAt: partial.updatedAt ?? '2026-03-31T00:00:00.000Z'
+    updatedAt: partial.updatedAt ?? '2026-03-31T00:00:00.000Z',
+    ...definedProps({ specialKind: partial.specialKind })
   };
 }
 

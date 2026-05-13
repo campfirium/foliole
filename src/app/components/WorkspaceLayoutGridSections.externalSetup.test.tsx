@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { toWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 
 vi.mock('./WorkspaceDocumentSurface', () => ({
   WorkspaceDocumentSurface: () => null
@@ -29,10 +30,10 @@ function createNode(args: {
     reading: null,
     reveal: null,
     review: null,
-    specialKind: args.id === INBOX_NODE_ID ? ('inbox' as const) : undefined,
     title: args.title,
     updatedAt: '2026-04-21T00:00:00.000Z',
-    virtualFilter: null
+    virtualFilter: null,
+    ...definedProps({ specialKind: args.id === INBOX_NODE_ID ? ('inbox' as const) : undefined })
   };
 }
 

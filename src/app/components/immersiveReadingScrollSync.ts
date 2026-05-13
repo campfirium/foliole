@@ -26,7 +26,7 @@ interface ImmersiveScrollSyncSource {
   activeNodeId: string | null;
   completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
   editorAdapterRef: MutableRefObject<EditorAdapter | null>;
-  editorNodeViewState?: NodeViewState;
+  editorNodeViewState?: NodeViewState | undefined;
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
   isImmersiveMode: boolean;

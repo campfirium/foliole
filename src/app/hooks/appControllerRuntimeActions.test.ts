@@ -8,6 +8,7 @@ vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
   requestPdfAnchorJump
 }));
 
+import { definedProps } from '../../shared/lib/definedProps';
 import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
@@ -72,11 +73,13 @@ function createRevealDocumentPositionArgs(args: {
         current: createMockEditorAdapter({
           getScrollTop: args.getScrollTop ?? (() => 0),
           revealPosition: args.revealPosition ?? (() => undefined),
-          revealSelectionNearest: args.revealSelectionNearest,
-          revealSelectionAtViewportRatio: args.revealSelectionAtViewportRatio,
           revealSelection: args.revealSelection ?? vi.fn(),
           restoreSelection: args.restoreSelection ?? vi.fn(),
-          setSelection: args.setSelection ?? vi.fn()
+          setSelection: args.setSelection ?? vi.fn(),
+          ...definedProps({
+            revealSelectionNearest: args.revealSelectionNearest,
+            revealSelectionAtViewportRatio: args.revealSelectionAtViewportRatio
+          })
         })
       },
       ...createRuntimeState(),

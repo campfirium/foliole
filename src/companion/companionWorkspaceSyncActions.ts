@@ -1,4 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -114,11 +115,11 @@ async function replaceCompanionWorkspaceSnapshot(
   changedNodeId?: string
 ) {
   const nextState = await persistCompanionWorkspaceSnapshot({
-    changedNodeId,
     endpointUrl: args.state.endpoint_url,
     lastSyncedAt: args.state.last_synced_at,
     rememberedTargets: args.state.remembered_targets,
-    workspaceSnapshot
+    workspaceSnapshot,
+    ...definedProps({ changedNodeId })
   });
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));

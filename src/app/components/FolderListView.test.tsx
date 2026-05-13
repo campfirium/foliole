@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
@@ -44,8 +45,10 @@ function renderFolderList(
       onChangeSortDirection={() => undefined}
       onChangeSortKey={() => undefined}
       onSelectNode={onSelectNode}
-      sortDirection={options?.sortDirection}
-      sortKey={options?.sortKey}
+      {...definedProps({
+        sortDirection: options?.sortDirection,
+        sortKey: options?.sortKey
+      })}
     />
   );
 

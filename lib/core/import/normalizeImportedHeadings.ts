@@ -14,7 +14,10 @@ function collectBodyHeadingStats(lines: string[]) {
 
     const fenceMatch = line.match(FENCE_PATTERN);
     if (fenceMatch) {
-      const marker = fenceMatch[1] as '```' | '~~~';
+      const marker = fenceMatch[1];
+      if (marker !== '```' && marker !== '~~~') {
+        continue;
+      }
       activeFence = activeFence === marker ? null : marker;
       continue;
     }
@@ -25,7 +28,11 @@ function collectBodyHeadingStats(lines: string[]) {
 
     const headingMatch = line.match(HEADING_PATTERN);
     if (headingMatch) {
-      const level = headingMatch[2].length;
+      const markers = headingMatch[2];
+      if (!markers) {
+        continue;
+      }
+      const level = markers.length;
       levels.push(level);
       if (level === 1) {
         levelOneCount += 1;
@@ -64,7 +71,10 @@ export function normalizeImportedMarkdownHeadings(content: string) {
 
       const fenceMatch = line.match(FENCE_PATTERN);
       if (fenceMatch) {
-        const marker = fenceMatch[1] as '```' | '~~~';
+        const marker = fenceMatch[1];
+        if (marker !== '```' && marker !== '~~~') {
+          return line;
+        }
         activeFence = activeFence === marker ? null : marker;
         return line;
       }
@@ -78,8 +88,14 @@ export function normalizeImportedMarkdownHeadings(content: string) {
         return line;
       }
 
-      const nextLevel = headingMatch[2].length + levelOffset;
-      return `${headingMatch[1]}${'#'.repeat(nextLevel)}${headingMatch[3]}`;
+      const indent = headingMatch[1] ?? '';
+      const markers = headingMatch[2];
+      const suffix = headingMatch[3] ?? '';
+      if (!markers) {
+        return line;
+      }
+      const nextLevel = markers.length + levelOffset;
+      return `${indent}${'#'.repeat(nextLevel)}${suffix}`;
     })
     .join('\n');
 }

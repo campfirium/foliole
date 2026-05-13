@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { AppEmptyState } from '../../shared/ui';
@@ -116,7 +117,6 @@ export function renderPdfDocumentSurface(
       <PdfDocumentSurface
         highlightLocators={highlightLocators}
         isVisible
-        nodeViewState={pdfViewContext.editorNodeViewState}
         onCreateHighlightFromSelection={onCreatePdfHighlight}
         onOpenExternalLink={onOpenExternalLink}
         onPersistViewState={(viewState) => {
@@ -129,6 +129,7 @@ export function renderPdfDocumentSurface(
         persistedPageDimensions={resolvePersistedPdfPageDimensions(pdfDocumentSurface.details)}
         pdfIndexStatus={pdfDocumentSurface.pdfIndexStatus}
         sourceHint={pdfDocumentSurface.sourceHint ?? ''}
+        {...definedProps({ nodeViewState: pdfViewContext.editorNodeViewState })}
       />
     );
   }

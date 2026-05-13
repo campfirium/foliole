@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { definedProps } from '../shared/lib/definedProps';
 
 import { resolveAncestorAnchorLink } from './workspaceNavigation';
 
@@ -12,8 +13,6 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'parentNodeId'>
     anchorLink: null,
     content: '',
     createdAt: now,
-    hasContent: undefined,
-    hasReveal: undefined,
     kind: 'topic',
     reveal: null,
     review: null,
@@ -21,7 +20,11 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'parentNodeId'>
     updatedAt: now,
     id,
     parentNodeId,
-    ...rest
+    ...rest,
+    ...definedProps({
+      hasContent: rest.hasContent,
+      hasReveal: rest.hasReveal
+    })
   };
 }
 

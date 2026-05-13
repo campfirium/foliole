@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { definedProps } from './definedProps';
 import { buildBreadcrumbDisplayPath, type BreadcrumbDisplayPathNode } from './breadcrumbDisplayPath';
 
 function createNode(
@@ -10,9 +11,9 @@ function createNode(
 ): BreadcrumbDisplayPathNode {
   return {
     id,
-    kind,
     parentNodeId,
-    title
+    title,
+    ...definedProps({ kind })
   };
 }
 

@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
-import { createInitialWorkspaceState } from './workspaceStore';
+import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 
 function createConfig() {
@@ -10,12 +10,19 @@ function createConfig() {
 }
 
 function mergePersistedState(persistedState: unknown) {
-  const current = createInitialWorkspaceState(new Date('2026-05-13T00:00:00.000Z'));
+  const current = createTestWorkspaceState();
   return createConfig().merge?.(persistedState, current) ?? current;
 }
 
+function createTestWorkspaceState() {
+  return {
+    ...useWorkspaceStore.getState(),
+    ...createInitialWorkspaceState(new Date('2026-05-13T00:00:00.000Z'))
+  };
+}
+
 it('roundtrips a partialized persisted workspace payload through merge', () => {
-  const current = createInitialWorkspaceState(new Date('2026-05-13T00:00:00.000Z'));
+  const current = createTestWorkspaceState();
   const persisted = {
     ...current,
     activeNodeId: INBOX_NODE_ID,
@@ -69,7 +76,7 @@ it('ignores missing workspace fields instead of hydrating partial shadows', () =
 });
 
 it('rejects a partially invalid persisted layout as one block', () => {
-  const current = createInitialWorkspaceState(new Date('2026-05-13T00:00:00.000Z'));
+  const current = createTestWorkspaceState();
   const merged = createConfig().merge?.(
     {
       layout: {
@@ -98,7 +105,7 @@ it('drops invalid node entries and does not activate missing nodes', () => {
 });
 
 it('ignores an active node id that is absent from the persisted nodes', () => {
-  const current = createInitialWorkspaceState(new Date('2026-05-13T00:00:00.000Z'));
+  const current = createTestWorkspaceState();
   const merged = createConfig().merge?.(
     {
       activeNodeId: 'missing-node',

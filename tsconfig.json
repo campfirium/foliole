@@ -6,6 +6,8 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "strict": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
     "allowJs": false,
     "allowImportingTsExtensions": true,
     "noEmit": true,

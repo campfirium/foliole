@@ -1,4 +1,5 @@
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 
 function isSelectionNodeInside(container: HTMLElement, node: Node | null) {
   if (!node) {
@@ -199,8 +200,8 @@ export function resolvePdfSelectionLocator(container: HTMLElement | null, select
 
   return {
     page,
-    rects: rects.length > 0 ? rects : undefined,
     x: clampRatio((rangeRect.left + rangeRect.width / 2 - pageRect.left) / pageRect.width),
-    y: clampRatio((rangeRect.top + rangeRect.height / 2 - pageRect.top) / pageRect.height)
+    y: clampRatio((rangeRect.top + rangeRect.height / 2 - pageRect.top) / pageRect.height),
+    ...definedProps({ rects: rects.length > 0 ? rects : undefined })
   };
 }

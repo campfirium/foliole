@@ -2,6 +2,7 @@ import { useEffect, useMemo, type MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import {
@@ -128,11 +129,11 @@ export function useReadingProgressLifecycle(args: {
   useReadingProgressEffects({
     activeNodeId: args.activeNodeId,
     flushReadingProgress: args.flushReadingProgress,
-    getReadingPositionSyncState: args.getReadingPositionSyncState,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     lifecycleFlush,
     syncActiveNodeReadingProgress: (activeNodeIdOverride) =>
-      args.flushReadingProgress(activeNodeIdOverride, null)
+      args.flushReadingProgress(activeNodeIdOverride, null),
+    ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState })
   });
 }
 

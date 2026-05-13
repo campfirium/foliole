@@ -108,8 +108,8 @@ function expectPermanentDeleteResult(args: {
     parentNodeId: 'parent',
     kind: 'item',
     content: 'answer',
-    anchorLink: args.childAnchorLink,
-    hasContent: true
+    hasContent: true,
+    ...(args.childAnchorLink !== undefined ? { anchorLink: args.childAnchorLink } : {})
   });
 
   const mutation = computeDeleteNodesPermanentlyMutation(

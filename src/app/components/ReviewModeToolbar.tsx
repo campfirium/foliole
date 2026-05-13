@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ReviewGradeActions } from './ReviewModeToolbarActions';
@@ -36,10 +37,9 @@ function ReviewCompleteBar({
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
-      className={className}
+      {...definedProps({ className, style })}
       mode="study"
       primary={<ReviewCompleteAction onExitReviewMode={onExitReviewMode} />}
-      style={style}
     />
   );
 }
@@ -127,13 +127,13 @@ export function ReviewModeToolbar({
   }
 
   if (!reviewCurrentNodeId) {
-    return <ReviewCompleteBar className={className} onExitReviewMode={onExitReviewMode} style={style} />;
+    return <ReviewCompleteBar onExitReviewMode={onExitReviewMode} {...definedProps({ className, style })} />;
   }
 
   return (
     <ReviewActionBar
       ariaLabel="Review mode toolbar"
-      className={className}
+      {...definedProps({ className, style })}
       mode={isStudyMode ? 'study' : 'edit'}
       primary={!isCurrentItemGradable ? (
         <ReadingReviewActions
@@ -147,14 +147,13 @@ export function ReviewModeToolbar({
         <ReviewGradeActions
           errorMessage={errorMessage}
           isSubmitting={isSubmitting}
-          onRetry={retryGrade}
+          {...definedProps({ onRetry: retryGrade })}
           submitGrade={submitGrade}
         />
       )}
       reviewInputMode={isReviewEditing ? 'editing' : 'hotkeys'}
       reviewItemKind={isCurrentItemGradable ? 'fsrs' : 'reading'}
       secondary={showSummary ? <ReviewSessionSummary reviewCompletedCount={reviewCompletedCount} reviewQueueCount={reviewQueueCount} /> : null}
-      style={style}
     />
   );
 }

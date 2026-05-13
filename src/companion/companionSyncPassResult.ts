@@ -7,26 +7,26 @@ import {
 export interface CompanionSyncPassInput {
   attachmentResourceError: string | null;
   contentBlobError: string | null;
-  localDirtyCount?: number | null;
-  pendingAckCount?: number | null;
-  pushConflictCount?: number;
-  pushError?: string | null;
-  pushIssueCount?: number | null;
-  pushRejectedCount?: number;
-  syncedAttachmentIds?: string[];
-  syncedAttachmentResourceElapsedMs?: number;
-  syncedAttachmentResourceBytes?: number;
-  syncedContentBlobElapsedMs?: number;
-  syncedContentBlobBytes?: number;
-  syncedContentBlobHashes?: string[];
+  localDirtyCount?: number | null | undefined;
+  pendingAckCount?: number | null | undefined;
+  pushConflictCount?: number | undefined;
+  pushError?: string | null | undefined;
+  pushIssueCount?: number | null | undefined;
+  pushRejectedCount?: number | undefined;
+  syncedAttachmentIds?: string[] | undefined;
+  syncedAttachmentResourceElapsedMs?: number | undefined;
+  syncedAttachmentResourceBytes?: number | undefined;
+  syncedContentBlobElapsedMs?: number | undefined;
+  syncedContentBlobBytes?: number | undefined;
+  syncedContentBlobHashes?: string[] | undefined;
   syncedContentBlobNativeTiming?: {
     dbElapsedMs: number;
     httpElapsedMs: number;
     parseElapsedMs: number;
     totalElapsedMs: number;
-  };
-  syncedResourceElapsedMs?: number;
-  syncedStructureElapsedMs?: number;
+  } | undefined;
+  syncedResourceElapsedMs?: number | undefined;
+  syncedStructureElapsedMs?: number | undefined;
   remainingAttachmentBreakdown?: {
     activeTopicAttachments?: number;
     dueReviewAttachments?: number;
@@ -36,11 +36,11 @@ export interface CompanionSyncPassInput {
     otherBytes?: number;
     pdfAttachments?: number;
     pdfBytes?: number;
-  };
-  remainingAttachmentResourceBytes?: number | null;
+  } | undefined;
+  remainingAttachmentResourceBytes?: number | null | undefined;
   remainingAttachmentResourceCount: number | null;
-  remainingFailedAttachmentResourceBytes?: number | null;
-  remainingFailedAttachmentResourceCount?: number | null;
+  remainingFailedAttachmentResourceBytes?: number | null | undefined;
+  remainingFailedAttachmentResourceCount?: number | null | undefined;
   remainingContentBreakdown?: {
     activeTopicBodies?: number;
     dueReviewBodies?: number;
@@ -48,12 +48,12 @@ export interface CompanionSyncPassInput {
     nestedTopicBodies?: number;
     topLevelTopicBodies?: number;
     topicBodies?: number;
-  };
-  remainingContentBlobBytes?: number | null;
+  } | undefined;
+  remainingContentBlobBytes?: number | null | undefined;
   remainingContentBlobCount: number | null;
-  remainingFailedContentBlobBytes?: number | null;
-  remainingFailedContentBlobCount?: number | null;
-  remainingStructureChangeCount?: number | null;
+  remainingFailedContentBlobBytes?: number | null | undefined;
+  remainingFailedContentBlobCount?: number | null | undefined;
+  remainingStructureChangeCount?: number | null | undefined;
 }
 
 export interface CompanionSyncPassResult {

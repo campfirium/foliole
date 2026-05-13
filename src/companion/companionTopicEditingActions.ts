@@ -41,7 +41,6 @@ export async function persistCompanionTopicContent(args: PersistCompanionTopicCo
   const updatedNode: WorkspaceNodeSnapshot = {
     ...node!,
     bodyBlobHash: null,
-    bodyStatus: undefined,
     content: args.content,
     updatedAt: new Date().toISOString()
   };

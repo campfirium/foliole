@@ -5,6 +5,7 @@ import {
 } from './companionSelectionAnnotationActions';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
+import { definedProps } from '../shared/lib/definedProps';
 
 import type { SelectionAnnotationPayload } from '@/shared/selectionAnnotationActions';
 
@@ -15,9 +16,9 @@ export function createCompanionSelectionAnnotationHandler(workspaceSync: ReturnT
     const result = await persistCompanionSelectionAnnotation({
       deviceId: workspaceSync.bootstrapState.device_id,
       kind,
-      note,
       payload,
-      snapshot: workspaceSync.state.workspace_snapshot
+      snapshot: workspaceSync.state.workspace_snapshot,
+      ...definedProps({ note })
     });
     if (!result) {
       return null;

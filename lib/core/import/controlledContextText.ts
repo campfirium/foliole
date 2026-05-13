@@ -10,6 +10,9 @@ export function normalizeLooseWhitespaceWithMap(value: string) {
 
   for (let index = 0; index < raw.length; index += 1) {
     const character = raw[index];
+    if (character === undefined) {
+      continue;
+    }
     if (/\s/.test(character)) {
       if (pendingWhitespaceStart === null) {
         pendingWhitespaceStart = index;

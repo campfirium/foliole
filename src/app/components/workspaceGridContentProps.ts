@@ -1,4 +1,5 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import type { WorkspaceGridColumnProps } from './workspaceLayoutGridContentColumns';
@@ -67,7 +68,6 @@ function selectWorkspaceListAreaProps({
     isExternalViewOpen: props.externalLibrary.isExternalViewOpen,
     isTrashViewOpen: props.trash.isTrashViewOpen,
     isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
-    isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated,
     listNodesById,
     nodesById: props.nodeList.nodesById,
     nodeOrder: props.nodeList.nodeOrder,
@@ -81,7 +81,8 @@ function selectWorkspaceListAreaProps({
     onSelectNodeInVirtualView: props.navigation.onSelectNodeInVirtualView,
     onSelectTrashNode: props.trash.onSelectTrashNode,
     selectedTrashNodeId: props.trash.selectedTrashNodeId,
-    trashedNodeIds: props.trash.trashedNodeIds
+    trashedNodeIds: props.trash.trashedNodeIds,
+    ...definedProps({ isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated })
   };
 }
 

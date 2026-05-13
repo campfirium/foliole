@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
@@ -26,9 +27,9 @@ function createNode(args: {
     reading: null,
     reveal: null,
     review: null,
-    specialKind: args.specialKind,
     title: args.title,
-    updatedAt: '2026-04-20T00:00:00.000Z'
+    updatedAt: '2026-04-20T00:00:00.000Z',
+    ...definedProps({ specialKind: args.specialKind })
   };
 }
 

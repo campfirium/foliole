@@ -17,6 +17,7 @@ import {
   AppDialogPortal,
   AppDialogTitle
 } from '../shared/ui';
+import { definedProps } from '../shared/lib/definedProps';
 
 function TopActionButton(props: {
   icon: LucideIcon;
@@ -97,7 +98,14 @@ function BrowseMainMenu(props: {
 }) {
   return (
     <>
-      <MenuRow disabled={props.syncDisabled} label="Sync" onSelect={props.onSync} status={props.syncStatus} />
+      <MenuRow
+        label="Sync"
+        {...definedProps({
+          disabled: props.syncDisabled,
+          onSelect: props.onSync,
+          status: props.syncStatus
+        })}
+      />
       <MenuRow label="Sort" onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
       <MenuRow disabled label="Theme" status="Not available yet" />
     </>
@@ -167,9 +175,11 @@ function CompanionBrowseMenuSheet(props: {
                 <BrowseMainMenu
                   activeSortLabel={activeSortLabel}
                   onOpenSort={() => setView('sort')}
-                  onSync={props.onSync}
-                  syncDisabled={props.syncDisabled}
-                  syncStatus={props.syncStatus}
+                  {...definedProps({
+                    onSync: props.onSync,
+                    syncDisabled: props.syncDisabled,
+                    syncStatus: props.syncStatus
+                  })}
                 />
               ) : (
                 <BrowseSortMenu
@@ -207,12 +217,14 @@ export function CompanionBrowseTopActions(props: {
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
         onOpenChange={setIsMenuOpen}
-        onSync={props.onSync}
         open={isMenuOpen}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}
-        syncDisabled={props.syncDisabled}
-        syncStatus={props.syncStatus}
+        {...definedProps({
+          onSync: props.onSync,
+          syncDisabled: props.syncDisabled,
+          syncStatus: props.syncStatus
+        })}
       />
     </div>
   );

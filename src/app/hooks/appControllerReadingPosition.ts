@@ -1,5 +1,6 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { requestReadingPositionApply } from './readingPositionRequests';
@@ -118,10 +119,10 @@ function beginReadingPositionApply(
   commandId?: string
 ) {
   setReadingSyncState(args, nodeId, {
-    commandId,
     reason,
     startedAt: Date.now(),
-    targetSelection: selection
+    targetSelection: selection,
+    ...definedProps({ commandId })
   });
 }
 
@@ -176,10 +177,9 @@ function createReadingPositionMutations(args: BuildControllerLayoutPropsArgs) {
       completeReadingSyncState({
         activeNodeId: args.ws.activeNodeId,
         currentState: args.runtime.readingPositionSyncRef.current,
-        commandId,
         reason,
         runtime: args.runtime,
-        selection
+        ...definedProps({ commandId, selection })
       });
     },
     setReadingPositionSelection: (selection: EditorSelection) => setReadingPositionSelection(args, selection)

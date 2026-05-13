@@ -35,7 +35,7 @@ it('treats empty content with unknown metadata as not yet loaded', () => {
         }
       },
       trashedNodeIds: []
-    } as Partial<WorkspaceState>,
+    } as unknown as Partial<WorkspaceState>,
     currentState as WorkspaceState & { rendererBoundaryKeepNodeIds?: string[] }
   ) as { nodesById: Record<string, { content: string; hasContent?: boolean }> };
 

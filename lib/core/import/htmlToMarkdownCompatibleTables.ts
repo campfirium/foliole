@@ -46,7 +46,9 @@ function renderGfmTable(
   if (columnCount === 0 || normalizedRows.some((row) => row.length !== columnCount)) return null;
 
   const delimiter = Array.from({ length: columnCount }, () => '---');
-  return [normalizedRows[0], delimiter, ...normalizedRows.slice(1)]
+  const header = normalizedRows[0];
+  if (!header) return null;
+  return [header, delimiter, ...normalizedRows.slice(1)]
     .map((row) => `| ${row.join(' | ')} |`)
     .join('\n');
 }

@@ -20,7 +20,7 @@ function parseMarkdownImageTarget(target: string) {
     return null;
   }
   return {
-    destination: match[1]
+    destination: match[1] ?? ''
   };
 }
 

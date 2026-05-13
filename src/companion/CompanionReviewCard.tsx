@@ -1,5 +1,7 @@
 import { Fragment } from 'react';
 
+import { definedProps } from '../shared/lib/definedProps';
+
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import type { CompanionReviewBreadcrumbItem } from './companionReviewBreadcrumbs';
 import type { CompanionReviewCard as CompanionReviewCardModel } from './companionReviewSession';
@@ -55,7 +57,7 @@ export function CompanionReviewCard(props: {
 }) {
   return (
     <section aria-label="Review card" className="bg-companion-content pb-4">
-      <ReviewBreadcrumb items={props.breadcrumbItems ?? []} onSelectItem={props.onSelectBreadcrumbItem} />
+      <ReviewBreadcrumb items={props.breadcrumbItems ?? []} {...definedProps({ onSelectItem: props.onSelectBreadcrumbItem })} />
       <div className="pt-1">
         <CompanionArticleDocument
           content={props.card.content}

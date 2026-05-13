@@ -1,3 +1,4 @@
+import { definedProps } from './shared/lib/definedProps';
 import { openLocalPath } from './shared/platform/bridge';
 import { exportDiagnosticBundle } from './shared/platform/diagnosticBundle';
 import { closeMainWindow, restartMainWindowApp } from './shared/platform/windowControls';
@@ -38,9 +39,11 @@ export function createStartupErrorActions(args: {
   return {
     exportDiagnostics: () => runStartupAction('export_diagnostics', exportDiagnosticBundle),
     exit: () => runStartupAction('exit', closeMainWindow),
-    openLogs: args.logPath
-      ? () => runStartupAction('open_logs', () => openLocalPath(args.logPath ?? ''))
-      : undefined,
-    retry: () => runStartupAction('retry', restartMainWindowApp)
+    retry: () => runStartupAction('retry', restartMainWindowApp),
+    ...definedProps({
+      openLogs: args.logPath
+        ? () => runStartupAction('open_logs', () => openLocalPath(args.logPath ?? ''))
+        : undefined
+    })
   };
 }

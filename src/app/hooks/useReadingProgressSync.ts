@@ -1,6 +1,7 @@
 import { useCallback, useRef, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
@@ -124,11 +125,13 @@ function useReadingProgressFlushCallbacks(args: {
   const flushReadingProgress = useCallback(
     (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null, captureMode?: ReadingProgressCaptureMode) =>
       flushReadingProgressToRuntime({
-        activeNodeIdOverride,
-        captureMode,
-        captureNodeIdOverride,
         lastSyncedSignatureRef,
-        persistence
+        persistence,
+        ...definedProps({
+          activeNodeIdOverride,
+          captureMode,
+          captureNodeIdOverride
+        })
       }),
     [persistence]
   );
@@ -166,9 +169,9 @@ function useReadingProgressCaptureHooks(args: {
     activeNodeId: args.activeNodeId,
     editorRef: args.editorRef,
     flushReadingProgress: () => args.flushReadingProgress(undefined, undefined, 'user-scroll'),
-    getReadingPositionSyncState: args.getReadingPositionSyncState,
     isViewingTrashNode: args.isViewingTrashNode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
+    ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState })
   });
 }
 
@@ -186,42 +189,46 @@ export function useReadingProgressSync({
   const options = createReadingProgressOptions({
     activeNodeId,
     editorRef,
-    getReadingPositionSelection,
-    getReadingPositionSyncState,
     isImmersiveMode,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
-    setNodeViewState
+    setNodeViewState,
+    ...definedProps({
+      getReadingPositionSelection,
+      getReadingPositionSyncState
+    })
   });
   const latest = useLatestReadingProgressState(options);
   const resolveCapturedReadingProgress = useResolvedReadingProgressState(options, latest);
   const { flushReadingProgress, flushReadingProgressImmediately } = useReadingProgressFlushCallbacks({
-    getReadingPositionSyncState,
     isWorkspaceHydrated,
     nodeViewById,
     resolveCapturedReadingProgress,
     setNodeViewState,
-    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
+    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
+    ...definedProps({ getReadingPositionSyncState })
   });
   useReadingProgressCloseFlushRegistration(isWorkspaceHydrated, flushReadingProgressImmediately);
   useReadingProgressLifecycle({
     activeNodeId,
     flushReadingProgress,
     flushReadingProgressImmediately,
-    getReadingPositionSyncState,
-    isWorkspaceHydrated
+    isWorkspaceHydrated,
+    ...definedProps({ getReadingPositionSyncState })
   });
   useReadingProgressCaptureHooks({
     activeNodeId,
     editorRef,
     flushReadingProgress,
-    getReadingPositionSelection,
-    getReadingPositionSyncState,
     isImmersiveMode,
     isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById,
-    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef
+    pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
+    ...definedProps({
+      getReadingPositionSelection,
+      getReadingPositionSyncState
+    })
   });
 }

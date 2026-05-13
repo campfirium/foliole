@@ -6,6 +6,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { definedProps } from '../../shared/lib/definedProps';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
 import { createSelectionHandlers, runSelectionCommandFromPayload } from './editorSelectionCommandActions';
@@ -113,16 +114,23 @@ export function useEditorContextCommands({
   const [contextMenu, setContextMenu] = useState<EditorContextMenuState | null>(null);
   const preservedSelectionPayloadRef = usePreservedSelectionPayload({ activeNodeId, editorRef });
   useSelectionAnnotationToolbar({ activeNodeId, editorRef, isTrashViewOpen, nodesById, setContextMenu, trashedNodeIds });
-  useImageClozeEventBridge({ activeNode, activeNodeId, createImageClozeNodes, deleteImageClozeRegion, editorRef, nodesById });
+  useImageClozeEventBridge({
+    activeNodeId,
+    createImageClozeNodes,
+    deleteImageClozeRegion,
+    editorRef,
+    nodesById,
+    ...definedProps({ activeNode })
+  });
   const closeContextMenu = () => setContextMenu(null);
   const syncActiveNodeContentFromEditor = createSyncActiveNodeContentFromEditor(activeNodeId, editorRef, updateNodeContent);
   const handleEditorContextMenu = createHandleEditorContextMenu({
-    activeNode,
     activeNodeId,
     editorRef,
     getPreservedSelectionPayload: () => preservedSelectionPayloadRef.current,
     isTrashViewOpen,
-    setContextMenu
+    setContextMenu,
+    ...definedProps({ activeNode })
   });
   const runSelectionCommand = createSelectionCommandRunner(contextMenu ? { payload: contextMenu.payload } : null, editorRef, closeContextMenu);
   const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef);
@@ -167,9 +175,9 @@ function createPayloadSelectionRunner(
     runSelectionCommandFromPayload({
       closeContextMenu,
       editorRef,
-      keepOpen,
       onApplied,
-      payload
+      payload,
+      ...definedProps({ keepOpen })
     });
 }
 

@@ -100,7 +100,8 @@ function uniqueValidRawMatch(locator: FullTextLocator, ranges: Range[], quote: s
       const match = sliceRaw(locator, range);
       return containsOrderedQuoteParts(match, quote) && (exactMatcher?.test(match) || isLengthClose(match, quote));
     });
-  return validRanges.length === 1 ? sliceRaw(locator, validRanges[0]) : null;
+  const onlyRange = validRanges[0];
+  return validRanges.length === 1 && onlyRange ? sliceRaw(locator, onlyRange) : null;
 }
 
 function collectBoundaryFragments(normalizedQuote: string) {
@@ -123,9 +124,15 @@ function collectFragmentRanges(locator: FullTextLocator, quoteLocator: ContextEx
   const ranges: Range[] = [];
   for (let startIndex = 0; startIndex < fragments.length; startIndex += 1) {
     const startFragment = fragments[startIndex];
+    if (!startFragment) {
+      continue;
+    }
     const startRanges = collectStringRanges(haystack, startFragment);
     for (let endIndex = fragments.length - 1; endIndex >= startIndex; endIndex -= 1) {
       const endFragment = fragments[endIndex];
+      if (!endFragment) {
+        continue;
+      }
       const endRanges = collectStringRanges(haystack, endFragment);
       for (const startRange of startRanges) {
         for (const endRange of endRanges) {

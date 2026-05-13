@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { definedProps } from '../../../shared/lib/definedProps';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
 
 import {
@@ -27,7 +28,6 @@ function createNode(
   return {
     id: input.id,
     parentNodeId: input.parentNodeId ?? null,
-    kind: input.kind,
     title: input.title,
     hasContent: input.hasContent ?? true,
     hasReveal: input.hasReveal ?? false,
@@ -35,7 +35,8 @@ function createNode(
     reading: input.reading ?? null,
     review: input.review ?? null,
     createdAt: '2026-03-29T00:00:00.000Z',
-    updatedAt: '2026-03-29T00:00:00.000Z'
+    updatedAt: '2026-03-29T00:00:00.000Z',
+    ...definedProps({ kind: input.kind })
   };
 }
 

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { canNodeAcceptMovedChildren } from '../../features/nodes/model/nodeContainers';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
+import { definedProps } from '../../shared/lib/definedProps';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 
 import { buildAppPaletteItems } from './appCommands';
@@ -149,7 +150,7 @@ export function useAppPaletteItems(args: {
     () =>
       buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes)).map((item) => ({
         ...item,
-        shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts
+        ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
       })),
     [args, canMoveToNode, hasNavigableNodes]
   );

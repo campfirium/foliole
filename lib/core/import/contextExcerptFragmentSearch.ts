@@ -66,8 +66,9 @@ export function collectOrderedMatchCandidates<TBudget extends MatchBudget>(args:
       break;
     }
     const indexes = args.findParagraphIndexesContainingFragment(fragment);
-    if (indexes.length === 1) {
-      anchoredCandidate = { fragment, index: indexes[0] };
+    const onlyIndex = indexes[0];
+    if (indexes.length === 1 && onlyIndex !== undefined) {
+      anchoredCandidate = { fragment, index: onlyIndex };
       break;
     }
     if (indexes.length > 1 && indexes.length <= 12) {
@@ -85,16 +86,23 @@ export function resolveBestNearbyRange<TBudget extends MatchBudget>(
   let bestRange: { anchorFragment: string; end: number; start: number } | null = null;
   for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
     const left = candidates[leftIndex];
+    if (!left) {
+      continue;
+    }
     for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
       if (!consumeAttempt(budget)) {
         return bestRange;
       }
       const right = candidates[rightIndex];
-      const matches = findNearbyMatches(left.indexes, right.indexes);
-      if (matches.length !== 1) {
+      if (!right) {
         continue;
       }
-      const candidate = { anchorFragment: left.fragment, end: matches[0].end, start: matches[0].start };
+      const matches = findNearbyMatches(left.indexes, right.indexes);
+      const match = matches[0];
+      if (matches.length !== 1 || !match) {
+        continue;
+      }
+      const candidate = { anchorFragment: left.fragment, end: match.end, start: match.start };
       if (!bestRange || isBetterRange(candidate, bestRange)) {
         bestRange = candidate;
       }

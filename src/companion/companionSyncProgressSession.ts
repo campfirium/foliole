@@ -1,4 +1,5 @@
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
+import { definedProps } from '../shared/lib/definedProps';
 
 function mergeCount(previous: number, total: number, nextTotal: number, nextCompleted: number) {
   return Math.min(total, Math.max(previous, total - nextTotal + nextCompleted));
@@ -12,7 +13,7 @@ function mergeBytes(previous: CompanionDesktopSyncProgress, next: CompanionDeskt
     typeof next.totalBytes !== 'number' ||
     previous.totalBytes < next.totalBytes
   ) {
-    return { completedBytes: next.completedBytes, totalBytes: next.totalBytes };
+    return definedProps({ completedBytes: next.completedBytes, totalBytes: next.totalBytes });
   }
   return {
     completedBytes: mergeCount(previous.completedBytes, previous.totalBytes, next.totalBytes, next.completedBytes),

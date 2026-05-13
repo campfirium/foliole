@@ -9,7 +9,7 @@ import {
   SlidersHorizontal,
   Unplug
 } from 'lucide-react';
-import type { ComponentType } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 export type CompanionTabAction = 'review' | 'recent' | 'search' | 'more';
 export type CompanionPrimaryTabId = 'browse' | 'learn' | 'search' | 'settings';
@@ -25,7 +25,7 @@ export type CompanionSecondaryDestinationId =
 export type CompanionTabSlotId = CompanionPrimaryTabId | 'shortcut';
 
 export type CompanionSecondaryDestination = {
-  icon: ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   id: CompanionSecondaryDestinationId;
   label: string;
   parentTab: CompanionPrimaryTabId;
@@ -42,7 +42,7 @@ export type CompanionTabConfig = {
 export type CompanionResolvedTab = {
   action?: CompanionTabAction;
   destinationId?: CompanionSecondaryDestinationId;
-  icon: ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   id: CompanionTabSlotId;
   label: string;
   parentAction: CompanionTabAction;

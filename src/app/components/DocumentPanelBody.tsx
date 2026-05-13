@@ -7,6 +7,7 @@ import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
+import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -37,7 +38,7 @@ interface DocumentPanelBodyProps {
   editorReadingSelection?: EditorSelection | null;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
-  editorNodeViewState?: NodeViewState;
+  editorNodeViewState?: NodeViewState | undefined;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   emptyState?: {
@@ -86,11 +87,12 @@ export function DocumentPanelBody({
   } = useDocumentPanelBodyMetrics({
     editorContent: props.editorContent,
     editorNodeId: props.editorNodeId,
-    onPromptImageLoadStateChange: props.onPromptImageLoadStateChange,
+    ...definedProps({ onPromptImageLoadStateChange: props.onPromptImageLoadStateChange }),
     reveal: props.reveal
   });
 
-  const bodyProps: DocumentPanelBodyProps = {
+  const bodyProps: DocumentPanelBodyProps = definedProps({
+    ...props,
     answerEditorDebugId,
     answerSectionMode,
     onAnswerImageLoadStateChange: handleAnswerImageLoadStateChange,
@@ -99,9 +101,8 @@ export function DocumentPanelBody({
     onPromptImageMetricsChange: setPromptImageMetrics,
     promptEditorDebugId,
     sharedBlockImageMaxHeight: props.fitBlockImagesToViewport ? sharedBlockImageMaxHeight : undefined,
-    showDocumentOutline,
-    ...props
-  };
+    showDocumentOutline
+  });
 
   return (
     <div

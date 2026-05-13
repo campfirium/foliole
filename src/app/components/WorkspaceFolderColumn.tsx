@@ -5,6 +5,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
@@ -78,20 +79,22 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       bodyAppendContent={
         <>
           <WorkspaceVirtualSection
-            activeVirtualNodeId={props.activeVirtualNodeId}
             isVirtualViewOpen={props.isVirtualViewOpen}
             nodeOrder={props.nodeOrder}
             nodesById={props.nodesById}
-            onOpenVirtualView={props.onOpenVirtualView}
             onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
+            {...definedProps({
+              activeVirtualNodeId: props.activeVirtualNodeId,
+              onOpenVirtualView: props.onOpenVirtualView
+            })}
           />
           <ExternalLibrarySection
             entriesByFolderId={props.externalEntriesByFolderId}
             folders={props.externalFolders}
             isExternalViewOpen={props.isExternalViewOpen}
             onOpenExternalSelection={props.onOpenExternalSelection}
-            onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}
             selection={props.externalSelection}
+            {...definedProps({ onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings })}
           />
         </>
       }

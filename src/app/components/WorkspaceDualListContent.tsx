@@ -17,6 +17,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import { definedProps } from '../../shared/lib/definedProps';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
@@ -181,7 +182,6 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
       >
         <WorkspaceFolderColumn
           activeFolderId={dualListState.activeFolderId}
-          activeVirtualNodeId={props.activeVirtualNodeId}
           externalEntriesByFolderId={props.externalEntriesByFolderId}
           externalFolders={props.externalFolders}
           externalSelection={props.externalSelection}
@@ -195,13 +195,16 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
           onOpenMoveToNode={props.onOpenMoveToNode}
           onOpenNotesView={props.onOpenNotesView}
           onOpenExternalSelection={props.onOpenExternalSelection}
-          onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}
           onOpenTrashView={props.onOpenTrashView}
-          onOpenVirtualView={props.onOpenVirtualView}
           onSelectNode={props.onSelectNode}
           onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
           onSelectTrashNode={props.onSelectTrashNode}
           selectedTrashNodeId={props.selectedTrashNodeId}
+          {...definedProps({
+            activeVirtualNodeId: props.activeVirtualNodeId,
+            onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
+            onOpenVirtualView: props.onOpenVirtualView
+          })}
         />
       </div>
       <WorkspaceDualListSplitter

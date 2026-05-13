@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 
+import { definedProps } from '../shared/lib/definedProps';
+
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { useCompanionHandoffReminderScheduler } from './useCompanionHandoffReminderScheduler';
 import { useCompanionHandoffReminderSettings } from './useCompanionHandoffReminderSettings';
@@ -85,9 +87,9 @@ export function CompanionSyncContent(props: {
   return (
     <CompanionSyncPanel {...buildSyncPanelProps({
       handoffReminders,
-      onOpenSettingsPage: props.onOpenSettingsPage,
       page: props.page ?? 'sync',
-      workspaceSync
+      workspaceSync,
+      ...definedProps({ onOpenSettingsPage: props.onOpenSettingsPage })
     })} />
   );
 }

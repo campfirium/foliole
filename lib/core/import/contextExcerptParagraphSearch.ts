@@ -56,8 +56,12 @@ function tryExactMatch(
   projectMatch: MatchProjector
 ) {
   const strictIndexes = findParagraphIndexesContainingFragment(locator.normalizedParagraphs, quoteLocator.normalizedQuote);
-  if (strictIndexes.length === 1) {
-    const paragraph = locator.paragraphs[strictIndexes[0]];
+  const strictIndex = strictIndexes[0];
+  if (strictIndexes.length === 1 && strictIndex !== undefined) {
+    const paragraph = locator.paragraphs[strictIndex];
+    if (!paragraph) {
+      return null;
+    }
     if (isValidRangeMatch(paragraph, quote, quoteLocator.exactMatcher)) {
       return projectMatch(paragraph, quote, quoteLocator.normalizedQuote, quoteLocator.exactMatcher);
     }
@@ -69,7 +73,11 @@ function tryExactMatch(
   if (looseIndexes.length !== 1) {
     return null;
   }
-  const paragraph = locator.paragraphs[looseIndexes[0]];
+  const looseIndex = looseIndexes[0];
+  const paragraph = looseIndex === undefined ? undefined : locator.paragraphs[looseIndex];
+  if (!paragraph) {
+    return null;
+  }
   if (!isValidRangeMatch(paragraph, quote, quoteLocator.exactMatcher)) {
     return null;
   }
@@ -102,8 +110,12 @@ function tryAnchoredRangeMatch(
   const boundaryFragments = collectOrderedBoundaryFragments(normalizeLineEndings(quote));
   const firstBoundary = boundaryFragments[0] ?? anchoredCandidate.fragment;
   const lastBoundary = boundaryFragments.at(-1) ?? anchoredCandidate.fragment;
+  const anchoredParagraph = locator.paragraphs[anchoredCandidate.index];
+  if (!anchoredParagraph) {
+    return null;
+  }
   if (!firstBoundary || !lastBoundary) {
-    return projectMatch(locator.paragraphs[anchoredCandidate.index], quote, anchoredCandidate.fragment, quoteLocator.exactMatcher);
+    return projectMatch(anchoredParagraph, quote, anchoredCandidate.fragment, quoteLocator.exactMatcher);
   }
   const startIndex = findNearestParagraphIndex(
     findParagraphIndexesContainingFragment(locator.normalizedParagraphs, firstBoundary),
@@ -116,7 +128,7 @@ function tryAnchoredRangeMatch(
     'forward'
   );
   if (startIndex === null || endIndex === null) {
-    return projectMatch(locator.paragraphs[anchoredCandidate.index], quote, anchoredCandidate.fragment, quoteLocator.exactMatcher);
+    return projectMatch(anchoredParagraph, quote, anchoredCandidate.fragment, quoteLocator.exactMatcher);
   }
   const start = Math.min(startIndex, anchoredCandidate.index);
   const end = Math.max(endIndex, anchoredCandidate.index);
@@ -184,4 +196,3 @@ export function findParagraphContextExcerptMatch(
     projectMatch
   );
 }
-

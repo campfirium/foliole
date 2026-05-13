@@ -1,5 +1,7 @@
 import type { MutableRefObject } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
+
 import { collectCrossPageMatches } from './pdfCrossPageMatchCollection';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { collectMappedQueryRanges, resolveIndexedEntry, resolvePageBounds } from './pdfSearchMatchCollectionUtils';
@@ -257,10 +259,10 @@ export function collectMatches(
         matches,
         page,
         pageBounds,
-        pageTextByNumberRef,
         query,
         searchablePages,
-        shell
+        shell,
+        ...definedProps({ pageTextByNumberRef })
       })
     ) {
       continue;

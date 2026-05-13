@@ -7,6 +7,7 @@ import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
+import { definedProps } from '@/shared/lib/definedProps';
 import { SimplePdfDocument } from '@/features/pdf/components/SimplePdfDocument';
 import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
 import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
@@ -57,9 +58,11 @@ export function ReadableArticleDocument(props: {
     canEdit: canEdit && !isViewingPdfOriginal,
     initialContent: props.readableArticle.content,
     nodeId: props.readableArticle.nodeId,
-    onSaveContent: saveContent
-      ? (content) => saveContent(props.readableArticle.nodeId, content)
-      : undefined
+    ...definedProps({
+      onSaveContent: saveContent
+        ? (content: string) => saveContent(props.readableArticle.nodeId, content)
+        : undefined
+    })
   });
   const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) return;
@@ -87,17 +90,19 @@ export function ReadableArticleDocument(props: {
       ) : null}
       <CompanionArticleDocument
         content={editorState.value}
-        contentPaddingTop={props.readableArticle.contentPaddingTop}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
-        nodeViewState={toEditorViewState(props.readableArticle)}
         onBlurCapture={() => void editorState.flushPendingSave()}
-        onChange={canEdit ? editorState.handleChange : undefined}
-        onEditorReady={props.onEditorReady}
         onMissingAttachmentResource={syncMissingAttachmentResource}
-        readingSelection={props.readingSelection}
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
+        {...definedProps({
+          contentPaddingTop: props.readableArticle.contentPaddingTop,
+          nodeViewState: toEditorViewState(props.readableArticle),
+          onChange: canEdit ? editorState.handleChange : undefined,
+          onEditorReady: props.onEditorReady,
+          readingSelection: props.readingSelection
+        })}
       />
       {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}
     </>

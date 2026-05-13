@@ -27,7 +27,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   return (
     <div
       className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 pt-2"
-      ref={args.scrollContainerRef}
+      ref={args.scrollContainerRef as RefObject<HTMLDivElement>}
       onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => {
         const target = event.target as HTMLElement | null;
         if (target?.closest('[role="treeitem"]')) {

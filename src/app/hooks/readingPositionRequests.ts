@@ -2,6 +2,7 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import type { ReadingPositionSyncState } from './useAppRuntime';
 
@@ -63,10 +64,12 @@ export function requestReadingPositionApply(args: {
       commandId: command.commandId,
       reason: args.reason,
       startedAt: command.startedAt,
-      targetScrollTop: args.scrollTop,
       targetSelection: args.selection,
-      targetViewportMode: args.targetViewportMode,
-      targetViewportRatio: args.targetViewportRatio
+      ...definedProps({
+        targetScrollTop: args.scrollTop,
+        targetViewportMode: args.targetViewportMode,
+        targetViewportRatio: args.targetViewportRatio
+      })
     }
   };
   args.runtime.bumpReadingPositionRequest();
@@ -86,10 +89,12 @@ function createReadingPositionRestoreCommand(args: {
     commandId: `reading-position-${args.runtime.readingPositionRestoreCommandSeqRef.current}`,
     nodeId: args.nodeId,
     reason: args.reason,
-    scrollTop: args.scrollTop,
     selection: args.selection,
     startedAt: Date.now(),
-    targetViewportMode: args.targetViewportMode,
-    targetViewportRatio: args.targetViewportRatio
+    ...definedProps({
+      scrollTop: args.scrollTop,
+      targetViewportMode: args.targetViewportMode,
+      targetViewportRatio: args.targetViewportRatio
+    })
   };
 }

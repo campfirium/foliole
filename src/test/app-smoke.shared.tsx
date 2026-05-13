@@ -7,6 +7,7 @@ import './reactPdfMock';
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { definedProps } from '../shared/lib/definedProps';
 import { resetPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { resetWorkspaceNodeDocumentPrefetchForTest } from '../store/workspaceNodeDocumentPrefetch';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
@@ -195,13 +196,15 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
     kind: partial.kind ?? (partial.specialKind === 'inbox' ? 'folder' : partial.reveal != null ? 'item' : 'topic'),
     priority: partial.priority ?? null,
     desiredRetention: partial.desiredRetention ?? null,
-    specialKind: partial.specialKind,
     title: partial.title,
     content: partial.content,
     reveal: partial.reveal ?? null,
     reading: partial.reading ?? null,
     review: partial.review ?? null,
-    anchorLink: partial.anchorLink,
+    ...definedProps({
+      anchorLink: partial.anchorLink,
+      specialKind: partial.specialKind
+    }),
     createdAt: partial.createdAt ?? FIXED_TIMESTAMP,
     updatedAt: partial.updatedAt ?? FIXED_TIMESTAMP
   };
@@ -209,7 +212,7 @@ export function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 
 
 export function resetAppSmokeState() {
   window.history.pushState({}, '', '/');
-  window.electronAPI = undefined;
+  delete window.electronAPI;
   localStorage.clear();
   resetPerformanceDiagnosticsProbe();
   resetWorkspaceNodeDocumentPrefetchForTest();

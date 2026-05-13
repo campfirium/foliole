@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import { loadRuntimePdfImportsInventory, type RuntimePdfImportsInventory } from '../../shared/platform/pdfImportsRuntimeRepository';
 import {
   loadRuntimeReadwiseBooksInventory,
@@ -182,8 +183,8 @@ export function useImportOverviewState(input: {
   });
   const actions = useReadwiseBookActions({
     onOpenChange: input.onOpenChange,
-    onSelectNode: input.onSelectNode,
-    refresh
+    refresh,
+    ...definedProps({ onSelectNode: input.onSelectNode })
   });
 
   return {

@@ -7,6 +7,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
@@ -91,7 +92,14 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
   externalFolders,
   externalSelection
 }: WorkspaceListAreaProps) {
-  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({ isTrashViewOpen, isVirtualViewOpen, isExternalViewOpen, isWorkspaceHydrated, nodeOrder, trashedNodeIds });
+  const shouldShowEmptyState = shouldShowWorkspaceEmptyState({
+    isTrashViewOpen,
+    isVirtualViewOpen,
+    isExternalViewOpen,
+    nodeOrder,
+    trashedNodeIds,
+    ...definedProps({ isWorkspaceHydrated })
+  });
 
   return (
     <div className="workspace-region-main-folder flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
@@ -104,7 +112,6 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
         isExternalViewOpen,
         isTrashViewOpen,
         isVirtualViewOpen,
-        isWorkspaceHydrated,
         listNodesById,
         nodesById,
         nodeOrder,
@@ -119,7 +126,8 @@ export const WorkspaceListArea = memo(function WorkspaceListArea({
         onSelectTrashNode,
         selectedTrashNodeId,
         shouldShowEmptyState,
-        trashedNodeIds
+        trashedNodeIds,
+        ...definedProps({ isWorkspaceHydrated })
       })}
     </div>
   );

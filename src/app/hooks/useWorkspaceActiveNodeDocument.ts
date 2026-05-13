@@ -6,6 +6,7 @@ import {
   markNodeDocumentLoadResolved,
   markNodeDocumentLoadStarted
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import { definedProps } from '../../shared/lib/definedProps';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
@@ -33,7 +34,6 @@ export function useWorkspaceActiveNodeDocument(
 
     let cancelled = false;
     void ensureWorkspaceNodeDocumentReady(activeNodeId, {
-      keepWarm: options.keepWarm,
       onDocumentMerged: (document) => {
         if (!cancelled) {
           markNodeDocumentMerged(activeNodeId, `content:${document.content.length}`);
@@ -48,7 +48,8 @@ export function useWorkspaceActiveNodeDocument(
         if (!cancelled) {
           markNodeDocumentLoadStarted(activeNodeId);
         }
-      }
+      },
+      ...definedProps({ keepWarm: options.keepWarm })
     });
 
     return () => {

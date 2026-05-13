@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it } from 'vitest';
 
+import type { WorkspaceListNode } from '../model/workspaceListNode';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 
 import { NodeListTree } from './NodeListTree';
@@ -11,14 +12,15 @@ function createNode(args: {
   kind?: 'folder' | 'topic' | 'item';
   parentNodeId?: string | null;
   title: string;
-}) {
+}): WorkspaceListNode {
+  const kind = args.kind ?? (args.parentNodeId ? 'topic' : 'folder');
   return {
     anchorLink: null,
     createdAt: '2026-04-20T00:00:00.000Z',
-    hasContent: args.kind !== 'folder',
-    hasReveal: args.kind === 'item',
+    hasContent: kind !== 'folder',
+    hasReveal: kind === 'item',
     id: args.id,
-    kind: args.kind,
+    kind,
     parentNodeId: args.parentNodeId ?? null,
     review: null,
     title: args.title,

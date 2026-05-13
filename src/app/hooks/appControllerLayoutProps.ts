@@ -2,6 +2,7 @@ import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
+import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
 
 import { createAnswerChangeHandler, createEditorChangeHandler, createEditorReadyHandler, createNodeContentChangeHandler, type SelectNodeHandler } from './appControllerEditorHandlers';
@@ -128,9 +129,9 @@ function createLayoutDataArgs(
     canGoParent: args.nav.canGoParent,
     canStartStudyMode: args.canStartStudyMode,
     contextMenu: args.editorCtx.contextMenu,
-    documentNode: args.runtime.isViewingTrashNode ? args.selectedTrashNode : args.activeNode,
     editorAdapterRef: args.runtime.editorRef,
     ...resolveEditorBindingArgs(args),
+    ...definedProps({ documentNode: args.runtime.isViewingTrashNode ? args.selectedTrashNode : args.activeNode }),
     isResizingList: args.listResize.isResizingList,
     isResizingRightSidebar: args.rightSidebarResize.isResizingRightSidebar,
     isSettingsOpen: args.runtime.isSettingsOpen,

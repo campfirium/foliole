@@ -1,3 +1,5 @@
+import { definedProps } from '../../shared/lib/definedProps';
+
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
 export type WorkspaceDocumentSurfaceSource = Pick<
@@ -61,7 +63,6 @@ function selectDocumentSurfaceState({
   props
 }: WorkspaceDocumentSurfaceSelectorArgs) {
   return {
-    activeVirtualNodeId: props.virtualView.activeVirtualNodeId,
     documentNodeId,
     isEditorReadOnly: props.document.isEditorReadOnly,
     isExternalViewOpen: props.externalLibrary.isExternalViewOpen,
@@ -70,10 +71,13 @@ function selectDocumentSurfaceState({
     isPriorityQuickSetActive: props.document.isPriorityQuickSetActive,
     isTrashViewOpen: props.trash.isTrashViewOpen,
     isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
-    isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated,
     onEnterImmersiveEdit,
     onShouldSuppressSelectionRestore,
-    showAnswerSection: props.document.showAnswerSection
+    showAnswerSection: props.document.showAnswerSection,
+    ...definedProps({
+      activeVirtualNodeId: props.virtualView.activeVirtualNodeId,
+      isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated
+    })
   };
 }
 
@@ -83,7 +87,6 @@ function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
     editorAdapterRef: props.document.editorAdapterRef,
     editorContent: props.document.editorContent,
     editorNodeId: props.document.editorNodeId,
-    editorNodeViewState: props.document.editorNodeViewState,
     externalEntriesByFolderId: props.externalLibrary.externalEntriesByFolderId,
     externalFolders: props.externalLibrary.externalFolders,
     externalSelection: props.externalLibrary.externalSelection,
@@ -93,7 +96,8 @@ function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
     nodeViewById: props.document.nodeViewById,
     priorityQuickSetShortcutLabel: props.document.priorityQuickSetShortcutLabel,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,
-    trashedNodeIds: props.trash.trashedNodeIds
+    trashedNodeIds: props.trash.trashedNodeIds,
+    ...definedProps({ editorNodeViewState: props.document.editorNodeViewState })
   };
 }
 
@@ -120,9 +124,7 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onCloseContextMenu: props.editorCommands.onCloseContextMenu,
     onCopyImage: props.editorCommands.onCopyImage,
     onCreateCloze: props.editorCommands.onCreateCloze,
-    onCreateClozeFromPayload: props.editorCommands.onCreateClozeFromPayload,
     onCreateHighlight: props.editorCommands.onCreateHighlight,
-    onCreateHighlightFromPayload: props.editorCommands.onCreateHighlightFromPayload,
     onCreateNote: props.editorCommands.onCreateNote,
     onDeleteExistingHighlight: props.editorCommands.onDeleteExistingHighlight,
     onCreateSelectionHighlight: props.editorCommands.onCreateSelectionHighlight,
@@ -139,7 +141,6 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onNodeDesiredRetentionChange: props.document.onNodeDesiredRetentionChange,
     onNodePriorityChange: props.document.onNodePriorityChange,
     onEnterPriorityQuickSet: props.document.onEnterPriorityQuickSet,
-    onPastedTextAnchors: props.document.onPastedTextAnchors,
     onPersistPdfViewState: props.document.onPersistPdfViewState,
     onRegisterEditorDraftFlush: props.document.onRegisterEditorDraftFlush,
     onResolveDocumentPositionAtViewportY: props.document.onResolveDocumentPositionAtViewportY,
@@ -147,6 +148,11 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     onRevealDocumentPosition: props.document.onRevealDocumentPosition,
     onRevealDocumentSelection: props.document.onRevealDocumentSelection,
     setNodeViewState: props.document.setNodeViewState,
+    ...definedProps({
+      onCreateClozeFromPayload: props.editorCommands.onCreateClozeFromPayload,
+      onCreateHighlightFromPayload: props.editorCommands.onCreateHighlightFromPayload,
+      onPastedTextAnchors: props.document.onPastedTextAnchors
+    })
   };
 }
 

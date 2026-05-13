@@ -17,7 +17,7 @@ export interface EditorContextMenuProps {
   mode?: 'annotation-toolbar' | 'context-menu' | 'existing-highlight-toolbar';
   notePanelLeft?: number;
   notePanelTop?: number;
-  selectionPayload?: SelectionCommandPayload | null;
+  selectionPayload?: SelectionCommandPayload | null | undefined;
   top: number;
   onClose: () => void;
   onCopyImage: () => void;

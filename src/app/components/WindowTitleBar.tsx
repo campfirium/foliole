@@ -11,6 +11,7 @@ import {
   queryMainWindowMaximized,
   toggleMainWindowMaximize
 } from '../../shared/platform/windowControls';
+import { definedProps } from '../../shared/lib/definedProps';
 
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
 import { WindowTitleBarViewButtons } from './WindowTitleBarViewButtons';
@@ -259,7 +260,11 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
       />
       <WindowLeadingActions {...props} />
-      <WindowCenterTitle icon={props.centerTitleIcon} onDoubleClick={handleToggleMaximize} title={props.centerTitle} />
+      <WindowCenterTitle
+        onDoubleClick={handleToggleMaximize}
+        title={props.centerTitle}
+        {...definedProps({ icon: props.centerTitleIcon })}
+      />
       <WindowTitleBarRightSidebarAnchor
         activeRightPanelId={props.activeRightPanelId}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
