@@ -29,6 +29,29 @@ interface StoredLibraryPathSettings {
   updated_at?: unknown;
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isStoredPathField(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === 'string';
+}
+
+function isStoredTimestampField(value: unknown): boolean {
+  return value === undefined || typeof value === 'string';
+}
+
+function isStoredLibraryPathSettings(value: unknown): value is StoredLibraryPathSettings {
+  return (
+    isObjectRecord(value) &&
+    isStoredPathField(value.assets_dir) &&
+    isStoredPathField(value.inbox) &&
+    isStoredPathField(value.library_home) &&
+    isStoredPathField(value.mirror) &&
+    isStoredTimestampField(value.updated_at)
+  );
+}
+
 function resolveLibraryPathSettingsFilePath() {
   return path.join(resolveAppPaths().app_config_dir, LIBRARY_PATH_SETTINGS_FILE);
 }
@@ -57,8 +80,8 @@ function readStoredLibraryPathSettings() {
   }
   try {
     const raw = fs.readFileSync(settingsPath, 'utf8');
-    const parsed = JSON.parse(raw) as StoredLibraryPathSettings;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    const parsed: unknown = JSON.parse(raw);
+    return isStoredLibraryPathSettings(parsed) ? parsed : null;
   } catch {
     return null;
   }
