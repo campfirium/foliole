@@ -70,7 +70,6 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.loadSyncNodes,
   NATIVE_COMMANDS.loadSyncObjects,
   NATIVE_COMMANDS.applySyncObjects,
-  NATIVE_COMMANDS.applySyncPack,
   NATIVE_COMMANDS.loadSyncNodeConflicts,
   NATIVE_COMMANDS.applySyncNodes,
   NATIVE_COMMANDS.recordSyncNodeConflicts,

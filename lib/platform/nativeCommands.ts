@@ -77,7 +77,6 @@ export const NATIVE_COMMANDS = {
   loadSyncNodes: 'load_sync_nodes',
   loadSyncObjects: 'load_sync_objects',
   applySyncObjects: 'apply_sync_objects',
-  applySyncPack: 'apply_sync_pack',
   loadSyncNodeConflicts: 'load_sync_node_conflicts',
   applySyncNodes: 'apply_sync_nodes',
   recordSyncNodeConflicts: 'record_sync_node_conflicts',

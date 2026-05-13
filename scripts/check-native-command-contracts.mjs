@@ -18,7 +18,9 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storageAttachmentCommands.ts',
   'electron/ipc/storageCommandSupport.ts',
   'electron/ipc/storageCommands.ts',
+  'electron/ipc/storageExternalSearchCommands.ts',
   'electron/ipc/storageReadCommands.ts',
+  'electron/ipc/storageSettingsCommands.ts',
   'electron/ipc/storageSyncCommands.ts',
   'electron/ipc/windowCommands.ts'
 ];
@@ -48,6 +50,9 @@ function collectNativeCommandKeys(source) {
 function collectReferencedCommandKeys(repoRoot, files) {
   const references = new Set();
   for (const file of files) {
+    if (!fs.existsSync(path.join(repoRoot, file))) {
+      continue;
+    }
     for (const key of collectNativeCommandKeys(readFile(repoRoot, file))) {
       references.add(key);
     }

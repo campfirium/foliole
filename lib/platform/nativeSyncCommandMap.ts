@@ -5,7 +5,6 @@ import type {
   NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
-  NativeSyncPackApplyResult,
   NativeSyncPeer
 } from './nativeSyncContract.js';
 
@@ -25,10 +24,6 @@ export type NativeSyncCommandMap = {
   [NATIVE_COMMANDS.applySyncObjects]: {
     args: { objects: NativeSyncObjectRecord[] };
     result: string[];
-  };
-  [NATIVE_COMMANDS.applySyncPack]: {
-    args: { pack_path: string };
-    result: NativeSyncPackApplyResult;
   };
   [NATIVE_COMMANDS.loadSyncNodeConflicts]: {
     args: { objectIds?: string[] } | undefined;

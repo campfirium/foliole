@@ -22,13 +22,6 @@ export function invokeApplySyncObjects(
   return invoke(NATIVE_COMMANDS.applySyncObjects, args);
 }
 
-export function invokeApplySyncPack(
-  invoke: NativeInvoke,
-  args: NativeCommandArgs<typeof NATIVE_COMMANDS.applySyncPack>
-) {
-  return invoke(NATIVE_COMMANDS.applySyncPack, args);
-}
-
 export function invokeLoadSyncNodes(
   invoke: NativeInvoke,
   args: NativeCommandArgs<typeof NATIVE_COMMANDS.loadSyncNodes>
