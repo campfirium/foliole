@@ -131,6 +131,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
   useEditorLayoutEffects(
     adapterRef,
     props.nodeId,
+    props.readingRestoreCommandId,
     props.readingSelection,
     props.readingTargetViewportMode,
     props.readingTargetViewportRatio,

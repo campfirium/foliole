@@ -154,6 +154,7 @@ function selectDocumentSurfaceReadingPosition(props: WorkspaceDocumentSurfaceSou
   return {
     beginApplyingReadingPosition: props.readingPosition.beginApplyingReadingPosition,
     completeApplyingReadingPosition: props.readingPosition.completeApplyingReadingPosition,
+    getReadingPositionRestoreCommand: props.readingPosition.getReadingPositionRestoreCommand,
     getReadingPositionSelection: props.readingPosition.getReadingPositionSelection,
     getReadingPositionSyncState: props.readingPosition.getReadingPositionSyncState,
     getReadingPositionTargetViewportMode: props.readingPosition.getReadingPositionTargetViewportMode,

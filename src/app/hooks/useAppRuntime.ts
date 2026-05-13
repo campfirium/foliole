@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
+import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/workspaceRuntimeRepository';
@@ -13,9 +14,10 @@ import { useMoveToNodeSourceState } from './appMoveToNodeSourceState';
 import { useWindowHotkeys } from './useAppRuntimeHotkeys';
 
 export interface ReadingPositionSyncState {
+  commandId?: string;
   reason: string;
   startedAt: number;
-  targetSelection: EditorSelection;
+  targetSelection: EditorSelection | null;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
 }
@@ -64,6 +66,14 @@ function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: n
       nodeId: null,
       selection: null
     }),
+    readingPositionRestoreCommandRef: useRef<{
+      command: ReadingPositionRestoreCommand | null;
+      nodeId: string | null;
+    }>({
+      command: null,
+      nodeId: null
+    }),
+    readingPositionRestoreCommandSeqRef: useRef(0),
     readingPositionSyncRef: useRef<{
       nodeId: string | null;
       state: ReadingPositionSyncState | null;

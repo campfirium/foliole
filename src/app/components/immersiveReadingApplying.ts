@@ -33,7 +33,7 @@ export function getCurrentApplyingSelection(props: ApplyingSelectionStateSource)
 }
 
 export function isApplyingReadingPosition(props: ApplyingSelectionStateSource) {
-  return getCurrentApplyingSelection(props) !== null;
+  return props.getReadingPositionSyncState() !== null;
 }
 
 export function completeApplyingFromViewport(

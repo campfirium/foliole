@@ -30,17 +30,16 @@ export function useNavigationReadingPosition(
       if (!nextViewState) {
         return false;
       }
-      if (!nextViewState.selection) {
-        return true;
-      }
       requestReadingPositionApply({
         nodeId: result.nodeId,
         reason: result.focusAnchor ? 'anchor-navigation' : 'node-navigation',
         runtime,
-        selection: {
-          from: nextViewState.selection.from,
-          to: nextViewState.selection.from
-        },
+        selection: nextViewState.selection
+          ? {
+              from: nextViewState.selection.from,
+              to: nextViewState.selection.from
+            }
+          : null,
         targetViewportMode: result.focusAnchor ? 'center' : undefined
       });
       return true;

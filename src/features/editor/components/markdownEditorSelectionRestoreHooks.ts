@@ -10,13 +10,15 @@ import {
 import type { EditorViewState } from './markdownEditorTypes';
 
 export function usePendingRestoreKey(args: {
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
+  passiveRestoreNodeIdRef: MutableRefObject<string | null>;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   previousNodeIdRef: MutableRefObject<string | null>;
   previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
+  readingRestoreCommandId: string | null | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
 }) {
@@ -25,16 +27,18 @@ export function usePendingRestoreKey(args: {
       args.nodeId,
       args.readingSelection,
       args.nodeViewState,
-      args.readingTargetViewportMode
+      args.readingTargetViewportMode,
+      args.readingRestoreCommandId
     );
     const nodeChanged = args.previousNodeIdRef.current !== args.nodeId;
     const shouldStartRestore = shouldStartPendingRestore({
       lastRestoredSelectionKey: args.lastRestoredSelectionKeyRef.current,
       nodeChanged,
       nextPendingRestoreSelectionKey,
+      passiveRestoreNodeId: args.passiveRestoreNodeIdRef.current,
       pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
-      previousReadingSelection: args.previousReadingSelectionRef.current,
-      readingSelection: args.readingSelection
+      readingRestoreCommandId: args.readingRestoreCommandId,
+      nodeId: args.nodeId
     });
     const shouldClearPendingRestore = !nextPendingRestoreSelectionKey && args.pendingRestoreSelectionKeyRef.current !== null;
     if (!nodeChanged && !shouldStartRestore && !shouldClearPendingRestore) {
@@ -46,8 +50,14 @@ export function usePendingRestoreKey(args: {
     if (nodeChanged || shouldStartRestore) {
       args.lastRestoredSelectionKeyRef.current = null;
     }
+    if (nodeChanged) {
+      args.passiveRestoreNodeIdRef.current = null;
+    }
+    if (shouldStartRestore && !args.readingRestoreCommandId) {
+      args.passiveRestoreNodeIdRef.current = args.nodeId;
+    }
     args.pendingRestoreSelectionKeyRef.current = nextPendingRestoreSelectionKey;
-    if (shouldStartRestore && !nodeChanged) {
+    if (shouldStartRestore && !nodeChanged && !args.readingRestoreCommandId) {
       args.beginApplyingReadingPosition?.(resolvePendingRestoreSelection(args), 'editor-restore-pending');
     }
   }, [args]);
@@ -56,25 +66,26 @@ export function usePendingRestoreKey(args: {
 function shouldStartPendingRestore(args: {
   lastRestoredSelectionKey: string | null;
   nodeChanged: boolean;
+  nodeId: string | null;
   nextPendingRestoreSelectionKey: string | null;
+  passiveRestoreNodeId: string | null;
   pendingRestoreSelectionKey: string | null;
-  previousReadingSelection: EditorViewState['selection'] | null | undefined;
-  readingSelection: EditorViewState['selection'] | null | undefined;
+  readingRestoreCommandId: string | null | undefined;
 }) {
   if (!args.nextPendingRestoreSelectionKey) {
     return false;
   }
+  if (args.readingRestoreCommandId) {
+    return (
+      args.pendingRestoreSelectionKey !== args.nextPendingRestoreSelectionKey &&
+      args.lastRestoredSelectionKey !== args.nextPendingRestoreSelectionKey
+    );
+  }
   if (args.nodeChanged) {
     return true;
   }
-  if (args.readingSelection && args.previousReadingSelection !== args.readingSelection) {
+  if (args.nodeId && args.passiveRestoreNodeId !== args.nodeId && args.lastRestoredSelectionKey !== args.nextPendingRestoreSelectionKey) {
     return true;
-  }
-  if (
-    args.pendingRestoreSelectionKey !== args.nextPendingRestoreSelectionKey &&
-    args.lastRestoredSelectionKey !== args.nextPendingRestoreSelectionKey
-  ) {
-    return !args.lastRestoredSelectionKey;
   }
   return false;
 }
@@ -91,8 +102,9 @@ function resolvePendingRestoreSelection(args: {
 }
 
 export function useRestoreCompletionCleanup(args: {
+  activeRestoreCommandIdRef: MutableRefObject<string | null>;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -101,6 +113,7 @@ export function useRestoreCompletionCleanup(args: {
   useEffect(
     () => () =>
       clearRestoreCompletionTimers({
+        activeRestoreCommandIdRef: args.activeRestoreCommandIdRef,
         activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
         completeApplyingReadingPosition: args.completeApplyingReadingPosition,
         isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
@@ -111,6 +124,7 @@ export function useRestoreCompletionCleanup(args: {
       }),
     [
       args.activeRestoreSelectionKeyRef,
+      args.activeRestoreCommandIdRef,
       args.completeApplyingReadingPosition,
       args.isRestoreApplyingActiveRef,
       args.restoreCompletionFrame2Ref,

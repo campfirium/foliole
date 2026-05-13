@@ -37,14 +37,15 @@ export interface MarkdownEditorProps {
   immersiveEditing?: boolean;
   lineDiffDecorations?: EditorDiffDecorations | null;
   nodeId: string | null;
+  readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
   readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;
-  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
+  onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onBlurCapture?: (event: ReactFocusEvent<HTMLDivElement>) => void;
   onChange: (value: string, meta?: EditorContentChangeMeta) => void;
-  onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection) => void;
+  onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;

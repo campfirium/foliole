@@ -13,15 +13,17 @@ const RESTORE_USER_SCROLL_INTERRUPT_GRACE_MS = 32;
 
 interface SelectionRestoreExecutionArgs {
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>;
+  activeRestoreCommandIdRef: MutableRefObject<string | null>;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
   activeRestoreValueLengthRef: MutableRefObject<number>;
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
+  readingRestoreCommandId: string | null | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
@@ -38,6 +40,7 @@ export function useSelectionRestoreExecution(args: SelectionRestoreExecutionArgs
   useLayoutEffect(() => {
     runSelectionRestore({
       adapter: args.adapterRef.current,
+      activeRestoreCommandIdRef: args.activeRestoreCommandIdRef,
       activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
       activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
       beginApplyingReadingPosition: args.beginApplyingReadingPosition,
@@ -47,6 +50,7 @@ export function useSelectionRestoreExecution(args: SelectionRestoreExecutionArgs
       nodeId: args.nodeId,
       nodeViewState: args.nodeViewState,
       pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
+      readingRestoreCommandId: args.readingRestoreCommandId,
       readingSelection: args.readingSelection,
       readingTargetViewportMode: args.readingTargetViewportMode,
       readingTargetViewportRatio: args.readingTargetViewportRatio,
@@ -101,9 +105,15 @@ function useRestoreUserScrollCancellation(
 function cancelActiveRestoreForUserScroll(args: SelectionRestoreExecutionArgs, activeKey: string) {
   cancelRestoreCompletionTimers(args);
   args.isRestoreApplyingActiveRef.current = false;
+  const commandId = args.activeRestoreCommandIdRef.current;
+  args.activeRestoreCommandIdRef.current = null;
   args.activeRestoreSelectionKeyRef.current = null;
   args.lastRestoredSelectionKeyRef.current = activeKey;
   args.pendingRestoreSelectionKeyRef.current = null;
+  if (commandId) {
+    args.completeApplyingReadingPosition?.('editor-restore-selection-user-interrupted', undefined, commandId);
+    return;
+  }
   args.completeApplyingReadingPosition?.('editor-restore-selection-user-interrupted');
 }
 
@@ -133,12 +143,14 @@ function runSelectionRestore(args: Omit<SelectionRestoreExecutionArgs, 'adapterR
     nodeId: args.nodeId,
     nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKey: args.pendingRestoreSelectionKeyRef.current,
+    readingRestoreCommandId: args.readingRestoreCommandId,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
     value: args.value
   });
   handleSelectionRestore({
+    activeRestoreCommandIdRef: args.activeRestoreCommandIdRef,
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     activeRestoreValueLengthRef: args.activeRestoreValueLengthRef,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
@@ -148,6 +160,7 @@ function runSelectionRestore(args: Omit<SelectionRestoreExecutionArgs, 'adapterR
     nodeId: args.nodeId,
     nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKeyRef: args.pendingRestoreSelectionKeyRef,
+    readingRestoreCommandId: args.readingRestoreCommandId,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,

@@ -1,4 +1,5 @@
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
+import { createEditorRestoreCommandKey } from '../model/editorRestoreCommand';
 import {
   createEditorRestoreTarget,
   createEditorRestoreTargetKey
@@ -50,7 +51,8 @@ export function createPendingRestoreSelectionKey(
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
   nodeViewState: EditorViewState | undefined,
-  targetViewportMode?: EditorViewportMode | null
+  targetViewportMode?: EditorViewportMode | null,
+  restoreCommandId?: string | null
 ) {
   const selectionSource = readingSelection ?? nodeViewState?.selection;
   const selection = selectionSource ? normalizeRestoreSelection(selectionSource) : null;
@@ -63,6 +65,9 @@ export function createPendingRestoreSelectionKey(
   });
   if (!target) {
     return null;
+  }
+  if (restoreCommandId) {
+    return createEditorRestoreCommandKey(restoreCommandId);
   }
   return createEditorRestoreTargetKey(target, targetViewportMode);
 }

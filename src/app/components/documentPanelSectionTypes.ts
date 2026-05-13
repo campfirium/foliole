@@ -31,12 +31,13 @@ export interface DocumentPanelSectionProps {
   onEnterImmersiveEdit?: () => void;
   isPriorityQuickSetActive?: boolean;
   editorNodeId: string | null;
+  editorReadingRestoreCommandId?: string | null;
   editorReadingSelection?: EditorSelection | null;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState;
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string) => void;
-  onCompleteApplyingReadingPosition?: (reason: string) => void;
+  onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   showAnswerSection: boolean;
   showDocumentOutline?: boolean;
   onAnswerChange: (answer: string) => void;

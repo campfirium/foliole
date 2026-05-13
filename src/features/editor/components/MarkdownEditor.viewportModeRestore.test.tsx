@@ -61,6 +61,7 @@ it('reveals a centered reading restore without viewport-ratio alignment', async 
       nodeId="node-1"
       nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
       onChange={vi.fn()}
+      readingRestoreCommandId="mode-center-1"
       readingSelection={{ from: 48_000, to: 48_024 }}
       readingTargetViewportMode="center"
       value={createLongDocument()}
@@ -80,6 +81,7 @@ it('reveals a nearest reading restore without plain restore selection', async ()
       nodeId="node-1"
       nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
       onChange={vi.fn()}
+      readingRestoreCommandId="mode-nearest-1"
       readingSelection={{ from: 48_000, to: 48_024 }}
       readingTargetViewportMode="nearest"
       value={createLongDocument()}

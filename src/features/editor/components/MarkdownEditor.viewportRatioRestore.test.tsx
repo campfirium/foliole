@@ -76,6 +76,7 @@ it('does not complete a viewport-ratio restore in the same call stack', () => {
         nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
         onChange={vi.fn()}
         onCompleteApplyingReadingPosition={mockComplete}
+        readingRestoreCommandId="ratio-restore-1"
         readingSelection={{ from: 48_000, to: 48_024 }}
         readingTargetViewportRatio={0.24}
         value={createLongDocument()}
@@ -85,7 +86,7 @@ it('does not complete a viewport-ratio restore in the same call stack', () => {
     act(() => {
       vi.runOnlyPendingTimers();
     });
-    expect(mockComplete).toHaveBeenCalledWith('editor-restore-selection-settled', { from: 48_000, to: 48_000 });
+    expect(mockComplete).toHaveBeenCalledWith('editor-restore-selection-settled', { from: 48_000, to: 48_000 }, 'ratio-restore-1');
   } finally {
     requestAnimationFrameSpy.mockRestore();
     cancelAnimationFrameSpy.mockRestore();
@@ -97,6 +98,7 @@ it('does not run a second restore after a viewport-ratio restore clears its requ
   function Harness() {
     const [readingSelection, setReadingSelection] = useState<{ from: number; to: number } | null>({ from: 48_000, to: 48_024 });
     const [readingTargetViewportRatio, setReadingTargetViewportRatio] = useState<number | null>(0.24);
+    const [readingRestoreCommandId, setReadingRestoreCommandId] = useState<string | null>('ratio-restore-1');
 
     return (
       <MarkdownEditor
@@ -104,10 +106,12 @@ it('does not run a second restore after a viewport-ratio restore clears its requ
         nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
         onChange={vi.fn()}
         onCompleteApplyingReadingPosition={() => {
+          setReadingRestoreCommandId(null);
           setReadingSelection(null);
           setReadingTargetViewportRatio(null);
         }}
         onSetReadingPositionSelection={() => undefined}
+        readingRestoreCommandId={readingRestoreCommandId}
         readingSelection={readingSelection}
         readingTargetViewportRatio={readingTargetViewportRatio}
         value={createLongDocument()}
@@ -132,17 +136,25 @@ it('reruns the same viewport-ratio request when a fresh request object arrives',
     .mockImplementation((handle: number) => window.clearTimeout(handle));
 
   function Harness() {
+    const [readingRestoreCommandId, setReadingRestoreCommandId] = useState('ratio-restore-1');
     const [readingSelection, setReadingSelection] = useState({ from: 48_000, to: 48_024 });
 
     return (
       <>
-        <button onClick={() => setReadingSelection({ from: 48_000, to: 48_024 })} type="button">
+        <button
+          onClick={() => {
+            setReadingSelection({ from: 48_000, to: 48_024 });
+            setReadingRestoreCommandId('ratio-restore-2');
+          }}
+          type="button"
+        >
           Repeat request
         </button>
         <MarkdownEditor
           nodeId="node-1"
           nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
           onChange={vi.fn()}
+          readingRestoreCommandId={readingRestoreCommandId}
           readingSelection={readingSelection}
           readingTargetViewportRatio={0.24}
           value={createLongDocument()}

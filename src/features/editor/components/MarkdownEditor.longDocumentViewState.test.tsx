@@ -182,6 +182,7 @@ it('prefers the current reading selection over the stale saved selection', async
       nodeId="node-1"
       nodeViewState={nodeViewState}
       onChange={vi.fn()}
+      readingRestoreCommandId="reading-selection-1"
       readingSelection={readingSelection}
       value={longDocument}
     />

@@ -83,6 +83,7 @@ export interface WorkspaceLayoutProps {
   readingPosition: Pick<WorkspaceLayoutFlatProps,
     | 'beginApplyingReadingPosition'
     | 'completeApplyingReadingPosition'
+    | 'getReadingPositionRestoreCommand'
     | 'getReadingPositionSelection'
     | 'getReadingPositionSyncState'
     | 'getReadingPositionTargetViewportMode'

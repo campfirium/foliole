@@ -23,10 +23,27 @@ function createHarness() {
           }
     }
   };
+  const readingPositionRestoreCommandRef = {
+    current: {
+      command: null as null | {
+        commandId: string;
+        nodeId: string | null;
+        reason: string;
+        selection: { from: number; to: number } | null;
+        startedAt: number;
+        targetViewportMode?: 'center' | 'nearest';
+        targetViewportRatio?: number;
+      },
+      nodeId: 'node-1'
+    }
+  };
 
   const handlers = createReadingPositionHandlers({
     runtime: {
+      bumpReadingPositionRequest: vi.fn(),
       readingPositionRef,
+      readingPositionRestoreCommandRef,
+      readingPositionRestoreCommandSeqRef: { current: 0 },
       readingPositionSyncRef
     },
     ws: {
@@ -34,7 +51,7 @@ function createHarness() {
     }
   } as never);
 
-  return { handlers, readingPositionRef };
+  return { handlers, readingPositionRef, readingPositionRestoreCommandRef };
 }
 
 describe('createReadingPositionHandlers', () => {
@@ -52,7 +69,8 @@ describe('createReadingPositionHandlers', () => {
     handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 42, to: 42 });
 
     expect(handlers.getReadingPositionSyncState()).toBeNull();
-    expect(handlers.getReadingPositionSelection()).toBeNull();
+    expect(handlers.getReadingPositionSelection()).toEqual({ from: 42, to: 42 });
+    expect(handlers.getReadingPositionRestoreCommand()).toBeNull();
   });
 
   it('does not let a stale completion clear a fresh anchor-navigation request', () => {
@@ -84,6 +102,16 @@ describe('createReadingPositionHandlers', () => {
     handlers.completeApplyingReadingPosition('editor-restore-selection-settled', { from: 12, to: 12 });
 
     expect(handlers.getReadingPositionSyncState()).toBeNull();
-    expect(handlers.getReadingPositionSelection()).toBeNull();
+    expect(handlers.getReadingPositionSelection()).toEqual({ from: 12, to: 12 });
+  });
+
+  it('does not turn a progress update into a restore command', () => {
+    const { handlers } = createHarness();
+
+    handlers.setReadingPositionSelection({ from: 99, to: 99 });
+
+    expect(handlers.getReadingPositionSelection()).toEqual({ from: 99, to: 99 });
+    expect(handlers.getReadingPositionRestoreCommand()).toBeNull();
+    expect(handlers.getReadingPositionSyncState()).toBeNull();
   });
 });

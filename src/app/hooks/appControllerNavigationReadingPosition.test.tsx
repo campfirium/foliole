@@ -13,6 +13,8 @@ it('does not invent a selection when navigation only has scroll state', () => {
     flushPendingEditorDraftImmediately: vi.fn(),
     lastExpandedRightSidebarWidthRef: { current: null },
     readingPositionRef: { current: { nodeId: null, selection: null } },
+    readingPositionRestoreCommandRef: { current: { nodeId: null, command: null } },
+    readingPositionRestoreCommandSeqRef: { current: 0 },
     readingPositionSyncRef: {
       current: { nodeId: null, state: null as ReadingPositionSyncState | null }
     },
@@ -29,7 +31,14 @@ it('does not invent a selection when navigation only has scroll state', () => {
   const view = renderHook(() => useNavigationReadingPosition(runtime as never, nodeViewById, vi.fn()));
 
   expect(view.result.current.applyNavigationReadingPosition({ focusAnchor: null, nodeId: 'node-2' })).toBe(true);
-  expect(runtime.bumpReadingPositionRequest).not.toHaveBeenCalled();
-  expect(runtime.readingPositionRef.current).toEqual({ nodeId: null, selection: null });
-  expect(runtime.readingPositionSyncRef.current).toEqual({ nodeId: null, state: null });
+  expect(runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+  expect(runtime.readingPositionRef.current).toEqual({ nodeId: 'node-2', selection: null });
+  expect(runtime.readingPositionRestoreCommandRef.current.command).toMatchObject({
+    reason: 'node-navigation',
+    selection: null
+  });
+  expect(runtime.readingPositionSyncRef.current.state).toMatchObject({
+    reason: 'node-navigation',
+    targetSelection: null
+  });
 });

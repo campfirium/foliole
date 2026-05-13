@@ -21,6 +21,10 @@ function createRuntimeState() {
     readingPositionRef: {
       current: { nodeId: null, selection: null }
     },
+    readingPositionRestoreCommandRef: {
+      current: { nodeId: null, command: null }
+    },
+    readingPositionRestoreCommandSeqRef: { current: 0 },
     readingPositionSyncRef: {
       current: { nodeId: null, state: null }
     }

@@ -115,6 +115,7 @@ interface BuildLayoutPropsArgs {
   onResolveDocumentPositionAtViewportY: WorkspaceLayoutFlatProps['onResolveDocumentPositionAtViewportY'];
   beginApplyingReadingPosition: WorkspaceLayoutFlatProps['beginApplyingReadingPosition'];
   completeApplyingReadingPosition: WorkspaceLayoutFlatProps['completeApplyingReadingPosition'];
+  getReadingPositionRestoreCommand: WorkspaceLayoutFlatProps['getReadingPositionRestoreCommand'];
   getReadingPositionSelection: WorkspaceLayoutFlatProps['getReadingPositionSelection'];
   getReadingPositionSyncState: WorkspaceLayoutFlatProps['getReadingPositionSyncState'];
   getReadingPositionTargetViewportMode: WorkspaceLayoutFlatProps['getReadingPositionTargetViewportMode'];
@@ -224,6 +225,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onResolveDocumentPositionAtViewportY: args.onResolveDocumentPositionAtViewportY,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
+    getReadingPositionRestoreCommand: args.getReadingPositionRestoreCommand,
     getReadingPositionSelection: args.getReadingPositionSelection,
     getReadingPositionSyncState: args.getReadingPositionSyncState,
     getReadingPositionTargetViewportMode: args.getReadingPositionTargetViewportMode,

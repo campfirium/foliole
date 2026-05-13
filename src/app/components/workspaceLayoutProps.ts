@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
+import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -109,8 +110,9 @@ export interface WorkspaceLayoutFlatProps {
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
-  beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => void;
-  completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => void;
+  beginApplyingReadingPosition: (selection: EditorSelection, reason: string, commandId?: string) => void;
+  completeApplyingReadingPosition: (reason: string, selection?: EditorSelection, commandId?: string) => void;
+  getReadingPositionRestoreCommand: () => ReadingPositionRestoreCommand | null;
   getReadingPositionSelection: () => EditorSelection | null;
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
   getReadingPositionTargetViewportMode: () => EditorViewportMode | null;

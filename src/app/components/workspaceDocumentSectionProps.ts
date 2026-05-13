@@ -2,10 +2,12 @@ import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 
 function buildReadingPositionProps(props: WorkspaceDocumentSurfaceProps) {
+  const restoreCommand = props.getReadingPositionRestoreCommand();
   return {
-    editorReadingSelection: props.getReadingPositionSelection(),
-    editorReadingTargetViewportMode: props.getReadingPositionTargetViewportMode(),
-    editorReadingTargetViewportRatio: props.getReadingPositionTargetViewportRatio(),
+    editorReadingRestoreCommandId: restoreCommand?.commandId ?? null,
+    editorReadingSelection: restoreCommand?.selection ?? null,
+    editorReadingTargetViewportMode: restoreCommand?.targetViewportMode ?? null,
+    editorReadingTargetViewportRatio: restoreCommand?.targetViewportRatio ?? null,
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.beginApplyingReadingPosition,
     onCompleteApplyingReadingPosition: props.completeApplyingReadingPosition,

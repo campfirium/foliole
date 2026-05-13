@@ -27,7 +27,7 @@ interface ReadingProgressEffectsOptions {
     captureNodeIdOverride?: string | null,
     captureMode?: ReadingProgressCaptureMode
   ) => void;
-  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isWorkspaceHydrated: boolean;
   lifecycleFlush: () => void;
   syncActiveNodeReadingProgress: (activeNodeIdOverride?: string | null) => void;
@@ -38,7 +38,7 @@ type ImmediateReadingProgressCaptureArgs = {
   activeNodeId: string | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
-  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
@@ -48,7 +48,7 @@ type ImmediateReadingProgressCaptureArgs = {
 };
 
 function isReadingPositionRestoreActive(
-  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null
 ) {
   return Boolean(getReadingPositionSyncState?.());
 }
@@ -115,7 +115,7 @@ export function useReadingProgressLifecycle(args: {
   activeNodeId: string | null;
   flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
   flushReadingProgressImmediately: () => Promise<boolean>;
-  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isWorkspaceHydrated: boolean;
 }) {
   const lifecycleFlush = useMemo(
@@ -199,7 +199,7 @@ function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureAr
 export function useDebouncedReadingProgressPersistence(args: {
   activeNodeId: string | null;
   flushReadingProgress: () => void;
-  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
+  getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;

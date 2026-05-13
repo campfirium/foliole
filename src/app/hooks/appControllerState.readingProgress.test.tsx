@@ -23,6 +23,23 @@ const runtimeRefs = vi.hoisted(() => ({
       selection: { from: 12, to: 12 }
     }
   },
+  readingPositionRestoreCommandRef: {
+    current: {
+      nodeId: null as string | null,
+      command: null as null | {
+        commandId: string;
+        nodeId: string | null;
+        reason: string;
+        selection: { from: number; to: number } | null;
+        startedAt: number;
+        targetViewportMode?: 'center' | 'nearest';
+        targetViewportRatio?: number;
+      }
+    }
+  },
+  readingPositionRestoreCommandSeqRef: {
+    current: 0
+  },
   readingPositionSyncRef: {
     current: {
       nodeId: 'node-1',
@@ -52,6 +69,8 @@ vi.mock('./useAppRuntime', () => ({
     isImmersiveMode: runtimeState.isImmersiveMode,
     isViewingTrashNode: false,
     readingPositionRef: runtimeRefs.readingPositionRef,
+    readingPositionRestoreCommandRef: runtimeRefs.readingPositionRestoreCommandRef,
+    readingPositionRestoreCommandSeqRef: runtimeRefs.readingPositionRestoreCommandSeqRef,
     readingPositionSyncRef: runtimeRefs.readingPositionSyncRef,
     setIsImmersiveMode: vi.fn()
   })
@@ -126,6 +145,11 @@ function resetRuntimeRefs() {
       targetSelection: { from: 12, to: 12 }
     }
   };
+  runtimeRefs.readingPositionRestoreCommandRef.current = {
+    nodeId: null,
+    command: null
+  };
+  runtimeRefs.readingPositionRestoreCommandSeqRef.current = 0;
 }
 
 function runSaveSharedReadingPositionTest() {
@@ -261,6 +285,7 @@ function runAnchorReadingPositionWiringTest() {
   expect(runtimeRefs.readingPositionSyncRef.current).toEqual({
     nodeId: 'node-2',
     state: {
+      commandId: 'reading-position-1',
       reason: 'anchor-navigation',
       startedAt: expect.any(Number),
       targetSelection: { from: 88, to: 88 },

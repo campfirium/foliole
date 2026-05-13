@@ -2,24 +2,20 @@ import type { EditorSelection } from '../../features/editor/adapters/EditorAdapt
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
+import { requestReadingPositionApply } from './readingPositionRequests';
 
 function isSameSelection(left: EditorSelection, right: EditorSelection) {
   return left.from === right.from && left.to === right.to;
 }
 
-function shouldClearAppliedReadingSelection(reason: string) {
-  return (
-    reason === 'anchor-navigation' ||
-    reason === 'node-navigation' ||
-    reason === 'reveal-anchor' ||
-    reason === 'reveal-selection' ||
-    reason === 'reveal-position'
-  );
-}
-
 function getActiveReadingSelection(args: BuildControllerLayoutPropsArgs) {
   const current = args.runtime.readingPositionRef.current;
   return current.nodeId === args.ws.activeNodeId ? current.selection : null;
+}
+
+function getActiveReadingRestoreCommand(args: BuildControllerLayoutPropsArgs) {
+  const current = args.runtime.readingPositionRestoreCommandRef.current;
+  return current.nodeId === args.ws.activeNodeId ? current.command : null;
 }
 
 function getActiveReadingSyncState(args: BuildControllerLayoutPropsArgs) {
@@ -28,11 +24,11 @@ function getActiveReadingSyncState(args: BuildControllerLayoutPropsArgs) {
 }
 
 function getActiveReadingViewportRatio(args: BuildControllerLayoutPropsArgs) {
-  return getActiveReadingSyncState(args)?.targetViewportRatio ?? null;
+  return getActiveReadingRestoreCommand(args)?.targetViewportRatio ?? null;
 }
 
 function getActiveReadingViewportMode(args: BuildControllerLayoutPropsArgs) {
-  return getActiveReadingSyncState(args)?.targetViewportMode ?? null;
+  return getActiveReadingRestoreCommand(args)?.targetViewportMode ?? null;
 }
 
 function setReadingSyncState(
@@ -49,30 +45,26 @@ function completeReadingSyncState(args: {
   reason: string;
   runtime: BuildControllerLayoutPropsArgs['runtime'];
   selection?: EditorSelection;
+  commandId?: string;
 }) {
   if (args.currentState.nodeId !== args.activeNodeId || !args.currentState.state) {
     return;
   }
-  if (args.selection && !isSameSelection(args.currentState.state.targetSelection, args.selection)) {
+  if (args.commandId && args.currentState.state.commandId !== args.commandId) {
     return;
   }
+  const targetSelection = args.currentState.state.targetSelection;
+  if (args.selection && targetSelection && !isSameSelection(targetSelection, args.selection)) {
+    return;
+  }
+  clearActiveRestoreCommand(args.runtime, args.activeNodeId, args.currentState.state.commandId);
   args.runtime.readingPositionSyncRef.current = {
     nodeId: args.activeNodeId,
     state: null
   };
-  if (
-    shouldClearAppliedReadingSelection(args.currentState.state.reason) &&
-    args.runtime.readingPositionRef.current.nodeId === args.activeNodeId &&
-    args.runtime.readingPositionRef.current.selection &&
-    isSameSelection(args.runtime.readingPositionRef.current.selection, args.currentState.state.targetSelection)
-  ) {
-    args.runtime.readingPositionRef.current = {
-      nodeId: args.activeNodeId,
-      selection: null
-    };
-  }
   pushDebugTrace('runtime.reading-position.applying-complete', {
     activeNodeId: args.activeNodeId,
+    commandId: args.currentState.state.commandId ?? null,
     reason: args.reason,
     selection: args.currentState.state.targetSelection
   });
@@ -80,6 +72,7 @@ function completeReadingSyncState(args: {
 
 function createReadingPositionAccessors(args: BuildControllerLayoutPropsArgs) {
   return {
+    getReadingPositionRestoreCommand: () => getActiveReadingRestoreCommand(args),
     getReadingPositionSelection: () => getActiveReadingSelection(args),
     getReadingPositionSyncState: () => getActiveReadingSyncState(args),
     getReadingPositionTargetViewportMode: () => getActiveReadingViewportMode(args),
@@ -98,13 +91,33 @@ function setReadingPositionSelection(args: BuildControllerLayoutPropsArgs, selec
   });
 }
 
+function clearActiveRestoreCommand(
+  runtime: BuildControllerLayoutPropsArgs['runtime'],
+  activeNodeId: string | null,
+  commandId?: string
+) {
+  const current = runtime.readingPositionRestoreCommandRef.current;
+  if (current.nodeId !== activeNodeId || !current.command) {
+    return;
+  }
+  if (commandId && current.command.commandId !== commandId) {
+    return;
+  }
+  runtime.readingPositionRestoreCommandRef.current = {
+    nodeId: activeNodeId,
+    command: null
+  };
+}
+
 function beginReadingPositionApply(
   args: BuildControllerLayoutPropsArgs,
   nodeId: string | null,
   selection: EditorSelection,
-  reason: string
+  reason: string,
+  commandId?: string
 ) {
   setReadingSyncState(args, nodeId, {
+    commandId,
     reason,
     startedAt: Date.now(),
     targetSelection: selection
@@ -120,16 +133,7 @@ function completeAnchorNavigationRestore(
   if (current.nodeId !== nodeId || current.state?.reason !== 'anchor-navigation') {
     return;
   }
-  if (
-    args.runtime.readingPositionRef.current.nodeId === nodeId &&
-    args.runtime.readingPositionRef.current.selection &&
-    isSameSelection(args.runtime.readingPositionRef.current.selection, current.state.targetSelection)
-  ) {
-    args.runtime.readingPositionRef.current = {
-      nodeId,
-      selection: null
-    };
-  }
+  clearActiveRestoreCommand(args.runtime, nodeId, current.state.commandId);
   args.runtime.readingPositionSyncRef.current = {
     nodeId,
     state: null
@@ -144,26 +148,34 @@ function completeAnchorNavigationRestore(
 function createReadingPositionMutations(args: BuildControllerLayoutPropsArgs) {
   return {
     beginAnchorNavigationRestore: (nodeId: string, selection: EditorSelection) => {
-      beginReadingPositionApply(args, nodeId, selection, 'anchor-navigation');
+      requestReadingPositionApply({
+        nodeId,
+        reason: 'anchor-navigation',
+        runtime: args.runtime,
+        selection,
+        targetViewportMode: 'center'
+      });
       pushDebugTrace('runtime.anchor-navigation.applying-begin', {
         nodeId,
         selection
       });
     },
-    beginApplyingReadingPosition: (selection: EditorSelection, reason: string) => {
-      beginReadingPositionApply(args, args.ws.activeNodeId, selection, reason);
+    beginApplyingReadingPosition: (selection: EditorSelection, reason: string, commandId?: string) => {
+      beginReadingPositionApply(args, args.ws.activeNodeId, selection, reason, commandId);
       pushDebugTrace('runtime.reading-position.applying-begin', {
         activeNodeId: args.ws.activeNodeId,
+        commandId: commandId ?? null,
         reason,
         selection
       });
     },
     completeAnchorNavigationRestore: (nodeId: string, reason: string) =>
       completeAnchorNavigationRestore(args, nodeId, reason),
-    completeApplyingReadingPosition: (reason: string, selection?: EditorSelection) => {
+    completeApplyingReadingPosition: (reason: string, selection?: EditorSelection, commandId?: string) => {
       completeReadingSyncState({
         activeNodeId: args.ws.activeNodeId,
         currentState: args.runtime.readingPositionSyncRef.current,
+        commandId,
         reason,
         runtime: args.runtime,
         selection

@@ -12,10 +12,12 @@ import type { EditorViewState } from './markdownEditorTypes';
 
 function useSelectionRestoreRefs() {
   return {
+    activeRestoreCommandIdRef: useRef<string | null>(null),
     activeRestoreSelectionKeyRef: useRef<string | null>(null),
     activeRestoreValueLengthRef: useRef(0),
     isRestoreApplyingActiveRef: useRef(false),
     lastRestoredSelectionKeyRef: useRef<string | null>(null),
+    passiveRestoreNodeIdRef: useRef<string | null>(null),
     pendingRestoreSelectionKeyRef: useRef<string | null>(null),
     previousNodeIdRef: useRef<string | null>(null),
     previousReadingSelectionRef: useRef<EditorViewState['selection'] | null | undefined>(undefined),
@@ -32,15 +34,17 @@ export function useEditorSelectionRestoreRefs() {
 }
 
 export function useEditorSelectionRestorePreparation(args: {
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
+  readingRestoreCommandId: string | null | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreRefs: SelectionRestoreRefs;
 }) {
   useSelectionRestorePreparation({
+    activeRestoreCommandIdRef: args.restoreRefs.activeRestoreCommandIdRef,
     activeRestoreSelectionKeyRef: args.restoreRefs.activeRestoreSelectionKeyRef,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
@@ -48,9 +52,11 @@ export function useEditorSelectionRestorePreparation(args: {
     lastRestoredSelectionKeyRef: args.restoreRefs.lastRestoredSelectionKeyRef,
     nodeId: args.nodeId,
     nodeViewState: args.nodeViewState,
+    passiveRestoreNodeIdRef: args.restoreRefs.passiveRestoreNodeIdRef,
     pendingRestoreSelectionKeyRef: args.restoreRefs.pendingRestoreSelectionKeyRef,
     previousNodeIdRef: args.restoreRefs.previousNodeIdRef,
     previousReadingSelectionRef: args.restoreRefs.previousReadingSelectionRef,
+    readingRestoreCommandId: args.readingRestoreCommandId,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     restoreCompletionFrame2Ref: args.restoreRefs.restoreCompletionFrame2Ref,
@@ -61,10 +67,11 @@ export function useEditorSelectionRestorePreparation(args: {
 
 export function useEditorSelectionRestoreExecution(args: {
   adapterRef: MutableRefObject<CodeMirrorEditorAdapter | null>;
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
+  readingRestoreCommandId: string | null | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
@@ -74,6 +81,7 @@ export function useEditorSelectionRestoreExecution(args: {
 }) {
   useSelectionRestoreExecution({
     adapterRef: args.adapterRef,
+    activeRestoreCommandIdRef: args.restoreRefs.activeRestoreCommandIdRef,
     activeRestoreSelectionKeyRef: args.restoreRefs.activeRestoreSelectionKeyRef,
     activeRestoreValueLengthRef: args.restoreRefs.activeRestoreValueLengthRef,
     beginApplyingReadingPosition: args.beginApplyingReadingPosition,
@@ -83,6 +91,7 @@ export function useEditorSelectionRestoreExecution(args: {
     nodeId: args.nodeId,
     nodeViewState: args.nodeViewState,
     pendingRestoreSelectionKeyRef: args.restoreRefs.pendingRestoreSelectionKeyRef,
+    readingRestoreCommandId: args.readingRestoreCommandId,
     readingSelection: args.readingSelection,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
@@ -95,16 +104,19 @@ export function useEditorSelectionRestoreExecution(args: {
 }
 
 function useSelectionRestorePreparation(args: {
+  activeRestoreCommandIdRef: MutableRefObject<string | null>;
   activeRestoreSelectionKeyRef: MutableRefObject<string | null>;
-  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string) => void) | undefined;
-  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>) => void) | undefined;
+  beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined;
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   isRestoreApplyingActiveRef: MutableRefObject<boolean>;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
   nodeViewState: EditorViewState | undefined;
+  passiveRestoreNodeIdRef: MutableRefObject<string | null>;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   previousNodeIdRef: MutableRefObject<string | null>;
   previousReadingSelectionRef: MutableRefObject<EditorViewState['selection'] | null | undefined>;
+  readingRestoreCommandId: string | null | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
@@ -112,6 +124,7 @@ function useSelectionRestorePreparation(args: {
   restoreCompletionTimeoutRef: MutableRefObject<number | null>;
 }) {
   useRestoreCompletionCleanup({
+    activeRestoreCommandIdRef: args.activeRestoreCommandIdRef,
     activeRestoreSelectionKeyRef: args.activeRestoreSelectionKeyRef,
     completeApplyingReadingPosition: args.completeApplyingReadingPosition,
     isRestoreApplyingActiveRef: args.isRestoreApplyingActiveRef,
